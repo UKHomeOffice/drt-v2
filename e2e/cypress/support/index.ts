@@ -1,3 +1,5 @@
+export {};
+
 declare global {
     namespace Cypress {
         interface Chainable {
@@ -51,7 +53,7 @@ declare global {
 
             deleteData(): Chainable<Element>;
 
-            downloadCsv(type: string, year: number, month: number, day: number): Chainable<Response>;
+            downloadCsv(type: string, year: number, month: number, day: number): Chainable<Response<any>>;
 
             findAndClick(thing: string): Chainable<Element>;
 

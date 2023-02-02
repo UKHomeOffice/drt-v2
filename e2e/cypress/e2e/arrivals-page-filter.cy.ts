@@ -1,5 +1,6 @@
 
 import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import moment from "moment-timezone";
 
 describe('Arrivals page filter', () => {
 
@@ -9,7 +10,7 @@ describe('Arrivals page filter', () => {
 
   it('Filters flights by any relevant time range intersecting the selected range', () => {
 
-      const flightTime = todayAtUtc(16, 55)
+      const flightTime:moment.Moment = todayAtUtc(16, 55)
       const scheduledHour = flightTime.tz("Europe/London").format("HH")
       let oneHourAfterScheduled = "" + (parseInt(scheduledHour) + 1);
       let twoHoursAfterScheduled = "" + (parseInt(scheduledHour) + 2);

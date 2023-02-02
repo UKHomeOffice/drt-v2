@@ -81,8 +81,8 @@ describe('Staff movements', () => {
                 .request('/')
                 .then((response) => {
                     const $html = Cypress.$(response.body)
-                    const csrf = $html.filter('input:hidden[name="csrfToken"]').val()
-                    cy.saveShifts(shifts(2), csrf)
+                    const csrfToken:any = $html.filter('input:hidden[name="csrfToken"]').val()
+                    cy.saveShifts(shifts(2), csrfToken)
                         .navigateHome()
                         .navigateToMenuItem('T1')
                         .selectCurrentTab()

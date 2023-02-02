@@ -103,7 +103,7 @@ describe('Monthly Staffing', () => {
                     url: '/',
                 }).then((response) => {
                 const $html = Cypress.$(response.body)
-                const csrf = $html.filter('input:hidden[name="csrfToken"]').val()
+                const csrf:any = $html.filter('input:hidden[name="csrfToken"]').val()
                 cy.visit('#terminal/T1/current/desksAndQueues/?timeRangeStart=0&timeRangeEnd=24')
                     .get('.staff-alert')
                     .contains("You have not entered any staff ")
@@ -122,7 +122,7 @@ describe('Monthly Staffing', () => {
                     .request('/')
                     .then((response) => {
                         const $html = Cypress.$(response.body)
-                        const csrf = $html.filter('input:hidden[name="csrfToken"]').val()
+                        const csrf:any = $html.filter('input:hidden[name="csrfToken"]').val()
                         cy.saveShifts(shifts(), csrf)
                             .visit('#terminal/T1/staffing/15/')
                             .get(cellToTest).contains("1")
