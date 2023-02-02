@@ -1,6 +1,6 @@
 package drt.server.feeds.legacy.bhx
 
-import javax.xml.ws.BindingProvider
+import jakarta.xml.ws.BindingProvider
 import org.slf4j.Logger
 import uk.co.bhx.online.flightinformation.{FlightInformation, FlightInformationSoap}
 

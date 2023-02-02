@@ -65,7 +65,7 @@ object Settings {
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
     val openSaml = "2.6.1"
-    val drtBirminghamSchema = "40"
+    val drtBirminghamSchema = "50"
     val drtCirium = "186"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
@@ -150,6 +150,8 @@ object Settings {
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
     "javax.mail" % "mail" % "1.4.7",
+    "jakarta.xml.ws" % "jakarta.xml.ws-api" % "4.0.0",
+    "com.sun.xml.ws" % "rt" % "4.0.0",
 
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
