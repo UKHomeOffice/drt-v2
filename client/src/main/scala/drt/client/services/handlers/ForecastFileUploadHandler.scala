@@ -6,7 +6,7 @@ import drt.client.actions.Actions._
 import drt.client.components.FileUploadState
 import drt.client.logger.log
 import org.scalajs.dom
-import org.scalajs.dom.FormData
+import org.scalajs.dom.{FormData, document, html}
 import org.scalajs.dom.ext.AjaxException
 import upickle.default._
 
@@ -50,6 +50,7 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
       }
 
       request.open("POST", s"data/feed/forecast/$portCode")
+      request.setRequestHeader("Csrf-Token", document.getElementById("csrfToken").asInstanceOf[html.Input].value)
       request.responseType = "text"
       request.timeout = 1000000
       request.withCredentials = false
