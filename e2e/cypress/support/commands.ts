@@ -1,36 +1,36 @@
 import {todayAtUtcString as todayAtString} from './time-helpers'
 
 Cypress.Commands.add('setRoles', (roles = []) => {
-    cy.request("POST", '/test/mock-roles', {"roles": roles});
+  cy.request("POST", '/test/mock-roles', {"roles": roles});
 });
 
 const portRole = ["test"]
 const lhrPortRole = ["LHR"]
 const bfRoles = [
-    "border-force-staff",
-    "forecast:view",
-    "fixed-points:view",
-    "arrivals-and-splits:view",
-    "desks-and-queues:view",
-    "staff-movements:edit",
-    "staff-movements:export",
-    "enhanced-api-view",
-    "create-alerts",
-    "test"
+  "border-force-staff",
+  "forecast:view",
+  "fixed-points:view",
+  "arrivals-and-splits:view",
+  "desks-and-queues:view",
+  "staff-movements:edit",
+  "staff-movements:export",
+  "enhanced-api-view",
+  "create-alerts",
+  "test"
 ];
 const bfReadOnlyRoles = [
-    "border-force-staff",
-    "forecast:view",
-    "fixed-points:view",
-    "arrivals-and-splits:view",
-    "desks-and-queues:view",
-    "test"
+  "border-force-staff",
+  "forecast:view",
+  "fixed-points:view",
+  "arrivals-and-splits:view",
+  "desks-and-queues:view",
+  "test"
 ];
 const bfPlanningRoles = ["staff:edit"];
 const superUserRoles = ["create-alerts", "manage-users"];
 const portOperatorRoles = ["port-operator-staff",
-    "arrivals-and-splits:view",
-    "api:view-port-arrivals"
+  "arrivals-and-splits:view",
+  "api:view-port-arrivals"
 ]
 
 export const paxRagGreenSelector = '.pax-rag-green'
@@ -42,129 +42,129 @@ export const eeaCellSelector = '.eeadesk-queue-pax';
 export const nonEeaCellSelector = '.noneeadesk-queue-pax';
 
 Cypress.Commands.add('asABorderForceOfficer', () => {
-    cy.request("POST", '/test/mock-roles', {"roles": portRole.concat(bfRoles)});
+  cy.request("POST", '/test/mock-roles', {"roles": portRole.concat(bfRoles)});
 });
 
 Cypress.Commands.add('asABorderForceReadOnlyOfficer', () => {
-    cy.request("POST", '/test/mock-roles', {"roles": portRole.concat(bfReadOnlyRoles)});
+  cy.request("POST", '/test/mock-roles', {"roles": portRole.concat(bfReadOnlyRoles)});
 });
 
 Cypress.Commands.add('asATestPortUser', () => {
-    cy.request("POST", '/test/mock-roles', {"roles": portRole});
+  cy.request("POST", '/test/mock-roles', {"roles": portRole});
 });
 
 Cypress.Commands.add('asAnLHRPortUser', () => {
-    cy.request("POST", '/test/mock-roles', {"roles": lhrPortRole});
+  cy.request("POST", '/test/mock-roles', {"roles": lhrPortRole});
 });
 
 Cypress.Commands.add('asANonTestPortUser', () => {
-    cy.request("POST", '/test/mock-roles', {"roles": []});
+  cy.request("POST", '/test/mock-roles', {"roles": []});
 });
 
 Cypress.Commands.add('asABorderForcePlanningOfficer', () => {
-    const roles = portRole.concat(bfRoles).concat(bfPlanningRoles);
-    cy.request("POST", '/test/mock-roles', {"roles": roles});
+  const roles = portRole.concat(bfRoles).concat(bfPlanningRoles);
+  cy.request("POST", '/test/mock-roles', {"roles": roles});
 });
 
 Cypress.Commands.add('asADrtSuperUser', () => {
-    cy.request("POST", '/test/mock-roles', {"roles": superUserRoles.concat(bfRoles).concat(portRole)});
+  cy.request("POST", '/test/mock-roles', {"roles": superUserRoles.concat(bfRoles).concat(portRole)});
 });
 
 Cypress.Commands.add('asAPortOperator', () => {
-    cy.request("POST", '/test/mock-roles', {"roles": portOperatorRoles.concat(portRole)});
+  cy.request("POST", '/test/mock-roles', {"roles": portOperatorRoles.concat(portRole)});
 });
 
 Cypress.Commands.add('asABorderForceOfficerWithRoles', (roles = []) => {
-    const withRoles = roles.concat(bfRoles).concat(portRole);
-    cy.request("POST", '/test/mock-roles', {"roles": withRoles})
+  const withRoles = roles.concat(bfRoles).concat(portRole);
+  cy.request("POST", '/test/mock-roles', {"roles": withRoles})
 });
 
 Cypress.Commands.add('addFlight', (params) => {
-    const defaults = {
-        "Operator": "TestAir",
-        "Status": "On Chox",
-        "EstDT": todayAtString(12, 0),
-        "ActDT": todayAtString(12, 0),
-        "EstChoxDT": todayAtString(12, 0),
-        "ActChoxDT": todayAtString(12, 0),
-        "Gate": "46",
-        "Stand": "44R",
-        "MaxPax": 78,
-        "ActPax": 51,
-        "TranPax": 0,
-        "RunwayID": "05L",
-        "FlightID": 100,
-        "BaggageReclaimId": "05",
-        "AirportID": "MAN",
-        "Terminal": "T1",
-        "ICAO": "TS123",
-        "IATA": "TS123",
-        "Origin": "AMS",
-        "SchDT": todayAtString(12, 0)
-    };
+  const defaults = {
+    "Operator": "TestAir",
+    "Status": "On Chox",
+    "EstDT": todayAtString(12, 0),
+    "ActDT": todayAtString(12, 0),
+    "EstChoxDT": todayAtString(12, 0),
+    "ActChoxDT": todayAtString(12, 0),
+    "Gate": "46",
+    "Stand": "44R",
+    "MaxPax": 78,
+    "ActPax": 51,
+    "TranPax": 0,
+    "RunwayID": "05L",
+    "FlightID": 100,
+    "BaggageReclaimId": "05",
+    "AirportID": "MAN",
+    "Terminal": "T1",
+    "ICAO": "TS123",
+    "IATA": "TS123",
+    "Origin": "AMS",
+    "SchDT": todayAtString(12, 0)
+  };
 
-    const flightPayload = Object.assign({}, defaults, params);
+  const flightPayload = Object.assign({}, defaults, params);
 
-    cy.request('POST', '/test/arrival', flightPayload);
+  cy.request('POST', '/test/arrival', flightPayload);
 });
 
 Cypress.Commands.add('deleteData', () => {
-    cy.request("DELETE", '/test/data')
+  cy.request("DELETE", '/test/data')
 });
 
 Cypress.Commands.add('saveShifts', (shiftsJson, csrfToken) => {
-    cy.request({
-        method: "POST",
-        url: "/data/staff",
-        body: shiftsJson,
-        headers: {
-            "Csrf-Token": csrfToken,
-        }
-    })
+  cy.request({
+    method: "POST",
+    url: "/data/staff",
+    body: shiftsJson,
+    headers: {
+      "Csrf-Token": csrfToken,
+    }
+  })
 });
 
 Cypress.Commands.add('navigateHome', () => {
-    cy.visit('/')
+  cy.visit('/')
 });
 
 Cypress.Commands.add('navigateToMenuItem', (itemName) => {
-    cy
-        .get('.main-menu-content > :nth-child(1)')
-        .children()
-        .contains(itemName)
-        .click(5, 5, {force: true})
+  cy
+    .get('.main-menu-content > :nth-child(1)')
+    .children()
+    .contains(itemName)
+    .click(5, 5, {force: true})
 });
 
 Cypress.Commands.add('selectCurrentTab', () => {
-    cy.get('#currentTab').click({force: true})
+  cy.get('#currentTab').click({force: true})
 })
 
 Cypress.Commands.add('findAndClick', (toFind) => {
-    cy.contains(toFind).click({force: true})
+  cy.contains(toFind).click({force: true})
 });
 
 Cypress.Commands.add('choose24Hours', () => {
-    cy.get('.time-view-selector-container')
-        .contains('24 hours')
-        .click({force: true})
+  cy.get('.time-view-selector-container')
+    .contains('24 hours')
+    .click({force: true})
 });
 
 Cypress.Commands.add('chooseArrivalsTab', () => {
-    cy.get("#arrivalsTab").click({force: true})
+  cy.get("#arrivalsTab").click({force: true})
 });
 
 Cypress.Commands.add('addManifest', (manifest) => {
-    cy.request('POST', '/test/manifest', manifest)
+  cy.request('POST', '/test/manifest', manifest)
 });
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
-    cy
-        .navigateHome()
-        .navigateToMenuItem('T1')
-        .selectCurrentTab()
-        .get("#currentTab").click({force: true})
-        .get("#arrivalsTab").click({force: true})
-        .choose24Hours()
-        .get("#arrivals")
-        .contains(flightCode);
+  cy
+    .navigateHome()
+    .navigateToMenuItem('T1')
+    .selectCurrentTab()
+    .get("#currentTab").click({force: true})
+    .get("#arrivalsTab").click({force: true})
+    .choose24Hours()
+    .get("#arrivals")
+    .contains(flightCode);
 })
