@@ -52,6 +52,7 @@ object Settings {
     val renjin = "0.9.2646"
     val awsSdk = "1.11.89"
     val csvCommons = "1.4"
+    val poi = "5.1.0"
     val pprint = "0.5.6"
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "0.5.0-DRT"
@@ -157,7 +158,6 @@ object Settings {
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
     "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
-    "com.typesafe.akka" %%  "akka-slf4j" % akka,
     "com.typesafe.akka" %%  "akka-persistence-typed" % akka,
     "com.typesafe.akka" %%  "akka-remote" % akka,
     "com.typesafe.akka" %%  "akka-persistence-testkit" % akka,
@@ -192,8 +192,8 @@ object Settings {
     "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
-    "org.apache.poi" % "poi" % "5.2.3",
-    "org.apache.poi" % "poi-ooxml" % "5.2.3",
+    "org.apache.poi" % "poi" % poi,
+    "org.apache.poi" % "poi-ooxml" % poi,
     "org.codehaus.janino" % "janino" % "3.0.7",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
