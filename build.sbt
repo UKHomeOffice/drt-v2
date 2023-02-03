@@ -109,7 +109,6 @@ lazy val server = (project in file("server"))
     libraryDependencies += specs2 % Test,
     libraryDependencies += guice,
     excludeDependencies += ExclusionRule("org.slf4j", "slf4j-log4j12"),
-    dependencyOverrides += "io.netty" % "netty-all" % "4.0.56.Final",
 
     commands += ReleaseCmd,
     // connect to the client project

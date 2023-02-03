@@ -3,7 +3,7 @@ resolvers += "Typesafe Releases" at "https://repo.typesafe.com/typesafe/ivy-rele
 
 addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.2.0")
 
-addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.12.0")
+addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.13.0")
 
 addSbtPlugin("ch.epfl.scala" % "sbt-web-scalajs-bundler" % "0.21.1")
 
@@ -16,3 +16,5 @@ addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.8.19")
 addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.3")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.7.0")
+
+addDependencyTreePlugin

@@ -24,14 +24,14 @@ object Settings {
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
-    val drtLib = "v359"
+    val drtLib = "363"
 
     val scala = "2.13.10"
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
     val scalaJsMomentJs = "0.10.4"
-    val autowire = "0.3.2"
+    val autowire = "0.3.3"
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
@@ -152,30 +152,31 @@ object Settings {
     "javax.mail" % "mail" % "1.4.7",
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % "4.0.0",
     "com.sun.xml.ws" % "rt" % "4.0.0",
+    "javax.xml.bind" % "jaxb-api" % "2.2.11",
 
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
     "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
-    "com.typesafe.akka" %%  "akka-slf4j" % akka force(),
-    "com.typesafe.akka" %%  "akka-persistence-typed" % akka force(),
-    "com.typesafe.akka" %%  "akka-remote" % akka force(),
-    "com.typesafe.akka" %%  "akka-persistence-testkit" % akka force(),
-    "com.typesafe.akka" %%  "akka-actor-testkit-typed" % akka force(),
-    "com.typesafe.akka" %%  "akka-testkit" % akka force(),
-    "com.typesafe.akka" %%  "akka-serialization-jackson" % akka force(),
-    "com.typesafe.akka" %%  "akka-pki" % akka force(),
-    "com.typesafe.akka" %%  "akka-stream-typed" % akka force(),
-    "com.typesafe.akka" %% "akka-persistence-testkit" % akka force(),
-    "com.typesafe.akka" %% "akka-testkit" % akka % "test" force(),
-    "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test" force(),
-    "com.typesafe.akka" %% "akka-persistence" % akka force(),
-    "com.typesafe.akka" %% "akka-persistence-query" % akka force(),
-    "com.typesafe.akka" %% "akka-slf4j" % akka force(),
-    "com.typesafe.akka" %% "akka-http" % akkaHttp force(),
-    "com.typesafe.akka" %% "akka-http-caching" % akkaHttp force(),
-    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp force(),
-    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp force(),
-    "com.typesafe.akka" %% "akka-stream" % akka force(),
+    "com.typesafe.akka" %%  "akka-slf4j" % akka,
+    "com.typesafe.akka" %%  "akka-persistence-typed" % akka,
+    "com.typesafe.akka" %%  "akka-remote" % akka,
+    "com.typesafe.akka" %%  "akka-persistence-testkit" % akka,
+    "com.typesafe.akka" %%  "akka-actor-testkit-typed" % akka,
+    "com.typesafe.akka" %%  "akka-testkit" % akka,
+    "com.typesafe.akka" %%  "akka-serialization-jackson" % akka,
+    "com.typesafe.akka" %%  "akka-pki" % akka,
+    "com.typesafe.akka" %%  "akka-stream-typed" % akka,
+    "com.typesafe.akka" %% "akka-persistence-testkit" % akka,
+    "com.typesafe.akka" %% "akka-testkit" % akka % "test",
+    "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
+    "com.typesafe.akka" %% "akka-persistence" % akka,
+    "com.typesafe.akka" %% "akka-persistence-query" % akka,
+    "com.typesafe.akka" %% "akka-slf4j" % akka,
+    "com.typesafe.akka" %% "akka-http" % akkaHttp,
+    "com.typesafe.akka" %% "akka-http-caching" % akkaHttp,
+    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp,
+    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
+    "com.typesafe.akka" %% "akka-stream" % akka,
 
     "com.typesafe.slick" %% "slick" % slick,
     "com.typesafe.slick" %% "slick-hikaricp" % slick,
@@ -211,7 +212,7 @@ object Settings {
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
     "org.bitbucket.b_c" % "jose4j" % "0.4.4",
 
-    "io.netty" % "netty-all" % "4.0.56.Final",
+    "io.netty" % "netty-all" % "4.1.74.Final",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
