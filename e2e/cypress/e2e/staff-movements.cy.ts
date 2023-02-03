@@ -45,39 +45,38 @@ describe('Staff movements', () => {
   describe('When adding staff movements on the desks and queues page', () => {
     it("Should update the available staff when 1 staff member is added for 1 hour, and record the correct reason and " +
       "it should appear in the export", () => {
-      const movementsCSV = "Terminal,Reason,Time,Staff Change,Made by" + "\n" +
-        "T1,Other start," + midnightThisMorning().format("YYYY-MM-DD") + " 00:00,1,\"Unknown\"" + "\n" +
-        "T1,Other end," + midnightThisMorning().format("YYYY-MM-DD") + " 01:00,-1,\"Unknown\""
-      cy
-        .asABorderForcePlanningOfficer()
-        .navigateHome()
-        .navigateToMenuItem('T1')
-        .selectCurrentTab()
-        .choose24Hours()
-        .openAdjustmentDialogueForHour('add', 0)
-        .adjustMinutes(60)
-        .adjustStaffBy(1)
-        .checkStaffMovementsOnDesksAndQueuesTabAre(1)
-        .checkStaffAvailableOnDesksAndQueuesTabAre(1)
-        .findAndClick('Staff Movements')
-        .checkStaffNumbersOnMovementsTabAre(1)
-        .checkUserNameOnMovementsTab(1, "Unknown")
-        .get('#export-day-staff-movements')
-        .then((el) => {
-          const href = el.prop('href')
-          cy.request({
-            method: 'GET',
-            url: href,
-          }).then((resp) => {
-            expect(resp.body).to.equal(movementsCSV, "Staff movements Export CSV is wrong.");
+        const movementsCSV = "Terminal,Reason,Time,Staff Change,Made by" + "\n" +
+          "T1,Other start," + midnightThisMorning().format("YYYY-MM-DD") + " 00:00,1,\"Unknown\"" + "\n" +
+          "T1,Other end," + midnightThisMorning().format("YYYY-MM-DD") + " 01:00,-1,\"Unknown\""
+        cy
+          .asABorderForcePlanningOfficer()
+          .navigateHome()
+          .navigateToMenuItem('T1')
+          .selectCurrentTab()
+          .choose24Hours()
+          .openAdjustmentDialogueForHour('add', 0)
+          .adjustMinutes(60)
+          .adjustStaffBy(1)
+          .checkStaffMovementsOnDesksAndQueuesTabAre(1)
+          .checkStaffAvailableOnDesksAndQueuesTabAre(1)
+          .findAndClick('Staff Movements')
+          .checkStaffNumbersOnMovementsTabAre(1)
+          .checkUserNameOnMovementsTab(1, "Unknown")
+          .get('#export-day-staff-movements')
+          .then((el) => {
+            const href = el.prop('href')
+            cy.request({
+              method: 'GET',
+              url: href,
+            }).then((resp) => {
+              expect(resp.body).to.equal(movementsCSV, "Staff movements Export CSV is wrong.");
+            })
           })
-        })
-        .removeXMovements(1);
-    });
+          .removeXMovements(1);
+      });
 
     it("Should update the available staff when 1 staff member is removed for 1 hour", () => {
-      cy
-        .asABorderForcePlanningOfficer()
+      cy.asABorderForcePlanningOfficer()
         .request('/')
         .then((response) => {
           const $html = Cypress.$(response.body)
