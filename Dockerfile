@@ -13,11 +13,11 @@ RUN ["chmod", "u+x,g+x", "/4/opt/docker/bin/drt"]
 
 FROM openjdk:11-jre-slim-buster as mainstage
 USER root
-RUN id -u demiourgos728 1>/dev/null 2>&1 || (( getent group 0 1>/dev/null 2>&1 || ( type groupadd 1>/dev/null 2>&1 && groupadd -g 0 root || addgroup -g 0 -S root )) && ( type useradd 1>/dev/null 2>&1 && useradd --system --create-home --uid 1001 --gid 0 demiourgos728 || adduser -S -u 1001 -G root demiourgos728 ))
+RUN id -u drt 1>/dev/null 2>&1 || (( getent group 0 1>/dev/null 2>&1 || ( type groupadd 1>/dev/null 2>&1 && groupadd -g 0 root || addgroup -g 0 -S root )) && ( type useradd 1>/dev/null 2>&1 && useradd --system --create-home --uid 1001 --gid 0 drt || adduser -S -u 1001 -G root drt ))
 WORKDIR /opt/docker
-COPY --from=stage0 --chown=demiourgos728:root /1/opt/docker /opt/docker
-COPY --from=stage0 --chown=demiourgos728:root /2/opt/docker /opt/docker
-COPY --from=stage0 --chown=demiourgos728:root /4/opt/docker /opt/docker
+COPY --from=stage0 --chown=drt:root /1/opt/docker /opt/docker
+COPY --from=stage0 --chown=drt:root /2/opt/docker /opt/docker
+COPY --from=stage0 --chown=drt:root /4/opt/docker /opt/docker
 
 RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1001 /var/run/drt
