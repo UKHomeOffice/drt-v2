@@ -1,3 +1,5 @@
+export {};
+
 declare global {
   namespace Cypress {
     interface Chainable {
@@ -5,7 +7,7 @@ declare global {
 
       addManifest(manifest: object): Chainable<Element>;
 
-      addShiftForToday(): Chainable<Element>;
+      addShiftForToday(csrfParam: string): Chainable<Element>;
 
       adjustMinutes(minutes: number): Chainable<Element>;
 
@@ -51,7 +53,7 @@ declare global {
 
       deleteData(): Chainable<Element>;
 
-      downloadCsv(type: string, year: number, month: number, day: number): Chainable<Response>;
+      downloadCsv(type: string, year: number, month: number, day: number): Chainable<Response<any>>;
 
       findAndClick(thing: string): Chainable<Element>;
 
@@ -65,9 +67,9 @@ declare global {
 
       removeXMovements(count: number): Chainable<Element>;
 
-      resetShifts(): Chainable<Element>;
+      resetShifts(csrfToken: string): Chainable<Element>;
 
-      saveShifts(shifts: object): Chainable<Element>;
+      saveShifts(shifts: object, csrfToken: string): Chainable<Element>;
 
       selectAdditionalReason(reason: string): Chainable<Element>;
 

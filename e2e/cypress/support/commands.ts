@@ -1,7 +1,7 @@
-import { todayAtUtcString as todayAtString } from './time-helpers'
+import {todayAtUtcString as todayAtString} from './time-helpers'
 
 Cypress.Commands.add('setRoles', (roles = []) => {
-  cy.request("POST", '/test/mock-roles', { "roles": roles });
+  cy.request("POST", '/test/mock-roles', {"roles": roles});
 });
 
 const portRole = ["test"]
@@ -42,41 +42,41 @@ export const eeaCellSelector = '.eeadesk-queue-pax';
 export const nonEeaCellSelector = '.noneeadesk-queue-pax';
 
 Cypress.Commands.add('asABorderForceOfficer', () => {
-  cy.request("POST", '/test/mock-roles', { "roles": portRole.concat(bfRoles) });
+  cy.request("POST", '/test/mock-roles', {"roles": portRole.concat(bfRoles)});
 });
 
 Cypress.Commands.add('asABorderForceReadOnlyOfficer', () => {
-  cy.request("POST", '/test/mock-roles', { "roles": portRole.concat(bfReadOnlyRoles) });
+  cy.request("POST", '/test/mock-roles', {"roles": portRole.concat(bfReadOnlyRoles)});
 });
 
 Cypress.Commands.add('asATestPortUser', () => {
-  cy.request("POST", '/test/mock-roles', { "roles": portRole });
+  cy.request("POST", '/test/mock-roles', {"roles": portRole});
 });
 
 Cypress.Commands.add('asAnLHRPortUser', () => {
-  cy.request("POST", '/test/mock-roles', { "roles": lhrPortRole });
+  cy.request("POST", '/test/mock-roles', {"roles": lhrPortRole});
 });
 
 Cypress.Commands.add('asANonTestPortUser', () => {
-  cy.request("POST", '/test/mock-roles', { "roles": [] });
+  cy.request("POST", '/test/mock-roles', {"roles": []});
 });
 
 Cypress.Commands.add('asABorderForcePlanningOfficer', () => {
   const roles = portRole.concat(bfRoles).concat(bfPlanningRoles);
-  cy.request("POST", '/test/mock-roles', { "roles": roles });
+  cy.request("POST", '/test/mock-roles', {"roles": roles});
 });
 
 Cypress.Commands.add('asADrtSuperUser', () => {
-  cy.request("POST", '/test/mock-roles', { "roles": superUserRoles.concat(bfRoles).concat(portRole) });
+  cy.request("POST", '/test/mock-roles', {"roles": superUserRoles.concat(bfRoles).concat(portRole)});
 });
 
 Cypress.Commands.add('asAPortOperator', () => {
-  cy.request("POST", '/test/mock-roles', { "roles": portOperatorRoles.concat(portRole) });
+  cy.request("POST", '/test/mock-roles', {"roles": portOperatorRoles.concat(portRole)});
 });
 
 Cypress.Commands.add('asABorderForceOfficerWithRoles', (roles = []) => {
   const withRoles = roles.concat(bfRoles).concat(portRole);
-  cy.request("POST", '/test/mock-roles', { "roles": withRoles })
+  cy.request("POST", '/test/mock-roles', {"roles": withRoles})
 });
 
 Cypress.Commands.add('addFlight', (params) => {
@@ -112,8 +112,15 @@ Cypress.Commands.add('deleteData', () => {
   cy.request("DELETE", '/test/data')
 });
 
-Cypress.Commands.add('saveShifts', (shiftsJson) => {
-  cy.request("POST", "/data/staff", shiftsJson)
+Cypress.Commands.add('saveShifts', (shiftsJson, csrfToken) => {
+  cy.request({
+    method: "POST",
+    url: "/data/staff",
+    body: shiftsJson,
+    headers: {
+      "Csrf-Token": csrfToken,
+    }
+  })
 });
 
 Cypress.Commands.add('navigateHome', () => {
@@ -125,7 +132,7 @@ Cypress.Commands.add('navigateToMenuItem', (itemName) => {
     .get('.main-menu-content > :nth-child(1)')
     .children()
     .contains(itemName)
-    .click(5, 5, { force: true })
+    .click(5, 5, {force: true})
 });
 
 Cypress.Commands.add('selectCurrentTab', () => {
@@ -133,7 +140,7 @@ Cypress.Commands.add('selectCurrentTab', () => {
 })
 
 Cypress.Commands.add('findAndClick', (toFind) => {
-  cy.contains(toFind).click({ force: true })
+  cy.contains(toFind).click({force: true})
 });
 
 Cypress.Commands.add('choose24Hours', () => {
