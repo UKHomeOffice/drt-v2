@@ -8,7 +8,7 @@ import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared._
 import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
-import org.scalajs.dom.FormData
+import org.scalajs.dom.{Element, File, FormData}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
@@ -184,7 +184,7 @@ object Actions {
 
   case class FileUploadInProgress() extends Action
 
-  case class ForecastFileUploadAction(portCode: String, formData: FormData) extends Action
+  case class ForecastFileUploadAction(portCode: String, file: File) extends Action
 
   case class ResetFileUpload() extends Action
 
