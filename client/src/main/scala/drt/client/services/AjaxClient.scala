@@ -5,6 +5,7 @@ import boopickle.Default._
 import drt.client.SPAMain
 import drt.shared._
 import org.scalajs.dom
+import org.scalajs.dom.{document, html}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.nio.ByteBuffer
@@ -26,7 +27,8 @@ object AjaxClient extends autowire.Client[ByteBuffer, Pickler, Pickler] {
       url = SPAMain.absoluteUrl("api/" + req.path.mkString("/")),
       data = Pickle.intoBytes(req.args),
       responseType = "arraybuffer",
-      headers = Map("Content-Type" -> "application/octet-stream")
+      headers = Map("Content-Type" -> "application/octet-stream",
+        "Csrf-Token" -> document.getElementById("csrfToken").asInstanceOf[html.Input].value)
     ).map(r => TypedArrayBuffer.wrap(r.response.asInstanceOf[ArrayBuffer]))
   }
 

@@ -8,6 +8,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent, _}
 import org.scalajs.dom
+import org.scalajs.dom.{Element, File, HTMLInputElement}
 import org.scalajs.dom.html.{Div, Heading}
 import org.scalajs.dom.raw.{FormData, HTMLFormElement}
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -27,12 +28,13 @@ object ForecastFileUploadPage {
     <.div(^.className := "fileUpload",
       heading,
       <.br(),
-      <.form(<.input(^.`type` := "file", ^.name := "filename"),
+      <.form(<.input(^.`type` := "file", ^.id := "forecast-file"),
         <.br(),
-        <.input(^.`type` := "button", ^.value := "Upload", ^.onClick ==> onSubmit(portCode)))
+        <.input(^.`type` := "button", ^.value := "Upload", ^.onClick ==> onSubmit(portCode))
+      )
     )
 
-  val uploadingInProgress: String => VdomTagOf[Div] = { message =>
+  private val uploadingInProgress: String => VdomTagOf[Div] = { message =>
     <.div(
       heading,
       <.br(),
@@ -42,7 +44,7 @@ object ForecastFileUploadPage {
     )
   }
 
-  val uploadResult: String => VdomTagOf[Div] = (message: String) =>
+  private val uploadResult: String => VdomTagOf[Div] = (message: String) =>
     <.div(
       heading,
       <.br(),
@@ -87,10 +89,11 @@ object ForecastFileUploadPage {
   def onSubmit(portCode: String)(e: ReactEventFromInput): Callback = {
     SPACircuit.dispatch(FileUploadInProgress())
     e.preventDefaultCB >> Callback {
-      val tFormElement = e.target.parentNode.domCast[HTMLFormElement]
-      val tFormData: FormData = new dom.FormData(tFormElement)
-      SPACircuit.dispatch(ForecastFileUploadAction(portCode, tFormData))
+      val file: File = dom.document
+        .getElementById("forecast-file")
+        .asInstanceOf[dom.HTMLInputElement]
+        .files(0)
+      SPACircuit.dispatch(ForecastFileUploadAction(portCode, file))
     }
   }
-
 }

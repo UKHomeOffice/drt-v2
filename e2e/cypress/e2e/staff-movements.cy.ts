@@ -14,10 +14,30 @@ describe('Staff movements', () => {
   const shifts = (numberOfStaff): object => {
     return {
       "shifts": [
-        { "port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().toISOString() },
-        { "port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().add('minute', 15).toISOString() },
-        { "port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().add('minute', 30).toISOString() },
-        { "port_code": "test", "terminal": "T1", "staff": String(numberOfStaff), "shift_start": midnightThisMorning().add('minute', 45).toISOString() }
+        {
+          "port_code": "test",
+          "terminal": "T1",
+          "staff": String(numberOfStaff),
+          "shift_start": midnightThisMorning().toISOString()
+        },
+        {
+          "port_code": "test",
+          "terminal": "T1",
+          "staff": String(numberOfStaff),
+          "shift_start": midnightThisMorning().add('minute', 15).toISOString()
+        },
+        {
+          "port_code": "test",
+          "terminal": "T1",
+          "staff": String(numberOfStaff),
+          "shift_start": midnightThisMorning().add('minute', 30).toISOString()
+        },
+        {
+          "port_code": "test",
+          "terminal": "T1",
+          "staff": String(numberOfStaff),
+          "shift_start": midnightThisMorning().add('minute', 45).toISOString()
+        }
       ]
     };
   }
@@ -56,22 +76,26 @@ describe('Staff movements', () => {
       });
 
     it("Should update the available staff when 1 staff member is removed for 1 hour", () => {
-      cy
-        .asABorderForcePlanningOfficer()
-        .saveShifts(shifts(2))
-        .navigateHome()
-        .navigateToMenuItem('T1')
-        .selectCurrentTab()
-        .choose24Hours()
-        .openAdjustmentDialogueForHour('remove', 0)
-        .adjustMinutes(60)
-        .adjustStaffBy(1)
-        .checkStaffMovementsOnDesksAndQueuesTabAre(-1)
-        .checkStaffAvailableOnDesksAndQueuesTabAre(1)
-        .findAndClick('Staff Movements')
-        .checkStaffNumbersOnMovementsTabAre(1)
-        .checkUserNameOnMovementsTab(1, "Unknown")
-        .removeXMovements(1);
+      cy.asABorderForcePlanningOfficer()
+        .request('/')
+        .then((response) => {
+          const $html = Cypress.$(response.body)
+          const csrfToken: any = $html.filter('input:hidden[name="csrfToken"]').val()
+          cy.saveShifts(shifts(2), csrfToken)
+            .navigateHome()
+            .navigateToMenuItem('T1')
+            .selectCurrentTab()
+            .choose24Hours()
+            .openAdjustmentDialogueForHour('remove', 0)
+            .adjustMinutes(60)
+            .adjustStaffBy(1)
+            .checkStaffMovementsOnDesksAndQueuesTabAre(-1)
+            .checkStaffAvailableOnDesksAndQueuesTabAre(1)
+            .findAndClick('Staff Movements')
+            .checkStaffNumbersOnMovementsTabAre(1)
+            .checkUserNameOnMovementsTab(1, "Unknown")
+            .removeXMovements(1);
+        })
     });
 
     it("Should update the available staff when 2 staff members are added for 1 hour, and record the reason", () => {
@@ -161,7 +185,9 @@ Cypress.Commands.add('checkStaffMovementsOnDesksAndQueuesTabAre', (numStaff) => 
 
 Cypress.Commands.add('checkStaffNumbersOnMovementsTabAre', (numStaff) => {
   cy.contains("Staff Movements").click({force: true}).then(() => {
-    [0, 1, 2, 3].map((slot) => { cy.staffOverTheDayAtSlot(slot).contains(numStaff) });
+    [0, 1, 2, 3].map((slot) => {
+      cy.staffOverTheDayAtSlot(slot).contains(numStaff)
+    });
     cy.staffOverTheDayAtSlot(4).contains("0");
   });
 });

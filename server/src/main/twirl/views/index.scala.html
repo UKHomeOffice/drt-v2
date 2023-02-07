@@ -26,9 +26,10 @@
 <body>
     <div id="root">
     </div>
-    <input type="hidden" id="port-code" value="@{port}"/>
-    <input type="hidden" id="ga-code" value="@{googleTrackingCode}"/>
-    <input type="hidden" id="user-id" value="@{userId}"/>
+    <input type="hidden" name="port-code" id="port-code" value="@{port}"/>
+    <input type="hidden" name="ga-code" id="ga-code" value="@{googleTrackingCode}"/>
+    <input type="hidden" name="user-id" id="user-id" value="@{userId}"/>
+    <input type="hidden" name="csrfToken" id="csrfToken" value="@helper.CSRF.getToken.value"/>
 </body>
     @*
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"

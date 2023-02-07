@@ -1,5 +1,4 @@
-
-import { todayAtUtc } from '../support/time-helpers'
+import {todayAtUtc} from '../support/time-helpers'
 
 
 describe('API role access', () => {
@@ -369,18 +368,20 @@ describe('API role access', () => {
     testCases.map(testCase => {
       it("Expects " + (testCase.shouldBeGranted ? "access ALLOWED" : "access DENIED") + " for a " + testCase.method + " request to " + testCase.endpoint + " with roles: [" + testCase.roles.join(", ") + "]", () => {
 
-        cy.setRoles(testCase.roles)
-          .request({
-            method: testCase.method,
-            url: testCase.endpoint,
-            failOnStatusCode: false
-          })
-          .then(resp => {
-            const accessGranted = resp.status != 401
-            expect(accessGranted)
-              .to
-              .eq(testCase.shouldBeGranted, "Role: " + testCase.roles.join(", ") + " has incorrect permissions to " + testCase.method + " on " + testCase.endpoint)
-          });
+        cy.session('access', () => {
+          cy.setRoles(testCase.roles)
+            .request({
+              method: testCase.method,
+              url: testCase.endpoint,
+              failOnStatusCode: false,
+            })
+            .then(resp => {
+              const accessGranted = resp.status != 401
+              expect(accessGranted)
+                .to
+                .eq(testCase.shouldBeGranted, "Role: " + testCase.roles.join(", ") + " has incorrect permissions to " + testCase.method + " on " + testCase.endpoint)
+            })
+        })
       });
     });
   });

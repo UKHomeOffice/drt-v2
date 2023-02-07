@@ -9,10 +9,10 @@
   "author": "UK Home Office",
   "license": "UNLICENSED",
   "devDependencies": {
-    "@types/node": "^18.11.18",
+    "@types/node": "^18.11.19",
     "@typescript-eslint/eslint-plugin": "^5.49.0",
     "@typescript-eslint/parser": "^5.49.0",
-    "cypress": "^12.4.1",
+    "cypress": "^12.5.1",
     "eslint": "^8.32.0",
     "eslint-plugin-cypress": "^2.12.1",
     "ts-loader": "^9.4.2",
