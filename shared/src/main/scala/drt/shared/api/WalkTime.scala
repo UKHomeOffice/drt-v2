@@ -56,12 +56,12 @@ object WalkTimes {
 
   def byTerminal(gateWalkTimes: Seq[WalkTime]): Map[Terminal, Map[String, WalkTime]] = gateWalkTimes
     .groupBy(_.terminal)
-    .map {
-      case (terminal, walkTimes) =>
-        (terminal, walkTimes.groupBy(_.gateOrStand).map {
-          case (gateOrStand, walkTimes) => gateOrStand -> walkTimes.head
-        })
-    }
+    .view
+    .mapValues {
+      _.groupBy(_.gateOrStand).map {
+        case (gateOrStand, walkTimes) => gateOrStand -> walkTimes.head
+      }
+    }.toMap
 
   private def gateStandPatternMatchPair(gateStand: String): (Int, String) = {
     val pattern: Regex = "^[0-9]*[A-Z]$".r

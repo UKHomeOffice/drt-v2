@@ -23,7 +23,6 @@ object BigSummaryBoxes {
     start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
   }
 
-
   def bestTime(f: ApiFlightWithSplits): MillisSinceEpoch = {
     val bestTime = {
       val flightDt = SDate(f.apiFlight.Scheduled)
@@ -75,9 +74,7 @@ object BigSummaryBoxes {
         val g = agg.getOrElse(k, 0d)
         agg.updated(k, v + g)
     }
-    val aggSplitsInts: Map[PaxTypeAndQueue, Int] = aggSplits.map {
-      case (ptq, split) => (ptq, Math.round(split).toInt)
-    }
+    val aggSplitsInts: Map[PaxTypeAndQueue, Int] = aggSplits.view.mapValues(Math.round(_).toInt).toMap
 
     aggSplitsInts
   }

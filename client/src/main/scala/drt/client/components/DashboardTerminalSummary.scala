@@ -69,10 +69,8 @@ object DashboardTerminalSummary {
       groupedFlights.getOrElse(h.millisSinceEpoch, Set()).size,
       groupedCrunchMinutes.getOrElse(h.millisSinceEpoch, List())
         .groupBy(_.queue)
-        .map { case (q, cm) =>
-          (q, cm.map(cm => cm.paxLoad).sum)
-        })
-    )
+        .view.mapValues(q => q.map(cm => cm.paxLoad).sum).toMap
+    ))
   }
 
   def groupFlightsByHour(flights: List[ApiFlightWithSplits], startMin: SDateLike): Seq[(MillisSinceEpoch, Set[ApiFlightWithSplits])] = {
@@ -84,9 +82,9 @@ object DashboardTerminalSummary {
         val hoursSinceStart = ((fws.apiFlight.PcpTime.getOrElse(0L) - startMin.millisSinceEpoch) / hourInMillis).toInt
         startMin.addHours(hoursSinceStart).millisSinceEpoch
       })
-      .map {
-        case (time, flights) => (time, flights.toSet)
-      }.toList.sortBy(_._1)
+      .view.mapValues(_.toSet)
+      .toList
+      .sortBy(_._1)
   }
 
   def groupCrunchMinutesByHour(cms: List[CrunchMinute], startMin: SDateLike): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
@@ -226,9 +224,7 @@ object DashboardTerminalSummary {
     }
     .flatMap(h => h.toList)
     .groupBy { case (queue, _) => queue }
-    .map { case (queue, queueTotalsByQ) =>
-      (queue, queueTotalsByQ.map { case (_, queuePax) => Math.round(queuePax) }.sum)
-    }
+    .view.mapValues(_.map { case (_, queuePax) => Math.round(queuePax) }.sum).toMap
 
   def apply(props: Props): Unmounted[Props, Unit, Unit] = component(props)
 }
