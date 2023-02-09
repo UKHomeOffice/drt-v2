@@ -59,13 +59,13 @@ object PcpArrival {
       }
   }
 
-  private def roundTimesToNearestMinute(walkTimes: Map[(String, Terminal), MillisSinceEpoch]) = {
+  private def roundTimesToNearestMinute(walkTimes: Map[(String, Terminal), MillisSinceEpoch]): Map[(String, Terminal), MillisSinceEpoch] = {
     /*
     times must be rounded to the nearest minute because
     a) any more precision than that is nonsense
     b) the client operates in minutes and stitches things together on minute boundary.
      */
-    walkTimes.mapValues(timeToNearestMinute)
+    walkTimes.view.mapValues(timeToNearestMinute).toMap
   }
 
   type GateOrStand = String

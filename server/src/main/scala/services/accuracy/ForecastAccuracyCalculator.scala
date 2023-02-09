@@ -39,9 +39,9 @@ object ForecastAccuracyCalculator {
               .groupBy {
                 case (_, terminal, _) => terminal
               }
-              .mapValues(dta => SortedMap[Int, Option[Double]]() ++ dta.map {
+              .view.mapValues(dta => SortedMap[Int, Option[Double]]() ++ dta.map {
                 case (daysAgo, _, accuracy) => (daysAgo, accuracy)
-              })
+              }).toMap
             ForecastAccuracy(dateToCalculate, accuraciesByTerminal)
           }
       }

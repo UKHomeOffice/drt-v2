@@ -21,7 +21,7 @@ import java.util.zip.{ZipEntry, ZipInputStream}
 import scala.collection.immutable.List
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
-import scala.jdk.CollectionConverters.iterableAsScalaIterableConverter
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.util.{Failure, Success, Try}
 
 case class AclFeed(ftpServer: String, username: String, path: String, portCode: PortCode, terminalMapping: Terminal => Terminal) {

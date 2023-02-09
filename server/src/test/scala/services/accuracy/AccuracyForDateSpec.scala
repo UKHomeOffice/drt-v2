@@ -22,7 +22,7 @@ class AccuracyForDateSpec extends CrunchTestLike {
       val forecast = 11000
       val actual = 10000
       "Then I should get 10%" >> {
-        accuracy(forecast, actual).mapValues(_.map(_.toInt)) === Map(T1 -> Option(10))
+        accuracy(forecast, actual).view.mapValues(_.map(_.toInt)).toMap === Map(T1 -> Option(10))
       }
     }
     "When forecast is 11,000 and actual is 0" >> {

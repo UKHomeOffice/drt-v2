@@ -19,7 +19,8 @@ import uk.gov.homeoffice.drt.ports.Queues.{Queue, displayName}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import scala.collection.immutable
-import scala.scalajs.js.JSConverters.JSRichGenTraversableOnce
+import scala.scalajs.js.JSConverters.JSRichIterableOnce
+
 
 object SimulationChartComponent extends ScalaCssReactImplicits {
 

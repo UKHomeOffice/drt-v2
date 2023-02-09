@@ -49,5 +49,5 @@ object Forecast {
         ForecastTimeSlot(millis, available, fixedPoints + deskStaff)
       }
       .groupBy(forecastTimeSlot => SDate(forecastTimeSlot.startMillis).getLocalLastMidnight.millisSinceEpoch)
-      .mapValues(_.toSeq)
+      .view.mapValues(_.toSeq).toMap
 }

@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration._
 
 
@@ -65,7 +65,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
               airportConfig = defaultAirportConfig.copy(
                 minMaxDesksByTerminalQueue24Hrs = minMaxDesks,
                 terminalProcessingTimes = procTimes,
-                queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
+                queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap),
                 minutesToCrunch = 120
               )))
 

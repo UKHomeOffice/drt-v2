@@ -32,7 +32,7 @@ object ForecastAccuracy {
           SortedMap[Int, Option[Double]]() ++ accuracies.map {
             case (dStr, acc) => Integer.parseInt(dStr) -> acc
           }
-      }
+      }.toMap
     )
   )
 }

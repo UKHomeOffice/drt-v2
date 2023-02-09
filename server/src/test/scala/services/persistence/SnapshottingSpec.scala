@@ -14,11 +14,11 @@ class TestSnapshottingActor(probe: ActorRef, snapshotMessage: GeneratedMessage, 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
-    case _ => Unit
+    case _ => ()
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
-    case _ => Unit
+    case _ => ()
   }
 
   override def stateToMessage: GeneratedMessage = snapshotMessage

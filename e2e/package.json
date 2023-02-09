@@ -4,12 +4,7 @@
   "description": "End to end tests for DRT V2",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc -w",
-    "lint": "eslint . --ext .ts",
-    "test": "npm run build && npx cypress run",
-    "test-open": "npx cypress open",
-    "test-browser": "npm-run-all -p watch test-open"
+    "cypress:open": "cypress open"
   },
   "author": "UK Home Office",
   "license": "UNLICENSED",

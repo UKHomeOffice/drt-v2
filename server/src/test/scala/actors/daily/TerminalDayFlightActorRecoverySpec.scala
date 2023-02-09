@@ -20,18 +20,18 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 object PersistMessageForIdActor {
-  def props(idToPersist: String) = Props(new PersistMessageForIdActor(idToPersist))
+  def props(idToPersist: String): Props = Props(new PersistMessageForIdActor(idToPersist))
 }
 
 class PersistMessageForIdActor(idToPersist: String) extends PersistentActor {
   override def receiveRecover: Receive = {
-    case _ => Unit
+    case _ => ()
   }
 
   override def receiveCommand: Receive = {
     case message: GeneratedMessage =>
       val replyTo = sender()
-      persist(message)((message) => {
+      persist(message)(message => {
         context.system.eventStream.publish(message)
         replyTo ! Ack
       })
@@ -70,18 +70,18 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
         val persistingActor = system.actorOf(PersistMessageForIdActor.props(persistenceId))
         val futureAck1 = persistingActor.ask(beforeRecoveryPointMessage)
         val futureAck2 = persistingActor.ask(afterRecoveryPointMessage)
-        Await.ready(Future.sequence(List(futureAck1, futureAck2)), 1 second)
+        Await.ready(Future.sequence(List(futureAck1, futureAck2)), 1.second)
 
         val terminalDayFlightActorForPointInTime = actorForTerminalAndDatePit(terminal, recoveryPit.toUtcDate, recoveryPit)
 
-        val state = Await.result(terminalDayFlightActorForPointInTime.ask(GetState).mapTo[FlightsWithSplits], 1 second)
+        val state = Await.result(terminalDayFlightActorForPointInTime.ask(GetState).mapTo[FlightsWithSplits], 1.second)
 
-        state.flights.keys must (contain((fws1.unique)))
-        state.flights.keys must (not(contain(fws2.unique)))
+        state.flights.keys must contain(fws1.unique)
+        state.flights.keys must not(contain(fws2.unique))
       }
     }
 
-    val cutOffThreshold = 1 second
+    val cutOffThreshold = 1.second
 
     def actorForTerminalAndDate(terminal: Terminal, date: UtcDate): ActorRef = {
       system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), cutOffThreshold))
@@ -123,14 +123,14 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
         val futureAck1 = persistingActor.ask(onDayMessageWithFlight)
         val futureAck2 = persistingActor.ask(onDayMessageWithDeletion)
         val futureAck3 = persistingActor.ask(nextDayMessageWithDeletion)
-        Await.ready(Future.sequence(List(futureAck1, futureAck2, futureAck3)), 1 second)
+        Await.ready(Future.sequence(List(futureAck1, futureAck2, futureAck3)), 1.second)
 
         val terminalDayFlightActor = actorForTerminalAndDate(terminal, dateInQuestion.toUtcDate)
 
-        val state = Await.result(terminalDayFlightActor.ask(GetState).mapTo[FlightsWithSplits], 1 second)
+        val state = Await.result(terminalDayFlightActor.ask(GetState).mapTo[FlightsWithSplits], 1.second)
 
-        state.flights.keys must (contain((flightWithRemovalMessageOutsideThreshold.unique)))
-        state.flights.keys must (not(contain(flightWithRemovalMessageOnDay.unique)))
+        state.flights.keys must contain(flightWithRemovalMessageOutsideThreshold.unique)
+        state.flights.keys must not(contain(flightWithRemovalMessageOnDay.unique))
       }
     }
   }

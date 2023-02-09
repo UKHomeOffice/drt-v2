@@ -99,8 +99,10 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
       case (terminal, maxDesksProvider) =>
         val terminalPassengers = terminalPassengersByQueue(terminal, minuteMillis, loads)
         val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
-        terminalDescRecs(terminal).workToDeskRecs(terminal, minuteMillis, terminalPassengers, terminalWork, maxDesksProvider)
-    }
+        terminalDescRecs(terminal)
+          .workToDeskRecs(terminal, minuteMillis, terminalPassengers, terminalWork, maxDesksProvider)
+          .map(_.toList)
+    }.toList
 
     Future.sequence(terminalQueueDeskRecs).map { deskRecs =>
       DeskRecMinutes(deskRecs.toSeq.flatten)

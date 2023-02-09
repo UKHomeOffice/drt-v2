@@ -67,8 +67,12 @@ class NeboArrivalActorSpec extends CrunchTestLike with ImplicitSender with Befor
     val redListPassengers = RedListPassengers("abc", PortCode("ab"), SDate("2017-10-25T00:00:00Z"), urns)
     val neboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))
 
+    val probe = TestProbe("red-list")
+    probe.watch(neboArrivalActor)
     //sending the red list passengers to persist which test serialisation
     Await.ready(neboArrivalActor.ask(redListPassengers), 1.second)
+    neboArrivalActor ! PoisonPill
+    probe.expectTerminated(neboArrivalActor)
 
     //using new actor to get actor state and test deSerialisation
     val newNeboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => SDate("2017-10-25T00:00:00Z")))

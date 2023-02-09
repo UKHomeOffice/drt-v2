@@ -60,7 +60,7 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
         case (queueRecsSoFar, queue) =>
           log.debug(s"Optimising $queue")
           val queuePassengers = passengersByQueue(queue)
-          val queueDeskAllocations = queueRecsSoFar.mapValues { case (desks, _, _) => desks.toList }
+          val queueDeskAllocations = queueRecsSoFar.view.mapValues { case (desks, _, _) => desks.toList }.toMap
 
           for {
             (minDesks, processorsProvider) <- deskLimitsProvider.deskLimitsForMinutes(minuteMillis, queue, queueDeskAllocations)

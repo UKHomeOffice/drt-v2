@@ -11,16 +11,15 @@ import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy}
 import akka.util.Timeout
-import drt.server.feeds.{Feed, ManifestsFeedResponse}
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
+import drt.server.feeds.{Feed, ManifestsFeedResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookup
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchSystem
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter
@@ -30,7 +29,7 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.time.MilliTimes
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -178,7 +177,9 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
           if (lastSuccess < twelveHoursAgo) {
             val minutesToNextCheck = (Math.random() * 90).toInt.minutes
             log.info(s"Last ACL check was more than 12 hours ago. Will check in ${minutesToNextCheck.toMinutes} minutes")
-            system.scheduler.scheduleOnce(minutesToNextCheck, () => fcstBaseActor ! AdhocCheck)
+            system.scheduler.scheduleOnce(minutesToNextCheck) {
+              fcstBaseActor ! AdhocCheck
+            }
           }
         }
 

@@ -36,14 +36,14 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
   val terminalSplits: Splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage)
 
   val airportConfig: AirportConfig = defaultAirportConfig.copy(
-    queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
+    queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap),
     useTimePredictions = true,
   )
   val defaultWalkTime = 300000L
   val pcpCalc: Arrival => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)((_, _) => defaultWalkTime)(RedListUpdates.empty)
 
   val setPcpTime: ArrivalsDiff => Future[ArrivalsDiff] =
-    diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.mapValues(arrival => arrival.copy(PcpTime = Option(pcpCalc(arrival).millisSinceEpoch)))))
+    diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpCalc(arrival).millisSinceEpoch))).to(SortedMap)))
 
   def withPcpTime(arrival: Arrival): Arrival =
     arrival.copy(PcpTime = Option(pcpCalc(arrival).millisSinceEpoch))

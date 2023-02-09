@@ -66,15 +66,15 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
       log.info(s"Restoring queue to ${requests.size} days")
-      state ++= crunchRequestsFromMessages(requests).to[mutable.SortedSet]
+      state ++= crunchRequestsFromMessages(requests)
 
     case DaysMessage(days) =>
       log.info(s"Restoring queue to ${days.size} days")
-      state ++= days.map(crunchRequestFromMillis).to[mutable.SortedSet]
+      state ++= days.map(crunchRequestFromMillis)
   }
 
   override def stateToMessage: GeneratedMessage =
-    CrunchRequestsMessage(state.map(crunchRequestToMessage).toList)
+    CrunchRequestsMessage(state.toList.map(crunchRequestToMessage))
 
   override def receiveCommand: Receive = {
     case GetState =>

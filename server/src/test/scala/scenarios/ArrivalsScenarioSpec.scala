@@ -101,7 +101,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
             paxTypeAndQueue.queueType == Queues.Transfer
 
         }
-        .mapValues(m => (m * 60).toInt),
+        .view.mapValues(m => (m * 60).toInt).toMap,
       airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
         case (q, (min, _)) => q -> min.max
       },

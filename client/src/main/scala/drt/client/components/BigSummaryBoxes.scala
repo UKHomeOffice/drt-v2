@@ -8,7 +8,7 @@ import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
-import org.scalajs.dom.raw.HTMLElement
+import org.scalajs.dom.HTMLElement
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -22,7 +22,6 @@ object BigSummaryBoxes {
     val bt: Long = bestTime(f)
     start.millisSinceEpoch <= bt && bt <= end.millisSinceEpoch
   }
-
 
   def bestTime(f: ApiFlightWithSplits): MillisSinceEpoch = {
     val bestTime = {
@@ -75,7 +74,7 @@ object BigSummaryBoxes {
         val g = agg.getOrElse(k, 0d)
         agg.updated(k, v + g)
     }
-    val aggSplitsInts: Map[PaxTypeAndQueue, Int] = aggSplits.mapValues(Math.round(_).toInt)
+    val aggSplitsInts: Map[PaxTypeAndQueue, Int] = aggSplits.view.mapValues(Math.round(_).toInt).toMap
 
     aggSplitsInts
   }

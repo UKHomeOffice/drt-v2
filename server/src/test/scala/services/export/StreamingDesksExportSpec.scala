@@ -81,8 +81,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
 
       val expected =
-        s"""|2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
+        s"""|2020-11-19,00:00,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -104,8 +104,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
 
       val expected =
-        s"""|2020-11-19,00:00,${Math.round(pax)},$depWait,$eeaDeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$nonEEADeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$depWait,$eeaDeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$nonEEADeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
+        s"""|2020-11-19,00:00,$pax,$depWait,$eeaDeskDep,$actWait,$actDesk,$pax,$depWait,$nonEEADeskDep,$actWait,$actDesk,$pax,$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,$pax,$depWait,$eeaDeskDep,$actWait,$actDesk,$pax,$depWait,$nonEEADeskDep,$actWait,$actDesk,$pax,$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -129,8 +129,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val expected =
         s"""|Date,,EEA,EEA,EEA,EEA,EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,e-Gates,e-Gates,e-Gates,e-Gates,e-Gates,Misc,Moves,PCP Staff,PCP Staff
             |,Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Staff req,Act. wait time,Act. desks,Staff req,Staff movements,Avail,Req
-            |2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
+            |2020-11-19,00:00,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -154,8 +154,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val expected =
         s"""|Date,,EEA,EEA,EEA,EEA,EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,e-Gates,e-Gates,e-Gates,e-Gates,e-Gates,Misc,Moves,PCP Staff,PCP Staff
             |,Start,Pax,Wait,Desks dep,Act. wait time,Act. desks,Pax,Wait,Desks dep,Act. wait time,Act. desks,Pax,Wait,Staff dep,Act. wait time,Act. desks,Staff req,Staff movements,Avail,Req
-            |2020-11-19,00:00,${Math.round(pax)},$depWait,$eeaDeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$nonEEADeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$depWait,$eeaDeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$nonEEADeskDep,$actWait,$actDesk,${Math.round(pax)},$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
+            |2020-11-19,00:00,$pax,$depWait,$eeaDeskDep,$actWait,$actDesk,$pax,$depWait,$nonEEADeskDep,$actWait,$actDesk,$pax,$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,$pax,$depWait,$eeaDeskDep,$actWait,$actDesk,$pax,$depWait,$nonEEADeskDep,$actWait,$actDesk,$pax,$depWait,$eGateDep,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -177,8 +177,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
 
       val expected =
-        s"""|2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
+        s"""|2020-11-19,00:00,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,00:15,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
       result === expected
@@ -262,8 +262,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val result = takeCSVLines(dropHeadings(resultStreamToCSV(resultSource)), 2)
 
       val expected =
-        s"""|2020-11-19,00:00,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,0,0,0,12
-            |2020-11-19,00:15,${Math.round(pax)},$waitTime,$eeaDeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$nonEEADeskRec,$actWait,$actDesk,${Math.round(pax)},$waitTime,$eGateRec,$actWait,$actDesk,0,0,0,12"""
+        s"""|2020-11-19,00:00,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,0,0,0,12
+            |2020-11-19,00:15,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,0,0,0,12"""
           .stripMargin
 
       result === expected

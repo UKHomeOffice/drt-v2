@@ -19,7 +19,7 @@ class SimulationParamsSpec extends Specification {
     terminal = terminal,
     date = LocalDate(2020, 3, 27),
     passengerWeighting = 1.0,
-    processingTimes = testConfig.terminalProcessingTimes(terminal).mapValues(_ => 60),
+    processingTimes = testConfig.terminalProcessingTimes(terminal).view.mapValues(_ => 60).toMap,
     minDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
     maxDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
     eGateBanksSizes = IndexedSeq(5, 5, 5),
@@ -33,7 +33,7 @@ class SimulationParamsSpec extends Specification {
 
       val updatedConfig = simulation.applyToAirportConfig(testConfig)
 
-      val expected = testConfig.terminalProcessingTimes(terminal).mapValues(_ => 1)
+      val expected = testConfig.terminalProcessingTimes(terminal).view.mapValues(_ => 1).toMap
 
       updatedConfig.terminalProcessingTimes(terminal) === expected
     }

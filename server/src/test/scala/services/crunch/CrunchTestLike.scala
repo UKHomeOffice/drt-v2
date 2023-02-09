@@ -159,7 +159,7 @@ object TestDefaults {
 
   def airportConfigForSplits(splits: Map[PaxTypeAndQueue, Double]): AirportConfig = {
     val queues = Seq(Queues.EGate, Queues.EeaDesk, Queues.NonEeaDesk)
-    val slas = Map[Queue, Int](Queues.EGate -> 25, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45).filterKeys(queues.contains)
+    val slas = Map[Queue, Int](Queues.EGate -> 25, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45).view.filterKeys(queues.contains).toMap
     val ratios: immutable.Iterable[SplitRatio] = splits.map {
       case (pt, q) => SplitRatio(pt, q)
     }
@@ -184,7 +184,7 @@ object TestDefaults {
       minutesToCrunch = 30,
       defaultWalkTimeMillis = Map(),
       terminalPaxSplits = Map(T1 -> SplitRatios(ratios, SplitSources.TerminalAverage)),
-      terminalProcessingTimes = Map(T1 -> procTimes.filterKeys { case PaxTypeAndQueue(_, q) => queues.contains(q) }),
+      terminalProcessingTimes = Map(T1 -> procTimes.view.filterKeys { case PaxTypeAndQueue(_, q) => queues.contains(q) }.toMap),
       minMaxDesksByTerminalQueue24Hrs = Map(T1 -> queues.map(q => (q, minMax)).toMap),
       eGateBankSizes = Map(T1 -> Iterable(10, 5)),
       timeToChoxMillis = 120000L,
@@ -196,18 +196,18 @@ object TestDefaults {
   }
 
   val setPcpFromSch: ArrivalsDiff => Future[ArrivalsDiff] =
-    diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.mapValues(a => a.copy(PcpTime = Option(SDate(a.Scheduled).millisSinceEpoch)))))
+    diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.view.mapValues(a => a.copy(PcpTime = Option(SDate(a.Scheduled).millisSinceEpoch))).to(SortedMap)))
 
   val setPcpFromBest: ArrivalsDiff => Future[ArrivalsDiff] =
     diff => Future.successful(
-      diff.copy(toUpdate = diff.toUpdate.mapValues { a =>
+      diff.copy(toUpdate = diff.toUpdate.view.mapValues { a =>
         val pcp = if (a.ActualChox.isDefined) SDate(a.ActualChox.get).millisSinceEpoch
         else if (a.EstimatedChox.isDefined) SDate(a.EstimatedChox.get).millisSinceEpoch
         else if (a.Actual.isDefined) SDate(a.Actual.get).millisSinceEpoch
         else if (a.Estimated.isDefined) SDate(a.Estimated.get).millisSinceEpoch
         else SDate(a.Scheduled).millisSinceEpoch
         a.copy(PcpTime = Option(pcp))
-      }
+      }.to(SortedMap)
     ))
 
   def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)

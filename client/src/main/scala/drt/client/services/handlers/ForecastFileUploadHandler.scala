@@ -6,8 +6,8 @@ import drt.client.actions.Actions._
 import drt.client.components.FileUploadState
 import drt.client.logger.log
 import org.scalajs.dom
-import org.scalajs.dom.{FormData, document, html}
 import org.scalajs.dom.ext.AjaxException
+import org.scalajs.dom.{document, html}
 import upickle.default._
 
 import scala.concurrent.{Future, Promise}
@@ -16,7 +16,6 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 case class ResponseMessage(message: String)
 
 object ResponseMessage {
-
   import upickle.default.{macroRW, ReadWriter => RW}
 
   implicit val rw: RW[ResponseMessage] = macroRW
@@ -36,7 +35,7 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
     case FileUploadInProgress() =>
       updated(Ready(FileUploadState(state = "uploadInProgress", message = "File upload in progress")))
 
-    case ForecastFileUploadAction(portCode: String, formData: FormData) =>
+    case ForecastFileUploadAction(portCode, file) =>
       val request = new dom.XMLHttpRequest()
       val promisedRequest = Promise[dom.XMLHttpRequest]()
 
@@ -54,7 +53,7 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
       request.responseType = "text"
       request.timeout = 1000000
       request.withCredentials = false
-      request.send(formData)
+      request.send(file)
 
       val apiCallEffect = Effect(promisedRequest.future.map { res =>
         val rMessage = read[ResponseMessage](res.responseText)
@@ -67,7 +66,6 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
       })
 
       effectOnly(apiCallEffect)
-
   }
 
 

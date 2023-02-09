@@ -1,7 +1,7 @@
 package drt.client.components.mui
 
 import scala.scalajs.js
-import scala.scalajs.js.JSConverters.JSRichGenMap
+import scala.scalajs.js.JSConverters.JSRichMap
 
 @js.native
 trait MuiInputLabelProps extends js.Object {
@@ -13,7 +13,7 @@ trait MuiInputLabelProps extends js.Object {
 object MuiInputLabelProps {
   def apply(shrink: js.UndefOr[Boolean] = js.undefined,
             classes: js.UndefOr[js.Object] = js.undefined
-           ) = {
+           ): MuiInputLabelProps = {
     val o: Map[String, Any] = Seq(
       shrink.toOption.map("shrink" -> _),
       classes.toOption.map("classes" -> _)

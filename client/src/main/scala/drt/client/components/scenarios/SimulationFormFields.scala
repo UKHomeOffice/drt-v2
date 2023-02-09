@@ -69,7 +69,7 @@ object SimulationFormFields {
         case (paxTypeAndQueue: PaxTypeAndQueue, _) =>
           paxTypeAndQueue.queueType == Queues.Transfer
       }
-      .mapValues(m => Option((m * 60).toInt))
+      .view.mapValues(m => Option((m * 60).toInt)).toMap
     val minDesks: Map[Queue, Option[Int]] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
       case (q, (min, _)) => q -> Option(min.max)
     }
@@ -77,7 +77,7 @@ object SimulationFormFields {
       case (q, (_, max)) => q -> Option(max.max)
     }
     val egateBankSizes: IndexedSeq[Option[Int]] = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq.map(Option(_))
-    val slas: Map[Queue, Option[Int]] = airportConfig.slaByQueue.mapValues(Option(_))
+    val slas: Map[Queue, Option[Int]] = airportConfig.slaByQueue.view.mapValues(Option(_)).toMap
     val egateOpeningHours: Seq[Int] = fullDay
 
     SimulationFormFields(

@@ -57,7 +57,7 @@ steps:
 
   - name: build
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
       - sbt --error compile docker:stage
@@ -74,7 +74,7 @@ steps:
 
   - name: unit-test
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
       - sbt --error test
@@ -150,6 +150,7 @@ steps:
         - push
     depends_on:
       - e2e-tests
+      - unit-test
 
 services:
   - name: docker

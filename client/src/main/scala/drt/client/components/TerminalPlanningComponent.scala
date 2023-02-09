@@ -39,8 +39,8 @@ object TerminalPlanningComponent {
 
   val forecastWeeks: Seq[SDateLike] = (-4 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
-  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TerminalForecast")
-    .renderP((_, props) => {
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
+    .renderP { (_, props) =>
       val sortedDays = props.forecastPeriod.forecast.days.toList.sortBy(_._1)
       val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] = Forecast.periodByTimeSlotAcrossDays(props.forecastPeriod.forecast)
 
@@ -142,7 +142,7 @@ object TerminalPlanningComponent {
           )
         )
       )
-    })
+    }
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
     })

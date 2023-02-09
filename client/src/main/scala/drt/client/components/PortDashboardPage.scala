@@ -80,7 +80,7 @@ object PortDashboardPage {
                       val portStateForDashboard = portState.windowWithTerminalFilter(
                         displayPeriod.start,
                         displayPeriod.end,
-                        portConfig.queuesByTerminal.filterKeys(_ == terminalName)
+                        portConfig.queuesByTerminal.view.filterKeys(_ == terminalName).toMap
                       )
                       val scheduledFlightsInTerminal = portStateForDashboard
                         .flights

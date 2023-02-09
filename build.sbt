@@ -56,23 +56,23 @@ lazy val client: Project = (project in file("client"))
     scalacOptions ++= Settings.scalacOptions,
     libraryDependencies ++= Settings.scalajsDependencies.value,
     scalaJSUseMainModuleInitializer := true,
-    mainClass in Compile := Some("drt.client.SPAMain"),
+    Compile / mainClass := Some("drt.client.SPAMain"),
     webpackBundlingMode := BundlingMode.LibraryOnly(),
-    version in webpack := "4.8.1",
+    webpack / version := "5.75.0",
     // by default we do development build, no eliding
     elideOptions := Seq(),
     scalacOptions ++= elideOptions.value,
     jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
-    requireJsDomEnv in Test := true,
-    scalaJSStage in Test := FastOptStage,
+    Test / requireJsDomEnv := true,
+    Test / scalaJSStage := FastOptStage,
     // 'new style js dependencies with scalaBundler'
-    npmDependencies in Compile ++= Settings.clientNpmDependencies,
-    npmDevDependencies in Compile += Settings.clientNpmDevDependencies,
+    Compile / npmDependencies ++= Settings.clientNpmDependencies,
+    Compile / npmDevDependencies += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
     useYarn := true,
     // yes, we want to package JS dependencies
-    skip in packageJSDependencies := false,
+    packageJSDependencies / skip := false,
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.defaultLocal,
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
@@ -80,8 +80,8 @@ lazy val client: Project = (project in file("client"))
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
-    parallelExecution in Test := false,
-    sources in doc in Compile := List()
+    Test / parallelExecution := false,
+    Compile / doc / sources := List()
   )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -102,23 +102,20 @@ lazy val server = (project in file("server"))
     version := Settings.version,
     scalaVersion := Settings.versions.scala,
     scalacOptions ++= Settings.scalacOptions,
-    buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion),
-    buildInfoPackage := "buildinfo",
-    javaOptions in Test += "-Duser.timezone=UTC",
-    javaOptions in Test += "-Xmx1750m",
-    javaOptions in Runtime += "-Duser.timezone=UTC",
+    Test / javaOptions += "-Duser.timezone=UTC",
+    Test / javaOptions += "-Xmx1750m",
+    Runtime / javaOptions += "-Duser.timezone=UTC",
     libraryDependencies ++= Settings.jvmDependencies.value,
     libraryDependencies += specs2 % Test,
     libraryDependencies += guice,
     excludeDependencies += ExclusionRule("org.slf4j", "slf4j-log4j12"),
-    dependencyOverrides += "io.netty" % "netty-all" % "4.0.56.Final",
 
     commands += ReleaseCmd,
     // connect to the client project
     scalaJSProjects := clients,
-    pipelineStages in Assets := Seq(scalaJSPipeline),
+    Assets / pipelineStages := Seq(scalaJSPipeline),
     // triggers scalaJSPipeline when using compile or continuous compilation
-    compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
+    Compile / compile := ((Compile / compile) dependsOn scalaJSPipeline).value,
     testFrameworks += new TestFramework("utest.runner.Framework"),
     resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
     resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
@@ -134,10 +131,10 @@ lazy val server = (project in file("server"))
     publishArtifact in(Compile, packageSrc) := false,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // compress CSS
-    LessKeys.compress in Assets := true,
+    Assets / LessKeys.compress := true,
     TwirlKeys.templateImports += "buildinfo._",
-    parallelExecution in Test := false,
-    sources in doc in Compile := List()
+    Test / parallelExecution := false,
+    Compile / doc / sources := List()
   )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
@@ -151,17 +148,17 @@ lazy val ReleaseCmd = Command.command("release") {
       state
 }
 
-cancelable in Global := true
+Global / cancelable := true
 
 // code generation task
 val conf = ConfigFactory.parseFile(new File("server/src/main/resources/application.conf")).resolve()
 
 lazy val slick = TaskKey[Seq[File]]("gen-tables")
-val tuple = (sourceManaged, dependencyClasspath in Compile, runner in Compile, streams)
+val tuple = (sourceManaged, Compile / dependencyClasspath, Compile / runner, streams)
 
-parallelExecution in Test := false
+Test / parallelExecution := false
 // loads the Play server project at sbt startup
-onLoad in Global := (Command.process("project server", _: State)) compose (onLoad in Global).value
+Global / onLoad := (Command.process("project server", _: State)) compose (Global / onLoad).value
 
 // Docker Plugin§
 enablePlugins(DockerPlugin)

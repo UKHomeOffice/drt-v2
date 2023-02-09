@@ -152,7 +152,7 @@ trait WithSimulations {
         case (_, cm) => cm
       }
       .groupBy(_.queue)
-      .mapValues(_.sortBy(_.minute))
+      .view.mapValues(_.sortBy(_.minute)).toMap
 
   }
 

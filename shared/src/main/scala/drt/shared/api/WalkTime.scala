@@ -1,9 +1,10 @@
 package drt.shared.api
 
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared.TimeUtil._
 import drt.shared.{MinuteAsAdjective, MinuteAsNoun}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default.{macroRW, _}
+
 import scala.collection.immutable.Map
 import scala.util.Try
 import scala.util.matching.Regex
@@ -55,10 +56,12 @@ object WalkTimes {
 
   def byTerminal(gateWalkTimes: Seq[WalkTime]): Map[Terminal, Map[String, WalkTime]] = gateWalkTimes
     .groupBy(_.terminal)
-    .mapValues(
-      _.groupBy(_.gateOrStand)
-        .mapValues(_.head)
-    )
+    .view
+    .mapValues {
+      _.groupBy(_.gateOrStand).map {
+        case (gateOrStand, walkTimes) => gateOrStand -> walkTimes.head
+      }
+    }.toMap
 
   private def gateStandPatternMatchPair(gateStand: String): (Int, String) = {
     val pattern: Regex = "^[0-9]*[A-Z]$".r

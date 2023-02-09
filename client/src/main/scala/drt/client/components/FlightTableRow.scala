@@ -57,7 +57,7 @@ object FlightTableRow {
 
   case class RowState(hasChanged: Boolean)
 
-  val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TableRow")
+  val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
       val codeShares = props.codeShares

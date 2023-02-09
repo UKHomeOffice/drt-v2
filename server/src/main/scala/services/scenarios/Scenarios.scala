@@ -74,7 +74,7 @@ object Scenarios {
 
     class DummyPersistentActor extends Actor {
       override def receive: Receive = {
-        case _ => Unit
+        case _ => ()
       }
     }
 

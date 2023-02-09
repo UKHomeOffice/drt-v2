@@ -205,7 +205,7 @@ object TerminalDesksAndQueues {
         .map {
           case (queue, queueMinutes) => (queue, queueMinutes)
         }
-        .mapValues(_.map(_._2).max)
+        .view.mapValues(_.map(_._2).max).toMap
 
       <.div(
         <.div(^.className := "desks-and-queues-top",

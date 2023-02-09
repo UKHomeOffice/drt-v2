@@ -41,8 +41,8 @@ object TerminalDashboardComponent {
 
   val defaultSlotSize = 120
 
-  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props](displayName = "TerminalDashboard")
-    .render_P(p => {
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalDashboard")
+    .render_P { p =>
       val slotSize = Try {
         p.terminalPageTabLoc.subMode.toInt
       }.getOrElse(defaultSlotSize)
@@ -160,12 +160,11 @@ object TerminalDashboardComponent {
               <.option("3 hours", ^.value := "180")))
         )
       )
-    })
+    }
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(page = s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}")
     })
     .build
-
 
   def cmsForTerminalAndQueue(ps: PortStateLike, queue: Queue, terminal: Terminal): Iterable[CrunchMinute] = ps
     .crunchMinutes

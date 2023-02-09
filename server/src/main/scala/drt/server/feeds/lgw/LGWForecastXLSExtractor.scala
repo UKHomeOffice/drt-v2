@@ -1,16 +1,15 @@
 package drt.server.feeds.lgw
 
 import drt.server.feeds.common.XlsExtractorUtil._
-import org.apache.poi.ss.usermodel.{Cell, DateUtil, Sheet}
+import org.apache.poi.ss.usermodel.{CellType, DateUtil, Sheet}
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.util.TimeZone
-import scala.jdk.CollectionConverters.asScalaIteratorConverter
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.util.{Failure, Success, Try}
 
 
@@ -48,7 +47,7 @@ object LGWForecastXLSExtractor {
     val arrivalRowsTry: Seq[Try[LGWForecastFlightRow]] = for {
       rowNumber <- startRow + 1 to sheet.getLastRowNum
       row = sheet.getRow(rowNumber)
-      if row.getCell(0) != null && row.getCell(1).getCellType != Cell.CELL_TYPE_BLANK
+      if row.getCell(0) != null && row.getCell(1).getCellType != CellType.BLANK
     } yield {
       Try {
         val terminalCell = "N"

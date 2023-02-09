@@ -68,7 +68,7 @@ class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
     "When I ask for deployments I should see 1440 minutes for each queue" >> {
       val expected: PartialFunction[Any, Boolean] = {
         case minutes: MinutesContainer[CrunchMinute, TQM] =>
-          val minuteCountByQueue: Map[Queue, Int] = minutes.minutes.groupBy(_.toMinute.queue).mapValues(_.size)
+          val minuteCountByQueue: Map[Queue, Int] = minutes.minutes.groupBy(_.toMinute.queue).view.mapValues(_.size).toMap
           minuteCountByQueue === Map(EeaDesk -> 1440, NonEeaDesk -> 1440, EGate -> 1440)
       }
       val noLoads = MinutesContainer.empty[PassengersMinute, TQM]

@@ -82,7 +82,7 @@ object TestActors {
     }
 
     override def receiveRecover: Receive = {
-      case _ => Unit
+      case _ => ()
     }
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

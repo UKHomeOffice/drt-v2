@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, Split
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import scala.collection.immutable.List
+import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.duration.DurationInt
 
 case class TestStaffAssignmentService(staff: Int) extends StaffAssignmentService {
@@ -164,7 +164,7 @@ class StaffDeploymentSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(TestConfig(
         airportConfig = defaultAirportConfig.copy(
-          queuesByTerminal = defaultAirportConfig.queuesByTerminal.filterKeys(_ == T1),
+          queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap),
           terminalPaxSplits = Map(T1 -> SplitRatios(
             SplitSources.TerminalAverage,
             SplitRatio(eeaMachineReadableToDesk, 0.5),

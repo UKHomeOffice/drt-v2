@@ -214,7 +214,7 @@ object FlightsApi {
 class ArrivalsRestorer[A <: WithUnique[UniqueArrival] with Updatable[A]] {
   var arrivals: Map[UniqueArrival, A] = Map()
 
-  def removeHashLegacies(removals: Iterable[Int]): Unit = removals.foreach(keyToRemove => arrivals = arrivals.filterKeys(_.legacyUniqueId != keyToRemove))
+  def removeHashLegacies(removals: Iterable[Int]): Unit = removals.foreach(keyToRemove => arrivals = arrivals.filterKeys(_.legacyUniqueId != keyToRemove).toMap)
 
   def applyUpdates(updates: Iterable[A]): Unit = updates.foreach { update =>
     val updated = arrivals.get(update.unique).map(_.update(update)).getOrElse(update)
@@ -234,7 +234,7 @@ object ArrivalsRemoval {
     val legacyKeys = removals.collect { case lk: LegacyUniqueArrival => lk }
     if (legacyKeys.nonEmpty) {
       legacyKeys.foldLeft(minusRemovals) {
-        case (acc, legacyKey) => acc.filterKeys(_.legacyUniqueArrival != legacyKey)
+        case (acc, legacyKey) => acc.filterKeys(_.legacyUniqueArrival != legacyKey).toMap
       }
     } else minusRemovals
   }
