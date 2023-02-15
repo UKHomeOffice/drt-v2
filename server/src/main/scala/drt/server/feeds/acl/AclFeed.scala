@@ -1,8 +1,8 @@
 package drt.server.feeds.acl
 
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.FlightsApi.Flights
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
@@ -18,7 +18,6 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
-import scala.collection.immutable.List
 import scala.collection.mutable.ArrayBuffer
 import scala.concurrent.duration.{DurationLong, FiniteDuration}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
@@ -70,16 +69,6 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
       case Failure(t) =>
         log.error(s"Failed to get flights from ACL: $t")
         ArrivalsFeedFailure("Failed to connect to sftp server")
-    }
-  }
-
-  def fileExists(filePath: String, sftpClient: SFTPClient): Boolean = {
-    log.info(s"Looking for ACL file '$filePath'")
-    Try(sftpClient.ls(filePath)) match {
-      case Success(_) => true
-      case Failure(t) =>
-        log.info(s"ACL file $filePath not found")
-        false
     }
   }
 }
