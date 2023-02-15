@@ -121,9 +121,6 @@ object FlightTable {
       ("Status", Option("status")),
       ("Sch", None),
       ("Est", None),
-      ("Act", None),
-      (estChoxHeading, None),
-      ("Act Chox", None),
       ("Est PCP", Option("arrivals__table__flight-est-pcp")),
       ("Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
 

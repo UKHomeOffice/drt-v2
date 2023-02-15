@@ -13,14 +13,14 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 object FlightTableComponents {
 
-  def maybeLocalTimeWithPopup(dt: Option[MillisSinceEpoch], maybeToolTip: Option[String] = None): TagMod = {
-    dt.map(millis => localTimePopup(millis, maybeToolTip)).getOrElse(<.span())
+  def maybeLocalTimeWithPopup(dtMap: Map[String, Option[MillisSinceEpoch]], maybeToolTip: Option[String] = None): TagMod = {
+    localTimePopup(dtMap.filter(_._2.nonEmpty).map { case (k, v) => k -> v.get }, maybeToolTip)
   }
 
-  def localTimePopup(dt: MillisSinceEpoch, maybeToolTip: Option[String]): VdomElement = {
+  def localTimePopup(dtMap: Map[String, MillisSinceEpoch], maybeToolTip: Option[String]): VdomElement = {
     maybeToolTip match {
-      case None => sdateLocalTimePopup(SDate(dt))
-      case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(SDate(dt)), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
+      case None => sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) })
+      case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) }), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
     }
   }
 
@@ -59,9 +59,12 @@ object FlightTableComponents {
       <.div()
     }
 
-  def sdateLocalTimePopup(sdate: SDateLike): Unmounted[Tippy.Props, Unit, Unit] = {
-    val hhmm = f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d"
-    Tippy.describe(<.span(sdate.toLocalDateTimeString(), ^.display := "inline"), hhmm)
+  def sdateLocalTimePopup(sdateMap: Map[String, SDateLike]): Unmounted[Tippy.Props, Unit, Unit] = {
+    val sdateOpt = if (sdateMap.contains("Est")) sdateMap.get("Est") else sdateMap.headOption.map(_._2)
+    val hhmm = sdateOpt.map(sdate => f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d").getOrElse("")
+    Tippy.describe(<.span(
+      sdateMap.map { case (timeName, sdate) => <.div(f"$timeName%12s -> ${sdate.toLocalDateTimeString()}%16s")
+      }.toVdomArray, ^.display := "inline"), hhmm)
   }
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))

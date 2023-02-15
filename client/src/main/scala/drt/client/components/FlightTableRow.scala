@@ -107,9 +107,10 @@ object FlightTableRow {
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
+      val fightTimes = Map("Est Chox" -> flight.EstimatedChox, "Act" -> flight.Actual, "Act Chox" -> flight.ActualChox)
       val estimatedContent = (flight.Estimated, flight.predictedTouchdown, props.airportConfig.useTimePredictions) match {
-        case (None, Some(value), true) => maybeLocalTimeWithPopup(Option(value), Option("Predicted touchdown based on recent patterns"))
-        case _ => maybeLocalTimeWithPopup(flight.Estimated)
+        case (None, Some(value), true) => maybeLocalTimeWithPopup(Map("Est" -> Option(value)) ++ fightTimes, Option("Predicted touchdown based on recent patterns"))
+        case _ => maybeLocalTimeWithPopup(Map("Est" -> flight.Estimated) ++ fightTimes)
       }
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
@@ -140,17 +141,15 @@ object FlightTableRow {
         },
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
         <.td(^.className := "no-wrap", flight.displayStatus.description),
-        <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
+        <.td(maybeLocalTimeWithPopup(Map("Sch" -> Option(flight.Scheduled)))),
         <.td(estimatedContent),
-        <.td(maybeLocalTimeWithPopup(flight.Actual)),
       )
-      val estCell = List(<.td(maybeLocalTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
-        <.td(maybeLocalTimeWithPopup(flight.ActualChox)),
         <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis), ^.className := "arrivals__table__flight-est-pcp"),
         <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.pcpPaxEstimate)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
       )
-      val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
+
+      val flightFields = firstCells ++ lastCells
 
       val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
 
