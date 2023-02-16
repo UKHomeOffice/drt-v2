@@ -28,6 +28,8 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
 
     val rows = csv.iterator().asScala.toList
 
+    log.info(s"Found ${rows.size} rows in LGW forecast feed")
+
     val flights = rows
       .map { record =>
         Try {

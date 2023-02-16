@@ -7,6 +7,8 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeed
 import drt.shared.FlightsApi.Flights
 
 object LgwForecastFeed {
+  private val log = org.slf4j.LoggerFactory.getLogger(getClass)
+
   def apply()(implicit system: ActorSystem): Source[ArrivalsFeedResponse, ActorRef[Feed.FeedTick]] = {
     val config = system.settings.config
     val username = config.getString("feeds.lgw.forecast.sftp.username")
@@ -20,6 +22,7 @@ object LgwForecastFeed {
 
     val feedSource = Feed.actorRefSource
       .map { _ =>
+        log.info("Tick - Fetching LGW forecast feed")
         csvParser.parseLatestFile() match {
           case Some(flights) =>
             val arrivals = flights.map(_.asArrival)

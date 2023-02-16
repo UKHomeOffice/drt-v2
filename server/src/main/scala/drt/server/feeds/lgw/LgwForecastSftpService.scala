@@ -39,6 +39,8 @@ case class LgwForecastSftpService(ftpServer: String, port: Int, username: String
   }
 
   private def contentForFile(sftp: SFTPClient, fileName: String): Option[String] = {
+    log.info(s"Fetching file '$fileName' from sftp server: $ftpServer:$port")
+
     val outputStream: ByteArrayOutputStream = new ByteArrayOutputStream()
 
     val output: InMemoryDestFile = new InMemoryDestFile {
@@ -54,6 +56,8 @@ case class LgwForecastSftpService(ftpServer: String, port: Int, username: String
   }
 
   private def latestFileName(sftp: SFTPClient): Option[String] = {
+    log.info(s"Fetching latest file name from sftp server: $ftpServer:$port")
+
     sftp
       .ls(pathPrefix).asScala
       .filter(_.getName.contains("-LGWArrForecast.csv"))
