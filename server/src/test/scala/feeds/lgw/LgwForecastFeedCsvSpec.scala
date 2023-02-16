@@ -13,7 +13,7 @@ class LgwForecastFeedCsvSpec extends Specification {
   "I should be able to fetch file contents via sftp" >> {
     skipped("integration test with ssh server")
 
-    val feedService = LgwForecastSftpService("some-host", "some-username", "some-password", "/some/path/prefix")
+    val feedService = LgwForecastSftpService("some-host", 22, "some-username", "some-password", "/some/path/prefix")
 
     val client = feedService.ssh.newSFTPClient
     val feed = LgwForecastFeedCsvParser(feedService.latestContent)

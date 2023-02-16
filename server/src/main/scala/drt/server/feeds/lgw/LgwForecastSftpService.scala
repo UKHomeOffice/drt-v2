@@ -1,7 +1,7 @@
 package drt.server.feeds.lgw
 
 import drt.server.feeds.lgw.LgwForecastSftpService.sshClient
-import net.schmizz.sshj.SSHClient
+import net.schmizz.sshj.{Config, SSHClient}
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
@@ -15,21 +15,21 @@ import scala.util.{Failure, Success, Try}
 
 
 object LgwForecastSftpService {
-  def sshClient(ftpServer: String, username: String, password: String): SSHClient = {
+  def sshClient(ftpServer: String, port: Int, username: String, password: String): SSHClient = {
     val ssh = new SSHClient()
     ssh.loadKnownHosts()
     ssh.addHostKeyVerifier(new PromiscuousVerifier())
-    ssh.connect(ftpServer)
+    ssh.connect(ftpServer, port)
     ssh.authPassword(username, password)
     ssh.setTimeout(0)
     ssh
   }
 }
 
-case class LgwForecastSftpService(ftpServer: String, username: String, password: String, pathPrefix: String) {
+case class LgwForecastSftpService(ftpServer: String, port: Int, username: String, password: String, pathPrefix: String) {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def ssh: SSHClient = sshClient(ftpServer, username, password)
+  def ssh: SSHClient = sshClient(ftpServer, port, username, password)
 
   val latestContent: () => Option[String] = () => {
     val client = ssh.newSFTPClient()

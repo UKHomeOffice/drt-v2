@@ -8,12 +8,14 @@ import drt.shared.FlightsApi.Flights
 
 object LgwForecastFeed {
   def apply()(implicit system: ActorSystem): Source[ArrivalsFeedResponse, ActorRef[Feed.FeedTick]] = {
-    val username = system.settings.config.getString("feeds.lgw.forecast.sftp.username")
-    val password = system.settings.config.getString("feeds.lgw.forecast.sftp.password")
-    val host = system.settings.config.getString("feeds.lgw.forecast.sftp.host")
-    val pathPrefix = system.settings.config.getString("feeds.lgw.forecast.sftp.pathPrefix")
+    val config = system.settings.config
+    val username = config.getString("feeds.lgw.forecast.sftp.username")
+    val password = config.getString("feeds.lgw.forecast.sftp.password")
+    val host = config.getString("feeds.lgw.forecast.sftp.host")
+    val port = config.getInt("feeds.lgw.forecast.sftp.port")
+    val pathPrefix = config.getString("feeds.lgw.forecast.sftp.pathPrefix")
 
-    val sftpService = LgwForecastSftpService(host, username, password, pathPrefix)
+    val sftpService = LgwForecastSftpService(host, port, username, password, pathPrefix)
     val csvParser = LgwForecastFeedCsvParser(sftpService.latestContent)
 
     val feedSource = Feed.actorRefSource
