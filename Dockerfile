@@ -30,6 +30,7 @@ RUN rm -rf /var/cache/apt/*
 RUN mkdir -p /home/drt/.ssh
 RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt/.ssh/known_hosts
 RUN ssh-keyscan -T 60 gateway.heathrow.com >> /home/drt/.ssh/known_hosts
+RUN ssh-keyscan -T 60 galtransfer.gatwickairport.com >> /home/drt/.ssh/known_hosts
 RUN chown -R 1001:1001 /home/drt/.ssh
 
 RUN mkdir -p /var/data

@@ -32,10 +32,17 @@ case class LgwForecastSftpService(ftpServer: String, port: Int, username: String
   def ssh: SSHClient = sshClient(ftpServer, port, username, password)
 
   val latestContent: () => Option[String] = () => {
-    val client = ssh.newSFTPClient()
-    val maybeContent = latestFileName(client).flatMap(file => contentForFile(client, file))
-    client.close()
-    maybeContent
+    Try(ssh.newSFTPClient()) match {
+      case Success(client) =>
+        val maybeContent = latestFileName(client).flatMap(file => contentForFile(client, file))
+        client.close()
+        ssh.close()
+        maybeContent
+      case Failure(t) =>
+        log.error(s"Failed to connect to sftp server: ${t.getMessage}")
+        ssh.close()
+        None
+    }
   }
 
   private def contentForFile(sftp: SFTPClient, fileName: String): Option[String] = {
