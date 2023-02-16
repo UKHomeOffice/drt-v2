@@ -8,7 +8,6 @@ import controllers.Application
 import controllers.model.RedListCounts
 import controllers.model.RedListCountsJsonFormats._
 import drt.server.feeds.StoreFeedImportArrivals
-import drt.server.feeds.lgw.LGWForecastXLSExtractor
 import drt.server.feeds.lhr.forecast.LHRForecastCSVExtractor
 import drt.server.feeds.stn.STNForecastXLSExtractor
 import drt.shared.FlightsApi.Flights
@@ -77,7 +76,6 @@ trait WithImports {
 
           val extractedArrivals = airportConfig.portCode match {
             case PortCode("LHR") => LHRForecastCSVExtractor(filePath)
-            case PortCode("LGW") => LGWForecastXLSExtractor(filePath)
             case PortCode("STN") => STNForecastXLSExtractor(filePath)
             case port => log.info(s"$port -> Not valid port for upload")
               List.empty

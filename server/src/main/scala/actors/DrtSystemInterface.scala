@@ -514,8 +514,9 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       case PortCode("LGW") =>
         val interval = system.settings.config.getString("feeds.lgw.forecast.interval-minutes").toInt.minutes
         val initialDelay = system.settings.config.getString("feeds.lgw.forecast.initial-delay-seconds").toInt.seconds
-        Feed(LgwForecastFeed(interval, initialDelay), 5.seconds, 30.seconds)
-      case PortCode("LHR") | PortCode("STN") => Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
+        Feed(LgwForecastFeed(), initialDelay, interval)
+      case PortCode("LHR") | PortCode("STN") =>
+        Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
       case PortCode("BHX") =>
         Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
       case PortCode("EDI") =>

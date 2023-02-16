@@ -1,15 +1,13 @@
 package drt.server.feeds.lgw
 
-import akka.NotUsed
-import akka.actor.{ActorSystem, Cancellable}
+import akka.actor.ActorSystem
+import akka.actor.typed.ActorRef
 import akka.stream.scaladsl.Source
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
 import drt.shared.FlightsApi.Flights
 
-import scala.concurrent.duration.FiniteDuration
-
 object LgwForecastFeed {
-  def apply(interval: FiniteDuration, initialDelay: FiniteDuration)(implicit system: ActorSystem): Source[ArrivalsFeedResponse, Cancellable] = {
+  def apply()(implicit system: ActorSystem): Source[ArrivalsFeedResponse, ActorRef[Feed.FeedTick]] = {
     val username = system.settings.config.getString("feeds.lgw.forecast.sftp.username")
     val password = system.settings.config.getString("feeds.lgw.forecast.sftp.password")
     val host = system.settings.config.getString("feeds.lgw.forecast.sftp.host")
@@ -18,7 +16,7 @@ object LgwForecastFeed {
     val sftpService = LgwForecastSftpService(host, username, password, pathPrefix)
     val csvParser = LgwForecastFeedCsvParser(sftpService.latestContent)
 
-    val feedSource = Source.tick(initialDelay, interval, NotUsed)
+    val feedSource = Feed.actorRefSource
       .map { _ =>
         csvParser.parseLatestFile() match {
           case Some(flights) =>
