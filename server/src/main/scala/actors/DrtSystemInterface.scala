@@ -32,7 +32,7 @@ import drt.server.feeds.edi.{EdiClient, EdiFeed}
 import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.BHXForecastFeedLegacy
-import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed}
+import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LgwForecastFeed}
 import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
@@ -511,7 +511,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def forecastArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =
     portCode match {
-      case PortCode("LHR") | PortCode("LGW") | PortCode("STN") => Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
+      case PortCode("LGW") =>
+        val interval = system.settings.config.getString("feeds.lgw.forecast.interval-minutes").toInt.minutes
+        val initialDelay = system.settings.config.getString("feeds.lgw.forecast.initial-delay-seconds").toInt.seconds
+        Feed(LgwForecastFeed(interval, initialDelay), 5.seconds, 30.seconds)
+      case PortCode("LHR") | PortCode("STN") => Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
       case PortCode("BHX") =>
         Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
       case PortCode("EDI") =>
