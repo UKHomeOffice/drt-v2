@@ -17,6 +17,8 @@ object LgwForecastFeed {
     val port = config.getInt("feeds.lgw.forecast.sftp.port")
     val pathPrefix = config.getString("feeds.lgw.forecast.sftp.pathPrefix")
 
+    log.info(s"LGW Forecast feed: $host:$port/$pathPrefix (username: $username, password: ${password.take(6)})")
+
     val sftpService = LgwForecastSftpService(host, port, username, password, pathPrefix)
     val csvParser = LgwForecastFeedCsvParser(sftpService.latestContent)
 

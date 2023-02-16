@@ -19,8 +19,8 @@ object LgwForecastSftpService {
     val ssh = new SSHClient()
     ssh.loadKnownHosts()
     ssh.addHostKeyVerifier(new PromiscuousVerifier())
-    ssh.connect(ftpServer, port)
     ssh.authPassword(username, password)
+    ssh.connect(ftpServer, port)
     ssh.setTimeout(0)
     ssh
   }
