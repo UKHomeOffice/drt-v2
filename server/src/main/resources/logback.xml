@@ -46,7 +46,7 @@
         <appender-ref ref="ASYNC"/>
     </logger>
 
-    <logger name="net.schmizz.sshj" level="debug">
+    <logger name="net.schmizz.sshj" level="INFO">
         <appender-ref ref="ASYNC"/>
     </logger>
 </configuration>
