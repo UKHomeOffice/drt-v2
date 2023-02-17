@@ -13,11 +13,12 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 object FlightTableComponents {
 
-  def maybeLocalTimeWithPopup(dtMap: Map[String, Option[MillisSinceEpoch]], maybeToolTip: Option[String] = None): TagMod = {
-    localTimePopup(dtMap.filter(_._2.nonEmpty).map { case (k, v) => k -> v.get }, maybeToolTip)
+  def maybeLocalTimeWithPopup(dtList: Seq[ArrivalDisplayTime], maybeToolTip: Option[String] = None, isMobile: Boolean): TagMod = {
+    localTimePopup(dtList.filter(_.time.nonEmpty)
+      .map(a => if (isMobile) a.shortLabel -> a.time.get else a.label -> a.time.get).toMap, maybeToolTip)
   }
 
-  def localTimePopup(dtMap: Map[String, MillisSinceEpoch], maybeToolTip: Option[String]): VdomElement = {
+  private def localTimePopup(dtMap: Map[String, MillisSinceEpoch], maybeToolTip: Option[String]): VdomElement = {
     maybeToolTip match {
       case None => sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) })
       case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) }), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
@@ -60,11 +61,16 @@ object FlightTableComponents {
     }
 
   def sdateLocalTimePopup(sdateMap: Map[String, SDateLike]): Unmounted[Tippy.Props, Unit, Unit] = {
-    val sdateOpt = if (sdateMap.contains("Est")) sdateMap.get("Est") else sdateMap.headOption.map(_._2)
+    val sdateOpt = (sdateMap.contains("Exp"), sdateMap.contains("Expected")) match {
+      case (true, _) => sdateMap.get("Exp")
+      case (_, true) => sdateMap.get("Expected")
+      case _ => sdateMap.headOption.map(_._2)
+    }
     val hhmm = sdateOpt.map(sdate => f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d").getOrElse("")
-    Tippy.describe(<.span(
-      sdateMap.map { case (timeName, sdate) => <.div(f"$timeName%12s -> ${sdate.toLocalDateTimeString()}%16s")
-      }.toVdomArray, ^.display := "inline"), hhmm)
+    Tippy.describe(<.table(
+      <.tbody(<.tr(^.colSpan := 2, <.th(^.width := "8em","Status"), <.th("Datetime")),
+        sdateMap.map { case (timeName, sdate) => <.tr(<.td(timeName) , <.td(sdate.toLocalDateTimeString()))
+      }.toTagMod, ^.display := "inline")), hhmm)
   }
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))

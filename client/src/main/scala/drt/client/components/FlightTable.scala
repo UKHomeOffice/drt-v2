@@ -12,6 +12,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import japgolly.scalajs.react.{CtorType, _}
+import org.scalajs.dom
 import org.scalajs.dom.html.TableSection
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -111,18 +112,18 @@ object FlightTable {
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue], redListPaxExist: Boolean): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val estChoxHeading = "Est Chox"
-
+    val isMobile = dom.window.innerWidth < 800
     val columns = List(
       ("Flight", Option("arrivals__table__flight-code")),
-      ("Origin", None),
+      (if(isMobile) "Ori" else "Origin", None),
       ("Country", Option("country")),
       (redListHeading, None),
-      ("Gate / Stand", Option("gate-stand")),
+      (if(isMobile) "Gt/St" else "Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
-      ("Sch", None),
-      ("Est", None),
-      ("Est PCP", Option("arrivals__table__flight-est-pcp")),
-      ("Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
+      (if(isMobile) "Sch" else "Scheduled", None),
+      (if(isMobile) "Exp" else "Expected", None),
+      (if(isMobile) "Ex Pcp" else "Exp PCP", Option("arrivals__table__flight-est-pcp")),
+      (if(isMobile) "Ex Pcp Px" else "Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
 
     val portColumnThs = columns
       .filter {

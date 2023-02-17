@@ -8,6 +8,7 @@ import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import japgolly.scalajs.react.{CtorType, _}
+import org.scalajs.dom
 import org.scalajs.dom.html.TableSection
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 
@@ -42,8 +43,8 @@ object ArrivalInfo {
       ("Terminal", None),
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
-      ("Sch", None),
-      ("Est", None),
+      ("Scheduled", None),
+      ("Expected", None),
       ("Act", None),
       ("Est Chox", None),
       ("Act Chox", None),
@@ -71,6 +72,7 @@ object FeedSourceRow {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .render_P { props =>
+      val isMobile = dom.window.innerWidth < 800
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
       val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
@@ -82,12 +84,12 @@ object FeedSourceRow {
         <.td(arrival.Origin.toString),
         <.td(arrival.Terminal.toString),
         <.td(s"${arrival.Gate.getOrElse("")}/${arrival.Stand.getOrElse("")}"),
-        <.td(arrival.displayStatus.description),
-        <.td(maybeLocalTimeWithPopup(Map("Sch" -> Option(arrival.Scheduled)))),
-        <.td(maybeLocalTimeWithPopup(Map("Est" -> arrival.Estimated))),
-        <.td(maybeLocalTimeWithPopup(Map("Act" -> arrival.Actual))),
-        <.td(maybeLocalTimeWithPopup(Map("EstChox" -> arrival.EstimatedChox))),
-        <.td(maybeLocalTimeWithPopup(Map("ActChox" -> arrival.ActualChox))),
+        <.td(arrival.displayStatus(isMobile).description),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Scheduled", "Sch", Option(arrival.Scheduled))), isMobile = isMobile)),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Expected", "Exp", arrival.Estimated)),isMobile = isMobile)),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Landed","Lan" , arrival.Actual)),isMobile = isMobile)),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("ExpectedChox","ExpChox" , arrival.EstimatedChox)),isMobile = isMobile)),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("LandedChox","LanChox" , arrival.ActualChox)),isMobile = isMobile)),
         <.td(paxTotal),
         <.td(paxTrans),
       )

@@ -16,6 +16,7 @@ import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
+import org.scalajs.dom
 import org.scalajs.dom.html.{Div, Span}
 import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
@@ -60,6 +61,7 @@ object FlightTableRow {
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
+      val isMobile = dom.window.innerWidth < 800
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
@@ -107,10 +109,12 @@ object FlightTableRow {
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
-      val fightTimes = Map("Est Chox" -> flight.EstimatedChox, "Act" -> flight.Actual, "Act Chox" -> flight.ActualChox)
+      val fightTimes = Seq(ArrivalDisplayTime("Expected Chox", "ExpChox", flight.EstimatedChox),
+        ArrivalDisplayTime("Landed", "Lan", flight.Actual),
+        ArrivalDisplayTime("Landed Chox", "LanChox", flight.ActualChox))
       val estimatedContent = (flight.Estimated, flight.predictedTouchdown, props.airportConfig.useTimePredictions) match {
-        case (None, Some(value), true) => maybeLocalTimeWithPopup(Map("Est" -> Option(value)) ++ fightTimes, Option("Predicted touchdown based on recent patterns"))
-        case _ => maybeLocalTimeWithPopup(Map("Est" -> flight.Estimated) ++ fightTimes)
+        case (None, Some(value), true) => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Expected", "Exp", Option(value))) ++ fightTimes, Option("Predicted touchdown based on recent patterns"),isMobile = isMobile)
+        case _ => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Expected", "Exp",flight.Estimated)) ++ fightTimes, isMobile = isMobile)
       }
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
@@ -140,8 +144,8 @@ object FlightTableRow {
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
-        <.td(^.className := "no-wrap", flight.displayStatus.description),
-        <.td(maybeLocalTimeWithPopup(Map("Sch" -> Option(flight.Scheduled)))),
+        <.td(^.className := "no-wrap", flight.displayStatus(isMobile).description),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Scheduled","Sch", Option(flight.Scheduled))),isMobile = isMobile)),
         <.td(estimatedContent),
       )
       val lastCells = List[TagMod](
