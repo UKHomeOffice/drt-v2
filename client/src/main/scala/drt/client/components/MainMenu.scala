@@ -49,7 +49,7 @@ object MainMenu {
 
   def menuItems(airportConfig: AirportConfig, currentLoc: Loc, userRoles: Set[Role], feeds: Seq[FeedSourceStatuses]): List[MenuItem] = {
     val addFileUpload: List[(Role, Int => MenuItem)] =
-      if (List(PortCode("LHR"), PortCode("LGW"), PortCode("STN"), PortCode("TEST")) contains airportConfig.portCode)
+      if (List(PortCode("LHR"), PortCode("STN"), PortCode("TEST")) contains airportConfig.portCode)
         List((PortFeedUpload, forecastUploadFile))
       else List.empty
 
