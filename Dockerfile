@@ -30,6 +30,8 @@ RUN rm -rf /var/cache/apt/*
 RUN mkdir -p /home/drt/.ssh
 RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt/.ssh/known_hosts
 RUN ssh-keyscan -T 60 gateway.heathrow.com >> /home/drt/.ssh/known_hosts
+RUN ssh-keyscan -T 60 -p 1022 galtransfer.gatwickairport.com >> /home/drt/.ssh/known_hosts
+RUN echo "[galtransfer.gatwickairport.com]:1022 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCe84ySHGHdFFp7cvyukRIZCE/khNOZxlkB38KDQpw6y7cjSr4NLtA6azgyNm42bSTLh8dAxzhm5FNYP++URPshcW26RGXOGRc6qmbWTLRVVT0oH/MpDCNe1W8KtJCAbaXMuAxN90jhZtdNK2JRuljlZjLlGeP8GfJyMzg0D3CORqBC0yhXC2w7HXirPDid8LeH9oMIKpcrJcHDTYnvyAniUdomeU4sFqO8BoTbNyHFz8XSlEl1bA3LG6hJ1oe8sLei/E1iJ90U/oE6HVMfWomNiuqcifLAv6WjpnoJ54x1FaWdSdqoGsviAqE8/a2Pv8n0aPaUrGir5/2emKO/ZIml" >> /home/drt/.ssh/known_hosts
 RUN chown -R 1001:1001 /home/drt/.ssh
 
 RUN mkdir -p /var/data
