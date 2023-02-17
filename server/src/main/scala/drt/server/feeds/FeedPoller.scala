@@ -44,7 +44,6 @@ object FeedPoller {
         enabled(newFeed, timers)
 
       case ScheduledCheck =>
-        log.info("Scheduled check")
         feed.feedSource ! Tick
         Behaviors.same
 
