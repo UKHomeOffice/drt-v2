@@ -82,7 +82,7 @@ object AclFeed {
     ssh.addHostKeyVerifier(new PromiscuousVerifier())
     ssh.connect(ftpServer)
     ssh.authPublickey(username, path)
-    ssh.setTimeout(0)
+    ssh.setTimeout(5000)
     ssh
   }
 

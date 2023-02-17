@@ -21,7 +21,7 @@ object LgwForecastSftpService {
     ssh.addHostKeyVerifier(new PromiscuousVerifier())
     ssh.connect(ftpServer, port)
     ssh.authPassword(username, password)
-    ssh.setTimeout(0)
+    ssh.setTimeout(5000)
     ssh
   }
 }
