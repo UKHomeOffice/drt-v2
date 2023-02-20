@@ -72,23 +72,23 @@ object FlightTableComponents {
   def getExpectedTime(sdateMap: Map[String, SDateLike], isMobile: Boolean): Option[SDateLike] = {
     if (isMobile) {
       (sdateMap.contains("ActChox"), sdateMap.contains("EstChox"), sdateMap.contains("Tou"),
-        sdateMap.contains("Est"), sdateMap.contains("Pre"), sdateMap.contains("Sch")) match {
-        case (true, _, _, _, _, _) => sdateMap.get("ActChox")
-        case (_, true, _, _, _, _) => sdateMap.get("EstChox")
-        case (_, _, true, _, _, _) => sdateMap.get("Tou")
-        case (_, _, _, true, _, _) => sdateMap.get("Est")
-        case (_, _, _, _, true, _) => sdateMap.get("Pre")
-        case (_, _, _, _, _, true) => sdateMap.get("Sch")
+        sdateMap.contains("Est"), sdateMap.contains("Pre")) match {
+        case (true, _, _, _, _) => sdateMap.get("ActChox")
+        case (_, true, _, _, _) => sdateMap.get("EstChox")
+        case (_, _, true, _, _) => sdateMap.get("Tou")
+        case (_, _, _, true, _) => sdateMap.get("Est")
+        case (_, _, _, _, true) => sdateMap.get("Pre")
+        case _ => sdateMap.get("Sch")
       }
     } else {
       (sdateMap.contains("ActualChox"), sdateMap.contains("EstimatedChox"), sdateMap.contains("Touchdown"),
-        sdateMap.contains("Estimated"), sdateMap.contains("Predicated"), sdateMap.contains("Scheduled")) match {
-        case (true, _, _, _, _, _) => sdateMap.get("ActualChox")
-        case (_, true, _, _, _, _) => sdateMap.get("EstimatedChox")
-        case (_, _, true, _, _, _) => sdateMap.get("Touchdown")
-        case (_, _, _, true, _, _) => sdateMap.get("Estimated")
-        case (_, _, _, _, true, _) => sdateMap.get("Predicated")
-        case (_, _, _, _, _, true) => sdateMap.get("Scheduled")
+        sdateMap.contains("Estimated"), sdateMap.contains("Predicated")) match {
+        case (true, _, _, _, _) => sdateMap.get("ActualChox")
+        case (_, true, _, _, _) => sdateMap.get("EstimatedChox")
+        case (_, _, true, _, _) => sdateMap.get("Touchdown")
+        case (_, _, _, true, _) => sdateMap.get("Estimated")
+        case (_, _, _, _, true) => sdateMap.get("Predicated")
+        case _ => sdateMap.get("Scheduled")
       }
     }
 
