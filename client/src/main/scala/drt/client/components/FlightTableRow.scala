@@ -109,9 +109,9 @@ object FlightTableRow {
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
-      val fightTimes = Seq(ArrivalDisplayTime("Estimated chox", "EstChox", flight.EstimatedChox),
+      val fightTimes = Seq(ArrivalDisplayTime("EstimatedChox", "EstChox", flight.EstimatedChox),
         ArrivalDisplayTime("Touchdown", "Tou", flight.Actual),
-        ArrivalDisplayTime("Actual Chox", "ActChox", flight.ActualChox))
+        ArrivalDisplayTime("ActualChox", "ActChox", flight.ActualChox))
       val estimatedContent = (flight.Estimated, flight.predictedTouchdown, props.airportConfig.useTimePredictions) match {
         case (None, Some(value), true) => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Predicated", "Pre", Option(value))) ++ fightTimes, Option("Predicted touchdown based on recent patterns"), isMobile = isMobile)
         case _ => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Estimated", "Est", flight.Estimated)) ++ fightTimes, isMobile = isMobile)
