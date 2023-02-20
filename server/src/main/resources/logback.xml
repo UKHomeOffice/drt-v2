@@ -45,4 +45,8 @@
     <logger name="slick.jdbc.JdbcBackend.statement" level="${SLICK_DEBUG_LEVEL:-WARN}">
         <appender-ref ref="ASYNC"/>
     </logger>
+
+    <logger name="net.schmizz.sshj" level="INFO">
+        <appender-ref ref="ASYNC"/>
+    </logger>
 </configuration>

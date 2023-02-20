@@ -14,7 +14,7 @@ case class SftpClientPasswordAuth(ftpServer: String, username: String, password:
     ssh.loadKnownHosts()
     ssh.connect(ftpServer)
     ssh.authPassword(username, password)
-    ssh.setTimeout(0)
+    ssh.setTimeout(5000)
     ssh
   }
 
