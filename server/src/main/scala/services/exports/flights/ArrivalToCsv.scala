@@ -16,7 +16,7 @@ object ArrivalToCsv {
       arrival.flightCodeString,
       arrival.Origin.toString,
       arrival.Gate.getOrElse("") + "/" + arrival.Stand.getOrElse(""),
-      arrival.displayStatus(false).description,
+      arrival.displayStatus.description,
       millisToDateOnly(arrival.Scheduled),
       millisToLocalDateTimeString(arrival.Scheduled),
       arrival.Estimated.map(millisToLocalDateTimeString(_)).getOrElse(""),

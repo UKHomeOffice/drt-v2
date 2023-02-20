@@ -109,12 +109,12 @@ object FlightTableRow {
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
-      val fightTimes = Seq(ArrivalDisplayTime("Expected Chox", "ExpChox", flight.EstimatedChox),
-        ArrivalDisplayTime("Landed", "Lan", flight.Actual),
-        ArrivalDisplayTime("Landed Chox", "LanChox", flight.ActualChox))
+      val fightTimes = Seq(ArrivalDisplayTime("Estimated chox", "EstChox", flight.EstimatedChox),
+        ArrivalDisplayTime("Touchdown", "Tou", flight.Actual),
+        ArrivalDisplayTime("Actual Chox", "ActChox", flight.ActualChox))
       val estimatedContent = (flight.Estimated, flight.predictedTouchdown, props.airportConfig.useTimePredictions) match {
-        case (None, Some(value), true) => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Expected", "Exp", Option(value))) ++ fightTimes, Option("Predicted touchdown based on recent patterns"),isMobile = isMobile)
-        case _ => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Expected", "Exp",flight.Estimated)) ++ fightTimes, isMobile = isMobile)
+        case (None, Some(value), true) => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Predicated", "Pre", Option(value))) ++ fightTimes, Option("Predicted touchdown based on recent patterns"), isMobile = isMobile)
+        case _ => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Estimated", "Est", flight.Estimated)) ++ fightTimes, isMobile = isMobile)
       }
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
@@ -144,8 +144,8 @@ object FlightTableRow {
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
-        <.td(^.className := "no-wrap", flight.displayStatus(isMobile).description),
-        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Scheduled","Sch", Option(flight.Scheduled))),isMobile = isMobile)),
+        <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Scheduled", "Sch", Option(flight.Scheduled))), isMobile = isMobile)),
         <.td(estimatedContent),
       )
       val lastCells = List[TagMod](

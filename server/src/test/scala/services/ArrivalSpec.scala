@@ -174,70 +174,70 @@ class ArrivalSpec extends Specification {
     "When flight Actual Chox time exists" >> {
       "display status should be On Chocks" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("On Chocks")
       }
     }
     "When flight Actual time exists and Actual Chox time does not exists" >> {
       "display status should be Landed" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), actDt = "2020-10-22T13:00Z")
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("Landed")
       }
     }
     "When flight Estimated Arrival is more than 15 minutes later than scheduled time" >> {
       "display status should be Delayed" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:20Z")
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("Delayed")
       }
     }
     "When flight Estimated Arrival is less than 15 minutes later than scheduled time" >> {
       "display status should be Expected" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z")
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("Expected")
       }
     }
     "When flight status is redirected" >> {
       "display status should be Diverted" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("redirected"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("Diverted")
       }
     }
     "When flight status is DIVERTED" >> {
       "display status should be Diverted" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("DIVERTED"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("Diverted")
       }
     }
     "When flight status is CANCELLED" >> {
       "display status should be Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("CANCELLED"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
     "When flight status is C" >> {
       "display status should be Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("C"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
     "When flight status is Canceled" >> {
       "display status should be Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("Canceled"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
     "When flight status is Deleted / Removed Flight Record" >> {
       "display status should be Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("Deleted / Removed Flight Record"))
-        val result = arrival.displayStatus(isMobile)
+        val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }

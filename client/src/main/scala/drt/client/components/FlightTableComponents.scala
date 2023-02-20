@@ -15,13 +15,13 @@ object FlightTableComponents {
 
   def maybeLocalTimeWithPopup(dtList: Seq[ArrivalDisplayTime], maybeToolTip: Option[String] = None, isMobile: Boolean): TagMod = {
     localTimePopup(dtList.filter(_.time.nonEmpty)
-      .map(a => if (isMobile) a.shortLabel -> a.time.get else a.label -> a.time.get).toMap, maybeToolTip)
+      .map(a => if (isMobile) a.shortLabel -> a.time.get else a.label -> a.time.get).toMap, maybeToolTip, isMobile)
   }
 
-  private def localTimePopup(dtMap: Map[String, MillisSinceEpoch], maybeToolTip: Option[String]): VdomElement = {
+  private def localTimePopup(dtMap: Map[String, MillisSinceEpoch], maybeToolTip: Option[String], isMobile: Boolean): VdomElement = {
     maybeToolTip match {
-      case None => sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) })
-      case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) }), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
+      case None => sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) }, isMobile)
+      case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) }, isMobile), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
     }
   }
 
@@ -60,17 +60,38 @@ object FlightTableComponents {
       <.div()
     }
 
-  def sdateLocalTimePopup(sdateMap: Map[String, SDateLike]): Unmounted[Tippy.Props, Unit, Unit] = {
-    val sdateOpt = (sdateMap.contains("Exp"), sdateMap.contains("Expected")) match {
-      case (true, _) => sdateMap.get("Exp")
-      case (_, true) => sdateMap.get("Expected")
-      case _ => sdateMap.headOption.map(_._2)
-    }
+  def sdateLocalTimePopup(sdateMap: Map[String, SDateLike], isMobile: Boolean): Unmounted[Tippy.Props, Unit, Unit] = {
+    val sdateOpt = getExpectedTime(sdateMap, isMobile)
     val hhmm = sdateOpt.map(sdate => f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d").getOrElse("")
     Tippy.describe(<.table(
-      <.tbody(<.tr(^.colSpan := 2, <.th(^.width := "8em","Status"), <.th("Datetime")),
-        sdateMap.map { case (timeName, sdate) => <.tr(<.td(timeName) , <.td(sdate.toLocalDateTimeString()))
-      }.toTagMod, ^.display := "inline")), hhmm)
+      <.tbody(<.tr(^.colSpan := 2, <.th(^.width := "8em", "Status"), <.th("Datetime")),
+        sdateMap.map { case (timeName, sdate) => <.tr(<.td(timeName), <.td(sdate.toLocalDateTimeString()))
+        }.toTagMod, ^.display := "inline")), hhmm)
+  }
+
+  def getExpectedTime(sdateMap: Map[String, SDateLike], isMobile: Boolean): Option[SDateLike] = {
+    if (isMobile) {
+      (sdateMap.contains("ActChox"), sdateMap.contains("EstChox"), sdateMap.contains("Tou"),
+        sdateMap.contains("Est"), sdateMap.contains("Pre"), sdateMap.contains("Sch")) match {
+        case (true, _, _, _, _, _) => sdateMap.get("ActChox")
+        case (_, true, _, _, _, _) => sdateMap.get("EstChox")
+        case (_, _, true, _, _, _) => sdateMap.get("Tou")
+        case (_, _, _, true, _, _) => sdateMap.get("Est")
+        case (_, _, _, _, true, _) => sdateMap.get("Pre")
+        case (_, _, _, _, _, true) => sdateMap.get("Sch")
+      }
+    } else {
+      (sdateMap.contains("ActualChox"), sdateMap.contains("EstimatedChox"), sdateMap.contains("Touchdown"),
+        sdateMap.contains("Estimated"), sdateMap.contains("Predicated"), sdateMap.contains("Scheduled")) match {
+        case (true, _, _, _, _, _) => sdateMap.get("ActualChox")
+        case (_, true, _, _, _, _) => sdateMap.get("EstimatedChox")
+        case (_, _, true, _, _, _) => sdateMap.get("Touchdown")
+        case (_, _, _, true, _, _) => sdateMap.get("Estimated")
+        case (_, _, _, _, true, _) => sdateMap.get("Predicated")
+        case (_, _, _, _, _, true) => sdateMap.get("Scheduled")
+      }
+    }
+
   }
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))
