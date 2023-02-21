@@ -41,8 +41,11 @@ object AlertsComponent {
     <.div(^.className := "has-alerts grow",
       (nonProdAlert.toList ++ alerts).map(alert => {
         val message = if (alert.title.nonEmpty) s"${alert.title} - ${alert.message}" else alert.message
-        <.span(^.key := alert.createdAt, ^.`class` := s"alert alert-class-${alert.alertClass} the-alert", ^.role := "alert",
-          ReactMarkdown.component(ReactMarkdown.props(message))
+        <.span(
+          ^.key := alert.createdAt,
+          ^.`class` := s"alert alert-class-${alert.alertClass} the-alert",
+          ^.role := "alert",
+          message
         )
       }).toVdomArray
     )
