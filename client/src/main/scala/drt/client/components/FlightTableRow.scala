@@ -61,7 +61,7 @@ object FlightTableRow {
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
-      val isMobile = dom.window.innerWidth < 800
+      implicit val isMobile = dom.window.innerWidth < 800
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
@@ -109,12 +109,12 @@ object FlightTableRow {
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
-      val fightTimes = Seq(ArrivalDisplayTime("EstimatedChox", "EstChox", flight.EstimatedChox),
-        ArrivalDisplayTime("Touchdown", "Tou", flight.Actual),
-        ArrivalDisplayTime("ActualChox", "ActChox", flight.ActualChox))
+      val fightTimes = Seq(ArrivalDisplayTime(TouchdownDisplayLabel(), flight.Actual),
+        ArrivalDisplayTime(EstimatedChoxDisplayLabel(), flight.EstimatedChox),
+        ArrivalDisplayTime(ActualChoxDisplayLabel(), flight.ActualChox))
       val estimatedContent = (flight.Estimated, flight.predictedTouchdown, props.airportConfig.useTimePredictions) match {
-        case (None, Some(value), true) => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Predicated", "Pre", Option(value))) ++ fightTimes, Option("Predicted touchdown based on recent patterns"), isMobile = isMobile)
-        case _ => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Estimated", "Est", flight.Estimated)) ++ fightTimes, isMobile = isMobile)
+        case (None, Some(value), true) => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(PredicatedDisplayLabel(), Option(value))) ++ fightTimes, Option("Predicted touchdown based on recent patterns"))
+        case _ => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(EstimatedDisplayLabel(), flight.Estimated)) ++ fightTimes)
       }
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
@@ -145,7 +145,7 @@ object FlightTableRow {
         },
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
-        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Scheduled", "Sch", Option(flight.Scheduled))), isMobile = isMobile)),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(ScheduleDisplayLabel(), Option(flight.Scheduled))))),
         <.td(estimatedContent),
       )
       val lastCells = List[TagMod](

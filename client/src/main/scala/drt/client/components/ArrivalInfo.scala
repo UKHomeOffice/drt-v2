@@ -44,7 +44,7 @@ object ArrivalInfo {
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
       ("Scheduled", None),
-      ("Expected", None),
+      ("Estimated", None),
       ("Act", None),
       ("Est Chox", None),
       ("Act Chox", None),
@@ -72,7 +72,7 @@ object FeedSourceRow {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .render_P { props =>
-      val isMobile = dom.window.innerWidth < 800
+      implicit val isMobile = dom.window.innerWidth < 800
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
       val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
@@ -85,11 +85,11 @@ object FeedSourceRow {
         <.td(arrival.Terminal.toString),
         <.td(s"${arrival.Gate.getOrElse("")}/${arrival.Stand.getOrElse("")}"),
         <.td(if (isMobile) arrival.displayStatusMobile.description else arrival.displayStatus.description),
-        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Scheduled", "Sch", Option(arrival.Scheduled))), isMobile = isMobile)),
-        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Estimated", "Est", arrival.Estimated)), isMobile = isMobile)),
-        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("Touchdown", "Tod", arrival.Actual)), isMobile = isMobile)),
-        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("EstimatedChox", "EstChox", arrival.EstimatedChox)), isMobile = isMobile)),
-        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime("ActualChox", "ActChox", arrival.ActualChox)), isMobile = isMobile)),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(ScheduleDisplayLabel(), Option(arrival.Scheduled))))),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(EstimatedDisplayLabel(), arrival.Estimated)))),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(TouchdownDisplayLabel(), arrival.Actual)))),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(EstimatedDisplayLabel(), arrival.EstimatedChox)))),
+        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(ActualChoxDisplayLabel(), arrival.ActualChox)))),
         <.td(paxTotal),
         <.td(paxTrans),
       )

@@ -27,6 +27,8 @@ object ToolTips {
 
   val estWaitTooltip = Tippy.info("DRT will colour code Dep desks/Dep banks and their associated Est wait values amber when estimated wait times are close to SLA and red when estimated wait times in excess of the SLA.")
 
+  val expTimeTooltip = Tippy.info("The value represent best arrival time available. You can view arrival times by clicking on a time in the column.")
+
   val miscTooltip = Tippy.info("The values under Misc represent the number of staff not allocated to a desk or e-passport gate (these are often referred to as fixed points). You can edit this value by clicking on the Staff Movements tab.")
 
   val monthlyStaffingTooltip = Tippy.info("You have permission to add staff to DRT. Add them directly into the spreadsheet in hourly or 15 minutes slots, or copy and paste from an existing spreadsheet if you have one in the same format.")

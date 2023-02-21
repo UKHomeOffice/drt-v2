@@ -13,15 +13,14 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 object FlightTableComponents {
 
-  def maybeLocalTimeWithPopup(dtList: Seq[ArrivalDisplayTime], maybeToolTip: Option[String] = None, isMobile: Boolean): TagMod = {
-    localTimePopup(dtList.filter(_.time.nonEmpty)
-      .map(a => if (isMobile) a.shortLabel -> a.time.get else a.label -> a.time.get).toMap, maybeToolTip, isMobile)
+  def maybeLocalTimeWithPopup(dtList: Seq[ArrivalDisplayTime], maybeToolTip: Option[String] = None): TagMod = {
+    localTimePopup(dtList.filter(_.time.nonEmpty), maybeToolTip)
   }
 
-  private def localTimePopup(dtMap: Map[String, MillisSinceEpoch], maybeToolTip: Option[String], isMobile: Boolean): VdomElement = {
+  private def localTimePopup(dtList: Seq[ArrivalDisplayTime], maybeToolTip: Option[String]): VdomElement = {
     maybeToolTip match {
-      case None => sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) }, isMobile)
-      case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(dtMap.map { case (k, dt) => k -> SDate(dt) }, isMobile), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
+      case None => sdateLocalTimePopup(dtList)
+      case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(dtList), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
     }
   }
 
@@ -60,38 +59,32 @@ object FlightTableComponents {
       <.div()
     }
 
-  def sdateLocalTimePopup(sdateMap: Map[String, SDateLike], isMobile: Boolean): Unmounted[Tippy.Props, Unit, Unit] = {
-    val sdateOpt = getExpectedTime(sdateMap, isMobile)
-    val hhmm = sdateOpt.map(sdate => f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d").getOrElse("")
+  val justTimeDateFormat: Option[SDateLike] => String =
+    sdateOpt => sdateOpt.map(sdate => f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d").getOrElse("")
+
+  def sdateLocalTimePopup(dtList: Seq[ArrivalDisplayTime]): Unmounted[Tippy.Props, Unit, Unit] = {
+    val sdateOpt = getExpectedTime(dtList)
+    val hhmm = justTimeDateFormat(sdateOpt)
     Tippy.describe(<.table(
       <.tbody(<.tr(^.colSpan := 2, <.th(^.width := "8em", "Status"), <.th("Datetime")),
-        sdateMap.map { case (timeName, sdate) => <.tr(<.td(timeName), <.td(sdate.toLocalDateTimeString()))
+        dtList.map { adt => <.tr(<.td(adt.timeLabel.getLabel), <.td(justTimeDateFormat(adt.time.map(SDate(_)))))
         }.toTagMod, ^.display := "inline")), hhmm)
   }
 
-  def getExpectedTime(sdateMap: Map[String, SDateLike], isMobile: Boolean): Option[SDateLike] = {
-    if (isMobile) {
-      (sdateMap.contains("ActChox"), sdateMap.contains("EstChox"), sdateMap.contains("Tou"),
-        sdateMap.contains("Est"), sdateMap.contains("Pre")) match {
-        case (true, _, _, _, _) => sdateMap.get("ActChox")
-        case (_, true, _, _, _) => sdateMap.get("EstChox")
-        case (_, _, true, _, _) => sdateMap.get("Tou")
-        case (_, _, _, true, _) => sdateMap.get("Est")
-        case (_, _, _, _, true) => sdateMap.get("Pre")
-        case _ => sdateMap.get("Sch")
-      }
-    } else {
-      (sdateMap.contains("ActualChox"), sdateMap.contains("EstimatedChox"), sdateMap.contains("Touchdown"),
-        sdateMap.contains("Estimated"), sdateMap.contains("Predicated")) match {
-        case (true, _, _, _, _) => sdateMap.get("ActualChox")
-        case (_, true, _, _, _) => sdateMap.get("EstimatedChox")
-        case (_, _, true, _, _) => sdateMap.get("Touchdown")
-        case (_, _, _, true, _) => sdateMap.get("Estimated")
-        case (_, _, _, _, true) => sdateMap.get("Predicated")
-        case _ => sdateMap.get("Scheduled")
-      }
-    }
 
+  def getExpectedTime(dtList: Seq[ArrivalDisplayTime]): Option[SDateLike] = {
+    (dtList.find(a => a.timeLabel.isInstanceOf[ActualChoxDisplayLabel]),
+      dtList.find(a => a.timeLabel.isInstanceOf[EstimatedChoxDisplayLabel]),
+      dtList.find(a => a.timeLabel.isInstanceOf[TouchdownDisplayLabel]),
+      dtList.find(a => a.timeLabel.isInstanceOf[EstimatedDisplayLabel]),
+      dtList.find(a => a.timeLabel.isInstanceOf[PredicatedDisplayLabel])) match {
+      case (Some(actChox), _, _, _, _) => actChox.time.map(SDate(_))
+      case (_, Some(estChox), _, _, _) => estChox.time.map(SDate(_))
+      case (_, _, Some(tou), _, _) => tou.time.map(SDate(_))
+      case (_, _, _, Some(est), _) => est.time.map(SDate(_))
+      case (_, _, _, _, Some(pre)) => pre.time.map(SDate(_))
+      case _ => dtList.find(a => a.timeLabel.isInstanceOf[ScheduleDisplayLabel]).flatMap(_.time.map(SDate(_)))
+    }
   }
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))

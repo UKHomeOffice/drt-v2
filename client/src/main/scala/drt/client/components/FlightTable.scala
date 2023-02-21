@@ -113,18 +113,18 @@ object FlightTable {
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue], redListPaxExist: Boolean, shortLabel: Boolean): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val estChoxHeading = "Est Chox"
-    val isMobile = dom.window.innerWidth < 800
+    implicit val isMobile = dom.window.innerWidth < 800
     val columns = List(
       ("Flight", Option("arrivals__table__flight-code")),
-      (if (isMobile) "Ori" else "Origin", None),
+      (OriginDisplayLabel().getLabel, None),
       ("Country", Option("country")),
       (redListHeading, None),
-      (if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand")),
+      (GateStandDisplayLabel().getLabel(shortLabel), Option("gate-stand")),
       ("Status", Option("status")),
-      (if (isMobile || shortLabel) "Sch" else "Scheduled", None),
-      (if (isMobile || shortLabel) "Exp" else "Expected", None),
-      (if (isMobile) "Ex Pcp" else "Exp PCP", Option("arrivals__table__flight-est-pcp")),
-      (if (isMobile) "Ex Pcp Px" else "Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
+      (ScheduleDisplayLabel().getLabel(shortLabel), None),
+      (ExpectedDisplayLabel().getLabel(shortLabel), None),
+      (ExpPcpDisplayLabel().getLabel(shortLabel), Option("arrivals__table__flight-est-pcp")),
+      (EstimatedPCPaxDisplayLabel().getLabel(shortLabel), Option("arrivals__table__flight__pcp-pax__header")))
 
     val portColumnThs = columns
       .filter {
@@ -136,6 +136,9 @@ object FlightTable {
       .map {
         case (label, Some(className)) if label == "Est PCP Pax" => <.th(
           <.div(^.cls := className, label, " ", totalPaxTooltip)
+        )
+        case (label, None) if label == "Expected" || label == "Exp" => <.th(
+          <.div(label, " ", expTimeTooltip)
         )
         case (label, None) if label == "Flight" => <.th(
           <.div(^.cls := "arrivals__table__flight-code-wrapper", label, " ", wbrFlightColorTooltip)
