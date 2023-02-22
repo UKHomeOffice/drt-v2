@@ -18,7 +18,7 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
     val maybePaxSummary = maybeManifest.flatMap(PassengerInfo.manifestToPassengerInfoSummary)
 
     (flightWithSplitsToCsvRow(fws) :::
-      actualAPISplitsForFlightInHeadingOrder(fws, ArrivalExportHeadings.actualApiHeadings).toList).map(s => s"$s") :::
+      actualAPISplitsForFlightInHeadingOrder(fws, ArrivalExportHeadings.actualApiHeadings.split(",")).toList).map(s => s"$s") :::
       List(s""""${nationalitiesFromSummary(maybePaxSummary)}"""", s""""${ageRangesFromSummary(maybePaxSummary)}"""")
   }
 
