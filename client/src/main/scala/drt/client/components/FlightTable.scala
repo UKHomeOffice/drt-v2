@@ -113,18 +113,18 @@ object FlightTable {
   def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue], redListPaxExist: Boolean, shortLabel: Boolean): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val estChoxHeading = "Est Chox"
-    implicit val isMobile = dom.window.innerWidth < 800
+    val isMobile = dom.window.innerWidth < 800
     val columns = List(
       ("Flight", Option("arrivals__table__flight-code")),
-      (OriginDisplayLabel().getLabel, None),
+      (if (isMobile) "Ori" else "Origin", None),
       ("Country", Option("country")),
       (redListHeading, None),
-      (GateStandDisplayLabel().getLabel(shortLabel), Option("gate-stand")),
+      (if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
-      (ScheduleDisplayLabel().getLabel(shortLabel), None),
-      (ExpectedDisplayLabel().getLabel(shortLabel), None),
-      (ExpPcpDisplayLabel().getLabel(shortLabel), Option("arrivals__table__flight-est-pcp")),
-      (EstimatedPCPaxDisplayLabel().getLabel(shortLabel), Option("arrivals__table__flight__pcp-pax__header")))
+      (if (isMobile || shortLabel) "Sch" else "Scheduled", None),
+      (if (isMobile || shortLabel) "Exp" else "Expected", None),
+      ("Exp PCP", Option("arrivals__table__flight-est-pcp")),
+      ("Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
 
     val portColumnThs = columns
       .filter {

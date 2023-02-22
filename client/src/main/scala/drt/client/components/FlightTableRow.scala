@@ -109,13 +109,24 @@ object FlightTableRow {
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
-      val fightTimes = Seq(ArrivalDisplayTime(TouchdownDisplayLabel(), flight.Actual),
-        ArrivalDisplayTime(EstimatedChoxDisplayLabel(), flight.EstimatedChox),
-        ArrivalDisplayTime(ActualChoxDisplayLabel(), flight.ActualChox))
-      val estimatedContent = (flight.Estimated, flight.predictedTouchdown, props.airportConfig.useTimePredictions) match {
-        case (None, Some(value), true) => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(PredicatedDisplayLabel(), Option(value))) ++ fightTimes, Option("Predicted touchdown based on recent patterns"))
-        case _ => maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(EstimatedDisplayLabel(), flight.Estimated)) ++ fightTimes)
+      val arrivalTimes: Seq[(String, Long)] = Seq(
+        "Predicted" -> (if (props.airportConfig.useTimePredictions) flight.predictedTouchdown else None),
+        "Estimated" -> flight.Estimated,
+        "Touchdown" -> flight.Actual,
+        "Estimated Chox" -> flight.EstimatedChox,
+        "Actual Chox" -> flight.ActualChox,
+      ).collect {
+        case (name, Some(time)) => name -> time
       }
+
+      val timesPopUp = arrivalTimes.map(t => <.div(
+        <.span(^.display := "inline-block", ^.width := "120px", t._1), <.span(SDate(t._2).toLocalDateTimeString().takeRight(5))
+      )).toTagMod
+
+      val bestExpectedTime = arrivalTimes.reverse.headOption.map(_._2)
+
+      val expectedContent = maybeLocalTimeWithPopup(bestExpectedTime, Option(timesPopUp), None)
+
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(
@@ -145,8 +156,8 @@ object FlightTableRow {
         },
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
-        <.td(maybeLocalTimeWithPopup(Seq(ArrivalDisplayTime(ScheduleDisplayLabel(), Option(flight.Scheduled))))),
-        <.td(estimatedContent),
+        <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
+        <.td(expectedContent),
       )
       val lastCells = List[TagMod](
         <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis), ^.className := "arrivals__table__flight-est-pcp"),
