@@ -24,7 +24,7 @@ object Settings {
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   object versions {
-    val drtLib = "v375"
+    val drtLib = "v378"
 
     val scala = "2.13.10"
     val scalaDom = "2.0.0"
