@@ -2,7 +2,7 @@ package services.exports.flights.templates
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues
 import uk.gov.homeoffice.drt.ports.Queues._
 
@@ -46,7 +46,7 @@ trait FlightsWithSplitsExport extends FlightsExport {
       splitsForSources(fws)
   }
 
-  override val headings: String = arrivalWithSplitsHeadings(queueNames)
+  override val headings: String = ArrivalExportHeadings.arrivalWithSplitsHeadings
 
   override def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Seq[String] = flightWithSplitsToCsvRow(fws)
 }
