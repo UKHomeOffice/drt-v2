@@ -5,7 +5,6 @@ import drt.shared.api.{AgeRange, PassengerInfoSummary, UnknownAge}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -19,7 +18,7 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
     val maybePaxSummary = maybeManifest.flatMap(PassengerInfo.manifestToPassengerInfoSummary)
 
     (flightWithSplitsToCsvRow(fws) :::
-      actualAPISplitsForFlightInHeadingOrder(fws, actualApiHeadings).toList).map(s => s"$s") :::
+      actualAPISplitsForFlightInHeadingOrder(fws, ArrivalExportHeadings.actualApiHeadings).toList).map(s => s"$s") :::
       List(s""""${nationalitiesFromSummary(maybePaxSummary)}"""", s""""${ageRangesFromSummary(maybePaxSummary)}"""")
   }
 
