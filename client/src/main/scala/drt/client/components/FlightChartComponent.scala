@@ -39,7 +39,7 @@ object FlightChartComponent {
                 infosPot.render { infos =>
                   infos.get(ArrivalKey(props.flightWithSplits.apiFlight)) match {
                     case None =>
-                      <.div(MuiCircularProgress()(), ^.height := "282px", ^.display := "flex", ^.alignItems := "center", ^.justifyContent := "center")
+                      <.div(MuiCircularProgress()(), ^.minWidth := "100px", ^.height := "282px", ^.display := "flex", ^.alignItems := "center", ^.justifyContent := "center")
                     case Some(info) =>
                       val nationalitiesCount = if (state.showAllNationalities) info.nationalities.size else 10
 
