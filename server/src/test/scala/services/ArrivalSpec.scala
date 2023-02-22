@@ -113,8 +113,6 @@ class ArrivalSpec extends Specification {
     }
   }
 
-  private val isMobile = false
-
   "When asking if a flight is relevant to a time period" >> {
     val startTime = SDate("2020-10-22T11:00Z")
     val endTime = SDate("2020-10-22T13:00Z")

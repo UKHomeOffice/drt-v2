@@ -61,7 +61,7 @@ object FlightTableRow {
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
-      implicit val isMobile = dom.window.innerWidth < 800
+      val isMobile = dom.window.innerWidth < 800
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
