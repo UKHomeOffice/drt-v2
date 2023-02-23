@@ -39,7 +39,7 @@ object FlightChartComponent {
                 infosPot.render { infos =>
                   infos.get(ArrivalKey(props.flightWithSplits.apiFlight)) match {
                     case None =>
-                      <.div(MuiCircularProgress()(), ^.minWidth := "200px", ^.height := "282px", ^.display := "flex", ^.alignItems := "center", ^.justifyContent := "center")
+                      <.div(MuiCircularProgress()(), ^.minWidth := "300px", ^.height := "282px", ^.display := "flex", ^.alignItems := "center", ^.justifyContent := "center")
                     case Some(info) =>
                       val nationalitiesCount = if (state.showAllNationalities) info.nationalities.size else 10
 
@@ -69,7 +69,7 @@ object FlightChartComponent {
                         scope.modState(_.copy(showAllNationalities = newValue))
                       }
 
-                      val chartHeight = 300
+                      val chartHeight = 350
                       val widthFactor = if (info.nationalities.size > 10 && state.showAllNationalities) 5 else 0
                       val chartWidth: Int = if (dom.window.innerWidth > 800)
                         300 + widthFactor * info.nationalities.size
