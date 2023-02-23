@@ -295,7 +295,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       val exporter = withActualApiExport
 
       val result = flights.map { flight =>
-        exporter.actualAPISplitsForFlightInHeadingOrder(flight, exporter.actualApiHeadings)
+        exporter.actualAPISplitsForFlightInHeadingOrder(flight, ArrivalExportHeadings.actualApiHeadings.split(","))
       }
 
       val expected = List(

@@ -12,7 +12,7 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import uk.gov.homeoffice.drt.time.SDate
 import services.exports.Exports
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.{PaxTypesAndQueues, Queues}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
@@ -40,8 +40,6 @@ trait FlightsExport {
 
   val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean
 
-  val queueNames: Seq[Queue] = ApiSplitsToSplitRatio.queuesFromPaxTypeAndQueue(PaxTypesAndQueues.inOrder)
-
   def flightToCsvRow(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): String = rowValues(fws, maybeManifest).mkString(",")
 
   def millisToDateStringFn: MillisSinceEpoch => String = SDate.millisToLocalIsoDateOnly(timeZone)
@@ -52,7 +50,7 @@ trait FlightsExport {
 
   val splitSources = List(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage)
 
-  def splitsForSources(fws: ApiFlightWithSplits): List[String] = splitSources.flatMap((ss: SplitSource) => queueSplits(queueNames, fws, ss))
+  def splitsForSources(fws: ApiFlightWithSplits): List[String] = splitSources.flatMap((ss: SplitSource) => queueSplits(ArrivalExportHeadings.queueNamesInOrder, fws, ss))
 
   def headingsForSplitSource(queueNames: Seq[Queue], source: String): String = queueNames
     .map(q => s"$source ${Queues.displayName(q)}")
