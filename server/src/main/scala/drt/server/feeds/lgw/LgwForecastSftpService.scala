@@ -55,7 +55,7 @@ case class LgwForecastSftpService(ftpServer: String, port: Int, username: String
     }
 
     Try(sftp.get(fileName, output)) match {
-      case Success(_) => Some(outputStream.toString(StandardCharsets.UTF_8))
+      case Success(_) => Some(outputStream.toString())
       case Failure(e) =>
         log.error(s"Failed to get file '$fileName' from sftp server: ${e.getMessage}")
         None

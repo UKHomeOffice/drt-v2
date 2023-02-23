@@ -16,6 +16,7 @@ import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
+import org.scalajs.dom
 import org.scalajs.dom.html.{Div, Span}
 import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
@@ -60,6 +61,7 @@ object FlightTableRow {
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
     .render_PS((props, state) => {
+      val isMobile = dom.window.innerWidth < 800
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
@@ -107,10 +109,24 @@ object FlightTableRow {
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
-      val estimatedContent = (flight.Estimated, flight.predictedTouchdown, props.airportConfig.useTimePredictions) match {
-        case (None, Some(value), true) => maybeLocalTimeWithPopup(Option(value), Option("Predicted touchdown based on recent patterns"))
-        case _ => maybeLocalTimeWithPopup(flight.Estimated)
+      val arrivalTimes: Seq[(String, Long)] = Seq(
+        "Predicted" -> (if (props.airportConfig.useTimePredictions) flight.predictedTouchdown else None),
+        "Estimated" -> flight.Estimated,
+        "Touchdown" -> flight.Actual,
+        "Estimated Chox" -> flight.EstimatedChox,
+        "Actual Chox" -> flight.ActualChox,
+      ).collect {
+        case (name, Some(time)) => name -> time
       }
+
+      val timesPopUp = arrivalTimes.map(t => <.div(
+        <.span(^.display := "inline-block", ^.width := "120px", t._1), <.span(SDate(t._2).toLocalDateTimeString().takeRight(5))
+      )).toTagMod
+
+      val bestExpectedTime = arrivalTimes.reverse.headOption.map(_._2)
+
+      val expectedContent = maybeLocalTimeWithPopup(bestExpectedTime, Option(timesPopUp), None)
+
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(
@@ -139,18 +155,16 @@ object FlightTableRow {
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
         <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
-        <.td(^.className := "no-wrap", flight.displayStatus.description),
+        <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
-        <.td(estimatedContent),
-        <.td(maybeLocalTimeWithPopup(flight.Actual)),
+        <.td(expectedContent),
       )
-      val estCell = List(<.td(maybeLocalTimeWithPopup(flight.EstimatedChox)))
       val lastCells = List[TagMod](
-        <.td(maybeLocalTimeWithPopup(flight.ActualChox)),
         <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis), ^.className := "arrivals__table__flight-est-pcp"),
         <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.pcpPaxEstimate)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
       )
-      val flightFields = if (props.hasEstChox) firstCells ++ estCell ++ lastCells else firstCells ++ lastCells
+
+      val flightFields = firstCells ++ lastCells
 
       val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
 

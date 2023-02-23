@@ -8,6 +8,7 @@ import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import japgolly.scalajs.react.{CtorType, _}
+import org.scalajs.dom
 import org.scalajs.dom.html.TableSection
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 
@@ -42,8 +43,8 @@ object ArrivalInfo {
       ("Terminal", None),
       ("Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
-      ("Sch", None),
-      ("Est", None),
+      ("Scheduled", None),
+      ("Estimated", None),
       ("Act", None),
       ("Est Chox", None),
       ("Act Chox", None),
@@ -71,6 +72,7 @@ object FeedSourceRow {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .render_P { props =>
+      val isMobile = dom.window.innerWidth < 800
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
       val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
@@ -82,7 +84,7 @@ object FeedSourceRow {
         <.td(arrival.Origin.toString),
         <.td(arrival.Terminal.toString),
         <.td(s"${arrival.Gate.getOrElse("")}/${arrival.Stand.getOrElse("")}"),
-        <.td(arrival.displayStatus.description),
+        <.td(if (isMobile) arrival.displayStatusMobile.description else arrival.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(arrival.Scheduled))),
         <.td(maybeLocalTimeWithPopup(arrival.Estimated)),
         <.td(maybeLocalTimeWithPopup(arrival.Actual)),

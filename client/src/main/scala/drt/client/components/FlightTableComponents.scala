@@ -13,14 +13,18 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 object FlightTableComponents {
 
-  def maybeLocalTimeWithPopup(dt: Option[MillisSinceEpoch], maybeToolTip: Option[String] = None): TagMod = {
-    dt.map(millis => localTimePopup(millis, maybeToolTip)).getOrElse(<.span())
-  }
-
-  def localTimePopup(dt: MillisSinceEpoch, maybeToolTip: Option[String]): VdomElement = {
-    maybeToolTip match {
-      case None => sdateLocalTimePopup(SDate(dt))
-      case Some(tooltip) => <.span(^.display := "flex", ^.flexWrap := "nowrap", sdateLocalTimePopup(SDate(dt)), <.span(^.marginLeft := "5px", Tippy.info(tooltip)))
+  def maybeLocalTimeWithPopup(dt: Option[MillisSinceEpoch], maybeToolTip: Option[TagMod] = None, maybeInfo: Option[String] = None): TagMod = {
+    dt match {
+      case Some(millis) =>
+        val sdate = SDate(millis)
+        val hhmm = f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d"
+        val toolTip = maybeToolTip.getOrElse(<.div(sdate.toLocalDateTimeString()))
+        val timeElement = Tippy.describe(<.span(toolTip, ^.display := "inline"), hhmm)
+        maybeInfo match {
+          case None => timeElement
+          case Some(info) => <.span(^.display := "flex", ^.flexWrap := "nowrap", timeElement, <.span(^.marginLeft := "5px", Tippy.info(info)))
+        }
+      case None => <.span()
     }
   }
 
@@ -58,11 +62,6 @@ object FlightTableComponents {
     } getOrElse {
       <.div()
     }
-
-  def sdateLocalTimePopup(sdate: SDateLike): Unmounted[Tippy.Props, Unit, Unit] = {
-    val hhmm = f"${sdate.getHours()}%02d:${sdate.getMinutes()}%02d"
-    Tippy.describe(<.span(sdate.toLocalDateTimeString(), ^.display := "inline"), hhmm)
-  }
 
   val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))
 }

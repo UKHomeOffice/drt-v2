@@ -12,6 +12,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import japgolly.scalajs.react.{CtorType, _}
+import org.scalajs.dom
 import org.scalajs.dom.html.TableSection
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -43,7 +44,8 @@ object FlightTable {
 
   case class State(apiDataLoaded: Boolean)
 
-  def ArrivalsTable(timelineComponent: Option[Arrival => VdomNode] = None,
+  def ArrivalsTable(shortLabel: Boolean = false,
+                    timelineComponent: Option[Arrival => VdomNode] = None,
                     originMapper: PortCode => VdomNode = portCode => portCode.toString,
                     splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
                    ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
@@ -72,7 +74,7 @@ object FlightTable {
           },
           <.table(
             ^.className := "arrivals-table table-striped",
-            tableHead(props, timelineTh, props.queueOrder, redListPaxExist),
+            tableHead(props, timelineTh, props.queueOrder, redListPaxExist, shortLabel),
             <.tbody(
               sortedFlights.zipWithIndex.map {
                 case ((flightWithSplits, codeShares), idx) =>
@@ -108,23 +110,20 @@ object FlightTable {
     .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
-  def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue], redListPaxExist: Boolean): TagOf[TableSection] = {
+  def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue], redListPaxExist: Boolean, shortLabel: Boolean): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val estChoxHeading = "Est Chox"
-
+    val isMobile = dom.window.innerWidth < 800
     val columns = List(
       ("Flight", Option("arrivals__table__flight-code")),
-      ("Origin", None),
+      (if (isMobile) "Ori" else "Origin", None),
       ("Country", Option("country")),
       (redListHeading, None),
-      ("Gate / Stand", Option("gate-stand")),
+      (if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand")),
       ("Status", Option("status")),
-      ("Sch", None),
-      ("Est", None),
-      ("Act", None),
-      (estChoxHeading, None),
-      ("Act Chox", None),
-      ("Est PCP", Option("arrivals__table__flight-est-pcp")),
+      (if (isMobile || shortLabel) "Sch" else "Scheduled", None),
+      (if (isMobile || shortLabel) "Exp" else "Expected", None),
+      ("Exp PCP", Option("arrivals__table__flight-est-pcp")),
       ("Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
 
     val portColumnThs = columns
@@ -137,6 +136,9 @@ object FlightTable {
       .map {
         case (label, Some(className)) if label == "Est PCP Pax" => <.th(
           <.div(^.cls := className, label, " ", totalPaxTooltip)
+        )
+        case (label, None) if label == "Expected" || label == "Exp" => <.th(
+          <.div(label, " ", expTimeTooltip)
         )
         case (label, None) if label == "Flight" => <.th(
           <.div(^.cls := "arrivals__table__flight-code-wrapper", label, " ", wbrFlightColorTooltip)

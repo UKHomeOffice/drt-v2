@@ -81,6 +81,7 @@ object TerminalDashboardComponent {
                 p.featureFlags.renderReady { featureFlags =>
                   p.redListPorts.renderReady { redListPorts =>
                     FlightTable.ArrivalsTable(
+                      true,
                       None,
                       originMapper,
                       splitsGraphComponentColoured)(
