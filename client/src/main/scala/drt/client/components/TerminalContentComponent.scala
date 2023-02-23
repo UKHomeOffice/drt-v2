@@ -111,7 +111,6 @@ object TerminalContentComponent {
               case ViewDay(localDate, _) => SDate(localDate).getLocalNextMidnight.millisSinceEpoch
             }
 
-            //if (props.viewMode.isLive) SDate.now() else props.terminalPageTab.viewMode.millis
             <.div(^.className := s"view-mode-content $viewModeStr",
               <.div(^.className := "tabs-with-export",
                 <.ul(^.className := "nav nav-tabs",

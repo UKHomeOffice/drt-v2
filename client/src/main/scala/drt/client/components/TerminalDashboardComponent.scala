@@ -80,7 +80,8 @@ object TerminalDashboardComponent {
               <.div(^.className := "terminal-dashboard__arrivals_popup_table",
                 p.featureFlags.renderReady { featureFlags =>
                   p.redListPorts.renderReady { redListPorts =>
-                    FlightTable.ArrivalsTable(true,
+                    FlightTable.ArrivalsTable(
+                      true,
                       None,
                       originMapper,
                       splitsGraphComponentColoured)(
