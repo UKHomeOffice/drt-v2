@@ -8,6 +8,25 @@ platform:
   arch: amd64
 
 steps:
+  - name: build
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error compile docker:stage
+      - sbt scalastyle
+      - sbt scapegoat
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+
   - name: sonar-scanner
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
@@ -51,23 +70,6 @@ steps:
       tags:
         - latest
         - ${DRONE_BUILD_NUMBER}
-    when:
-      event:
-        - push
-
-  - name: build
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-    commands:
-      - /root/entrypoint.sh
-      - sbt --error compile docker:stage
-    environment:
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt_ci
-      ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
     when:
       event:
         - push
