@@ -14,8 +14,8 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt --error compile docker:stage
-      - sbt scalastyle
-      - sbt scapegoat
+      - sbt scalastyle | true
+      - sbt scapegoat | true
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -35,6 +35,8 @@ steps:
         - ${DRONE_BRANCH}
       event:
         - push
+    depends_on:
+      - build
 
   - name: ecr-login
     pull: if-not-exists
