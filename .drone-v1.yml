@@ -31,6 +31,10 @@ steps:
   - name: sonar-scanner
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
+    commands:
+      - pwd
+      - find / -name dependency-check-report.html
+      - sonar-scanner
     when:
       branch:
         - ${DRONE_BRANCH}
