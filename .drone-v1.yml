@@ -14,7 +14,7 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt --error compile docker:stage
-      - sbt -ivy ./.ivy2 dependencyCheck dependencyUpdatesReport
+      - sbt -ivy ./.ivy2 dependencyCheck
       - sbt scalastyle | true
       - sbt scapegoat | true
     environment:
