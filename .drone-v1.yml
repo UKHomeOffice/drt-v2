@@ -34,6 +34,7 @@ steps:
     commands:
       - pwd
       - find / -name dependency-check-report.html
+      - find / -name dependency-check-report.xml
       - sonar-scanner
     when:
       branch:
