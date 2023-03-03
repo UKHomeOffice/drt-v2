@@ -41,7 +41,8 @@ steps:
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
     when:
-      - push
+      event:
+        - push
     depends_on:
       - build
 
