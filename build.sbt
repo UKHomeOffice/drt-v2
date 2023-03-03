@@ -151,8 +151,6 @@ lazy val ReleaseCmd = Command.command("release") {
 
 Global / cancelable := true
 
-Global / dependencyCheckFormats := Seq("HTML", "JSON")
-
 // code generation task
 val conf = ConfigFactory.parseFile(new File("server/src/main/resources/application.conf")).resolve()
 
