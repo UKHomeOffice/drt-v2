@@ -41,8 +41,9 @@ steps:
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
     when:
-      event:
-        - build
+      - push
+    depends_on:
+      - analysis
 
   - name: sonar-scanner
     pull: if-not-exists
