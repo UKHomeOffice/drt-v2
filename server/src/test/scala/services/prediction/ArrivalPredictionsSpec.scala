@@ -13,6 +13,7 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T2
 import uk.gov.homeoffice.drt.prediction.Feature.OneToMany
 import uk.gov.homeoffice.drt.prediction._
+import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.category.FlightCategory
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 

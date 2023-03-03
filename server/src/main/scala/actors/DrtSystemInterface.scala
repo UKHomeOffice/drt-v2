@@ -47,7 +47,7 @@ import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import play.api.Configuration
 import queueus._
-import services.PcpArrival.{GateOrStandWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
+import services.PcpArrival.{GateOrStandToWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
 import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchManager.queueDaysToReCrunch
@@ -67,7 +67,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArriv
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.prediction.{OffScheduleModelAndFeatures, ToChoxModelAndFeatures}
+import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 import uk.gov.homeoffice.drt.time.{MilliDate => _, _}
@@ -100,8 +100,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val params: DrtParameters
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
 
-  val gateWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.gateWalkTimesFilePath)
-  val standWalkTimesProvider: GateOrStandWalkTime = walkTimeMillisProviderFromCsv(params.standWalkTimesFilePath)
+  val gateWalkTimesProvider: GateOrStandToWalkTime = walkTimeMillisProviderFromCsv(params.gateWalkTimesFilePath)
+  val standWalkTimesProvider: GateOrStandToWalkTime = walkTimeMillisProviderFromCsv(params.standWalkTimesFilePath)
 
   private val minBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.minimum-seconds")
   private val maxBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.maximum-seconds")
@@ -360,7 +360,15 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
     val addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
       log.info(s"Touchdown predictions enabled")
-      ArrivalPredictions(Flight().getModels, Map(OffScheduleModelAndFeatures.targetName -> 45, ToChoxModelAndFeatures.targetName -> 20), 15).addPredictions
+      ArrivalPredictions(
+        Flight().getModels,
+        Map(
+          OffScheduleModelAndFeatures.targetName -> 45,
+          ToChoxModelAndFeatures.targetName -> 20,
+          WalkTimeModelAndFeatures.targetName -> 30 * 60,
+        ),
+        15
+      ).addPredictions
     } else {
       log.info(s"Touchdown predictions disabled. Using noop lookup")
       diff => Future.successful(diff)

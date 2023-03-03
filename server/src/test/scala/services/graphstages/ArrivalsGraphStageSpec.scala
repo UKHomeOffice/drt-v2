@@ -17,7 +17,7 @@ import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3}
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.prediction.OffScheduleModelAndFeatures
+import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 

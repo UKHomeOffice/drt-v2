@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.prediction.OffScheduleModelAndFeatures
+import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
 
 class FlightMessageConversionSpec extends Specification {
 

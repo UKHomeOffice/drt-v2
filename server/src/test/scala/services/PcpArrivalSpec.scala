@@ -9,7 +9,7 @@ import org.specs2.mutable.SpecificationLike
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import uk.gov.homeoffice.drt.prediction.OffScheduleModelAndFeatures
+import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
 import uk.gov.homeoffice.drt.time.SDate
 

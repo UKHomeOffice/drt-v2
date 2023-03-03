@@ -8,7 +8,8 @@ import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.Models
 import uk.gov.homeoffice.drt.actor.TerminalDateActor.FlightRoute
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.prediction.{ModelAndFeatures, OffScheduleModelAndFeatures, ToChoxModelAndFeatures}
+import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
+import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -27,7 +28,7 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
       val lastUpdatedThreshold = SDate.now().addDays(-7).millisSinceEpoch
       Source(diff.toUpdate.values.toList)
         .mapAsync(1) { arrival: Arrival =>
-          if (recentPredictionTouchdownExists(lastUpdatedThreshold, arrival.Predictions.lastChecked))
+          if (recentPredictionExists(lastUpdatedThreshold, arrival.Predictions.lastChecked))
             Future.successful(arrival)
           else
             applyPredictions(arrival)
@@ -38,8 +39,8 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
         }
     }
 
-  private def recentPredictionTouchdownExists(lastUpdatedThreshold: MillisSinceEpoch,
-                                              lastChecked: Long): Boolean = lastChecked > lastUpdatedThreshold
+  private def recentPredictionExists(lastUpdatedThreshold: MillisSinceEpoch, lastChecked: Long): Boolean =
+    false //lastChecked > lastUpdatedThreshold
 
   def applyPredictions(arrival: Arrival): Future[Arrival] = {
     implicit val millisToSDate: MillisSinceEpoch => SDateLike = (millis: MillisSinceEpoch) => SDate(millis)
@@ -47,10 +48,11 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
     modelAndFeaturesProvider(FlightRoute(arrival.Terminal.toString, arrival.VoyageNumber.numeric, arrival.Origin.iata))
       .map { models =>
         models.models.values.foldLeft(arrival) {
-          case (arrival, model: OffScheduleModelAndFeatures) =>
-            updatePrediction(arrival, model, model.maybeOffScheduleMinutes)
-          case (arrival, model: ToChoxModelAndFeatures) =>
-            updatePrediction(arrival, model, model.maybeToChoxMinutes)
+          case (arrival, model: ArrivalModelAndFeatures) =>
+            updatePrediction(arrival, model, model.prediction)
+          case (_, unknownModel) =>
+            log.error(s"Unknown model type ${unknownModel.getClass}")
+            arrival
         }
       }
       .recover {
@@ -61,8 +63,7 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
   }
 
   private def updatePrediction(arrival: Arrival, model: ModelAndFeatures, predictionProvider: Arrival => Option[Int]): Arrival = {
-    val maybeTouchdown: Option[Int] = maybePrediction(arrival, model, predictionProvider)
-    val updatedPredictions: Map[String, Int] = maybeTouchdown match {
+    val updatedPredictions: Map[String, Int] = maybePrediction(arrival, model, predictionProvider) match {
       case None => arrival.Predictions.predictions
       case Some(update) => arrival.Predictions.predictions.updated(model.targetName, update)
     }
@@ -78,7 +79,12 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
         maybeValue <- predictor(arrival)
         maybePrediction <- if (abs(maybeValue) < valueThreshold)
           Option(maybeValue)
-        else None
+        else {
+          println(s"Prediction for ${arrival.unique} was $maybeValue which was above the threshold of $valueThreshold")
+          None
+        }
       } yield maybePrediction
-    } else None
+    } else {
+      None
+    }
 }

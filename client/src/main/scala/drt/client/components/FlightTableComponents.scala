@@ -3,13 +3,11 @@ package drt.client.components
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.vdom.TagMod
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
-import uk.gov.homeoffice.drt.prediction.ToChoxModelAndFeatures
+import uk.gov.homeoffice.drt.prediction.arrival.{ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
-import uk.gov.homeoffice.drt.time.SDateLike
 
 object FlightTableComponents {
 
@@ -51,6 +49,7 @@ object FlightTableComponents {
         s"Feed actual: ${actualMinutesToChox(fws.apiFlight).map(c => s"${c.toString}m").getOrElse("-")}", <.br(),
         <.h3("Other times"),
         s"Chox to doors open: ${firstPaxOffMillis / oneMinuteMillis}m", <.br(),
+        s"Predicted walk time: ${fws.apiFlight.Predictions.predictions.get(WalkTimeModelAndFeatures.targetName).map(c => s"${c / 60}m").getOrElse("-")}", <.br(),
         s"Walk time from gate to arrivals hall: ${fws.apiFlight.walkTime(firstPaxOffMillis, considerPredictions = true).map(ms => s"${(ms / oneMinuteMillis).toString}m").getOrElse("-")}", <.br(),
       )
       val content = <.div(^.display := "grid", ^.whiteSpace := "nowrap",

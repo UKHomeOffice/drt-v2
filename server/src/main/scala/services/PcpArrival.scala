@@ -18,7 +18,9 @@ object PcpArrival {
 
   def walkTimesLinesFromFileUrl(walkTimesFileUrl: String): Seq[String] = {
     Try(scala.io.Source.fromURL(walkTimesFileUrl)).map(_.getLines().drop(1).toSeq) match {
-      case Success(walkTimes) => walkTimes
+      case Success(walkTimes) =>
+        println(s"\n***Loaded ${walkTimes.size} walk times from '$walkTimesFileUrl'\n")
+        walkTimes
       case f =>
         log.warn(s"Failed to extract lines from walk times file '$walkTimesFileUrl': $f")
         Seq.empty
@@ -41,7 +43,7 @@ object PcpArrival {
       None
   }
 
-  def walkTimeMillisProviderFromCsv(walkTimesCsvFileUrl: String): GateOrStandWalkTime = {
+  def walkTimeMillisProviderFromCsv(walkTimesCsvFileUrl: String): GateOrStandToWalkTime = {
     val walkTimes =
       if (walkTimesCsvFileUrl.nonEmpty)
         loadWalkTimesFromCsv(walkTimesCsvFileUrl).map(x => ((x.gateOrStand, x.terminal), x.walkTimeMillis)).toMap
@@ -69,7 +71,7 @@ object PcpArrival {
   }
 
   type GateOrStand = String
-  type GateOrStandWalkTime = (GateOrStand, Terminal) => Option[MillisSinceEpoch]
+  type GateOrStandToWalkTime = (GateOrStand, Terminal) => Option[MillisSinceEpoch]
 
   def walkTimeMillis(walkTimes: Map[(String, Terminal), Long])(from: String, terminal: Terminal): Option[MillisSinceEpoch] = {
     walkTimes.get((from, terminal))
@@ -84,8 +86,8 @@ object PcpArrival {
     MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
   }
 
-  def gateOrStandWalkTimeCalculator(gateWalkTimesProvider: GateOrStandWalkTime,
-                                    standWalkTimesProvider: GateOrStandWalkTime,
+  def gateOrStandWalkTimeCalculator(gateWalkTimesProvider: GateOrStandToWalkTime,
+                                    standWalkTimesProvider: GateOrStandToWalkTime,
                                     defaultWalkTimeMillis: MillisSinceEpoch,
                                     coachWalkTime: CoachWalkTime
                                    )(flight: Arrival, redListUpdates: RedListUpdates): MillisSinceEpoch = {
