@@ -8,6 +8,23 @@ platform:
   arch: amd64
 
 steps:
+  - name: build
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error compile docker:stage
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+
   - name: analysis
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
@@ -25,7 +42,7 @@ steps:
         from_secret: KEYTOOL_PASSWORD
     when:
       event:
-        - push
+        - build
 
   - name: sonar-scanner
     pull: if-not-exists
@@ -39,23 +56,6 @@ steps:
         - push
     depends_on:
       - analysis
-
-  - name: build
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-    commands:
-      - /root/entrypoint.sh
-      - sbt --error compile docker:stage
-    environment:
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt_ci
-      ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
-    when:
-      event:
-        - push
 
   - name: ecr-login
     pull: if-not-exists
