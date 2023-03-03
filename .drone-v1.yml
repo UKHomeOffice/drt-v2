@@ -43,7 +43,7 @@ steps:
     when:
       - push
     depends_on:
-      - analysis
+      - build
 
   - name: sonar-scanner
     pull: if-not-exists
