@@ -66,7 +66,6 @@ object Settings {
     val typesafeConfig = "1.3.0"
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
-    val openSaml = "2.6.1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
     val playJson = "2.6.0"

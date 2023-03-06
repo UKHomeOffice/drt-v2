@@ -15,6 +15,7 @@ steps:
       - /root/entrypoint.sh
       - sbt --error compile docker:stage
     environment:
+      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt_ci
@@ -52,6 +53,8 @@ steps:
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     commands:
       - sonar-scanner
+    environment:
+      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
     when:
       branch:
         - ${DRONE_BRANCH}
