@@ -52,7 +52,7 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
     commands:
-      - sonar-scanner
+      - sonar-scanner -Dsonar.projectVersion=${DRONE_BUILD_NUMBER}
     environment:
       DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
     when:
