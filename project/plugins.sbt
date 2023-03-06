@@ -17,4 +17,10 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.3")
 
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.7.0")
 
+addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "1.0.0")
+
+addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.1.1")
+
+addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "5.0.0")
+
 addDependencyTreePlugin
