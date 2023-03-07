@@ -52,7 +52,7 @@ object Settings {
     val levelDbJni = "1.8"
     val renjin = "0.9.2646"
     val awsSdk = "1.11.89"
-    val csvCommons = "1.4"
+    val csvCommons = "1.10.0"
     val poi = "5.1.0"
     val pprint = "0.5.6"
     val akkaPersistenceJdbc = "5.2.0"
