@@ -35,7 +35,7 @@ object Settings {
     val autowire = "0.3.3"
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
-    val uTest = "0.7.4"
+    val uTest = "0.7.11"
     val h2 = "2.1.210"
 
     val akka = "2.7.0"
