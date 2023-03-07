@@ -31,7 +31,7 @@ object Settings {
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
-    val scalaJsMomentJs = "0.10.4"
+    val scalaJsMomentJs = "0.10.9"
     val autowire = "0.3.3"
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
