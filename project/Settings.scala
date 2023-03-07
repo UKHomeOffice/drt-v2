@@ -36,7 +36,7 @@ object Settings {
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
-    val h2 = "2.1.210"
+    val h2 = "2.1.214"
 
     val akka = "2.7.0"
     val akkaStreamContrib = "0.9"
