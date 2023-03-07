@@ -192,7 +192,7 @@ object Settings {
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.poi" % "poi" % poi,
     "org.apache.poi" % "poi-ooxml" % poi,
-    "org.codehaus.janino" % "janino" % "3.0.7",
+    "org.codehaus.janino" % "janino" % "3.0.16",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.postgresql" % "postgresql" % postgres,
