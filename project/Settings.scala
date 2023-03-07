@@ -48,7 +48,7 @@ object Settings {
 
     val playScripts = "0.5.0"
     val sprayVersion = "1.3.4"
-    val levelDb = "0.7"
+    val levelDb = "0.12"
     val levelDbJni = "1.8"
     val renjin = "0.9.2646"
     val awsSdk = "1.11.89"
