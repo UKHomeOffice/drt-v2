@@ -207,7 +207,7 @@ object Settings {
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "com.box" % "box-java-sdk" % "2.19.0",
-    "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
+    "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.5",
     "org.bitbucket.b_c" % "jose4j" % "0.4.4",
 
     "io.netty" % "netty-all" % "4.1.74.Final",
