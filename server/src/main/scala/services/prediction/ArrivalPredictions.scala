@@ -5,8 +5,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.ArrivalsDiff
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.actor.PredictionModelActor.Models
-import uk.gov.homeoffice.drt.actor.TerminalDateActor.FlightRoute
+import uk.gov.homeoffice.drt.actor.PredictionModelActor.{Models, WithId}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
@@ -16,7 +15,8 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.math.abs
 
 
-case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Models],
+case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
+                              modelAndFeaturesProvider: WithId => Future[Models],
                               modelThresholds: Map[String, Int],
                               minimumImprovementPctThreshold: Int)
                              (implicit ec: ExecutionContext, mat: Materializer) {
@@ -45,27 +45,34 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
   def applyPredictions(arrival: Arrival): Future[Arrival] = {
     implicit val millisToSDate: MillisSinceEpoch => SDateLike = (millis: MillisSinceEpoch) => SDate(millis)
 
-    modelAndFeaturesProvider(FlightRoute(arrival.Terminal.toString, arrival.VoyageNumber.numeric, arrival.Origin.iata))
-      .map { models =>
-        models.models.values.foldLeft(arrival) {
-          case (arrival, model: ArrivalModelAndFeatures) =>
-            updatePrediction(arrival, model, model.prediction)
-          case (_, unknownModel) =>
-            log.error(s"Unknown model type ${unknownModel.getClass}")
-            arrival
-        }
+    Source(modelKeys(arrival).toList)
+      .foldAsync(arrival) {
+        case (accArrival, key) =>
+          modelAndFeaturesProvider(key)
+            .map { models =>
+              models.models.values.foldLeft(accArrival) {
+                case (arrival, model: ArrivalModelAndFeatures) =>
+                  updatePrediction(arrival, model, model.prediction)
+                case (_, unknownModel) =>
+                  log.error(s"Unknown model type ${unknownModel.getClass}")
+                  accArrival
+              }
+            }
+            .recover {
+              case t =>
+                log.error(s"Failed to fetch prediction model and features for ${arrival.unique}", t)
+                accArrival
+            }
       }
-      .recover {
-        case t =>
-          log.error(s"Failed to fetch prediction model and features for ${arrival.unique}", t)
-          arrival
-      }
+      .runWith(Sink.head)
   }
 
   private def updatePrediction(arrival: Arrival, model: ModelAndFeatures, predictionProvider: Arrival => Option[Int]): Arrival = {
     val updatedPredictions: Map[String, Int] = maybePrediction(arrival, model, predictionProvider) match {
-      case None => arrival.Predictions.predictions
-      case Some(update) => arrival.Predictions.predictions.updated(model.targetName, update)
+      case None =>
+        arrival.Predictions.predictions.removed(model.targetName)
+      case Some(update) =>
+        arrival.Predictions.predictions.updated(model.targetName, update)
     }
     arrival.copy(Predictions = arrival.Predictions.copy(predictions = updatedPredictions))
   }
@@ -80,7 +87,6 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
         maybePrediction <- if (abs(maybeValue) < valueThreshold)
           Option(maybeValue)
         else {
-          println(s"Prediction for ${arrival.unique} was $maybeValue which was above the threshold of $valueThreshold")
           None
         }
       } yield maybePrediction

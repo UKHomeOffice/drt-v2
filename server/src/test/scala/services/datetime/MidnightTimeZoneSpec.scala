@@ -72,7 +72,7 @@ class MidnightTimeZoneSpec extends Specification {
 
       val expected = "2019-03-31T00:00:00Z"
 
-      SDate(result.millisSinceEpoch).toISOString === expected
+      SDate(result.millisSinceEpoch).toISOString() === expected
     }
     "Given midnight BST on 01/04/2019 then we should get 2019-03-31T23:00:00Z" >> {
       val bstMidnight = SDate("2019-03-31T23:00:00Z")
@@ -80,7 +80,7 @@ class MidnightTimeZoneSpec extends Specification {
 
       val expected = "2019-03-31T23:00:00Z"
 
-      SDate(result.millisSinceEpoch).toISOString === expected
+      SDate(result.millisSinceEpoch).toISOString() === expected
     }
   }
 }
