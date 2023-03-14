@@ -1,3 +1,4 @@
+
 package controllers
 
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
@@ -28,9 +29,10 @@ import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
 import services.staffing.StaffTimeSlots
+import slickdb.UserTableLike
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, ManageUsers, Role, StaffEdit}
-import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.auth.{LoggedInUser, _}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -105,20 +107,25 @@ trait AirportConfProvider extends AirportConfiguration {
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  val userService: UserTableLike
+
   def userRolesFromHeader(headers: Headers): Set[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toSet).getOrElse(Set.empty[Role])
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
 
-  def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
+  def getLoggedInUser(config: Configuration, headers: Headers, session: Session)(implicit ec: ExecutionContext): LoggedInUser = {
     val baseRoles = Set()
     val roles: Set[Role] =
       getRoles(config, headers, session) ++ baseRoles
-    LoggedInUser(
+    val loggedInUser: LoggedInUser = LoggedInUser(
       userName = headers.get("X-Auth-Username").getOrElse("Unknown"),
       id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
       email = headers.get("X-Auth-Email").getOrElse("Unknown"),
       roles = roles
     )
+    userService.insertOrUpdateUser(loggedInUser, None, None)
+
+    loggedInUser
   }
 }
 
@@ -254,8 +261,10 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       }
 
       def keyCloakClient: KeyCloakClient with ProdSendAndReceive = {
-        val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
-        val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+        val token = headers.get("X-Auth-Token")
+          .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+        val keyCloakUrl = config.getOptional[String]("key-cloak.url")
+          .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
         new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
       }
 
@@ -322,7 +331,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
         val b = request.body.asBytes(parse.UNLIMITED).get
 
-        val router = Router.route[Api](ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
+        val router = Router.route[Api](
+          ApiService(airportConfig, ctrl.shiftsActor, ctrl.fixedPointsActor, ctrl.staffMovementsActor, request.headers, request.session))
 
         router(
           autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
@@ -345,11 +355,11 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     eventualThing
   }
 
-  def index: Action[AnyContent] = Action { implicit request: Request[AnyContent]  =>
+  def index: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
-    if (user.hasRole(airportConfig.role))
-      Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id) )
-    else {
+    if (user.hasRole(airportConfig.role)) {
+      Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
+    } else {
       val baseDomain = config.get[String]("drt.domain")
       val isSecure = config.get[Boolean]("drt.use-https")
       val protocol = if (isSecure) "https://" else "http://"
@@ -376,7 +386,9 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
       ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneSecondMillis))
     )
-  } else HealthChecker(Seq())
+  } else {
+    HealthChecker(Seq())
+  }
 
   def healthCheck: Action[AnyContent] = Action.async { _ =>
     healthChecker.checksPassing.map {
@@ -440,8 +452,10 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   }
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
-    val token = headers.get("X-Auth-Token").getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
-    val keyCloakUrl = config.getOptional[String]("key-cloak.url").getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+    val token = headers.get("X-Auth-Token")
+      .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+    val keyCloakUrl = config.getOptional[String]("key-cloak.url")
+      .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
