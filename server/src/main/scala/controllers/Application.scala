@@ -1,4 +1,3 @@
-
 package controllers
 
 import actors._
@@ -207,8 +206,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         val router = Router.route[Api](
           new ApiService(airportConfig,
             ctrl.shiftsActor,
-            ctrl.fixedPointsActor,
-            ctrl.staffMovementsActor,
             request.headers,
             request.session))
 

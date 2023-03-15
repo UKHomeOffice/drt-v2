@@ -19,7 +19,6 @@ import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
-
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -47,15 +46,15 @@ trait ApiServiceI extends Api with ShiftPersistence {
 
 class ApiService(airportConfig: AirportConfig,
                  shiftsActorRef: ActorRef,
-                 fixedPointsActor: ActorRef,
-                 staffMovementsActor: ActorRef,
-                 headers: Headers, session: Session) extends ApiServiceI {
+                 headers: Headers,
+                 session: Session) extends ApiServiceI {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
   implicit val mat: Materializer = DrtActorSystem.mat
   implicit val ec: ExecutionContext = DrtActorSystem.ec
   val ctrl = DrtActorSystem.drtSystem
   val config = DrtActorSystem.config
+
   override def shiftsActor: ActorRef = shiftsActorRef
 
   override def actorSystem: ActorSystem = DrtActorSystem.actorSystem
