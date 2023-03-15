@@ -64,7 +64,7 @@ steps:
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt_ci
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
       ENV_LOG_LEVEL: ERROR
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
@@ -81,7 +81,7 @@ steps:
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt_ci
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
       ENV_LOG_LEVEL: ERROR
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
