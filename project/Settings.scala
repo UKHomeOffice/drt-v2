@@ -23,6 +23,7 @@ object Settings {
   )
 
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
+  //noinspection ScalaStyle
   object versions {
     val drtLib = "v405"
 
@@ -65,7 +66,6 @@ object Settings {
     val typesafeConfig = "1.3.0"
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
-    val openSaml = "2.6.1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
     val playJson = "2.6.0"
@@ -188,7 +188,6 @@ object Settings {
     "org.codehaus.janino" % "janino" % janinoVersion,
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.0",
     "com.fasterxml.jackson.core" % "jackson-core" % "2.10.0",
-    "org.opensaml" % "opensaml" % openSaml excludeAll(ExclusionRule("org.bouncycastle"), ExclusionRule("xerces")),
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.poi" % "poi" % poi,

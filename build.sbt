@@ -5,9 +5,10 @@ import sbt.Credentials
 import sbt.Keys.{credentials, _}
 import sbt.Project.projectToRef
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
+import com.sksamuel.scapegoat.sbt.ScapegoatSbtPlugin.autoImport._
 
 scalaVersion := Settings.versions.scala
-
+scapegoatVersion in ThisBuild := "2.1.1"
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
 

@@ -8,14 +8,58 @@ platform:
   arch: amd64
 
 steps:
+  - name: build
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error compile docker:stage
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+
+  - name: analysis
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt -ivy ./.ivy2 dependencyCheck
+      - sbt scalastyle | true
+      - sbt scapegoat | true
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+    depends_on:
+      - build
+
   - name: sonar-scanner
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
+    commands:
+      - sonar-scanner -Dsonar.projectVersion=B${DRONE_BUILD_NUMBER}
+    environment:
+      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
     when:
       branch:
         - ${DRONE_BRANCH}
       event:
         - push
+    depends_on:
+      - analysis
 
   - name: ecr-login
     pull: if-not-exists
@@ -51,23 +95,6 @@ steps:
       tags:
         - latest
         - ${DRONE_BUILD_NUMBER}
-    when:
-      event:
-        - push
-
-  - name: build
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-    commands:
-      - /root/entrypoint.sh
-      - sbt --error compile docker:stage
-    environment:
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
-      ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
     when:
       event:
         - push
