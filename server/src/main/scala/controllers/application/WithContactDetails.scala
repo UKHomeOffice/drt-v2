@@ -25,7 +25,7 @@ trait WithContactDetails {
     OOHChecker(BankHolidayApiClient())
       .isOOH(localTime)
       .map { isOoh =>
-        Ok(write(OutOfHoursStatus(localTime.toLocalDateTimeString(), isOoh)))
+        Ok(write(OutOfHoursStatus(localTime.toLocalDateTimeString, isOoh)))
       }
   }
 }

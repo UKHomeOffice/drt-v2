@@ -70,7 +70,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         .addMillis(airportConfig.firstPaxOffMillis)
         .addMillis(defaultWalkTime)
 
-      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for ${expectedPcp.toISOString()}") {
+      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for ${expectedPcp.toISOString}") {
         case ps: PortState =>
           ps.flights.values.exists(_.apiFlight.PcpTime == Option(expectedPcp.millisSinceEpoch))
       }

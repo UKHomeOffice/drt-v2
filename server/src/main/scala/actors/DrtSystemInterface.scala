@@ -39,7 +39,7 @@ import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits}
+import drt.shared.FlightsApi.Flights
 import drt.shared._
 import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookupLike
@@ -63,9 +63,10 @@ import services.staffing.StaffMinutesChecker
 import slickdb.UserTableLike
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
-import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrierOrigin, TerminalFlightNumberOrigin}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, WithTimeAccessor}
+import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
@@ -313,7 +314,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       staffMovementsActor ! staffingUpdateRequestQueue
 
       val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
-      log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString()}")
+      log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString}")
 
       val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
 
@@ -361,8 +362,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       log.info(s"Flight predictions enabled")
       ArrivalPredictions(
         (a: Arrival) => Iterable(
-          TerminalFlightNumberOrigin(a.Terminal.toString, a.VoyageNumber.numeric, a.Origin.iata),
-          TerminalCarrierOrigin(a.Terminal.toString, a.CarrierCode.code, a.Origin.iata),
+          TerminalOrigin(a.Terminal.toString, a.Origin.iata),
+          TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
         ),
         Flight().getModels,
         Map(

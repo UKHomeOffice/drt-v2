@@ -46,11 +46,11 @@ object WholePassengerQueueSplits {
           (tqm, LoadMinute(tqm.terminal, tqm.queue, pax, pax.sum, tqm.minute))
       }
 
-  def flightSplits(minuteMillis: NumericRange[MillisSinceEpoch],
-                   flight: ApiFlightWithSplits,
-                   processingTime: (PaxType, Queue) => Double,
-                   queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-                   queueFallbacks: QueueFallbacks,
+  private def flightSplits(minuteMillis: NumericRange[MillisSinceEpoch],
+                           flight: ApiFlightWithSplits,
+                           processingTime: (PaxType, Queue) => Double,
+                           queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
+                           queueFallbacks: QueueFallbacks,
                   ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
     flight.bestSplits match {
       case Some(splitsToUse) =>
@@ -65,9 +65,9 @@ object WholePassengerQueueSplits {
     }
 
   @tailrec
-  def maybeFallbackQueue(queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-                         queueFallbacks: List[Queue],
-                         minute: MillisSinceEpoch,
+  private def maybeFallbackQueue(queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
+                                 queueFallbacks: List[Queue],
+                                 minute: MillisSinceEpoch,
                         ): Option[Queue] =
     queueFallbacks match {
       case Nil => None
@@ -102,7 +102,7 @@ object WholePassengerQueueSplits {
             if (queueStatus(ptqc.queueType, minuteMillis) != Open) {
               val fallbacks = queueFallbacks(ptqc.queueType, ptqc.passengerType)
               val redirectedQueue = maybeFallbackQueue(queueStatus, fallbacks, minuteMillis).getOrElse {
-                log.error(s"No fallback for closed queue ${ptqc.queueType} at ${SDate(minuteMillis).toISOString()}. Resorting to closed queue")
+                log.error(s"No fallback for closed queue ${ptqc.queueType} at ${SDate(minuteMillis).toISOString}. Resorting to closed queue")
                 ptqc.queueType
               }
               (redirectedQueue, minuteMillis, pax)

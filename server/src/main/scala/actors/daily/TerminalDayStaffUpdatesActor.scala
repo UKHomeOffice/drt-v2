@@ -35,7 +35,7 @@ class TerminalDayStaffUpdatesActor(year: Int,
 
   def myReceiveRecover: Receive = {
     case SnapshotOffer(SnapshotMetadata(_, _, ts), StaffMinutesMessage(minuteMessages)) =>
-      log.debug(s"Processing snapshot offer from ${SDate(ts).toISOString()}")
+      log.debug(s"Processing snapshot offer from ${SDate(ts).toISOString}")
       updateState(minuteMessages)
 
     case StaffMinutesMessage(minuteMessages) =>

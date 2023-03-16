@@ -4,10 +4,10 @@ import actors.persistent.staffing.GetState
 import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages}
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.DataUpdates.Combinable
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.DataUpdates.Combinable
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
@@ -21,7 +21,7 @@ object QueueLikeActor {
 
   case object Tick
 
-  case object ReadyToEmit
+//  case object ReadyToEmit
 
   object UpdatedMillis {
     val empty: UpdatedMillis = UpdatedMillis(Set())
@@ -45,7 +45,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
   val state: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet()
 
-  def crunchRequestFromMillis(millis: MillisSinceEpoch): ProcessingRequest =
+  private def crunchRequestFromMillis(millis: MillisSinceEpoch): ProcessingRequest =
     CrunchRequest(SDate(millis).toLocalDate, crunchOffsetMinutes, durationMinutes)
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

@@ -16,7 +16,7 @@ object MockManifest {
     val voyageManifest = VoyageManifestGenerator.voyageManifest(
       portCode = arrival.AirportID,
       scheduledDate = ManifestDateOfArrival(scheduled.toISODateOnly),
-      scheduledTime = ManifestTimeOfArrival(scheduled.prettyTime()),
+      scheduledTime = ManifestTimeOfArrival(scheduled.prettyTime),
       paxInfos = List(
         List.fill(30)(euPassport),
         List.fill(10)(euChild),

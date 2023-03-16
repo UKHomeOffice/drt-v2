@@ -120,7 +120,7 @@ object FlightTableRow {
       }
 
       val timesPopUp = arrivalTimes.map(t => <.div(
-        <.span(^.display := "inline-block", ^.width := "120px", t._1), <.span(SDate(t._2).toLocalDateTimeString().takeRight(5))
+        <.span(^.display := "inline-block", ^.width := "120px", t._1), <.span(SDate(t._2).toLocalDateTimeString.takeRight(5))
       )).toTagMod
 
       val bestExpectedTime = arrivalTimes.reverse.headOption.map(_._2)

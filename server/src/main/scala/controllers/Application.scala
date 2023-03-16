@@ -22,7 +22,6 @@ import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc._
 import play.api.{Configuration, Environment}
-import play.filters.csp.CSP
 import services.PcpArrival._
 import services._
 import services.graphstages.Crunch
@@ -223,7 +222,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         portStateFuture
           .map {
             case portState: PortState =>
-              log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
+              log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
               val fp = services.exports.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
               val hf = services.exports.Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
               Option(ForecastPeriodWithHeadlines(fp, hf))
@@ -247,7 +246,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
         shiftsFuture.collect {
           case shifts: ShiftAssignments =>
-            log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
+            log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString}")
             val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
             StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime)
         }
@@ -462,7 +461,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         val logMessage = Map(
           "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
           "message" -> postStringValOrElse("message", "no log message"),
-          "logTime" -> SDate(millis).toISOString(),
+          "logTime" -> SDate(millis).toISOString,
           "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
           "logLevel" -> logLevel
         )

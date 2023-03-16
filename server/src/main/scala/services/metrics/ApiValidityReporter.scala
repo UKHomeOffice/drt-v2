@@ -7,8 +7,8 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.FlightsApi.FlightsWithSplits
 import services.crunch.deskrecs.DynamicRunnablePassengerLoads
+import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.ExecutionContext

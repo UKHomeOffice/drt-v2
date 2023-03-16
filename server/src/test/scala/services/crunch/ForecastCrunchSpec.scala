@@ -48,10 +48,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expectedForecast = Map(
-      SDate(base).toISOString() -> 20,
-      SDate(base).addMinutes(1).toISOString() -> 1,
-      SDate(scheduled).toISOString() -> 20,
-      SDate(scheduled).addMinutes(1).toISOString() -> 1
+      SDate(base).toISOString -> 20,
+      SDate(base).addMinutes(1).toISOString -> 1,
+      SDate(scheduled).toISOString -> 20,
+      SDate(scheduled).addMinutes(1).toISOString -> 1
     )
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
@@ -132,8 +132,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expectedForecast = Map(
-      SDate(baseScheduled).toISOString() -> 20,
-      SDate(baseScheduled).addMinutes(1).toISOString() -> 1)
+      SDate(baseScheduled).toISOString -> 20,
+      SDate(baseScheduled).addMinutes(1).toISOString -> 1)
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
@@ -379,7 +379,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
   }
 
   def interestingPaxLoads(cms: Map[TQM, CrunchApi.CrunchMinute]): Map[String, Double] = {
-    cms.values.filter(cm => cm.paxLoad != 0).map(cm => (SDate(cm.minute).toISOString(), cm.paxLoad)).toMap
+    cms.values.filter(cm => cm.paxLoad != 0).map(cm => (SDate(cm.minute).toISOString, cm.paxLoad)).toMap
   }
 
   def interestingDeployments(cms: Map[TQM, CrunchApi.CrunchMinute]): scala.Seq[(MillisSinceEpoch, Terminal, Queue, Option[Int])] = {

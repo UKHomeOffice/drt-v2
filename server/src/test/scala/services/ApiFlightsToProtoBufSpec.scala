@@ -1,11 +1,11 @@
 package services
 
-import actors.serializers.FlightMessageConversion._
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T2
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PortCode}
 import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{apiFlightToFlightMessage, flightMessageToApiFlight}
 import uk.gov.homeoffice.drt.time.SDate
 
 class ApiFlightsToProtoBufSpec extends Specification {

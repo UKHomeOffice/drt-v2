@@ -59,8 +59,8 @@ object TerminalDashboardComponent {
 
       val prevSlotPortState = p.portState.window(prevSlotStart, start)
 
-      val urlPrevTime = URIUtils.encodeURI(prevSlotStart.toISOString())
-      val urlNextTime = URIUtils.encodeURI(end.toISOString())
+      val urlPrevTime = URIUtils.encodeURI(prevSlotStart.toISOString)
+      val urlNextTime = URIUtils.encodeURI(end.toISOString)
 
       val terminalPax = ps.crunchMinutes.collect {
         case (_, cm) if cm.terminal == p.terminalPageTabLoc.terminal => cm.paxLoad
@@ -137,7 +137,7 @@ object TerminalDashboardComponent {
           <.div(^.className := "tb-bar-wrapper",
             p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlPrevTime")))(^.aria.label := s"View previous $slotSize minutes", ^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
             <.div(^.className := "tb-bar", ^.aria.label := "current display time range",
-              s"${start.prettyTime()} - ${end.prettyTime()}",
+              s"${start.prettyTime} - ${end.prettyTime}",
             ),
             p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.aria.label := s"View next $slotSize minutes", ^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
           )
@@ -198,7 +198,7 @@ object TerminalDashboardComponent {
     ))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {
-    val offset: Int = sd.getMinutes() % slotSize
+    val offset: Int = sd.getMinutes % slotSize
 
     sd.addMinutes(offset * -1)
   }

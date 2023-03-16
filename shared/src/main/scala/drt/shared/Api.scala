@@ -6,9 +6,9 @@ import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.arrivals.{UniqueArrival, WithLastUpdated, WithTerminal, WithTimeAccessor}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode}
 import upickle.default._
 
 import scala.concurrent.Future
@@ -108,35 +108,6 @@ case class ApplicationConfig(rootDomain: String, useHttps: Boolean) {
 
 object ApplicationConfig {
   implicit val rw: ReadWriter[ApplicationConfig] = macroRW
-}
-
-object DataUpdates {
-
-  trait Combinable[A]  {
-    def ++(other: A): A
-  }
-
-  trait Updates
-
-  trait FlightUpdates extends Updates
-
-  trait MinuteUpdates extends Updates
-
-}
-
-object PassengerSplits {
-  type PaxTypeAndQueueCounts = Seq[ApiPaxTypeAndQueueCount]
-
-  case object FlightsNotFound
-
-  case class FlightNotFound(carrierCode: String, flightCode: String, scheduledArrivalDateTime: MilliDate)
-
-  case class VoyagePaxSplits(destinationPort: String, carrierCode: String,
-                             voyageNumber: String,
-                             totalPaxCount: Int,
-                             scheduledArrivalDateTime: MilliDate,
-                             paxSplits: List[ApiPaxTypeAndQueueCount])
-
 }
 
 trait Api {

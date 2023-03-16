@@ -48,8 +48,10 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
     Source(modelKeys(arrival).toList)
       .foldAsync(arrival) {
         case (accArrival, key) =>
+          println(s"looking up model for $key")
           modelAndFeaturesProvider(key)
             .map { models =>
+
               models.models.values.foldLeft(accArrival) {
                 case (arrival, model: ArrivalModelAndFeatures) =>
                   updatePrediction(arrival, model, model.prediction)

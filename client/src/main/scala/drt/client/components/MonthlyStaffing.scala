@@ -65,15 +65,15 @@ object MonthlyStaffing {
       slots.map(Option(_))
   }
 
-  def itsTheDayWeSwitchToBst(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean = slots.size < slotsInRegularDay
+  private def itsTheDayWeSwitchToBst(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean = slots.size < slotsInRegularDay
 
-  def itsARegularDayInOctober(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean =
-    slots.head.getMonth() == 10 && slots.size == slotsInRegularDay
+  private def itsARegularDayInOctober(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean =
+    slots.head.getMonth == 10 && slots.size == slotsInRegularDay
 
-  def handleBstToUtcChange(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] =
+  private def handleBstToUtcChange(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] =
     slots.map(Option(_)).patch(2 * slotsPerHour, List.fill(slotsPerHour)(None), 0)
 
-  def handleUtcToBstDay(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] =
+  private def handleUtcToBstDay(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] =
     slots.sliding(2).flatMap(dates =>
       if (dates.head.getTimeZoneOffsetMillis < dates(1).getTimeZoneOffsetMillis)
         Option(dates.head) :: List.fill(slotsPerHour)(None)
@@ -81,7 +81,7 @@ object MonthlyStaffing {
         Option(dates.head) :: Nil
     ).toSeq ++ Seq(Option(slots.last))
 
-  def minutesInDay(date: SDateLike): Int = {
+  private def minutesInDay(date: SDateLike): Int = {
     val startOfDay = SDate.midnightOf(date)
     val endOfDay = SDate.midnightOf(date.addDays(1))
     (endOfDay.millisSinceEpoch - startOfDay.millisSinceEpoch).toInt / 1000 / 60
@@ -102,7 +102,7 @@ object MonthlyStaffing {
   }
 
   def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[SDateLike] = {
-    val days = (endDay.getDate() - startDay.getDate()) + 1
+    val days = (endDay.getDate - startDay.getDate) + 1
     List.tabulate(days)(i => startDay.addDays(i))
   }
 
@@ -119,7 +119,7 @@ object MonthlyStaffing {
     toDaysWithIndexSet(updatedSlots)
       .diff(toDaysWithIndexSet(startingSlots)).map { case (_, dayIndex) => dayIndex }
 
-  def toDaysWithIndexSet(updatedSlots: Seq[Seq[Any]]): Set[(Seq[Any], Int)] = updatedSlots
+  private def toDaysWithIndexSet(updatedSlots: Seq[Seq[Any]]): Set[(Seq[Any], Int)] = updatedSlots
     .transpose
     .zipWithIndex
     .toSet
@@ -130,7 +130,7 @@ object MonthlyStaffing {
     case dateList => dateList.dropRight(1).mkString(", ") + " and " + dateList.last
   }
 
-  val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
+  private val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
 
   def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] =
     if (timeSlotMinutes == 60) hourlyToQuarterHourlySlots(changes) else changes
@@ -155,7 +155,7 @@ object MonthlyStaffing {
             props.terminalPageTab.terminal,
             saveAsTimeSlotMinutes)
 
-          val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString()
+          val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
             .map(d => state.colHeadings(d)).toList
 
@@ -174,9 +174,9 @@ object MonthlyStaffing {
               <.label("Choose Month", ^.className := "staffing-controls-label"),
               <.div(^.className := "staffing-controls-select",
                 drawSelect(
-                  values = monthOptions.map(_.toISOString()),
-                  names = monthOptions.map(d => s"${d.getMonthString()} ${d.getFullYear()}"),
-                  defaultValue = viewingDate.toISOString(),
+                  values = monthOptions.map(_.toISOString),
+                  names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
+                  defaultValue = viewingDate.toISOString,
                   callback = (e: ReactEventFromInput) => {
                     props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
                   })
@@ -206,7 +206,7 @@ object MonthlyStaffing {
           )
         ),
         maybeClockChangeDate(viewingDate).map { clockChangeDate =>
-          val prettyDate = s"${clockChangeDate.getDate()} ${clockChangeDate.getMonthString()}"
+          val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
           MuiGrid(container = true, direction = "column", spacing = 8)(
             MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("font-weight" -> "bold"))),
             MuiGrid(item = true)(<.span("Please ensure no staff are entered in the cells with a dash '-'. They are there to enable you to " +
@@ -252,18 +252,18 @@ object MonthlyStaffing {
       timeSlots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
         val startMd = slotStart.millisSinceEpoch
         val endMd = slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch
-        StaffAssignment(slotStart.toISOString(), terminalName, startMd, endMd, staff, None)
+        StaffAssignment(slotStart.toISOString, terminalName, startMd, endMd, staff, None)
       })
   }.collect {
     case Some(a) => a
   }
 
-  def hourlyToQuarterHourlySlots(hourlySlots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = hourlySlots.flatMap {
+  private def hourlyToQuarterHourlySlots(hourlySlots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = hourlySlots.flatMap {
     case ((slotIdx, dayIdx), staff) =>
       (0 to 3).map(offset => (((slotIdx * 4) + offset, dayIdx), staff))
   }
 
-  def memoize[I, O](f: I => O): I => O = new mutable.HashMap[I, O]() {
+  private def memoize[I, O](f: I => O): I => O = new mutable.HashMap[I, O]() {
     override def apply(key: I): O = getOrElseUpdate(key, f(key))
   }
 
@@ -271,7 +271,7 @@ object MonthlyStaffing {
     case (viewingDate, timeSlotMinutes) => daysInMonthByTimeSlotCalc(viewingDate, timeSlotMinutes)
   }
 
-  def daysInMonthByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] =
+  private def daysInMonthByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] =
     consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
       .map(day => timeZoneSafeTimeSlots(
         slotsInDay(day, timeSlotMinutes),
@@ -279,12 +279,12 @@ object MonthlyStaffing {
       ))
       .transpose
 
-  def maybeClockChangeDate(viewingDate: SDateLike): Option[SDateLike] = {
+  private def maybeClockChangeDate(viewingDate: SDateLike): Option[SDateLike] = {
     val lastDay = SDate.lastDayOfMonth(viewingDate)
     (0 to 10).map(offset => lastDay.addDays(-1 * offset)).find(date => slotsInDay(date, 60).length == 25)
   }
 
-  def stateFromProps(props: Props): State = {
+  private def stateFromProps(props: Props): State = {
     import drt.client.services.JSDateConversions._
 
     val viewingDate = props.terminalPageTab.dateFromUrlOrNow
@@ -299,14 +299,14 @@ object MonthlyStaffing {
       case None => "-"
     })
 
-    val dayForRowLabels = if (viewingDate.getMonth() != 10)
-      viewingDate.startOfTheMonth()
+    val dayForRowLabels = if (viewingDate.getMonth != 10)
+      viewingDate.startOfTheMonth
     else
       SDate.lastDayOfMonth(viewingDate).getLastSunday
 
-    val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime())
+    val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(staffTimeSlots, daysInMonth.map(_.getDate().toString), rowHeadings, Map())
+    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map())
   }
 
   def apply(shifts: ShiftAssignments,

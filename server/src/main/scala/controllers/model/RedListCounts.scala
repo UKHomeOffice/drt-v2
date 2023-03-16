@@ -1,12 +1,11 @@
 package controllers.model
 
 
-import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.RedListPassengers
-import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsString, JsValue, RootJsonFormat, enrichAny}
+import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.util.{Success, Try}
 

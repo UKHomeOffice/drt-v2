@@ -91,7 +91,7 @@ object AclFeed {
   }
 
   def nextAclCheck(now: SDateLike, updateHour: Int): SDateLike = {
-    val todaysCheck = SDate(now.getFullYear(), now.getMonth(), now.getDate(), updateHour, 0, Crunch.europeLondonTimeZone)
+    val todaysCheck = SDate(now.getFullYear, now.getMonth, now.getDate, updateHour, 0, Crunch.europeLondonTimeZone)
     if (todaysCheck > now) todaysCheck else todaysCheck.addDays(1)
   }
 
@@ -104,7 +104,7 @@ object AclFeed {
     List(0, 1, 2, 3, 4)
       .map { offset =>
         val d = now.addDays(-1 * offset)
-        val todayStr = f"${d.getFullYear()}${d.getMonth()}%02d${d.getDate()}%02d"
+        val todayStr = f"${d.getFullYear}${d.getMonth}%02d${d.getDate}%02d"
         s"$portCode.*$todayStr\\.zip".r
       }
       .map(fileRegex => allFiles.find(fileName => fileRegex.findFirstMatchIn(fileName).isDefined))
@@ -132,12 +132,12 @@ object AclFeed {
 
     if (arrivals.nonEmpty) {
       val latestArrival = arrivals.maxBy(_.Scheduled)
-      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString()} (${latestArrival.flightCodeString})")
+      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString} (${latestArrival.flightCodeString})")
     }
     arrivals
   }
 
-  def contentFromFileName(sftp: SFTPClient, latestFileName: String): String = {
+  private def contentFromFileName(sftp: SFTPClient, latestFileName: String): String = {
     val outputStream: ByteArrayOutputStream = new ByteArrayOutputStream()
 
     val file: InMemoryDestFile = new InMemoryDestFile {
@@ -153,12 +153,12 @@ object AclFeed {
     dropFileNameFromContent(csvContent)
   }
 
-  def dropFileNameFromContent(content: String): String = content
+  private def dropFileNameFromContent(content: String): String = content
     .split("\n")
     .drop(1)
     .mkString("\n")
 
-  def unzipStream(zipInputStream: ZipInputStream): Seq[String] = {
+  private def unzipStream(zipInputStream: ZipInputStream): Seq[String] = {
     try {
       unzipAllFilesInStream(zipInputStream).toList
     } finally {
@@ -166,11 +166,11 @@ object AclFeed {
     }
   }
 
-  def unzipAllFilesInStream(unzippedStream: ZipInputStream): Stream[String] = {
+  private def unzipAllFilesInStream(unzippedStream: ZipInputStream): Stream[String] = {
     unzipAllFilesInStream(unzippedStream, Option(unzippedStream.getNextEntry))
   }
 
-  def unzipAllFilesInStream(unzippedStream: ZipInputStream, zipEntryOption: Option[ZipEntry]): Stream[String] = {
+  private def unzipAllFilesInStream(unzippedStream: ZipInputStream, zipEntryOption: Option[ZipEntry]): Stream[String] = {
     zipEntryOption match {
       case None => Stream.empty
       case Some(_) =>
@@ -181,7 +181,7 @@ object AclFeed {
     }
   }
 
-  def getZipEntry(zis: ZipInputStream): String = {
+  private def getZipEntry(zis: ZipInputStream): String = {
     val buffer = new Array[Byte](4096)
     val stringBuffer = new ArrayBuffer[Byte]()
     var len: Int = zis.read(buffer)
@@ -194,13 +194,13 @@ object AclFeed {
     new String(stringBuffer.toArray, UTF_8)
   }
 
-  def dateAndTimeToDateTimeIso(date: String, time: String): String = s"${date}T${formatTimeToIso(time)}"
+  private def dateAndTimeToDateTimeIso(date: String, time: String): String = s"${date}T${formatTimeToIso(time)}"
 
-  def formatTimeToIso(time: String): String = f"${time.toInt}%04d".splitAt(2) match {
+  private def formatTimeToIso(time: String): String = f"${time.toInt}%04d".splitAt(2) match {
     case (hour, minute) => s"$hour:$minute:00Z"
   }
 
-  def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[Arrival] = {
+  private def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[Arrival] = {
     Try {
       val operator: String = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
@@ -235,8 +235,8 @@ object AclFeed {
     }
   }
 
-  object AclColIndex {
-    val allFields: Map[String, Int] = List(
+  private object AclColIndex {
+    private val allFields: Map[String, Int] = List(
       "A/C", "ACReg", "Airport", "ArrDep", "CreDate",
       "Date", "DOOP", "EditDate", "Icao Aircraft Type", "Icao Last/Next Station",
       "Icao Orig/Dest Station", "LastNext", "LastNextCountry", "Ope", "OpeGroup",
@@ -255,7 +255,6 @@ object AclFeed {
     val Airport: Int = allFields("Airport")
     val Terminal: Int = allFields("Term")
     val ArrDep: Int = allFields("ArrDep")
-    val FlightType: Int = allFields("ST")
   }
 
   def aclToPortMapping(portCode: PortCode): Terminal => Terminal = portCode match {

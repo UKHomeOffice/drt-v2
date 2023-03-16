@@ -1,10 +1,8 @@
 package services.arrivals
 
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.time.SDate
 
 object LiveArrivalsUtil {
-
   def mergePortFeedWithLiveBase(portFeedArrival: Arrival, baseLiveArrival: Arrival): Arrival = {
     portFeedArrival.copy(
       ActualChox = if (portFeedArrival.ActualChox.isEmpty) baseLiveArrival.ActualChox else portFeedArrival.ActualChox,
@@ -17,22 +15,5 @@ object LiveArrivalsUtil {
       TotalPax = portFeedArrival.TotalPax ++ baseLiveArrival.TotalPax
     )
   }
-
-  def printArrival(a: Arrival): String = {
-    s"""
-       |flightCode: ${a.flightCodeString}
-       |terminal: ${a.Terminal}
-       |scheduled: ${SDate(a.Scheduled).toISOString()}
-       |Est: ${a.Estimated.map(d => SDate(d).toISOString())}
-       |EstChox: ${a.EstimatedChox.map(d => SDate(d).toISOString())}
-       |Act: ${a.Actual.map(d => SDate(d).toISOString())}
-       |ActChox: ${a.ActualChox.map(d => SDate(d).toISOString())}
-       |Status: ${a.Status.description}
-       |Gate: ${a.Gate}
-       |PCP: ${a.PcpTime.map(d => SDate(d).toISOString())}
-       |scheduledDeparture: ${a.ScheduledDeparture.map(d => SDate(d).toISOString())}
-       |""".stripMargin
-  }
-
 }
 
