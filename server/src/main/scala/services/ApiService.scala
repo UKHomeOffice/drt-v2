@@ -1,6 +1,7 @@
 
 package services
 
+import actors.DrtSystemInterface
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.persistent.staffing.{GetState, UpdateShifts}
 import akka.actor._
@@ -11,6 +12,7 @@ import controllers.{DrtActorSystem, ShiftPersistence}
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.Configuration
 import play.api.mvc._
 import services.graphstages.Crunch
 import services.staffing.StaffTimeSlots
@@ -19,6 +21,7 @@ import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -52,8 +55,8 @@ class ApiService(airportConfig: AirportConfig,
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
   implicit val mat: Materializer = DrtActorSystem.mat
   implicit val ec: ExecutionContext = DrtActorSystem.ec
-  val ctrl = DrtActorSystem.drtSystem
-  val config = DrtActorSystem.config
+  val ctrl: DrtSystemInterface = DrtActorSystem.drtSystem
+  val config: Configuration = DrtActorSystem.config
 
   override def shiftsActor: ActorRef = shiftsActorRef
 
@@ -82,7 +85,7 @@ class ApiService(airportConfig: AirportConfig,
     portStateFuture
       .map {
         case portState: PortState =>
-          log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString()} on $terminal")
+          log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
           val fp = services.exports.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
           val hf = services.exports.Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
             airportConfig.queuesByTerminal(terminal).toList)
@@ -109,7 +112,7 @@ class ApiService(airportConfig: AirportConfig,
 
     shiftsFuture.collect {
       case shifts: ShiftAssignments =>
-        log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString()}")
+        log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString}")
         val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
         StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime)
     }
