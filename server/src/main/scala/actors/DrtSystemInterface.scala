@@ -91,8 +91,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val manifestLookupService: ManifestLookupLike
 
-  val userService: UserTableLike
-
   val config: Configuration = new Configuration(ConfigFactory.load)
 
   val env: AppEnvironment = AppEnvironment(config.getOptional[String]("env").getOrElse("other"))
