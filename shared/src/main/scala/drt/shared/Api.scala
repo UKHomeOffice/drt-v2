@@ -1,7 +1,7 @@
+
 package drt.shared
 
 import drt.shared.CrunchApi._
-import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.arrivals.{UniqueArrival, WithLastUpdated, WithTerminal, WithTimeAccessor}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -121,16 +121,6 @@ trait Api {
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: Terminal): Future[Option[ForecastPeriodWithHeadlines]]
 
   def getLoggedInUser(): LoggedInUser
-
-  def getKeyCloakUsers(): Future[List[KeyCloakUser]]
-
-  def getKeyCloakGroups(): Future[List[KeyCloakGroup]]
-
-  def getKeyCloakUserGroups(userId: String): Future[Set[KeyCloakGroup]]
-
-  def addUserToGroups(userId: String, groups: Set[String]): Future[Unit]
-
-  def removeUserFromGroups(userId: String, groups: Set[String]): Future[Unit]
 
   def getShowAlertModalDialog(): Boolean
 }
