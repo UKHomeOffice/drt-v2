@@ -12,7 +12,6 @@ import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrierOrigin, 
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T2
-import uk.gov.homeoffice.drt.prediction.Feature.OneToMany
 import uk.gov.homeoffice.drt.prediction._
 import uk.gov.homeoffice.drt.prediction.arrival.FeatureColumns.{DayOfWeek, PartOfDay}
 import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
@@ -28,7 +27,7 @@ class MockPredictionModelActor(now: () => SDateLike,
                               ) extends PredictionModelActor(now, category, identifier) {
   private val model: RegressionModel = RegressionModel(Iterable(-4.491677337488966, 0.5758560689088016, 3.8006500547982798, 0.11517121378172734, 0.0), 0)
   private val features: FeaturesWithOneToManyValues = FeaturesWithOneToManyValues(
-    List(OneToMany(List(DayOfWeek()), "dow"), OneToMany(List(PartOfDay()), "pod")),
+    List(DayOfWeek(), PartOfDay()),
     IndexedSeq("dow_7", "dow_4", "dow_6", "dow_2", "pod_1")
   )
   state = Map(OffScheduleModelAndFeatures.targetName -> OffScheduleModelAndFeatures(model, features, examplesTrainedOn = 10, improvementPct = 25))

@@ -21,8 +21,6 @@ object QueueLikeActor {
 
   case object Tick
 
-//  case object ReadyToEmit
-
   object UpdatedMillis {
     val empty: UpdatedMillis = UpdatedMillis(Set())
   }

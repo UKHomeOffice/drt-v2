@@ -39,20 +39,6 @@ trait WorkloadCalculatorLike {
   def flightsWithPcpWorkload(flights: Iterable[ApiFlightWithSplits], redListUpdates: RedListUpdates): Iterable[ApiFlightWithSplits] =
     flights.filter(fws => flightHasWorkload.apply(fws, redListUpdates))
 
-//  def paxTypeAndQueueCountsFromSplits(splitsToUse: Splits): Set[ApiPaxTypeAndQueueCount] = {
-//    val splitRatios: Set[ApiPaxTypeAndQueueCount] = splitsToUse.splitStyle match {
-//      case UndefinedSplitStyle => splitsToUse.splits.map(qc => qc.copy(paxCount = 0))
-//      case PaxNumbers =>
-//        val splitsWithoutTransit = splitsToUse.splits.filter(_.queueType != Queues.Transfer)
-//        val totalSplitsPax: Load = splitsWithoutTransit.toList.map(_.paxCount).sum
-//        if (totalSplitsPax == 0.0)
-//          splitsWithoutTransit
-//        else
-//          splitsWithoutTransit.map(qc => qc.copy(paxCount = qc.paxCount / totalSplitsPax))
-//      case _ => splitsToUse.splits.map(qc => qc.copy(paxCount = qc.paxCount / 100))
-//    }
-//    splitRatios
-//  }
 }
 
 case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],

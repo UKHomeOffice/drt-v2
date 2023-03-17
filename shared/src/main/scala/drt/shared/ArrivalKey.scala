@@ -41,8 +41,6 @@ object ArrivalKey {
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
 }
 
-//case class ArrivalUpdate(old: Arrival, updated: Arrival)
-
 object ArrivalsDiff {
   val empty: ArrivalsDiff = ArrivalsDiff(Seq(), Seq())
 

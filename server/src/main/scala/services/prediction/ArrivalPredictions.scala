@@ -43,7 +43,7 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
     false //lastChecked > lastUpdatedThreshold
 
   def applyPredictions(arrival: Arrival): Future[Arrival] = {
-    implicit val millisToSDate: MillisSinceEpoch => SDateLike = (millis: MillisSinceEpoch) => SDate(millis)
+//    implicit val millisToSDate: MillisSinceEpoch => SDateLike = (millis: MillisSinceEpoch) => SDate(millis)
 
     Source(modelKeys(arrival).toList)
       .foldAsync(arrival) {
