@@ -69,7 +69,7 @@ case class CrunchProps[FT](logLabel: String = "",
                            aclPaxAdjustmentDays: Int,
                            startDeskRecs: () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                            arrivalsAdjustments: ArrivalsAdjustmentsLike,
-                           addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+                           addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                            setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
                           )
 
@@ -133,7 +133,7 @@ object CrunchSystem {
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
       forecastMaxMillis = forecastMaxMillis,
       redListUpdatesSource = props.redListUpdatesSource,
-      addTouchdownPredictions = props.addTouchdownPredictions,
+      addArrivalPredictions = props.addArrivalPredictions,
       setPcpTimes = props.setPcpTimes,
     )
 

@@ -17,7 +17,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{PaxFlow, UserRoleProviderLike}
+import controllers.UserRoleProviderLike
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -41,13 +41,12 @@ import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import play.api.Configuration
 import queueus._
-import services.PcpArrival.{GateOrStandToWalkTime, gateOrStandWalkTimeCalculator, walkTimeMillisProviderFromCsv}
+import services.PcpArrival.pcpFrom
 import services._
 import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchManager.queueDaysToReCrunch
@@ -60,10 +59,10 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.FlightFilter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
-import slickdb.UserTableLike
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
+import uk.gov.homeoffice.drt.actor.WalkTimeProvider
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
@@ -72,8 +71,10 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
+import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
 import uk.gov.homeoffice.drt.time.{MilliDate => _, _}
 
+import java.nio.file.{Files, Paths}
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
@@ -98,8 +99,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val params: DrtParameters
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
 
-  val gateWalkTimesProvider: GateOrStandToWalkTime = walkTimeMillisProviderFromCsv(params.gateWalkTimesFilePath)
-  val standWalkTimesProvider: GateOrStandToWalkTime = walkTimeMillisProviderFromCsv(params.standWalkTimesFilePath)
+  private val maybeGatesFile = Option(params.gateWalkTimesFilePath).filter(p => Files.exists(Paths.get(p)))
+  private val maybeStandsFile = Option(params.standWalkTimesFilePath).filter(p => Files.exists(Paths.get(p)))
+
+  private val walkTimeProvider: (Terminal, String, String) => Option[Int] = WalkTimeProvider(maybeGatesFile, maybeStandsFile)
 
   private val minBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.minimum-seconds")
   private val maxBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.maximum-seconds")
@@ -233,24 +236,21 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   def run(): Unit
 
-  def coachWalkTime: CoachWalkTime
-
-  def walkTimeProvider(flight: Arrival, redListUpdates: RedListUpdates): MillisSinceEpoch = {
-    val defaultWalkTimeMillis = airportConfig.defaultWalkTimeMillis.getOrElse(flight.Terminal, 300000L)
-    gateOrStandWalkTimeCalculator(gateWalkTimesProvider, standWalkTimesProvider, defaultWalkTimeMillis, coachWalkTime)(flight, redListUpdates)
+  private def walkTimeProviderWithFallback(arrival: Arrival): MillisSinceEpoch = {
+    val defaultWalkTimeMillis = airportConfig.defaultWalkTimeMillis.getOrElse(arrival.Terminal, 300000L)
+    walkTimeProvider(arrival.Terminal, arrival.Gate.getOrElse(""), arrival.Stand.getOrElse(""))
+      .map(_.toLong * oneSecondMillis)
+      .getOrElse(defaultWalkTimeMillis)
   }
 
-  private val pcpArrivalTimeCalculator: RedListUpdates => Arrival => MilliDate =
-    PaxFlow.pcpArrivalTimeForFlight(airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)(walkTimeProvider)
+  private val pcpArrivalTimeCalculator: Arrival => MilliDate =
+    pcpFrom(airportConfig.firstPaxOffMillis, walkTimeProviderWithFallback, airportConfig.useTimePredictions)
 
-  val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff => {
-    redListUpdatesActor.ask(GetState).mapTo[RedListUpdates]
-      .map { redListUpdates =>
-        val calc = pcpArrivalTimeCalculator(redListUpdates)
-        val updates = SortedMap[UniqueArrival, Arrival]() ++ diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(calc(arrival).millisSinceEpoch)))
-        diff.copy(toUpdate = updates)
-      }
-  }
+  val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff =>
+    Future.successful {
+      val updates = SortedMap[UniqueArrival, Arrival]() ++ diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpArrivalTimeCalculator(arrival).millisSinceEpoch)))
+      diff.copy(toUpdate = updates)
+    }
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
@@ -349,14 +349,10 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         refreshArrivalsOnStart: Boolean,
                         startDeskRecs: () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
-
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
-
     val redListUpdatesSource: Source[List[RedListUpdateCommand], SourceQueueWithComplete[List[RedListUpdateCommand]]] = Source.queue[List[RedListUpdateCommand]](1, OverflowStrategy.backpressure)
-
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
-
-    val addFlightPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
+    val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
       log.info(s"Flight predictions enabled")
       ArrivalPredictions(
         (a: Arrival) => Iterable(
@@ -416,7 +412,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       startDeskRecs = startDeskRecs,
       arrivalsAdjustments = arrivalAdjustments,
       redListUpdatesSource = redListUpdatesSource,
-      addTouchdownPredictions = addFlightPredictions,
+      addArrivalPredictions = addArrivalPredictions,
       setPcpTimes = setPcpTimes,
       flushArrivalsOnStart = params.flushArrivalsOnStart,
     ))

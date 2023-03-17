@@ -5,6 +5,7 @@ import controllers.{ArrivalGenerator, PaxFlow}
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.FlightsApi.Flights
 import drt.shared._
+import services.PcpArrival.pcpFrom
 import services.arrivals.EdiArrivalsTerminalAdjustments
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
@@ -15,7 +16,6 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.AirportConfigs
-import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.SortedMap
@@ -40,7 +40,8 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
     useTimePredictions = true,
   )
   val defaultWalkTime = 300000L
-  val pcpCalc: Arrival => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)((_, _) => defaultWalkTime)(RedListUpdates.empty)
+  val pcpCalc: Arrival => MilliDate =
+    pcpFrom(airportConfig.firstPaxOffMillis, _ => defaultWalkTime, airportConfig.useTimePredictions)
 
   val setPcpTime: ArrivalsDiff => Future[ArrivalsDiff] =
     diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpCalc(arrival).millisSinceEpoch))).to(SortedMap)))

@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.actor.PredictionModelActor.{Models, WithId}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.abs
@@ -43,15 +43,11 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
     false //lastChecked > lastUpdatedThreshold
 
   def applyPredictions(arrival: Arrival): Future[Arrival] = {
-//    implicit val millisToSDate: MillisSinceEpoch => SDateLike = (millis: MillisSinceEpoch) => SDate(millis)
-
     Source(modelKeys(arrival).toList)
       .foldAsync(arrival) {
         case (accArrival, key) =>
-          println(s"looking up model for $key")
           modelAndFeaturesProvider(key)
             .map { models =>
-
               models.models.values.foldLeft(accArrival) {
                 case (arrival, model: ArrivalModelAndFeatures) =>
                   updatePrediction(arrival, model, model.prediction)

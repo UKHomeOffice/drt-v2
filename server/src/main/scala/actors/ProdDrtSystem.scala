@@ -225,8 +225,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
         System.exit(1)
     }
   }
-
-  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
 }
 
 case class AddUpdatesSubscriber(source: ActorRef)

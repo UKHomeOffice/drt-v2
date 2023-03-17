@@ -33,7 +33,7 @@ object RunnableCrunch {
                                            manifestsLiveSource: Source[ManifestsFeedResponse, MS],
                                            actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
                                            redListUpdatesSource: Source[List[RedListUpdateCommand], RL],
-                                           addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+                                           addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                                            setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
 
                                            arrivalsGraphStage: ArrivalsGraphStage,
@@ -169,10 +169,10 @@ object RunnableCrunch {
               if (diff.toUpdate.nonEmpty) {
                 val startMillis = SDate.now().millisSinceEpoch
                 val withoutPredictions = diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
-                addTouchdownPredictions(diff).map { diffWithPredictions =>
+                addArrivalPredictions(diff).map { diffWithPredictions =>
                   val predictionsAdded = withoutPredictions - diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
                   val millisTaken = SDate.now().millisSinceEpoch - startMillis
-                  log.info(s"Touchdown prediction lookups finished for $withoutPredictions arrivals. $predictionsAdded new predictions added. Took ${millisTaken}ms")
+                  log.info(s"Arrival prediction lookups finished for $withoutPredictions arrivals. $predictionsAdded new predictions added. Took ${millisTaken}ms")
                   diffWithPredictions
                 }
               } else Future.successful(diff)

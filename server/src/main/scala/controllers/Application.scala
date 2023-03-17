@@ -49,16 +49,6 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   override def write[R: Pickler](r: R): ByteBuffer = Pickle.intoBytes(r)
 }
 
-object PaxFlow {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def pcpArrivalTimeForFlight(firstPaxOffMillis: MillisSinceEpoch, considerPredictions: Boolean)
-                             (walkTimeProvider: FlightWalkTime)
-                             (redListUpdates: RedListUpdates)
-                             (flight: Arrival): MilliDate =
-    pcpFrom(firstPaxOffMillis, walkTimeProvider, considerPredictions)(flight, redListUpdates)
-}
-
 trait AirportConfiguration {
   def airportConfig: AirportConfig
 }

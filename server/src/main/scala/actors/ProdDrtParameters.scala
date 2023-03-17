@@ -58,8 +58,8 @@ trait DrtParameters {
 case class ProdDrtParameters(config: Configuration) extends DrtParameters {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override val gateWalkTimesFilePath: String = config.get[String]("walk_times.gates_csv_url")
-  override val standWalkTimesFilePath: String = config.get[String]("walk_times.stands_csv_url")
+  override val gateWalkTimesFilePath: String = config.get[String]("walk_times.gates-file-path")
+  override val standWalkTimesFilePath: String = config.get[String]("walk_times.stands-file-path")
 
   override val forecastMaxDays: Int = config.get[Int]("crunch.forecast.max_days")
   override val aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)

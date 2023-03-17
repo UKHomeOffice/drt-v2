@@ -7,6 +7,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
+import services.PcpArrival.pcpFrom
 import services.crunch.VoyageManifestGenerator.{euIdCard, xOfPaxType}
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.Nationality
@@ -42,7 +43,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     useTimePredictions = true,
   )
   val defaultWalkTime = 300000L
-  val pcpCalc: Arrival => MilliDate = PaxFlow.pcpArrivalTimeForFlight(airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions)((_, _) => defaultWalkTime)(RedListUpdates.empty)
+  val pcpCalc: Arrival => MilliDate =
+    pcpFrom(airportConfig.firstPaxOffMillis, _ => defaultWalkTime, airportConfig.useTimePredictions)
 
   val setPcpTime: ArrivalsDiff => Future[ArrivalsDiff] =
     diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpCalc(arrival).millisSinceEpoch))).to(SortedMap)))

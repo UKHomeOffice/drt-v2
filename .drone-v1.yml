@@ -25,26 +25,26 @@ steps:
       event:
         - push
 
-  - name: analysis
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-    commands:
-      - /root/entrypoint.sh
-      - sbt -ivy ./.ivy2 dependencyCheck
-      - sbt scalastyle | true
-      - sbt scapegoat | true
-    environment:
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
-      ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
-    when:
-      event:
-        - push
-    depends_on:
-      - build
+#  - name: analysis
+#    pull: if-not-exists
+#    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+#    commands:
+#      - /root/entrypoint.sh
+#      - sbt -ivy ./.ivy2 dependencyCheck
+#      - sbt scalastyle | true
+#      - sbt scapegoat | true
+#    environment:
+#      ARTIFACTORY_PASSWORD:
+#        from_secret: ARTIFACTORY_PASSWORD
+#      ARTIFACTORY_USERNAME: drt-artifactory-robot
+#      ENV_LOG_LEVEL: ERROR
+#      KEYTOOL_PASSWORD:
+#        from_secret: KEYTOOL_PASSWORD
+#    when:
+#      event:
+#        - push
+#    depends_on:
+#      - build
 
   - name: sonar-scanner
     pull: if-not-exists

@@ -249,8 +249,6 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
     crunchInputs.killSwitches
   }
-
-  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
 }
 
 
