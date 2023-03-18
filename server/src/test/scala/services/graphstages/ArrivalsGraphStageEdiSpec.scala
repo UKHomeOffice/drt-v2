@@ -1,7 +1,7 @@
 package services.graphstages
 
+import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.arrival
-import controllers.{ArrivalGenerator, PaxFlow}
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.FlightsApi.Flights
 import drt.shared._
