@@ -61,7 +61,7 @@ object JSDateConversions {
 
       def addMillis(millisToAdd: Int): SDateLike = Moment.tz(millisSinceEpoch + millisToAdd, europeLondon)
 
-      def millisSinceEpoch: MillisSinceEpoch = date.unix.toLong * 1000
+      def millisSinceEpoch: MillisSinceEpoch = date.unix().toLong * 1000
 
       def toLocalDateTimeString(): String = f"$getFullYear-$getMonth%02d-$getDate%02d $getHours%02d:$getMinutes%02d"
 
@@ -72,16 +72,16 @@ object JSDateConversions {
         UtcDate(utcLastMidnight.getFullYear, utcLastMidnight.getMonth, utcLastMidnight.getDate)
       }
 
-      override def toISOString: String = date.seconds(0).millisecond(0).toISOString
+      override def toISOString: String = date.seconds(0).millisecond(0).toISOString()
 
       def getDayOfWeek: Int = {
         val dow = date.format("d").toInt
         if (dow == 0) 7 else dow
       }
 
-      def getZone: String = date.tz
+      def getZone: String = date.tz()
 
-      override def getTimeZoneOffsetMillis: MillisSinceEpoch = date.utcOffset.toLong * 60000L
+      override def getTimeZoneOffsetMillis: MillisSinceEpoch = date.utcOffset().toLong * 60000L
 
       def startOfTheMonth: SDateLike = SDate(date.getFullYear, date.getMonth, 1)
 
@@ -114,7 +114,7 @@ object JSDateConversions {
 
     def parse(dateString: String): Option[SDateLike] = {
       val moment = Moment.tz(dateString, europeLondon)
-      if (moment.isValid) Option(JSSDate(moment))
+      if (moment.isValid()) Option(JSSDate(moment))
       else None
     }
 

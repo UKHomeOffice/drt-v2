@@ -3,11 +3,12 @@ package actors
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 
+import java.nio.file.{Files, Paths}
 import scala.concurrent.duration._
 
 trait DrtParameters {
-  val gateWalkTimesFilePath: String
-  val standWalkTimesFilePath: String
+  val gateWalkTimesFilePath: Option[String]
+  val standWalkTimesFilePath: Option[String]
 
   val forecastMaxDays: Int
   val aclDisabled: Boolean
@@ -58,8 +59,8 @@ trait DrtParameters {
 case class ProdDrtParameters(config: Configuration) extends DrtParameters {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override val gateWalkTimesFilePath: String = config.get[String]("walk_times.gates-file-path")
-  override val standWalkTimesFilePath: String = config.get[String]("walk_times.stands-file-path")
+  override val gateWalkTimesFilePath: Option[String] = Option(config.get[String]("walk_times.gates-file-path")).filter(p => p.nonEmpty && Files.exists(Paths.get(p)))
+  override val standWalkTimesFilePath: Option[String] = Option(config.get[String]("walk_times.stands-file-path")).filter(p => p.nonEmpty && Files.exists(Paths.get(p)))
 
   override val forecastMaxDays: Int = config.get[Int]("crunch.forecast.max_days")
   override val aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)

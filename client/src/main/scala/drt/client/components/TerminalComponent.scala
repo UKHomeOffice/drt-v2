@@ -12,6 +12,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
+import drt.shared.api.WalkTimes
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -48,12 +49,13 @@ object TerminalComponent {
                            redListPorts: Pot[HashSet[PortCode]],
                            redListUpdates: Pot[RedListUpdates],
                            timeMachineEnabled: Boolean,
+                           walkTimes: Pot[WalkTimes],
                           ) extends UseValueEq
 
   private val activeClass = "active"
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Terminal")
-    .render_P(props => {
+    .render_P { props =>
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         model.portStatePot,
         model.forecastPeriodPot,
@@ -72,15 +74,15 @@ object TerminalComponent {
         model.redListPorts,
         model.redListUpdates,
         model.maybeTimeMachineDate.isDefined,
+        model.gateStandWalkTime,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
 
-
       <.div(
         dialogueStateRCP(dialogueStateMP => <.div(dialogueStateMP().map(dialogueState => StaffAdjustmentDialogue(dialogueState)()).whenDefined)),
         modelRCP(modelMP => {
-          val model = modelMP()
+          val model: TerminalModel = modelMP()
 
           <.div(model.airportConfig.render(airportConfig => {
 
@@ -105,6 +107,7 @@ object TerminalComponent {
                   arrivalSources = model.arrivalSources,
                   redListPorts = model.redListPorts,
                   redListUpdates = model.redListUpdates,
+                  walkTimes = model.walkTimes,
                 )
                 <.div(
                   <.div(^.className := "terminal-nav-wrapper", terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled)),
@@ -121,6 +124,7 @@ object TerminalComponent {
                             loggedInUser = loggedInUser,
                             redListPorts = model.redListPorts,
                             redListUpdates = redListUpdates,
+                            walkTimes = model.walkTimes,
                           )
                         )
                       case Current =>
@@ -149,7 +153,7 @@ object TerminalComponent {
           }))
         })
       )
-    })
+    }
     .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean): VdomTagOf[UList] = {

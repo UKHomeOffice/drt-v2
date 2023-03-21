@@ -77,7 +77,7 @@ object TerminalStaffing {
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
       <.div(
         <.h2("Staff over the day"),
-        staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.midnightThisMorning), staffWithShiftsAndMovementsAt)
+        staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.midnightThisMorning()), staffWithShiftsAndMovementsAt)
       )
     }
 

@@ -99,12 +99,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val params: DrtParameters
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
 
-  private val maybeGatesFile = Option(params.gateWalkTimesFilePath).filter(p => p.nonEmpty && Files.exists(Paths.get(p)))
-  private val maybeStandsFile = Option(params.standWalkTimesFilePath).filter(p => p.nonEmpty && Files.exists(Paths.get(p)))
-
-  println(s"maybeGatesFile: $maybeGatesFile")
-  println(s"maybeStandsFile: $maybeStandsFile")
-  private val walkTimeProvider: (Terminal, String, String) => Option[Int] = WalkTimeProvider(maybeGatesFile, maybeStandsFile)
+  private val walkTimeProvider: (Terminal, String, String) => Option[Int] = WalkTimeProvider(params.gateWalkTimesFilePath, params.standWalkTimesFilePath)
 
   private val minBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.minimum-seconds")
   private val maxBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.maximum-seconds")

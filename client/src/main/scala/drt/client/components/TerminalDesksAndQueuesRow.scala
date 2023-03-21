@@ -122,7 +122,7 @@ object TerminalDesksAndQueuesRow {
       val ragClass = ragStatus(totalRequired, available)
 
       def allowAdjustments: Boolean = props.loggedInUser.hasRole(StaffMovementsEdit) &&
-        SDate(props.viewMode.localDate).millisSinceEpoch >= SDate.midnightThisMorning.millisSinceEpoch
+        SDate(props.viewMode.localDate).millisSinceEpoch >= SDate.midnightThisMorning().millisSinceEpoch
 
       val minus: TagMod = adjustmentLink(props, "-")
       val plus: TagMod = adjustmentLink(props, "+")
