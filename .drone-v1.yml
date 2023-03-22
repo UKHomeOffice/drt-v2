@@ -65,10 +65,27 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
     environment:
-      AWS_ACCESS_KEY_ID:
-        from_secret: AKIAU6OMSVAP4LOYB46I
+      AWS_ACCESS_KEY_ID: AKIAU6OMSVAP4LOYB46I
       AWS_SECRET_ACCESS_KEY:
         from_secret: cypress_aws_secret_access_key
+    commands:
+      # wait for docker service to be up before running docker build
+      - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
+      - aws ecr get-login-password --region eu-west-2 | docker login --username AWS --password-stdin 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+    volumes:
+      - name: dockerclientconfig
+        path: /root/.docker
+    when:
+      event:
+        - push
+
+  - name: ecr-login-drt-v2
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
+    environment:
+      AWS_ACCESS_KEY_ID: AKIAU6OMSVAPQAIHYUVJ
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: aws_secret_access_key
     commands:
       # wait for docker service to be up before running docker build
       - n=0; while [ "$n" -lt 60 ] && [ ! docker stats --no-stream ]; do n=$(( n + 1 )); sleep 1; done
@@ -124,8 +141,7 @@ steps:
     environment:
       AWS_REGION: eu-west-2
     settings:
-      access_key:
-        from_secret: AKIAU6OMSVAPQAIHYUVJ
+      access_key: AKIAU6OMSVAPQAIHYUVJ
       secret_key:
         from_secret: aws_secret_access_key
       repo: drt/drt-v2
