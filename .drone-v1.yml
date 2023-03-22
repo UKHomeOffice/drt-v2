@@ -96,7 +96,7 @@ steps:
       event:
         - push
     depends_on:
-      - ecr-login-drt-cypress
+      - ecr-login-drt-v2
 
   - name: unit-test
     pull: if-not-exists
