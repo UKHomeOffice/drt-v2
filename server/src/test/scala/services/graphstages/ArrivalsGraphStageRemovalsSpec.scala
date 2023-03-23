@@ -21,8 +21,8 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
       TestableArrivalsGraphStage.buildArrivalsGraphStage(dayOfArrivals)
     ).run
 
-    val arrivalThatIsRemoved = ArrivalGenerator.arrival(schDt = dayOfArrivals.toISOString())
-    val arrivalThatRemains = ArrivalGenerator.arrival(schDt = dayOfArrivals.addHours(1).toISOString())
+    val arrivalThatIsRemoved = ArrivalGenerator.arrival(schDt = dayOfArrivals.toISOString)
+    val arrivalThatRemains = ArrivalGenerator.arrival(schDt = dayOfArrivals.addHours(1).toISOString)
 
     val firstAclFeed = List(arrivalThatIsRemoved, arrivalThatRemains)
     aclSource.offer(firstAclFeed)
@@ -47,9 +47,9 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
       TestableArrivalsGraphStage.buildArrivalsGraphStage(dayOfArrivals.getUtcLastMidnight.addDays(1))
     ).run
 
-    val arrivalThatIsRemoved = ArrivalGenerator.arrival(schDt = dayOfArrivals.toISOString())
-    val arrivalThatRemains = ArrivalGenerator.arrival(schDt = dayOfArrivals.addHours(1).toISOString())
-    val newArrival = ArrivalGenerator.arrival(schDt = dayOfArrivals.addHours(2).toISOString())
+    val arrivalThatIsRemoved = ArrivalGenerator.arrival(schDt = dayOfArrivals.toISOString)
+    val arrivalThatRemains = ArrivalGenerator.arrival(schDt = dayOfArrivals.addHours(1).toISOString)
+    val newArrival = ArrivalGenerator.arrival(schDt = dayOfArrivals.addHours(2).toISOString)
 
     val firstAclFeed = List(arrivalThatIsRemoved, arrivalThatRemains)
     aclSource.offer(firstAclFeed)

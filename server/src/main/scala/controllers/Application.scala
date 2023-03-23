@@ -11,24 +11,20 @@ import buildinfo.BuildInfo
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import drt.http.ProdSendAndReceive
-import drt.shared.CrunchApi._
 import drt.shared._
 import drt.users.KeyCloakClient
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.mvc._
 import play.api.{Configuration, Environment}
-import services.PcpArrival._
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
 import slickdb.UserTableLike
-import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, FeedSource, PortCode}
-import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.nio.ByteBuffer
@@ -47,16 +43,6 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
   def myroute[Trait](target: Trait): Router = macro MyMacros.routeMacro[Trait, ByteBuffer]
 
   override def write[R: Pickler](r: R): ByteBuffer = Pickle.intoBytes(r)
-}
-
-object PaxFlow {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def pcpArrivalTimeForFlight(firstPaxOffMillis: MillisSinceEpoch, considerPredictions: Boolean)
-                             (walkTimeProvider: FlightWalkTime)
-                             (redListUpdates: RedListUpdates)
-                             (flight: Arrival): MilliDate =
-    pcpFrom(firstPaxOffMillis, walkTimeProvider, considerPredictions)(flight, redListUpdates)
 }
 
 trait AirportConfiguration {
@@ -351,7 +337,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         val logMessage = Map(
           "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
           "message" -> postStringValOrElse("message", "no log message"),
-          "logTime" -> SDate(millis).toISOString(),
+          "logTime" -> SDate(millis).toISOString,
           "url" -> postStringValOrElse("url", request.headers.get("referrer").getOrElse("unknown url")),
           "logLevel" -> logLevel
         )

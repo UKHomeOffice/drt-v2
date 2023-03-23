@@ -5,7 +5,6 @@ import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.shared.FeedSourceStatuses
 import io.kinoplan.scalajs.react.material.ui.core.MuiSnackbar
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -14,6 +13,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEvent, ScalaComponent}
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
 
 case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]], snackbarMessage: Pot[String])

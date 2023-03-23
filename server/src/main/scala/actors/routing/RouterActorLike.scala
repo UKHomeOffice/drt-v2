@@ -10,7 +10,7 @@ import akka.pattern.{ask, pipe}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.DataUpdates.Updates
+import uk.gov.homeoffice.drt.DataUpdates.Updates
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -70,7 +70,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
     eventualEffects
   }
 
-  def updateAll(updates: U): Future[UpdatedMillis] = {
+  private def updateAll(updates: U): Future[UpdatedMillis] = {
     val eventualUpdatedMinutesDiff: Source[UpdatedMillis, NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => updatePartition(partition, updates)
@@ -105,13 +105,13 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
     case StreamFailure(t) => log.error(s"Stream failed", t)
   }
 
-  def receiveUpdates: Receive = {
+  private def receiveUpdates: Receive = {
     case updates: U =>
       updateRequestsQueue = (sender(), updates) :: updateRequestsQueue
       self ! ProcessNextUpdateRequest
   }
 
-  def receiveProcessRequest: Receive = {
+  private def receiveProcessRequest: Receive = {
     case ProcessNextUpdateRequest =>
       if (!processingRequest) {
         updateRequestsQueue match {
@@ -124,7 +124,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
       }
   }
 
-  def receiveUnexpected: Receive = {
+  private def receiveUnexpected: Receive = {
     case unexpected => log.warning(s"Got an unexpected message: ${unexpected.getClass}")
   }
 }
@@ -162,12 +162,12 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
     case StreamFailure(t) => log.error(s"Stream failed", t)
   }
 
-  def receiveUpdates: Receive = {
+  private def receiveUpdates: Receive = {
     case updates: U =>
       handleUpdatesAndAck(updates, sender())
   }
 
-  def receiveUnexpected: Receive = {
+  private def receiveUnexpected: Receive = {
     case unexpected =>
       log.warning(s"Got an unexpected message: ${unexpected.getClass}")
   }

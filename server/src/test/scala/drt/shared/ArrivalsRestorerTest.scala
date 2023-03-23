@@ -1,7 +1,7 @@
 package drt.shared
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsRestorer}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 class ArrivalsRestorerTest extends Specification {

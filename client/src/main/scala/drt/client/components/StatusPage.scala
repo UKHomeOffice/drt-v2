@@ -9,7 +9,6 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.CheckFeed
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -18,12 +17,9 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.PortFeedUpload
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, ApiFeedSource, FeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.auth.Roles.{PortFeedUpload, SuperAdmin}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, FeedSource, LiveFeedSource}
-import uk.gov.homeoffice.drt.auth.Roles.PortFeedUpload
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, ApiFeedSource, FeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
+import uk.gov.homeoffice.drt.ports._
 
 
 object StatusPage {
@@ -141,8 +137,8 @@ object StatusPage {
 
   private def displayTime(date: MillisSinceEpoch): String = {
     val dateToDisplay = SDate(date)
-    if (dateToDisplay.toISODateOnly == SDate.now().toISODateOnly) dateToDisplay.hms()
-    else dateToDisplay.prettyDateTime()
+    if (dateToDisplay.toISODateOnly == SDate.now().toISODateOnly) dateToDisplay.hms
+    else dateToDisplay.prettyDateTime
   }
 
   def timeAgo(millisToCheck: MillisSinceEpoch): String = {

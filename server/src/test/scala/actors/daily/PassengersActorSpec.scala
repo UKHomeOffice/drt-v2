@@ -13,8 +13,8 @@ class PassengersActorSpec extends Specification {
   val inValidDate: SDateLike = now().addDays(-3)
   val daysInAverage = 2
 
-  s"Given a 2 days for the average, and a now of 15 June, ${now().toISOString()}, the days taken into account should be 13th and 14th" >> {
-    s"When I ask if 14th June (${validDate.toISOString()}) is relevant" >> {
+  s"Given a 2 days for the average, and a now of 15 June, ${now().toISOString}, the days taken into account should be 13th and 14th" >> {
+    s"When I ask if 14th June (${validDate.toISOString}) is relevant" >> {
       "I should see it is relevant" >> {
         val pcm = PaxCountMessage(Option(validDate.millisSinceEpoch), Option(validDate.millisSinceEpoch), Option(1))
         val validMessages = PassengersActor.relevantPaxCounts(daysInAverage, now)(Seq(pcm))
@@ -24,7 +24,7 @@ class PassengersActorSpec extends Specification {
     }
   }
 
-  s"When I ask if 13th June (${validDate2.toISOString()}) is relevant" >> {
+  s"When I ask if 13th June (${validDate2.toISOString}) is relevant" >> {
     "I should see it is relevant" >> {
       val pcm = PaxCountMessage(Option(validDate2.millisSinceEpoch), Option(validDate2.millisSinceEpoch), Option(1))
       val validMessages = PassengersActor.relevantPaxCounts(daysInAverage, now)(Seq(pcm))
@@ -33,7 +33,7 @@ class PassengersActorSpec extends Specification {
     }
   }
 
-  s"When I ask if 12th June (${inValidDate.toISOString()}) is relevant" >> {
+  s"When I ask if 12th June (${inValidDate.toISOString}) is relevant" >> {
     "I should see it is not relevant" >> {
       val pcm = PaxCountMessage(Option(inValidDate.millisSinceEpoch), Option(inValidDate.millisSinceEpoch), Option(1))
       val validMessages = PassengersActor.relevantPaxCounts(daysInAverage, now)(Seq(pcm))

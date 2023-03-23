@@ -4,10 +4,9 @@ import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
-import drt.server.feeds.{Feed, ManifestsFeedResponse}
 import drt.server.feeds.Feed.EnabledFeedWithFrequency
+import drt.server.feeds.{Feed, ManifestsFeedResponse}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
@@ -15,7 +14,7 @@ import services._
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike}
 import services.graphstages.Crunch._
 import services.graphstages._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplitsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -70,7 +69,7 @@ case class CrunchProps[FT](logLabel: String = "",
                            aclPaxAdjustmentDays: Int,
                            startDeskRecs: () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                            arrivalsAdjustments: ArrivalsAdjustmentsLike,
-                           addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+                           addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                            setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
                           )
 
@@ -134,11 +133,11 @@ object CrunchSystem {
       aggregatedArrivalsStateActor = props.actors("aggregated-arrivals"),
       forecastMaxMillis = forecastMaxMillis,
       redListUpdatesSource = props.redListUpdatesSource,
-      addTouchdownPredictions = props.addTouchdownPredictions,
+      addArrivalPredictions = props.addArrivalPredictions,
       setPcpTimes = props.setPcpTimes,
     )
 
-    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run
+    val (forecastBaseIn, forecastIn, liveBaseIn, liveIn, manifestsLiveIn, actDesksIn, redListUpdatesIn, arrivalsKillSwitch, manifestsKillSwitch) = crunchSystem.run()
 
     val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
 

@@ -56,8 +56,8 @@ case class MockUserTable()(implicit ec: ExecutionContext) extends UserTableLike 
 }
 
 case class MockDrtParameters() extends DrtParameters {
-  override val gateWalkTimesFilePath: String = ""
-  override val standWalkTimesFilePath: String = ""
+  override val gateWalkTimesFilePath: Option[String] = None
+  override val standWalkTimesFilePath: Option[String] = None
   override val forecastMaxDays: Int = 3
   override val aclDisabled: Boolean = false
   override val aclHost: Option[String] = None
@@ -249,8 +249,6 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
     crunchInputs.killSwitches
   }
-
-  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
 }
 
 

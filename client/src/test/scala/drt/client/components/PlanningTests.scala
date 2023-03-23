@@ -16,7 +16,7 @@ object PlanningTests extends TestSuite {
 
         val expected = SDate("2017-10-22T00:00:00")
 
-        assert(result.toISOString() == expected.toISOString())
+        assert(result.toISOString == expected.toISOString)
       }
       "Given a Monday then I should get Midnight previous Sunday back" - {
         val start = SDate("2017-10-23T18:15:00")
@@ -25,7 +25,7 @@ object PlanningTests extends TestSuite {
 
         val expected = SDate("2017-10-22T00:00:00")
 
-        assert(result.toISOString() == expected.toISOString())
+        assert(result.toISOString == expected.toISOString)
       }
       "Given a Friday then I should get Midnight last Sunday back" - {
         val start = SDate("2017-10-27T18:15:00")
@@ -34,7 +34,7 @@ object PlanningTests extends TestSuite {
 
         val expected = SDate("2017-10-22T00:00:00")
 
-        assert(result.toISOString() == expected.toISOString())
+        assert(result.toISOString == expected.toISOString)
       }
       "Given a Saturday then I should get Midnight last Sunday back" - {
         val start = SDate("2017-10-28T18:15:00")
@@ -43,7 +43,7 @@ object PlanningTests extends TestSuite {
 
         val expected = SDate("2017-10-22T00:00:00")
 
-        assert(result.toISOString() == expected.toISOString())
+        assert(result.toISOString == expected.toISOString)
       }
     }
   }

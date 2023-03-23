@@ -1,7 +1,6 @@
 package actors.persistent.arrivals
 
 import actors.persistent.staffing.GetState
-import actors.serializers.FlightMessageConversion
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.FeedSourceArrival
@@ -10,6 +9,7 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2, T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FlightMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.flightMessageToApiFlight
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object ArrivalLookupActor {
@@ -55,7 +55,7 @@ class ArrivalLookupActor(portCode: PortCode, pointInTime: SDateLike, arrivalToLo
   }
 
   private def addArrival(msg: FlightMessage): Unit = {
-    val arrival = FlightMessageConversion.flightMessageToApiFlight(msg)
+    val arrival = flightMessageToApiFlight(msg)
     state = state.copy(arrivals = state.arrivals.updated(arrival.unique, arrival))
   }
 

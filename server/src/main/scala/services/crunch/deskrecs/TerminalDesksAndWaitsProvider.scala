@@ -67,7 +67,7 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
           } yield {
             queuePassengers match {
               case noWork if noWork.isEmpty || noWork.map(_.sum).sum == 0 =>
-                log.info(s"No workload to crunch for $queue on ${SDate(minuteMillis.min).toISOString()}. Filling with min desks and zero wait times")
+                log.info(s"No workload to crunch for $queue on ${SDate(minuteMillis.min).toISOString}. Filling with min desks and zero wait times")
                 queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0), List.fill(minDesks.size)(0d))))
               case someWork =>
                 val start = System.currentTimeMillis()
@@ -86,7 +86,7 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
                   queueRecsSoFar
                 }
 
-                log.info(s"$queue crunch for ${SDate(minuteMillis.min).toISOString()} took: ${System.currentTimeMillis() - start}ms")
+                log.info(s"$queue crunch for ${SDate(minuteMillis.min).toISOString} took: ${System.currentTimeMillis() - start}ms")
                 optimisedDesks
             }
           }

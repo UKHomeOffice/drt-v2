@@ -11,6 +11,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewLive
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
+import drt.shared.api.WalkTimes
 import drt.shared.redlist.RedList
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -37,82 +38,88 @@ object TerminalDashboardComponent {
                    loggedInUser: LoggedInUser,
                    redListPorts: Pot[HashSet[PortCode]],
                    redListUpdates: RedListUpdates,
+                   walkTimes: Pot[WalkTimes],
                   ) extends UseValueEq
 
   val defaultSlotSize = 120
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalDashboard")
-    .render_P { p =>
+    .render_P { props =>
       val slotSize = Try {
-        p.terminalPageTabLoc.subMode.toInt
+        props.terminalPageTabLoc.subMode.toInt
       }.getOrElse(defaultSlotSize)
 
       def timeSlotStart: SDateLike => SDateLike = timeSlotForTime(slotSize)
 
-      val startPoint = p.terminalPageTabLoc.queryParams.get("start")
+      val startPoint = props.terminalPageTabLoc.queryParams.get("start")
         .flatMap(s => SDate.parse(s))
         .getOrElse(SDate.now())
       val start = timeSlotStart(startPoint)
       val end = start.addMinutes(slotSize)
-      val ps = p.portState.window(start, end)
+      val ps = props.portState.window(start, end)
       val prevSlotStart = start.addMinutes(-slotSize)
 
-      val prevSlotPortState = p.portState.window(prevSlotStart, start)
+      val prevSlotPortState = props.portState.window(prevSlotStart, start)
 
-      val urlPrevTime = URIUtils.encodeURI(prevSlotStart.toISOString())
-      val urlNextTime = URIUtils.encodeURI(end.toISOString())
+      val urlPrevTime = URIUtils.encodeURI(prevSlotStart.toISOString)
+      val urlNextTime = URIUtils.encodeURI(end.toISOString)
 
       val terminalPax = ps.crunchMinutes.collect {
-        case (_, cm) if cm.terminal == p.terminalPageTabLoc.terminal => cm.paxLoad
+        case (_, cm) if cm.terminal == props.terminalPageTabLoc.terminal => cm.paxLoad
       }.sum.round
 
-      val terminal = p.terminalPageTabLoc.terminal
+      val terminal = props.terminalPageTabLoc.terminal
 
       <.div(^.className := "terminal-dashboard",
-        if (p.terminalPageTabLoc.queryParams.contains("showArrivals")) {
-          val closeArrivalsPopupLink = p.terminalPageTabLoc.copy(
-            queryParams = p.terminalPageTabLoc.queryParams - "showArrivals"
+        if (props.terminalPageTabLoc.queryParams.contains("showArrivals")) {
+          val closeArrivalsPopupLink = props.terminalPageTabLoc.copy(
+            queryParams = props.terminalPageTabLoc.queryParams - "showArrivals"
           )
           <.div(<.div(^.className := "popover-overlay",
-            ^.onClick --> p.router.set(closeArrivalsPopupLink)),
+            ^.onClick --> props.router.set(closeArrivalsPopupLink)),
             <.div(^.className := "dashboard-arrivals-popup",
               <.h2("Arrivals"),
-              <.div(^.className := "terminal-dashboard__arrivals_popup_table",
-                p.featureFlags.renderReady { featureFlags =>
-                  p.redListPorts.renderReady { redListPorts =>
-                    FlightTable.ArrivalsTable(
-                      true,
+              <.div(^.className := "terminal-dashboard__arrivals_popup_table", {
+                val tablePot = for {
+                  featureFlags <- props.featureFlags
+                  redListPorts <- props.redListPorts
+                  walkTimes <- props.walkTimes
+                } yield {
+                  FlightTable.apply(
+                    true,
+                    None,
+                    originMapper,
+                    splitsGraphComponentColoured)(
+                    FlightTable.Props(
+                      ps.flights.filter { case (ua, _) => ua.terminal == props.terminalPageTabLoc.terminal }.values.toList,
+                      props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
+                      props.airportConfig.hasEstChox,
                       None,
-                      originMapper,
-                      splitsGraphComponentColoured)(
-                      FlightTable.Props(
-                        ps.flights.filter { case (ua, _) => ua.terminal == p.terminalPageTabLoc.terminal }.values.toList,
-                        p.airportConfig.queueTypeSplitOrder(p.terminalPageTabLoc.terminal),
-                        p.airportConfig.hasEstChox,
-                        None,
-                        p.loggedInUser,
-                        ViewLive,
-                        p.airportConfig.defaultWalkTimeMillis(p.terminalPageTabLoc.terminal),
-                        hasTransfer = p.airportConfig.hasTransfer,
-                        displayRedListInfo = featureFlags.displayRedListInfo,
-                        redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(p.airportConfig.portCode, terminal),
-                        terminal = terminal,
-                        portCode = p.airportConfig.portCode,
-                        redListPorts = redListPorts,
-                        airportConfig = p.airportConfig,
-                        redListUpdates = p.redListUpdates
-                      )
+                      props.loggedInUser,
+                      ViewLive,
+                      props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
+                      hasTransfer = props.airportConfig.hasTransfer,
+                      displayRedListInfo = featureFlags.displayRedListInfo,
+                      redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                      terminal = terminal,
+                      portCode = props.airportConfig.portCode,
+                      redListPorts = redListPorts,
+                      airportConfig = props.airportConfig,
+                      redListUpdates = props.redListUpdates,
+                      walkTimes = walkTimes,
                     )
-                  }
-                }),
-              p.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
+                  )
+                }
+                tablePot.renderReady(table => table)
+              }),
+              props.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
             ))
 
         } else <.div(),
         <.div(^.className := "terminal-dashboard-queues",
           <.div(^.className := "pax-bar", s"$terminalPax passengers presenting at the PCP"),
           <.div(^.className := "queue-boxes",
-            p.airportConfig.nonTransferQueues(terminal).filterNot(_ == Queues.FastTrack).map(q => {
+            props.airportConfig.nonTransferQueues(terminal).filterNot(_ == Queues.FastTrack).map(q => {
               val qCMs = cmsForTerminalAndQueue(ps, q, terminal)
               val prevSlotCMs = cmsForTerminalAndQueue(prevSlotPortState, q, terminal)
               val qPax = qCMs.map(_.paxLoad).sum.round
@@ -126,7 +133,7 @@ object TerminalDashboardComponent {
               }
 
               <.dl(^.aria.label := s"Passenger joining queue ${Queues.displayName(q)}",
-                ^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, p.airportConfig.slaByQueue(q))}",
+                ^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, props.airportConfig.slaByQueue(q))}",
                 <.dt(^.className := "queue-name", s"${Queues.displayName(q)}"),
                 <.dd(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
                 <.dd(^.className := "queue-box-text", Icon.clockO, s"${MinuteAsAdjective(qWait).display} wait"),
@@ -135,24 +142,24 @@ object TerminalDashboardComponent {
             }).toTagMod
           ),
           <.div(^.className := "tb-bar-wrapper",
-            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlPrevTime")))(^.aria.label := s"View previous $slotSize minutes", ^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
+            props.router.link(props.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlPrevTime")))(^.aria.label := s"View previous $slotSize minutes", ^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
             <.div(^.className := "tb-bar", ^.aria.label := "current display time range",
-              s"${start.prettyTime()} - ${end.prettyTime()}",
+              s"${start.prettyTime} - ${end.prettyTime}",
             ),
-            p.router.link(p.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.aria.label := s"View next $slotSize minutes", ^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
+            props.router.link(props.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.aria.label := s"View next $slotSize minutes", ^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
           )
         ),
         <.div(^.className := "terminal-dashboard-side",
-          p.router
-            .link(p.terminalPageTabLoc.copy(
-              queryParams = p.terminalPageTabLoc.queryParams + ("showArrivals" -> "true")
+          props.router
+            .link(props.terminalPageTabLoc.copy(
+              queryParams = props.terminalPageTabLoc.queryParams + ("showArrivals" -> "true")
             ))(^.className := "terminal-dashboard-side__sidebar_widget", "View Arrivals"),
           <.div(
             ^.className := "terminal-dashboard-side__sidebar_widget time-slot-changer",
             <.label(^.className := "terminal-dashboard-side__sidebar_widget__label", ^.aria.label := "Select timeslot size for PCP passengers display", "Time slot duration"),
             <.select(
               ^.onChange ==> ((e: ReactEventFromInput) =>
-                p.router.set(p.terminalPageTabLoc.copy(subMode = e.target.value))),
+                props.router.set(props.terminalPageTabLoc.copy(subMode = e.target.value))),
               ^.value := slotSize,
               <.option("15 minutes", ^.value := "15"),
               <.option("30 minutes", ^.value := "30"),
@@ -185,6 +192,7 @@ object TerminalDashboardComponent {
             loggedInUser: LoggedInUser,
             redListPorts: Pot[HashSet[PortCode]],
             redListUpdates: RedListUpdates,
+            walkTimes: Pot[WalkTimes],
            ): VdomElement =
     component(Props(
       terminalPageTabLoc,
@@ -195,10 +203,11 @@ object TerminalDashboardComponent {
       loggedInUser,
       redListPorts,
       redListUpdates,
+      walkTimes
     ))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {
-    val offset: Int = sd.getMinutes() % slotSize
+    val offset: Int = sd.getMinutes % slotSize
 
     sd.addMinutes(offset * -1)
   }

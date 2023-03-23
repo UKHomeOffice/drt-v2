@@ -13,12 +13,12 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.DataUpdates.FlightUpdates
 import drt.shared.FlightsApi._
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.SourceUtils
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
