@@ -63,7 +63,7 @@ object Settings {
     val playJsonJoda = "2.6.9"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
-    val typesafeConfig = "1.3.0"
+    val typesafeConfig = "1.3.4"
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
