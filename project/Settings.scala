@@ -50,7 +50,7 @@ object Settings {
     val sprayVersion = "1.3.4"
     val levelDb = "0.7"
     val levelDbJni = "1.8"
-    val renjin = "0.9.2726"
+    val renjin = "0.9.2725"
     val awsSdk = "1.11.89"
     val csvCommons = "1.4"
     val poi = "5.1.0"
@@ -157,14 +157,14 @@ object Settings {
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
     "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
-    "com.typesafe.akka" %%  "akka-persistence-typed" % akka,
-    "com.typesafe.akka" %%  "akka-remote" % akka,
-    "com.typesafe.akka" %%  "akka-persistence-testkit" % akka,
-    "com.typesafe.akka" %%  "akka-actor-testkit-typed" % akka,
-    "com.typesafe.akka" %%  "akka-testkit" % akka,
-    "com.typesafe.akka" %%  "akka-serialization-jackson" % akka,
-    "com.typesafe.akka" %%  "akka-pki" % akka,
-    "com.typesafe.akka" %%  "akka-stream-typed" % akka,
+    "com.typesafe.akka" %% "akka-persistence-typed" % akka,
+    "com.typesafe.akka" %% "akka-remote" % akka,
+    "com.typesafe.akka" %% "akka-persistence-testkit" % akka,
+    "com.typesafe.akka" %% "akka-actor-testkit-typed" % akka,
+    "com.typesafe.akka" %% "akka-testkit" % akka,
+    "com.typesafe.akka" %% "akka-serialization-jackson" % akka,
+    "com.typesafe.akka" %% "akka-pki" % akka,
+    "com.typesafe.akka" %% "akka-stream-typed" % akka,
     "com.typesafe.akka" %% "akka-persistence-testkit" % akka,
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
