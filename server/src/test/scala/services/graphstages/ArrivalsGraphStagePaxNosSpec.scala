@@ -91,7 +91,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
 
     "When I send an ACL arrival with 100 pax and a live arrival with 0 pax, scheduled more than 3 hours after now" >> {
-      val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString()
+      val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString
       offerArrivalAndWait(crunch.aclArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(100), tranPax = None, maxPax = Option(150))
       offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(0), tranPax = None, maxPax = Option(150), "updated")
       "I should see it with 0 ActPax in the port state (trust zero even when not close to landing)" >> {
@@ -100,7 +100,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
 
     "When I send an ACL arrival with 100 pax and a live arrival with 0 pax, scheduled more than 3 hours after now, but with an actChox time, ie it's landed" >> {
-      val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString()
+      val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString
       offerArrivalAndWait(crunch.aclArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(100), tranPax = None, maxPax = Option(150))
       offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(0), tranPax = None, maxPax = Option(150), actChoxDt = scheduled3Hrs5MinsAfterNow)
       "I should see it with 0 ActPax in the port state" >> {
@@ -109,7 +109,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
 
     "When I send an ACL arrival with 100 pax and a live arrival with 50 pax, scheduled more than 3 hours after now" >> {
-      val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString()
+      val scheduled3Hrs5MinsAfterNow = SDate(nowString).addHours(3).addMinutes(5).toISOString
       offerArrivalAndWait(crunch.aclArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(100), tranPax = None, maxPax = Option(150))
       offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled3Hrs5MinsAfterNow, actPax = Option(50), tranPax = None, maxPax = Option(150))
       "I should see it with 50 ActPax in the port state" >> {
@@ -118,7 +118,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
 
     "When I send an ACL arrival with 100 pax and a live arrival with 0 pax, scheduled less than 3 hours after now" >> {
-      val scheduled2Hrs55MinsAfterNow = SDate(nowString).addHours(2).addMinutes(55).toISOString()
+      val scheduled2Hrs55MinsAfterNow = SDate(nowString).addHours(2).addMinutes(55).toISOString
       offerArrivalAndWait(crunch.aclArrivalsInput, scheduled = scheduled2Hrs55MinsAfterNow, actPax = Option(100), tranPax = None, maxPax = Option(150))
       offerArrivalAndWait(crunch.liveArrivalsInput, scheduled = scheduled2Hrs55MinsAfterNow, actPax = Option(0), tranPax = None, maxPax = Option(150))
       "I should see it with 0 ActPax in the port state" >> {

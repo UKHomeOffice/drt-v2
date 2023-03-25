@@ -1,9 +1,9 @@
 package actors.persistent.arrivals
 
-import drt.shared.FeedStatusSuccess
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, TotalPaxSource, UniqueArrival}
+import uk.gov.homeoffice.drt.feeds.FeedStatusSuccess
 import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.time.SDateLike

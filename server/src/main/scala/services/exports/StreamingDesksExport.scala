@@ -21,11 +21,11 @@ import scala.concurrent.{ExecutionContext, Future}
 object StreamingDesksExport {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def colHeadings(deskTitle: String = "req") = List("Pax", "Wait", s"Desks $deskTitle", "Act. wait time", "Act. desks")
+  def colHeadings(deskTitle: String = "req"): List[String] = List("Pax", "Wait", s"Desks $deskTitle", "Act. wait time", "Act. desks")
 
-  def eGatesHeadings(deskTitle: String) = List("Pax", "Wait", s"Staff $deskTitle", "Act. wait time", "Act. desks")
+  private def eGatesHeadings(deskTitle: String): List[String] = List("Pax", "Wait", s"Staff $deskTitle", "Act. wait time", "Act. desks")
 
-  def csvHeader(queues: Seq[Queue], deskTitle: String): String = {
+  private def csvHeader(queues: Seq[Queue], deskTitle: String): String = {
 
     val headingsLine1 = "Date,," + queueHeadings(queues) + ",Misc,Moves,PCP Staff,PCP Staff"
     val headingsLine2 = ",Start," + queues.flatMap(q => {
@@ -152,14 +152,14 @@ object StreamingDesksExport {
         val total = qcms.map(_.deskRec).sum
         val localMinute = SDate(minute, Crunch.europeLondonTimeZone)
         val misc = terminalStaffMinutesWithinRange.get(minute).map(_.fixedPoints).getOrElse(0)
-        s"${localMinute.toISODateOnly},${localMinute.prettyTime()},$qsCsv,$staffMinutesCsv,${total + misc}\n"
+        s"${localMinute.toISODateOnly},${localMinute.prettyTime},$qsCsv,$staffMinutesCsv,${total + misc}\n"
 
     }.mkString
   }
 
-  def deskRecsCsv(cm: CrunchMinute): String =
+  private def deskRecsCsv(cm: CrunchMinute): String =
     s"${Math.round(cm.paxLoad)},${cm.waitTime},${cm.deskRec},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
 
-  def deploymentsCsv(cm: CrunchMinute): String =
+  private def deploymentsCsv(cm: CrunchMinute): String =
     s"${Math.round(cm.paxLoad)},${cm.deployedWait.getOrElse("")},${cm.deployedDesks.getOrElse(0)},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
 }

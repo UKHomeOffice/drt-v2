@@ -23,7 +23,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
   "When rounding times to the nearest 5 minutes" >> {
 
     def convert(s: String) = CiriumFeed
-      .timeToNearest5Minutes(SDate(s)).toISOString()
+      .timeToNearest5Minutes(SDate(s)).toISOString
 
     "A time with minutes ending in a 5 should be unchanged" >> {
       convert("2019-07-15T11:15:00Z") mustEqual "2019-07-15T11:15:00Z"

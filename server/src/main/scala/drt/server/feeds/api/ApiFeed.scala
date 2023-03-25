@@ -26,7 +26,7 @@ case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
       .unfoldAsync((since, Iterable[(UniqueArrivalKey, MillisSinceEpoch)]())) { case (lastProcessedAt, lastKeys) =>
         markerAndNextArrivalKeys(lastProcessedAt).map {
           case (nextMarker, newKeys) =>
-            if (newKeys.nonEmpty) log.info(s"${newKeys.size} new live manifests available. Next marker: ${SDate(nextMarker).toISOString()}")
+            if (newKeys.nonEmpty) log.info(s"${newKeys.size} new live manifests available. Next marker: ${SDate(nextMarker).toISOString}")
             Option((nextMarker, newKeys), (lastProcessedAt, lastKeys))
         }
       }

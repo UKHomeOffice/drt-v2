@@ -124,7 +124,7 @@ object EgatesScheduleEditor {
                     MuiGrid(item = true, xs = 9)(
                       MuiTextField(inputProps = js.Dynamic.literal(`class` = "mui-textfield-date-input"))(
                         ^.`type` := "datetime-local",
-                        ^.defaultValue := SDate(editing.update.effectiveFrom).toISOString().split("\\.").dropRight(1).mkString(""),
+                        ^.defaultValue := SDate(editing.update.effectiveFrom).toISOString.split("\\.").dropRight(1).mkString(""),
                         ^.onChange ==> setDate
                       )
                     )
@@ -186,7 +186,7 @@ object EgatesScheduleEditor {
               s.updates.toList.sortBy(_.effectiveFrom).reverseMap { updates =>
                 val date = SDate(updates.effectiveFrom)
                 MuiGrid(container = true, item = true, spacing = 8)(
-                  MuiGrid(item = true, xs = 4)(s"${date.toLocalDateTimeString()}"),
+                  MuiGrid(item = true, xs = 4)(s"${date.toLocalDateTimeString}"),
                   MuiGrid(item = true, xs = 4)(s"${updates.banks.map(b => s"${b.gates.count(_ == true)} / ${b.gates.length}").mkString(", ")}"),
                   MuiGrid(item = true, container = true, xs = 4, justify = "flex-end")(
                     MuiButton(color = Color.default, variant = "outlined", size = "medium")(

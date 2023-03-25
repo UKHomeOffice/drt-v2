@@ -14,21 +14,20 @@ import controllers.Application
 import controllers.application.exports.CsvFileStreaming
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import manifests.queues.SplitsCalculator
 import play.api.mvc._
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.deskrecs.OptimisationProviders
 import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios.simulationResult
+import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{MilliTimes, UtcDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, UtcDate}
 import upickle.default.write
 
 import scala.collection.immutable.SortedMap
@@ -157,9 +156,9 @@ trait WithSimulations {
   }
 
 
-  def simulationResultAsCsv(simulationParams: SimulationParams,
-                            terminal: Terminal,
-                            futureDeskRecMinutes: Future[DeskRecMinutes]): Future[Result] = {
+  private def simulationResultAsCsv(simulationParams: SimulationParams,
+                                    terminal: Terminal,
+                                    futureDeskRecMinutes: Future[DeskRecMinutes]): Future[Result] = {
 
     val date = SDate(simulationParams.date)
 
@@ -195,10 +194,10 @@ trait WithSimulations {
     })
   }
 
-  def simulationQueuesLookup(cms: SortedMap[TQM, CrunchMinute])(
+  private def simulationQueuesLookup(cms: SortedMap[TQM, CrunchMinute])(
     terminalDate: (Terminal, UtcDate),
     maybePit: Option[MillisSinceEpoch]
   ): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = Future(Option(MinutesContainer(cms.values.toSeq)))
 
-  def staffLookupNoop: MinutesLookup[StaffMinute, TM] = (terminalDate: (Terminal, UtcDate), maybePit: Option[MillisSinceEpoch]) => Future(None)
+  private def staffLookupNoop: MinutesLookup[StaffMinute, TM] = (terminalDate: (Terminal, UtcDate), maybePit: Option[MillisSinceEpoch]) => Future(None)
 }

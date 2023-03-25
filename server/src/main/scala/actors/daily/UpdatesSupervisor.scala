@@ -27,8 +27,6 @@ case object PurgeAll
 
 case class GetAllUpdatesSince(sinceMillis: MillisSinceEpoch)
 
-case class StartUpdatesStream(terminal: Terminal, day: SDateLike)
-
 
 class QueueUpdatesSupervisor(now: () => SDateLike,
                              terminals: List[Terminal],
@@ -72,7 +70,7 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
     case Some(existing) => existing
     case None =>
       log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
-      val actor = context.system.actorOf(updatesActorFactory(terminal, day), s"updates-actor-$terminal-${day.toISOString()}-${UUID.randomUUID().toString}")
+      val actor = context.system.actorOf(updatesActorFactory(terminal, day), s"updates-actor-$terminal-${day.toISOString}-${UUID.randomUUID().toString}")
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
       actor
@@ -141,7 +139,7 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
                 log.warn(s"Timed out waiting for updates. Actor may have already been terminated", t)
                 Future(MinutesContainer.empty[A, B])
               case t =>
-                log.error(s"Failed to fetch updates from streaming updates actor: ${SDate(day).toISOString()}", t)
+                log.error(s"Failed to fetch updates from streaming updates actor: ${SDate(day).toISOString}", t)
                 Future(MinutesContainer.empty[A, B])
             }
       }

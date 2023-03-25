@@ -50,7 +50,7 @@ class StreamingDesksBstExportSpec extends CrunchTestLike {
         terminal = T1,
         queue = queue,
         minute = minute.millisSinceEpoch,
-        paxLoad = if (minute.getDate() == 5) firstHourPax else secondHourPax,
+        paxLoad = if (minute.getDate == 5) firstHourPax else secondHourPax,
         workLoad = workload,
         deskRec = Map(EeaDesk -> eeaDeskRec, NonEeaDesk -> nonEEADeskRec, EGate -> eGateRec)(queue),
         waitTime = waitTime,

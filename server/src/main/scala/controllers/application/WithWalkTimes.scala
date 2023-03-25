@@ -1,9 +1,9 @@
 package controllers.application
 
 import controllers.Application
-import drt.shared.api.WalkTimes
+import drt.shared.api.{WalkTime, WalkTimes}
 import play.api.mvc.{Action, AnyContent}
-import services.PcpArrival
+import uk.gov.homeoffice.drt.actor.WalkTimeProvider
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 
 
@@ -14,12 +14,14 @@ trait WithWalkTimes {
     Action { _ =>
       import upickle.default._
 
-      val gateWalkTimes = PcpArrival.loadWalkTimesFromCsv(ctrl.params.gateWalkTimesFilePath)
-      val standWalkTimes = PcpArrival.loadWalkTimesFromCsv(ctrl.params.standWalkTimesFilePath)
+      val gates = ctrl.params.gateWalkTimesFilePath.map(walkTimes).getOrElse(Iterable())
+      val stands = ctrl.params.standWalkTimesFilePath.map(walkTimes).getOrElse(Iterable())
 
-
-      Ok(write(WalkTimes(gateWalkTimes, standWalkTimes)))
+      Ok(write(WalkTimes(gates, stands)))
     }
   }
 
+  private def walkTimes(csvPath: String): Iterable[WalkTime] = WalkTimeProvider.walkTimes(csvPath).map {
+    case ((terminal, gateOrStand), walkTimeSeconds) => WalkTime(gateOrStand, terminal, walkTimeSeconds * 1000)
+  }
 }

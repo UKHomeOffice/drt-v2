@@ -1,10 +1,9 @@
 package services.simulations
 
 import controllers.ArrivalGenerator
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._

@@ -5,7 +5,6 @@ import akka.stream.scaladsl.Flow
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.TimeLogger
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
@@ -18,7 +17,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object DynamicRunnableDeployments {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  val timeLogger: TimeLogger = TimeLogger("Deployment", 1000, log)
 
   type PassengersToQueueMinutes = (NumericRange[MillisSinceEpoch], Map[TQM, PassengersMinute], Map[Terminal, TerminalDeskLimitsLike]) => Future[PortStateQueueMinutes]
 
@@ -55,7 +53,7 @@ object DynamicRunnableDeployments {
       .mapAsync(1) {
         case (request, loads, deskLimitsByTerminal) =>
           val started = SDate.now().millisSinceEpoch
-          log.info(s"[deployments] Optimising ${request.durationMinutes} minutes (${request.start.toISOString()} to ${request.end.toISOString()})")
+          log.info(s"[deployments] Optimising ${request.durationMinutes} minutes (${request.start.toISOString} to ${request.end.toISOString})")
           loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal)
             .map { minutes =>
               log.info(s"[deployments] Optimising complete. Took ${SDate.now().millisSinceEpoch - started}ms")

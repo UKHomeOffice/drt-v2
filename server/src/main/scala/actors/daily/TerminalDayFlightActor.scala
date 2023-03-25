@@ -2,8 +2,6 @@ package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.GetState
-import actors.serializers.FlightMessageConversion
-import actors.serializers.FlightMessageConversion.{flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
 import akka.actor.Props
 import akka.persistence.SaveSnapshotSuccess
 import controllers.model.RedListCounts
@@ -13,9 +11,11 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightCode, VoyageNumberLike}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{flightWithSplitsDiffToMessage, flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration
@@ -42,13 +42,13 @@ class TerminalDayFlightActor(year: Int,
 
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
-    case Some(pit) => f"@${SDate(pit).toISOString()}"
+    case Some(pit) => f"@${SDate(pit).toISOString}"
   }
 
   val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)
-  val lastMinuteOfDay: SDateLike = firstMinuteOfDay.addDays(1).addMinutes(-1)
+  private val lastMinuteOfDay: SDateLike = firstMinuteOfDay.addDays(1).addMinutes(-1)
 
-  val maybeRemovalsCutoffTimestamp: Option[MillisSinceEpoch] = maybeRemovalMessageCutOff
+  private val maybeRemovalsCutoffTimestamp: Option[MillisSinceEpoch] = maybeRemovalMessageCutOff
     .map(cutoff => firstMinuteOfDay.addDays(1).addMillis(cutoff.toMillis).millisSinceEpoch)
 
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
@@ -118,16 +118,16 @@ class TerminalDayFlightActor(year: Int,
     case m => log.warn(s"Got unexpected message: $m")
   }
 
-  def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit = {
+  private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit = {
     val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch)
     state = updatedState
 
     val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
-    val message = FlightMessageConversion.flightWithSplitsDiffToMessage(diff)
+    val message = flightWithSplitsDiffToMessage(diff)
     persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
   }
 
-  def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {
+  private def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {
     case Some(removalsCutoffTimestamp) => timestamp < removalsCutoffTimestamp
     case None => true
   }

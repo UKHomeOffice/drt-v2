@@ -112,7 +112,7 @@ object VoyageManifestGenerator {
   }
 
   def manifestForArrival(arrival: Arrival, pax: List[PassengerInfoJson]): VoyageManifest = {
-    val Array(date, time) = SDate(arrival.Scheduled).toISOString().split("T")
+    val Array(date, time) = SDate(arrival.Scheduled).toISOString.split("T")
 
     voyageManifest(
       paxInfos = pax,

@@ -38,7 +38,7 @@ trait WithDesksExport {
             end,
             terminalName,
             deskRecsExportStreamForTerminalDates(pointInTime = Option(pit.millisSinceEpoch)),
-            s"desks-and-queues-recs-at-${pit.toISOString()}-for"
+            s"desks-and-queues-recs-at-${pit.toISOString}-for"
           )
         case _ =>
           Action(BadRequest(write(ErrorResponse("Invalid date format"))))
@@ -84,7 +84,7 @@ trait WithDesksExport {
             end,
             terminalName,
             deploymentsExportStreamForTerminalDates(pointInTime = Option(pit.millisSinceEpoch)),
-            s"desks-and-queues-deps-at-${pit.toISOString()}-for"
+            s"desks-and-queues-deps-at-${pit.toISOString}-for"
           )
         case _ =>
           Action(BadRequest(write(ErrorResponse("Invalid date format"))))
@@ -112,7 +112,7 @@ trait WithDesksExport {
       }
     }
 
-  def exportStreamingDesksAndQueuesBetweenTimestampsCSV(
+  private def exportStreamingDesksAndQueuesBetweenTimestampsCSV(
                                                          start: SDateLike,
                                                          end: SDateLike,
                                                          terminalName: String,
@@ -133,7 +133,7 @@ trait WithDesksExport {
     }
   }
 
-  def deskRecsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
+  private def deskRecsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
     start: SDateLike,
     end: SDateLike,
     terminal: Terminal
@@ -148,7 +148,7 @@ trait WithDesksExport {
       pointInTime
     )
 
-  def deploymentsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
+  private def deploymentsExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch])(
     start: SDateLike,
     end: SDateLike,
     terminal: Terminal

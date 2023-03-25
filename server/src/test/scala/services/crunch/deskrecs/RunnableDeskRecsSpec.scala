@@ -12,7 +12,7 @@ import controllers.ArrivalGenerator
 import dispatch.Future
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MinutesContainer, PassengersMinute}
-import drt.shared.FlightsApi.{Flights, FlightsWithSplits, PaxForArrivals, SplitsForArrivals}
+import drt.shared.FlightsApi.{Flights, PaxForArrivals, SplitsForArrivals}
 import drt.shared._
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
@@ -25,7 +25,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
@@ -526,7 +526,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "Then I should see crunch minutes arriving for the 2 days " >> {
     val noonSDate: SDateLike = SDate("2018-01-01T00:00")
     val arrivalsFor10Days: Seq[ApiFlightWithSplits] = (0 until 10).map { d =>
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA1000", schDt = noonSDate.addDays(d).toISOString(), actPax = Option(100)), Set(historicSplits))
+      ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA1000", schDt = noonSDate.addDays(d).toISOString, actPax = Option(100)), Set(historicSplits))
     }
     val crunch = runCrunchGraph(TestConfig(
       airportConfig = defaultAirportConfig.copy(minutesToCrunch = 30),

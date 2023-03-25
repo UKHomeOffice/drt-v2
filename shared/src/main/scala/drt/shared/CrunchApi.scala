@@ -1,6 +1,6 @@
 package drt.shared
 
-import drt.shared.DataUpdates.{Combinable, MinuteUpdates}
+import uk.gov.homeoffice.drt.DataUpdates.{Combinable, MinuteUpdates}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival, WithLastUpdated, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

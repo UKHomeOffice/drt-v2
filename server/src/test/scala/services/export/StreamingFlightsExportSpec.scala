@@ -2,9 +2,7 @@ package services.`export`
 
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
-import drt.shared.FlightsApi.FlightsWithSplits
 import passengersplits.parsing.VoyageManifestParser._
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import services.exports.flights.templates._
 import uk.gov.homeoffice.drt.Nationality
@@ -12,6 +10,7 @@ import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -148,7 +147,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     )
   )
 
-  val flightsIncludingOneWithNoPaxNos = List(
+  val flightsIncludingOneWithNoPaxNos: Seq[ApiFlightWithSplits] = List(
     flightWithAllTypesOfAPISplitAndNoLiveNos,
     flightWithoutFastTrackApiSplits,
     ApiFlightWithSplits(
@@ -176,7 +175,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     )
   )
 
-  val codeShareFlights = List(
+  val codeShareFlights: Seq[ApiFlightWithSplits] = List(
     flightWithAllTypesOfAPISplit,
     flightWithoutFastTrackApiSplits,
     ApiFlightWithSplits(
