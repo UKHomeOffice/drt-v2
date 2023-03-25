@@ -41,7 +41,7 @@ object Settings {
     val akka = "2.7.0"
     val akkaStreamContrib = "0.9"
 
-    val specs2 = "4.6.0"
+    val specs2 = "4.20.0"
     val react = "17.0.2"
 
     val bootstrap = "3.3.6"
