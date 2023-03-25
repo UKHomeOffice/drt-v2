@@ -93,7 +93,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           UrlDateParameter(date.map(_.toISODateOnly)),
           UrlTimeRangeStart(None),
           UrlTimeRangeEnd(None),
-          UrlTimeMachineDateParameter(tmDate.map(_.date.toISOString())),
+          UrlTimeMachineDateParameter(tmDate.map(_.date.toISOString)),
         )
 
         props.router.set(
@@ -217,7 +217,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                 )(
                   ^.className := "time-machine-datetime-selector",
                   ^.`type` := "datetime-local",
-                  ^.defaultValue := s"${tmDate.date.toISODateOnly}T${tmDate.date.prettyTime()}",
+                  ^.defaultValue := s"${tmDate.date.toISODateOnly}T${tmDate.date.prettyTime}",
                   ^.onChange ==> updateTimeMachineDate
                 ),
                 <.div(^.className := "date-go-button",

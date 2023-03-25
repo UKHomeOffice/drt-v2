@@ -68,7 +68,7 @@ object StaffAssignmentHelper {
 
   private def adjustEndDateIfEndTimeIsBeforeStartTime(d: Int, m: Int, y: Int, startDt: SDateLike, endDt: SDateLike): SDateLike =
     if (endDt.millisSinceEpoch < startDt.millisSinceEpoch)
-      SDate(y, m, d, endDt.getHours(), endDt.getMinutes()).addDays(1)
+      SDate(y, m, d, endDt.getHours, endDt.getMinutes).addDays(1)
     else
       endDt
 

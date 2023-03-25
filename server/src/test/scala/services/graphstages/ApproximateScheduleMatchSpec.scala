@@ -10,7 +10,7 @@ class ApproximateScheduleMatchSpec extends CrunchTestLike {
   "When I ask for a merged approx match with an arrival" >> {
     val origin = PortCode("JFK")
     val scheduled = SDate("2021-06-01T12:00")
-    val arrival = ArrivalGenerator.arrival(origin = origin, schDt = scheduled.toISOString())
+    val arrival = ArrivalGenerator.arrival(origin = origin, schDt = scheduled.toISOString)
 
     "Given a cirium arrival with a scheduled time 60 minutes different" >> {
       "Then I should get the original arrival with the cirium arrival's estimated time" >> {
@@ -60,13 +60,13 @@ class ApproximateScheduleMatchSpec extends CrunchTestLike {
   "When I ask for a merged approx match with an arrival" >> {
     val origin = PortCode("JFK")
     val ciriumScheduled = SDate("2021-06-01T12:00")
-    val ciriumArrival = ArrivalGenerator.arrival(origin = origin, schDt = ciriumScheduled.toISOString(), estDt = ciriumScheduled.toISOString())
+    val ciriumArrival = ArrivalGenerator.arrival(origin = origin, schDt = ciriumScheduled.toISOString, estDt = ciriumScheduled.toISOString)
 
     "Given two sources of arrivals with scheduled times with 60 minutes of the original arrival" >> {
       "Then I should get a merged arrival from the first in the list" >> {
-        val baseScheduled = ciriumScheduled.addMinutes(15).toISOString()
+        val baseScheduled = ciriumScheduled.addMinutes(15).toISOString
         val baseArrival = ArrivalGenerator.arrival(origin = origin, schDt = baseScheduled)
-        val liveScheduled = ciriumScheduled.addMinutes(29).toISOString()
+        val liveScheduled = ciriumScheduled.addMinutes(29).toISOString
         val liveArrival = ArrivalGenerator.arrival(origin = origin, schDt = liveScheduled)
         val sourceArrivals = List(
           BaseArrivals -> Map(baseArrival.unique -> baseArrival),
@@ -80,9 +80,9 @@ class ApproximateScheduleMatchSpec extends CrunchTestLike {
 
     "Given two sources of arrivals, the first scheduled outside the window, and the second inside" >> {
       "Then I should get a merged arrival from the second in the list" >> {
-        val baseScheduled = ciriumScheduled.addMinutes(65).toISOString()
+        val baseScheduled = ciriumScheduled.addMinutes(65).toISOString
         val baseArrival = ArrivalGenerator.arrival(origin = origin, schDt = baseScheduled)
-        val liveScheduled = ciriumScheduled.addMinutes(29).toISOString()
+        val liveScheduled = ciriumScheduled.addMinutes(29).toISOString
         val liveArrival = ArrivalGenerator.arrival(origin = origin, schDt = liveScheduled)
         val sourceArrivals = List(
           BaseArrivals -> Map(baseArrival.unique -> baseArrival),
@@ -96,9 +96,9 @@ class ApproximateScheduleMatchSpec extends CrunchTestLike {
 
     "Given two sources of arrivals neither containing an approximate match" >> {
       "Then I should get None" >> {
-        val baseScheduled = ciriumScheduled.addMinutes(65).toISOString()
+        val baseScheduled = ciriumScheduled.addMinutes(65).toISOString
         val baseArrival = ArrivalGenerator.arrival(origin = origin, schDt = baseScheduled)
-        val liveScheduled = ciriumScheduled.addMinutes(101).toISOString()
+        val liveScheduled = ciriumScheduled.addMinutes(101).toISOString
         val liveArrival = ArrivalGenerator.arrival(origin = origin, schDt = liveScheduled)
         val sourceArrivals = List(
           BaseArrivals -> Map(baseArrival.unique -> baseArrival),

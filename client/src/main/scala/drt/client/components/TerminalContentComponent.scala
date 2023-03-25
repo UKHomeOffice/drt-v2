@@ -14,6 +14,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
+import drt.shared.api.WalkTimes
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedList}
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiCircularProgress}
@@ -53,6 +54,7 @@ object TerminalContentComponent {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    redListPorts: Pot[HashSet[PortCode]],
                    redListUpdates: Pot[RedListUpdates],
+                   walkTimes: Pot[WalkTimes],
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -75,10 +77,8 @@ object TerminalContentComponent {
   }
 
   class Backend() {
-    val arrivalsTableComponent: Component[FlightTable.Props, Unit, Unit, CtorType.Props] = FlightTable.ArrivalsTable(false,
-      None,
-      originMapper,
-      splitsGraphComponentColoured)
+    val arrivalsTableComponent: Component[FlightTable.Props, Unit, Unit, CtorType.Props] =
+      FlightTable(shortLabel = false, None, originMapper, splitsGraphComponentColoured)
 
     def render(props: Props, state: State): TagOf[Div] = {
       val terminal = props.terminalPageTab.terminal
@@ -196,8 +196,8 @@ object TerminalContentComponent {
                       features <- props.featureFlags
                       redListPorts <- props.redListPorts
                       redListUpdates <- props.redListUpdates
+                      walkTimes <- props.walkTimes
                     } yield {
-
                       val flightDisplayFilter = props.airportConfig.portCode match {
                         case PortCode("LHR") => LhrFlightDisplayFilter(redListUpdates, (portCode, _, _) => redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
                         case _ => DefaultFlightDisplayFilter
@@ -221,6 +221,7 @@ object TerminalContentComponent {
                           redListPorts = redListPorts,
                           airportConfig = props.airportConfig,
                           redListUpdates = redListUpdates,
+                          walkTimes = walkTimes,
                         )
                       )
                     }

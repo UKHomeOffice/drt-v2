@@ -7,16 +7,16 @@ import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared._
 import japgolly.scalajs.react.component.Js
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.{Div, LI}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles._
+import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, PortRegion}
 
 object MainMenu {

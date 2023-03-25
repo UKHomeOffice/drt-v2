@@ -5,7 +5,6 @@ import drt.shared.{MinuteAsAdjective, MinuteAsNoun}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default.{macroRW, _}
 
-import scala.collection.immutable.Map
 import scala.util.Try
 import scala.util.matching.Regex
 
@@ -24,15 +23,31 @@ case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
   def walkTimeStringForArrival(defaultWalkTime: Long)
                               (gate: Option[String], stand: Option[String], terminal: Terminal): String = {
     val defaultString = s"${MinuteAsNoun(millisToMinutes(defaultWalkTime)).display} (default walk time for terminal)"
-    val maybeWalkTime: Option[String] = (gate, stand, byTerminal.get(terminal)) match {
+    maybeWalkTimeMinutes(gate, stand, terminal).map(wtMins => MinuteAsAdjective(wtMins).display + " walk time").getOrElse(defaultString)
+  }
+
+  def maybeWalkTimeMinutes(gate: Option[String], stand: Option[String], terminal: Terminal): Option[Int] = {
+    val maybeWalkTime = (gate, stand, byTerminal.get(terminal)) match {
       case (Some(g), _, Some(t)) if t.gateWalktimes.contains(g) =>
-        byTerminal(terminal).gateWalktimes.get(g).map(g => MinuteAsAdjective(g.inMinutes).display + " walk time")
+        byTerminal(terminal).gateWalktimes.get(g)
       case (_, Some(s), Some(t)) if t.standWalkTimes.contains(s) =>
-        byTerminal(terminal).standWalkTimes.get(s).map(g => MinuteAsAdjective(g.inMinutes).display + " walk time")
+        byTerminal(terminal).standWalkTimes.get(s)
+      case _ => None
+    }
+    maybeWalkTime.map(_.inMinutes)
+  }
+
+  def walkTimeMillisForArrival(defaultWalkTime: Long)
+                              (gate: Option[String], stand: Option[String], terminal: Terminal): Long = {
+    val maybeWalkTime = (gate, stand, byTerminal.get(terminal)) match {
+      case (Some(g), _, Some(t)) if t.gateWalktimes.contains(g) =>
+        byTerminal(terminal).gateWalktimes.get(g)
+      case (_, Some(s), Some(t)) if t.standWalkTimes.contains(s) =>
+        byTerminal(terminal).standWalkTimes.get(s)
       case _ => None
     }
 
-    maybeWalkTime.getOrElse(defaultString)
+    maybeWalkTime.map(_.walkTimeMillis).getOrElse(defaultWalkTime)
   }
 
   def isEmpty: Boolean = byTerminal.isEmpty
@@ -41,7 +56,7 @@ case class WalkTimes(byTerminal: Map[Terminal, TerminalWalkTimes]) {
 object WalkTimes {
   implicit val rw: ReadWriter[WalkTimes] = macroRW
 
-  def apply(gateWalkTimes: Seq[WalkTime], standWalkTimes: Seq[WalkTime]): WalkTimes = {
+  def apply(gateWalkTimes: Iterable[WalkTime], standWalkTimes: Iterable[WalkTime]): WalkTimes = {
     val gatesByTerminal = byTerminal(gateWalkTimes)
     val standsByTerminal = byTerminal(standWalkTimes)
 
@@ -54,7 +69,7 @@ object WalkTimes {
     WalkTimes(twt)
   }
 
-  def byTerminal(gateWalkTimes: Seq[WalkTime]): Map[Terminal, Map[String, WalkTime]] = gateWalkTimes
+  def byTerminal(gateWalkTimes: Iterable[WalkTime]): Map[Terminal, Map[String, WalkTime]] = gateWalkTimes
     .groupBy(_.terminal)
     .view
     .mapValues {

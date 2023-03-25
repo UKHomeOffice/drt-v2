@@ -3,9 +3,9 @@ package test
 import actors._
 import actors.acking.AckingReceiver.Ack
 import actors.daily._
+import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors.persistent._
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
@@ -13,14 +13,12 @@ import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.Logger
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.Future
 
@@ -32,12 +30,12 @@ object TestActors {
   trait Resettable extends PersistentActor {
     val log: Logger
     var replyTo: Option[ActorRef] = None
-    var deletedMessages: Boolean = false
-    var deletedSnapshots: Boolean = false
+    private var deletedMessages: Boolean = false
+    private var deletedSnapshots: Boolean = false
 
     def resetState(): Unit
 
-    def deletionFinished: Boolean = deletedMessages && deletedSnapshots
+    private def deletionFinished: Boolean = deletedMessages && deletedSnapshots
 
     def resetBehaviour: Receive = {
       case ResetData =>
@@ -53,7 +51,7 @@ object TestActors {
         ackIfDeletionFinished()
     }
 
-    def ackIfDeletionFinished(): Unit = replyTo.foreach { r =>
+    private def ackIfDeletionFinished(): Unit = replyTo.foreach { r =>
       if (deletionFinished) {
         log.info("Finished deletions")
         resetState()
@@ -75,7 +73,7 @@ object TestActors {
   class TestPortForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends PortForecastArrivalsActor(now, expireAfterMillis) {
 
-    def resetBehaviour: Receive = {
+    private def resetBehaviour: Receive = {
       case ResetData =>
         state.clear()
         sender() ! Ack
@@ -173,7 +171,7 @@ object TestActors {
 
   trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
-    var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
+    private var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 
     private def addToTerminalDays(container: MinutesContainer[A, B]): Unit = {
       partitionUpdates(container).keys.foreach {
@@ -200,7 +198,7 @@ object TestActors {
 
   trait TestMinuteActorLike2[A, B <: WithTimeAccessor] extends MinutesActorLike2[A, B] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
-    var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
+    private var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 
     private def addToTerminalDays(container: MinutesContainer[A, B]): Unit = {
       partitionUpdates(container).keys.foreach {
@@ -262,7 +260,7 @@ object TestActors {
     extends FlightsRouterActor(terminals, byDayLookup, updateMinutes) {
     override def receive: Receive = resetReceive orElse super.receive
 
-    var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
+    private var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
 
     private def addToTerminalDays(container: ArrivalsDiff): Unit = {
       partitionUpdates(container).keys.foreach {
@@ -270,7 +268,7 @@ object TestActors {
       }
     }
 
-    def resetReceive: Receive = {
+    private def resetReceive: Receive = {
       case container: ArrivalsDiff =>
         val replyTo = sender()
         addToTerminalDays(container)
@@ -309,7 +307,7 @@ object TestActors {
       queues,
       journalType) {
 
-    val actorClearRequests = Map(
+    private val actorClearRequests = Map(
       flightsActor -> ResetData,
       queuesActor -> ResetData,
       staffActor -> ResetData,
@@ -318,7 +316,7 @@ object TestActors {
       flightUpdatesActor -> PurgeAll
     )
 
-    def myReceive: Receive = {
+    private def myReceive: Receive = {
       case ResetData =>
         Future
           .sequence(actorClearRequests.map {

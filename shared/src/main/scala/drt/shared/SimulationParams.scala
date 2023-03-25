@@ -1,7 +1,6 @@
 package drt.shared
 
-import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.arrivals.TotalPaxSource
+import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -66,9 +65,9 @@ case class SimulationParams(
 object SimulationParams {
   implicit val rw: ReadWriter[SimulationParams] = macroRW
 
-  val fullDay = Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+  val fullDay: Seq[Int] = Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
 
-  val requiredFields = List(
+  val requiredFields: List[String] = List(
     "terminal",
     "date",
     "passengerWeighting",

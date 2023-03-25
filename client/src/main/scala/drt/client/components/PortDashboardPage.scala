@@ -24,15 +24,15 @@ object PortDashboardPage {
 
   case class DisplayPeriod(start: SDateLike, end: SDateLike)
 
-  object DisplayPeriod {
+  private object DisplayPeriod {
     def apply(start: SDateLike, hours: Int = 3): DisplayPeriod = DisplayPeriod(start, start.addHours(hours))
   }
 
-  case class PortDashboardModel(
-                                 airportConfig: Pot[AirportConfig],
-                                 portState: Pot[PortState],
-                                 featureFlags: Pot[FeatureFlags]
-                               )
+  private case class PortDashboardModel(
+                                         airportConfig: Pot[AirportConfig],
+                                         portState: Pot[PortState],
+                                         featureFlags: Pot[FeatureFlags]
+                                       )
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("PortDashboard")
     .render_P(p => {
@@ -67,7 +67,7 @@ object PortDashboardPage {
                   periods.zipWithIndex.map {
                     case (p, index) =>
                       MuiButton(color = Color.default, variant = "outlined", size = "medium")(
-                        s"${p.start.prettyTime()}-${p.end.prettyTime()}",
+                        s"${p.start.prettyTime}-${p.end.prettyTime}",
                         ^.className := s"btn btn-primary${if (p == displayPeriod) " active" else ""} muiFontSize",
                         ^.target := "_blank",
                         ^.onClick ==> switchDashboardPeriod(index))
@@ -91,7 +91,7 @@ object PortDashboardPage {
                       val terminalStaffMinutes = portStateForDashboard.staffMinutes.values.toList
                       val terminalQueuesInOrder = Queues.inOrder(queues.getOrElse(terminalName, Seq()))
 
-                      portDashboardModel.featureFlags.renderReady(ff => {
+                      portDashboardModel.featureFlags.renderReady { _ =>
                         DashboardTerminalSummary(
                           DashboardTerminalSummary.Props(
                             scheduledFlightsInTerminal,
@@ -105,7 +105,6 @@ object PortDashboardPage {
                           )
                         )
                       }
-                      )
                     })
                   })
                 )

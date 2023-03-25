@@ -19,14 +19,12 @@ import org.scalajs.dom.html.Select
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.immutable.Seq
-
 object TerminalPlanningComponent {
 
   def getLastSunday(start: SDateLike): SDateLike = {
     val sunday = start.getLastSunday
 
-    SDate(f"${sunday.getFullYear()}-${sunday.getMonth()}%02d-${sunday.getDate()}%02dT00:00:00")
+    SDate(f"${sunday.getFullYear}-${sunday.getMonth}%02d-${sunday.getDate}%02dT00:00:00")
   }
 
   case class Props(forecastPeriod: ForecastPeriodWithHeadlines, page: TerminalPageTabLoc, router: RouterCtl[Loc]) extends UseValueEq {
@@ -37,7 +35,7 @@ object TerminalPlanningComponent {
     }.hashCode
   }
 
-  val forecastWeeks: Seq[SDateLike] = (-4 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
+  private val forecastWeeks: Seq[SDateLike] = (-4 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
     .renderP { (_, props) =>
@@ -66,8 +64,8 @@ object TerminalPlanningComponent {
               <.div(^.className := "staffing-controls-select",
                 drawSelect(
                   forecastWeeks.map(_.ddMMyyString),
-                  forecastWeeks.map(_.toISOString()).toList,
-                  defaultStartDate(props.page.dateFromUrlOrNow).toISOString())
+                  forecastWeeks.map(_.toISOString).toList,
+                  defaultStartDate(props.page.dateFromUrlOrNow).toISOString)
               )
             ),
             MuiDivider()(),
@@ -97,7 +95,7 @@ object TerminalPlanningComponent {
             <.tr(
               <.th(^.className := "queue-heading"),
               props.forecastPeriod.headlines.queueDayHeadlines.map(_.day).toSet.toList.sorted.map(
-                day => <.th(s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}")
+                day => <.th(s"${SDate(MilliDate(day)).getDate}/${SDate(MilliDate(day)).getMonth}")
               ).toTagMod
             ), {
               val groupedByQ = props.forecastPeriod.headlines.queueDayHeadlines.groupBy(_.queue)
@@ -119,7 +117,7 @@ object TerminalPlanningComponent {
             <.tr(
               <.th(^.className := "heading"), sortedDays.map {
                 case (day, _) =>
-                  <.th(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(day)).getDate()}/${SDate(MilliDate(day)).getMonth()}")
+                  <.th(^.colSpan := 2, ^.className := "heading", s"${SDate(MilliDate(day)).getDate}/${SDate(MilliDate(day)).getMonth}")
               }.toTagMod
             ),
             <.tr(

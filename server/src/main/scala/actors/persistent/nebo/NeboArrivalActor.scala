@@ -20,11 +20,11 @@ object NeboArrivalActor {
 
   def getRedListPassengerFlightKey(redListPassengers: RedListPassengers): String = {
     val flightCode = redListPassengers.flightCode.toLowerCase
-    val year = redListPassengers.scheduled.getFullYear()
-    val month = redListPassengers.scheduled.getMonth()
-    val day = redListPassengers.scheduled.getDate()
-    val hours = redListPassengers.scheduled.getHours()
-    val minutes = redListPassengers.scheduled.getMinutes()
+    val year = redListPassengers.scheduled.getFullYear
+    val month = redListPassengers.scheduled.getMonth
+    val day = redListPassengers.scheduled.getDate
+    val hours = redListPassengers.scheduled.getHours
+    val minutes = redListPassengers.scheduled.getMinutes
     s"$flightCode-$year-$month-$day-$hours-$minutes"
   }
 }
