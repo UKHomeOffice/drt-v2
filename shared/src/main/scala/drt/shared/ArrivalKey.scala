@@ -1,9 +1,8 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber, WithTimeAccessor}
+import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import upickle.default.{macroRW, _}
@@ -41,8 +40,6 @@ object ArrivalKey {
 
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
 }
-
-case class ArrivalUpdate(old: Arrival, updated: Arrival)
 
 object ArrivalsDiff {
   val empty: ArrivalsDiff = ArrivalsDiff(Seq(), Seq())

@@ -35,7 +35,7 @@ trait WithDebug {
         "Crunch State" -> "crunch-state",
         "Flight State" -> "flight-state",
       ) ++ airportConfig.terminals.map(t => {
-        "Terminal Day Flight (for snapshot day)" -> f"terminal-flights-${t.toString.toLowerCase}-${pit.getFullYear()}-${pit.getMonth()}%02d-${pit.getDate()}%02d"
+        "Terminal Day Flight (for snapshot day)" -> f"terminal-flights-${t.toString.toLowerCase}-${pit.getFullYear}-${pit.getMonth}%02d-${pit.getDate}%02d"
       })
 
       if (persistenceIds.keys.exists(_ == persistenceId)) throw new Exception("Invalid actor")
@@ -44,22 +44,22 @@ trait WithDebug {
 
       val actorSelection = persistenceIds.map {
         case (feed, id) =>
-          s"<a href='/debug/flights/$id/${pit.toISOString()}/$messages'>$feed</a></br>"
+          s"<a href='/debug/flights/$id/${pit.toISOString}/$messages'>$feed</a></br>"
       }.mkString("\n")
 
       val timeNavigation =
-        s"<a href='/debug/flights/$persistenceId/${pit.addDays(-1).toISOString()}/$messages'>-1 day</a> " +
-          s"<a href='/debug/flights/$persistenceId/${pit.addHours(-1).toISOString()}/$messages'>-1 hour</a> " +
-          s"<a href='/debug/flights/$persistenceId/${pit.addMinutes(-1).toISOString()}/$messages'>-1 mins</a> " +
-          pit.toISOString() +
-          s" <a href='/debug/flights/$persistenceId/${pit.addMinutes(1).toISOString()}/$messages'>+1 mins</a> " +
-          s"<a href='/debug/flights/$persistenceId/${pit.addHours(1).toISOString()}/$messages'>+1 hour</a> " +
-          s"<a href='/debug/flights/$persistenceId/${pit.addDays(1).toISOString()}/$messages'>+1 day</a> "
+        s"<a href='/debug/flights/$persistenceId/${pit.addDays(-1).toISOString}/$messages'>-1 day</a> " +
+          s"<a href='/debug/flights/$persistenceId/${pit.addHours(-1).toISOString}/$messages'>-1 hour</a> " +
+          s"<a href='/debug/flights/$persistenceId/${pit.addMinutes(-1).toISOString}/$messages'>-1 mins</a> " +
+          pit.toISOString +
+          s" <a href='/debug/flights/$persistenceId/${pit.addMinutes(1).toISOString}/$messages'>+1 mins</a> " +
+          s"<a href='/debug/flights/$persistenceId/${pit.addHours(1).toISOString}/$messages'>+1 hour</a> " +
+          s"<a href='/debug/flights/$persistenceId/${pit.addDays(1).toISOString}/$messages'>+1 day</a> "
       val numMessagesNavigation =
-        s"<a href='/debug/flights/$persistenceId/${pit.toISOString()}/10'>10</a> " +
-          s"<a href='/debug/flights/$persistenceId/${pit.toISOString()}/50'>50</a> " +
-          s"<a href='/debug/flights/$persistenceId/${pit.toISOString()}/500'>500</a> " +
-          s"<a href='/debug/flights/$persistenceId/${pit.toISOString()}/1000'>1000</a> "
+        s"<a href='/debug/flights/$persistenceId/${pit.toISOString}/10'>10</a> " +
+          s"<a href='/debug/flights/$persistenceId/${pit.toISOString}/50'>50</a> " +
+          s"<a href='/debug/flights/$persistenceId/${pit.toISOString}/500'>500</a> " +
+          s"<a href='/debug/flights/$persistenceId/${pit.toISOString}/1000'>1000</a> "
 
       val navigation =
         "<h3>Actor Selection</h3>" + actorSelection +
@@ -72,7 +72,7 @@ trait WithDebug {
           val debugHtml = m.messages.map {
             case f: FlightsWithSplitsDiffMessage =>
 
-              val heading = s"<h3>Created at: ${f.createdAt.map(SDate(_).toISOString()).getOrElse("Missing")}</h3>"
+              val heading = s"<h3>Created at: ${f.createdAt.map(SDate(_).toISOString).getOrElse("Missing")}</h3>"
               val updates = if (f.updates.nonEmpty) {
 
                 "<table border='1' cellpadding='5' cellspacing='0'><tr>" +
@@ -99,10 +99,10 @@ trait WithDebug {
                       "<td>" + a.getFlight.getIATA + "</td>" +
                       "<td>" + a.getFlight.getTerminal + "</td>" +
                       "<td>" + SDate(a.getFlight.getScheduled).toISOString + "</td>" +
-                      "<td>" + a.getFlight.estimated.map(SDate(_).toISOString()).getOrElse("-") + "</td>" +
-                      "<td>" + a.getFlight.estimatedChox.map(SDate(_).toISOString()).getOrElse("-") + "</td>" +
-                      "<td>" + a.getFlight.actualChox.map(SDate(_).toISOString()).getOrElse("-") + "</td>" +
-                      "<td>" + a.getFlight.pcpTime.map(SDate(_).toISOString()).getOrElse("-") + "</td>" +
+                      "<td>" + a.getFlight.estimated.map(SDate(_).toISOString).getOrElse("-") + "</td>" +
+                      "<td>" + a.getFlight.estimatedChox.map(SDate(_).toISOString).getOrElse("-") + "</td>" +
+                      "<td>" + a.getFlight.actualChox.map(SDate(_).toISOString).getOrElse("-") + "</td>" +
+                      "<td>" + a.getFlight.pcpTime.map(SDate(_).toISOString).getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.status.getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.gate.getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.stand.getOrElse("-") + "</td>" +
@@ -127,7 +127,7 @@ trait WithDebug {
                   s"<td>Number</td>" +
                   "</tr>" +
                   f.removals.map(r => {
-                    s"<tr><td>${SDate(r.getScheduled).toISOString()}</td><td>${r.getTerminalName}</td><td>${r.getNumber}</td></tr>"
+                    s"<tr><td>${SDate(r.getScheduled).toISOString}</td><td>${r.getTerminalName}</td><td>${r.getNumber}</td></tr>"
                   }).mkString("\n") +
                   "</table>"
               } else "No removals </br>"

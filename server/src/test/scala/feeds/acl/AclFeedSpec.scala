@@ -71,7 +71,7 @@ class AclFeedSpec extends CrunchTestLike {
     "When the current date time is 2021-10-15 10:00" >> {
       val now = SDate("2021-10-15T10:00", Crunch.europeLondonTimeZone)
       "The next check should be 2021-10-15 18:00" >> {
-        nextAclCheck(now, updateHour).toISOString() === "2021-10-15T18:00:00+01:00"
+        nextAclCheck(now, updateHour).toISOString === "2021-10-15T18:00:00+01:00"
       }
       "The delay until the next check should be 8 hours" >> {
         val delay = delayUntilNextAclCheck(now, updateHour)
@@ -82,7 +82,7 @@ class AclFeedSpec extends CrunchTestLike {
     "When the current date time is 2021-10-15 20:00" >> {
       val now = SDate("2021-10-15T20:00", Crunch.europeLondonTimeZone)
       "The next check should be 2021-10-16 18:00" >> {
-        nextAclCheck(now, updateHour).toISOString() === "2021-10-16T18:00:00+01:00"
+        nextAclCheck(now, updateHour).toISOString === "2021-10-16T18:00:00+01:00"
       }
       "The delay until the next check should be 22 hours" >> {
         val delay = delayUntilNextAclCheck(now, updateHour)

@@ -22,7 +22,7 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
   import tables.profile.api._
 
   override def nextKeys(since: Long): Future[Iterable[(UniqueArrivalKey, MillisSinceEpoch)]] = {
-    val ts = SDate(since).toISOString()
+    val ts = SDate(since).toISOString
     val query: DBIOAction[Vector[(UniqueArrivalKey, MillisSinceEpoch)], NoStream, Effect] =
       sql"""SELECT
               vm.departure_port_code, vm.voyage_number, EXTRACT(EPOCH FROM vm.scheduled_date) * 1000, EXTRACT(EPOCH FROM pz.processed_at) * 1000

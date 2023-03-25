@@ -23,7 +23,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                                                      override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
-    case Some(pit) => f"@${SDate(pit).toISOString()}"
+    case Some(pit) => f"@${SDate(pit).toISOString}"
   }
   override val log: Logger = LoggerFactory.getLogger(f"$getClass-$terminal-$year%04d-$month%02d-$day%02d$loggerSuffix")
 
@@ -37,8 +37,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 
   val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.utcTimeZone)
-  val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
-  val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
+  private val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
+  private val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
@@ -58,7 +58,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
     if (state.nonEmpty) Option(MinutesContainer(state.values.toSeq)) else None
 
-  def diffFromMinutes(state: mutable.Map[INDEX, VAL], minutes: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
+  private def diffFromMinutes(state: mutable.Map[INDEX, VAL], minutes: Iterable[MinuteLike[VAL, INDEX]]): Iterable[VAL] = {
     val nowMillis = now().millisSinceEpoch
     minutes
       .map(cm => state.get(cm.key) match {
@@ -68,12 +68,12 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       .collect { case Some(update) => update }
   }
 
-  def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]]): Unit =
+  private def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]]): Unit =
     diff.foreach { cm =>
       if (firstMinuteMillis <= cm.minute && cm.minute < lastMinuteMillis) state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
     }
 
-  def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
+  private def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
     diffFromMinutes(state, container.minutes) match {
       case noDifferences if noDifferences.isEmpty => sender() ! UpdatedMillis.empty
       case differences =>
@@ -94,10 +94,10 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   val msgLastUpdated: M => MillisSinceEpoch
   val valFromMessage: M => VAL
 
-  val withinWindow: M => Boolean = (msg: M) =>
+  private val withinWindow: M => Boolean = (msg: M) =>
     firstMinuteMillis <= msgMinute(msg) && msgMinute(msg) <= lastMinuteMillis
 
-  val isApplicable: M => Boolean = maybePointInTime match {
+  private val isApplicable: M => Boolean = maybePointInTime match {
     case None => withinWindow
     case Some(pit) => (msg: M) => (msgLastUpdated(msg) <= pit) && withinWindow(msg)
   }

@@ -37,11 +37,11 @@ object CsvFileStreaming {
     val startLocal = SDate(SDate(start), Crunch.europeLondonTimeZone)
     val endLocal = SDate(SDate(end), Crunch.europeLondonTimeZone)
     val endDate = if (startLocal.daysBetweenInclusive(endLocal) > 1)
-      f"-to-${endLocal.getFullYear()}-${endLocal.getMonth()}%02d-${endLocal.getDate()}%02d"
+      f"-to-${endLocal.getFullYear}-${endLocal.getMonth}%02d-${endLocal.getDate}%02d"
     else ""
 
     f"$portCode-$terminalName-$subject-" +
-      f"${startLocal.getFullYear()}-${startLocal.getMonth()}%02d-${startLocal.getDate()}%02d" + endDate
+      f"${startLocal.getFullYear}-${startLocal.getMonth}%02d-${startLocal.getDate}%02d" + endDate
   }
 
 }

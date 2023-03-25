@@ -20,7 +20,7 @@ case class DynamicQueueStatusProvider(airportConfig: AirportConfig, egatesProvid
           val byQueue = queues.map {
             case (EGate, _) => (EGate, egateStatuses(period, egatePortUpdates, terminal))
             case (from, to) => (from, deskStatuses(airportConfig.maxDesksByTerminalAndQueue24Hrs, period, terminal, to))
-          }.toMap
+          }
           (terminal, byQueue)
         }
       }
@@ -47,7 +47,7 @@ case class DynamicQueueStatusProvider(airportConfig: AirportConfig, egatesProvid
       .flatMap(_.get(queue).map { maxByHour =>
         val maxByHourLifted = maxByHour.lift
         period.map { minute =>
-          val status = maxByHourLifted(SDate(minute).getHours()) match {
+          val status = maxByHourLifted(SDate(minute).getHours) match {
             case None => Closed
             case Some(0) => Closed
             case Some(_) => Open

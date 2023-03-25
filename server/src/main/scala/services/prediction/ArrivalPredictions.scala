@@ -5,17 +5,18 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.ArrivalsDiff
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.actor.PredictionModelActor.Models
-import uk.gov.homeoffice.drt.actor.TerminalDateActor.FlightRoute
+import uk.gov.homeoffice.drt.actor.PredictionModelActor.{Models, WithId}
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.prediction.{ModelAndFeatures, OffScheduleModelAndFeatures, ToChoxModelAndFeatures}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
+import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.abs
 
 
-case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Models],
+case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
+                              modelAndFeaturesProvider: WithId => Future[Models],
                               modelThresholds: Map[String, Int],
                               minimumImprovementPctThreshold: Int)
                              (implicit ec: ExecutionContext, mat: Materializer) {
@@ -27,7 +28,7 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
       val lastUpdatedThreshold = SDate.now().addDays(-7).millisSinceEpoch
       Source(diff.toUpdate.values.toList)
         .mapAsync(1) { arrival: Arrival =>
-          if (recentPredictionTouchdownExists(lastUpdatedThreshold, arrival.Predictions.lastChecked))
+          if (recentPredictionExists(lastUpdatedThreshold, arrival.Predictions.lastChecked))
             Future.successful(arrival)
           else
             applyPredictions(arrival)
@@ -38,33 +39,38 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
         }
     }
 
-  private def recentPredictionTouchdownExists(lastUpdatedThreshold: MillisSinceEpoch,
-                                              lastChecked: Long): Boolean = lastChecked > lastUpdatedThreshold
+  private def recentPredictionExists(lastUpdatedThreshold: MillisSinceEpoch, lastChecked: Long): Boolean =
+    false //lastChecked > lastUpdatedThreshold
 
   def applyPredictions(arrival: Arrival): Future[Arrival] = {
-    implicit val millisToSDate: MillisSinceEpoch => SDateLike = (millis: MillisSinceEpoch) => SDate(millis)
-
-    modelAndFeaturesProvider(FlightRoute(arrival.Terminal.toString, arrival.VoyageNumber.numeric, arrival.Origin.iata))
-      .map { models =>
-        models.models.values.foldLeft(arrival) {
-          case (arrival, model: OffScheduleModelAndFeatures) =>
-            updatePrediction(arrival, model, model.maybeOffScheduleMinutes)
-          case (arrival, model: ToChoxModelAndFeatures) =>
-            updatePrediction(arrival, model, model.maybeToChoxMinutes)
-        }
+    Source(modelKeys(arrival).toList)
+      .foldAsync(arrival) {
+        case (accArrival, key) =>
+          modelAndFeaturesProvider(key)
+            .map { models =>
+              models.models.values.foldLeft(accArrival) {
+                case (arrival, model: ArrivalModelAndFeatures) =>
+                  updatePrediction(arrival, model, model.prediction)
+                case (_, unknownModel) =>
+                  log.error(s"Unknown model type ${unknownModel.getClass}")
+                  accArrival
+              }
+            }
+            .recover {
+              case t =>
+                log.error(s"Failed to fetch prediction model and features for ${arrival.unique}", t)
+                accArrival
+            }
       }
-      .recover {
-        case t =>
-          log.error(s"Failed to fetch prediction model and features for ${arrival.unique}", t)
-          arrival
-      }
+      .runWith(Sink.head)
   }
 
   private def updatePrediction(arrival: Arrival, model: ModelAndFeatures, predictionProvider: Arrival => Option[Int]): Arrival = {
-    val maybeTouchdown: Option[Int] = maybePrediction(arrival, model, predictionProvider)
-    val updatedPredictions: Map[String, Int] = maybeTouchdown match {
-      case None => arrival.Predictions.predictions
-      case Some(update) => arrival.Predictions.predictions.updated(model.targetName, update)
+    val updatedPredictions: Map[String, Int] = maybePrediction(arrival, model, predictionProvider) match {
+      case None =>
+        arrival.Predictions.predictions.removed(model.targetName)
+      case Some(update) =>
+        arrival.Predictions.predictions.updated(model.targetName, update)
     }
     arrival.copy(Predictions = arrival.Predictions.copy(predictions = updatedPredictions))
   }
@@ -78,7 +84,11 @@ case class ArrivalPredictions(modelAndFeaturesProvider: FlightRoute => Future[Mo
         maybeValue <- predictor(arrival)
         maybePrediction <- if (abs(maybeValue) < valueThreshold)
           Option(maybeValue)
-        else None
+        else {
+          None
+        }
       } yield maybePrediction
-    } else None
+    } else {
+      None
+    }
 }

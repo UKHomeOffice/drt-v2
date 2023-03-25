@@ -6,16 +6,14 @@ import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinuteLike, MinutesContainer, PassengersMinute}
-import drt.shared.DataUpdates.Combinable
+import drt.shared.CrunchApi._
 import drt.shared.TQM
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.DataUpdates.Combinable
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
-import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.UtcDate
+import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -141,7 +139,7 @@ class SequentialAccessActorSpec extends CrunchTestLike {
     val probeA = TestProbe()
     val probeB = TestProbe()
 
-    def callResource[RES, REQ, RESP](probeRefs: Map[RES, ActorRef]): (RES, REQ) => Future[UpdatedMillis] =
+    def callResource[RES, REQ](probeRefs: Map[RES, ActorRef]): (RES, REQ) => Future[UpdatedMillis] =
       (resource: RES, request: REQ) => {
         probeRefs.get(resource).foreach(_ ! ((resource, request)))
         Future({

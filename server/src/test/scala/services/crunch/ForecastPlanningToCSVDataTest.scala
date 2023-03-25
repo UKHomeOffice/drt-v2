@@ -31,7 +31,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
       val result = CSVData.forecastPeriodToCsv(forecast)
 
       val expected =
-        s"""|,${day1Midnight.getDate()}/${day1Midnight.getMonth()} - available,25/10 - required,25/10 - difference
+        s"""|,${day1Midnight.getDate}/${day1Midnight.getMonth} - available,25/10 - required,25/10 - difference
             |01:00,1,2,-1
             |01:15,3,4,-1
             |01:30,5,6,-1
@@ -100,9 +100,9 @@ class ForecastPlanningToCSVDataTest extends Specification {
 
       val result = CSVData.forecastPeriodToCsv(forecast)
 
-      val dt1 = s"""${day1Midnight.getDate()}/${day1Midnight.getMonth()}"""
-      val dt2 = s"""${day2Midnight.getDate()}/${day2Midnight.getMonth()}"""
-      val dt3 = s"""${day3Midnight.getDate()}/${day3Midnight.getMonth()}"""
+      val dt1 = s"""${day1Midnight.getDate}/${day1Midnight.getMonth}"""
+      val dt2 = s"""${day2Midnight.getDate}/${day2Midnight.getMonth}"""
+      val dt3 = s"""${day3Midnight.getDate}/${day3Midnight.getMonth}"""
       val expected =
         s"""|,$dt1 - available,$dt1 - required,$dt1 - difference,$dt2 - available,$dt2 - required,$dt2 - difference,$dt3 - available,$dt3 - required,$dt3 - difference
             |01:00,1,2,-1,1,2,-1,1,2,-1
@@ -500,7 +500,7 @@ class ForecastPlanningToCSVDataTest extends Specification {
       val result = CSVData.forecastHeadlineToCSV(headlines, Queues.forecastExportQueueOrderSansFastTrack)
 
       val expected =
-        f"""|,${day1StartMinute.getDate()}%02d/${day1StartMinute.getMonth()}%02d,${day2StartMinute.getDate()}%02d/${day2StartMinute.getMonth()}%02d,${day3StartMinute.getDate()}%02d/${day3StartMinute.getMonth()}%02d
+        f"""|,${day1StartMinute.getDate}%02d/${day1StartMinute.getMonth}%02d,${day2StartMinute.getDate}%02d/${day2StartMinute.getMonth}%02d,${day3StartMinute.getDate}%02d/${day3StartMinute.getMonth}%02d
             |Total Pax,2,2,2
             |EEA,1,1,1
             |e-Gates,1,1,1

@@ -4,11 +4,8 @@ import actors.PartitionedPortStateActor._
 import actors.acking.AckingReceiver.Ack
 import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.persistent.arrivals.FeedStateLike
 import actors.persistent.staffing.{GetFeedStatuses, GetState}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
-import actors.serializers.FlightMessageConversion
-import actors.serializers.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage}
 import actors.{AddUpdatesSubscriber, DateRange}
 import akka.NotUsed
 import akka.actor.ActorRef
@@ -23,9 +20,11 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStateLike, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage, feedStatusesToMessage}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
@@ -42,8 +41,8 @@ object ManifestRouterActor {
 
   case object ManifestNotFound extends ManifestResult
 
-  def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)
-                          (start: SDateLike,
+  private def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)
+                                  (start: SDateLike,
                            end: SDateLike,
                            maybePit: Option[MillisSinceEpoch]): Source[VoyageManifests, NotUsed] =
     DateRange
@@ -79,7 +78,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   )
 
   var state: ApiFeedState = initialState
-  var maybeUpdatesSubscriber: Option[ActorRef] = None
+  private var maybeUpdatesSubscriber: Option[ActorRef] = None
 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -108,7 +107,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   override def stateToMessage: VoyageManifestStateSnapshotMessage = VoyageManifestStateSnapshotMessage(
     None,
     Seq(),
-    state.maybeSourceStatuses.flatMap(mss => FlightMessageConversion.feedStatusesToMessage(mss.feedStatuses)),
+    state.maybeSourceStatuses.flatMap(mss => feedStatusesToMessage(mss.feedStatuses)),
     Option(state.lastProcessedMarker)
   )
 
@@ -132,7 +131,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       self ! ProcessNextUpdateRequest
 
     case ManifestsFeedFailure(message, failedAt) =>
-      log.error(s"Failed to connect to AWS S3 for API data at ${failedAt.toISOString()}. $message")
+      log.error(s"Failed to connect to AWS S3 for API data at ${failedAt.toISOString}. $message")
       val newStatus = FeedStatusFailure(failedAt.millisSinceEpoch, message)
       state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
@@ -209,7 +208,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     eventualEffects
   }
 
-  def sendUpdates(updates: VoyageManifests): Future[UpdatedMillis] = {
+  private def sendUpdates(updates: VoyageManifests): Future[UpdatedMillis] = {
     val eventualUpdatedMinutesDiff: Source[UpdatedMillis, NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => manifestsUpdate(partition, updates)
@@ -228,12 +227,12 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
         UpdatedMillis.empty
       }
 
-  def persistLastSeenFileName(lastProcessedMarker: MillisSinceEpoch): Unit =
+  private def persistLastSeenFileName(lastProcessedMarker: MillisSinceEpoch): Unit =
     persistAndMaybeSnapshot(lastProcessedMarkerToMessage(lastProcessedMarker))
 
   def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))
 
-  def lastProcessedMarkerToMessage(lastProcessedMarker: MillisSinceEpoch): VoyageManifestLatestFileNameMessage =
+  private def lastProcessedMarkerToMessage(lastProcessedMarker: MillisSinceEpoch): VoyageManifestLatestFileNameMessage =
     VoyageManifestLatestFileNameMessage(
       createdAt = Option(SDate.now().millisSinceEpoch),
       lastProcessedMarker = Option(lastProcessedMarker)

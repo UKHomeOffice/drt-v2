@@ -3,13 +3,13 @@ package actors
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent._
-import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalsState, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing._
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.ask
-import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
-import akka.stream.{Materializer, OverflowStrategy}
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, SourceQueueWithComplete}
 import akka.util.Timeout
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
@@ -25,9 +25,11 @@ import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
 import slickdb.{ArrivalTable, Tables, UserTable, UserTableLike}
+import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate}
 
@@ -55,9 +57,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
   import DrtStaticParameters._
 
-  val maxBufferSize: Int = config.get[Int]("crunch.manifests.max-buffer-size")
-  val minSecondsBetweenBatches: Int = config.get[Int]("crunch.manifests.min-seconds-between-batches")
-  val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
+  private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
@@ -108,14 +108,12 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     queues = airportConfig.queuesByTerminal,
     journalType = journalType)))
 
-  val manifestsArrivalRequestSource: Source[List[Arrival], SourceQueueWithComplete[List[Arrival]]] = Source.queue[List[Arrival]](100, OverflowStrategy.backpressure)
-
   override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
   override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new FixedPointsActor(now, airportConfig.minutesToCrunch, params.forecastMaxDays)), "staff-fixed-points")
   override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "staff-movements")
 
-  val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor).map(_.lastProcessedMarker)
-  system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString()).getOrElse("None")}")
+  private val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor).map(_.lastProcessedMarker)
+  system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
 
   system.log.info(s"useNationalityBasedProcessingTimes: ${params.useNationalityBasedProcessingTimes}")
 
@@ -186,7 +184,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
         val arrivalKeysProvider = DbManifestArrivalKeys(PostgresTables, airportConfig.portCode)
         val manifestProcessor = DbManifestProcessor(PostgresTables, airportConfig.portCode, crunchInputs.manifestsLiveResponse)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
-        log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString()}")
+        log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
         ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 15.seconds)
           .processFilesAfter(processFilesAfter)
           .runWith(Sink.ignore)
@@ -227,8 +225,6 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
         System.exit(1)
     }
   }
-
-  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
 }
 
 case class AddUpdatesSubscriber(source: ActorRef)

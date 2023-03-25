@@ -6,8 +6,8 @@ import actors.routing.SequentialAccessActor.{ProcessNextRequest, RequestFinished
 import akka.actor.{Actor, ActorRef}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared.DataUpdates.Combinable
 import org.slf4j.LoggerFactory
+import uk.gov.homeoffice.drt.DataUpdates.Combinable
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -26,7 +26,7 @@ class SequentialAccessActor[RES, REQ, UPDATES <: Combinable[UPDATES]](resourceRe
   var updatesSubscribers: List[ActorRef] = List.empty
   var requests: List[(ActorRef, Iterable[(RES, REQ)])] = List.empty
 
-  var busy: Boolean = false
+  private var busy: Boolean = false
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val mat: Materializer = Materializer.createMaterializer(context)
 

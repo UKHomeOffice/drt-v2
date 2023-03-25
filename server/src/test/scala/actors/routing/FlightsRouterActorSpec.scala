@@ -14,19 +14,18 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.FlightsApi.{FlightsWithSplits, SplitsForArrivals}
+import drt.shared.FlightsApi.SplitsForArrivals
 import drt.shared._
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaNonMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode}
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

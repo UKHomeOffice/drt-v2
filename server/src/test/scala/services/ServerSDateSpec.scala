@@ -16,21 +16,21 @@ class ServerSDateSpec extends Specification {
   "When calling getDayOfWeek" >> {
     "On a Monday we should get back 1" >> {
       val d = SDate("2017-10-23T18:00:00")
-      val result = d.getDayOfWeek()
+      val result = d.getDayOfWeek
       val expected = 1
 
       result === expected
     }
     "On a Sunday we should get back 7" >> {
       val d = SDate("2017-10-29T18:00:00")
-      val result = d.getDayOfWeek()
+      val result = d.getDayOfWeek
       val expected = 7
 
       result === expected
     }
     "On a Wednesday we should get back 3" >> {
       val d = SDate("2017-10-25T18:00:00")
-      val result = d.getDayOfWeek()
+      val result = d.getDayOfWeek
       val expected = 3
 
       result === expected
@@ -134,7 +134,7 @@ class ServerSDateSpec extends Specification {
     val date = SDate("2020-03-31T23:00:00Z")
     val expected = SDate("2020-04-01T23:00:00Z")
 
-    s"Given ${date.toISOString()} then I should get ${expected.toISOString()}" >> {
+    s"Given ${date.toISOString} then I should get ${expected.toISOString}" >> {
       val result = date.getLocalNextMidnight
       expected === result
     }
@@ -145,7 +145,7 @@ class ServerSDateSpec extends Specification {
     val date = SDate("2020-04-01T22:00:00Z")
     val expected = SDate("2020-04-01T23:00:00Z")
 
-    s"Given ${date.toISOString()} then I should get ${expected.toISOString()}" >> {
+    s"Given ${date.toISOString} then I should get ${expected.toISOString}" >> {
       val result = date.getLocalNextMidnight
       expected === result
     }
@@ -156,7 +156,7 @@ class ServerSDateSpec extends Specification {
     val date = SDate("2020-04-02T23:00:00Z")
     val expected = SDate("2020-04-02T23:00:00Z")
 
-    s"Given ${date.toISOString()} then I should get ${expected.toISOString()}" >> {
+    s"Given ${date.toISOString} then I should get ${expected.toISOString}" >> {
       val result = date.getLocalLastMidnight
       expected === result
     }
@@ -167,7 +167,7 @@ class ServerSDateSpec extends Specification {
     val date = SDate("2020-04-02", europeLondonTimeZone)
     val expected = LocalDate(2020, 4, 2)
 
-    s"Given ${date.toISOString()} then I should get $expected" >> {
+    s"Given ${date.toISOString} then I should get $expected" >> {
       val result = date.getLocalLastMidnight.toLocalDate
       expected === result
     }
@@ -177,16 +177,16 @@ class ServerSDateSpec extends Specification {
     val gmtDate = SDate("2020-01-01T00:00Z")
     val expectedGMT = "2020-01-01 00:00"
 
-    s"Given a gmt time ${gmtDate.toISOString()} then I should expect $expectedGMT" >> {
-      val result = gmtDate.toLocalDateTimeString()
+    s"Given a gmt time ${gmtDate.toISOString} then I should expect $expectedGMT" >> {
+      val result = gmtDate.toLocalDateTimeString
 
       result === expectedGMT
     }
 
     val bstDate = SDate("2020-06-01T00:00Z")
     val expectedBST = "2020-06-01 01:00"
-    s"Given a BST time ${bstDate.toISOString()} then I should expect $expectedBST" >> {
-      val result = bstDate.toLocalDateTimeString()
+    s"Given a BST time ${bstDate.toISOString} then I should expect $expectedBST" >> {
+      val result = bstDate.toLocalDateTimeString
 
       result === expectedBST
     }

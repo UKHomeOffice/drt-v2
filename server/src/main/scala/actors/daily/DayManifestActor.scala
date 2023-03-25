@@ -30,7 +30,7 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
 
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
-    case Some(pit) => f"@${SDate(pit).toISOString()}"
+    case Some(pit) => f"@${SDate(pit).toISOString}"
   }
 
   val firstMinuteOfDay: SDateLike = SDate(year, month, day, 0, 0)

@@ -52,7 +52,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
         val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
 
         val portCode = airportConfig.portCode
-        val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
+        val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear}-${startOfForecast.getMonth}%02d-${startOfForecast.getDate}%02d"
 
         portStateFuture
           .map { portState =>
@@ -79,12 +79,12 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
         val now = SDate.now()
 
         val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
-          log.info(s"${startOfWeekMidnight.toLocalDateTimeString()} < ${now.toLocalDateTimeString()}, going to use ${now.getLocalNextMidnight} instead")
+          log.info(s"${startOfWeekMidnight.toLocalDateTimeString} < ${now.toLocalDateTimeString}, going to use ${now.getLocalNextMidnight} instead")
           now.getLocalNextMidnight
         } else startOfWeekMidnight
 
         val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
-        val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear()}-${startOfForecast.getMonth()}%02d-${startOfForecast.getDate()}%02d"
+        val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear}-${startOfForecast.getMonth}%02d-${startOfForecast.getDate}%02d"
 
         portStateFuture
           .map { portState =>
@@ -101,9 +101,9 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
     }
   }
 
-  def portStateForTerminal(terminal: Terminal,
-                           endOfForecast: SDateLike,
-                           startOfForecast: SDateLike): Future[PortState] =
+  private def portStateForTerminal(terminal: Terminal,
+                                   endOfForecast: SDateLike,
+                                   startOfForecast: SDateLike): Future[PortState] =
     ctrl.portStateActor
       .ask(GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal))(new Timeout(30 seconds))
       .mapTo[PortState]
@@ -112,17 +112,6 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
           log.error("Failed to get PortState", t)
           PortState.empty
       }
-
-  val queryFromPortStateFn: Option[MillisSinceEpoch] => DateRangeLike => Future[Any] = (maybePointInTime: Option[MillisSinceEpoch]) => (message: DateRangeLike) => {
-    implicit val timeout: Timeout = new Timeout(30 seconds)
-
-    val finalMessage: DateRangeLike = maybePointInTime match {
-      case None => message
-      case Some(pit) => PointInTimeQuery(pit, message)
-    }
-
-    ctrl.portStateActor.ask(finalMessage)
-  }
 
   def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
     val startOfWeekMidnight = SDate(startDay).getLocalLastMidnight

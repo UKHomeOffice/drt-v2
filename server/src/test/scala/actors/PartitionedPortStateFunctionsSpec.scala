@@ -7,10 +7,9 @@ import akka.stream.scaladsl.Source
 import akka.testkit.{ImplicitSender, TestProbe}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PortStateUpdates, StaffMinute}
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared.{PortState, TM, TQM}
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, FlightsWithSplitsDiff}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.UtcDate

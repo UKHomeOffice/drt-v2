@@ -25,13 +25,13 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v385"
+    val drtLib = "v460"
 
     val scala = "2.13.10"
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
-    val scalaJsMomentJs = "0.10.4"
+    val scalaJsMomentJs = "0.10.9"
     val autowire = "0.3.3"
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
@@ -50,20 +50,20 @@ object Settings {
     val sprayVersion = "1.3.4"
     val levelDb = "0.7"
     val levelDbJni = "1.8"
-    val renjin = "0.9.2646"
+    val renjin = "0.9.2725"
     val awsSdk = "1.11.89"
     val csvCommons = "1.4"
     val poi = "5.1.0"
     val pprint = "0.5.6"
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "0.5.0-DRT"
-    val postgres = "42.2.2"
+    val postgres = "42.2.27"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
     val playJsonJoda = "2.6.9"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
-    val typesafeConfig = "1.3.0"
+    val typesafeConfig = "1.3.4"
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
@@ -151,20 +151,20 @@ object Settings {
 
     "javax.mail" % "mail" % "1.4.7",
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % "4.0.0",
-    "com.sun.xml.ws" % "rt" % "4.0.0",
+    "com.sun.xml.ws" % "rt" % "4.0.1",
     "javax.xml.bind" % "jaxb-api" % "2.2.11",
 
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
     "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
-    "com.typesafe.akka" %%  "akka-persistence-typed" % akka,
-    "com.typesafe.akka" %%  "akka-remote" % akka,
-    "com.typesafe.akka" %%  "akka-persistence-testkit" % akka,
-    "com.typesafe.akka" %%  "akka-actor-testkit-typed" % akka,
-    "com.typesafe.akka" %%  "akka-testkit" % akka,
-    "com.typesafe.akka" %%  "akka-serialization-jackson" % akka,
-    "com.typesafe.akka" %%  "akka-pki" % akka,
-    "com.typesafe.akka" %%  "akka-stream-typed" % akka,
+    "com.typesafe.akka" %% "akka-persistence-typed" % akka,
+    "com.typesafe.akka" %% "akka-remote" % akka,
+    "com.typesafe.akka" %% "akka-persistence-testkit" % akka,
+    "com.typesafe.akka" %% "akka-actor-testkit-typed" % akka,
+    "com.typesafe.akka" %% "akka-testkit" % akka,
+    "com.typesafe.akka" %% "akka-serialization-jackson" % akka,
+    "com.typesafe.akka" %% "akka-pki" % akka,
+    "com.typesafe.akka" %% "akka-stream-typed" % akka,
     "com.typesafe.akka" %% "akka-persistence-testkit" % akka,
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
@@ -203,7 +203,7 @@ object Settings {
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
 
-    "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
+    "org.webjars" % "font-awesome" % "4.3.0-4" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "com.box" % "box-java-sdk" % "2.19.0",

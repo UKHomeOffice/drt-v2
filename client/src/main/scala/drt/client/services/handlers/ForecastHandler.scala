@@ -16,7 +16,7 @@ import scala.concurrent.Future
 class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriodWithHeadlines]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetForecastWeek(startDay, terminalName) =>
-      log.info(s"Calling forecastWeekSummary starting at ${startDay.toLocalDateTimeString()}")
+      log.info(s"Calling forecastWeekSummary starting at ${startDay.toLocalDateTimeString}")
       val apiCallEffect = Effect(AjaxClient[Api].forecastWeekSummary(startDay.millisSinceEpoch, terminalName).call()
         .map(res => SetForecastPeriod(res))
         .recoverWith {
