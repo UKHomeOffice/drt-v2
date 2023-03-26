@@ -17,7 +17,8 @@ object PcpArrival {
     val bestChoxTimeMillis: Long = arrival.bestArrivalTime(considerPredictions)
     val walkTimeMillis = arrival.Predictions.predictions
       .get(WalkTimeModelAndFeatures.targetName)
-      .map(_.toLong * oneSecondMillis).getOrElse(walkTimeForFlight(arrival))
+      .map(_.toLong * oneSecondMillis)
+      .getOrElse(walkTimeForFlight(arrival))
     MilliDate(bestChoxTimeMillis + firstPaxOffMillis + walkTimeMillis)
   }
 }
