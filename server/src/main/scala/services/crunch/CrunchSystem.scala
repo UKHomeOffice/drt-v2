@@ -94,7 +94,7 @@ object CrunchSystem {
       initialForecastArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals,
       initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals,
       initialLiveArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveArrivals,
-      initialMergedArrivals = initialMergedArrivals,
+      initialMergedArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else initialMergedArrivals,
       validPortTerminals = props.airportConfig.terminals.toSet,
       ArrivalDataSanitiser(
         props.airportConfig.maybeCiriumEstThresholdHours,
