@@ -22,23 +22,23 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
                              (implicit ec: ExecutionContext, mat: Materializer) {
   private val log = LoggerFactory.getLogger(getClass)
 
-  val addPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
-    diff => {
-      log.info(s"Looking up predictions for ${diff.toUpdate.size} arrivals")
-      val lastUpdatedThreshold = SDate.now().addDays(-7).millisSinceEpoch
-      Source(diff.toUpdate.values.toList)
-        .mapAsync(1) { arrival: Arrival =>
-          if (recentPredictionExists(lastUpdatedThreshold, arrival.Predictions.lastChecked))
-            Future.successful(arrival)
-          else
-            applyPredictions(arrival)
-        }
-        .runWith(Sink.seq)
-        .map { arrivals =>
-          log.info(s"Finished looking up predictions for ${arrivals.size} arrivals")
-          diff.copy(toUpdate = diff.toUpdate ++ arrivals.map(a => (a.unique, a)))
-        }
-    }
+  val addPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff)
+//    diff => {
+//      log.info(s"Looking up predictions for ${diff.toUpdate.size} arrivals")
+//      val lastUpdatedThreshold = SDate.now().addDays(-7).millisSinceEpoch
+//      Source(diff.toUpdate.values.toList)
+//        .mapAsync(1) { arrival: Arrival =>
+//          if (recentPredictionExists(lastUpdatedThreshold, arrival.Predictions.lastChecked))
+//            Future.successful(arrival)
+//          else
+//            applyPredictions(arrival)
+//        }
+//        .runWith(Sink.seq)
+//        .map { arrivals =>
+//          log.info(s"Finished looking up predictions for ${arrivals.size} arrivals")
+//          diff.copy(toUpdate = diff.toUpdate ++ arrivals.map(a => (a.unique, a)))
+//        }
+//    }
 
   private def recentPredictionExists(lastUpdatedThreshold: MillisSinceEpoch, lastChecked: Long): Boolean =
     false //lastChecked > lastUpdatedThreshold
