@@ -35,6 +35,7 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
         }
         .runWith(Sink.seq)
         .map { arrivals =>
+          log.info(s"Finished looking up predictions for ${arrivals.size} arrivals")
           diff.copy(toUpdate = diff.toUpdate ++ arrivals.map(a => (a.unique, a)))
         }
     }

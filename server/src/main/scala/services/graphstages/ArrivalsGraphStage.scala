@@ -215,6 +215,7 @@ class ArrivalsGraphStage(name: String = "",
     setHandler(outArrivalsDiff, new OutHandler {
       override def onPull(): Unit = {
         val timer = StageTimer(stageName, outArrivalsDiff)
+        log.info(s"Pushing ${toPush.map(_.toRemove.size).getOrElse(0)} removals and ${toPush.map(_.toUpdate.size).getOrElse(0)} additions")
         pushIfAvailable(toPush, outArrivalsDiff)
 
         List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals, inRedListUpdates).foreach(inlet => if (!hasBeenPulled(inlet)) {
@@ -271,22 +272,34 @@ class ArrivalsGraphStage(name: String = "",
           diff
       }
 
-      maybeNewDiff.foreach { newDiff =>
-        val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values, redListUpdates)
-        val adjustedRemovals = arrivalsAdjustments(newDiff.toRemove, redListUpdates)
-        val oldTerminalRemovals = terminalRemovals(adjustedUpdates, newDiff.toUpdate.values)
-        toPush = toPush match {
-          case Some(existingDiff) =>
-            Option(existingDiff.copy(
-              toUpdate = existingDiff.toUpdate ++ adjustedUpdates.map(a => (a.unique, a)),
-              toRemove = existingDiff.toRemove ++ adjustedRemovals ++ oldTerminalRemovals))
-          case None =>
-            Option(ArrivalsDiff(adjustedUpdates, adjustedRemovals ++ oldTerminalRemovals))
-        }
-      }
+      log.info(s"Applying adjustments to ${maybeNewDiff.map(_.toUpdate.size)} arrivals")
 
+      arrivalsAdjustments match {
+        case ArrivalsAdjustmentsNoop =>
+          maybeNewDiff.foreach(newDiff => toPush = updateMaybeDiff(newDiff, toPush))
+
+        case _ =>
+          maybeNewDiff.foreach { newDiff =>
+            val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values, redListUpdates)
+            val adjustedRemovals = arrivalsAdjustments(newDiff.toRemove, redListUpdates)
+            val oldTerminalRemovals = terminalRemovals(adjustedUpdates, newDiff.toUpdate.values)
+            val diffWithAdjustments = ArrivalsDiff(adjustedUpdates, adjustedRemovals ++ oldTerminalRemovals)
+            toPush = updateMaybeDiff(diffWithAdjustments, toPush)
+          }
+      }
+      log.info(s"Pushing ${toPush.map(_.toRemove.size).getOrElse(0)} removals and ${toPush.map(_.toUpdate.size).getOrElse(0)} additions")
       pushIfAvailable(toPush, outArrivalsDiff)
     }
+
+    private def updateMaybeDiff(diffWithAdjustments: ArrivalsDiff, maybeExistingDiff: Option[ArrivalsDiff]): Option[ArrivalsDiff] =
+      maybeExistingDiff match {
+        case Some(existingDiff) =>
+          Option(existingDiff.copy(
+            toUpdate = existingDiff.toUpdate ++ diffWithAdjustments.toUpdate,
+            toRemove = existingDiff.toRemove ++ diffWithAdjustments.toRemove))
+        case None =>
+          Option(diffWithAdjustments)
+      }
 
     def updateFilteredIncomingWithTotalPaxSource(filteredIncoming: SortedMap[UniqueArrival, Arrival], feedSource: FeedSource): SortedMap[UniqueArrival, Arrival] =
       filteredIncoming.map { case (k, arrival) =>
