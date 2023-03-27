@@ -272,8 +272,6 @@ class ArrivalsGraphStage(name: String = "",
           diff
       }
 
-      log.info(s"Applying adjustments to ${maybeNewDiff.map(_.toUpdate.size)} arrivals")
-
       arrivalsAdjustments match {
         case ArrivalsAdjustmentsNoop =>
           maybeNewDiff.foreach(newDiff => toPush = updateMaybeDiff(newDiff, toPush))
