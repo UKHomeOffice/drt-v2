@@ -167,6 +167,7 @@ object RunnableCrunch {
           arrivals.out
             .mapAsync(1) { diff =>
               if (diff.toUpdate.nonEmpty) {
+                log.info(s"Looking up arrival predictions for ${diff.toUpdate.size} arrivals")
                 val startMillis = SDate.now().millisSinceEpoch
                 val withoutPredictions = diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
                 addArrivalPredictions(diff).map { diffWithPredictions =>
