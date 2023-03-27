@@ -360,6 +360,7 @@ class ArrivalsGraphStage(name: String = "",
     def pushIfAvailable(arrivalsToPush: Option[ArrivalsDiff], outlet: Outlet[ArrivalsDiff]): Unit = {
       if (isAvailable(outlet)) {
         arrivalsToPush.foreach { diff =>
+          log.info(s"Pushing ${diff.toUpdate.size} updates and ${diff.toRemove.size} removals")
           Metrics.counter(s"$stageName.arrivals.updates", diff.toUpdate.size)
           Metrics.counter(s"$stageName.arrivals.removals", diff.toRemove.size)
           push(outArrivalsDiff, diff)

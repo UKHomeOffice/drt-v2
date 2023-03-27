@@ -180,7 +180,10 @@ object RunnableCrunch {
               Future.successful(diff)
             }
             .mapAsync(1) { diff =>
-              if (diff.toUpdate.nonEmpty) setPcpTimes(diff) else Future.successful(diff)
+              log.info(s"Setting pcp times for ${diff.toUpdate} arrivals")
+              val updated = if (diff.toUpdate.nonEmpty) setPcpTimes(diff) else Future.successful(diff)
+              log.info(s"Finished setting pcp times for ${diff.toUpdate} arrivals")
+              updated
             } ~> arrivalsFanOut
           arrivalsFanOut ~> flightsSink
           arrivalsFanOut ~> aggregatedArrivalsSink
