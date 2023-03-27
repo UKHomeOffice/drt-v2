@@ -166,24 +166,20 @@ object RunnableCrunch {
 
           arrivals.out
             .mapAsync(1) { diff =>
-//              if (diff.toUpdate.nonEmpty) {
-//                log.info(s"Looking up arrival predictions for ${diff.toUpdate.size} arrivals")
-//                val startMillis = SDate.now().millisSinceEpoch
-//                val withoutPredictions = diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
-//                addArrivalPredictions(diff).map { diffWithPredictions =>
-//                  val predictionsAdded = withoutPredictions - diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
-//                  val millisTaken = SDate.now().millisSinceEpoch - startMillis
-//                  log.info(s"Arrival prediction lookups finished for $withoutPredictions arrivals. $predictionsAdded new predictions added. Took ${millisTaken}ms")
-//                  diffWithPredictions
-//                }
-//              } else Future.successful(diff)
-              Future.successful(diff)
+              if (diff.toUpdate.nonEmpty) {
+                log.info(s"Looking up arrival predictions for ${diff.toUpdate.size} arrivals")
+                val startMillis = SDate.now().millisSinceEpoch
+                val withoutPredictions = diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
+                addArrivalPredictions(diff).map { diffWithPredictions =>
+                  val predictionsAdded = withoutPredictions - diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
+                  val millisTaken = SDate.now().millisSinceEpoch - startMillis
+                  log.info(s"Arrival prediction lookups finished for $withoutPredictions arrivals. $predictionsAdded new predictions added. Took ${millisTaken}ms")
+                  diffWithPredictions
+                }
+              } else Future.successful(diff)
             }
             .mapAsync(1) { diff =>
-              log.info(s"Setting pcp times for ${diff.toUpdate} arrivals")
-              val updated = if (diff.toUpdate.nonEmpty) setPcpTimes(diff) else Future.successful(diff)
-              log.info(s"Finished setting pcp times for ${diff.toUpdate} arrivals")
-              updated
+              if (diff.toUpdate.nonEmpty) setPcpTimes(diff) else Future.successful(diff)
             } ~> arrivalsFanOut
           arrivalsFanOut ~> flightsSink
           arrivalsFanOut ~> aggregatedArrivalsSink
