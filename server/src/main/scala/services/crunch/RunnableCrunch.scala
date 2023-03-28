@@ -165,9 +165,10 @@ object RunnableCrunch {
           } ~> manifestsLiveKillSwitchSync ~> manifestsSink
 
           arrivals.out
-            .mapAsync(1) { diff =>
+            .mapConcat(_.splitByScheduledUtcDate(ts => SDate(ts)))
+            .mapAsync(1) { case (date, diff) =>
               if (diff.toUpdate.nonEmpty) {
-                log.info(s"Looking up arrival predictions for ${diff.toUpdate.size} arrivals")
+                log.info(f"Looking up arrival predictions for ${diff.toUpdate.size} arrivals on ${date.day}%02d/${date.month}%02d/${date.year}")
                 val startMillis = SDate.now().millisSinceEpoch
                 val withoutPredictions = diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
                 addArrivalPredictions(diff).map { diffWithPredictions =>
