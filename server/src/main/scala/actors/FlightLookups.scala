@@ -38,7 +38,7 @@ trait FlightLookupsLike {
       val props = (removalMessageCutOff, maybePit) match {
         case (None, None) => TerminalDayFlightActor.props(terminal, date, now)
         case (Some(finiteDuration), None) => TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, finiteDuration)
-        case (_, Some(pointInTime)) => TerminalDayFlightActor.propsPointInTime(terminal, date, now, pointInTime)
+        case (Some(finiteDuration), Some(pointInTime)) => TerminalDayFlightActor.propsPointInTime(terminal, date, now, pointInTime, Some(finiteDuration))
       }
       val actor = system.actorOf(props)
       requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[FlightsWithSplits]
