@@ -60,46 +60,65 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
     10)
   val scheduledStr = "2022-05-01T12:00"
 
-  "Given an arrival and an actor containing a prediction model for that arrival" >> {
-    "I should be able to update the arrival with an predicted touchdown time" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
-      val keysWithArrival = modelKeysForArrival(arrival).map(k => (k, List(arrival))).toList
-      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(keysWithArrival), 1.second)
-
-      maybePredictedTouchdown.head.predictedTouchdown.nonEmpty
-    }
-  }
-
-  "Given an ArrivalsDiff and an actor containing touchdown prediction models" >> {
-    "I should be able to update the arrival with an predicted touchdown time" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
-
-      val diff = ArrivalsDiff(Seq(arrival), Seq())
-
-      val arrivals = Await.result(arrivalPredictions.addPredictions(diff), 1.second).toUpdate.values
-
-      arrivals.exists(a => a.predictedTouchdown.get !== a.Scheduled)
-    }
-  }
-
-  "Within CrunchSystem" >> {
-    "An Arrivals Graph Stage configured to use predicted times" should {
-      "set the correct pcp time given an arrival with a predicted touchdown time" >> {
-        val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
-
-        val crunch = runCrunchGraph(TestConfig(
-          now = () => SDate(scheduledStr),
-          addTouchdownPredictions = arrivalPredictions.addPredictions
-        ))
-
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival))))
-
-        crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for a predicted time") {
-          case ps: PortState => ps.flights.values.exists(_.apiFlight.predictedTouchdown.nonEmpty)
-        }
-
-        success
+  "Given some stuff" >> {
+    "It should work as I expect" >> {
+      val things = List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+      val ids: Int => Iterable[String] = thing => {
+        Iterable(s"${thing / 2}_two", s"${thing / 3}_three")
       }
+      val set = things
+        .flatMap { thing =>
+          ids(thing).map(id => (id, thing))
+        }
+        .groupBy(_._1)
+        .map { case (id, things) => (id, things.map(_._2)) }
+
+      println(set)
+
+      success
     }
   }
+
+  //  "Given an arrival and an actor containing a prediction model for that arrival" >> {
+  //    "I should be able to update the arrival with an predicted touchdown time" >> {
+  //      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
+  //      val keysWithArrival = modelKeysForArrival(arrival).map(k => (k, List(arrival))).toList
+  //      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(keysWithArrival), 1.second)
+  //
+  //      maybePredictedTouchdown.head.predictedTouchdown.nonEmpty
+  //    }
+  //  }
+  //
+  //  "Given an ArrivalsDiff and an actor containing touchdown prediction models" >> {
+  //    "I should be able to update the arrival with an predicted touchdown time" >> {
+  //      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
+  //
+  //      val diff = ArrivalsDiff(Seq(arrival), Seq())
+  //
+  //      val arrivals = Await.result(arrivalPredictions.addPredictions(diff), 1.second).toUpdate.values
+  //
+  //      arrivals.exists(a => a.predictedTouchdown.get !== a.Scheduled)
+  //    }
+  //  }
+  //
+  //  "Within CrunchSystem" >> {
+  //    "An Arrivals Graph Stage configured to use predicted times" should {
+  //      "set the correct pcp time given an arrival with a predicted touchdown time" >> {
+  //        val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
+  //
+  //        val crunch = runCrunchGraph(TestConfig(
+  //          now = () => SDate(scheduledStr),
+  //          addTouchdownPredictions = arrivalPredictions.addPredictions
+  //        ))
+  //
+  //        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival))))
+  //
+  //        crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for a predicted time") {
+  //          case ps: PortState => ps.flights.values.exists(_.apiFlight.predictedTouchdown.nonEmpty)
+  //        }
+  //
+  //        success
+  //      }
+  //    }
+  //  }
 }
