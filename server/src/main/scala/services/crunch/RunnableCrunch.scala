@@ -172,9 +172,8 @@ object RunnableCrunch {
                 val startMillis = SDate.now().millisSinceEpoch
                 val withoutPredictions = diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
                 addArrivalPredictions(diff).map { diffWithPredictions =>
-                  val predictionsAdded = withoutPredictions - diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
                   val millisTaken = SDate.now().millisSinceEpoch - startMillis
-                  log.info(s"Arrival prediction lookups finished for $withoutPredictions arrivals. $predictionsAdded new predictions added. Took ${millisTaken}ms")
+                  log.info(s"Arrival prediction lookups finished for $withoutPredictions arrivals. Took ${millisTaken}ms")
                   diffWithPredictions
                 }
               } else Future.successful(diff)

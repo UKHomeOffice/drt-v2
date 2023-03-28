@@ -48,11 +48,13 @@ case class MockFlightPersistence()
 
 class ArrivalPredictionsSpec extends CrunchTestLike {
   val minutesOffScheduledThreshold = 45
+  private val modelKeysForArrival: Arrival => Iterable[WithId] = (a: Arrival) => Iterable(
+    TerminalFlightNumberOrigin(a.Terminal.toString, a.VoyageNumber.numeric, a.Origin.iata),
+    TerminalCarrierOrigin(a.Terminal.toString, a.CarrierCode.code, a.Origin.iata),
+  )
+
   val arrivalPredictions: ArrivalPredictions = ArrivalPredictions(
-    (a: Arrival) => Iterable(
-      TerminalFlightNumberOrigin(a.Terminal.toString, a.VoyageNumber.numeric, a.Origin.iata),
-      TerminalCarrierOrigin(a.Terminal.toString, a.CarrierCode.code, a.Origin.iata),
-    ),
+    modelKeysForArrival,
     MockFlightPersistence().getModels,
     Map(OffScheduleModelAndFeatures.targetName -> minutesOffScheduledThreshold),
     10)
@@ -61,9 +63,10 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
   "Given an arrival and an actor containing a prediction model for that arrival" >> {
     "I should be able to update the arrival with an predicted touchdown time" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
-      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictions(arrival), 1.second)
+      val keysWithArrival = modelKeysForArrival(arrival).map(k => (k, List(arrival))).toList
+      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(keysWithArrival), 1.second)
 
-      maybePredictedTouchdown.predictedTouchdown.nonEmpty
+      maybePredictedTouchdown.head.predictedTouchdown.nonEmpty
     }
   }
 

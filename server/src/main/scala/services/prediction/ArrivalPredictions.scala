@@ -5,6 +5,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.ArrivalsDiff
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
+import services.prediction.ArrivalPredictions.arrivalsByKey
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{Models, WithId}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
@@ -14,6 +15,17 @@ import uk.gov.homeoffice.drt.time.SDate
 import scala.concurrent.{ExecutionContext, Future}
 import scala.math.abs
 
+
+object ArrivalPredictions {
+  def arrivalsByKey(arrivals: Iterable[Arrival], keys: Arrival => Iterable[WithId]): List[(WithId, Iterable[Arrival])] = {
+    arrivals
+      .flatMap(a => keys(a).map(k => (k, a)))
+      .groupBy(_._1)
+      .map(kv => (kv._1, kv._2.map(_._2)))
+      .toList
+  }
+
+}
 
 case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
                               modelAndFeaturesProvider: WithId => Future[Models],
@@ -25,46 +37,81 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
   val addPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
     diff => {
       log.info(s"Looking up predictions for ${diff.toUpdate.size} arrivals")
-      val lastUpdatedThreshold = SDate.now().addDays(-7).millisSinceEpoch
-      Source(diff.toUpdate.values.toList)
-        .mapAsync(1) { arrival: Arrival =>
-          if (recentPredictionExists(lastUpdatedThreshold, arrival.Predictions.lastChecked))
-            Future.successful(arrival)
-          else
-            applyPredictions(arrival)
-        }
-        .runWith(Sink.seq)
+//      val lastUpdatedThreshold = SDate.now().addDays(-7).millisSinceEpoch
+      applyPredictionsByKey(arrivalsByKey(diff.toUpdate.values, modelKeys))
         .map { arrivals =>
           log.info(s"Finished looking up predictions for ${arrivals.size} arrivals")
           diff.copy(toUpdate = diff.toUpdate ++ arrivals.map(a => (a.unique, a)))
         }
+//      Source(diff.toUpdate.values.toList)
+//        .mapAsync(1) { arrival: Arrival =>
+//          if (recentPredictionExists(lastUpdatedThreshold, arrival.Predictions.lastChecked))
+//            Future.successful(arrival)
+//          else
+//            applyPredictionsByKey(arrival, modelKeys)
+//        }
+//        .runWith(Sink.seq)
+//        .map { arrivals =>
+//          log.info(s"Finished looking up predictions for ${arrivals.size} arrivals")
+//          diff.copy(toUpdate = diff.toUpdate ++ arrivals.map(a => (a.unique, a)))
+//        }
     }
 
   private def recentPredictionExists(lastUpdatedThreshold: MillisSinceEpoch, lastChecked: Long): Boolean =
     false //lastChecked > lastUpdatedThreshold
 
-  def applyPredictions(arrival: Arrival): Future[Arrival] = {
-    Source(modelKeys(arrival).toList)
-      .foldAsync(arrival) {
-        case (accArrival, key) =>
-          modelAndFeaturesProvider(key)
-            .map { models =>
-              models.models.values.foldLeft(accArrival) {
-                case (arrival, model: ArrivalModelAndFeatures) =>
-                  updatePrediction(arrival, model, model.prediction)
-                case (_, unknownModel) =>
-                  log.error(s"Unknown model type ${unknownModel.getClass}")
-                  accArrival
-              }
-            }
-            .recover {
-              case t =>
-                log.error(s"Failed to fetch prediction model and features for ${arrival.unique}", t)
-                accArrival
-            }
+  def applyPredictionsByKey(arrivals: List[(WithId, Iterable[Arrival])]): Future[Iterable[Arrival]] = {
+    val lastUpdatedThreshold = SDate.now().addDays(-7).millisSinceEpoch
+
+    Source(arrivals)
+      .mapAsync(1) {
+        case (key, arrivals) =>
+          if (arrivals.exists(_.Predictions.lastChecked < lastUpdatedThreshold)) {
+            log.info(s"Looking up predictions for ${arrivals.size} arrivals with key $key")
+            findAndApplyForKey(key, arrivals)
+          }
+          else {
+            Future.successful(arrivals)
+          }
       }
       .runWith(Sink.head)
   }
+
+  private def findAndApplyForKey(key: WithId, arrivals: Iterable[Arrival]): Future[Iterable[Arrival]] =
+    modelAndFeaturesProvider(key).map { models =>
+      arrivals.map { arrival =>
+        models.models.values.foldLeft(arrival) {
+          case (arrival, model: ArrivalModelAndFeatures) =>
+            updatePrediction(arrival, model, model.prediction)
+          case (_, unknownModel) =>
+            log.error(s"Unknown model type ${unknownModel.getClass}")
+            arrival
+        }
+      }
+    }
+
+  //  def applyPredictions(arrival: Arrival): Future[Arrival] = {
+  //    Source(modelKeys(arrival).toList)
+  //      .foldAsync(arrival) {
+  //        case (accArrival, key) =>
+  //          modelAndFeaturesProvider(key)
+  //            .map { models =>
+  //              models.models.values.foldLeft(accArrival) {
+  //                case (arrival, model: ArrivalModelAndFeatures) =>
+  //                  updatePrediction(arrival, model, model.prediction)
+  //                case (_, unknownModel) =>
+  //                  log.error(s"Unknown model type ${unknownModel.getClass}")
+  //                  accArrival
+  //              }
+  //            }
+  //            .recover {
+  //              case t =>
+  //                log.error(s"Failed to fetch prediction model and features for ${arrival.unique}", t)
+  //                accArrival
+  //            }
+  //      }
+  //      .runWith(Sink.head)
+  //  }
 
   private def updatePrediction(arrival: Arrival, model: ModelAndFeatures, predictionProvider: Arrival => Option[Int]): Arrival = {
     val updatedPredictions: Map[String, Int] = maybePrediction(arrival, model, predictionProvider) match {
