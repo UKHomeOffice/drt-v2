@@ -27,18 +27,17 @@ trait FlightLookupsLike {
   val now: () => SDateLike
   val requestAndTerminateActor: ActorRef
 
-  val updateFlights: FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
+  def updateFlights(removalMessageCutOff: Option[FiniteDuration]): FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
     val (terminal, date) = partition
-    val actor = system.actorOf(TerminalDayFlightActor.props(terminal, date, now))
+    val actor = system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, removalMessageCutOff))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[UpdatedMillis]
   }
 
   def flightsByDayLookup(removalMessageCutOff: Option[FiniteDuration]): FlightsLookup =
     (maybePit: Option[MillisSinceEpoch]) => (date: UtcDate) => (terminal: Terminal) => {
-      val props = (removalMessageCutOff, maybePit) match {
-        case (None, None) => TerminalDayFlightActor.props(terminal, date, now)
-        case (Some(finiteDuration), None) => TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, finiteDuration)
-        case (Some(finiteDuration), Some(pointInTime)) => TerminalDayFlightActor.propsPointInTime(terminal, date, now, pointInTime, Some(finiteDuration))
+      val props = maybePit match {
+        case None => TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, removalMessageCutOff)
+        case Some(pointInTime) => TerminalDayFlightActor.propsPointInTime(terminal, date, now, pointInTime, removalMessageCutOff)
       }
       val actor = system.actorOf(props)
       requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[FlightsWithSplits]
@@ -59,7 +58,7 @@ case class FlightLookups(system: ActorSystem,
     Props(new FlightsRouterActor(
       queuesByTerminal.keys,
       flightsByDayLookup(removalMessageCutOff),
-      updateFlights
+      updateFlights(removalMessageCutOff)
     ))
   )
 }
