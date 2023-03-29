@@ -200,6 +200,8 @@ object Actions {
 
   case class RequestForecastRecrunch(recalculateSplits: Boolean) extends Action
 
+  object RequestRecalculateArrivals extends Action
+
   case class GetForecastAccuracy(localDate: LocalDate) extends Action
 
   case object ClearForecastAccuracy extends Action

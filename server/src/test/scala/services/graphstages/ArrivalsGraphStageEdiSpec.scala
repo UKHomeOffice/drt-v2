@@ -53,7 +53,7 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
     val newCrunch = (live: Seq[Arrival], fcBase: Seq[Arrival], merged: Seq[ApiFlightWithSplits]) => {
       runCrunchGraph(TestConfig(
         airportConfig = AirportConfigs.confByPort(PortCode("EDI")),
-        arrivalsAdjustments = EdiArrivalsTerminalAdjustments((_, _, _) => false),
+        arrivalsAdjustments = EdiArrivalsTerminalAdjustments,
         now = () => dateNow,
         setPcpTimes = setPcpTime,
         initialLiveArrivals = SortedMap[UniqueArrival, Arrival]() ++ live.map(a => (a.unique, a)),

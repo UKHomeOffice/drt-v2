@@ -1,9 +1,9 @@
 package actors
 
+import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber}
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors.daily.PassengersActor
-import actors.persistent.RedListUpdatesActor.AddSubscriber
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import actors.persistent.staffing._
@@ -70,11 +70,10 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
-import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
 import uk.gov.homeoffice.drt.time.{MilliDate => _, _}
 
-import java.nio.file.{Files, Paths}
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
@@ -112,7 +111,11 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val alertsActor: ActorRef = restartOnStop.actorOf(Props(new AlertsActor(now)), "alerts-actor")
   val redListUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new RedListUpdatesActor(now)), "red-list-updates-actor")
-  val egateBanksUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new EgateBanksUpdatesActor(now, defaultEgates, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, params.forecastMaxDays)), "egate-banks-updates-actor")
+  val egateBanksUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new EgateBanksUpdatesActor(now,
+    defaultEgates,
+    airportConfig.crunchOffsetMinutes,
+    airportConfig.minutesToCrunch,
+    params.forecastMaxDays)), "egate-banks-updates-actor")
   val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val persistentCrunchQueueActor: ActorRef
@@ -203,7 +206,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       } yield AclFeed(host, username, keyPath, airportConfig.portCode, AclFeed.aclToPortMapping(airportConfig.portCode))
 
   val maxDaysToConsider: Int = 14
-  val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)), name = "passengers-actor")
+  val passengersActorProvider: () => ActorRef = () => system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, now)))
 
   val aggregatedArrivalsActor: ActorRef
 
@@ -318,7 +321,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
       egateBanksUpdatesActor ! AddUpdatesSubscriber(crunchRequestQueueActor)
 
-      crunchManagerActor ! AddUpdatesSubscriber(crunchRequestQueueActor)
+      crunchManagerActor ! AddQueueCrunchSubscriber(crunchRequestQueueActor)
 
       if (params.recrunchOnStart)
         queueDaysToReCrunch(crunchRequestQueueActor, portDeskRecs.crunchOffsetMinutes, params.forecastMaxDays, now)
@@ -347,7 +350,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
                         startDeskRecs: () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
-    val redListUpdatesSource: Source[List[RedListUpdateCommand], SourceQueueWithComplete[List[RedListUpdateCommand]]] = Source.queue[List[RedListUpdateCommand]](1, OverflowStrategy.backpressure)
+    val flushArrivalsSource: Source[Boolean, SourceQueueWithComplete[Boolean]] = Source.queue[Boolean](100, OverflowStrategy.backpressure)
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
     val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
       log.info(s"Flight predictions enabled")
@@ -408,7 +411,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       aclPaxAdjustmentDays = aclPaxAdjustmentDays,
       startDeskRecs = startDeskRecs,
       arrivalsAdjustments = arrivalAdjustments,
-      redListUpdatesSource = redListUpdatesSource,
+      flushArrivalsSource = flushArrivalsSource,
       addArrivalPredictions = addArrivalPredictions,
       setPcpTimes = setPcpTimes,
       flushArrivalsOnStart = params.flushArrivalsOnStart,
@@ -589,7 +592,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     .runWith(Sink.seq)
 
   def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]]): Unit = {
-    redListUpdatesActor ! AddSubscriber(crunchInputs.redListUpdates)
     flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)

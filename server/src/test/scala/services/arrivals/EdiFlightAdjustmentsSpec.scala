@@ -37,26 +37,15 @@ class EdiFlightAdjustmentsSpec extends Specification {
   val notRedListed: (PortCode, MillisSinceEpoch, RedListUpdates) => Boolean = (_, _, _) => false
   val redListed: (PortCode, MillisSinceEpoch, RedListUpdates) => Boolean = (_, _, _) => true
 
-  "Given incoming arrivals with non-red list flights, they should be assigned terminal A2" >> {
-    val result = EdiArrivalsTerminalAdjustments(notRedListed).apply(a1Arrivals, RedListUpdates.empty)
-
-    result === a1Arrivals.map(_.copy(Terminal = A2))
-  }
-
-  "Given incoming arrivals with red list flights, they should remain assigned terminal A1" >> {
-    val result = EdiArrivalsTerminalAdjustments(redListed).apply(a1Arrivals, RedListUpdates.empty)
-
-    result === a1Arrivals
-  }
 
   "Given incoming arrivals with baggage ids 1, 2 & 3, they should be assigned terminal A1" >> {
-    val result = EdiArrivalsTerminalAdjustments(notRedListed).apply(a1BaggageArrivals, RedListUpdates.empty)
+    val result = EdiArrivalsTerminalAdjustments.apply(a1BaggageArrivals)
 
     result === a1BaggageArrivals
   }
 
   "Given incoming arrivals with baggage ids 7 & 8, they should be assigned terminal A2" >> {
-    val result = EdiArrivalsTerminalAdjustments(notRedListed).apply(a2BaggageArrivals, RedListUpdates.empty)
+    val result = EdiArrivalsTerminalAdjustments.apply(a2BaggageArrivals)
 
     result === a2BaggageArrivals.map(_.copy(Terminal = A2))
   }

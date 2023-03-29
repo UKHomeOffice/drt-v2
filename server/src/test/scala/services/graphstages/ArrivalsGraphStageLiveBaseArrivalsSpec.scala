@@ -14,7 +14,6 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions, Uniq
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.prediction.arrival.WalkTimeModelAndFeatures
-import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
 import uk.gov.homeoffice.drt.time.MilliTimes.oneDayMillis
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -30,14 +29,14 @@ object TestableArrivalsGraphStage {
       SourceQueueWithComplete[List[Arrival]],
       SourceQueueWithComplete[List[Arrival]],
       SourceQueueWithComplete[List[Arrival]],
-      SourceQueueWithComplete[List[RedListUpdateCommand]])
+      SourceQueueWithComplete[Boolean])
   ] = {
 
     val liveArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
     val liveBaseArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
     val forecastArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
     val forecastBaseArrivalsSource = Source.queue[List[Arrival]](1, OverflowStrategy.backpressure)
-    val redListSource = Source.queue[List[RedListUpdateCommand]](1, OverflowStrategy.backpressure)
+    val flushArrivalsSource = Source.queue[Boolean](1, OverflowStrategy.backpressure)
     import akka.stream.scaladsl.GraphDSL.Implicits._
 
     val graph = GraphDSL.create(
@@ -45,11 +44,11 @@ object TestableArrivalsGraphStage {
       forecastArrivalsSource.async,
       liveBaseArrivalsSource.async,
       liveArrivalsSource.async,
-      redListSource.async,
+      flushArrivalsSource.async,
     )((_, _, _, _, _)) {
 
       implicit builder =>
-        (forecastBase, forecast, liveBase, live, redList) =>
+        (forecastBase, forecast, liveBase, live, flushArrivalsSource) =>
 
           val arrivals = builder.add(arrivalsGraphStage.async)
           val sink = builder.add(Sink.actorRef(testProbe.ref, StreamCompleted))
@@ -58,7 +57,7 @@ object TestableArrivalsGraphStage {
           forecast ~> arrivals.in1
           liveBase ~> arrivals.in2
           live ~> arrivals.in3
-          redList ~> arrivals.in4
+          flushArrivalsSource ~> arrivals.in4
           arrivals.out ~> sink
 
           ClosedShape
@@ -71,7 +70,6 @@ object TestableArrivalsGraphStage {
                               sanitiser: ArrivalDataSanitiser = ArrivalDataSanitiser(None, None)
                              ) = new ArrivalsGraphStage(
     name = "",
-    initialRedListUpdates = RedListUpdates.empty,
     initialForecastBaseArrivals = SortedMap[UniqueArrival, Arrival](),
     initialForecastArrivals = SortedMap[UniqueArrival, Arrival](),
     initialLiveBaseArrivals = SortedMap[UniqueArrival, Arrival](),

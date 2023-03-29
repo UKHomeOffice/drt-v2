@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.RequestForecastRecrunch
+import drt.client.actions.Actions.{RequestForecastRecrunch, RequestRecalculateArrivals}
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -45,6 +45,10 @@ object StatusPage {
 
       def requestSplitsRefresh(): Callback = Callback {
         SPACircuit.dispatch(RequestForecastRecrunch(recalculateSplits = true))
+      }
+
+      def requestRecalculateArrivals(): Callback = Callback {
+        SPACircuit.dispatch(RequestRecalculateArrivals)
       }
 
 
@@ -117,8 +121,9 @@ object StatusPage {
             <.br(),
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
-              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Request forecast re-crunch", ^.onClick --> requestForecastRecrunch())),
-              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Request splits refresh", ^.onClick --> requestSplitsRefresh())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Re-crunch forecast", ^.onClick --> requestForecastRecrunch())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Refresh splits", ^.onClick --> requestSplitsRefresh())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())),
             )
           ) else EmptyVdom
         }

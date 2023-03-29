@@ -45,7 +45,6 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
 
   def removeArrival(number: Int, terminal: Terminal, scheduledTs: Timestamp): Future[Int] = {
     val idx = matchIndex(number, terminal, scheduledTs)
-    log.info(s"removing: $number / ${terminal.toString} / $scheduledTs")
     tables.run(arrivalsTableQuery.filter(idx).delete) recover {
       case throwable =>
         log.error(s"delete failed", throwable)
