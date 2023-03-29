@@ -22,14 +22,12 @@ class CrunchManagerActor extends Actor {
       maybeQueueCrunchSubscriber = Option(subscriber)
 
     case AddRecalculateArrivalsSubscriber(subscriber) =>
-      println(s"\n\n*Got recalc subscriber\n")
       maybeRecalculateArrivalsSubscriber = Option(subscriber)
 
     case um: UpdatedMillis =>
       maybeQueueCrunchSubscriber.foreach(_ ! um)
 
     case RecalculateArrivals =>
-      println(s"\n\n*RecalculateArrivals received\n")
       maybeRecalculateArrivalsSubscriber.foreach(_.offer(true))
   }
 }
