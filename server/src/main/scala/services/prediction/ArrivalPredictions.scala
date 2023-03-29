@@ -24,7 +24,6 @@ object ArrivalPredictions {
       .map(kv => (kv._1, kv._2.map(_._2)))
       .toList
   }
-
 }
 
 case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
@@ -36,12 +35,9 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
 
   val addPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
     diff => {
-//      log.info(s"Looking up predictions for ${diff.toUpdate.size} arrivals")
       val byKey = arrivalsByKey(diff.toUpdate.values, modelKeys)
-//      log.info(s"\n\n got ${byKey.size} keys to lookup for ${byKey.map(_._2.size).sum} arrivals \n\n")
       applyPredictionsByKey(diff.toUpdate, byKey)
         .map { arrivals =>
-//          log.info(s"Finished looking up predictions for ${arrivals.size} arrivals")
           diff.copy(toUpdate = diff.toUpdate ++ arrivals.map(a => (a.unique, a)))
         }
     }
@@ -51,18 +47,21 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
 
     Source(idsToArrivalKey)
       .foldAsync(arrivals) {
-        case (arrivalsAcc, (key, arrivals)) =>
-          if (true) { //arrivals.exists(_.Predictions.lastChecked < lastUpdatedThreshold)) {
-//            log.info(s"Looking up predictions for ${arrivals.size} arrivals with key $key")
-            findAndApplyForKey(key, arrivals.map(arrivalsAcc(_))).map(updates => updates.foldLeft(arrivalsAcc)((acc, a) => acc.updated(a.unique, a)))
-          }
-          else {
+        case (arrivalsAcc, (key, uniqueArrivals)) =>
+          if (oldValuesExist(lastUpdatedThreshold, arrivalsAcc, uniqueArrivals))
+            findAndApplyForKey(key, uniqueArrivals.map(arrivalsAcc(_)))
+              .map(updates => updates.foldLeft(arrivalsAcc)((acc, a) => acc.updated(a.unique, a)))
+          else
             Future.successful(arrivalsAcc)
-          }
       }
       .map { things => things.values }
       .runWith(Sink.head)
   }
+
+  private def oldValuesExist(lastUpdatedThreshold: MillisSinceEpoch,
+                             arrivalsAcc: Map[UniqueArrival, Arrival],
+                             uniqueArrivals: Iterable[UniqueArrival]): Boolean =
+    uniqueArrivals.map(arrivalsAcc(_)).exists(_.Predictions.lastChecked < lastUpdatedThreshold)
 
   private def findAndApplyForKey(key: WithId, arrivals: Iterable[Arrival]): Future[Iterable[Arrival]] =
     modelAndFeaturesProvider(key).map { models =>
@@ -79,10 +78,8 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
 
   private def updatePrediction(arrival: Arrival, model: ModelAndFeatures, predictionProvider: Arrival => Option[Int]): Arrival = {
     val updatedPredictions: Map[String, Int] = maybePrediction(arrival, model, predictionProvider) match {
-      case None =>
-        arrival.Predictions.predictions.removed(model.targetName)
-      case Some(update) =>
-        arrival.Predictions.predictions.updated(model.targetName, update)
+      case None => arrival.Predictions.predictions.removed(model.targetName)
+      case Some(update) => arrival.Predictions.predictions.updated(model.targetName, update)
     }
     arrival.copy(Predictions = arrival.Predictions.copy(predictions = updatedPredictions, lastChecked = SDate.now().millisSinceEpoch))
   }
