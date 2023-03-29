@@ -204,7 +204,7 @@ class ArrivalsGraphStage(name: String = "",
 
         List(inLiveBaseArrivals, inLiveArrivals, inForecastArrivals, inForecastBaseArrivals, inFlushArrivals)
           .foreach(inlet => if (!hasBeenPulled(inlet)) pull(inlet))
-        
+
         timer.stopAndReport()
       }
     })

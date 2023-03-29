@@ -87,8 +87,9 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
   "Given an arrival and an actor containing a prediction model for that arrival" >> {
     "I should be able to update the arrival with an predicted touchdown time" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
-      val keysWithArrival = modelKeysForArrival(arrival).map(k => (k, List(arrival))).toList
-      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(keysWithArrival), 1.second)
+      val keysWithArrival = modelKeysForArrival(arrival).map(k => (k, List(arrival.unique))).toList
+      val arrivalsMap = List(arrival).map(a => (a.unique, a)).toMap
+      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(arrivalsMap, keysWithArrival), 1.second)
 
       maybePredictedTouchdown.head.predictedTouchdown.nonEmpty
     }

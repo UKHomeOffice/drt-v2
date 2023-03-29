@@ -239,7 +239,7 @@ class TestDrtActor extends Actor {
       val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
-      val redListUpdatesSource: Source[List[RedListUpdateCommand], SourceQueueWithComplete[List[RedListUpdateCommand]]] = Source.queue[List[RedListUpdateCommand]](0, OverflowStrategy.backpressure)
+      val flushArrivalsSource: Source[Boolean, SourceQueueWithComplete[Boolean]] = Source.queue[Boolean](0, OverflowStrategy.backpressure)
 
       val aclPaxAdjustmentDays = 7
       val maxDaysToConsider = 14
@@ -294,7 +294,7 @@ class TestDrtActor extends Actor {
         aclPaxAdjustmentDays = aclPaxAdjustmentDays,
         startDeskRecs = startDeskRecs,
         arrivalsAdjustments = tc.arrivalsAdjustments,
-        flushArrivalsSource = redListUpdatesSource,
+        flushArrivalsSource = flushArrivalsSource,
         addArrivalPredictions = tc.addTouchdownPredictions,
         setPcpTimes = tc.setPcpTimes,
         flushArrivalsOnStart = tc.recrunchOnStart,
