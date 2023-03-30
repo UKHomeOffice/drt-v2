@@ -109,7 +109,6 @@ class ArrivalsGraphStage(name: String = "",
     }
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var redListUpdates: RedListUpdates = RedListUpdates.empty
     var forecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()
     var forecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()
     var ciriumArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()

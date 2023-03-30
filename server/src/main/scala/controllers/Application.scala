@@ -23,8 +23,9 @@ import services.metrics.Metrics
 import slickdb.UserTableLike
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.ports
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, FeedSource, ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.nio.ByteBuffer
@@ -236,7 +237,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     val defaultLastCheckThreshold = config.get[Int]("health-check.max-last-feed-check-minutes").minutes
     val feedsHealthCheckGracePeriod = config.get[Int]("health-check.feeds-grace-period-minutes").minutes
     val feedLastCheckThresholds: Map[FeedSource, FiniteDuration] = Map(
-      AclFeedSource -> 26.hours
+      AclFeedSource -> 7.days,
+      ForecastFeedSource -> 7.days,
     )
 
     val feedsToMonitor = ctrl.feedActorsForPort
