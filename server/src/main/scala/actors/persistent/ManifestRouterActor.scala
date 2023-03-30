@@ -125,7 +125,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
         maybeSourceStatuses = Option(state.addStatus(newStatus))
       )
 
-      persistFeedStatus(newStatus)
+//      persistFeedStatus(newStatus)
       persistLastSeenFileName(updatedLZF)
 
       self ! ProcessNextUpdateRequest
@@ -135,7 +135,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       val newStatus = FeedStatusFailure(failedAt.millisSinceEpoch, message)
       state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
-      persistFeedStatus(newStatus)
+//      persistFeedStatus(newStatus)
       sender() ! Ack
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
@@ -230,7 +230,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   private def persistLastSeenFileName(lastProcessedMarker: MillisSinceEpoch): Unit =
     persistAndMaybeSnapshot(lastProcessedMarkerToMessage(lastProcessedMarker))
 
-  def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))
+//  def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))
 
   private def lastProcessedMarkerToMessage(lastProcessedMarker: MillisSinceEpoch): VoyageManifestLatestFileNameMessage =
     VoyageManifestLatestFileNameMessage(

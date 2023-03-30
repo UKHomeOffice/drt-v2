@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v463"
+    val drtLib = "v20230330_1"
 
     val scala = "2.13.10"
     val scalaDom = "2.0.0"
@@ -57,7 +57,7 @@ object Settings {
     val pprint = "0.5.6"
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "0.5.0-DRT"
-    val postgres = "42.2.27"
+    val postgres = "42.2.2"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
     val playJsonJoda = "2.6.9"

@@ -40,4 +40,5 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       maybeEgatesProvider: Option[() => Future[PortEgateBanksUpdates]] = None,
                       setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = TestDefaults.setPcpFromSch,
                       addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff),
+                      passengerAdjustments: List[Arrival]=> Future[List[Arrival]] = arrivals => Future.successful(arrivals)
                      )

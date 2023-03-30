@@ -62,15 +62,15 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
-  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
+  override val forecastBaseArrivalsActor: ActorRef = system.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastArrivalsActor: ActorRef = system.actorOf(Props(new PortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override val liveArrivalsActor: ActorRef = system.actorOf(Props(new PortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
 
-  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
+  override val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookup = ManifestLookup(PostgresTables)
 
