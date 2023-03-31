@@ -37,6 +37,7 @@ class AclForecastArrivalsActor(val now: () => SDateLike,
 
     state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivalsWithKeys, maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
-    persistArrivalUpdates(createdAt, removals, updates)
+    if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(createdAt, removals, updates)
+//    persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size))
   }
 }

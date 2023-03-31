@@ -59,12 +59,15 @@ object FlightComponents {
     val max: String = flight.apiFlight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")
     val portDirectPax: Int = flight.apiFlight.ActPax.getOrElse(0) - flight.apiFlight.TranPax.getOrElse(0)
 
-    val paxNos = List(
-      <.p(s"Pax: $portDirectPax (${flight.apiFlight.ActPax.getOrElse(0)} - ${flight.apiFlight.TranPax.getOrElse(0)} transfer)"),
-      <.p(s"Max: $max"),
+    val paxSources = flight.apiFlight.TotalPax.toList.sortBy(_.feedSource.name).map {
+      case TotalPaxSource(pax, feedSource) =>
+        <.p(s"${feedSource.toString} - ${pax.map(_.toString).getOrElse("")}")
+    }
+
+    val apiPax = List(
       flight.totalPaxFromApiExcludingTransfer.map(p => <.p(s"API: ${p.pax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
     )
-    <.span(paxNos.toVdomArray)
+    <.span((paxSources ++ apiPax).toVdomArray)
   }
 
   def paxTransferComponent(flight: Arrival): VdomTagOf[Div] = {
