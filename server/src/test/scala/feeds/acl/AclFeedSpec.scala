@@ -31,17 +31,20 @@ class AclFeedSpec extends CrunchTestLike {
       val aclFlights = Flights(Seq(arrival(iata = "BA0004", schDt = "2017-01-01T00:04Z", actPax = Option(100))))
       val forecastFlights = Flights(Seq(arrival(iata = "BA0004", schDt = "2017-01-01T00:04Z", actPax = Option(50))))
 
+      var adjustment = 1
+
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduledLive),
-        passengerAdjustments = arrivals => Future.successful(arrivals.map(a => a.copy(ActPax = a.ActPax.map(_ + 1)))),
+        passengerAdjustments = arrivals => Future.successful(arrivals.map(a => a.copy(ActPax = a.ActPax.map(_ + adjustment)))),
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastFlights))
       Thread.sleep(250)
+      adjustment = 5
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       Thread.sleep(250)
-      offerAndWait(crunch.recalculateArrivalsInput, true)
+//      offerAndWait(crunch.recalculateArrivalsInput, true)
 
 
       crunch.portStateTestProbe.fishForMessage(5.seconds) {
