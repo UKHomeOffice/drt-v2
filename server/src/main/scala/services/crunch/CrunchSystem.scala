@@ -164,14 +164,6 @@ object CrunchSystem {
       B5JPlusTypeAllocator,
       TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
 
-  def initialStaffMinutesFromPortState(initialPortState: Option[PortState]): Option[StaffMinutes] = initialPortState.map(
-    ps => StaffMinutes(ps.staffMinutes))
-
-  def initialCrunchMinutesFromPortState(initialPortState: Option[PortState]): Option[CrunchMinutes] = initialPortState.map(
-    ps => CrunchMinutes(ps.crunchMinutes.values.toSet))
-
-  def initialLoadsFromPortState(initialPortState: Option[PortState]): Option[Loads] = initialPortState.map(ps => Loads.fromCrunchMinutes(ps.crunchMinutes))
-
   def initialFlightsFromPortState(initialPortState: Option[PortState]): Option[FlightsWithSplitsDiff] = initialPortState.map { ps =>
     FlightsWithSplitsDiff(ps.flights.values.toList, List())
   }
