@@ -284,7 +284,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def updateFilteredIncomingWithTotalPaxSource(filteredIncoming: SortedMap[UniqueArrival, Arrival], feedSource: FeedSource): SortedMap[UniqueArrival, Arrival] =
       filteredIncoming.map { case (k, arrival) =>
-        k -> arrival.copy(TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(arrival.ActPax, feedSource)))
+        k -> arrival.copy(TotalPax = arrival.TotalPax.updated(feedSource, arrival.ActPax))
       }
 
     def changedArrivals(existingArrivals: SortedMap[UniqueArrival, Arrival],
@@ -382,7 +382,7 @@ class ArrivalsGraphStage(name: String = "",
       val merged = mergeBestFields(baseArrival, mergeArrivalWithMaybeBase(baseArrival.unique, Option(baseArrival)).getOrElse(baseArrival))
       merged.copy(
         FeedSources = merged.FeedSources + AclFeedSource,
-        TotalPax = merged.TotalPax + TotalPaxSource(baseArrival.ActPax, AclFeedSource)
+        TotalPax = merged.TotalPax.updated(AclFeedSource, baseArrival.ActPax)
       )
     }
 
@@ -464,12 +464,12 @@ class ArrivalsGraphStage(name: String = "",
       ciriumArrivals.get(uniqueArrival).map(_ => LiveBaseFeedSource)
     ).flatten.toSet
 
-    def totalPaxSources(uniqueArrival: UniqueArrival): Set[TotalPaxSource] = List(
-      liveArrivals.get(uniqueArrival).map(a => TotalPaxSource(a.ActPax, LiveFeedSource)),
-      forecastArrivals.get(uniqueArrival).map(a => TotalPaxSource(a.ActPax, ForecastFeedSource)),
-      forecastBaseArrivals.get(uniqueArrival).map(a => TotalPaxSource(a.ActPax, AclFeedSource)),
-      ciriumArrivals.get(uniqueArrival).map(a => TotalPaxSource(a.ActPax, LiveBaseFeedSource))
-    ).flatten.toSet
+    def totalPaxSources(uniqueArrival: UniqueArrival): Map[FeedSource, Option[Int]] = List(
+      liveArrivals.get(uniqueArrival).map(a => (LiveFeedSource, a.ActPax)),
+      forecastArrivals.get(uniqueArrival).map(a => (ForecastFeedSource, a.ActPax)),
+      forecastBaseArrivals.get(uniqueArrival).map(a => (AclFeedSource, a.ActPax)),
+      ciriumArrivals.get(uniqueArrival).map(a => (LiveBaseFeedSource, a.ActPax))
+    ).flatten.toMap
 
     private def allMergedArrivals(forecastBaseArrivals: SortedMap[UniqueArrival, Arrival], liveArrivals: SortedMap[UniqueArrival, Arrival]) = {
       val arrivals = (liveArrivals.keys ++ forecastBaseArrivals.keys)

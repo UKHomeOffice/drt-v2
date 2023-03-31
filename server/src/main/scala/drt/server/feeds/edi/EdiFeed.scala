@@ -141,7 +141,7 @@ case class EdiFeed(ediClient: EdiClient)
         ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Set.empty
+        TotalPax = Map.empty
       )
     } match {
       case Success(a) => Option(a)

@@ -11,7 +11,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 pax from API and 50 from Act Pax " +
       "Then I should expect 50 PCP pax" >> {
       val a = arrival(actPax = Option(50), apiPax = Option(100), feedSources = Set(LiveFeedSource),
-        totalPax = Set(TotalPaxSource(Option(50), LiveFeedSource), TotalPaxSource(Option(100), ApiFeedSource)))
+        totalPax = Map(LiveFeedSource -> Option(50), ApiFeedSource -> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 50
@@ -22,7 +22,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with None from API and 50 from Act Pax " +
       "Then I should expect 50 PCP pax" >> {
       val a = arrival(actPax = Option(50), apiPax = None, feedSources = Set(LiveFeedSource),
-        totalPax = Set(TotalPaxSource(Option(50), LiveFeedSource)))
+        totalPax = Map(LiveFeedSource -> Option(50)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 50
@@ -33,7 +33,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 pax from API and None from Act Pax " +
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = None, apiPax = Option(100), feedSources = Set(LiveFeedSource),
-        totalPax = Set(TotalPaxSource(Option(100), ApiFeedSource)))
+        totalPax = Map(ApiFeedSource -> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 100
@@ -44,7 +44,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 pax and None for Transfer " +
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = None, feedSources = Set(LiveFeedSource),
-        totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource)))
+        totalPax = Map(LiveFeedSource -> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 100
@@ -55,7 +55,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with more Transfer Pax than Act Pax and a MaxPax of 150 " +
       "Then we should get 0 PCP Pax " >> {
       val a = arrival(actPax = Option(50), tranPax = Option(100), maxPax = Option(150), feedSources = Set(LiveFeedSource),
-        totalPax = Set(TotalPaxSource(Option(50), LiveFeedSource)))
+        totalPax = Map(LiveFeedSource -> Option(50)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 0
@@ -66,7 +66,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 pax and 0 Transfer " +
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = Option(0), feedSources = Set(LiveFeedSource),
-        totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource)))
+        totalPax = Map(LiveFeedSource -> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 100
@@ -77,7 +77,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 0 act pax, 0 Transfer and 130 Max Pax" +
       "Then I should expect 0 PCP pax" >> {
       val a = arrival(actPax = Option(0), tranPax = Option(0), maxPax = Option(130), feedSources = Set(LiveFeedSource),
-        totalPax = Set(TotalPaxSource(Option(0), LiveFeedSource)))
+        totalPax = Map(LiveFeedSource -> Option(0)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 0
@@ -88,7 +88,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 act pax and 10 Transfer" +
       "Then I should expect 90 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = Option(10), feedSources = Set(LiveFeedSource),
-        totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource), TotalPaxSource(Option(100), ApiFeedSource)))
+        totalPax = Map(LiveFeedSource -> Option(100), ApiFeedSource -> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 90
@@ -112,7 +112,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 pax from API and 50 from Act Pax " +
       "Then I should expect 100 PCP pax - API trumps ACL numbers" >> {
       val a = arrival(actPax = Option(50), apiPax = Option(100), feedSources = Set(AclFeedSource),
-        totalPax = Set(TotalPaxSource(Option(100), ApiFeedSource)))
+        totalPax = Map(ApiFeedSource-> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 100
@@ -123,7 +123,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with None from API and 50 from Act Pax " +
       "Then I should expect 50 PCP pax" >> {
       val a = arrival(actPax = Option(50), apiPax = None, feedSources = Set(AclFeedSource),
-        totalPax = Set(TotalPaxSource(Option(50), AclFeedSource)))
+        totalPax = Map(AclFeedSource-> Option(50)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 50
@@ -134,7 +134,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 pax from API and None from Act Pax " +
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = None, apiPax = Option(100), feedSources = Set(AclFeedSource),
-        totalPax = Set(TotalPaxSource(Option(100), ApiFeedSource)))
+        totalPax = Map(ApiFeedSource-> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 100
@@ -145,7 +145,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 pax and None for Transfer " +
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = None, feedSources = Set(AclFeedSource),
-        totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
+        totalPax = Map(AclFeedSource-> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 100
@@ -166,7 +166,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 pax and 0 Transfer " +
       "Then I should expect 100 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = Option(0), feedSources = Set(AclFeedSource),
-        totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
+        totalPax = Map(AclFeedSource-> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 100
@@ -177,7 +177,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 0 act pax, 0 Transfer and 130 Max Pax" +
       "Then I should expect 0 PCP pax" >> {
       val a = arrival(actPax = Option(0), tranPax = Option(0), maxPax = Option(130), feedSources = Set(AclFeedSource),
-        totalPax = Set(TotalPaxSource(Option(0), AclFeedSource)))
+        totalPax = Map(AclFeedSource-> Option(0)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 0
@@ -188,7 +188,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with 100 act pax and 10 Transfer" +
       "Then I should expect 90 PCP pax" >> {
       val a = arrival(actPax = Option(100), tranPax = Option(10), feedSources = Set(AclFeedSource),
-        totalPax = Set(TotalPaxSource(Option(100), AclFeedSource)))
+        totalPax = Map(AclFeedSource-> Option(100)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 90
@@ -199,7 +199,7 @@ class PcpUtilsSpec extends Specification {
     "Given an arrival with no values set for act pax and transfer and 130 for max pax" +
       "Then I should expect 0 PCP pax" >> {
       val a = arrival(actPax = None, tranPax = None, maxPax = Option(130), feedSources = Set(AclFeedSource),
-        totalPax = Set(TotalPaxSource(Option(0), AclFeedSource)))
+        totalPax = Map(AclFeedSource-> Option(0)))
 
       val result = a.bestPcpPaxEstimate.pax.map(_.toInt).getOrElse(0)
       val expected = 0

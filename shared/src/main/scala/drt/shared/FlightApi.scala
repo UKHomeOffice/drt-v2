@@ -25,7 +25,7 @@ object FlightsApi {
     def from(arrivals: Iterable[Arrival], feedSource: FeedSource): PaxForArrivals =
       PaxForArrivals(arrivals
         .map { arrival =>
-          val histApiPax = arrival.TotalPax.filter(_.feedSource == feedSource)
+          val histApiPax = arrival.TotalPax.view.filterKeys(_ == feedSource).toMap
           (arrival.unique, histApiPax)
         }
         .collect { case (key, nonEmptyPax) if nonEmptyPax.nonEmpty => (key, nonEmptyPax) }
@@ -33,16 +33,22 @@ object FlightsApi {
       )
   }
 
-  case class PaxForArrivals(pax: Map[UniqueArrival, Set[TotalPaxSource]]) extends FlightUpdates {
+  case class PaxForArrivals(pax: Map[UniqueArrival, Map[FeedSource, Option[Int]]]) extends FlightUpdates {
     def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
       val updatedFlights = pax.map {
         case (key, newPax) =>
           flights.flights.get(key)
-            .map(fws => (fws, newPax.diff(fws.apiFlight.TotalPax)))
+            .map { fws =>
+              val updatedPax = newPax.filter {
+                case (source, pax) =>
+                  val existingPax = fws.apiFlight.TotalPax.get(source)
+                  existingPax.isEmpty || existingPax != pax
+              }
+              (fws, updatedPax)
+            }
             .collect {
               case (fws, updatedPax) if updatedPax.nonEmpty =>
-                val updatedSources = updatedPax.map(_.feedSource)
-                val mergedPax = fws.apiFlight.TotalPax.filterNot(s => updatedSources.contains(s.feedSource)) ++ updatedPax
+                val mergedPax = fws.apiFlight.TotalPax ++ updatedPax
                 val updatedArrival = fws.apiFlight.copy(TotalPax = mergedPax)
                 fws.copy(apiFlight = updatedArrival, lastUpdated = Option(nowMillis))
             }
@@ -73,7 +79,7 @@ object FlightsApi {
                     case Some(liveSplit) =>
                       val totalPax = Math.round(liveSplit.totalExcludingTransferPax).toInt
                       val sources = fws.apiFlight.FeedSources + ApiFeedSource
-                      val totalPaxSources = fws.apiFlight.TotalPax ++ Set(TotalPaxSource(Some(totalPax), ApiFeedSource))
+                      val totalPaxSources = fws.apiFlight.TotalPax.updated(ApiFeedSource, Some(totalPax))
                       fws.apiFlight.copy(
                         ApiPax = Option(totalPax),
                         FeedSources = sources,

@@ -20,7 +20,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWith
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -194,7 +194,7 @@ object DynamicRunnablePassengerLoads {
             if (flight.apiFlight.hasNoPaxSource) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
-                  val totalPax: Set[TotalPaxSource] = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(manifestPaxLike.pax, HistoricApiFeedSource))
+                  val totalPax: Map[FeedSource, Option[Int]] = flight.apiFlight.TotalPax.updated(HistoricApiFeedSource, manifestPaxLike.pax)
                   val updatedArrival = flight.apiFlight.copy(TotalPax = totalPax)
                   flight.copy(apiFlight = updatedArrival)
                 case None => flight
@@ -309,7 +309,7 @@ object DynamicRunnablePassengerLoads {
             val arrival = flight.apiFlight.copy(
               ApiPax = Option(apiPax),
               FeedSources = flight.apiFlight.FeedSources + ApiFeedSource,
-              TotalPax = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(Option(apiPax), ApiFeedSource))
+              TotalPax = flight.apiFlight.TotalPax.updated(ApiFeedSource, Option(apiPax))
             )
 
             flight.copy(apiFlight = arrival)

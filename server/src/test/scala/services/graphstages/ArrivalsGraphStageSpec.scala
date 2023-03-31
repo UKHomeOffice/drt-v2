@@ -84,10 +84,10 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         arrival_v2_with_chox_time.copy(ActualChox = Option(SDate(scheduled).millisSinceEpoch), Stand = Option("I will update"))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival_v2_with_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Set(TotalPaxSource(Option(100), LiveFeedSource))))))
+      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Map(LiveFeedSource -> Option(100))))))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival_v3_with_an_update_to_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v3_with_an_update_to_chox_time.copy(TotalPax = Set(TotalPaxSource(Option(100), LiveFeedSource))))))
+      expectArrivals(Iterable(withPcpTime(arrival_v3_with_an_update_to_chox_time.copy(TotalPax = Map(LiveFeedSource -> Option(100))))))
 
       success
     }
@@ -100,7 +100,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       )))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v2_with_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Set(TotalPaxSource(arrival_v2_with_chox_time.ActPax, LiveFeedSource))))))
+      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Map(LiveFeedSource->arrival_v2_with_chox_time.ActPax)))))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
       expectFeedSources(Set(LiveFeedSource))
@@ -114,7 +114,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       )))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v2_with_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Set(TotalPaxSource(arrival_v2_with_chox_time.ActPax, LiveFeedSource))))))
+      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Map(LiveFeedSource->arrival_v2_with_chox_time.ActPax)))))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
       expectFeedSources(Set(LiveFeedSource, ApiFeedSource))
@@ -190,7 +190,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
-        expectArrivals(Iterable(withPcpTime(withoutSuffix.copy(TotalPax = Set(TotalPaxSource(withoutSuffix.ActPax, AclFeedSource))))))
+        expectArrivals(Iterable(withPcpTime(withoutSuffix.copy(TotalPax = Map(AclFeedSource -> withoutSuffix.ActPax)))))
 
         success
       }
@@ -218,7 +218,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           val expected = liveArrival.copy(
             Estimated = Option(SDate(scheduled).millisSinceEpoch),
             FeedSources = Set(LiveFeedSource, LiveBaseFeedSource),
-            TotalPax = Set(TotalPaxSource(liveArrival.ActPax, LiveFeedSource), TotalPaxSource(ciriumArrival.ActPax, LiveBaseFeedSource)))
+            TotalPax = Map(LiveFeedSource -> liveArrival.ActPax, LiveBaseFeedSource -> ciriumArrival.ActPax))
 
           expectArrivals(Iterable(withPcpTime(expected)))
 
@@ -236,10 +236,10 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           expectUniqueArrival(liveArrival.unique)
 
           offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
-          expectArrivals(Iterable(withPcpTime(liveArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = Set(TotalPaxSource(updatedArrival.ActPax, LiveFeedSource))))))
+          expectArrivals(Iterable(withPcpTime(liveArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = Map(LiveFeedSource -> updatedArrival.ActPax)))))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(updatedArrival))))
-          expectArrivals(Iterable(withPcpTime(updatedArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = Set(TotalPaxSource(updatedArrival.ActPax, LiveFeedSource))))))
+          expectArrivals(Iterable(withPcpTime(updatedArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = Map(LiveFeedSource -> updatedArrival.ActPax)))))
 
           success
         }
@@ -296,9 +296,9 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
         val expected = forecastArrival.copy(
           FeedSources = Set(AclFeedSource, ForecastFeedSource),
-          TotalPax = Set(
-            TotalPaxSource(aclArrival.ActPax, AclFeedSource),
-            TotalPaxSource(forecastArrival.ActPax, ForecastFeedSource),
+          TotalPax = Map(
+            AclFeedSource -> aclArrival.ActPax,
+            ForecastFeedSource -> forecastArrival.ActPax,
           ))
 
         crunch.portStateTestProbe.fishForMessage(1.second) {

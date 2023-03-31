@@ -35,7 +35,6 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import scala.collection.immutable.Map
 import scala.collection.{SortedSet, immutable}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -121,7 +120,7 @@ object OptimiserMocks {
 }
 
 case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], historicManifestsPax: Map[UniqueArrivalKey, Option[ManifestPaxCount]], destinationPort: PortCode)
-                                    (implicit mat: Materializer) extends ManifestLookupLike {
+  extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
@@ -193,7 +192,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   }
 
   "Given a flight and a mock splits calculator" >> {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource)))
+    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = Map(LiveFeedSource -> Option(100)))
     val flights = Seq(ApiFlightWithSplits(arrival, Set()))
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
     val mockSplits: SplitsForArrival = (_, _) => splits
@@ -205,7 +204,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
         withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource,
-          TotalPax = arrival.TotalPax ++ Set(TotalPaxSource(Option(1), ApiFeedSource))
+          TotalPax = arrival.TotalPax.updated(ApiFeedSource, Option(1))
         ), Set(splits)))
       }
 
@@ -239,7 +238,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     "add historic API pax" >> {
       "When I have no Feed I should get some pax from historic API" >> {
         val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(),
-          totalPax = Set.empty)
+          totalPax = Map.empty)
         checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(10), HistoricApiFeedSource)))
       }
     }
@@ -279,7 +278,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   "Given an arrival with 100 pax " >> {
 
     val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource),
-      totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource)))
+      totalPax = Map(LiveFeedSource -> Option(100)))
 
     "When I provide no live and no historic manifests, terminal splits should be applied (50% desk, 50% egates)" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)
@@ -337,17 +336,17 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     }
   }
 
-//  "validApiPercentage" >> {
-//    val validApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
-//    val invalidApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
-//    "Given no flights, then validApiPercentage should give 100%" >> {
-//      DynamicRunnablePassengerLoads.validApiPercentage(Seq()) === 100d
-//    }
-//    "Given 1 flight with live api splits, when it is valid, then validApiPercentage should give 100%" >> {
-//      DynamicRunnablePassengerLoads.validApiPercentage(Seq(validApi)) === 100d
-//    }
-//    "Given 4 flights with live api splits, when 3 are categorised as valid, then validApiPercentage should give 75%" >> {
-//      DynamicRunnablePassengerLoads.validApiPercentage(Seq(validApi, validApi, validApi, invalidApi)) === 75d
-//    }
-//  }
+  //  "validApiPercentage" >> {
+  //    val validApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+  //    val invalidApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+  //    "Given no flights, then validApiPercentage should give 100%" >> {
+  //      DynamicRunnablePassengerLoads.validApiPercentage(Seq()) === 100d
+  //    }
+  //    "Given 1 flight with live api splits, when it is valid, then validApiPercentage should give 100%" >> {
+  //      DynamicRunnablePassengerLoads.validApiPercentage(Seq(validApi)) === 100d
+  //    }
+  //    "Given 4 flights with live api splits, when 3 are categorised as valid, then validApiPercentage should give 75%" >> {
+  //      DynamicRunnablePassengerLoads.validApiPercentage(Seq(validApi, validApi, validApi, invalidApi)) === 75d
+  //    }
+  //  }
 }

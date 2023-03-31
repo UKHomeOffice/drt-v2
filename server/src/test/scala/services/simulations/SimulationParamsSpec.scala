@@ -3,7 +3,7 @@ package services.simulations
 import controllers.ArrivalGenerator
 import drt.shared._
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
@@ -118,7 +118,7 @@ class SimulationParamsSpec extends Specification {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
     val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), tranPax = Option(50),
-      totalPax = Set(TotalPaxSource(Option(100),ScenarioSimulationSource))), Set())
+      totalPax = Map(ScenarioSimulationSource-> Option(100))), Set())
     val flights = FlightsWithSplits(List(
       flightWithSplits
     ).map(a => a.apiFlight.unique -> a).toMap)
@@ -147,7 +147,7 @@ class SimulationParamsSpec extends Specification {
     ).map(a => a.apiFlight.unique -> a).toMap)
 
     val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(200), tranPax = Option(100),
-      totalPax = Set(TotalPaxSource(Option(200),ScenarioSimulationSource))),Set())
+      totalPax = Map(ScenarioSimulationSource-> Option(200))),Set())
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 
     result.flights.values.head.apiFlight.bestPcpPaxEstimate === flightWithSplits.apiFlight.bestPcpPaxEstimate

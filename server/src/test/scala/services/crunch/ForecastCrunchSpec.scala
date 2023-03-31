@@ -182,7 +182,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
 
     val expectedForecastArrivals = Set(baseArrival.copy(FeedSources = Set(AclFeedSource),
-      TotalPax = Set(TotalPaxSource(baseArrival.ActPax, AclFeedSource))))
+      TotalPax = Map(AclFeedSource -> baseArrival.ActPax)))
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
@@ -212,9 +212,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val expectedForecastArrivals = Set(baseArrival.copy(ActPax = Some(50), TranPax = Some(25),
       FeedSources = Set(ForecastFeedSource, AclFeedSource),
-      TotalPax = Set(
-        TotalPaxSource(baseArrival.ActPax, AclFeedSource),
-        TotalPaxSource(forecastArrival.ActPax, ForecastFeedSource),
+      TotalPax = Map(
+        AclFeedSource -> baseArrival.ActPax,
+        ForecastFeedSource -> forecastArrival.ActPax,
       )))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
@@ -250,10 +250,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax,
       TranPax = forecastArrival.TranPax, Estimated = Some(SDate(liveScheduled).millisSinceEpoch),
       FeedSources = Set(AclFeedSource, ForecastFeedSource, LiveFeedSource),
-      TotalPax = Set(
-        TotalPaxSource(baseArrival.ActPax, AclFeedSource),
-        TotalPaxSource(forecastArrival.ActPax, ForecastFeedSource),
-        TotalPaxSource(liveArrival.ActPax, LiveFeedSource),
+      TotalPax = Map(
+        AclFeedSource -> baseArrival.ActPax,
+        ForecastFeedSource -> forecastArrival.ActPax,
+        LiveFeedSource -> liveArrival.ActPax,
       )))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
@@ -292,15 +292,15 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val expectedForecastArrivals = Set(
       baseArrival1.copy(ActPax = Some(51), Status = ArrivalStatus("Port Forecast"),
         FeedSources = Set(ForecastFeedSource, AclFeedSource),
-        TotalPax = Set(
-          TotalPaxSource(baseArrival1.ActPax, AclFeedSource),
-          TotalPaxSource(forecastArrival1.ActPax, ForecastFeedSource),
+        TotalPax = Map(
+          AclFeedSource->baseArrival1.ActPax,
+          ForecastFeedSource->forecastArrival1.ActPax,
         )),
       baseArrival2.copy(ActPax = Some(52), Status = ArrivalStatus("Port Forecast"),
         FeedSources = Set(ForecastFeedSource, AclFeedSource),
-        TotalPax = Set(
-          TotalPaxSource(baseArrival2.ActPax, AclFeedSource),
-          TotalPaxSource(forecastArrival2.ActPax, ForecastFeedSource),
+        TotalPax = Map(
+          AclFeedSource->baseArrival2.ActPax,
+          ForecastFeedSource->forecastArrival2.ActPax,
         )))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {

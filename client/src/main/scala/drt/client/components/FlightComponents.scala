@@ -56,11 +56,8 @@ object FlightComponents {
   }
 
   def paxNumberSources(flight: ApiFlightWithSplits): VdomTagOf[Span] = {
-    val max: String = flight.apiFlight.MaxPax.filter(_ > 0).map(_.toString).getOrElse("n/a")
-    val portDirectPax: Int = flight.apiFlight.ActPax.getOrElse(0) - flight.apiFlight.TranPax.getOrElse(0)
-
-    val paxSources = flight.apiFlight.TotalPax.toList.sortBy(_.feedSource.name).map {
-      case TotalPaxSource(pax, feedSource) =>
+    val paxSources = flight.apiFlight.TotalPax.toList.sortBy(_._1.name).map {
+      case (feedSource, pax) =>
         <.p(s"${feedSource.toString} - ${pax.map(_.toString).getOrElse("")}")
     }
 
