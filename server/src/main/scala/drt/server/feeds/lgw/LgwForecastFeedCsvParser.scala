@@ -2,6 +2,7 @@ package drt.server.feeds.lgw
 
 import org.apache.commons.csv.{CSVFormat, CSVParser}
 import org.slf4j.{Logger, LoggerFactory}
+import services.graphstages.Crunch.europeLondonTimeZone
 import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -46,7 +47,14 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
               val scheduledDateAndTime = scheduledString.split(" ")
               val dateParts = scheduledDateAndTime(0).split("/")
               val timeParts = scheduledDateAndTime(1).split(":")
-              val scheduled = SDate(dateParts(2).toInt, dateParts(1).toInt, dateParts(0).toInt, timeParts(0).toInt, timeParts(1).toInt).millisSinceEpoch
+              val scheduled = SDate(
+                dateParts(2).toInt,
+                dateParts(1).toInt,
+                dateParts(0).toInt,
+                timeParts(0).toInt,
+                timeParts(1).toInt,
+                europeLondonTimeZone
+              ).millisSinceEpoch
               val totalPax = Option(record.get("POA PAX").toInt)
               val transPax = None
               val maxPax = Option(record.get("Seats").toInt)
