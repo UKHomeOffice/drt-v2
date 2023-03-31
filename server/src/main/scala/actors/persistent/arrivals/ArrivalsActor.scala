@@ -112,7 +112,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     state = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
 
-    persistArrivalUpdates(Set(), updatedArrivals)
+    persistFeedStatus(newStatus)
+    if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
   }
 
   def persistArrivalUpdates(removals: Set[UniqueArrival], updatedArrivals: Iterable[Arrival]): Unit = {
