@@ -11,7 +11,7 @@ import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{RecoveryActorLike, Sizes}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsRestorer, UniqueArrival}
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess}
+import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
@@ -46,13 +46,6 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)
       state = state.copy(maybeSourceStatuses = Option(state.addStatus(status)))
-
-//    case diffWithStatus: DiffWithStatusMessage =>
-//      diffWithStatus.status.foreach { statusMessage =>
-//        val status = feedStatusFromFeedStatusMessage(statusMessage)
-//        state = state.copy(maybeSourceStatuses = Option(state.addStatus(status)))
-//      }
-//      diffWithStatus.diff.foreach(consumeDiffsMessage)
   }
 
   override def postRecoveryComplete(): Unit = {
@@ -108,8 +101,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     log.warn("Received feed failure")
     val newStatus = FeedStatusFailure(createdAt.millisSinceEpoch, message)
     state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
-
-    persistAndMaybeSnapshot(feedStatusToMessage(newStatus))
+    persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
   }
 
   def handleFeedSuccess(incomingArrivals: Iterable[Arrival], createdAt: SDateLike): Unit = {
@@ -120,10 +112,10 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     state = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
 
-    persistArrivalUpdates(createdAt, Set(), updatedArrivals)
+    persistArrivalUpdates(Set(), updatedArrivals)
   }
 
-  def persistArrivalUpdates(createdAt: SDateLike, removals: Set[UniqueArrival], updatedArrivals: Iterable[Arrival]): Unit = {
+  def persistArrivalUpdates(removals: Set[UniqueArrival], updatedArrivals: Iterable[Arrival]): Unit = {
     val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
     val removalMessages = removals.map(uniqueArrivalToMessage).toSeq
     val diffMessage = FlightsDiffMessage(
@@ -131,8 +123,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
       removals = removalMessages,
       updates = updateMessages)
 
-    val status = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
-
     persistAndMaybeSnapshot(diffMessage)
   }
+
+  def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))
 }
