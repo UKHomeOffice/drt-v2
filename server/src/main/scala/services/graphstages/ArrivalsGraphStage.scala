@@ -109,7 +109,6 @@ class ArrivalsGraphStage(name: String = "",
     }
 
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new GraphStageLogic(shape) {
-    var redListUpdates: RedListUpdates = RedListUpdates.empty
     var forecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()
     var forecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()
     var ciriumArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()
@@ -380,6 +379,8 @@ class ArrivalsGraphStage(name: String = "",
 
     def mergeBaseArrival(baseArrival: Arrival): Arrival = {
       val merged = mergeBestFields(baseArrival, mergeArrivalWithMaybeBase(baseArrival.unique, Option(baseArrival)).getOrElse(baseArrival))
+      println(s"forecast: ${forecastArrivals.get(baseArrival.unique).map(_.ActPax)}")
+      println(s"merged: ${merged.ActPax}")
       merged.copy(
         FeedSources = merged.FeedSources + AclFeedSource,
         TotalPax = merged.TotalPax.updated(AclFeedSource, baseArrival.ActPax)

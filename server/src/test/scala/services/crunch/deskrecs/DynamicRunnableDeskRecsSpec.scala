@@ -239,7 +239,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       "When I have no Feed I should get some pax from historic API" >> {
         val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(),
           totalPax = Map.empty)
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Set(TotalPaxSource(Option(10), HistoricApiFeedSource)))
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Map(HistoricApiFeedSource -> Option(10)))
       }
     }
   }
@@ -261,7 +261,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   private def checkPaxSource(arrival: Arrival,
                              maybeHistoricArrivalManifestPax: Map[Arrival, Option[List[PassengerInfoJson]]],
-                             expectedPaxSources: Set[TotalPaxSource]) = {
+                             expectedPaxSources: Map[FeedSource, Option[Int]]) = {
     val flow = DynamicRunnablePassengerLoads.addPax(mockHistoricManifestsPaxProvider(maybeHistoricArrivalManifestPax))
 
     val crunchRequestSource = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
