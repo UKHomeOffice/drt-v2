@@ -30,7 +30,7 @@ object ArrivalGenerator {
               airportId: PortCode = PortCode(""),
               feedSources: Set[FeedSource] = Set(),
               apiPax: Option[Int] = None,
-              totalPax: Set[TotalPaxSource] = Set.empty[TotalPaxSource]
+              totalPax: Map[FeedSource, Option[Int]] = Map.empty
              ): Arrival = {
     val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None
 

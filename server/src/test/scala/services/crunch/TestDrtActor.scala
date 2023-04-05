@@ -3,7 +3,7 @@ package services.crunch
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.acking.AckingReceiver.Ack
-import actors.daily.{FlightUpdatesSupervisor, PassengersActor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
@@ -32,11 +32,10 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
-import uk.gov.homeoffice.drt.redlist.{RedListUpdateCommand, RedListUpdates}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import scala.collection.SortedSet
-import scala.collection.immutable.Map
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -241,15 +240,6 @@ class TestDrtActor extends Actor {
       val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val flushArrivalsSource: Source[Boolean, SourceQueueWithComplete[Boolean]] = Source.queue[Boolean](0, OverflowStrategy.backpressure)
 
-      val aclPaxAdjustmentDays = 7
-      val maxDaysToConsider = 14
-
-      val passengersActorProvider: () => ActorRef = tc.maybePassengersActorProps match {
-        case Some(props) => () => system.actorOf(props)
-        case None => () =>
-          system.actorOf(Props(new PassengersActor(maxDaysToConsider, aclPaxAdjustmentDays, tc.now)))
-      }
-
       val aggregatedArrivalsActor = tc.maybeAggregatedArrivalsActor match {
         case None => system.actorOf(Props(new MockAggregatedArrivalsActor))
         case Some(actor) => actor
@@ -285,13 +275,12 @@ class TestDrtActor extends Actor {
         arrivalsForecastFeed = Feed(forecastArrivals, 1.second, 5.second),
         arrivalsLiveBaseFeed = Feed(liveBaseArrivals, 1.second, 1.second),
         arrivalsLiveFeed = Feed(liveArrivals, 1.second, 500.millis),
-        passengersActorProvider = passengersActorProvider,
+        passengerAdjustments = tc.passengerAdjustments,
         initialShifts = tc.initialShifts,
         initialFixedPoints = tc.initialFixedPoints,
         initialStaffMovements = tc.initialStaffMovements,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
         optimiser = tc.cruncher,
-        aclPaxAdjustmentDays = aclPaxAdjustmentDays,
         startDeskRecs = startDeskRecs,
         arrivalsAdjustments = tc.arrivalsAdjustments,
         flushArrivalsSource = flushArrivalsSource,
@@ -306,6 +295,7 @@ class TestDrtActor extends Actor {
         liveArrivalsInput = crunchInputs.liveArrivalsResponse.feedSource,
         ciriumArrivalsInput = crunchInputs.liveBaseArrivalsResponse.feedSource,
         manifestsLiveInput = crunchInputs.manifestsLiveResponseSource,
+        recalculateArrivalsInput = crunchInputs.flushArrivalsSource,
         shiftsInput = shiftsActor,
         fixedPointsInput = fixedPointsActor,
         staffMovementsInput = staffMovementsActor,

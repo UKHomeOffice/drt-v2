@@ -79,7 +79,7 @@ class SplitsForArrivalsSpec extends Specification {
         val updated = splitsForArrivals.diff(flights, now)
 
         updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(ApiFeedSource), ApiPax = Option(1),
-          TotalPax = Set(TotalPaxSource(Option(1), ApiFeedSource))
+          TotalPax = Map(ApiFeedSource -> Option(1))
         ), Set(newSplits, existingSplits), Option(now))), Seq())
       }
     }
@@ -96,7 +96,7 @@ class SplitsForArrivalsSpec extends Specification {
         val updated = splitsForArrivals.diff(flights, now)
 
         updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(ApiFeedSource), ApiPax = Option(1),
-          TotalPax = Set(TotalPaxSource(Option(1), ApiFeedSource))), Set(newSplits, existingSplits1), Option(now))), Seq())
+          TotalPax = Map(ApiFeedSource -> Option(1))), Set(newSplits, existingSplits1), Option(now))), Seq())
       }
     }
 

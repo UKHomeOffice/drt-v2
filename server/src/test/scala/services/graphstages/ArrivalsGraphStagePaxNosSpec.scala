@@ -142,7 +142,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
 
     "Given an arrival with a zero pax, undefined trans pax, and max pax of 100" >> {
-      val arrival = ArrivalGenerator.arrival(actPax = Option(0), tranPax = None, maxPax = Option(100), totalPax = Set(TotalPaxSource(Option(0), AclFeedSource)))
+      val arrival = ArrivalGenerator.arrival(actPax = Option(0), tranPax = None, maxPax = Option(100), totalPax = Map(AclFeedSource -> Option(0)))
       "When I ask for the best pax" >> {
         val bestPax = arrival.bestPcpPaxEstimate.pax
         "I should see 0" >> {

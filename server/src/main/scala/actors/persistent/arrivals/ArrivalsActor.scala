@@ -19,6 +19,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.SortedMap
 
+
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
                              feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
@@ -111,7 +112,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     state = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
 
-    persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
+    persistFeedStatus(newStatus)
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
   }
 

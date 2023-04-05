@@ -67,8 +67,9 @@ object FeedSourceRow {
 
   case class Props(feedSourceArrival: FeedSourceArrival, airportConfig: AirportConfig) extends UseValueEq
 
-  def feedDisplayName(isCiriumAsPortLive: Boolean, feedSource: FeedSource): String = if (isCiriumAsPortLive)
-    feedSource.displayName(Option("Live arrival")) else feedSource.displayName(None)
+  def feedDisplayName(isCiriumAsPortLive: Boolean, feedSource: FeedSource): String =
+    if (isCiriumAsPortLive) "Live arrival"
+    else feedSource.displayName
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .render_P { props =>
