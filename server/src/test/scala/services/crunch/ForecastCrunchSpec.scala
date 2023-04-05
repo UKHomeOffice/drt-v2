@@ -15,14 +15,9 @@ import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedS
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
-
-class MockPassengerDeltaActor(maybeDelta: Option[Double]) extends Actor {
-  override def receive: Receive = {
-    case _ => sender() ! maybeDelta
-  }
-}
 
 class ForecastCrunchSpec extends CrunchTestLike {
   sequential
@@ -360,7 +355,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
-      maybePassengersActorProps = Option(Props(new MockPassengerDeltaActor(Option(paxDelta))))
+      passengerAdjustments = arrivals => Future.successful(arrivals.map(a => a.copy(ActPax = a.ActPax.map(pax => (pax * paxDelta).toInt))))
     ))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(baseArrivals)))
@@ -371,6 +366,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       case PortState(flightsWithSplits, _, _) =>
         if (flightsWithSplits.nonEmpty) {
           val actPax = flightsWithSplits.values.head.apiFlight.ActPax
+          println(s"actPax: $actPax, expectedActPax: $expectedActPax")
           actPax == expectedActPax
         } else false
     }
