@@ -1,6 +1,6 @@
 package actors
 
-import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber}
+import actors.CrunchManagerActor.AddQueueCrunchSubscriber
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors.daily.PassengersActor
@@ -430,13 +430,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     case Some(aclFeed) =>
       val initialDelay =
         if (config.get[Boolean]("acl.check-on-startup")) 10.seconds
-        else AclFeed.delayUntilNextAclCheck(now(), 18) + (Math.random() * 60).minutes
+        else 5.days//AclFeed.delayUntilNextAclCheck(now(), 18) + (Math.random() * 60).minutes
 
       log.info(s"Daily ACL check. Initial delay: ${initialDelay.toMinutes} minutes")
       Feed(Feed.actorRefSource.map { _ =>
         system.log.info(s"Requesting ACL feed")
         aclFeed.requestArrivals
-      }, initialDelay, 1.day)
+      }, initialDelay, 7.day)
   }
 
   def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {

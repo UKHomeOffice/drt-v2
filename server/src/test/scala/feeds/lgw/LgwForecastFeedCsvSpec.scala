@@ -17,7 +17,7 @@ class LgwForecastFeedCsvSpec extends Specification {
 
     val client = feedService.ssh.newSFTPClient
     val feed = LgwForecastFeedCsvParser(feedService.latestContent)
-    feed.parseLatestFile()
+    feed.parseLatestContent()
     client.close()
 
     success
