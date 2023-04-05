@@ -14,7 +14,7 @@ import scala.util.{Failure, Success, Try}
 case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def parseLatestFile(): Option[List[ForecastArrival]] = {
+  def parseLatestContent(): Option[List[ForecastArrival]] =
     fetchContent().map { content =>
       val flights = parseCsv(content)
 
@@ -22,7 +22,6 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
 
       flights._1
     }
-  }
 
   def parseCsv(csvContent: String): (List[ForecastArrival], Int) = {
     val csv = CSVParser.parse(csvContent, CSVFormat.DEFAULT.withFirstRecordAsHeader())
