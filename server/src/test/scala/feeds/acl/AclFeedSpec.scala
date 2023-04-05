@@ -39,12 +39,8 @@ class AclFeedSpec extends CrunchTestLike {
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastFlights))
-      Thread.sleep(250)
       adjustment = 5
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlights))
-      Thread.sleep(250)
-      //      offerAndWait(crunch.recalculateArrivalsInput, true)
-
 
       crunch.portStateTestProbe.fishForMessage(5.seconds) {
         case PortState(flights, _, _) =>
