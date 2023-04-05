@@ -21,14 +21,11 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 import scala.concurrent.duration.FiniteDuration
 
 object TerminalDayFlightActor {
-  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, None))
+  def propsWithRemovalsCutoff(terminal: Terminal, date: UtcDate, now: () => SDateLike, cutOff: Option[FiniteDuration]): Props =
+    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, cutOff))
 
-  def propsWithRemovalsCutoff(terminal: Terminal, date: UtcDate, now: () => SDateLike, cutOff: FiniteDuration): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, Option(cutOff)))
-
-  def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), None))
+  def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch, cutOff: Option[FiniteDuration]): Props =
+    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), cutOff))
 }
 
 class TerminalDayFlightActor(year: Int,
