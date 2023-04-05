@@ -58,7 +58,7 @@ object FlightComponents {
   def paxNumberSources(flight: ApiFlightWithSplits): VdomTagOf[Span] = {
     val paxSources = flight.apiFlight.TotalPax.toList.sortBy(_._1.name).map {
       case (feedSource, pax) =>
-        <.p(s"${feedSource.toString} - ${pax.map(_.toString).getOrElse("")}")
+        <.p(s"${feedSource.displayName} - ${pax.map(_.toString).getOrElse("")}")
     }
 
     val apiPax = List(
