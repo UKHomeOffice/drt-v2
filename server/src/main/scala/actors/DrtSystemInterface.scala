@@ -431,12 +431,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       val initialDelay =
         if (config.get[Boolean]("acl.check-on-startup")) 10.seconds
         else AclFeed.delayUntilNextAclCheck(now(), 18) + (Math.random() * 60).minutes
+      val frequency = 1.day
 
-      log.info(s"Daily ACL check. Initial delay: ${initialDelay.toMinutes} minutes")
+      log.info(s"Checking ACL every ${frequency.toHours} hours. Initial delay: ${initialDelay.toMinutes} minutes")
+
       Feed(Feed.actorRefSource.map { _ =>
         system.log.info(s"Requesting ACL feed")
         aclFeed.requestArrivals
-      }, initialDelay, 7.day)
+      }, initialDelay, frequency)
   }
 
   def liveBaseArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] = {
