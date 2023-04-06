@@ -430,7 +430,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     case Some(aclFeed) =>
       val initialDelay =
         if (config.get[Boolean]("acl.check-on-startup")) 10.seconds
-        else 5.days//AclFeed.delayUntilNextAclCheck(now(), 18) + (Math.random() * 60).minutes
+        else AclFeed.delayUntilNextAclCheck(now(), 18) + (Math.random() * 60).minutes
 
       log.info(s"Daily ACL check. Initial delay: ${initialDelay.toMinutes} minutes")
       Feed(Feed.actorRefSource.map { _ =>
