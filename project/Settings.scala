@@ -203,7 +203,7 @@ object Settings {
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
 
-    "org.webjars" % "font-awesome" % "4.3.0-4" % Provided,
+    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "com.box" % "box-java-sdk" % "2.19.0",
