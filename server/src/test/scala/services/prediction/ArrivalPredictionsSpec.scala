@@ -8,10 +8,10 @@ import drt.shared.FlightsApi.Flights
 import drt.shared.{ArrivalsDiff, PortState}
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
-import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrierOrigin, TerminalFlightNumberOrigin, WithId}
+import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalCarrierOrigin, TerminalFlightNumberOrigin, TerminalOrigin, WithId}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals.T2
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.prediction._
 import uk.gov.homeoffice.drt.prediction.arrival.FeatureColumns.{DayOfWeek, PartOfDay}
 import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
@@ -48,22 +48,50 @@ case class MockFlightPersistence()
 
 class ArrivalPredictionsSpec extends CrunchTestLike {
   val minutesOffScheduledThreshold = 45
+  private val modelKeysForArrival: Arrival => Iterable[WithId] = (a: Arrival) => Iterable(
+    TerminalFlightNumberOrigin(a.Terminal.toString, a.VoyageNumber.numeric, a.Origin.iata),
+    TerminalCarrierOrigin(a.Terminal.toString, a.CarrierCode.code, a.Origin.iata),
+  )
+
   val arrivalPredictions: ArrivalPredictions = ArrivalPredictions(
-    (a: Arrival) => Iterable(
-      TerminalFlightNumberOrigin(a.Terminal.toString, a.VoyageNumber.numeric, a.Origin.iata),
-      TerminalCarrierOrigin(a.Terminal.toString, a.CarrierCode.code, a.Origin.iata),
-    ),
+    modelKeysForArrival,
     MockFlightPersistence().getModels,
     Map(OffScheduleModelAndFeatures.targetName -> minutesOffScheduledThreshold),
     10)
   val scheduledStr = "2022-05-01T12:00"
 
+  "arrivalsByKey should" >> {
+    "take some arrivals and a function to create their keys and return a list of keys to arrivals" >> {
+      val jfkT1 = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T1)
+      val bhxT1 = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("BHX"), terminal = T1)
+      val jfkT2 = ArrivalGenerator.arrival("BA0002", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
+      val bhxT2 = ArrivalGenerator.arrival("BA0003", schDt = scheduledStr, origin = PortCode("BHX"), terminal = T2)
+      val arrivals = List(jfkT1, bhxT1, jfkT2, bhxT2)
+      val modelKeys: Arrival => Iterable[WithId] = arrival =>
+        List(
+          TerminalOrigin(arrival.Terminal.toString, arrival.Origin.iata),
+          TerminalCarrier(arrival.Terminal.toString, arrival.CarrierCode.code),
+        )
+
+      ArrivalPredictions.arrivalsByKey(arrivals, modelKeys).toSet === Set(
+        (TerminalOrigin("T1", "JFK"), List(jfkT1.unique)),
+        (TerminalOrigin("T2", "JFK"), List(jfkT2.unique)),
+        (TerminalOrigin("T1", "BHX"), List(bhxT1.unique)),
+        (TerminalOrigin("T2", "BHX"), List(bhxT2.unique)),
+        (TerminalCarrier("T1", "BA"), List(jfkT1.unique, bhxT1.unique)),
+        (TerminalCarrier("T2", "BA"), List(jfkT2.unique, bhxT2.unique)),
+      )
+    }
+  }
+
   "Given an arrival and an actor containing a prediction model for that arrival" >> {
     "I should be able to update the arrival with an predicted touchdown time" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
-      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictions(arrival), 1.second)
+      val keysWithArrival = modelKeysForArrival(arrival).map(k => (k, List(arrival.unique))).toList
+      val arrivalsMap = List(arrival).map(a => (a.unique, a)).toMap
+      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(arrivalsMap, keysWithArrival), 1.second)
 
-      maybePredictedTouchdown.predictedTouchdown.nonEmpty
+      maybePredictedTouchdown.head.predictedTouchdown.nonEmpty
     }
   }
 

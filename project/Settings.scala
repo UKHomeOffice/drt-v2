@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v460"
+    val drtLib = "v475"
 
     val scala = "2.13.10"
     val scalaDom = "2.0.0"
@@ -57,7 +57,7 @@ object Settings {
     val pprint = "0.5.6"
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "0.5.0-DRT"
-    val postgres = "42.2.27"
+    val postgres = "42.6.0"
     val sshJ = "0.24.0"
     val jodaTime = "2.9.4"
     val playJsonJoda = "2.6.9"
@@ -203,14 +203,14 @@ object Settings {
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
 
-    "org.webjars" % "font-awesome" % "4.3.0-4" % Provided,
+    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "com.box" % "box-java-sdk" % "2.19.0",
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
     "org.bitbucket.b_c" % "jose4j" % "0.4.4",
 
-    "io.netty" % "netty-all" % "4.1.74.Final",
+    "io.netty" % "netty-all" % "4.1.91.Final",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,

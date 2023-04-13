@@ -1,5 +1,6 @@
 package actors
 
+import actors.CrunchManagerActor.AddRecalculateArrivalsSubscriber
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent._
@@ -182,12 +183,14 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
         }
 
         val arrivalKeysProvider = DbManifestArrivalKeys(PostgresTables, airportConfig.portCode)
-        val manifestProcessor = DbManifestProcessor(PostgresTables, airportConfig.portCode, crunchInputs.manifestsLiveResponse)
+        val manifestProcessor = DbManifestProcessor(PostgresTables, airportConfig.portCode, crunchInputs.manifestsLiveResponseSource)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
         log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
         ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 15.seconds)
           .processFilesAfter(processFilesAfter)
           .runWith(Sink.ignore)
+
+        crunchManagerActor ! AddRecalculateArrivalsSubscriber(crunchInputs.flushArrivalsSource)
 
         setSubscribers(crunchInputs)
 

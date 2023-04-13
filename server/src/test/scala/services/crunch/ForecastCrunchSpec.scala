@@ -15,14 +15,9 @@ import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedS
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
-
-class MockPassengerDeltaActor(maybeDelta: Option[Double]) extends Actor {
-  override def receive: Receive = {
-    case _ => sender() ! maybeDelta
-  }
-}
 
 class ForecastCrunchSpec extends CrunchTestLike {
   sequential
@@ -182,7 +177,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
 
     val expectedForecastArrivals = Set(baseArrival.copy(FeedSources = Set(AclFeedSource),
-      TotalPax = Set(TotalPaxSource(baseArrival.ActPax, AclFeedSource))))
+      TotalPax = Map(AclFeedSource -> baseArrival.ActPax)))
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
@@ -212,9 +207,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val expectedForecastArrivals = Set(baseArrival.copy(ActPax = Some(50), TranPax = Some(25),
       FeedSources = Set(ForecastFeedSource, AclFeedSource),
-      TotalPax = Set(
-        TotalPaxSource(baseArrival.ActPax, AclFeedSource),
-        TotalPaxSource(forecastArrival.ActPax, ForecastFeedSource),
+      TotalPax = Map(
+        AclFeedSource -> baseArrival.ActPax,
+        ForecastFeedSource -> forecastArrival.ActPax,
       )))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
@@ -250,10 +245,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax,
       TranPax = forecastArrival.TranPax, Estimated = Some(SDate(liveScheduled).millisSinceEpoch),
       FeedSources = Set(AclFeedSource, ForecastFeedSource, LiveFeedSource),
-      TotalPax = Set(
-        TotalPaxSource(baseArrival.ActPax, AclFeedSource),
-        TotalPaxSource(forecastArrival.ActPax, ForecastFeedSource),
-        TotalPaxSource(liveArrival.ActPax, LiveFeedSource),
+      TotalPax = Map(
+        AclFeedSource -> baseArrival.ActPax,
+        ForecastFeedSource -> forecastArrival.ActPax,
+        LiveFeedSource -> liveArrival.ActPax,
       )))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
@@ -292,15 +287,15 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val expectedForecastArrivals = Set(
       baseArrival1.copy(ActPax = Some(51), Status = ArrivalStatus("Port Forecast"),
         FeedSources = Set(ForecastFeedSource, AclFeedSource),
-        TotalPax = Set(
-          TotalPaxSource(baseArrival1.ActPax, AclFeedSource),
-          TotalPaxSource(forecastArrival1.ActPax, ForecastFeedSource),
+        TotalPax = Map(
+          AclFeedSource->baseArrival1.ActPax,
+          ForecastFeedSource->forecastArrival1.ActPax,
         )),
       baseArrival2.copy(ActPax = Some(52), Status = ArrivalStatus("Port Forecast"),
         FeedSources = Set(ForecastFeedSource, AclFeedSource),
-        TotalPax = Set(
-          TotalPaxSource(baseArrival2.ActPax, AclFeedSource),
-          TotalPaxSource(forecastArrival2.ActPax, ForecastFeedSource),
+        TotalPax = Map(
+          AclFeedSource->baseArrival2.ActPax,
+          ForecastFeedSource->forecastArrival2.ActPax,
         )))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
@@ -360,7 +355,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
-      maybePassengersActorProps = Option(Props(new MockPassengerDeltaActor(Option(paxDelta))))
+      passengerAdjustments = arrivals => Future.successful(arrivals.map(a => a.copy(ActPax = a.ActPax.map(pax => (pax * paxDelta).toInt))))
     ))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(baseArrivals)))
@@ -371,6 +366,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       case PortState(flightsWithSplits, _, _) =>
         if (flightsWithSplits.nonEmpty) {
           val actPax = flightsWithSplits.values.head.apiFlight.ActPax
+          println(s"actPax: $actPax, expectedActPax: $expectedActPax")
           actPax == expectedActPax
         } else false
     }

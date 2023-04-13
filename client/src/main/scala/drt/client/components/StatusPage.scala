@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.RequestForecastRecrunch
+import drt.client.actions.Actions.{RequestForecastRecrunch, RequestRecalculateArrivals}
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -47,6 +47,10 @@ object StatusPage {
         SPACircuit.dispatch(RequestForecastRecrunch(recalculateSplits = true))
       }
 
+      def requestRecalculateArrivals(): Callback = Callback {
+        SPACircuit.dispatch(RequestRecalculateArrivals)
+      }
+
 
       modelRcp { proxy =>
 
@@ -70,13 +74,13 @@ object StatusPage {
 
             <.div(^.className := s"feed-status $ragStatus",
               if (feed.feedSource.name == "API")
-                <.h3(feed.feedSource.displayName(None), " ", apiDataTooltip)
+                <.h3(feed.feedSource.displayName, " ", apiDataTooltip)
               else if (manualCheckAllowed)
-                <.h3(feed.feedSource.displayName(None), " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
               else if (isCiriumAsPortLive)
-                <.h3(feed.feedSource.displayName(Option("Live arrival")))
+                <.h3("Live arrival")
               else
-                <.h3(feed.feedSource.displayName(None)),
+                <.h3(feed.feedSource.displayName),
               if (isCiriumAsPortLive)
                 <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isCiriumAsPortLive)))
               else
@@ -117,8 +121,9 @@ object StatusPage {
             <.br(),
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
-              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Request forecast re-crunch", ^.onClick --> requestForecastRecrunch())),
-              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Request splits refresh", ^.onClick --> requestSplitsRefresh())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Re-crunch forecast", ^.onClick --> requestForecastRecrunch())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Refresh splits", ^.onClick --> requestSplitsRefresh())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())),
             )
           ) else EmptyVdom
         }

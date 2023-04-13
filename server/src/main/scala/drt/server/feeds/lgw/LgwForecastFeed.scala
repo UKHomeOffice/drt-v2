@@ -25,7 +25,7 @@ object LgwForecastFeed {
     val feedSource = Feed.actorRefSource
       .map { _ =>
         log.info("Tick - Fetching LGW forecast feed")
-        csvParser.parseLatestFile() match {
+        csvParser.parseLatestContent() match {
           case Some(flights) =>
             val arrivals = flights.map(_.asArrival)
             ArrivalsFeedSuccess(Flights(arrivals))

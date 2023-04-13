@@ -245,7 +245,7 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
     setSubscribers(crunchInputs)
 
-    testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
+    testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponseSource)
 
     crunchInputs.killSwitches
   }

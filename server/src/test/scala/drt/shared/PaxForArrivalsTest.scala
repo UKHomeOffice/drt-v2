@@ -3,13 +3,13 @@ package drt.shared
 import drt.shared.FlightsApi.PaxForArrivals
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals.TotalPaxSource
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, HistoricApiFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 class PaxForArrivalsTest extends Specification {
   "When I ask to extract the historic api nos" >> {
     "Given an arrival with no passenger totals" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", sch = 0L, terminal = T1, origin = PortCode("ABC"), totalPax = Set())
+      val arrival = ArrivalGenerator.arrival(iata = "BA0001", sch = 0L, terminal = T1, origin = PortCode("ABC"), totalPax = Map())
       "I should get an empty PaxForArrivals" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals.empty
       }
@@ -17,7 +17,7 @@ class PaxForArrivalsTest extends Specification {
 
     "Given an arrival with live api passenger totals" >> {
       val arrival = ArrivalGenerator.arrival(iata = "BA0001", sch = 0L, terminal = T1, origin = PortCode("ABC"),
-        totalPax = Set(TotalPaxSource(Option(100), ApiFeedSource)))
+        totalPax = Map(ApiFeedSource -> Option(100)))
       "I should get an empty PaxForArrivals" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals.empty
       }
@@ -25,10 +25,10 @@ class PaxForArrivalsTest extends Specification {
 
     "Given an arrival with live & historic api passenger totals" >> {
       val arrival = ArrivalGenerator.arrival(iata = "BA0001", sch = 0L, terminal = T1, origin = PortCode("ABC"),
-        totalPax = Set(TotalPaxSource(Option(100), ApiFeedSource), TotalPaxSource(Option(100), HistoricApiFeedSource)))
+        totalPax = Map(ApiFeedSource -> Option(100), HistoricApiFeedSource -> Option(100)))
       "I should get a PaxForArrivals with HistoricApiFeedSource with 100 passengers" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals(Map(
-          arrival.unique -> Set(TotalPaxSource(Option(100), HistoricApiFeedSource))
+          arrival.unique -> Map[FeedSource, Option[Int]](HistoricApiFeedSource -> Option(100))
         ))
       }
     }

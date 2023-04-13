@@ -1,5 +1,6 @@
 package controllers.application
 
+import actors.CrunchManagerActor.RecalculateArrivals
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince, PointInTimeQuery}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -82,6 +83,13 @@ trait WithPortState {
           queueDaysToReCrunch(ctrl.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now)
           Future.successful(Ok("Re-crunching without updating splits"))
       }
+    }
+  }
+
+  def reCalculateArrivals: Action[AnyContent] = authByRole(SuperAdmin) {
+    Action.async { request: Request[AnyContent] =>
+      ctrl.crunchManagerActor ! RecalculateArrivals
+      Future.successful(Ok("Re-calculating arrivals"))
     }
   }
 }

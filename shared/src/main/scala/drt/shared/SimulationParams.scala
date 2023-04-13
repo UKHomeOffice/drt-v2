@@ -56,7 +56,7 @@ case class SimulationParams(
           ActPax = actualPax,
           TranPax = tranPax,
           FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
-          TotalPax = Set(TotalPaxSource(actualPax, ScenarioSimulationSource))
+          TotalPax = Map(ScenarioSimulationSource -> actualPax)
         )
         ua -> fws.copy(apiFlight = updatedArrival)
     })
