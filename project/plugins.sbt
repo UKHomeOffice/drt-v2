@@ -1,7 +1,7 @@
 // repository for Typesafe plugins
 resolvers += "Typesafe Releases" at "https://repo.typesafe.com/typesafe/ivy-releases/"
 
-addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.2.0")
+addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.3.0")
 
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.13.0")
 
