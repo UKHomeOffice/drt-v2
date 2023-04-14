@@ -59,7 +59,7 @@ object Settings {
     val bluebus = "0.5.0-DRT"
     val postgres = "42.6.0"
     val sshJ = "0.24.0"
-    val jodaTime = "2.9.4"
+    val jodaTime = "2.9.9"
     val playJsonJoda = "2.6.9"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
