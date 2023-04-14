@@ -44,7 +44,7 @@ object Settings {
     val specs2 = "4.20.0"
     val react = "17.0.2"
 
-    val bootstrap = "3.3.6"
+    val bootstrap = "3.3.7-1"
 
     val playScripts = "0.5.0"
     val sprayVersion = "1.3.4"
