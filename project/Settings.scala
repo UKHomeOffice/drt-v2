@@ -59,7 +59,7 @@ object Settings {
     val bluebus = "0.5.0-DRT"
     val postgres = "42.6.0"
     val sshJ = "0.24.0"
-    val jodaTime = "2.9.4"
+    val jodaTime = "2.9.9"
     val playJsonJoda = "2.6.9"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
@@ -144,7 +144,7 @@ object Settings {
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
     "com.github.gphat" %% "censorinus" % censorinus,
-    "com.pauldijou" %% "jwt-core" % "4.0.0",
+    "com.pauldijou" %% "jwt-core" % "4.3.0",
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
@@ -188,7 +188,7 @@ object Settings {
     "org.codehaus.janino" % "janino" % janinoVersion,
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.0",
     "com.fasterxml.jackson.core" % "jackson-core" % "2.10.0",
-    "org.pac4j" % "pac4j-saml" % pac4jSaml,
+//    "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.poi" % "poi" % poi,
     "org.apache.poi" % "poi-ooxml" % poi,
@@ -208,7 +208,7 @@ object Settings {
 
     "com.box" % "box-java-sdk" % "2.19.0",
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
-    "org.bitbucket.b_c" % "jose4j" % "0.4.4",
+//    "org.bitbucket.b_c" % "jose4j" % "0.4.4",
 
     "io.netty" % "netty-all" % "4.1.91.Final",
 

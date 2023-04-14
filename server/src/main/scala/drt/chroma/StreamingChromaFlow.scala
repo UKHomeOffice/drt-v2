@@ -8,8 +8,8 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeed
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
 import drt.shared.FlightsApi.Flights
+import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
-import org.springframework.util.StringUtils
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Operator, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -54,13 +54,13 @@ object StreamingChromaFlow {
         Actual = if (act == 0) None else Option(act),
         EstimatedChox = if (estChox == 0) None else Option(estChox),
         ActualChox = if (actChox == 0) None else Option(actChox),
-        Gate = if (StringUtils.isEmpty(flight.Gate)) None else Option(flight.Gate),
-        Stand = if (StringUtils.isEmpty(flight.Stand)) None else Option(flight.Stand),
+        Gate = if (StringUtils.isBlank(flight.Gate)) None else Option(flight.Gate),
+        Stand = if (StringUtils.isBlank(flight.Stand)) None else Option(flight.Stand),
         MaxPax = if (flight.MaxPax == 0) None else Option(flight.MaxPax),
         ActPax = if (flight.ActPax == 0) None else Option(flight.ActPax),
         TranPax = if (flight.ActPax == 0) None else Option(flight.TranPax),
-        RunwayID = if (StringUtils.isEmpty(flight.RunwayID)) None else Option(flight.RunwayID),
-        BaggageReclaimId = if (StringUtils.isEmpty(flight.BaggageReclaimId)) None else Option(flight.BaggageReclaimId),
+        RunwayID = if (StringUtils.isBlank(flight.RunwayID)) None else Option(flight.RunwayID),
+        BaggageReclaimId = if (StringUtils.isBlank(flight.BaggageReclaimId)) None else Option(flight.BaggageReclaimId),
         AirportID = flight.AirportID,
         Terminal = Terminal(flight.Terminal),
         rawICAO = flight.ICAO,
