@@ -144,7 +144,7 @@ object Settings {
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
     "com.github.gphat" %% "censorinus" % censorinus,
-    "com.pauldijou" %% "jwt-core" % "4.0.0",
+    "com.pauldijou" %% "jwt-core" % "4.3.0",
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
