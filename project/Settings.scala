@@ -58,7 +58,7 @@ object Settings {
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "0.5.0-DRT"
     val postgres = "42.6.0"
-    val sshJ = "0.24.0"
+    val sshJ = "0.35.0"
     val jodaTime = "2.9.9"
     val playJsonJoda = "2.6.9"
     val exposeLoader = "0.7.1"
