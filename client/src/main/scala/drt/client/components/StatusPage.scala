@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.RequestForecastRecrunch
+import drt.client.actions.Actions.{RequestForecastRecrunch, RequestRecalculateArrivals}
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -9,7 +9,6 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.CheckFeed
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -18,12 +17,9 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.PortFeedUpload
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, ApiFeedSource, FeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.auth.Roles.{PortFeedUpload, SuperAdmin}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, FeedSource, LiveFeedSource}
-import uk.gov.homeoffice.drt.auth.Roles.PortFeedUpload
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, ApiFeedSource, FeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
+import uk.gov.homeoffice.drt.ports._
 
 
 object StatusPage {
@@ -51,6 +47,10 @@ object StatusPage {
         SPACircuit.dispatch(RequestForecastRecrunch(recalculateSplits = true))
       }
 
+      def requestRecalculateArrivals(): Callback = Callback {
+        SPACircuit.dispatch(RequestRecalculateArrivals)
+      }
+
 
       modelRcp { proxy =>
 
@@ -74,13 +74,13 @@ object StatusPage {
 
             <.div(^.className := s"feed-status $ragStatus",
               if (feed.feedSource.name == "API")
-                <.h3(feed.feedSource.displayName(None), " ", apiDataTooltip)
+                <.h3(feed.feedSource.displayName, " ", apiDataTooltip)
               else if (manualCheckAllowed)
-                <.h3(feed.feedSource.displayName(None), " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
               else if (isCiriumAsPortLive)
-                <.h3(feed.feedSource.displayName(Option("Live arrival")))
+                <.h3("Live arrival")
               else
-                <.h3(feed.feedSource.displayName(None)),
+                <.h3(feed.feedSource.displayName),
               if (isCiriumAsPortLive)
                 <.div(^.className := s"feed-status-description", <.p(feed.feedSource.description(isCiriumAsPortLive)))
               else
@@ -121,8 +121,9 @@ object StatusPage {
             <.br(),
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
-              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Request forecast re-crunch", ^.onClick --> requestForecastRecrunch())),
-              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Request splits refresh", ^.onClick --> requestSplitsRefresh())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Re-crunch forecast", ^.onClick --> requestForecastRecrunch())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Refresh splits", ^.onClick --> requestSplitsRefresh())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())),
             )
           ) else EmptyVdom
         }
@@ -141,8 +142,8 @@ object StatusPage {
 
   private def displayTime(date: MillisSinceEpoch): String = {
     val dateToDisplay = SDate(date)
-    if (dateToDisplay.toISODateOnly == SDate.now().toISODateOnly) dateToDisplay.hms()
-    else dateToDisplay.prettyDateTime()
+    if (dateToDisplay.toISODateOnly == SDate.now().toISODateOnly) dateToDisplay.hms
+    else dateToDisplay.prettyDateTime
   }
 
   def timeAgo(millisToCheck: MillisSinceEpoch): String = {

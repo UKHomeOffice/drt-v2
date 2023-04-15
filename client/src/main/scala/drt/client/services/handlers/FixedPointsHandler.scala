@@ -30,7 +30,7 @@ class FixedPointsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW
         else noChange
       else {
         if (isFirstLoad) updated(Ready(fixedPoints), scheduledRequest(viewMode))
-        else if (isUpdated) updated(Ready(fixedPoints), scheduledRequest(viewMode) + updateSnackbarEffect)
+        else if (isUpdated) updated(Ready(fixedPoints), scheduledRequest(viewMode) + updateSnackbarEffect())
         else effectOnly(scheduledRequest(viewMode))
       }
 

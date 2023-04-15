@@ -7,7 +7,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
-import drt.shared.FlightsApi.{FlightsWithSplits, PaxForArrivals, SplitsForArrivals}
+import drt.shared.FlightsApi.{PaxForArrivals, SplitsForArrivals}
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
@@ -15,31 +15,24 @@ import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.DynamicQueueStatusProvider
-import services.TimeLogger
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
-import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.collection.immutable.Map
 import scala.concurrent.{ExecutionContext, Future}
 
 
 object DynamicRunnablePassengerLoads {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val timeLogger: TimeLogger = TimeLogger("DeskRecs", 1000, log)
-
   type HistoricManifestsProvider = Iterable[Arrival] => Source[ManifestLike, NotUsed]
 
   type HistoricManifestsPaxProvider = Arrival => Future[Option[ManifestPaxCount]]
-
-  type FlightsToLoads = (FlightsWithSplits, RedListUpdates) => Map[TQM, Crunch.LoadMinute]
 
   def crunchRequestsToQueueMinutes(arrivalsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                                    liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
@@ -79,8 +72,8 @@ object DynamicRunnablePassengerLoads {
     } else 100
   }
 
-  def updateSplits(splitsSink: ActorRef)
-                  (implicit ec: ExecutionContext, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+  private def updateSplits(splitsSink: ActorRef)
+                          (implicit ec: ExecutionContext, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
@@ -94,8 +87,8 @@ object DynamicRunnablePassengerLoads {
             }
       }
 
-  def updateHistoricApiPaxNos(splitsSink: ActorRef)
-                             (implicit ec: ExecutionContext, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+  private def updateHistoricApiPaxNos(splitsSink: ActorRef)
+                                     (implicit ec: ExecutionContext, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
@@ -121,7 +114,7 @@ object DynamicRunnablePassengerLoads {
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchDay, flights) =>
-          log.info(s"Passenger load calculation starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
+          log.info(s"Passenger load calculation starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString} to ${crunchDay.end.toISOString})")
           val eventualDeskRecs = for {
             redListUpdates <- redListUpdatesProvider()
             statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(crunchDay.minutesInMillis)
@@ -136,7 +129,7 @@ object DynamicRunnablePassengerLoads {
               flightsPax.getOrElse(TQM(terminal, queue, minute), PassengersMinute(terminal, queue, minute, Seq(), Option(SDate.now().millisSinceEpoch)))
             }
 
-            log.info(s"Passenger load calculation finished: (${crunchDay.start.toISOString()} to ${crunchDay.end.toISOString()})")
+            log.info(s"Passenger load calculation finished: (${crunchDay.start.toISOString} to ${crunchDay.end.toISOString})")
             Option(MinutesContainer(paxMinutesForCrunchPeriod.toSeq))
           }
           eventualDeskRecs.recover {
@@ -201,7 +194,7 @@ object DynamicRunnablePassengerLoads {
             if (flight.apiFlight.hasNoPaxSource) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
-                  val totalPax: Set[TotalPaxSource] = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(manifestPaxLike.pax, HistoricApiFeedSource))
+                  val totalPax: Map[FeedSource, Option[Int]] = flight.apiFlight.TotalPax.updated(HistoricApiFeedSource, manifestPaxLike.pax)
                   val updatedArrival = flight.apiFlight.copy(TotalPax = totalPax)
                   flight.copy(apiFlight = updatedArrival)
                 case None => flight
@@ -316,7 +309,7 @@ object DynamicRunnablePassengerLoads {
             val arrival = flight.apiFlight.copy(
               ApiPax = Option(apiPax),
               FeedSources = flight.apiFlight.FeedSources + ApiFeedSource,
-              TotalPax = flight.apiFlight.TotalPax ++ Set(TotalPaxSource(Option(apiPax), ApiFeedSource))
+              TotalPax = flight.apiFlight.TotalPax.updated(ApiFeedSource, Option(apiPax))
             )
 
             flight.copy(apiFlight = arrival)

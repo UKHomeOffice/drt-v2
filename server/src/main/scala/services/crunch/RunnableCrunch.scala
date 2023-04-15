@@ -13,9 +13,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import services.graphstages._
 import services.metrics.Metrics
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
-import uk.gov.homeoffice.drt.redlist.RedListUpdateCommand
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -24,38 +23,36 @@ object RunnableCrunch {
 
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
 
-  def groupByCodeShares(flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Set[Arrival])] = flights.map(f => (f, Set(f.apiFlight)))
+  def apply[FR, MS, SAD, RL](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                             forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                             liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                             liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                             manifestsLiveSource: Source[ManifestsFeedResponse, MS],
+                             actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+                             flushArrivalsSource: Source[Boolean, RL],
+                             addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+                             setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
 
-  def apply[FR, MS, SS, SFP, SMM, SAD, RL](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                           forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                           liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                           liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                                           manifestsLiveSource: Source[ManifestsFeedResponse, MS],
-                                           actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
-                                           redListUpdatesSource: Source[List[RedListUpdateCommand], RL],
-                                           addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff],
-                                           setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
+                             arrivalsGraphStage: ArrivalsGraphStage,
 
-                                           arrivalsGraphStage: ArrivalsGraphStage,
+                             forecastArrivalsDiffStage: ArrivalsDiffingStage,
+                             liveBaseArrivalsDiffStage: ArrivalsDiffingStage,
+                             liveArrivalsDiffStage: ArrivalsDiffingStage,
 
-                                           forecastArrivalsDiffStage: ArrivalsDiffingStage,
-                                           liveBaseArrivalsDiffStage: ArrivalsDiffingStage,
-                                           liveArrivalsDiffStage: ArrivalsDiffingStage,
+                             forecastBaseArrivalsActor: ActorRef,
+                             forecastArrivalsActor: ActorRef,
+                             liveBaseArrivalsActor: ActorRef,
+                             liveArrivalsActor: ActorRef,
+                             applyPaxDeltas: List[Arrival] => Future[List[Arrival]],
 
-                                           forecastBaseArrivalsActor: ActorRef,
-                                           forecastArrivalsActor: ActorRef,
-                                           liveBaseArrivalsActor: ActorRef,
-                                           liveArrivalsActor: ActorRef,
-                                           applyPaxDeltas: List[Arrival] => Future[List[Arrival]],
+                             manifestsActor: ActorRef,
 
-                                           manifestsActor: ActorRef,
+                             portStateActor: ActorRef,
+                             aggregatedArrivalsStateActor: ActorRef,
 
-                                           portStateActor: ActorRef,
-                                           aggregatedArrivalsStateActor: ActorRef,
-
-                                           forecastMaxMillis: () => MillisSinceEpoch
-                                          )
-                                          (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, MS, SAD, RL, UniqueKillSwitch, UniqueKillSwitch)] = {
+                             forecastMaxMillis: () => MillisSinceEpoch
+                            )
+                            (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, MS, SAD, RL, UniqueKillSwitch, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]
@@ -69,7 +66,7 @@ object RunnableCrunch {
       liveArrivalsSource,
       manifestsLiveSource,
       actualDesksAndWaitTimesSource,
-      redListUpdatesSource.async,
+      flushArrivalsSource.async,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
     )((_, _, _, _, _, _, _, _, _)) {
@@ -82,7 +79,7 @@ object RunnableCrunch {
           liveArrivalsSourceSync,
           manifestsLiveSourceSync,
           actualDesksAndWaitTimesSourceSync,
-          redListUpdatesSourceAsync,
+          flushArrivalsSourceAsync,
           arrivalsKillSwitchSync,
           manifestsLiveKillSwitchSync,
         ) =>
@@ -154,7 +151,7 @@ object RunnableCrunch {
               as.toList
             } ~> arrivals.in3
 
-          redListUpdatesSourceAsync ~> arrivals.in4
+          flushArrivalsSourceAsync ~> arrivals.in4
 
           liveArrivalsFanOut ~> liveArrivalsSink
 
@@ -165,18 +162,8 @@ object RunnableCrunch {
           } ~> manifestsLiveKillSwitchSync ~> manifestsSink
 
           arrivals.out
-            .mapAsync(1) { diff =>
-              if (diff.toUpdate.nonEmpty) {
-                val startMillis = SDate.now().millisSinceEpoch
-                val withoutPredictions = diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
-                addTouchdownPredictions(diff).map { diffWithPredictions =>
-                  val predictionsAdded = withoutPredictions - diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
-                  val millisTaken = SDate.now().millisSinceEpoch - startMillis
-                  log.info(s"Touchdown prediction lookups finished for $withoutPredictions arrivals. $predictionsAdded new predictions added. Took ${millisTaken}ms")
-                  diffWithPredictions
-                }
-              } else Future.successful(diff)
-            }
+            .mapConcat(_.splitByScheduledUtcDate(ts => SDate(ts)))
+            .mapAsync(1) { case (date, diff) => addPredictionsToDiff(addArrivalPredictions, date, diff) }
             .mapAsync(1) { diff =>
               if (diff.toUpdate.nonEmpty) setPcpTimes(diff) else Future.successful(diff)
             } ~> arrivalsFanOut
@@ -194,4 +181,17 @@ object RunnableCrunch {
       .fromGraph(graph)
       .withAttributes(StreamSupervision.resumeStrategyWithLog(RunnableCrunch.getClass.getName))
   }
+
+  private def addPredictionsToDiff(addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff], date: UtcDate, diff: ArrivalsDiff)
+                                  (implicit executionContext: ExecutionContext): Future[ArrivalsDiff] =
+    if (diff.toUpdate.nonEmpty) {
+      log.info(f"Looking up arrival predictions for ${diff.toUpdate.size} arrivals on ${date.day}%02d/${date.month}%02d/${date.year}")
+      val startMillis = SDate.now().millisSinceEpoch
+      val withoutPredictions = diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
+      addArrivalPredictions(diff).map { diffWithPredictions =>
+        val millisTaken = SDate.now().millisSinceEpoch - startMillis
+        log.info(s"Arrival prediction lookups finished for $withoutPredictions arrivals. Took ${millisTaken}ms")
+        diffWithPredictions
+      }
+    } else Future.successful(diff)
 }

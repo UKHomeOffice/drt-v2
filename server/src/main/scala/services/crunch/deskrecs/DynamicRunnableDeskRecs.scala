@@ -6,21 +6,17 @@ import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
-import services.TimeLogger
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.DynamicRunnableDeployments.PassengersToQueueMinutes
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
-import scala.collection.immutable.Map
 import scala.concurrent.{ExecutionContext, Future}
 
 
 object DynamicRunnableDeskRecs {
   private val log: Logger = LoggerFactory.getLogger(getClass)
-
-  val timeLogger: TimeLogger = TimeLogger("DeskRecs", 1000, log)
 
   type HistoricManifestsProvider = Iterable[Arrival] => Source[ManifestLike, NotUsed]
 
@@ -45,7 +41,7 @@ object DynamicRunnableDeskRecs {
       }
       .mapAsync(1) {
         case (request, loads) =>
-          log.info(s"[desk-recs] Optimising ${request.durationMinutes} minutes (${request.start.toISOString()} to ${request.end.toISOString()})")
+          log.info(s"[desk-recs] Optimising ${request.durationMinutes} minutes (${request.start.toISOString} to ${request.end.toISOString})")
           loadsToQueueMinutes(request.minutesInMillis, loads, maxDesksProviders)
             .map(minutes => Option(minutes))
             .recover {

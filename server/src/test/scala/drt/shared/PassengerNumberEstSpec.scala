@@ -179,7 +179,7 @@ class PassengerNumberEstSpec extends Specification {
       actPax = Option(actPax),
       tranPax = Option(transferPax),
       feedSources = sources,
-      totalPax = Set(sources.map(TotalPaxSource(Option(actPax), _)).toList: _*)
+      totalPax = sources.map(s => (s, Option(actPax))).toMap
     )
 
     ApiFlightWithSplits(flight, splits)

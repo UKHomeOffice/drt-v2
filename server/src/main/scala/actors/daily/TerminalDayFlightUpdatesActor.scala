@@ -3,7 +3,6 @@ package actors.daily
 import actors.StreamingJournalLike
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.daily.StreamingUpdatesLike.StopUpdates
-import actors.serializers.FlightMessageConversion
 import akka.actor.PoisonPill
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
@@ -14,6 +13,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{flightWithSplitsDiffFromMessage, flightWithSplitsFromMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 
@@ -81,7 +81,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
   def myReceiveCommand: Receive = {
     case EventEnvelope(_, _, _, diffMessage: FlightsWithSplitsDiffMessage) =>
-      val diff = FlightMessageConversion.flightWithSplitsDiffFromMessage(diffMessage)
+      val diff = flightWithSplitsDiffFromMessage(diffMessage)
 
       updatesAndRemovals = updatesAndRemovals
         .apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
@@ -94,11 +94,11 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
   def myReceiveRecover: Receive = {
     case SnapshotOffer(SnapshotMetadata(_, _, _), m: FlightsWithSplitsMessage) =>
-      val flights = m.flightWithSplits.map(FlightMessageConversion.flightWithSplitsFromMessage)
+      val flights = m.flightWithSplits.map(flightWithSplitsFromMessage)
       updatesAndRemovals = updatesAndRemovals ++ flights
 
     case diffMessage: FlightsWithSplitsDiffMessage =>
-      val diff = FlightMessageConversion.flightWithSplitsDiffFromMessage(diffMessage)
+      val diff = flightWithSplitsDiffFromMessage(diffMessage)
       updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
   }
 }

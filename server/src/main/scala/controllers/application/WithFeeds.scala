@@ -10,11 +10,12 @@ import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent}
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
+import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure}
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.time.SDate
 import upickle.default.{read, write}
 
 import java.util.UUID
@@ -108,14 +109,14 @@ trait WithFeeds {
         .map(arrivalSources => Ok(write(arrivalSources)))
     }
 
-  val arrivalActorPersistenceIds = Seq(
+  private val arrivalActorPersistenceIds = Seq(
     (CirriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
     (PortLiveArrivalsActor.persistenceId, LiveFeedSource),
     (AclForecastArrivalsActor.persistenceId, AclFeedSource),
     (PortForecastArrivalsActor.persistenceId, ForecastFeedSource)
   )
 
-  def pointInTimeActorSources(pit: MillisSinceEpoch): Seq[UniqueArrival => ActorRef] = {
+  private def pointInTimeActorSources(pit: MillisSinceEpoch): Seq[UniqueArrival => ActorRef] = {
     arrivalActorPersistenceIds.map {
       case (id, source) =>
         (ua: UniqueArrival) =>

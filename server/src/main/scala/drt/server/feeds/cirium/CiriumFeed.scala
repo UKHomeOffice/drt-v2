@@ -49,7 +49,7 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
 object CiriumFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def terminalMatchForPort(terminal: Option[String], portCode: PortCode): Terminal = portCode.iata match {
+  private def terminalMatchForPort(terminal: Option[String], portCode: PortCode): Terminal = portCode.iata match {
     case "LTN" | "STN" | "EMA" | "GLA" | "LCY" | "BRS" | "BFS" | "LPL" | "NCL" | "PIK" =>
       T1
     case "EDI" =>
@@ -59,7 +59,7 @@ object CiriumFeed {
     case _ => Terminal(terminal.getOrElse(""))
   }
 
-  def timeToNearest5Minutes(date: SDateLike): SDateLike = date.getMinutes() % 5 match {
+  def timeToNearest5Minutes(date: SDateLike): SDateLike = date.getMinutes % 5 match {
     case n if n <= 2 => date.addMinutes(-n)
     case n if n >= 3 => date.addMinutes(5 - n)
     case _ => date
@@ -111,7 +111,7 @@ object CiriumFeed {
       Unmarshal[HttpResponse](res).to[List[CiriumFlightStatus]]
     }.flatten
 
-  val ciriumStatusCodeToStatus: Map[String, String] = Map(
+  private val ciriumStatusCodeToStatus: Map[String, String] = Map(
     "A" -> "Active",
     "C" -> "Canceled",
     "D" -> "Diverted",

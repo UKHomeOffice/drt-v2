@@ -26,7 +26,7 @@ object LHRForecastCSVExtractor {
 
   def apply(filePath: String): Seq[Arrival] = {
     val source = Source.fromFile(filePath)
-    val file = source.getLines.mkString("\n")
+    val file = source.getLines().mkString("\n")
     source.close()
     parse(file).map(LHRForecastFeed.lhrFieldsToArrival).collect {
       case Success(arrival) => arrival

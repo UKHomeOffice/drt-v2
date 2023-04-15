@@ -10,15 +10,13 @@ import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
-import uk.gov.homeoffice.drt.time.SDate
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -61,7 +59,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
   }
 
   def resetData(terminal: Terminal, day: SDateLike): Unit = {
-    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => SDate.now())))
+    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => SDate.now())))
     Await.ready(actor.ask(ResetData), 1.second)
   }
 
