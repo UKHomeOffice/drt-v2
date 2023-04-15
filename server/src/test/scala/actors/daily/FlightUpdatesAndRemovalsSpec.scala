@@ -1,9 +1,8 @@
 package actors.daily
 
 import controllers.ArrivalGenerator
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplitsDiff}
 
 class FlightUpdatesAndRemovalsSpec extends Specification {
   private val update1000 = 1000L

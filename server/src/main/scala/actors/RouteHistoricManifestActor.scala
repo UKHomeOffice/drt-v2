@@ -38,8 +38,8 @@ object RouteHistoricManifestActor {
         RouteHistoricManifestActor.updateForUniqueArrival(key, manifest, now)(system, timeout, ec)
       }
 
-  def forUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, now: () => SDateLike, maybePointInTime: Option[Long])
-                      (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Future[Option[ManifestLike]] = {
+  private def forUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, now: () => SDateLike, maybePointInTime: Option[Long])
+                              (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Future[Option[ManifestLike]] = {
     val actor = system.actorOf(props(uniqueArrivalKey, now, maybePointInTime))
 
     actor
@@ -55,8 +55,8 @@ object RouteHistoricManifestActor {
       }
   }
 
-  def updateForUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, manifestLike: ManifestLike, now: () => SDateLike)
-                            (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Future[AckingReceiver.Ack.type] = {
+  private def updateForUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, manifestLike: ManifestLike, now: () => SDateLike)
+                                    (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Future[AckingReceiver.Ack.type] = {
     val actor = system.actorOf(props(uniqueArrivalKey, now, None))
 
     actor
@@ -74,7 +74,7 @@ object RouteHistoricManifestActor {
       uniqueArrivalKey.arrivalPort.iata,
       uniqueArrivalKey.departurePort.iata,
       uniqueArrivalKey.voyageNumber.numeric,
-      uniqueArrivalKey.scheduled.getDayOfWeek(),
+      uniqueArrivalKey.scheduled.getDayOfWeek,
       SDate.weekOfYear(uniqueArrivalKey.scheduled),
       now,
       maybePointInTime,

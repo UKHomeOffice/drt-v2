@@ -1,16 +1,12 @@
 package actors.serializers
 
-import actors.serializers.FlightMessageConversion.flightWithSplitsFromMessage
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
-import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, EventType, SplitStyle, Splits, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxAge, PaxType}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.flightWithSplitsFromMessage
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object PortStateMessageConversion {
@@ -83,64 +79,6 @@ object PortStateMessageConversion {
     fixedPoints = Option(sm.fixedPoints),
     movements = Option(sm.movements),
     lastUpdated = sm.lastUpdated)
-
-  def flightsFromMessages(flightMessages: Seq[FlightWithSplitsMessage]): Map[UniqueArrival, ApiFlightWithSplits] =
-    flightMessages.map(message => {
-      val fws = flightWithSplitsFromMessage(message)
-      (fws.unique, fws)
-    }).toMap
-
-  def portStateToSnapshotMessage(portState: PortState): CrunchStateSnapshotMessage = CrunchStateSnapshotMessage(
-    Option(0L),
-    Option(0),
-    portState.flights.values.toList.map(flight => FlightMessageConversion.flightWithSplitsToMessage(flight)),
-    portState.crunchMinutes.values.toList.map(crunchMinuteToMessage),
-    portState.staffMinutes.values.toList.map(staffMinuteToMessage)
-  )
-
-  def splitMessageToApiSplits(sm: SplitMessage): Splits = {
-    val splitSource = SplitSource(sm.source.getOrElse("")) match {
-      case SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages_Old => SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-      case s => s
-    }
-
-    Splits(
-      sm.paxTypeAndQueueCount.map(ptqcm => {
-        ApiPaxTypeAndQueueCount(
-          PaxType(ptqcm.paxType.getOrElse("")),
-          Queue(ptqcm.queueType.getOrElse("")),
-          ptqcm.paxValue.getOrElse(0d),
-          nationalitiesFromMessage(ptqcm),
-          passengerAgesFromMessage(ptqcm)
-        )
-      }).toSet,
-      splitSource,
-      sm.eventType.map(EventType(_)),
-      SplitStyle(sm.style.getOrElse("")),
-    )
-  }
-
-  def nationalitiesFromMessage(ptqcm: PaxTypeAndQueueCountMessage): Option[Map[Nationality, Double]] = ptqcm
-    .nationalities
-    .map(nc => {
-      nc.paxNationality -> nc.count
-    }).collect {
-    case (Some(nat), Some(count)) => Nationality(nat) -> count
-  }.toMap match {
-    case nats if nats.isEmpty => None
-    case nats => Option(nats)
-  }
-
-  def passengerAgesFromMessage(ptqcm: PaxTypeAndQueueCountMessage): Option[Map[PaxAge, Double]] = ptqcm
-    .ages
-    .map(pa => {
-      pa.paxAge -> pa.count
-    }).collect {
-    case (Some(age), Some(count)) => PaxAge(age) -> count
-  }.toMap match {
-    case ages if ages.isEmpty => None
-    case ages => Option(ages)
-  }
 
   def crunchMinuteToMessage(cm: CrunchMinute): CrunchMinuteMessage = CrunchMinuteMessage(
     terminalName = Option(cm.terminal.toString),

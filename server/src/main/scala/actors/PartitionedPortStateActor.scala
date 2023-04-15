@@ -5,17 +5,16 @@ import actors.acking.Acking.AckingAsker
 import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily._
 import akka.NotUsed
-import akka.actor.{Actor, ActorContext, ActorRef, Props}
+import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.{ask, pipe}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi._
-import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{UniqueArrival, WithTimeAccessor}
+import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, FlightsWithSplitsDiff, UniqueArrival, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
@@ -27,17 +26,17 @@ import scala.language.postfixOps
 object PartitionedPortStateActor {
   def queueUpdatesProps(now: () => SDateLike, journalType: StreamingJournalLike): (Terminal, SDateLike) => Props =
     (terminal: Terminal, day: SDateLike) => {
-      Props(new TerminalDayQueuesUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
+      Props(new TerminalDayQueuesUpdatesActor(day.getFullYear, day.getMonth, day.getDate, terminal, now, journalType))
     }
 
   def staffUpdatesProps(now: () => SDateLike, journalType: StreamingJournalLike): (Terminal, SDateLike) => Props =
     (terminal: Terminal, day: SDateLike) => {
-      Props(new TerminalDayStaffUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
+      Props(new TerminalDayStaffUpdatesActor(day.getFullYear, day.getMonth, day.getDate, terminal, now, journalType))
     }
 
   def flightUpdatesProps(now: () => SDateLike, journalType: StreamingJournalLike): (Terminal, SDateLike) => Props =
     (terminal: Terminal, day: SDateLike) => {
-      Props(new TerminalDayFlightUpdatesActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, now, journalType))
+      Props(new TerminalDayFlightUpdatesActor(day.getFullYear, day.getMonth, day.getDate, terminal, now, journalType))
     }
 
   type QueueMinutesRequester = PortStateRequest => Future[MinutesContainer[CrunchMinute, TQM]]
@@ -46,7 +45,7 @@ object PartitionedPortStateActor {
 
   type FlightsRequester = PortStateRequest => Future[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-  type FlightUpdatesRequester = PortStateRequest => Future[FlightsWithSplitsDiff]
+  private type FlightUpdatesRequester = PortStateRequest => Future[FlightsWithSplitsDiff]
 
   type PortStateUpdatesRequester = (MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, ActorRef) => Future[Option[PortStateUpdates]]
 
@@ -70,8 +69,8 @@ object PartitionedPortStateActor {
       case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
     }
 
-  def requestFlightUpdatesFn(actor: ActorRef)
-                            (implicit timeout: Timeout, ec: ExecutionContext): FlightUpdatesRequester =
+  private def requestFlightUpdatesFn(actor: ActorRef)
+                                    (implicit timeout: Timeout, ec: ExecutionContext): FlightUpdatesRequester =
     request => actor.ask(request).mapTo[FlightsWithSplitsDiff].recoverWith {
       case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
     }
@@ -95,8 +94,8 @@ object PartitionedPortStateActor {
       staffMins(request)
     ).pipeTo(replyTo)
 
-  def replyWithMinutesAsPortStateFn(queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
-                                   (implicit ec: ExecutionContext, mat: Materializer): PortStateRequester =
+  private def replyWithMinutesAsPortStateFn(queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
+                                           (implicit ec: ExecutionContext, mat: Materializer): PortStateRequester =
     replyWithPortStateFn(_ => Future(Source(List[(UtcDate, FlightsWithSplits)]())), queueMins, staffMins)
 
   def forwardRequestAndKillActor(killActor: ActorRef)
@@ -107,10 +106,10 @@ object PartitionedPortStateActor {
         .pipeTo(replyTo)
     }
 
-  def combineToPortStateUpdates(eventualFlightsDiff: Future[FlightsWithSplitsDiff],
-                                eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
-                                eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
-                               (implicit ec: ExecutionContext): Future[Option[PortStateUpdates]] =
+  private def combineToPortStateUpdates(eventualFlightsDiff: Future[FlightsWithSplitsDiff],
+                                        eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
+                                        eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
+                                       (implicit ec: ExecutionContext): Future[Option[PortStateUpdates]] =
     for {
       flightsDiff <- eventualFlightsDiff
       queueMinutes <- eventualQueueMinutes
@@ -128,10 +127,10 @@ object PartitionedPortStateActor {
       else None
     }
 
-  def combineToPortState(flightsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]],
-                         eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
-                         eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
-                        (implicit ec: ExecutionContext, mat: Materializer): Future[PortState] = {
+  private def combineToPortState(flightsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]],
+                                 eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
+                                 eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
+                                (implicit ec: ExecutionContext, mat: Materializer): Future[PortState] = {
     val eventualFlights = flightsStream
       .flatMap(source => source
         .log(getClass.getName)
@@ -180,18 +179,6 @@ object PartitionedPortStateActor {
 
 }
 
-trait PartitionedPortStateActorLike {
-  val now: () => SDateLike
-  val context: ActorContext
-  val journalType: StreamingJournalLike
-  val queues: Map[Terminal, Seq[Queue]]
-
-  def terminals: List[Terminal] = queues.keys.toList
-
-  val queueUpdatesSupervisor: ActorRef
-  val staffUpdatesSupervisor: ActorRef
-}
-
 class PartitionedPortStateActor(flightsRouterActor: ActorRef,
                                 queuesRouterActor: ActorRef,
                                 staffRouterActor: ActorRef,
@@ -211,21 +198,21 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
 
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
 
-  val requestStaffMinuteUpdates: StaffMinutesRequester = requestStaffMinutesFn(staffUpdatesActor)
-  val requestQueueMinuteUpdates: QueueMinutesRequester = requestQueueMinutesFn(queueUpdatesActor)
-  val requestFlightUpdates: FlightUpdatesRequester = requestFlightUpdatesFn(flightUpdatesActor)
-  val requestStaffMinutes: StaffMinutesRequester = requestStaffMinutesFn(staffRouterActor)
+  private val requestStaffMinuteUpdates: StaffMinutesRequester = requestStaffMinutesFn(staffUpdatesActor)
+  private val requestQueueMinuteUpdates: QueueMinutesRequester = requestQueueMinutesFn(queueUpdatesActor)
+  private val requestFlightUpdates: FlightUpdatesRequester = requestFlightUpdatesFn(flightUpdatesActor)
+  private val requestStaffMinutes: StaffMinutesRequester = requestStaffMinutesFn(staffRouterActor)
   val requestQueueMinutes: QueueMinutesRequester = requestQueueMinutesFn(queuesRouterActor)
-  val requestFlights: FlightsRequester = requestFlightsFn(flightsRouterActor)
+  private val requestFlights: FlightsRequester = requestFlightsFn(flightsRouterActor)
   val replyWithUpdates: PortStateUpdatesRequester = replyWithUpdatesFn(requestFlightUpdates, requestQueueMinuteUpdates, requestStaffMinuteUpdates)
   val replyWithPortState: PortStateRequester = replyWithPortStateFn(requestFlights, requestQueueMinutes, requestStaffMinutes)
-  val replyWithMinutesAsPortState: PortStateRequester = replyWithMinutesAsPortStateFn(requestQueueMinutes, requestStaffMinutes)
+  private val replyWithMinutesAsPortState: PortStateRequester = replyWithMinutesAsPortStateFn(requestQueueMinutes, requestStaffMinutes)
   val askThenAck: AckingAsker = Acking.askThenAck
 
-  def containsQueueTypeMinutes[A, B <: WithTimeAccessor](mins: MinutesContainer[A, B]): Boolean =
+  private def containsQueueTypeMinutes[A, B <: WithTimeAccessor](mins: MinutesContainer[A, B]): Boolean =
     mins.minutes.headOption.exists(_.toMinute.isInstanceOf[CrunchMinute])
 
-  def containsStaffTypeMinutes[A, B <: WithTimeAccessor](mins: MinutesContainer[A, B]): Boolean =
+  private def containsStaffTypeMinutes[A, B <: WithTimeAccessor](mins: MinutesContainer[A, B]): Boolean =
     mins.minutes.headOption.exists(_.toMinute.isInstanceOf[StaffMinute])
 
   def processMessage: Receive = {

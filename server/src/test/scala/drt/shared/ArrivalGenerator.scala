@@ -30,7 +30,7 @@ object ArrivalGenerator {
                airportId: PortCode = PortCode(""),
                feedSources: Set[FeedSource] = Set(),
                pcpTime: Option[MillisSinceEpoch] = None,
-               totalPax: Set[TotalPaxSource] = Set.empty[TotalPaxSource]
+               totalPax: Map[FeedSource, Option[Int]] = Map.empty
              ): Arrival =
     Arrival(
       Operator = operator,
@@ -55,7 +55,7 @@ object ArrivalGenerator {
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (sch != 0L) Some(sch) else None,
       Scheduled = sch,
       FeedSources = feedSources,
-      TotalPax = if (totalPax.nonEmpty) totalPax else actPax.map(p => TotalPaxSource(Option(p), LiveFeedSource)).toSet
+      TotalPax = if (totalPax.nonEmpty) totalPax else actPax.map(p => LiveFeedSource -> Option(p)).toMap
     )
 
   def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(

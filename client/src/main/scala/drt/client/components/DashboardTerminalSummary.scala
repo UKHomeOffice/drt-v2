@@ -26,7 +26,7 @@ object DashboardTerminalSummary {
 
   def pcpLowest(cms: Seq[CrunchMinute]): CrunchMinute = cms.reduceLeft((cm1, cm2) => if (cm1.paxLoad < cm2.paxLoad) cm1 else cm2)
 
-  def hourRange(start: SDateLike, numHours: Int): IndexedSeq[SDateLike] = (0 until numHours).map(h => start.addHours(h))
+  private def hourRange(start: SDateLike, numHours: Int): IndexedSeq[SDateLike] = (0 until numHours).map(h => start.addHours(h))
 
   def aggregateAcrossQueues(startMinutes: List[CrunchMinute], terminal: Terminal): List[CrunchMinute] = {
     val emptyMinute = CrunchMinute(terminal, InvalidQueue, 0L, 0, 0, 0, 0, None, None, None, None, None)
@@ -87,7 +87,7 @@ object DashboardTerminalSummary {
       .sortBy(_._1)
   }
 
-  def groupCrunchMinutesByHour(cms: List[CrunchMinute], startMin: SDateLike): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
+  private def groupCrunchMinutesByHour(cms: List[CrunchMinute], startMin: SDateLike): Seq[(MillisSinceEpoch, List[CrunchMinute])] = {
     val hourInMillis = 3600000
     cms.sortBy(_.minute).groupBy(cm => {
       val hoursSinceStart = ((cm.minute - startMin.millisSinceEpoch) / hourInMillis).toInt
@@ -100,16 +100,16 @@ object DashboardTerminalSummary {
 
   def windowStart(time: SDateLike): SDateLike = {
 
-    val minutes = (time.getMinutes() / 15) * 15
+    val minutes = (time.getMinutes / 15) * 15
 
-    SDate(f"${time.getFullYear()}-${time.getMonth()}%02d-${time.getDate()}%02d ${time.getHours()}%02d:$minutes%02d")
+    SDate(f"${time.getFullYear}-${time.getMonth}%02d-${time.getDate}%02d ${time.getHours}%02d:$minutes%02d")
   }
 
   def worstTimeslot(crunchMinutes: Seq[CrunchMinute]): CrunchMinute = crunchMinutes.reduceLeft(
     (cm1, cm2) => if (deployedRatio(cm1) > deployedRatio(cm2)) cm1 else cm2
   )
 
-  def deployedRatio(cm1: CrunchMinute): Double = {
+  private def deployedRatio(cm1: CrunchMinute): Double = {
     cm1.deployedDesks match {
       case Some(deployed) =>
         cm1.deskRec.toDouble / deployed
@@ -119,8 +119,6 @@ object DashboardTerminalSummary {
   }
 
   def aggSplits: Seq[ApiFlightWithSplits] => Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits
-
-  def paxInPeriod(cms: Seq[CrunchMinute]): Double = cms.map(_.paxLoad).sum
 
   case class Props(flights: List[ApiFlightWithSplits],
                    crunchMinutes: List[CrunchMinute],
@@ -165,13 +163,13 @@ object DashboardTerminalSummary {
             <.table(^.className := s"summary-box-count rag-desks",
               <.tbody(
                 <.tr(
-                  <.th(^.colSpan := 2, s"${SDate(MilliDate(pressurePoint.minute)).prettyTime()}")
+                  <.th(^.colSpan := 2, s"${SDate(MilliDate(pressurePoint.minute)).prettyTime}")
                 ),
                 <.tr(
                   <.td("Staff"), <.td("Desks")
                 ),
                 <.tr(
-                  <.td(s"${pressurePointAvailableStaff}"),
+                  <.td(s"$pressurePointAvailableStaff"),
                   <.td(s"${pressurePoint.deskRec + pressureStaffMinute.map(_.fixedPoints).getOrElse(0)}")
                 )
               )
@@ -186,11 +184,11 @@ object DashboardTerminalSummary {
                     <.th(Queues.displayName(q), ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod),
                 summary.map {
 
-                  case DashboardSummary(start, numFlights, paxPerQueue) =>
+                  case DashboardSummary(start, _, paxPerQueue) =>
 
                     val totalPax = paxPerQueue.values.map(Math.round).sum
                     <.tr(^.className := "dashboard-summary__pax-summary-row",
-                      <.td(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", s"${SDate(MilliDate(start)).prettyTime()} - ${SDate(MilliDate(start)).addHours(1).prettyTime()}"),
+                      <.td(^.colSpan := 2, ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--left", s"${SDate(MilliDate(start)).prettyTime} - ${SDate(MilliDate(start)).addHours(1).prettyTime}"),
                       <.td(s"$totalPax", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right"),
                       props.queues.map(q => <.td(s"${Math.round(paxPerQueue.getOrElse(q, 0.0))}", ^.className := "dashboard-summary__pax-summary-cell pax-summary-cell--right")).toTagMod
                     )
@@ -207,10 +205,10 @@ object DashboardTerminalSummary {
             <.div(^.className := "pcp-pressure",
               <.div(^.className := "title", "PCP Pressure"),
               <.div(^.className := "highest", <.span(^.className := "sr-only", "Highest Pressure"),
-                Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime()}"
+                Icon.chevronUp, s" ${SDate(MilliDate(pcpHighestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpHighestTimeSlot)).addMinutes(15).prettyTime}"
               ),
               <.div(^.className := "lowest", <.span(^.className := "sr-only", "Lowest Pressure"),
-                Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime()}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime()}"
+                Icon.chevronDown, s" ${SDate(MilliDate(pcpLowestTimeSlot)).prettyTime}-${SDate(MilliDate(pcpLowestTimeSlot)).addMinutes(15).prettyTime}"
               )
             )
           )

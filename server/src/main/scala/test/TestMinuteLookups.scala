@@ -19,21 +19,15 @@ case class TestMinuteLookups(system: ActorSystem,
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
-  val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
+  private val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
-    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)))
+    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.getFullYear, date.getMonth, date.getDate, terminal, now)))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
-  val resetQueueLoadsData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
+  private val resetStaffData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
-    val actor = system.actorOf(Props(new TestTerminalDayQueueLoadsActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)))
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
-  }
-
-  val resetStaffData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
-    val date = SDate(millis)
-    val actor = system.actorOf(Props(new TestTerminalDayStaffActor(date.getFullYear(), date.getMonth(), date.getDate(), terminal, now)))
+    val actor = system.actorOf(Props(new TestTerminalDayStaffActor(date.getFullYear, date.getMonth, date.getDate, terminal, now)))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 

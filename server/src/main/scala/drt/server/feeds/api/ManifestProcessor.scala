@@ -49,7 +49,7 @@ case class DbManifestProcessor(tables: Tables,
     }
 
   private def manifestForArrivalKey(uniqueArrivalKey: UniqueArrivalKey): Future[Option[VoyageManifest]] = {
-    val scheduled = SDate(uniqueArrivalKey.scheduled.millisSinceEpoch).toISOString()
+    val scheduled = SDate(uniqueArrivalKey.scheduled.millisSinceEpoch).toISOString
     val query =
       sql"""SELECT
            |  document_type,

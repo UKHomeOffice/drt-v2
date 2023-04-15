@@ -12,32 +12,32 @@ object TerminalDashboardComponentTests extends TestSuite {
           TerminalDashboardComponent.timeSlotForTime(15)(SDate(dateString))
 
         "Given a time ending in a 01 then I should get back a 00 timeslot" - {
-          val result = convert("2019-10-28T15:01:00Z").toISOString()
-          val expected = SDate("2019-10-28T15:00").toISOString()
+          val result = convert("2019-10-28T15:01:00Z").toISOString
+          val expected = SDate("2019-10-28T15:00").toISOString
           assert(result == expected)
         }
 
         "Given a time ending in a 14 then I should get back a 00 timeslot" - {
-          val result = convert("2019-10-28T15:14:00Z").toISOString()
-          val expected = SDate("2019-10-28T15:00").toISOString()
+          val result = convert("2019-10-28T15:14:00Z").toISOString
+          val expected = SDate("2019-10-28T15:00").toISOString
           assert(result == expected)
         }
 
         "Given a time ending in a 15 then I should get back a 15 timeslot" - {
-          val result = convert("2019-10-28T15:15:00Z").toISOString()
-          val expected = SDate("2019-10-28T15:15").toISOString()
+          val result = convert("2019-10-28T15:15:00Z").toISOString
+          val expected = SDate("2019-10-28T15:15").toISOString
           assert(result == expected)
         }
 
         "Given a time ending in a 16 then I should get back a 15 timeslot" - {
-          val result = convert("2019-10-28T15:16:00Z").toISOString()
-          val expected = SDate("2019-10-28T15:15").toISOString()
+          val result = convert("2019-10-28T15:16:00Z").toISOString
+          val expected = SDate("2019-10-28T15:15").toISOString
           assert(result == expected)
         }
 
         "Given a time ending in a 30 then I should get back a 30 timeslot" - {
-          val result = convert("2019-10-28T15:30:00Z").toISOString()
-          val expected = SDate("2019-10-28T15:30").toISOString()
+          val result = convert("2019-10-28T15:30:00Z").toISOString
+          val expected = SDate("2019-10-28T15:30").toISOString
           assert(result == expected)
         }
       }
@@ -48,14 +48,14 @@ object TerminalDashboardComponentTests extends TestSuite {
           TerminalDashboardComponent.timeSlotForTime(60)(SDate(dateString))
 
         "Given a time ending in a 01 then I should get back a 00 timeslot" - {
-          val result = convert("2019-10-28T15:01:00Z").toISOString()
-          val expected = SDate("2019-10-28T15:00").toISOString()
+          val result = convert("2019-10-28T15:01:00Z").toISOString
+          val expected = SDate("2019-10-28T15:00").toISOString
           assert(result == expected)
         }
 
         "Given a time ending in a 59 then I should get back a 00 timeslot" - {
-          val result = convert("2019-10-28T15:59:00Z").toISOString()
-          val expected = SDate("2019-10-28T15:00").toISOString()
+          val result = convert("2019-10-28T15:59:00Z").toISOString
+          val expected = SDate("2019-10-28T15:00").toISOString
           assert(result == expected)
         }
       }
@@ -66,14 +66,14 @@ object TerminalDashboardComponentTests extends TestSuite {
           TerminalDashboardComponent.timeSlotForTime(30)(SDate(dateString))
 
         "Given a time ending in a 01 then I should get back a 00 timeslot" - {
-          val result = convert("2019-10-28T15:01:00Z").toISOString()
-          val expected = SDate("2019-10-28T15:00").toISOString()
+          val result = convert("2019-10-28T15:01:00Z").toISOString
+          val expected = SDate("2019-10-28T15:00").toISOString
           assert(result == expected)
         }
 
         "Given a time ending in a 59 then I should get back a 30 timeslot" - {
-          val result = convert("2019-10-28T15:59:00Z").toISOString()
-          val expected = SDate("2019-10-28T15:30").toISOString()
+          val result = convert("2019-10-28T15:59:00Z").toISOString
+          val expected = SDate("2019-10-28T15:30").toISOString
           assert(result == expected)
         }
       }
