@@ -41,7 +41,7 @@ object Settings {
     val akka = "2.7.0"
     val akkaStreamContrib = "0.9"
 
-    val specs2 = "4.6.0"
+    val specs2 = "4.20.0"
     val react = "17.0.2"
 
     val bootstrap = "3.3.6"
@@ -51,7 +51,7 @@ object Settings {
     val levelDb = "0.7"
     val levelDbJni = "1.8"
     val renjin = "0.9.2725"
-    val awsSdk = "1.11.89"
+    val awsSdk = "1.11.1034"
     val csvCommons = "1.4"
     val poi = "5.1.0"
     val pprint = "0.5.6"
@@ -59,11 +59,11 @@ object Settings {
     val bluebus = "0.5.0-DRT"
     val postgres = "42.6.0"
     val sshJ = "0.24.0"
-    val jodaTime = "2.9.4"
+    val jodaTime = "2.9.9"
     val playJsonJoda = "2.6.9"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
-    val typesafeConfig = "1.3.4"
+    val typesafeConfig = "1.4.2"
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
@@ -74,10 +74,10 @@ object Settings {
     val akkaHttp = "10.2.6"
     val slick = "3.4.1"
     val censorinus = "2.1.16"
-    val janinoVersion = "3.1.6"
+    val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.3.1"
     val sprayJsonScalaJs = "1.3.5-7"
-    val scalaTestVersion = "3.2.12"
+    val scalaTestVersion = "3.2.15"
   }
 
   import versions._
@@ -144,7 +144,7 @@ object Settings {
   val jvmDependencies = Def.setting(List(
     "com.amazonaws" % "aws-java-sdk" % awsSdk,
     "com.github.gphat" %% "censorinus" % censorinus,
-    "com.pauldijou" %% "jwt-core" % "4.0.0",
+    "com.pauldijou" %% "jwt-core" % "4.3.0",
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
@@ -152,7 +152,7 @@ object Settings {
     "javax.mail" % "mail" % "1.4.7",
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % "4.0.0",
     "com.sun.xml.ws" % "rt" % "4.0.1",
-    "javax.xml.bind" % "jaxb-api" % "2.2.11",
+    "javax.xml.bind" % "jaxb-api" % "2.2.12",
 
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
@@ -186,7 +186,7 @@ object Settings {
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
-    "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.0",
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.5.1",
     "com.fasterxml.jackson.core" % "jackson-core" % "2.10.0",
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
