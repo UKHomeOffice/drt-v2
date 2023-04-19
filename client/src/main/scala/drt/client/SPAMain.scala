@@ -4,12 +4,13 @@ import diode.Action
 import drt.client.SPAMain.TerminalPageModes.{Current, Planning, Staffing}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
-import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle}
+import drt.client.components.styles.{ArrivalsPageStylesDefault, DefaultFormFieldsStyle, DefaultScenarioSimulationStyle, DefaultToolTipsStyle, DrtTheme}
 import drt.client.components.{ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
+import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
@@ -313,7 +314,7 @@ object SPAMain {
       ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
       dynRenderR { (page: TerminalPageTabLoc, router) =>
         val props = TerminalComponent.Props(terminalPageTab = page, router)
-        TerminalComponent(props)
+        ThemeProvider(DrtTheme.theme)(TerminalComponent(props))
       }
   }
 

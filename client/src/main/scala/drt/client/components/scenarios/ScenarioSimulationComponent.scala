@@ -39,7 +39,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
           <.h2("Arrival Scenario Simulation"),
           MuiPaper()(
             DefaultFormFieldsStyle.simulation,
-            MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 16)(
+            MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 2)(
               MuiGrid(item = true, xs = 2)(
                 ScenarioSimulationFormComponent(props.date, props.terminal, props.airportConfig)
               ),

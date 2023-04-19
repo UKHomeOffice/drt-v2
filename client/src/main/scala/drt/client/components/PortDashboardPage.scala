@@ -66,7 +66,7 @@ object PortDashboardPage {
                 MuiToggleButtonGroup(selected = true)(^.className := "btn-group no-gutters",
                   periods.zipWithIndex.map {
                     case (p, index) =>
-                      MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+                      MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
                         s"${p.start.prettyTime}-${p.end.prettyTime}",
                         ^.className := s"btn btn-primary${if (p == displayPeriod) " active" else ""} muiFontSize",
                         ^.target := "_blank",

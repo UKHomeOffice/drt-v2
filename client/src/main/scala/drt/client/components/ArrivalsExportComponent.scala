@@ -48,7 +48,7 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
 
       <.div(
         ^.className := "export-button-wrapper",
-        MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+        MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
           MuiIcons(GetApp)(fontSize = "small"),
           "Arrivals",
           ^.className := "btn btn-default",
@@ -91,7 +91,7 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
 
   private def exportLinks(exports: List[ExportType], date: SDateLike, terminal: Terminal, viewMode: ViewMode): html_<^.VdomElement =
     MuiGrid(container = true)(
-      MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+      MuiGrid(container = true, spacing = 2)(
         exports.map(export =>
           MuiGrid(item = true, xs = 4)(
             exportLink(date, terminal.toString, export, SPAMain.exportUrl(export, viewMode, terminal))

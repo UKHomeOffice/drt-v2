@@ -271,7 +271,7 @@ object TerminalContentComponent {
                  exportUrl: String,
                  maybeExtraIcon: Option[Icon] = None
                 ): WithPropsAndTagsMods = {
-    MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+    MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
       MuiIcons(GetApp)(fontSize = "small"),
       s" $exportType",
       maybeExtraIcon.getOrElse(EmptyVdom),
