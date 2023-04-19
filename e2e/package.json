@@ -14,7 +14,7 @@
     "@typescript-eslint/parser": "^5.56.0",
     "cypress": "^12.10.0",
     "eslint": "^8.36.0",
-    "eslint-plugin-cypress": "^2.12.1",
+    "eslint-plugin-cypress": "^2.13.2",
     "ts-loader": "^9.4.2",
     "typescript": "^4.9.5"
   },
