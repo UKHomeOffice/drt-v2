@@ -89,7 +89,7 @@ object FlightTable {
             case _ => <.div()
           },
           MuiAutocomplete(
-            options = js.Array(CountryOptions.countries.map(c => MuiAutocompleteOption(label = s"${c.twoLetterCode} | ${c.threeLetterCode} - ${c.name}", id = c.id))),
+            options = js.Array(CountryOptions.countries.map(c => MuiAutocompleteOption(label = s"${c.twoLetterCode} | ${c.threeLetterCode} - ${c.name}", id = c.id)): _*),
             renderInput = acTextInput
           ),
           <.table(
@@ -472,5 +472,13 @@ object CountryOptions {
     Country(twoLetterCode = "ZM", threeLetterCode = "ZMB", name="Zambia", id = 894),
     Country(twoLetterCode = "ZW", threeLetterCode = "ZWE", name="Zimbabwe", id = 716),
     Country(twoLetterCode = "AX", threeLetterCode = "ALA", name="Åland Islands", id = 248),
+    Country(twoLetterCode = "", threeLetterCode = "EUE", name="European Union laissez-passer", id = -1),
+    Country(twoLetterCode = "", threeLetterCode = "XOM", name="Sovereign Military Order of Malta", id = -2),
+    Country(twoLetterCode = "", threeLetterCode = "XPO", name="Interpol travel documents", id = -3),
+    Country(twoLetterCode = "", threeLetterCode = "XXA", name="Stateless person", id = -4),
+    Country(twoLetterCode = "", threeLetterCode = "XXB", name="Refugee (Article 1)", id = -5),
+    Country(twoLetterCode = "", threeLetterCode = "XXC", name="Refugee (non-Article 1)", id = -6),
+    Country(twoLetterCode = "", threeLetterCode = "XXX", name="Unspecified nationality", id = -7),
+    Country(twoLetterCode = "", threeLetterCode = "WSA", name="World Service Authority World Passport", id = -8),
   )
 }
