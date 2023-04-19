@@ -36,7 +36,7 @@ object Settings {
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
-    val h2 = "2.1.210"
+    val h2 = "2.1.214"
 
     val akka = "2.7.0"
     val akkaStreamContrib = "0.9"
@@ -48,13 +48,13 @@ object Settings {
 
     val playScripts = "0.5.0"
     val sprayVersion = "1.3.4"
-    val levelDb = "0.7"
+    val levelDb = "0.12"
     val levelDbJni = "1.8"
     val renjin = "0.9.2725"
     val awsSdk = "1.11.1034"
-    val csvCommons = "1.4"
+    val csvCommons = "1.10.0"
     val poi = "5.1.0"
-    val pprint = "0.5.6"
+    val pprint = "0.5.9"
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "0.5.0-DRT"
     val postgres = "42.6.0"
@@ -188,12 +188,12 @@ object Settings {
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
     "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.5.1",
-    "com.fasterxml.jackson.core" % "jackson-core" % "2.10.0",
+    "com.fasterxml.jackson.core" % "jackson-core" % "2.10.5",
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.poi" % "poi" % poi,
     "org.apache.poi" % "poi-ooxml" % poi,
-    "org.codehaus.janino" % "janino" % "3.0.7",
+    "org.codehaus.janino" % "janino" % "3.0.16",
     "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
     "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.postgresql" % "postgresql" % postgres,
@@ -208,7 +208,7 @@ object Settings {
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "com.box" % "box-java-sdk" % "2.19.0",
-    "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
+    "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.5",
     "org.bitbucket.b_c" % "jose4j" % "0.4.4",
 
     "io.netty" % "netty-all" % "4.1.91.Final",
