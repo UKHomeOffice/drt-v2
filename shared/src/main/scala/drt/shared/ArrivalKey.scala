@@ -1,11 +1,11 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.DataUpdates.FlightUpdates
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber, WithTimeAccessor}
+import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 import upickle.default.{macroRW, _}
 
 import scala.collection.immutable.{SortedMap => ISortedMap}
@@ -42,8 +42,6 @@ object ArrivalKey {
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
 }
 
-case class ArrivalUpdate(old: Arrival, updated: Arrival)
-
 object ArrivalsDiff {
   val empty: ArrivalsDiff = ArrivalsDiff(Seq(), Seq())
 
@@ -75,6 +73,23 @@ case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: 
       .collect { case Some(updatedFlight) => updatedFlight }
 
     FlightsWithSplitsDiff(updatedFlights, toRemove.map(_.unique))
+  }
+
+  def splitByScheduledUtcDate(implicit millisToSdate: Long => SDateLike): List[(UtcDate, ArrivalsDiff)] = {
+    val updatesByDate = toUpdate.values.groupBy(d => millisToSdate(d.Scheduled).toUtcDate)
+    val removalsByDate = toRemove.groupBy(d => millisToSdate(d.Scheduled).toUtcDate)
+
+    val dates = updatesByDate.keys ++ removalsByDate.keys
+
+    dates
+      .map { date =>
+        val updates = updatesByDate.getOrElse(date, Seq())
+        val removals = removalsByDate.getOrElse(date, Seq())
+
+        (date, ArrivalsDiff(updates, removals))
+      }
+      .toList
+      .sortBy(_._1)
   }
 }
 

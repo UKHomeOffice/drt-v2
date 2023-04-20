@@ -157,7 +157,7 @@ object StaffDeploymentCalculator {
     }
   }
 
-  def deploymentWithinBounds(min: Int, max: Int, ideal: Int, staffAvailable: Int): Int = {
+  private def deploymentWithinBounds(min: Int, max: Int, ideal: Int, staffAvailable: Int): Int = {
     val best = if (ideal < min) min
     else if (ideal > max) max
     else ideal
@@ -201,7 +201,7 @@ object StaffAssignmentHelper {
                                                       startDt: SDateLike,
                                                       endDt: SDateLike): SDateLike = {
     if (endDt.millisSinceEpoch < startDt.millisSinceEpoch) {
-      SDate(y, m, d, endDt.getHours(), endDt.getMinutes()).addDays(1)
+      SDate(y, m, d, endDt.getHours, endDt.getMinutes).addDays(1)
     }
     else {
       endDt
@@ -248,12 +248,3 @@ case class StaffMovementsService(movements: Seq[StaffMovement])
   }
 }
 
-object StaffMovementsHelper {
-  def assignmentsToMovements(staffAssignments: Seq[StaffAssignment]): Seq[StaffMovement] = {
-    staffAssignments.flatMap(assignment => {
-      val uuid = UUID.randomUUID().toString
-      StaffMovement(assignment.terminal, assignment.name + " start", time = assignment.start, assignment.numberOfStaff, uuid, createdBy = None) ::
-        StaffMovement(assignment.terminal, assignment.name + " end", time = assignment.end, -assignment.numberOfStaff, uuid, createdBy = None) :: Nil
-    }).sortBy(_.time.millisSinceEpoch)
-  }
-}

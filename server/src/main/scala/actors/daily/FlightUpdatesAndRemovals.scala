@@ -1,9 +1,8 @@
 package actors.daily
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplitsDiff, UniqueArrival}
 
 import scala.collection.immutable.{Map, Set}
 

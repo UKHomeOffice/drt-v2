@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorLogging, PoisonPill}
 import akka.pattern.pipe
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.DeskRecMinutes
-import drt.shared.FlightsApi.FlightsWithSplits
+import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContextExecutor, Promise}

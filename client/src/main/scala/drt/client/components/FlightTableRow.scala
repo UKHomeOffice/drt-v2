@@ -10,6 +10,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
+import drt.shared.api.WalkTimes
 import drt.shared.redlist._
 import drt.shared.splits.ApiSplitsToSplitRatio
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -25,9 +26,8 @@ import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
-
-import scala.collection.immutable.Map
 
 object FlightTableRow {
 
@@ -54,13 +54,14 @@ object FlightTableRow {
                    airportConfig: AirportConfig,
                    redListUpdates: RedListUpdates,
                    includeIndirectRedListColumn: Boolean,
+                   walkTimes: WalkTimes,
                   ) extends UseValueEq
 
   case class RowState(hasChanged: Boolean)
 
   val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .initialState[RowState](RowState(false))
-    .render_PS((props, state) => {
+    .render_PS { (props, state) =>
       val isMobile = dom.window.innerWidth < 800
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
@@ -120,7 +121,7 @@ object FlightTableRow {
       }
 
       val timesPopUp = arrivalTimes.map(t => <.div(
-        <.span(^.display := "inline-block", ^.width := "120px", t._1), <.span(SDate(t._2).toLocalDateTimeString().takeRight(5))
+        <.span(^.display := "inline-block", ^.width := "120px", t._1), <.span(SDate(t._2).toLocalDateTimeString.takeRight(5))
       )).toTagMod
 
       val bestExpectedTime = arrivalTimes.reverse.headOption.map(_._2)
@@ -154,13 +155,13 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        <.td(gateOrStand(flight, props.airportConfig, props.directRedListFlight.paxDiversion)),
+        <.td(gateOrStand(flight, props.airportConfig.defaultWalkTimeMillis(flight.Terminal), props.directRedListFlight.paxDiversion, props.walkTimes)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
         <.td(expectedContent),
       )
       val lastCells = List[TagMod](
-        <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis), ^.className := "arrivals__table__flight-est-pcp"),
+        <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes), ^.className := "arrivals__table__flight-est-pcp"),
         <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.pcpPaxEstimate)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
       )
 
@@ -203,21 +204,23 @@ object FlightTableRow {
         )
       }
 
-    })
+    }
     .build
 
-  private def gateOrStand(arrival: Arrival, airportConfig: AirportConfig, paxAreDiverted: Boolean): VdomTagOf[Span] = {
+  private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
     val gateOrStand = <.span(^.className := "no-wrap", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
-    arrival.walkTime(airportConfig.firstPaxOffMillis, airportConfig.useTimePredictions).map { wt =>
-      val description = (paxAreDiverted, arrival.Stand.isDefined, arrival.Gate.isDefined) match {
-        case (true, _, _) => "walk time including transfer bus"
-        case (false, true, _) => "walk time from stand"
-        case (false, false, true) => "walk time from gate"
-        case _ => "default walk time"
-      }
-      val walkTimeString = MinuteAsAdjective(millisToMinutes(wt)).display + " " + description
-      <.span(^.className := "no-wrap", Tippy.interactive(<.span(walkTimeString), gateOrStand))
-    }.getOrElse(gateOrStand)
+    val maybeActualWalkTime = walkTimes.maybeWalkTimeMinutes(arrival.Gate, arrival.Stand, arrival.Terminal)
+
+    val description = (paxAreDiverted, maybeActualWalkTime.isDefined) match {
+      case (true, _) => "walk time including transfer bus"
+      case (_, true) =>
+        val gateOrStand = if (arrival.Stand.isDefined) "stand" else "gate"
+        s"walk time from $gateOrStand"
+      case _ => "default walk time"
+    }
+    val walkTime = maybeActualWalkTime.getOrElse((terminalWalkTime / oneMinuteMillis).toInt)
+    val walkTimeString = MinuteAsAdjective(walkTime).display + " " + description
+    <.span(^.className := "no-wrap", Tippy.interactive(<.span(walkTimeString), gateOrStand))
   }
 
   def offScheduleClass(arrival: Arrival, considerPredictions: Boolean): String = {
@@ -233,6 +236,5 @@ object FlightTableRow {
   def isRedListCountry(country: String, date: SDateLike, redListUpdates: RedListUpdates): Boolean =
     redListUpdates.countryCodesByName(date.millisSinceEpoch).keys.exists(_.toLowerCase == country.toLowerCase)
 
-  def apply(props: Props): Unmounted[Props, RowState, Unit] = component(props)
-
+  //  def apply(props: Props): Unmounted[Props, RowState, Unit] = component(props)
 }

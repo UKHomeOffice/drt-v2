@@ -1,6 +1,7 @@
 package actors.persistent.arrivals
 
 import org.slf4j.{Logger, LoggerFactory}
+import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.time.SDateLike

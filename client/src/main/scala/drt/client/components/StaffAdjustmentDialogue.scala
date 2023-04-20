@@ -74,9 +74,9 @@ object StaffAdjustmentDialogueState {
       None,
       terminalNames = terminalNames,
       terminal = terminal.getOrElse(terminalNames.head),
-      date = f"${startDate.getDate()}%02d/${startDate.getMonth()}%02d/${startDate.getFullYear - 2000}%02d",
-      startTimeHours = startDate.getHours(),
-      startTimeMinutes = roundToNearest(5)(startDate.getMinutes()),
+      date = f"${startDate.getDate}%02d/${startDate.getMonth}%02d/${startDate.getFullYear - 2000}%02d",
+      startTimeHours = startDate.getHours,
+      startTimeMinutes = roundToNearest(5)(startDate.getMinutes),
       lengthOfTimeMinutes = timeLengthMinutes,
       numberOfStaff = numberOfStaff,
       loggedInUser = loggedInUser

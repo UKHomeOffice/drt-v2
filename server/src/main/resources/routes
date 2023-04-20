@@ -26,7 +26,8 @@ DELETE        /alerts                                                           
 GET           /version                                                                controllers.Application.getApplicationVersion
 
 GET           /crunch                                                                 controllers.Application.getCrunch
-POST          /crunch/recalculate                                                     controllers.Application.reCrunch
+POST          /control/crunch/recalculate                                             controllers.Application.reCrunch
+POST          /control/arrivals/recalculate                                           controllers.Application.reCalculateArrivals
 GET           /crunch-snapshot/:pit                                                   controllers.Application.getCrunchSnapshot(pit: Long)
 
 GET           /feed-statuses                                                          controllers.Application.getFeedStatuses

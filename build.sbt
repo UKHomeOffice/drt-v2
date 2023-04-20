@@ -74,7 +74,7 @@ lazy val client: Project = (project in file("client"))
     useYarn := true,
     // yes, we want to package JS dependencies
     packageJSDependencies / skip := false,
-    resolvers += Resolver.sonatypeRepo("snapshots"),
+    resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     resolvers += Resolver.defaultLocal,
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
@@ -124,12 +124,9 @@ lazy val server = (project in file("server"))
     resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-    //dependencyOverrides += "com.github.dwhjames" %% "aws-wrap" % "0.9.0",
-    publishArtifact in(Compile, packageBin) := false,
-    // Disable scaladoc generation for this project (useless)
-    publishArtifact in(Compile, packageDoc) := false,
-    // Disable source jar for this project (useless)
-    publishArtifact in(Compile, packageSrc) := false,
+    Compile / packageBin / publishArtifact := false,
+    Compile / packageDoc / publishArtifact := false,
+    Compile / packageSrc / publishArtifact := false,
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // compress CSS
     Assets / LessKeys.compress := true,

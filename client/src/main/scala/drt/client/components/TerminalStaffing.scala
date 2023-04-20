@@ -159,7 +159,7 @@ object TerminalStaffing {
                 <.tr(^.key := s"hr-${hoursWorthOf15Minutes.headOption.getOrElse("empty")}", {
                   hoursWorthOf15Minutes.map((t: Long) => {
                     val d = SDate(t)
-                    val display = f"${d.getHours()}%02d:${d.getMinutes()}%02d"
+                    val display = f"${d.getHours}%02d:${d.getMinutes}%02d"
                     <.th(^.key := t, display)
                   }).toTagMod
                 }),

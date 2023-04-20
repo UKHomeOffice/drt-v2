@@ -6,6 +6,7 @@ import drt.client.SPAMain
 import drt.shared._
 import org.scalajs.dom
 import org.scalajs.dom.{document, html}
+import uk.gov.homeoffice.drt.feeds.{FeedStatus, FeedStatusFailure, FeedStatusSuccess}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.nio.ByteBuffer

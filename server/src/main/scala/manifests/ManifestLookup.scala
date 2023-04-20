@@ -38,7 +38,7 @@ case class UniqueArrivalKey(arrivalPort: PortCode,
                             departurePort: PortCode,
                             voyageNumber: VoyageNumber,
                             scheduled: SDateLike) {
-  override def toString: String = s"$arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString()}"
+  override def toString: String = s"$arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString}"
 
   val queryArrivalKey: (String, String, String, Timestamp) =
     (arrivalPort.iata, departurePort.iata, voyageNumber.numeric.toString, new Timestamp(scheduled.millisSinceEpoch))

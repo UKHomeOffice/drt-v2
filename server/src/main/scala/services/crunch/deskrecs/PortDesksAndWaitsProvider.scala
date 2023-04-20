@@ -2,13 +2,13 @@ package services.crunch.deskrecs
 
 import akka.stream.Materializer
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch, PassengersMinute}
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunchWholePax
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
+import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -42,12 +42,12 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     )
   }
 
-  def deskRecsToSimulations(terminalQueueDeskRecs: Iterable[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs
+  private def deskRecsToSimulations(terminalQueueDeskRecs: Iterable[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs
     .map {
       case DeskRecMinute(t, q, m, _, _, d, w, _) => (TQM(t, q, m), SimulationMinute(t, q, m, d, w))
     }.toMap
 
-  def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
+  private def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
     deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch)
 
   override def flightsToLoads(minuteMillis: NumericRange[MillisSinceEpoch],
@@ -66,9 +66,9 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
         (tqm, PassengersMinute(tqm.terminal, tqm.queue, tqm.minute, loads.flatMap(_.passengers), None) )
     }
 
-  def terminalWorkLoadsByQueue(terminal: Terminal,
-                               minuteMillis: NumericRange[MillisSinceEpoch],
-                               loadMinutes: Map[TQM, PassengersMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
+  private def terminalWorkLoadsByQueue(terminal: Terminal,
+                                       minuteMillis: NumericRange[MillisSinceEpoch],
+                                       loadMinutes: Map[TQM, PassengersMinute]): Map[Queue, Seq[Double]] = queuesByTerminal(terminal)
     .filterNot(_ == Transfer)
     .map { queue =>
       val lms = minuteMillis.map(minute =>
@@ -77,8 +77,8 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }
     .toMap
 
-  def terminalPassengersByQueue(terminal: Terminal, minuteMillis: NumericRange[MillisSinceEpoch],
-                                loadMinutes: Map[TQM, PassengersMinute]): Map[Queue, immutable.IndexedSeq[Iterable[Double]]] = queuesByTerminal(terminal)
+  private def terminalPassengersByQueue(terminal: Terminal, minuteMillis: NumericRange[MillisSinceEpoch],
+                                        loadMinutes: Map[TQM, PassengersMinute]): Map[Queue, immutable.IndexedSeq[Iterable[Double]]] = queuesByTerminal(terminal)
     .filterNot(_ == Transfer)
     .map { queue =>
       val paxLoads = minuteMillis.map { minute =>

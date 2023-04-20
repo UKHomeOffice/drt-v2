@@ -2,19 +2,17 @@ package actors.daily
 
 import actors.acking.AckingReceiver.Ack
 import actors.persistent.staffing.GetState
-import actors.serializers.FlightMessageConversion
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.persistence.PersistentActor
 import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
-import drt.shared.FlightsApi.FlightsWithSplits
-import uk.gov.homeoffice.drt.time.SDateLike
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.time.UtcDate
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -53,7 +51,7 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
         val fws1 = flightWithSplitsForDayAndTerminal(recoveryPit, terminal)
         val fws2 = flightWithSplitsForDayAndTerminal(recoveryPit.addHours(1), terminal)
 
-        val persistenceId = f"terminal-flights-${terminal.toString.toLowerCase}-${recoveryPit.getFullYear()}-${recoveryPit.getMonth()}%02d-${recoveryPit.getDate()}%02d"
+        val persistenceId = f"terminal-flights-${terminal.toString.toLowerCase}-${recoveryPit.getFullYear}-${recoveryPit.getMonth}%02d-${recoveryPit.getDate}%02d"
 
         val beforeRecoveryPointMessage = FlightsWithSplitsDiffMessage(
           Option(recoveryPit.addHours(-1).millisSinceEpoch),
@@ -84,7 +82,7 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
     val cutOffThreshold = 1.second
 
     def actorForTerminalAndDate(terminal: Terminal, date: UtcDate): ActorRef = {
-      system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), cutOffThreshold))
+      system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), Some(cutOffThreshold)))
     }
 
     "When I have a removal message that came through after the day for this actor " >> {
@@ -95,8 +93,7 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
         val flightWithRemovalMessageOutsideThreshold = flightWithSplitsForDayAndTerminal(dateInQuestion.addHours(1), terminal)
         val flightWithRemovalMessageOnDay = flightWithSplitsForDayAndTerminal(dateInQuestion.addHours(2), terminal)
 
-
-        val persistenceId = f"terminal-flights-${terminal.toString.toLowerCase}-${dateInQuestion.getFullYear()}-${dateInQuestion.getMonth()}%02d-${dateInQuestion.getDate()}%02d"
+        val persistenceId = f"terminal-flights-${terminal.toString.toLowerCase}-${dateInQuestion.getFullYear}-${dateInQuestion.getMonth}%02d-${dateInQuestion.getDate}%02d"
 
         val onDayMessageWithFlight: FlightsWithSplitsDiffMessage = FlightsWithSplitsDiffMessage(
           Option(dateInQuestion.millisSinceEpoch),
@@ -138,6 +135,6 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
 
 
   def actorForTerminalAndDatePit(terminal: Terminal, date: UtcDate, pit: SDateLike): ActorRef = {
-    system.actorOf(TerminalDayFlightActor.propsPointInTime(terminal, date, () => SDate(date), pit.millisSinceEpoch))
+    system.actorOf(TerminalDayFlightActor.propsPointInTime(terminal, date, () => SDate(date), pit.millisSinceEpoch, None))
   }
 }

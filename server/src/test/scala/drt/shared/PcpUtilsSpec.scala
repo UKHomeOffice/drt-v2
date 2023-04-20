@@ -1,17 +1,16 @@
 package drt.shared
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.Predictions
-import uk.gov.homeoffice.drt.prediction.ToChoxModelAndFeatures
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.prediction.arrival.ToChoxModelAndFeatures
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 
 class PcpUtilsSpec extends Specification {
   "Given an arrival, time to chox and the first pax off time, PcpUtils " should {
     val givenTime = 1000L
     val pcpTime = 2000L
-    val minutesToChox = 10
-    val millisToChox = minutesToChox * oneMinuteMillis
-    val predictions = Predictions(0L, Map(ToChoxModelAndFeatures.targetName -> minutesToChox))
+    val millisToChox = Arrival.defaultMinutesToChox * oneMinuteMillis
+    val predictions = Predictions(0L, Map(ToChoxModelAndFeatures.targetName -> Arrival.defaultMinutesToChox))
     val firstPaxOff = 10L
     "Know the correct walk time" >> {
       val walkTimeWithChoxRemoved = pcpTime - (givenTime + millisToChox + firstPaxOff)

@@ -1,3 +1,4 @@
+
 package test
 
 import actors._
@@ -45,8 +46,9 @@ case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Mater
   }
 }
 
-case class MockUserTable()(implicit ec: ExecutionContext, mat: Materializer) extends UserTableLike {
-  override def insertOrUpdateUser(user: LoggedInUser, inactive_email_sent: Option[Timestamp], revoked_access: Option[Timestamp])(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+case class MockUserTable()(implicit ec: ExecutionContext) extends UserTableLike {
+  override def insertOrUpdateUser(user: LoggedInUser, inactive_email_sent: Option[Timestamp],
+                                  revoked_access: Option[Timestamp])(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
   override def selectAll: Future[Seq[UserRow]] = Future.successful(Seq.empty)
 
@@ -54,8 +56,8 @@ case class MockUserTable()(implicit ec: ExecutionContext, mat: Materializer) ext
 }
 
 case class MockDrtParameters() extends DrtParameters {
-  override val gateWalkTimesFilePath: String = ""
-  override val standWalkTimesFilePath: String = ""
+  override val gateWalkTimesFilePath: Option[String] = None
+  override val standWalkTimesFilePath: Option[String] = None
   override val forecastMaxDays: Int = 3
   override val aclDisabled: Boolean = false
   override val aclHost: Option[String] = None
@@ -101,22 +103,32 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
   log.warn("Using test System")
 
-  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
+  override val forecastBaseArrivalsActor: ActorRef =
+    restartOnStop.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  override val forecastArrivalsActor: ActorRef =
+    restartOnStop.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override val liveArrivalsActor: ActorRef =
+    restartOnStop.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
   override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
   override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new TestFixedPointsActor(now, airportConfig.minutesToCrunch)), "staff-fixed-points")
-  override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "TestActor-StaffMovements")
+  override val staffMovementsActor: ActorRef =
+    restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
-  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
+  override val manifestsRouterActor: ActorRef =
+    restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
+      name = "voyage-manifests-router-actor")
 
-  override val persistentCrunchQueueActor: ActorRef = system.actorOf(Props(new TestCrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
-  override val persistentDeskRecsQueueActor: ActorRef = system.actorOf(Props(new TestDeskRecsQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
-  override val persistentDeploymentQueueActor: ActorRef = system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
-  override val persistentStaffingUpdateQueueActor: ActorRef = system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentCrunchQueueActor: ActorRef =
+    system.actorOf(Props(new TestCrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentDeskRecsQueueActor: ActorRef =
+    system.actorOf(Props(new TestDeskRecsQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentDeploymentQueueActor: ActorRef =
+    system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
+  override val persistentStaffingUpdateQueueActor: ActorRef =
+    system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val userService: UserTableLike = MockUserTable()
@@ -233,12 +245,10 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
     setSubscribers(crunchInputs)
 
-    testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponse)
+    testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponseSource)
 
     crunchInputs.killSwitches
   }
-
-  val coachWalkTime: CoachWalkTime = CoachWalkTime(airportConfig.portCode)
 }
 
 

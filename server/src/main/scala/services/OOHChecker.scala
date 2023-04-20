@@ -19,14 +19,14 @@ case class OOHChecker(bankHolidayClient: BankHolidayApiClient) {
 
   def isOOH(localTime: SDateLike): Future[Boolean] = {
 
-    val time = localTime.toLocalDateTimeString().split(" ").last
+    val time = localTime.toLocalDateTimeString.split(" ").last
 
     bankHolidayClient.isEnglandAndWalesBankHoliday(localTime).map { isBankHoliday =>
       isBankHoliday || time < startOfDay || time > endOfDay || isWeekend(localTime)
     }
   }
 
-  def isWeekend(localTime: SDateLike): Boolean = localTime.getDayOfWeek >= 6
+  private def isWeekend(localTime: SDateLike): Boolean = localTime.getDayOfWeek >= 6
 }
 
 case class BankHolidayApiClient(uri: String = "https://www.gov.uk/bank-holidays.json")(implicit system: ActorSystem, materializer: Materializer) {

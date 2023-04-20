@@ -35,9 +35,9 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       refreshArrivalsOnStart: Boolean = false,
                       recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,
-                      maybePassengersActorProps: Option[Props] = None,
                       arrivalsAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustmentsNoop,
                       maybeEgatesProvider: Option[() => Future[PortEgateBanksUpdates]] = None,
                       setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = TestDefaults.setPcpFromSch,
                       addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff),
+                      passengerAdjustments: List[Arrival]=> Future[List[Arrival]] = arrivals => Future.successful(arrivals)
                      )

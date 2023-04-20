@@ -62,7 +62,7 @@ case class ResponseToArrivals(data: String) {
       ApiPax = None,
       ScheduledDeparture = None,
       RedListPax = None,
-      TotalPax = Set(TotalPaxSource(actPax, LiveFeedSource)),
+      TotalPax = Map(LiveFeedSource -> actPax),
     )
     log.debug(s"parsed arrival: $arrival")
     arrival
