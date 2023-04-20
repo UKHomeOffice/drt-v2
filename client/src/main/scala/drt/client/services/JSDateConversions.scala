@@ -39,17 +39,17 @@ object JSDateConversions {
 
       def date: moment.Date = Moment(mdate)
 
-      def getFullYear(): Int = date.format("YYYY").toInt
+      def getFullYear: Int = date.format("YYYY").toInt
 
-      def getMonth(): Int = date.format("M").toInt
+      def getMonth: Int = date.format("M").toInt
 
-      def getDate(): Int = date.format("D").toInt
+      def getDate: Int = date.format("D").toInt
 
-      def getHours(): Int = date.format("H").toInt
+      def getHours: Int = date.format("H").toInt
 
-      def getMinutes(): Int = date.format("m").toInt
+      def getMinutes: Int = date.format("m").toInt
 
-      def getSeconds(): Int = date.format("s").toInt
+      def getSeconds: Int = date.format("s").toInt
 
       def addDays(daysToAdd: Int): SDateLike = date.add(daysToAdd, "days")
 
@@ -63,31 +63,31 @@ object JSDateConversions {
 
       def millisSinceEpoch: MillisSinceEpoch = date.unix().toLong * 1000
 
-      def toLocalDateTimeString(): String = f"${getFullYear()}-${getMonth()}%02d-${getDate()}%02d ${getHours()}%02d:${getMinutes()}%02d"
+      def toLocalDateTimeString(): String = f"$getFullYear-$getMonth%02d-$getDate%02d $getHours%02d:$getMinutes%02d"
 
-      override def toLocalDate: LocalDate = LocalDate(getFullYear(), getMonth(), getDate())
+      override def toLocalDate: LocalDate = LocalDate(getFullYear, getMonth, getDate)
 
       override def toUtcDate: UtcDate = {
         val utcLastMidnight = getUtcLastMidnight
-        UtcDate(utcLastMidnight.getFullYear(), utcLastMidnight.getMonth(), utcLastMidnight.getDate())
+        UtcDate(utcLastMidnight.getFullYear, utcLastMidnight.getMonth, utcLastMidnight.getDate)
       }
 
-      override def toISOString(): String = date.seconds(0).millisecond(0).toISOString()
+      override def toISOString: String = date.seconds(0).millisecond(0).toISOString()
 
-      def getDayOfWeek(): Int = {
+      def getDayOfWeek: Int = {
         val dow = date.format("d").toInt
         if (dow == 0) 7 else dow
       }
 
-      def getZone(): String = date.tz()
+      def getZone: String = date.tz()
 
-      override def getTimeZoneOffsetMillis(): MillisSinceEpoch = date.utcOffset().toLong * 60000L
+      override def getTimeZoneOffsetMillis: MillisSinceEpoch = date.utcOffset().toLong * 60000L
 
-      def startOfTheMonth(): SDateLike = SDate(date.getFullYear(), date.getMonth(), 1)
+      def startOfTheMonth: SDateLike = SDate(date.getFullYear, date.getMonth, 1)
 
       def getUtcLastMidnight: SDateLike = Moment.tz(date.millisSinceEpoch, utc)
 
-      def getLocalLastMidnight: SDateLike = SDate(getFullYear(), getMonth(), getDate())
+      def getLocalLastMidnight: SDateLike = SDate(getFullYear, getMonth, getDate)
 
       def getLocalNextMidnight: SDateLike = getLocalLastMidnight.addDays(1)
     }
@@ -129,7 +129,7 @@ object JSDateConversions {
       .second(0)
       .millisecond(0)
 
-    def firstDayOfMonth(today: SDateLike): SDateLike = SDate(y = today.getFullYear(), m = today.getMonth(), d = 1)
+    def firstDayOfMonth(today: SDateLike): SDateLike = SDate(y = today.getFullYear, m = today.getMonth, d = 1)
 
     def lastDayOfMonth(today: SDateLike): SDateLike = firstDayOfMonth(today).addMonths(1).addDays(-1)
 
@@ -140,8 +140,8 @@ object JSDateConversions {
     def apply(utcDate: UtcDate): SDateLike = Moment.tz(utcDate.toISOString, utc)
   }
 
-  def startOfDay(d: SDateLike): SDateLike = SDate(d.getFullYear(), d.getMonth(), d.getDate())
+  def startOfDay(d: SDateLike): SDateLike = SDate(d.getFullYear, d.getMonth, d.getDate)
 
-  def endOfDay(d: SDateLike): SDateLike = SDate(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59)
+  def endOfDay(d: SDateLike): SDateLike = SDate(d.getFullYear, d.getMonth, d.getDate, 23, 59, 59)
 
 }

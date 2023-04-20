@@ -89,7 +89,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             Origin = PortCode(flight.Origin),
             PcpTime = Option(pcpTime),
             FeedSources = Set(LiveFeedSource),
-            TotalPax = Set(TotalPaxSource(actPax, LiveFeedSource)),
+            TotalPax = Map(LiveFeedSource -> actPax),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
           )
           saveArrival(arrival).map(_ => Created)

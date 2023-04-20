@@ -29,7 +29,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         iata = "BA0001",
         terminal = T1,
         actPax = Option(21),
-        totalPax = Set(TotalPaxSource(Option(21), AclFeedSource)),
+        totalPax = Map(AclFeedSource -> Option(21)),
       )
       val initialBaseArrivals = Set(flight)
       val deskStats = ActualDeskStats(Map(

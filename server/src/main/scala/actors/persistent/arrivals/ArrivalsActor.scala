@@ -3,20 +3,22 @@ package actors.persistent.arrivals
 import actors.acking.AckingReceiver.StreamCompleted
 import actors.persistent.PersistentDrtActor
 import actors.persistent.staffing.{GetFeedStatuses, GetState}
-import actors.serializers.FlightMessageConversion._
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.shared.FlightsApi.Flights
-import drt.shared._
 import scalapb.GeneratedMessage
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{RecoveryActorLike, Sizes}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsRestorer, UniqueArrival}
+import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.SortedMap
+
 
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
@@ -110,7 +112,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     state = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
 
-    persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size))
+    persistFeedStatus(newStatus)
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
   }
 

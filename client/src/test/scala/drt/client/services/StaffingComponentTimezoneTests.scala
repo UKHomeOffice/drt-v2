@@ -76,8 +76,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
 
         val changeDayTimeslots: Seq[SDateLike] = slotsInDay(utcToBSTChangeDate, 60)
 
-        val result: Option[String] = timeZoneSafeTimeSlots(changeDayTimeslots, 60).toList.last.map(_.toISOString())
-        val expected = Some(SDate("2019-03-31T23:00:00").toISOString())
+        val result: Option[String] = timeZoneSafeTimeSlots(changeDayTimeslots, 60).toList.last.map(_.toISOString)
+        val expected = Some(SDate("2019-03-31T23:00:00").toISOString)
 
         assert(result == expected)
       }
@@ -87,8 +87,8 @@ object StaffingComponentTimezoneTests extends TestSuite {
 
         val changeDayTimeslots: Seq[SDateLike] = slotsInDay(utcToBSTChangeDate, 15)
 
-        val result: Option[String] = timeZoneSafeTimeSlots(changeDayTimeslots, 15).toList.last.map(_.toISOString())
-        val expected = Option(SDate("2019-03-31T23:45:00").toISOString())
+        val result: Option[String] = timeZoneSafeTimeSlots(changeDayTimeslots, 15).toList.last.map(_.toISOString)
+        val expected = Option(SDate("2019-03-31T23:45:00").toISOString)
 
         assert(result == expected)
       }
@@ -130,7 +130,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
 
           val shiftStart = SDate("2019-03-31T00:00:00Z")
           val expected = StaffAssignment(
-            shiftStart.toISOString(),
+            shiftStart.toISOString,
             T1,
             shiftStart.millisSinceEpoch,
             shiftStart.addMinutes(14).millisSinceEpoch,
@@ -149,7 +149,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
 
           val shiftStart = SDate("2019-03-31T00:00:00Z")
           val expected = StaffAssignment(
-            shiftStart.toISOString(),
+            shiftStart.toISOString,
             T1,
             shiftStart.millisSinceEpoch,
             shiftStart.addMinutes(59).millisSinceEpoch,
@@ -168,7 +168,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
 
           val shiftStart = SDate("2019-03-30T01:00:00Z")
           val expected = StaffAssignment(
-            shiftStart.toISOString(),
+            shiftStart.toISOString,
             T1,
             shiftStart.millisSinceEpoch,
             shiftStart.addMinutes(59).millisSinceEpoch,
@@ -187,7 +187,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
 
           val shiftStart = SDate("2019-03-31T01:00:00Z")
           val expected = StaffAssignment(
-            shiftStart.toISOString(),
+            shiftStart.toISOString,
             T1,
             shiftStart.millisSinceEpoch,
             shiftStart.addMinutes(59).millisSinceEpoch,

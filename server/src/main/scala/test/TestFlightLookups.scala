@@ -26,7 +26,7 @@ case class TestFlightLookups(system: ActorSystem,
       new TestFlightsRouterActor(
         queuesByTerminal.keys,
         flightsByDayLookup(None),
-        updateFlights,
+        updateFlights(None),
         resetFlightsData
       )))
 }

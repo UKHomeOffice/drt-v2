@@ -19,7 +19,7 @@ object SDateTests extends TestSuite {
         val baseDate = SDate(2016, february, 1, 10, 23)
         val d = baseDate.addDays(39)
 
-        val ymdhm: (Int, Int, Int, Int, Int) = (d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes())
+        val ymdhm: (Int, Int, Int, Int, Int) = (d.getFullYear, d.getMonth, d.getDate, d.getHours, d.getMinutes)
 
         val march = 3
         val expected = (2016, march, 11, 10, 23)
@@ -35,12 +35,12 @@ object SDateTests extends TestSuite {
 
       "round trip the above magic numbers 1481364000000d is 2016/12/10 10:00" - {
         val sdate: SDateLike = SDate.JSSDate(Moment(1481364000000d))
-        assert((2016, 12, 10, 10, 0) == Tuple5(sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
+        assert((2016, 12, 10, 10, 0) == Tuple5(sdate.getFullYear, sdate.getMonth, sdate.getDate, sdate.getHours, sdate.getMinutes))
       }
 
       "round trip the above magic numbers 1482148800000L is 2016/12/19 12:00" - {
         val sdate: SDateLike = SDate.JSSDate(Moment(1482148800000d))
-        assert((2016, 12, 19, 12, 0) == Tuple5(sdate.getFullYear(), sdate.getMonth(), sdate.getDate(), sdate.getHours(), sdate.getMinutes()))
+        assert((2016, 12, 19, 12, 0) == Tuple5(sdate.getFullYear, sdate.getMonth, sdate.getDate, sdate.getHours, sdate.getMinutes))
       }
 
       "a new js date takes the time and assumes it is in the system locale timezone" - {
@@ -55,21 +55,21 @@ object SDateTests extends TestSuite {
       "When calling getDayOfWeek" - {
         "On a Monday we should get back 1" - {
           val d = SDate("2017-10-23T18:00:00")
-          val result = d.getDayOfWeek()
+          val result = d.getDayOfWeek
           val expected = 1
 
           assert(result == expected)
         }
         "On a Sunday we should get back 7" - {
           val d = SDate("2017-10-29T18:00:00")
-          val result = d.getDayOfWeek()
+          val result = d.getDayOfWeek
           val expected = 7
 
           assert(result == expected)
         }
         "On a Wednesday we should get back 3" - {
           val d = SDate("2017-10-25T18:00:00")
-          val result = d.getDayOfWeek()
+          val result = d.getDayOfWeek
           val expected = 3
 
           assert(result == expected)

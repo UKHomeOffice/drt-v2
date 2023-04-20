@@ -1,10 +1,10 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.{FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals}
+import drt.shared.FlightsApi.SplitsForArrivals
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, TotalPaxSource, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, FlightsWithSplitsDiff, Splits, TotalPaxSource, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
@@ -79,7 +79,7 @@ class SplitsForArrivalsSpec extends Specification {
         val updated = splitsForArrivals.diff(flights, now)
 
         updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(ApiFeedSource), ApiPax = Option(1),
-          TotalPax = Set(TotalPaxSource(Option(1), ApiFeedSource))
+          TotalPax = Map(ApiFeedSource -> Option(1))
         ), Set(newSplits, existingSplits), Option(now))), Seq())
       }
     }
@@ -96,7 +96,7 @@ class SplitsForArrivalsSpec extends Specification {
         val updated = splitsForArrivals.diff(flights, now)
 
         updated === FlightsWithSplitsDiff(Seq(ApiFlightWithSplits(arrival.copy(FeedSources = Set(ApiFeedSource), ApiPax = Option(1),
-          TotalPax = Set(TotalPaxSource(Option(1), ApiFeedSource))), Set(newSplits, existingSplits1), Option(now))), Seq())
+          TotalPax = Map(ApiFeedSource -> Option(1))), Set(newSplits, existingSplits1), Option(now))), Seq())
       }
     }
 
