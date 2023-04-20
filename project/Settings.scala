@@ -208,7 +208,7 @@ object Settings {
 
     "com.box" % "box-java-sdk" % "2.19.0",
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.5",
-    "org.bitbucket.b_c" % "jose4j" % "0.4.4",
+    "org.bitbucket.b_c" % "jose4j" % "0.9.3",
 
     "io.netty" % "netty-all" % "4.1.91.Final",
 
