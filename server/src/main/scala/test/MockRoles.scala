@@ -1,3 +1,4 @@
+
 package test.roles
 
 import controllers.UserRoleProviderLike
@@ -6,8 +7,9 @@ import uk.gov.homeoffice.drt.auth.Roles.Role
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
+import slickdb.UserTableLike
 import spray.json.{DefaultJsonProtocol, JsValue, RootJsonFormat}
-
+import test.MockUserTable
 
 object MockRoles {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -33,4 +35,8 @@ object TestUserRoleProvider extends UserRoleProviderLike {
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
     MockRoles(session) ++ userRolesFromHeader(headers)
   }
+
+  implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
+
+  override val userService: UserTableLike = MockUserTable()
 }

@@ -2,9 +2,9 @@ package services.crunch.deskrecs
 
 import akka.stream.Materializer
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch, PassengersMinute}
-import drt.shared.FlightsApi.FlightsWithSplits
 import drt.shared.{SimulationMinutes, TQM}
 import services.crunch.desklimits.TerminalDeskLimitsLike
+import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates

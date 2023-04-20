@@ -5,13 +5,12 @@ import drt.client.components.ArrivalGenerator.apiFlight
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import drt.shared._
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypeAndQueue, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.ports._
 import utest.{TestSuite, _}
 
 
@@ -164,13 +163,13 @@ object BigSummaryBoxTests extends TestSuite {
             "Then we can aggregate the splits by multiply the % against the bestPax so that we can show them in a graph" - {
               val flights = List(
                 ApiFlightWithSplits(apiFlight(schDt = "2017-05-01T12:05Z", terminal = terminal1, actPax = Option(100), pcpTime = Option(mkMillis("2017-05-01T12:05Z")),
-                  totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource))),
+                  totalPax = Map(LiveFeedSource -> Option(100))),
                   Set(Splits(Set(
                     ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 30, None, None),
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 70, None, None)),
                     SplitSources.Historical, None, Percentage))),
                 ApiFlightWithSplits(apiFlight(schDt = "2017-05-01T13:05Z", terminal = terminal1, actPax = Option(100), pcpTime = Option(mkMillis("2017-05-01T13:15Z")),
-                  totalPax = Set(TotalPaxSource(Option(100), LiveFeedSource))),
+                  totalPax = Map(LiveFeedSource -> Option(100))),
                   Set(Splits(Set(
                     ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 40, None, None),
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 60, None, None)),

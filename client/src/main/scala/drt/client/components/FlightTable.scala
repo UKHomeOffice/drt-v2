@@ -8,6 +8,7 @@ import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
 import drt.client.services._
 import drt.shared._
+import drt.shared.api.WalkTimes
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
@@ -40,15 +41,16 @@ object FlightTable {
                    redListPorts: HashSet[PortCode],
                    redListUpdates: RedListUpdates,
                    airportConfig: AirportConfig,
+                   walkTimes: WalkTimes,
                   ) extends UseValueEq
 
   case class State(apiDataLoaded: Boolean)
 
-  def ArrivalsTable(shortLabel: Boolean = false,
-                    timelineComponent: Option[Arrival => VdomNode] = None,
-                    originMapper: PortCode => VdomNode = portCode => portCode.toString,
-                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-                   ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
+  def apply(shortLabel: Boolean = false,
+            timelineComponent: Option[Arrival => VdomNode] = None,
+            originMapper: PortCode => VdomNode = portCode => portCode.toString,
+            splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
+           ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
     .render_P { props =>
       val flightsWithSplits = props.flightsWithSplits
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsWithSplits)
@@ -99,6 +101,7 @@ object FlightTable {
                     airportConfig = props.airportConfig,
                     redListUpdates = props.redListUpdates,
                     includeIndirectRedListColumn = redListPaxExist,
+                    walkTimes = props.walkTimes,
                   ))
               }.toTagMod)
           ),

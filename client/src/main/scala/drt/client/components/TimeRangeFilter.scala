@@ -25,9 +25,9 @@ case class WholeDayWindow() extends TimeRangeHours {
 }
 
 case class CurrentWindow() extends TimeRangeHours {
-  override def start: Int = SDate.now().getHours() - 1
+  override def start: Int = SDate.now().getHours - 1
 
-  override def end: Int = SDate.now().getHours() + 3
+  override def end: Int = SDate.now().getHours + 3
 }
 
 object TimeRangeHours {

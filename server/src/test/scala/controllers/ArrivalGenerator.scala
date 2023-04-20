@@ -30,7 +30,7 @@ object ArrivalGenerator {
               airportId: PortCode = PortCode(""),
               feedSources: Set[FeedSource] = Set(),
               apiPax: Option[Int] = None,
-              totalPax: Set[TotalPaxSource] = Set.empty[TotalPaxSource]
+              totalPax: Map[FeedSource, Option[Int]] = Map.empty
              ): Arrival = {
     val pcpTime = if (pcpDt.nonEmpty) Option(SDate(pcpDt).millisSinceEpoch) else if (schDt.nonEmpty) Option(SDate(schDt).millisSinceEpoch) else None
 
@@ -63,9 +63,9 @@ object ArrivalGenerator {
   }
 
   def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(
-    ArrivalGenerator.arrival(schDt = date.toISOString(), terminal = terminal), Set(), Option(date.millisSinceEpoch)
+    ArrivalGenerator.arrival(schDt = date.toISOString, terminal = terminal), Set(), Option(date.millisSinceEpoch)
   )
 
   def arrivalForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): Arrival =
-    ArrivalGenerator.arrival(schDt = date.toISOString(), terminal = terminal)
+    ArrivalGenerator.arrival(schDt = date.toISOString, terminal = terminal)
 }

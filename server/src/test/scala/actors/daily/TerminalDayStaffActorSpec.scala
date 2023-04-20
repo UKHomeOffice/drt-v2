@@ -21,7 +21,7 @@ object MockTerminalDayStaffActor {
 
 class MockTerminalDayStaffActor(day: SDateLike,
                                 terminal: Terminal,
-                                override val state: mutable.Map[TM, StaffMinute]) extends TerminalDayStaffActor(day.getFullYear(), day.getMonth(), day.getDate(), terminal, () => day, None)
+                                override val state: mutable.Map[TM, StaffMinute]) extends TerminalDayStaffActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => day, None)
 
 class TerminalDayStaffActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1

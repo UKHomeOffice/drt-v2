@@ -17,7 +17,7 @@ object CSVData {
     val headings = "," + headlines.queueDayHeadlines.map(_.day).toSet.toList.sorted.map(
       day => {
         val localDate = SDate(day, europeLondonTimeZone)
-        f"${localDate.getDate()}%02d/${localDate.getMonth()}%02d"
+        f"${localDate.getDate}%02d/${localDate.getMonth}%02d"
       }
     ).mkString(",")
     val queues: String = queueOrder.flatMap(
@@ -61,7 +61,7 @@ object CSVData {
   def millisToHoursAndMinutesString: MillisSinceEpoch => String =
     (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toHoursAndMinutes
 
-  def periodTimeslotsToCSVString(timeSlotStarts: Seq[String], byTimeSlot: List[List[Option[ForecastTimeSlot]]]): String = {
+  private def periodTimeslotsToCSVString(timeSlotStarts: Seq[String], byTimeSlot: List[List[Option[ForecastTimeSlot]]]): String = {
     byTimeSlot.zip(timeSlotStarts).map {
       case (row, startTime) =>
         s"$startTime" + "," +
@@ -69,22 +69,22 @@ object CSVData {
     }.mkString(lineEnding)
   }
 
-  def forecastTimeSlotOptionToCSV(rowOption: Option[ForecastTimeSlot]): String = rowOption match {
+  private def forecastTimeSlotOptionToCSV(rowOption: Option[ForecastTimeSlot]): String = rowOption match {
     case Some(col) =>
       s"${col.available},${col.required},${col.available - col.required}"
     case None =>
       s",,"
   }
 
-  def makeDayHeadingsForPlanningExport(daysInPeriod: Seq[MillisSinceEpoch]): String = {
+  private def makeDayHeadingsForPlanningExport(daysInPeriod: Seq[MillisSinceEpoch]): String = {
     "," + daysInPeriod.map(day => {
       val localDate = SDate(day, europeLondonTimeZone)
-      val date = localDate.getDate()
-      val month = localDate.getMonth()
+      val date = localDate.getDate
+      val month = localDate.getMonth
       val columnPrefix = f"$date%02d/$month%02d - "
       columnPrefix + "available," + columnPrefix + "required," + columnPrefix + "difference"
     }).mkString(",")
   }
 
-  def forecastDaysInPeriod(forecastPeriod: ForecastPeriod): Seq[MillisSinceEpoch] = forecastPeriod.days.toList.map(_._1).sorted
+  private def forecastDaysInPeriod(forecastPeriod: ForecastPeriod): Seq[MillisSinceEpoch] = forecastPeriod.days.toList.map(_._1).sorted
 }

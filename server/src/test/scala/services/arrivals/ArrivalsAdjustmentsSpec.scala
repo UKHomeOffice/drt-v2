@@ -10,7 +10,7 @@ class ArrivalsAdjustmentsSpec extends Specification {
   }
 
   "Given EDI as the port code then I should get back an EdiArrivalsTerminalAdjustments" >> {
-    val result = ArrivalsAdjustments.adjustmentsForPort(PortCode("EDI")).getClass
-    result === classOf[EdiArrivalsTerminalAdjustments]
+    val result = ArrivalsAdjustments.adjustmentsForPort(PortCode("EDI"))
+    result === EdiArrivalsTerminalAdjustments
   }
 }

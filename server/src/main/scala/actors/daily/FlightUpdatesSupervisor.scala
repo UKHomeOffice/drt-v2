@@ -9,11 +9,10 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.FlightsWithSplitsDiff
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.arrivals.FlightsWithSplitsDiff
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.util.UUID
 import scala.concurrent.duration._
@@ -55,7 +54,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
     case Some(existing) => existing
     case None =>
       log.debug(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
-      val actor = context.system.actorOf(updatesActorFactory(terminal, day), s"flight-updates-actor-$terminal-${day.toISOString()}-${UUID.randomUUID().toString}")
+      val actor = context.system.actorOf(updatesActorFactory(terminal, day), s"flight-updates-actor-$terminal-${day.toISOString}-${UUID.randomUUID().toString}")
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
       actor
@@ -124,7 +123,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
                 log.warn(s"Timed out waiting for updates. Actor may have already been terminated", t)
                 Future(FlightsWithSplitsDiff.empty)
               case t =>
-                log.error(s"Failed to fetch updates from streaming updates actor: ${SDate(day).toISOString()}", t)
+                log.error(s"Failed to fetch updates from streaming updates actor: ${SDate(day).toISOString}", t)
                 Future(FlightsWithSplitsDiff.empty)
             }
       }

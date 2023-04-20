@@ -8,7 +8,7 @@ import diode.{Action, ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared._
+import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import upickle.default.{read, write}
 
