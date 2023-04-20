@@ -206,7 +206,7 @@ object Settings {
     "org.webjars" % "font-awesome" % "4.3.0-1" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
-    "com.box" % "box-java-sdk" % "2.58.0",
+    "com.box" % "box-java-sdk" % "2.19.0",
     "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.1",
     "org.bitbucket.b_c" % "jose4j" % "0.4.4",
 
