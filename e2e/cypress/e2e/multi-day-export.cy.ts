@@ -14,6 +14,7 @@ describe('Multi day export', () => {
       .navigateHome()
       .navigateToMenuItem('T1')
       .selectCurrentTab()
+      .chooseDesksAndQueuesTab()
       .choose24Hours()
       .get("#arrivalsTab").click({force: true}).then(() => {
         cy.contains('Multi Day Export').click({force: true}).then(() => {
@@ -54,6 +55,7 @@ describe('Multi day export', () => {
       .navigateHome()
       .navigateToMenuItem('T1')
       .selectCurrentTab()
+      .chooseDesksAndQueuesTab()
       .choose24Hours()
       .then(() => {
         cy
