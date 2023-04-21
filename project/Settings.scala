@@ -206,10 +206,6 @@ object Settings {
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
-    "com.box" % "box-java-sdk" % "2.19.0",
-    "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.5",
-    "org.bitbucket.b_c" % "jose4j" % "0.4.4",
-
     "io.netty" % "netty-all" % "4.1.91.Final",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
