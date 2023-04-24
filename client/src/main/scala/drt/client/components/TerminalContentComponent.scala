@@ -22,6 +22,7 @@ import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.component.ScalaFn
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
@@ -77,8 +78,7 @@ object TerminalContentComponent {
   }
 
   class Backend() {
-    val arrivalsTableComponent: Component[FlightTable.Props, Unit, Unit, CtorType.Props] =
-      FlightTable(shortLabel = false, None, originMapper, splitsGraphComponentColoured)
+    val arrivalsTableComponent = FlightTable(shortLabel = false, None, originMapper, splitsGraphComponentColoured)
 
     def render(props: Props, state: State): TagOf[Div] = {
       val terminal = props.terminalPageTab.terminal

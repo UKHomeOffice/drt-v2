@@ -3,7 +3,7 @@ package drt.client.actions
 import diode.Action
 import diode.data.Pot
 import drt.client.components.scenarios.SimulationFormFields
-import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
+import drt.client.components.{Country, FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared._
@@ -209,4 +209,8 @@ object Actions {
   case class UpdateForecastAccuracy(forecastAccuracy: ForecastAccuracy) extends Action
 
   case class SetTimeMachineDate(date: SDateLike) extends Action
+
+  case class AddFlaggedNationality(country: Country) extends Action
+
+  case class RemoveFlaggedNationality(country: Country) extends Action
 }

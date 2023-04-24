@@ -3,6 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.SPAMain._
 import drt.client.components.styles.DrtTheme
+import drt.client.components.styles.DrtTheme._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -150,13 +151,13 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       def defaultTimeRangeWindow: TimeRangeHours = if (isToday) CurrentWindow() else WholeDayWindow()
 
-      val liveViewClass = if (state.maybeTimeMachineDate.isEmpty) "active" else ""
-      val timeMachineViewClass = if (state.maybeTimeMachineDate.nonEmpty) "active" else ""
+      val liveViewButtonTheme = if (state.maybeTimeMachineDate.isEmpty) buttonSelectedTheme else buttonTheme
+      val timeMachineViewButtonTheme = if (state.maybeTimeMachineDate.nonEmpty) buttonSelectedTheme else buttonTheme
       val headerClass = if (state.maybeTimeMachineDate.nonEmpty) "terminal-content-header__time-machine" else ""
 
-      val yesterdayTheme = if (isYesterday) DrtTheme.buttonSelectedTheme else DrtTheme.buttonTheme
-      val todayTheme = if (isToday) DrtTheme.buttonSelectedTheme else DrtTheme.buttonTheme
-      val tomorrowTheme = if (isTomorrow) DrtTheme.buttonSelectedTheme else DrtTheme.buttonTheme
+      val yesterdayButtonTheme = if (isYesterday) buttonSelectedTheme else buttonTheme
+      val todayButtonTheme = if (isToday) buttonSelectedTheme else buttonTheme
+      val tomorrowButtonTheme = if (isTomorrow) buttonSelectedTheme else buttonTheme
 
       <.div(^.className := s"terminal-content-header $headerClass",
         <.div(
@@ -164,9 +165,9 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           <.div(
             ^.className := "date-select-wrapper",
             MuiButtonGroup(variant = "contained")(
-              ThemeProvider(theme = yesterdayTheme)(MuiButton()("Yesterday", ^.onClick ==> selectYesterday, ^.id := "yesterday")),
-              ThemeProvider(theme = todayTheme)(MuiButton()("Today", ^.onClick ==> selectToday, ^.id := "today")),
-              ThemeProvider(theme = tomorrowTheme)(MuiButton()("Tomorrow", ^.onClick ==> selectTomorrow, ^.id := "tomorrow")),
+              ThemeProvider(theme = yesterdayButtonTheme)(MuiButton()("Yesterday", ^.onClick ==> selectYesterday, ^.id := "yesterday")),
+              ThemeProvider(theme = todayButtonTheme)(MuiButton()("Today", ^.onClick ==> selectToday, ^.id := "today")),
+              ThemeProvider(theme = tomorrowButtonTheme)(MuiButton()("Tomorrow", ^.onClick ==> selectTomorrow, ^.id := "tomorrow")),
             ),
             <.div(
               ^.className := "date-picker",
@@ -193,9 +194,9 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                   )
                 ),
               ),
-              <.div(^.className := "btn-group no-gutters time-machine-switch-buttons",
-                <.div(^.id := "live-view", ^.className := s"btn btn-primary $liveViewClass", s"Off", ^.onClick ==> selectLatestView),
-                <.div(^.id := "time-machine-view", ^.className := s"btn btn-primary $timeMachineViewClass", "On", ^.onClick ==> selectTimeMachineView),
+              MuiButtonGroup(variant = "contained")(
+                ThemeProvider(liveViewButtonTheme)(MuiButton()(^.id := "live-view", s"Off", ^.onClick ==> selectLatestView)),
+                ThemeProvider(timeMachineViewButtonTheme)(MuiButton()(^.id := "time-machine-view", "On", ^.onClick ==> selectTimeMachineView)),
               ),
             ),
           ),

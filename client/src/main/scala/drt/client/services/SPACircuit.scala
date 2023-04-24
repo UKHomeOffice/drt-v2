@@ -3,7 +3,7 @@ package drt.client.services
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
+import drt.client.components.{Country, FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
@@ -156,6 +156,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      gateStandWalkTime: Pot[WalkTimes] = Empty,
                      passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
                      maybeTimeMachineDate: Option[SDateLike] = None,
+                     flaggedNationalities: Set[Country] = Set(),
                     )
 
 object PollDelay {
@@ -220,6 +221,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new GateStandWalkTimePortsHandler(zoomRW(_.gateStandWalkTime)((m, v) => m.copy(gateStandWalkTime = v))),
       new AppControlHandler(zoomRW(identity)((m, _) => m)),
       new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
+      new FlaggedNationalitiesHandler(zoomRW(_.flaggedNationalities)((m, v) => m.copy(flaggedNationalities = v))),
     )
 
     composedHandlers
