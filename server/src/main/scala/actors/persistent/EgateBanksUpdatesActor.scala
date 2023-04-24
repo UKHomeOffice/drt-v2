@@ -33,7 +33,8 @@ object EgateBanksUpdatesActor {
   case object ReceivedSubscriberAck
 
   def terminalEgatesProvider(egateBanksUpdatesActor: ActorRef)
-                            (implicit timeout: Timeout, ec: ExecutionContext): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) => egateBanksUpdatesActor
+                            (implicit timeout: Timeout, ec: ExecutionContext): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) =>
+    egateBanksUpdatesActor
     .ask(GetState)
     .mapTo[PortEgateBanksUpdates]
     .map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))

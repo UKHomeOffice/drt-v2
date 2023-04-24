@@ -84,11 +84,14 @@ trait WithExports extends WithDesksExport with WithFlightsExport {
         } else startOfWeekMidnight
 
         val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
-        val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${startOfForecast.getFullYear}-${startOfForecast.getMonth}%02d-${startOfForecast.getDate}%02d"
+        val fileName = f"${airportConfig.portCode}-" +
+          f"$terminal-forecast-export-headlines-${startOfForecast.getFullYear}-" +
+          f"${startOfForecast.getMonth}%02d-${startOfForecast.getDate}%02d"
 
         portStateFuture
           .map { portState =>
-            val hf: ForecastHeadlineFigures = Forecast.headlineFigures(startOfForecast, sixMonthsDays, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
+            val hf: ForecastHeadlineFigures =
+              Forecast.headlineFigures(startOfForecast, sixMonthsDays, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
             val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.forecastExportQueueOrder)
             CsvFileStreaming.csvFileResult(fileName, csvData)
           }

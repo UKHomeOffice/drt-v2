@@ -55,7 +55,13 @@ object OptimiserWithFlexibleProcessors {
     val indexedMinDesks = minDesks.toIndexedSeq
 
     val bestMaxDesks = if (passengers.size >= 60) {
-      val fairMaxDesks = rollingFairXmax(indexedWork, indexedMinDesks, blockSize, (0.75 * config.sla).round.toInt, targetWidth, rollingBuffer, config.processors)
+      val fairMaxDesks = rollingFairXmax(indexedWork,
+        indexedMinDesks,
+        blockSize,
+        (0.75 * config.sla).round.toInt,
+        targetWidth,
+        rollingBuffer,
+        config.processors)
       fairMaxDesks.zip(maxDesks).map { case (fair, orig) => List(fair, orig).min }
     } else maxDesks.toIndexedSeq
 
@@ -92,7 +98,8 @@ object OptimiserWithFlexibleProcessors {
                     blockSize: Int,
                     backlog: Double,
                     processors: WorkloadProcessorsProvider): IndexedSeq[Int] = {
-    val workWithMinMaxDesks: Iterator[((IndexedSeq[Double], (IndexedSeq[Int], IndexedSeq[Int])), Int)] = work.grouped(blockSize).zip(xmin.grouped(blockSize).zip(xmax.grouped(blockSize))).zip(work.indices)
+    val workWithMinMaxDesks: Iterator[((IndexedSeq[Double], (IndexedSeq[Int], IndexedSeq[Int])), Int)] =
+      work.grouped(blockSize).zip(xmin.grouped(blockSize).zip(xmax.grouped(blockSize))).zip(work.indices)
 
     workWithMinMaxDesks.foldLeft((List[Int](), backlog)) {
       case ((desks, bl), ((workBlock, (xminBlock, xmaxBlock)), idx)) =>
@@ -463,9 +470,20 @@ object OptimiserWithFlexibleProcessors {
         }
         .iterator.to(mutable.IndexedSeq)
 
-      def myCost(costWork: IndexedSeq[Double], costQStart: IndexedSeq[Double], previousDesksOpen: Int, windowProcessors: WorkloadProcessorsProvider)
+      def myCost(costWork: IndexedSeq[Double],
+                 costQStart: IndexedSeq[Double],
+                 previousDesksOpen: Int,
+                 windowProcessors: WorkloadProcessorsProvider)
                 (capacity: IndexedSeq[Int]): Cost =
-        cost(costWork, sla, weightChurn, weightPax, weightStaff, weightSla, costQStart, previousDesksOpen, windowProcessors)(capacity.flatMap(c => IndexedSeq.fill(blockWidth)(c)))
+        cost(costWork,
+          sla,
+          weightChurn,
+          weightPax,
+          weightStaff,
+          weightSla,
+          costQStart,
+          previousDesksOpen,
+          windowProcessors)(capacity.flatMap(c => IndexedSeq.fill(blockWidth)(c)))
 
       var shouldStop = false
 
@@ -477,7 +495,6 @@ object OptimiserWithFlexibleProcessors {
         val xmaxCondensed = maxDesks.slice(winStart, winStop).grouped(blockWidth).map(_.head).toIndexedSeq
 
         val windowIndices = winStart until winStop
-        //        branchBoundBinarySearch(blockGuess, myCost(currentWork, qStart, lastDesksOpen, currentProcessors), xminCondensed, xmaxCondensed, concavityLimit)
         branchBound(blockGuess, myCost(currentWork, qStart, lastDesksOpen, currentProcessors), xminCondensed, xmaxCondensed, concavityLimit)
           .flatMap(o => List.fill(blockWidth)(o))
           .zip(windowIndices)

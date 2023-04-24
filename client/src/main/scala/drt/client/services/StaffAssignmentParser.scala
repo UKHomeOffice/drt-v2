@@ -11,7 +11,13 @@ object StaffAssignmentHelper {
 
   import JSDateConversions._
 
-  def tryStaffAssignment(name: String, terminalName: String, startDate: String, startTime: String, endTime: String, numberOfStaff: String, createdBy: Option[String]): Try[StaffAssignment] = {
+  def tryStaffAssignment(name: String,
+                         terminalName: String,
+                         startDate: String,
+                         startTime: String,
+                         endTime: String,
+                         numberOfStaff: String,
+                         createdBy: Option[String]): Try[StaffAssignment] = {
     val staffDeltaTry = Try(numberOfStaff.toInt)
     val ymd = startDate.split("/").toVector
 
