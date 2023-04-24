@@ -19,7 +19,7 @@ class EgateBanksUpdatesHandler[M](modelRW: ModelRW[M, Pot[PortEgateBanksUpdates]
 
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetPortEgateBanksUpdates =>
-      effectOnly(Effect(DrtApi.get("egate-banks/updates-legacy").map(r => {
+      effectOnly(Effect(DrtApi.get("egate-banks/updates").map(r => {
         SetEgateBanksUpdates(read[PortEgateBanksUpdates](r.responseText))
       }).recoverWith {
         case e: Throwable =>
