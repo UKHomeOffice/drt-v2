@@ -24,6 +24,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
@@ -55,6 +56,7 @@ object FlightTableRow {
                    redListUpdates: RedListUpdates,
                    includeIndirectRedListColumn: Boolean,
                    walkTimes: WalkTimes,
+                   flaggedNationalities: Set[Country],
                   ) extends UseValueEq
 
   case class RowState(hasChanged: Boolean)
@@ -155,6 +157,11 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
+        <.td(
+          if (flightWithSplits.hasValidApi) {
+            "hmm"
+          } else EmptyVdom
+        ),
         <.td(gateOrStand(flight, props.airportConfig.defaultWalkTimeMillis(flight.Terminal), props.directRedListFlight.paxDiversion, props.walkTimes)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
@@ -236,5 +243,4 @@ object FlightTableRow {
   def isRedListCountry(country: String, date: SDateLike, redListUpdates: RedListUpdates): Boolean =
     redListUpdates.countryCodesByName(date.millisSinceEpoch).keys.exists(_.toLowerCase == country.toLowerCase)
 
-  //  def apply(props: Props): Unmounted[Props, RowState, Unit] = component(props)
 }

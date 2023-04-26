@@ -1,7 +1,7 @@
 package manifests.paxinfo
 
 import drt.shared._
-import drt.shared.api.{AgeRange, PassengerInfoSummary, PaxAgeRange, UnknownAge}
+import drt.shared.api.{AgeRange, FlightManifestSummary, PaxAgeRange, UnknownAge}
 import manifests.passengers.PassengerInfo
 import manifests.paxinfo.ManifestBuilder._
 import org.specs2.mutable.Specification
@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.ports.{PaxTypes, PortCode}
 import scala.collection.immutable.List
 
 
-class PassengerInfoSummaryFromManifestSpec extends Specification {
+class FlightManifestSummaryFromManifestSpec extends Specification {
 
   "When extracting passenger info " >> {
     "Given a manifest with multiple GB passengers aged 10, 20 and 30 " >> {
@@ -25,9 +25,9 @@ class PassengerInfoSummaryFromManifestSpec extends Specification {
           (Nationality("GBR"), 30))
         )
 
-        val result = PassengerInfo.manifestToPassengerInfoSummary(voyageManifest)
+        val result = PassengerInfo.manifestToFlightManifestSummary(voyageManifest)
 
-        val expected = Option(PassengerInfoSummary(
+        val expected = Option(FlightManifestSummary(
           ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2020-11-09T00:00").millisSinceEpoch),
           Map(AgeRange(0, Option(11)) -> 1, AgeRange(12, Option(24)) -> 1, AgeRange(25, Option(49)) -> 1),
           Map(Nationality("GBR") -> 3),
@@ -51,9 +51,9 @@ class PassengerInfoSummaryFromManifestSpec extends Specification {
           (Nationality("GBR"), 25, Option("1")),
         ))
 
-        val result = PassengerInfo.manifestToPassengerInfoSummary(voyageManifest)
+        val result = PassengerInfo.manifestToFlightManifestSummary(voyageManifest)
 
-        val expected = Option(PassengerInfoSummary(
+        val expected = Option(FlightManifestSummary(
           ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2020-11-09T00:00").millisSinceEpoch),
           Map(AgeRange(25, Option(49)) -> 1),
           Map(Nationality("GBR") -> 1),
@@ -82,9 +82,9 @@ class PassengerInfoSummaryFromManifestSpec extends Specification {
           )
         )
 
-        val result = PassengerInfo.manifestToPassengerInfoSummary(voyageManifest)
+        val result = PassengerInfo.manifestToFlightManifestSummary(voyageManifest)
 
-        val expected = Option(PassengerInfoSummary(
+        val expected = Option(FlightManifestSummary(
           ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2020-11-09T00:00").millisSinceEpoch),
           Map(AgeRange(25, Option(49)) -> 6),
           Map(Nationality("GBR") -> 6),

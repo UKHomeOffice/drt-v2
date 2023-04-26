@@ -1,14 +1,23 @@
 package drt.client.services.handlers
 
-import diode.{ActionResult, ModelRW}
-import drt.client.actions.Actions.{AddFlaggedNationality, RemoveFlaggedNationality}
-import drt.client.components.Country
+import diode.{ActionResult, Effect, ModelRW}
+import drt.client.actions.Actions._
+import drt.client.components.NationalityFlaggerState
 
-class FlaggedNationalitiesHandler[M](modelRW: ModelRW[M, Set[Country]]) extends LoggingActionHandler(modelRW) {
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+
+class FlaggedNationalitiesHandler[M](modelRW: ModelRW[M, NationalityFlaggerState]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddFlaggedNationality(country) =>
-      updated(value + country)
+      updated(value.copy(flaggedNationalities = value.flaggedNationalities + country), Effect(Future.successful(UpdateNationalityFlaggerInputText(""))))
     case RemoveFlaggedNationality(country) =>
-      updated(value - country)
+      updated(value.copy(flaggedNationalities = value.flaggedNationalities - country))
+    case ClearFlaggedNationalities =>
+      updated(value.copy(flaggedNationalities = Set()))
+    case SetNationalityFlaggerOpen(open) =>
+      updated(value.copy(open = open))
+    case UpdateNationalityFlaggerInputText(text) =>
+      updated(value.copy(inputText = text))
   }
 }

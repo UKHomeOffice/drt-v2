@@ -3,13 +3,13 @@ package drt.client.services
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.client.components.{Country, FileUploadState, StaffAdjustmentDialogueState}
+import drt.client.components.{FileUploadState, NationalityFlaggerState, StaffAdjustmentDialogueState}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
-import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
+import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
@@ -148,7 +148,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureFlags: Pot[FeatureFlags] = Empty,
                      fileUploadState: Pot[FileUploadState] = Empty,
                      simulationResult: Pot[SimulationResult] = Empty,
-                     passengerInfoSummariesByArrival: Pot[Map[ArrivalKey, PassengerInfoSummary]] = Ready(Map()),
+                     passengerInfoSummariesByArrival: Pot[Map[ArrivalKey, FlightManifestSummary]] = Ready(Map()),
                      snackbarMessage: Pot[String] = Empty,
                      redListPorts: Pot[HashSet[PortCode]] = Empty,
                      redListUpdates: Pot[RedListUpdates] = Empty,
@@ -156,7 +156,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      gateStandWalkTime: Pot[WalkTimes] = Empty,
                      passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
                      maybeTimeMachineDate: Option[SDateLike] = None,
-                     flaggedNationalities: Set[Country] = Set(),
+                     nationalityFlaggerState: NationalityFlaggerState = NationalityFlaggerState(Set(), false, ""),
+                     flightManifests: Pot[Map[ArrivalKey, FlightManifestSummary]] = Empty,
                     )
 
 object PollDelay {
@@ -187,7 +188,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new PortStateUpdatesHandler(currentViewMode, zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2))),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
-      new PassengerInfoSummaryHandler(zoom(_.portStatePot), zoomRW(_.passengerInfoSummariesByArrival)((m, v) => m.copy(passengerInfoSummariesByArrival = v))),
+      new PassengerInfoSummaryHandler(zoomRW(_.passengerInfoSummariesByArrival)((m, v) => m.copy(passengerInfoSummariesByArrival = v))),
+      new FlightManifestsHandler(zoomRW(_.flightManifests)((m, v) => m.copy(flightManifests = v))),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),
@@ -221,7 +223,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new GateStandWalkTimePortsHandler(zoomRW(_.gateStandWalkTime)((m, v) => m.copy(gateStandWalkTime = v))),
       new AppControlHandler(zoomRW(identity)((m, _) => m)),
       new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
-      new FlaggedNationalitiesHandler(zoomRW(_.flaggedNationalities)((m, v) => m.copy(flaggedNationalities = v))),
+      new FlaggedNationalitiesHandler(zoomRW(_.nationalityFlaggerState)((m, v) => m.copy(nationalityFlaggerState = v))),
     )
 
     composedHandlers

@@ -7,7 +7,7 @@ import drt.client.components.{Country, FileUploadState, StaffAdjustmentDialogueS
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared._
-import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
+import drt.shared.api.{ForecastAccuracy, FlightManifestSummary, WalkTimes}
 import org.scalajs.dom.{Element, File, FormData}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -124,7 +124,7 @@ object Actions {
 
   case class GetPassengerInfoSummary(arrivalKey: ArrivalKey) extends Action
 
-  case class SetPassengerInfoSummary(arrivalKey: ArrivalKey, infoSummary: PassengerInfoSummary) extends Action
+  case class SetPassengerInfoSummary(arrivalKey: ArrivalKey, infoSummary: FlightManifestSummary) extends Action
 
   case object GetPassengerInfoForCurrentFlights extends Action
 
@@ -196,7 +196,7 @@ object Actions {
 
   case object GetGateStandWalktime extends Action
 
-  case class UpdateGateStandWalktime(walkTimes:WalkTimes) extends Action
+  case class UpdateGateStandWalktime(walkTimes: WalkTimes) extends Action
 
   case class RequestForecastRecrunch(recalculateSplits: Boolean) extends Action
 
@@ -213,4 +213,10 @@ object Actions {
   case class AddFlaggedNationality(country: Country) extends Action
 
   case class RemoveFlaggedNationality(country: Country) extends Action
+
+  case object ClearFlaggedNationalities extends Action
+
+  case class SetNationalityFlaggerOpen(open: Boolean) extends Action
+
+  case class UpdateNationalityFlaggerInputText(value: String) extends Action
 }
