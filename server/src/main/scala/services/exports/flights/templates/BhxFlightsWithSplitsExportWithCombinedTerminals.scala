@@ -17,6 +17,8 @@ trait BhxFlightsWithSplitsExportWithCombinedTerminals {
   val requestForDiversions: FlightsRequest = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, terminalsToQuery)
 }
 
-case class BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithoutActualApiExport with BhxFlightsWithSplitsExportWithCombinedTerminals
+case class BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start: SDateLike, end: SDateLike, terminal: Terminal)
+  extends FlightsWithSplitsWithoutActualApiExport with BhxFlightsWithSplitsExportWithCombinedTerminals
 
-case class BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithActualApiExport with BhxFlightsWithSplitsExportWithCombinedTerminals
+case class BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start: SDateLike, end: SDateLike, terminal: Terminal)
+  extends FlightsWithSplitsWithActualApiExport with BhxFlightsWithSplitsExportWithCombinedTerminals

@@ -31,6 +31,8 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object Scenarios {
 
+
+
   def simulationResult(simulationParams: SimulationParams,
                        simulationAirportConfig: AirportConfig,
                        splitsCalculator: SplitsCalculator,

@@ -14,7 +14,8 @@ import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
 import uk.gov.homeoffice.drt.time.SDate
 import services.exports.StaffMovementsExport
-import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
+import uk.gov.homeoffice.drt.auth.Roles.{StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{read, write}

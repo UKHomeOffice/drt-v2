@@ -21,7 +21,9 @@ object TestFixtureFeed {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(actorSystem: ActorSystem, testArrivalActor: ActorRef, source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedSuccess, typed.ActorRef[FeedTick]] = {
+  def apply(actorSystem: ActorSystem,
+            testArrivalActor: ActorRef,
+            source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedSuccess, typed.ActorRef[FeedTick]] = {
     log.info(s"About to create test Arrival")
 
     implicit val timeout: Timeout = Timeout(1 seconds)

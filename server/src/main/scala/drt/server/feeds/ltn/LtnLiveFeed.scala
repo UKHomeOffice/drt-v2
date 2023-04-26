@@ -105,8 +105,10 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       BaggageReclaimId = ltnFeedFlight.BaggageClaimUnit,
       AirportID = "LTN",
       Terminal = Terminal(ltnFeedFlight.TerminalCode.getOrElse(throw new Exception("Missing terminal"))),
-      rawICAO = ltnFeedFlight.AirlineICAO.getOrElse(throw new Exception("Missing ICAO carrier code")) + ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
-      rawIATA = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing IATA carrier code")) + ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
+      rawICAO = ltnFeedFlight.AirlineICAO.getOrElse(throw new Exception("Missing ICAO carrier code")) +
+        ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
+      rawIATA = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing IATA carrier code")) +
+        ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
       Origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
       Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
       PcpTime = None,
@@ -147,4 +149,3 @@ case class LtnLiveFlight(TotalPassengerCount: Option[Int],
 object LtnLiveFlightProtocol extends DefaultJsonProtocol {
   implicit val ltnLiveFlightConverter: RootJsonFormat[LtnLiveFlight] = jsonFormat21(LtnLiveFlight)
 }
-

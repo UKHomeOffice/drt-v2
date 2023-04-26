@@ -13,7 +13,7 @@ object BootstrapStyles extends StyleSheet.Inline {
 
   val contextDomain = Domain.ofValues(success, info, warning, danger)
 
-  def commonStyle[A](domain: Domain[A], base: String)(implicit l: StyleLookup[A]) = styleF(domain)(opt =>
+  def commonStyle[A](domain: Domain[A], base: String)(implicit l: StyleLookup[A]): A => StyleA = styleF(domain)(opt =>
     styleS(addClassNames(base, s"$base-$opt"))(cssComposition)
   )
 
@@ -41,7 +41,7 @@ object BootstrapStyles extends StyleSheet.Inline {
   val panelBody = styleWrap(panelBodyStr)
 
   // wrap styles in a namespace, assign to val to prevent lazy initialization
-  object modal {
+  object Modal {
     val modal = styleWrap("modal")
     val fade = styleWrap("fade")
     val dialog = styleWrap("modal-dialog")
@@ -51,15 +51,15 @@ object BootstrapStyles extends StyleSheet.Inline {
     val footer = styleWrap("modal-footer")
   }
 
-  val _modal = modal
+  val _modal = Modal
 
-  object listGroup {
+  object ListGroup {
     val listGroup = styleWrap("list-group")
     val item = styleWrap("list-group-item")
     val itemOpt = commonStyle(contextDomain, "list-group-item")
   }
 
-  val _listGroup = listGroup
+  val _listGroup = ListGroup
   val pullRight = styleWrap("pull-right")
   val buttonXS = styleWrap("btn-xs")
   val close = styleWrap("close")

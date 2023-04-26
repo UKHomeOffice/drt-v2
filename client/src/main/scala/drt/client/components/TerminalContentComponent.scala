@@ -114,15 +114,15 @@ object TerminalContentComponent {
             <.div(^.className := s"view-mode-content $viewModeStr",
               <.div(^.className := "tabs-with-export",
                 <.ul(^.className := "nav nav-tabs",
-                  <.li(^.className := desksAndQueuesActive,
-                    <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
-                      GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                      props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
-                    }),
                   <.li(^.className := arrivalsActive,
                     <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
                       GoogleEventTracker.sendEvent(terminalName, "Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                       props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
+                    }),
+                  <.li(^.className := desksAndQueuesActive,
+                    <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
+                      GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
+                      props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
                     }),
                   <.li(^.className := staffingActive,
                     <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", " ", staffMovementsTabTooltip), ^.onClick --> {

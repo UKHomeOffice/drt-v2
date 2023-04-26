@@ -122,8 +122,8 @@ object SPAMain {
   }
 
   case class TerminalPageTabLoc(terminalName: String,
-                                modeStr: String = "dashboard",
-                                subMode: String = "summary",
+                                modeStr: String = "current",
+                                subMode: String = "arrivals",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
     val terminal: Terminal = Terminal(terminalName)

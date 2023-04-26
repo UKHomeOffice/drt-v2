@@ -71,7 +71,8 @@ trait FlightsExport {
       }
       .prepend(Source(List(headings + "\n")))
 
-  private def filterAndSort(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed]): Source[(ApiFlightWithSplits, Option[VoyageManifest]), NotUsed] =
+  private def filterAndSort(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed]):
+  Source[(ApiFlightWithSplits, Option[VoyageManifest]), NotUsed] =
     flightsStream.mapConcat { case (flights, manifests) =>
       uniqueArrivalsWithCodeShares(flights.flights.values.toSeq)
         .map(_._1)
