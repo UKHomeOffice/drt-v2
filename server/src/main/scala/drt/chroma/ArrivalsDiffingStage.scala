@@ -61,7 +61,8 @@ final class ArrivalsDiffingStage(initialKnownArrivals: SortedMap[UniqueArrival, 
     def processFeedResponse(arrivalsFeedResponse: ArrivalsFeedResponse): Option[ArrivalsFeedResponse] = arrivalsFeedResponse match {
       case afs@ArrivalsFeedSuccess(latestArrivals, _) =>
         val maxScheduledMillis = forecastMaxMillis()
-        val incomingArrivals: Iterable[(UniqueArrival, Arrival)] = latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
+        val incomingArrivals: Iterable[(UniqueArrival, Arrival)] =
+          latestArrivals.flights.filter(_.Scheduled <= maxScheduledMillis).map(a => (UniqueArrival(a), a))
         val newUpdates: Iterable[(UniqueArrival, Arrival)] = filterArrivalsWithUpdates(knownArrivals, incomingArrivals)
         if (newUpdates.nonEmpty) log.info(s"Got ${newUpdates.size} new arrival updates")
         knownArrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivals

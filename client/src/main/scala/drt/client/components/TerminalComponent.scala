@@ -113,6 +113,16 @@ object TerminalComponent {
                   <.div(^.className := "terminal-nav-wrapper", terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled)),
                   <.div(^.className := "tab-content",
                     props.terminalPageTab.mode match {
+                      case Current =>
+                        <.div(
+                          DaySelectorComponent(DaySelectorComponent.Props(props.router,
+                            props.terminalPageTab,
+                            model.loadingState,
+                            model.minuteTicker,
+                            PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
+                          )),
+                          TerminalContentComponent(terminalContentProps)
+                        )
                       case Dashboard =>
                         terminalContentProps.portStatePot.renderReady(ps =>
                           TerminalDashboardComponent(
@@ -126,16 +136,6 @@ object TerminalComponent {
                             redListUpdates = redListUpdates,
                             walkTimes = model.walkTimes,
                           )
-                        )
-                      case Current =>
-                        <.div(
-                          DaySelectorComponent(DaySelectorComponent.Props(props.router,
-                            props.terminalPageTab,
-                            model.loadingState,
-                            model.minuteTicker,
-                            PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
-                          )),
-                          TerminalContentComponent(terminalContentProps)
                         )
                       case Planning =>
                         <.div(model.forecastPeriodPot.render(fp => {
@@ -160,7 +160,7 @@ object TerminalComponent {
     val terminalName = props.terminalPageTab.terminal.toString
 
     val subMode = if (props.terminalPageTab.mode != Current && props.terminalPageTab.mode != Snapshot)
-      "desksAndQueues"
+      "arrivals"
     else
       props.terminalPageTab.subMode
 
@@ -175,17 +175,6 @@ object TerminalComponent {
     val timeMachineClass = if (timeMachineEnabled) "time-machine-active" else ""
 
     <.ul(^.className := "nav nav-tabs",
-      <.li(^.className := tabClass(Dashboard),
-        <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", s"$terminalName Dashboard"), ^.onClick --> {
-          GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
-          props.router.set(
-            props.terminalPageTab.update(
-              mode = Dashboard,
-              subMode = "summary",
-              queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams)
-          )
-        }
-      ),
       <.li(^.className := tabClass(Current) + " " + timeMachineClass,
         <.a(^.id := "currentTab", "Queues & Arrivals", VdomAttr("data-toggle") := "tab"),
         ^.onClick ==> { e: ReactEventFromInput =>
@@ -221,7 +210,18 @@ object TerminalComponent {
               queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
             ))
           }
-        ) else ""
+        ) else "",
+      <.li(^.className := tabClass(Dashboard),
+        <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", s"$terminalName Dashboard"), ^.onClick --> {
+          GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
+          props.router.set(
+            props.terminalPageTab.update(
+              mode = Dashboard,
+              subMode = "summary",
+              queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams)
+          )
+        }
+      )
     )
   }
 

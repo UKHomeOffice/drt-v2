@@ -150,7 +150,8 @@ case class ManifestLookup(tables: Tables)
     ManifestPaxCount(SplitSources.Historical, uniqueArrivalKey, profiles)
   }
 
-  type QueryFunction = UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), tables.profile.api.Effect]
+  type QueryFunction =
+    UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), tables.profile.api.Effect]
 
   private val queryHierarchy: List[(String, QueryFunction)] = List(
     ("sameFlightAndDay3WeekWindowPreviousYearQuery", sameFlightAndDay3WeekWindowPreviousYearQuery),

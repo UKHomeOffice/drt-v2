@@ -9,18 +9,23 @@ import uk.gov.homeoffice.drt.time.SDate
 
 trait MetricsCollectorLike {
   def timer(name: String, milliseconds: Double): Unit
+
   def counter(name: String, value: Double): Unit
 }
 
 class StatsDMetrics extends MetricsCollectorLike {
   val statsd: StatsDClient = new StatsDClient()
+
   override def timer(name: String, milliseconds: Double): Unit = statsd.timer(name, milliseconds)
+
   override def counter(name: String, value: Double): Unit = statsd.counter(name, value)
 }
 
 class LoggingMetrics extends MetricsCollectorLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
   override def timer(name: String, milliseconds: Double): Unit = log.debug(s"METRICS :: $name took ${milliseconds}ms")
+
   override def counter(name: String, value: Double): Unit = log.debug(s"METRICS :: $name count: $value")
 }
 
@@ -51,15 +56,15 @@ object Metrics {
 
   def counter(name: String, value: Double): Unit = collector.counter(name, value)
 
-  def successCounter(name: String, value: Double) = {
+  def successCounter(name: String, value: Double): Unit = {
     counter(s"$name.success", value)
   }
 
-  def failureCounter(name: String) = {
+  def failureCounter(name: String): Unit = {
     counter(s"$name.failure", 1)
   }
 
-  def errorCounter(name: String) = {
+  def errorCounter(name: String): Unit = {
     counter(s"$name.error", 1)
   }
 
@@ -72,6 +77,9 @@ case class StageTimer(stageName: String, portName: String, startTime: MillisSinc
 }
 
 object StageTimer {
-  def apply[T](stageName: String, inlet: Inlet[T]): StageTimer = StageTimer(stageName, inlet.toString().replaceAll("\\.in\\(.*", ""), SDate.now().millisSinceEpoch)
-  def apply[T](stageName: String, outlet: Outlet[T]): StageTimer = StageTimer(stageName, outlet.toString().replaceAll("\\.out\\(.*", ""), SDate.now().millisSinceEpoch)
+  def apply[T](stageName: String, inlet: Inlet[T]): StageTimer =
+    StageTimer(stageName, inlet.toString().replaceAll("\\.in\\(.*", ""), SDate.now().millisSinceEpoch)
+
+  def apply[T](stageName: String, outlet: Outlet[T]): StageTimer =
+    StageTimer(stageName, outlet.toString().replaceAll("\\.out\\(.*", ""), SDate.now().millisSinceEpoch)
 }

@@ -149,6 +149,10 @@ Cypress.Commands.add('choose24Hours', () => {
     .click({force: true})
 });
 
+Cypress.Commands.add('chooseDesksAndQueuesTab', () => {
+  cy.get("#desksAndQueuesTab").click({force: true})
+});
+
 Cypress.Commands.add('chooseArrivalsTab', () => {
   cy.get("#arrivalsTab").click({force: true})
 });

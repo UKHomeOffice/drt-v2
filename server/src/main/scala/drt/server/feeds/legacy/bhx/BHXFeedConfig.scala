@@ -18,7 +18,8 @@ trait BHXFeedConfig {
   def serviceSoap(endPointUrl: String): FlightInformationSoap = {
     Try {
       val service: FlightInformation = new FlightInformation(this.getClass.getClassLoader.getResource("FlightInformation.wsdl"))
-      log.debug(s"Initialising BHX Feed with ${service.getWSDLDocumentLocation.toString} [connectionTimeout: $connectionTimeout, receiveTimeout: $receiveTimeout]")
+      log.debug(s"Initialising BHX Feed with ${service.getWSDLDocumentLocation.toString} " +
+        s"[connectionTimeout: $connectionTimeout, receiveTimeout: $receiveTimeout]")
       service.getFlightInformationSoap match {
         case binder: BindingProvider =>
           binder.getRequestContext.put("javax.xml.ws.client.connectionTimeout", connectionTimeout.toString)

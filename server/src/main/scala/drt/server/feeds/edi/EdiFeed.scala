@@ -100,7 +100,8 @@ case class EdiFeed(ediClient: EdiClient)
 
   def flightNumberSplitToComponent(flightNumberStr: String): (VoyageNumber, Option[FlightCodeSuffix]) = {
     if (flightNumberStr.matches("[0-9]+[a-zA-Z]"))
-      (VoyageNumber(flightNumberStr.substring(0, flightNumberStr.length - 1).toInt), Option(FlightCodeSuffix(flightNumberStr.substring(flightNumberStr.length - 1, flightNumberStr.length))))
+      (VoyageNumber(flightNumberStr.substring(0, flightNumberStr.length - 1).toInt),
+        Option(FlightCodeSuffix(flightNumberStr.substring(flightNumberStr.length - 1, flightNumberStr.length))))
     else (VoyageNumber(flightNumberStr.toInt), None)
 
   }
@@ -154,6 +155,3 @@ case class EdiFeed(ediClient: EdiClient)
     case _ => InvalidTerminal
   }
 }
-
-
-

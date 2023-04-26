@@ -64,8 +64,9 @@ object ChromaFlightMarshallers {
 }
 
 
-abstract case class ChromaFetcher[F <: ChromaFlightLike](override val feedType: ChromaFeedType, rToFs: HttpResponse => Future[List[F]])(implicit val system: ActorSystem, mat: Materializer) extends ChromaConfig with WithSendAndReceive {
-
+abstract case class ChromaFetcher[F <: ChromaFlightLike](override val feedType: ChromaFeedType,
+                                                         rToFs: HttpResponse => Future[List[F]])
+                                                        (implicit val system: ActorSystem, mat: Materializer) extends ChromaConfig with WithSendAndReceive {
   import ChromaParserProtocol._
   import system.dispatcher
 

@@ -1,7 +1,8 @@
 package queueus
 
 import uk.gov.homeoffice.drt.arrivals.Splits
-import uk.gov.homeoffice.drt.ports.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge, EeaBelowEGateAge, EeaMachineReadable, GBRNational, GBRNationalBelowEgateAge}
+import uk.gov.homeoffice.drt.ports.PaxTypes.{B5JPlusNational, B5JPlusNationalBelowEGateAge}
+import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaBelowEGateAge, EeaMachineReadable, GBRNational, GBRNationalBelowEgateAge}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
 

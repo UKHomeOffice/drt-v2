@@ -19,7 +19,8 @@ object ApproximateScheduleMatch {
       .filter {
         case (_, potentialArrival) =>
           val originMatches = potentialArrival.Origin == origin
-          if (!originMatches) log.warn(s"Origin mismatch for $uniqueArrival approximate match ${potentialArrival.unique} ($origin != ${potentialArrival.Origin})")
+          if (!originMatches)
+            log.warn(s"Origin mismatch for $uniqueArrival approximate match ${potentialArrival.unique} ($origin != ${potentialArrival.Origin})")
           originMatches
       }
 
