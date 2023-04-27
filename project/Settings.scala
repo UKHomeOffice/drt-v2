@@ -51,7 +51,7 @@ object Settings {
     val levelDb = "0.12"
     val levelDbJni = "1.8"
     val renjin = "0.9.2725"
-    val awsSdk = "1.11.1034"
+    val awsSdk = "1.12.458"
     val csvCommons = "1.10.0"
     val poi = "5.1.0"
     val pprint = "0.5.9"
