@@ -14,6 +14,7 @@ import uk.gov.homeoffice.drt.auth.Roles.EnhancedApiView
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 import upickle.default._
 
+import java.util.Base64
 import scala.concurrent.Future
 
 
@@ -42,12 +43,16 @@ trait WithManifests {
 
   def getManifestSummariesForArrivals: Action[AnyContent] = authByRole(EnhancedApiView) {
     Action.async { request: Request[AnyContent] =>
-      request.body.asText match {
-        case Some(text) =>
-          val arrivalKeys = read[List[ArrivalKey]](text)
-          manifestsForFlights(arrivalKeys)
-            .map(manifests => Ok(write(WithManifests.manifestSummaries(manifests)))
+      request.queryString.get("keys") match {
+        case Some(strings) =>
+          val arrivalKeys = strings.headOption
+            .map(read[Set[ArrivalKey]](_))
+            .getOrElse(Set())
+
+          manifestsForFlights(arrivalKeys.toList)
+            .map(manifests => Ok(WithManifests.manifestSummaries(manifests))
           )
+
         case _ =>
           Future(BadRequest(write(ErrorResponse("Invalid request body"))))
       }
@@ -74,7 +79,7 @@ object WithManifests {
       .mapAsync(1)(getManifests)
       .map { manifests =>
         val relevantManifests = manifests.manifests.filter { m =>
-          m.maybeKey.map(arrivalKeys.contains).getOrElse(false)
+          m.maybeKey.exists(arrivalKeys.contains)
         }
         VoyageManifests(relevantManifests)
       }

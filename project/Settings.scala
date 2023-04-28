@@ -124,6 +124,7 @@ object Settings {
 
     "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
     "com.dedipresta" %%% "scala-crypto" % "1.0.0",
+    "io.lemonlabs" %%% "scala-uri" % "4.0.3",
 
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
@@ -208,6 +209,7 @@ object Settings {
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "io.netty" % "netty-all" % "4.1.91.Final",
+    "io.lemonlabs" %% "scala-uri" % "4.0.3",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,

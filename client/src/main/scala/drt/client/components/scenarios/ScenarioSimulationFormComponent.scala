@@ -4,12 +4,10 @@ import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.actions.Actions.GetSimulation
 import io.kinoplan.scalajs.react.material.ui.core._
-//import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.components.styles.ScalaCssImplicits._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
-//import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.{MuiIcons, MuiIconsModule}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.all.{`type`, id, onChange, onClick, value}

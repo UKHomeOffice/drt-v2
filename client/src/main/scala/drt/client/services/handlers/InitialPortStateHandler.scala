@@ -8,7 +8,8 @@ import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi._
-import drt.shared.PortState
+import drt.shared.{ArrivalKey, PortState}
+import drt.shared.api.FlightManifestSummary
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.ports.PortCode
 import upickle.default.read
@@ -20,7 +21,9 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
-                                 modelRW: ModelRW[M, (Pot[PortState], MillisSinceEpoch, Pot[HashSet[PortCode]])]) extends LoggingActionHandler(modelRW) {
+                                 portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, Pot[HashSet[PortCode]])],
+                                 manifestSummariesModel: ModelRW[M, Map[ArrivalKey, FlightManifestSummary]],
+                                ) extends LoggingActionHandler(portStateModel) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
   val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
@@ -54,8 +57,22 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       val actions = hideLoader + fetchOrigins + fetchRedList
 
+      val manifests = manifestSummariesModel.value
+      val manifestsToFetch = portState.flights.values
+        .filter(f => f.hasValidApi && !manifests.contains(ArrivalKey(f.apiFlight)))
+        .map(f => ArrivalKey(f.apiFlight)).toSet
+
+      val manifestRequest = if (manifestsToFetch.nonEmpty) {
+        println(s"Requesting manifests for ${manifestsToFetch.size} flights")
+        Option(Effect(Future(GetManifestSummaries(manifestsToFetch))))
+      } else None
+
       val effects = if (getCurrentViewMode().isHistoric(SDate.now())) {
-        actions + Effect(Future(GetPassengerInfoForFlights))
+        val e1 = actions + Effect(Future(GetPassengerInfoForFlights))
+        manifestRequest match {
+          case Some(e) => e1 + e
+          case None => e1
+        }
       } else {
         viewMode match {
           case ViewDay(_, None) => actions + getCrunchUpdatesAfterDelay(viewMode)

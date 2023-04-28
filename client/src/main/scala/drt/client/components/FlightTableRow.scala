@@ -10,9 +10,10 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
-import drt.shared.api.WalkTimes
+import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist._
 import drt.shared.splits.ApiSplitsToSplitRatio
+import io.kinoplan.scalajs.react.material.ui.core.MuiChip
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
@@ -20,6 +21,7 @@ import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
 import org.scalajs.dom.html.{Div, Span}
 import scalacss.ScalaCssReact
+import scalacss.internal.Attrs.color
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
@@ -57,6 +59,7 @@ object FlightTableRow {
                    includeIndirectRedListColumn: Boolean,
                    walkTimes: WalkTimes,
                    flaggedNationalities: Set[Country],
+                   manifestSummary: Option[FlightManifestSummary],
                   ) extends UseValueEq
 
   case class RowState(hasChanged: Boolean)
@@ -157,11 +160,22 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        <.td(
-          if (flightWithSplits.hasValidApi) {
-            "hmm"
-          } else EmptyVdom
-        ),
+        if (props.flaggedNationalities.nonEmpty) {
+          <.td(
+            props.manifestSummary.map { summary =>
+              props.flaggedNationalities.toList.sortBy(_.threeLetterCode)
+                .map { country =>
+                  val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
+                  if (pax > 0) Option(MuiChip(label = VdomNode(s"${country.threeLetterCode} ($pax)"))())
+                  else None
+                }
+                .collect {
+                  case Some(chip) => chip
+                }
+                .toTagMod
+            }.getOrElse(EmptyVdom)
+          )
+        } else EmptyVdom,
         <.td(gateOrStand(flight, props.airportConfig.defaultWalkTimeMillis(flight.Terminal), props.directRedListFlight.paxDiversion, props.walkTimes)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
@@ -210,7 +224,6 @@ object FlightTableRow {
           queueSplits
         )
       }
-
     }
     .build
 

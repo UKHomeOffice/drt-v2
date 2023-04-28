@@ -122,9 +122,9 @@ object Actions {
 
   case class SetWalktimes(walkTimes: WalkTimes) extends Action
 
-  case class GetPassengerInfoSummary(arrivalKey: ArrivalKey) extends Action
+  case class GetManifestSummaries(arrivalKeys: Set[ArrivalKey]) extends Action
 
-  case class SetPassengerInfoSummary(arrivalKey: ArrivalKey, infoSummary: FlightManifestSummary) extends Action
+  case class SetManifestSummaries(summaries: Set[FlightManifestSummary]) extends Action
 
   case object GetPassengerInfoForCurrentFlights extends Action
 

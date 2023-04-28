@@ -14,7 +14,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
-import drt.shared.api.WalkTimes
+import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedList}
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiCircularProgress}
@@ -23,10 +23,11 @@ import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.component.ScalaFn
+import japgolly.scalajs.react.extra.ReusabilityOverlay
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
@@ -39,8 +40,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import scala.collection.immutable.HashSet
 
 object TerminalContentComponent {
-  case class Props(portStatePot: Pot[PortState],
-                   potShifts: Pot[ShiftAssignments],
+  case class Props(potShifts: Pot[ShiftAssignments],
                    potFixedPoints: Pot[FixedPointAssignments],
                    potStaffMovements: Pot[StaffMovements],
                    airportConfig: AirportConfig,
@@ -59,6 +59,9 @@ object TerminalContentComponent {
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
+
+  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
+  implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
 
   def viewStartAndEnd(day: LocalDate, range: TimeRangeHours): (SDateLike, SDateLike) = {
     val startOfDay = SDate(day)
@@ -96,20 +99,21 @@ object TerminalContentComponent {
 
       val timeRangeHours: CustomWindow = timeRange(props)
 
+      val terminalQueues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
+      val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeRangeHours)
+      val terminalName = terminal.toString
+      val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
+      val movementsExportMillis = props.viewMode match {
+        case ViewLive => SDate.now().millisSinceEpoch
+        case ViewDay(localDate, _) => SDate(localDate).getLocalNextMidnight.millisSinceEpoch
+      }
+
       <.div(^.className := "queues-and-arrivals",
-        props.portStatePot match {
-          case Pending(_) =>
-            <.div(^.className := "terminal-spinner", MuiCircularProgress()())
-          case p if p.isEmpty => <.div(^.id := "terminal-data", "Nothing to show for this time period")
-          case Ready(portState) =>
-            val queues = props.airportConfig.queuesByTerminal.filterKeys(_ == terminal)
-            val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeRangeHours)
-            val terminalName = terminal.toString
-            val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
-            val movementsExportMillis = props.viewMode match {
-              case ViewLive => SDate.now().millisSinceEpoch
-              case ViewDay(localDate, _) => SDate(localDate).getLocalNextMidnight.millisSinceEpoch
-            }
+//        props.portStatePot match {
+//          case Pending(_) =>
+//            <.div(^.className := "terminal-spinner", MuiCircularProgress()())
+//          case p if p.isEmpty => <.div(^.id := "terminal-data", "Nothing to show for this time period")
+//          case Ready(portState) =>
 
             <.div(^.className := s"view-mode-content $viewModeStr",
               <.div(^.className := "tabs-with-export",
@@ -177,7 +181,7 @@ object TerminalContentComponent {
                       TerminalDesksAndQueues(
                         TerminalDesksAndQueues.Props(
                           router = props.router,
-                          portState = portState.windowWithTerminalFilter(viewStart, viewEnd, queues.toMap),
+                          portState = PortState.empty,//portState.windowWithTerminalFilter(viewStart, viewEnd, terminalQueues.toMap),
                           viewStart = viewStart,
                           hoursToView = timeRangeHours.end - timeRangeHours.start,
                           airportConfig = props.airportConfig,
@@ -198,15 +202,8 @@ object TerminalContentComponent {
                       redListUpdates <- props.redListUpdates
                       walkTimes <- props.walkTimes
                     } yield {
-                      val flightDisplayFilter = props.airportConfig.portCode match {
-                        case PortCode("LHR") => LhrFlightDisplayFilter(redListUpdates, (portCode, _, _) => redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
-                        case _ => DefaultFlightDisplayFilter
-                      }
-                      val flights = portState.window(viewStart, viewEnd).flights.values
-                      val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminalPageTab.terminal)
                       arrivalsTableComponent(
                         FlightTable.Props(
-                          flightsWithSplits = flightsForTerminal.toList,
                           queueOrder = queueOrder,
                           hasEstChox = props.airportConfig.hasEstChox,
                           arrivalSources = props.arrivalSources,
@@ -222,6 +219,8 @@ object TerminalContentComponent {
                           airportConfig = props.airportConfig,
                           redListUpdates = redListUpdates,
                           walkTimes = walkTimes,
+                          viewStart = viewStart,
+                          viewEnd = viewEnd,
                         )
                       )
                     }
@@ -231,15 +230,14 @@ object TerminalContentComponent {
                 displayForRole(
                   <.div(^.id := "simulations", ^.className := s"tab-pane in $simulationsActive", {
                     if (state.activeTab == "simulations") {
-
-                      props.portStatePot.renderReady(ps =>
+//                      props.portStatePot.renderReady(ps =>
                         ScenarioSimulationComponent(
                           props.viewMode.dayStart.toLocalDate,
                           props.terminalPageTab.terminal,
                           props.airportConfig,
-                          ps.window(props.viewMode.dayStart, props.viewMode.dayStart.getLocalNextMidnight)
+                          PortState.empty,//ps.window(props.viewMode.dayStart, props.viewMode.dayStart.getLocalNextMidnight)
                         )
-                      )
+//                      )
                     } else "not rendering"
                   }),
                   ArrivalSimulationUpload,
@@ -260,7 +258,7 @@ object TerminalContentComponent {
                 )
               )
             )
-        }
+//        }
       )
     }
   }
@@ -309,6 +307,7 @@ object TerminalContentComponent {
         log.info("terminal component didMount")
       }
     )
+    .configure(ReusabilityOverlay.install)
     .build
 
   def apply(props: Props): VdomElement = component(props)

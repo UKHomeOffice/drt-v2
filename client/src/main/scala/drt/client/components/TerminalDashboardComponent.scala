@@ -91,13 +91,12 @@ object TerminalDashboardComponent {
                     originMapper,
                     splitsGraphComponentColoured)(
                     FlightTable.Props(
-                      ps.flights.filter { case (ua, _) => ua.terminal == props.terminalPageTabLoc.terminal }.values.toList,
-                      props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
-                      props.airportConfig.hasEstChox,
-                      None,
-                      props.loggedInUser,
-                      ViewLive,
-                      props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
+                      queueOrder = props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
+                      hasEstChox = props.airportConfig.hasEstChox,
+                      arrivalSources = None,
+                      loggedInUser = props.loggedInUser,
+                      viewMode = ViewLive,
+                      defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
                       hasTransfer = props.airportConfig.hasTransfer,
                       displayRedListInfo = featureFlags.displayRedListInfo,
                       redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
@@ -107,6 +106,8 @@ object TerminalDashboardComponent {
                       airportConfig = props.airportConfig,
                       redListUpdates = props.redListUpdates,
                       walkTimes = walkTimes,
+                      viewStart = start,
+                      viewEnd = end,
                     )
                   )
                 }

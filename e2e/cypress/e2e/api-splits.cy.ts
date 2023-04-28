@@ -90,7 +90,7 @@ describe('API splits', () => {
       .get(paxRagGreenSelector)
       .request({
         method: 'GET',
-        url: "/manifests/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
+        url: "/manifest-summaries/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
       }).then((resp) => {
       expect(resp.body).to.equal(JSON.stringify(summaryWith2Pax), "Api splits incorrect for regular users")
     })
@@ -146,7 +146,7 @@ describe('API splits', () => {
       .contains("3")
       .request({
         method: 'GET',
-        url: "/manifests/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
+        url: "/manifest-summaries/" + scheduledTime.format("YYYY-MM-DD") + "/summary",
       })
       .then((resp) => {
         expect(resp.body).to.equal(JSON.stringify(expectedNationalitySummary), "Api splits incorrect for regular users")

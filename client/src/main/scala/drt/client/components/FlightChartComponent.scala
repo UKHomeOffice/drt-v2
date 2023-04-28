@@ -1,6 +1,5 @@
 package drt.client.components
 
-import drt.client.actions.Actions.GetPassengerInfoSummary
 import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsOptions, ChartJsProps}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.SPACircuit
@@ -9,7 +8,7 @@ import io.kinoplan.scalajs.react.material.ui.core.MuiCircularProgress
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
@@ -29,9 +28,6 @@ object FlightChartComponent {
       val proxy = SPACircuit.connect(_.passengerInfoSummariesByArrival)
       <.div(^.className := "arrivals__table__flight__chart-box-wrapper",
         Tippy.interactiveInfo(
-          triggerCallback = Option((_: ReactEventFromInput) => {
-            Callback(SPACircuit.dispatch(GetPassengerInfoSummary(ArrivalKey(props.flightWithSplits.apiFlight))))
-          }),
           content =
             proxy { rcp =>
               val infosPot = rcp()

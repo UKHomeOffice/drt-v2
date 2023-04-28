@@ -3,22 +3,14 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions.RemoveArrivalSources
-import drt.client.components.ArrivalsExportComponent.StringExtended
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
 import drt.client.services._
 import drt.shared._
-import drt.shared.api.WalkTimes
-import io.kinoplan.scalajs.react.bridge.WithProps.toVdomNode
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core._
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.ExpandMore
+import drt.shared.api.{FlightManifestSummary, WalkTimes}
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.component.ScalaFn
-import japgolly.scalajs.react.facade.React.Node
-import japgolly.scalajs.react.hooks.Hooks.UseState
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf}
 import japgolly.scalajs.react.{CtorType, _}
@@ -31,13 +23,12 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.HashSet
-import scala.scalajs.js
 
 object FlightTable {
-  case class Props(flightsWithSplits: List[ApiFlightWithSplits],
-                   queueOrder: Seq[Queue],
+  case class Props(queueOrder: Seq[Queue],
                    hasEstChox: Boolean,
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    loggedInUser: LoggedInUser,
@@ -52,7 +43,147 @@ object FlightTable {
                    redListUpdates: RedListUpdates,
                    airportConfig: AirportConfig,
                    walkTimes: WalkTimes,
+                   viewStart: SDateLike,
+                   viewEnd: SDateLike,
                   ) extends UseValueEq
+
+  implicit val reuseSDateLike: Reusability[SDateLike] = Reusability.by(_.millisSinceEpoch)
+  implicit val reuseViewMode: Reusability[ViewMode] = Reusability {
+    case (a, b) => a == b
+  }
+  implicit val reuseFlightManifestSummaries: Reusability[Map[ArrivalKey, FlightManifestSummary]] = Reusability {
+    case (a, b) => a.keys == b.keys
+  }
+  implicit val reuseApiFlightWithSplits: Reusability[ApiFlightWithSplits] = Reusability.caseClassExcept[ApiFlightWithSplits]("apiFlight", "splits")
+  implicit val reuseProps: Reusability[Props] = Reusability.caseClassExcept[Props](
+    "queueOrder",
+    "hasEstChox",
+    "arrivalSources",
+    "loggedInUser",
+    "defaultWalkTime",
+    "hasTransfer",
+    "displayRedListInfo",
+    "redListOriginWorkloadExcluded",
+    "terminal",
+    "portCode",
+    "redListPorts",
+    "redListUpdates",
+    "airportConfig",
+    "walkTimes",
+  )
+
+  def apply(shortLabel: Boolean = false,
+            timelineComponent: Option[Arrival => VdomNode] = None,
+            originMapper: PortCode => VdomNode = portCode => portCode.toString,
+            splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
+           ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
+    .render_PS { (props, _) =>
+      val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
+        "* Passengers from CTA & Red List origins do not contribute to PCP workload"
+      else
+        "* Passengers from CTA origins do not contribute to PCP workload"
+
+      val flaggerConnect = SPACircuit.connect(_.flaggedNationalities)
+      val portStateConnect = SPACircuit.connect(m => (m.portStatePot, m.flightManifestSummaries))
+
+      <.div(
+        (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
+          case (true, Some((_, sourcesPot))) =>
+            <.div(^.tabIndex := 0,
+              <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
+              <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.airportConfig)))
+            )
+          case _ => <.div()
+        },
+        flaggerConnect { flaggerProxy =>
+          <.div(
+            NationalityFlaggingComponent.component(flaggerProxy.value),
+            portStateConnect { proxy =>
+              <.div(
+                proxy()._1.render { ps =>
+                  val flightDisplayFilter = props.airportConfig.portCode match {
+                    case PortCode("LHR") => LhrFlightDisplayFilter(props.redListUpdates, (portCode, _, _) => props.redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
+                    case _ => DefaultFlightDisplayFilter
+                  }
+                  val flights = ps.window(props.viewStart, props.viewEnd).flights.values
+                  val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
+                  FlightTableContent(shortLabel, timelineComponent, originMapper, splitsGraphComponent)(
+                    FlightTableContent.Props(
+                      flightsForTerminal.toList,
+                      proxy()._2,
+                      props.queueOrder,
+                      props.hasEstChox,
+                      props.loggedInUser,
+                      props.viewMode,
+                      props.defaultWalkTime,
+                      props.hasTransfer,
+                      props.displayRedListInfo,
+                      props.redListOriginWorkloadExcluded,
+                      props.terminal,
+                      props.portCode,
+                      props.redListPorts,
+                      props.redListUpdates,
+                      props.airportConfig,
+                      props.walkTimes,
+                      flaggerProxy.value,
+                    ))
+                }
+              )
+            },
+            excludedPaxNote
+          )
+        }
+
+      )
+    }
+
+    .configure(Reusability.shouldComponentUpdate)
+    .build
+}
+
+
+object FlightTableContent {
+  case class Props(flightsWithSplits: List[ApiFlightWithSplits],
+                   flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                   queueOrder: Seq[Queue],
+                   hasEstChox: Boolean,
+                   loggedInUser: LoggedInUser,
+                   viewMode: ViewMode,
+                   defaultWalkTime: Long,
+                   hasTransfer: Boolean,
+                   displayRedListInfo: Boolean,
+                   redListOriginWorkloadExcluded: Boolean,
+                   terminal: Terminal,
+                   portCode: PortCode,
+                   redListPorts: HashSet[PortCode],
+                   redListUpdates: RedListUpdates,
+                   airportConfig: AirportConfig,
+                   walkTimes: WalkTimes,
+                   flaggedNationalities: Set[Country],
+                  ) extends UseValueEq
+
+  implicit val reuseViewMode: Reusability[ViewMode] = Reusability {
+    case (a, b) => a == b
+  }
+  implicit val reuseFlightManifestSummaries: Reusability[Map[ArrivalKey, FlightManifestSummary]] = Reusability {
+    case (a, b) => a.keys == b.keys
+  }
+  implicit val reuseApiFlightWithSplits: Reusability[ApiFlightWithSplits] = Reusability((a, b) => a.lastUpdated == b.lastUpdated)
+  implicit val reuseProps: Reusability[Props] = Reusability.caseClassExcept[Props](
+    "queueOrder",
+    "hasEstChox",
+    "loggedInUser",
+    "defaultWalkTime",
+    "hasTransfer",
+    "displayRedListInfo",
+    "redListOriginWorkloadExcluded",
+    "terminal",
+    "portCode",
+    "redListPorts",
+    "redListUpdates",
+    "airportConfig",
+    "walkTimes",
+  )
 
   def apply(shortLabel: Boolean = false,
             timelineComponent: Option[Arrival => VdomNode] = None,
@@ -68,24 +199,10 @@ object FlightTable {
 
       if (sortedFlights.nonEmpty) {
         val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
-        val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
-          "* Passengers from CTA & Red List origins do not contribute to PCP workload"
-        else
-          "* Passengers from CTA origins do not contribute to PCP workload"
-
         <.div(
-          (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
-            case (true, Some((_, sourcesPot))) =>
-              <.div(^.tabIndex := 0,
-                <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
-                <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.airportConfig)))
-              )
-            case _ => <.div()
-          },
-          NationalityFlaggingComponment()(),
           <.table(
             ^.className := "arrivals-table table-striped",
-            tableHead(props, timelineTh, props.queueOrder, redListPaxExist, shortLabel),
+            tableHead(props, timelineTh, props.queueOrder, redListPaxExist, shortLabel, props.flaggedNationalities.nonEmpty),
             <.tbody(
               sortedFlights.zipWithIndex.map {
                 case ((flightWithSplits, codeShares), idx) =>
@@ -111,21 +228,29 @@ object FlightTable {
                     redListUpdates = props.redListUpdates,
                     includeIndirectRedListColumn = redListPaxExist,
                     walkTimes = props.walkTimes,
-                    flaggedNationalities = Set(),
+                    flaggedNationalities = props.flaggedNationalities,
+                    manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
                   ))
               }.toTagMod)
           ),
-          excludedPaxNote
         )
       }
       else <.div("No flights to display")
     }
+    .configure(Reusability.shouldComponentUpdate)
+    //    .configure(ReusabilityOverlay.install)
     .build
 
-  def tableHead(props: Props, timelineTh: TagMod, queues: Seq[Queue], redListPaxExist: Boolean, shortLabel: Boolean): TagOf[TableSection] = {
+  def tableHead(props: Props,
+                timelineTh: TagMod,
+                queues: Seq[Queue],
+                redListPaxExist: Boolean,
+                shortLabel: Boolean,
+                showFlagger: Boolean
+               ): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val isMobile = dom.window.innerWidth < 800
-    val columns = columnHeaders(shortLabel, redListHeading, isMobile)
+    val columns = columnHeaders(shortLabel, redListHeading, isMobile, showFlagger)
 
     val portColumnThs = columnHeadersWithClasses(columns, props.hasEstChox, props.displayRedListInfo, redListPaxExist, redListHeading)
       .toTagMod
@@ -187,20 +312,22 @@ object FlightTable {
       }
   }
 
-  private def columnHeaders(shortLabel: Boolean, redListHeading: String, isMobile: Boolean): Seq[(String, Option[String])] = {
+  private def columnHeaders(shortLabel: Boolean, redListHeading: String, isMobile: Boolean, showFlagger: Boolean): Seq[(String, Option[String])] =
     List(
-      ("Flight", Option("arrivals__table__flight-code")),
-      (if (isMobile) "Ori" else "Origin", None),
-      ("Country", Option("country")),
-      (redListHeading, None),
-      (if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand")),
-      ("Nationality ICAO code", None),
-      ("Status", Option("status")),
-      (if (isMobile || shortLabel) "Sch" else "Scheduled", None),
-      (if (isMobile || shortLabel) "Exp" else "Expected", None),
-      ("Exp PCP", Option("arrivals__table__flight-est-pcp")),
-      ("Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header")))
-  }
+      Option(("Flight", Option("arrivals__table__flight-code"))),
+      Option((if (isMobile) "Ori" else "Origin", None)),
+      Option(("Country", Option("country"))),
+      Option((redListHeading, None)),
+      if (showFlagger) Option("Nationality ICAO code", None) else None,
+      Option((if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand"))),
+      Option(("Status", Option("status"))),
+      Option((if (isMobile || shortLabel) "Sch" else "Scheduled", None)),
+      Option((if (isMobile || shortLabel) "Exp" else "Expected", None)),
+      Option(("Exp PCP", Option("arrivals__table__flight-est-pcp"))),
+      Option(("Est PCP Pax", Option("arrivals__table__flight__pcp-pax__header"))),
+    ).collect {
+      case Some(column) => column
+    }
 
   private def gateOrStandTh: VdomTagOf[Span] =
     <.span(

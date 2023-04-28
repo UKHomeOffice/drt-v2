@@ -8,6 +8,7 @@ import drt.client.logger._
 import drt.client.services._
 import drt.shared.CrunchApi._
 import drt.shared._
+import drt.shared.api.FlightManifestSummary
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import upickle.default.read
@@ -19,7 +20,9 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
-                                 modelRW: ModelRW[M, (Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(modelRW) {
+                                 portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch)],
+                                 manifestSummariesModel: ModelRW[M, Map[ArrivalKey, FlightManifestSummary]],
+                                ) extends LoggingActionHandler(portStateModel) {
   val liveRequestFrequency: FiniteDuration = 2 seconds
   val forecastRequestFrequency: FiniteDuration = 15 seconds
 
@@ -27,7 +30,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetPortStateUpdates(viewMode) =>
-      val (_, lastUpdateMillis) = modelRW.value
+      val (_, lastUpdateMillis) = portStateModel.value
       val startMillis = viewMode.dayStart.millisSinceEpoch
       val endMillis = startMillis + thirtySixHoursInMillis
       val updateRequestFuture = DrtApi.get(s"crunch?start=$startMillis&end=$endMillis&since=$lastUpdateMillis")
@@ -41,16 +44,29 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
       noChange
 
     case UpdatePortStateFromUpdates(viewMode, crunchUpdates) =>
-      modelRW.value match {
+      portStateModel.value match {
         case (Ready(existingState), _) =>
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
-          val scheduledUpdateRequests = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
+          val scheduledUpdateRequest = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
 
           val newOriginCodes = crunchUpdates.flights.map(_.apiFlight.Origin).toSet -- existingState.flights.map { case (_, fws) => fws.apiFlight.Origin }
-          val effects = if (newOriginCodes.nonEmpty)
-            scheduledUpdateRequests + Effect(Future(GetAirportInfos(newOriginCodes)))
+          val airportsRequest = if (newOriginCodes.nonEmpty)
+            List(Effect(Future(GetAirportInfos(newOriginCodes))))
           else
-            scheduledUpdateRequests
+            List.empty
+
+          val manifests = manifestSummariesModel.value
+          val manifestsToFetch = crunchUpdates.flights
+            .filter(f => f.hasValidApi && !manifests.contains(ArrivalKey(f.apiFlight)))
+            .map(f => ArrivalKey(f.apiFlight)).toSet
+
+          val manifestRequest = if (manifestsToFetch.nonEmpty) {
+            println(s"Requesting manifests for ${manifestsToFetch.size} flights")
+            List(Effect(Future(GetManifestSummaries(manifestsToFetch))))
+          } else List.empty
+
+          val effects = (manifestRequest ++ airportsRequest)
+            .foldLeft(new EffectSet(scheduledUpdateRequest, Set(), queue))(_ + _)
 
           updated((Ready(newState), crunchUpdates.latest), effects)
 
