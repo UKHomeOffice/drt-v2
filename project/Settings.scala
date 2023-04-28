@@ -186,7 +186,7 @@ object Settings {
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
-    "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.5.1",
+    "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.0",
     "com.fasterxml.jackson.core" % "jackson-core" % "2.10.5",
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
