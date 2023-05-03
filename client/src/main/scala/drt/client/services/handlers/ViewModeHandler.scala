@@ -12,7 +12,9 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ViewModeHandler[M](now: () => SDateLike, viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(viewModePortStateMP) {
+class ViewModeHandler[M](now: () => SDateLike,
+                         viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)]
+                        ) extends LoggingActionHandler(viewModePortStateMP) {
 
   def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 

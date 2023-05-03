@@ -22,7 +22,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
                                  portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, Pot[HashSet[PortCode]])],
-                                 manifestSummariesModel: ModelRW[M, Map[ArrivalKey, FlightManifestSummary]],
+                                 manifestSummariesModel: ModelR[M, Map[ArrivalKey, FlightManifestSummary]],
                                 ) extends LoggingActionHandler(portStateModel) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
@@ -63,17 +63,13 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
         .map(f => ArrivalKey(f.apiFlight)).toSet
 
       val manifestRequest = if (manifestsToFetch.nonEmpty) {
-        println(s"Requesting manifests for ${manifestsToFetch.size} flights")
+        println(s"Requesting initial manifests for ${manifestsToFetch.size} flights")
         Option(Effect(Future(GetManifestSummaries(manifestsToFetch))))
       } else None
 
-      val effects = if (getCurrentViewMode().isHistoric(SDate.now())) {
-        val e1 = actions + Effect(Future(GetPassengerInfoForFlights))
-        manifestRequest match {
-          case Some(e) => e1 + e
-          case None => e1
-        }
-      } else {
+      val effects = if (getCurrentViewMode().isHistoric(SDate.now()))
+        actions + Effect(Future(GetPassengerInfoForFlights))
+      else {
         viewMode match {
           case ViewDay(_, None) => actions + getCrunchUpdatesAfterDelay(viewMode)
           case ViewLive => actions + getCrunchUpdatesAfterDelay(viewMode)

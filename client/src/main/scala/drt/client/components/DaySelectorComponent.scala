@@ -12,9 +12,10 @@ import drt.client.util.DateUtil.isNotValidDate
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.extra.ReusabilityOverlay
 import japgolly.scalajs.react.extra.router.{RouterCtl, SetRouteVia}
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -28,7 +29,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                    terminalPageTab: TerminalPageTabLoc,
                    loadingState: LoadingState,
                    minuteTicker: Int,
-                   additionalContent: VdomElement,
+//                   additionalContent: VdomElement,
                   ) extends UseValueEq
 
   case class DisplayDate(date: LocalDate, isNotValid: Boolean)
@@ -43,7 +44,8 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
     def updateValidity(isNotValid: Boolean): State = copy(stateDate = DisplayDate(date = stateDate.date, isNotValid = isNotValid))
   }
 
-  val today: SDateLike = SDate.now()
+  implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.stateDate == b.stateDate && a.maybeTimeMachineDate.map(_.date.millisSinceEpoch) == b.maybeTimeMachineDate.map(_.date.millisSinceEpoch))
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps { p =>
@@ -153,13 +155,13 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       val liveViewButtonTheme = if (state.maybeTimeMachineDate.isEmpty) buttonSelectedTheme else buttonTheme
       val timeMachineViewButtonTheme = if (state.maybeTimeMachineDate.nonEmpty) buttonSelectedTheme else buttonTheme
-      val headerClass = if (state.maybeTimeMachineDate.nonEmpty) "terminal-content-header__time-machine" else ""
 
       val yesterdayButtonTheme = if (isYesterday) buttonSelectedTheme else buttonTheme
       val todayButtonTheme = if (isToday) buttonSelectedTheme else buttonTheme
       val tomorrowButtonTheme = if (isTomorrow) buttonSelectedTheme else buttonTheme
 
-      <.div(^.className := s"terminal-content-header $headerClass",
+      <.div(
+        ^.className := s"flex-horz-between",
         <.div(
           ^.className := "date-component-wrapper",
           <.div(
@@ -232,9 +234,10 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
             )
           case None => EmptyVdom
         },
-        props.additionalContent
       )
     }
+    .configure(Reusability.shouldComponentUpdate)
+//    .configure(ReusabilityOverlay.install)
     .build
 
   def apply(props: Props): VdomElement = component(props)

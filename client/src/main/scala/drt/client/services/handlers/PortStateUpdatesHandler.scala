@@ -21,7 +21,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
                                  portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch)],
-                                 manifestSummariesModel: ModelRW[M, Map[ArrivalKey, FlightManifestSummary]],
+                                 manifestSummariesModel: ModelR[M, Map[ArrivalKey, FlightManifestSummary]],
                                 ) extends LoggingActionHandler(portStateModel) {
   val liveRequestFrequency: FiniteDuration = 2 seconds
   val forecastRequestFrequency: FiniteDuration = 15 seconds

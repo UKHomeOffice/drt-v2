@@ -9,20 +9,25 @@ import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.ExpandMore
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.extra.ReusabilityOverlay
 import japgolly.scalajs.react.facade.React.Node
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 
 import scala.scalajs.js
+import scala.scalajs.js.JSConverters.JSRichIterableOnce
 
 
 object NationalityFlaggingComponent {
-//  implicit val propsReuse: Reusability[State] = Reusability.derive[State]
+  case class Props(flaggedNationalities: Set[Country])
 
-  case class State(flaggedNationalities: Set[Country])
+  case class State(flaggedNationalities: Set[Country], inputValue: String)
 
-  val component: Component[Set[Country], State, Unit, CtorType.Props] = ScalaComponent.builder[Set[Country]]("nationality-flagger")
-    .initialStateFromProps(State)
+  implicit val propsReuse: Reusability[Props] = Reusability.always
+  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
+
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("nationality-flagger")
+    .initialStateFromProps(p => State(p.flaggedNationalities, ""))
     .renderS { (scope, state) =>
       val acTextInput: js.Function1[AutocompleteRenderInputParams, Node] = (params: AutocompleteRenderInputParams) => {
         MuiTextField(
@@ -76,7 +81,9 @@ object NationalityFlaggingComponent {
                 isOptionEqualToValue = (o1: MuiAutocompleteOption, o2: MuiAutocompleteOption) => {
                   o1.id == o2.id
                 },
-                value = null,
+                inputValue = state.inputValue,
+                onInputChange = (_: ReactEvent, value: String) => scope.modState(_.copy(inputValue = value)),
+//                value = null,
                 onChange = (_: ReactEvent, value: MuiAutocompleteOption) => value match {
                   case option: MuiAutocompleteOption =>
                     CountryOptions.countries.find(_.id == option.id) match {
@@ -90,6 +97,29 @@ object NationalityFlaggingComponent {
                   case _ => Callback.empty
                 },
               )(),
+//              MuiAutocomplete[String](
+//                disablePortal = true,
+//                options = CountryOptions.countries.map(c => s"${c.name} (${c.threeLetterCode})").toJSArray,
+//                renderInput = acTextInput,
+//                sx = SxProps(Map("minWidth" -> "250px")),
+//                getOptionLabel = (o: MuiAutocompleteOption) => o.label,
+//                isOptionEqualToValue = (o1: MuiAutocompleteOption, o2: MuiAutocompleteOption) => {
+//                  o1.id == o2.id
+//                },
+//                value = null,
+//                onChange = (_: ReactEvent, value: MuiAutocompleteOption) => value match {
+//                  case option: MuiAutocompleteOption =>
+//                    CountryOptions.countries.find(_.id == option.id) match {
+//                      case Some(c) =>
+//                        scope.modState(_.copy(flaggedNationalities = state.flaggedNationalities + c)).map(_ =>
+//                          SPACircuit.dispatch(AddFlaggedNationality(c))
+//                        )
+//                      case None => Callback.empty
+//                    }
+//
+//                  case _ => Callback.empty
+//                },
+//              )(),
               <.div(
                 ^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
                 state.flaggedNationalities.toList
@@ -108,7 +138,8 @@ object NationalityFlaggingComponent {
         )
       )
     }
-//    .configure(Reusability.shouldComponentUpdate)
+    .configure(Reusability.shouldComponentUpdate)
+//    .configure(ReusabilityOverlay.install)
     .build
 }
 

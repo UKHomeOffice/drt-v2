@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.ViewMode
+import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.CrunchMinute
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
@@ -36,7 +36,7 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(crunchMinutes: Iterable[CrunchMinute], viewMode: ViewMode, minuteTicker: Int) extends UseValueEq
+  case class Props(viewMode: ViewMode, minuteTicker: Int) extends UseValueEq
 
   class Backend {
     def render(props: Props): html_<^.VdomNode = {
@@ -45,16 +45,26 @@ object PcpPaxSummariesComponent {
       val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
       val boxes = Seq("next 5 minutes", "5-10 minutes", "10-15 minutes")
       if (props.viewMode.isLive) {
-        <.div(
-          ^.className := "pcp-pax-summaries",
-          boxes.zipWithIndex.map {
-            case (label, box) =>
-              val start = now.addMinutes(box * 5)
-              val summary = PcpPaxSummary(start, fiveMinutes, props.crunchMinutes, queues.toSet)
-              summaryBox(box, label, start, queues, summary)
-          }.toVdomArray
-        )
-      } else EmptyVdom
+
+        val crunchMinutesRCP = SPACircuit.connect(_.portStatePot.map(_.crunchMinutes.values))
+
+        crunchMinutesRCP { crunchMinutesProxy =>
+          <.div(
+            crunchMinutesProxy().render { crunchMinutes =>
+              <.div(
+                ^.className := "pcp-pax-summaries",
+                boxes.zipWithIndex.map {
+                  case (label, box) =>
+                    val start = now.addMinutes(box * 5)
+                    val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes, queues.toSet)
+                    summaryBox(box, label, start, queues, summary)
+                }.toVdomArray
+              )
+            }
+          )
+        }
+      }
+      else EmptyVdom
     }
   }
 
@@ -80,6 +90,6 @@ object PcpPaxSummariesComponent {
     .componentDidMount(_ => Callback.log(s"PcpPaxSummaries component didMount"))
     .build
 
-  def apply(crunchMinutes: Iterable[CrunchMinute], viewMode: ViewMode, minuteTicker: Int): VdomElement =
-    component(Props(crunchMinutes, viewMode, minuteTicker))
+  def apply(viewMode: ViewMode, minuteTicker: Int): VdomElement =
+    component(Props(viewMode, minuteTicker))
 }

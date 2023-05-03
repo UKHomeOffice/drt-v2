@@ -201,12 +201,6 @@ object SPAMain {
 
   case object ForecastFileUploadLoc extends Loc
 
-  case object FaqsLoc extends Loc
-
-  case object DeskAndQueuesLoc extends Loc
-
-  case object AlertLoc extends Loc
-
   def requestInitialActions(): Unit = {
     val initActions = Seq(
       GetApplicationVersion,
@@ -224,6 +218,8 @@ object SPAMain {
       GetOohStatus,
       GetFeatureFlags,
       GetGateStandWalktime,
+      GetManifestSummariesForDate(SDate.now().toUtcDate),
+      GetManifestSummariesForDate(SDate.now().addDays(-1).toUtcDate),
     )
 
     initActions.foreach(SPACircuit.dispatch(_))

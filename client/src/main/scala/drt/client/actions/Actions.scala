@@ -7,7 +7,7 @@ import drt.client.components.{Country, FileUploadState, StaffAdjustmentDialogueS
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared._
-import drt.shared.api.{ForecastAccuracy, FlightManifestSummary, WalkTimes}
+import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
 import org.scalajs.dom.{Element, File, FormData}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
 import scala.collection.immutable.HashSet
 import scala.concurrent.duration.FiniteDuration
@@ -121,6 +121,8 @@ object Actions {
   case class UpdateRedListPorts(codes: HashSet[PortCode], date: LocalDate) extends Action
 
   case class SetWalktimes(walkTimes: WalkTimes) extends Action
+
+  case class GetManifestSummariesForDate(date: UtcDate) extends Action
 
   case class GetManifestSummaries(arrivalKeys: Set[ArrivalKey]) extends Action
 
