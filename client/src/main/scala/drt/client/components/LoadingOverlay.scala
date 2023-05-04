@@ -19,8 +19,8 @@ object LoadingOverlay {
           "width" -> "100%",
           "background" -> "rgba(0,0,0,0.5)",
           "display" -> "flex",
-          "justify-content" -> "center",
-          "align-items" -> "center",
+          "justifyContent" -> "center",
+          "alignItems" -> "center",
         ),
         MuiCircularProgress()()
       )

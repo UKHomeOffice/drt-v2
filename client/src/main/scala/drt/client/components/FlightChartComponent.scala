@@ -72,22 +72,22 @@ object FlightChartComponent {
               <.div(^.className := "arrivals__table__flight__chart-wrapper", ^.width := (chartWidth * 3).toString + "px",
                 if (sortedNats.toMap.values.sum > 0) {
                   val maxY = sortedNats.toMap.values.max + 5
-                  <.div(^.cls := "arrivals__table__flight__chart-box__chart",
+                  <.div(^.key := "nat-chart", ^.cls := "arrivals__table__flight__chart-box__chart",
                     chart("Nationality breakdown", nationalityData, maxY, chartWidth, chartHeight))
                 } else EmptyVdom,
                 if (sortedPaxTypes.toMap.values.sum > 0) {
                   val maxY = sortedPaxTypes.toMap.values.max + 5
-                  <.div(^.cls := "arrivals__table__flight__chart-box__chart",
+                  <.div(^.key := "pax-chart", ^.cls := "arrivals__table__flight__chart-box__chart",
                     chart("Passenger types", paxTypeData, maxY, chartWidth, chartHeight))
                 } else EmptyVdom,
                 if (sortedAges.toMap.values.sum > 0) {
                   val maxY = sortedAges.toMap.values.max + 5
-                  <.div(^.cls := "arrivals__table__flight__chart-box__chart",
+                  <.div(^.key := "age-chart", ^.cls := "arrivals__table__flight__chart-box__chart",
                     chart("Age breakdown", ageData, maxY, chartWidth, chartHeight))
                 } else EmptyVdom
               ),
               if (props.manifestSummary.nationalities.size > 10)
-                <.div(^.cls := s"arrivals__table__flight__chart__show__nationalities",
+                <.div(^.key := "toggle-all-nats", ^.cls := s"arrivals__table__flight__chart__show__nationalities",
                   <.input.checkbox(^.className := "arrivals__table__flight__chart__show__nationalities_checkbox", ^.checked := state.showAllNationalities,
                     ^.onChange ==> toggleShowAllNationalities, ^.id := "toggle-showAllNationalities"),
                   <.label(^.className := "arrivals__table__flight__chart__show__nationalities_label", ^.`for` := "toggle-showAllNationalities", s"Show all ${props.manifestSummary.nationalities.size} Nationalities")

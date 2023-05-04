@@ -47,7 +47,6 @@ object TerminalComponent {
                            viewMode: ViewMode,
                            minuteTicker: Int,
                            featureFlags: Pot[FeatureFlags],
-                           arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                            redListPorts: Pot[HashSet[PortCode]],
                            redListUpdates: Pot[RedListUpdates],
                            timeMachineEnabled: Boolean,
@@ -56,7 +55,7 @@ object TerminalComponent {
 
   private val activeClass = "active"
 
-  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Terminal")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalComponent")
     .render_P { props =>
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         forecastPeriodPot = model.forecastPeriodPot,
@@ -71,7 +70,6 @@ object TerminalComponent {
         viewMode = model.viewMode,
         minuteTicker = model.minuteTicker,
         featureFlags = model.featureFlags,
-        arrivalSources = model.arrivalSources,
         redListPorts = model.redListPorts,
         redListUpdates = model.redListUpdates,
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
@@ -104,7 +102,6 @@ object TerminalComponent {
               loggedInUser = loggedInUser,
               minuteTicker = model.minuteTicker,
               featureFlags = model.featureFlags,
-              arrivalSources = model.arrivalSources,
               redListPorts = model.redListPorts,
               redListUpdates = model.redListUpdates,
               walkTimes = model.walkTimes,
@@ -156,7 +153,6 @@ object TerminalComponent {
         ))
     }
     .configure(Reusability.shouldComponentUpdate)
-//    .configure(ReusabilityOverlay.install)
     .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean): VdomTagOf[UList] = {

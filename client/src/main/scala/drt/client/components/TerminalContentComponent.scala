@@ -52,7 +52,6 @@ object TerminalContentComponent {
                    loggedInUser: LoggedInUser,
                    minuteTicker: Int,
                    featureFlags: Pot[FeatureFlags],
-                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    redListPorts: Pot[HashSet[PortCode]],
                    redListUpdates: Pot[RedListUpdates],
                    walkTimes: Pot[WalkTimes],
@@ -169,7 +168,6 @@ object TerminalContentComponent {
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
               if (state.activeTab == "desksAndQueues") {
-                val (viewStart, _) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeRangeHours)
                 props.featureFlags.render(features =>
                   TerminalDesksAndQueues(
                     TerminalDesksAndQueues.Props(
@@ -198,7 +196,6 @@ object TerminalContentComponent {
                     FlightTable.Props(
                       queueOrder = queueOrder,
                       hasEstChox = props.airportConfig.hasEstChox,
-                      arrivalSources = props.arrivalSources,
                       loggedInUser = props.loggedInUser,
                       viewMode = props.viewMode,
                       defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),

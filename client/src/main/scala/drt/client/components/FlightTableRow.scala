@@ -62,12 +62,11 @@ object FlightTableRow {
                    manifestSummary: Option[FlightManifestSummary],
                   ) extends UseValueEq
 
-  implicit val propsReuse: Reusability[Props] = Reusability.always[Props]
-//    Reusability((a, b) =>
-//    a.flightWithSplits.lastUpdated == b.flightWithSplits.lastUpdated //&&
-//      a.flaggedNationalities == b.flaggedNationalities &&
-//      a.manifestSummary == b.manifestSummary
-//  )
+  implicit val propsReuse: Reusability[Props] = Reusability {
+    (a, b) => a.flightWithSplits.lastUpdated == b.flightWithSplits.lastUpdated &&
+      a.manifestSummary == b.manifestSummary &&
+      a.flaggedNationalities == b.flaggedNationalities
+  }
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .render_P { props =>
@@ -136,19 +135,19 @@ object FlightTableRow {
 
       val expectedContent = maybeLocalTimeWithPopup(bestExpectedTime, Option(timesPopUp), None)
 
-//      val charts = (flightWithSplits.hasValidApi, props.manifestSummary) match {
-//        case (true, Some(manifestSummary)) =>
-//          <.div(^.className := "arrivals__table__flight-code__info",
-//            FlightChartComponent(FlightChartComponent.Props(manifestSummary)))
-//        case _ => EmptyVdom
-//      }
+      val charts = (flightWithSplits.hasValidApi, props.manifestSummary) match {
+        case (true, Some(manifestSummary)) =>
+          <.div(^.className := "arrivals__table__flight-code__info",
+            FlightChartComponent(FlightChartComponent.Props(manifestSummary)))
+        case _ => EmptyVdom
+      }
 
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(
             ^.cls := "arrivals__table__flight-code-wrapper",
             flightCodeElement(flightCodes, props.directRedListFlight.outgoingDiversion, props.directRedListFlight.incomingDiversion),
-//            charts
+            charts
           )),
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
@@ -236,11 +235,10 @@ object FlightTableRow {
       }
     }
     .configure(Reusability.shouldComponentUpdate)
-//        .configure(ReusabilityOverlay.install)
     .build
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
-    val gateOrStand = <.span(^.className := "no-wrap", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
+    val gateOrStand = <.span(^.key := "gate-or-stand", ^.className := "no-wrap", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
     val maybeActualWalkTime = walkTimes.maybeWalkTimeMinutes(arrival.Gate, arrival.Stand, arrival.Terminal)
 
     val description = (paxAreDiverted, maybeActualWalkTime.isDefined) match {
@@ -252,7 +250,7 @@ object FlightTableRow {
     }
     val walkTime = maybeActualWalkTime.getOrElse((terminalWalkTime / oneMinuteMillis).toInt)
     val walkTimeString = MinuteAsAdjective(walkTime).display + " " + description
-    <.span(^.className := "no-wrap", Tippy.interactive(<.span(walkTimeString), gateOrStand))
+    <.span(^.className := "no-wrap", Tippy.interactive(<.span(^.key := "walk-time", walkTimeString), gateOrStand))
   }
 
   def offScheduleClass(arrival: Arrival, considerPredictions: Boolean): String = {

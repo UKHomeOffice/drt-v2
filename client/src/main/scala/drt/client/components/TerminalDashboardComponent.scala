@@ -98,7 +98,6 @@ object TerminalDashboardComponent {
                           FlightTable.Props(
                             queueOrder = props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
                             hasEstChox = props.airportConfig.hasEstChox,
-                            arrivalSources = None,
                             loggedInUser = props.loggedInUser,
                             viewMode = ViewLive,
                             defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),

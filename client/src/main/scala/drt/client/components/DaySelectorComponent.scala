@@ -237,7 +237,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       )
     }
     .configure(Reusability.shouldComponentUpdate)
-//    .configure(ReusabilityOverlay.install)
     .build
 
   def apply(props: Props): VdomElement = component(props)

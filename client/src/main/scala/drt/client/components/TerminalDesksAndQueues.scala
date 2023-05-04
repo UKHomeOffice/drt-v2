@@ -34,7 +34,6 @@ object TerminalDesksAndQueues {
   def queueActualsColour(queue: Queue): String = s"${queueColour(queue)} actuals"
 
   case class Props(router: RouterCtl[Loc],
-                   //                   portState: PortState,
                    viewStart: SDateLike,
                    hoursToView: Int,
                    airportConfig: AirportConfig,
