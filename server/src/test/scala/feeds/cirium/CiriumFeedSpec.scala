@@ -8,7 +8,7 @@ import drt.server.feeds.cirium.CiriumFeed
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.cirium.services.entities._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
@@ -70,7 +70,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       publishedDepartureTime
     )
 
-    val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime,publishedDepartureTime)
+    val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime, publishedDepartureTime)
 
 
     val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
@@ -124,8 +124,6 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       Gate = Option("22"),
       Stand = None,
       MaxPax = None,
-      ActPax = None,
-      TranPax = None,
       RunwayID = None,
       BaggageReclaimId = Option("12"),
       AirportID = PortCode("LHR"),
@@ -136,7 +134,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       Scheduled = SDate(publishedArrivalTime).millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveBaseFeedSource),
-      ScheduledDeparture = Option(SDate(publishedDepartureTime).millisSinceEpoch)
+      ScheduledDeparture = Option(SDate(publishedDepartureTime).millisSinceEpoch),
+      TotalPax = Map(LiveBaseFeedSource -> Passengers(None, None))
     )
   }
 

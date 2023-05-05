@@ -24,11 +24,11 @@ object ArrivalToCsv {
       arrival.EstimatedChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
       arrival.ActualChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
       arrival.PcpTime.map(millisToLocalDateTimeString(_)).getOrElse(""),
-      arrival.ActPax.map(_.toString).getOrElse(""),
+      arrival.bestPcpPaxEstimate.getPcpPax.map(_.toString).getOrElse("")
     )
 
   def arrivalWithTransferToCsvFields(arrival: Arrival,
                                      millisToDateOnly: MillisSinceEpoch => String,
                                      millisToLocalDateTimeString: MillisSinceEpoch => String): List[String] =
-    arrivalToCsvFields(arrival, millisToDateOnly, millisToLocalDateTimeString) :+ arrival.TranPax.getOrElse(0).toString
+    arrivalToCsvFields(arrival, millisToDateOnly, millisToLocalDateTimeString) :+ arrival.bestPcpPaxEstimate.passengers.transit.getOrElse(0).toString
 }

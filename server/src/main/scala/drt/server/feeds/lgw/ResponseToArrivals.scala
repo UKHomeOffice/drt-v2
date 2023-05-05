@@ -4,7 +4,7 @@ import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, Predictions, TotalPaxSource, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, Passengers, Predictions, TotalPaxSource, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
 import uk.gov.homeoffice.drt.time.SDate
@@ -45,8 +45,6 @@ case class ResponseToArrivals(data: String) {
       Gate = (n \\ "PassengerGate").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
       Stand = (n \\ "ArrivalStand").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
       MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt),
-      ActPax = actPax,
-      TranPax = if (actPax.isEmpty) None else transPax,
       RunwayID = parseRunwayId(n).filter(StringUtils.isNotBlank(_)),
       BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filter(StringUtils.isNotBlank(_)),
       AirportID = "LGW",
@@ -59,10 +57,9 @@ case class ResponseToArrivals(data: String) {
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None,
-      ApiPax = None,
       ScheduledDeparture = None,
       RedListPax = None,
-      TotalPax = Map(LiveFeedSource -> actPax),
+      TotalPax = Map(LiveFeedSource -> Passengers(actPax, if (actPax.isEmpty) None else transPax)),
     )
     log.debug(s"parsed arrival: $arrival")
     arrival

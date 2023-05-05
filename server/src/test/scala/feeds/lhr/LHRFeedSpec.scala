@@ -8,7 +8,7 @@ import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
@@ -47,10 +47,11 @@ class LHRFeedSpec extends CrunchTestLike {
             Actual = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
             EstimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
             ActualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
-            Gate = None, Stand = Option("10"), MaxPax = Option(795), ActPax = Option(142), TranPax = Option(1), RunwayID = None, BaggageReclaimId = None,
+            Gate = None, Stand = Option("10"), MaxPax = Option(795), RunwayID = None, BaggageReclaimId = None,
             AirportID = PortCode("LHR"), Terminal = T4, rawICAO = "QR005", rawIATA = "QR005", Origin = PortCode("DOH"),
             Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
-            PcpTime = Option(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch), FeedSources = Set(LiveFeedSource)
+            PcpTime = Option(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch), FeedSources = Set(LiveFeedSource),
+            TotalPax = Map(LiveFeedSource -> Passengers(actual = Option(142), transit = Option(1)))
           )
         )
       )
@@ -86,8 +87,6 @@ class LHRFeedSpec extends CrunchTestLike {
             Gate = None,
             Stand = Option("10"),
             MaxPax = Option(0),
-            ActPax = Option(0),
-            TranPax = Option(0),
             RunwayID = None,
             BaggageReclaimId = None,
             AirportID = PortCode("LHR"),
@@ -97,7 +96,8 @@ class LHRFeedSpec extends CrunchTestLike {
             Origin = PortCode("DOH"),
             Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
             PcpTime = Option(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch),
-            FeedSources = Set(LiveFeedSource)
+            FeedSources = Set(LiveFeedSource),
+            TotalPax = Map(LiveFeedSource -> Passengers(actual = Option(0), transit = Option(0)))
           )
         )
       )
@@ -143,4 +143,3 @@ class LHRFeedSpec extends CrunchTestLike {
     }
   }
 }
-

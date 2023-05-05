@@ -7,6 +7,7 @@ import drt.shared.FlightsApi.Flights
 import org.specs2.mock.Mockito
 import org.specs2.specification.Scope
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -64,7 +65,7 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
     )
 
 
-    val result: Flights = Await.result(lcyClient.initialFlights, 1 second).asInstanceOf[ArrivalsFeedSuccess].arrivals
+    val result: Flights = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
     val expected = Flights(List(
       LCYFlightTransform.lcyFlightToArrival(flight1),
       LCYFlightTransform.lcyFlightToArrival(flight2)
@@ -76,8 +77,7 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
   "Given a request for a full refresh of all flights, if we are rate limited then we should get an ArrivalsFeedFailure" in new Context {
     httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, rateLimitReachedResponse)))
 
-
-    val result = Await.result(lcyClient.initialFlights, 1 second)
+    val result = Await.result(lcyClient.initialFlights, 1.second)
 
     result must haveClass[ArrivalsFeedFailure]
   }
@@ -87,7 +87,7 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
     httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, invalidXmlResponse)))
 
 
-    val result = Await.result(lcyClient.initialFlights, 1 second)
+    val result = Await.result(lcyClient.initialFlights, 1.second)
 
     result must haveClass[ArrivalsFeedFailure]
   }
@@ -96,10 +96,10 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
   "Given a LCYFlight with 0 for passenger fields, I should see 0 pax, 0 max pax and 0 transfer pax." in new Context {
     httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseZeroPaxFlightXml)))
 
-    val result: Flights = Await.result(lcyClient.initialFlights, 1 second).asInstanceOf[ArrivalsFeedSuccess].arrivals
+    val result: Flights = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
     val actMax = result match {
-      case Flights(f :: _) => (f.ActPax, f.MaxPax)
+      case Flights(f :: _) => (f.TotalPax.get(LiveFeedSource).flatMap(_.actual), f.MaxPax)
     }
 
     val expected = (None, Some(0))

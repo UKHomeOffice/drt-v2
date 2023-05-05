@@ -10,9 +10,9 @@ import org.specs2.specification.AfterEach
 import services.PcpArrival
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.prediction.arrival.WalkTimeModelAndFeatures
 import uk.gov.homeoffice.drt.time.MilliTimes.oneDayMillis
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -109,8 +109,8 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     val liveEstimated = Option(scheduled.millisSinceEpoch)
     val liveBaseActual = Option(scheduled.millisSinceEpoch)
 
-    liveSource.offer(List(arrival(estimated = liveBaseActual)))
-    offerAndCheck(liveBaseSource, List(arrival(actual = liveBaseActual)),
+    liveSource.offer(List(arrival(estimated = liveBaseActual,feedSource = LiveBaseFeedSource)))
+    offerAndCheck(liveBaseSource, List(arrival(actual = liveBaseActual,feedSource = LiveBaseFeedSource)),
       (a: Arrival) => a.Estimated == liveEstimated && a.Actual == liveBaseActual)
 
     success
@@ -121,9 +121,9 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     val (_, _, liveBaseSource, liveSource, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(scheduled)).run()
     val liveBaseActual = Option(scheduled.millisSinceEpoch)
 
-    liveSource.offer(List(arrival(estimated = liveBaseActual, status = ArrivalStatus("UNK"))))
+    liveSource.offer(List(arrival(estimated = liveBaseActual, status = ArrivalStatus("UNK"),feedSource = LiveBaseFeedSource)))
 
-    offerAndCheck(liveBaseSource, List(arrival(actual = liveBaseActual, status = ArrivalStatus("Scheduled"))),
+    offerAndCheck(liveBaseSource, List(arrival(actual = liveBaseActual, status = ArrivalStatus("Scheduled"),feedSource = LiveBaseFeedSource)),
       (a: Arrival) => a.Status.description == "Scheduled")
 
     success
@@ -134,9 +134,9 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     val (_, _, liveBaseSource, liveSource, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(scheduled)).run()
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
-    offerAndCheck(liveSource, List(arrival()), (_: Arrival) => true)
+    offerAndCheck(liveSource, List(arrival(feedSource = LiveFeedSource)), (_: Arrival) => true)
 
-    val ciriumArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture)))
+    val ciriumArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture),feedSource = LiveFeedSource))
     offerAndCheck(liveBaseSource, ciriumArrivals,
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.Scheduled == scheduled.millisSinceEpoch)
 
@@ -149,9 +149,9 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
 
-    offerAndCheck(forecastBaseArrivalsSource, List(arrival()), (_: Arrival) => true)
+    offerAndCheck(forecastBaseArrivalsSource, List(arrival(feedSource = AclFeedSource)), (_: Arrival) => true)
 
-    val ciriumArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture)))
+    val ciriumArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture),feedSource = LiveBaseFeedSource))
     offerAndCheck(liveBaseSource, ciriumArrivals,
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.Scheduled == scheduled.millisSinceEpoch)
 
@@ -164,10 +164,10 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
 
-    val aclArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture)))
+    val aclArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture),feedSource = LiveBaseFeedSource))
     offerAndCheck(forecastBaseArrivalsSource, aclArrivals, (_: Arrival) => true)
 
-    offerAndCheck(liveSource, List(arrival()), (a: Arrival) => a.ScheduledDeparture.isEmpty)
+    offerAndCheck(liveSource, List(arrival(feedSource = LiveBaseFeedSource)), (a: Arrival) => a.ScheduledDeparture.isEmpty)
 
     success
   }
@@ -178,14 +178,14 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
 
-    offerAndCheck(forecastBaseArrivalsSource, List(arrival()), (_: Arrival) => true)
+    offerAndCheck(forecastBaseArrivalsSource, List(arrival(feedSource = LiveBaseFeedSource)), (_: Arrival) => true)
 
-    val ciriumArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture)))
+    val ciriumArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture),feedSource = LiveBaseFeedSource))
     offerAndCheck(liveBaseSource, ciriumArrivals,
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.Scheduled == scheduled.millisSinceEpoch)
 
-    offerAndCheck(forecastArrivalSource, List(arrival(actPax = Some(90))),
-      (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.ActPax.get == 90)
+    offerAndCheck(forecastArrivalSource, List(arrival(actPax = Some(90),feedSource = ForecastFeedSource)),
+      (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.bestPcpPaxEstimate.passengers.actual == Option(90))
 
     success
   }
@@ -196,13 +196,13 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     val scheduledDeparture = scheduled.addHours(-4).millisSinceEpoch
 
-    offerAndCheck(liveArrivalSource, List(arrival()), (_: Arrival) => true)
+    offerAndCheck(liveArrivalSource, List(arrival(feedSource = LiveBaseFeedSource)), (_: Arrival) => true)
 
-    val ciriumArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture)))
+    val ciriumArrivals = List(arrival(scheduledDate = scheduled.addMinutes(59).millisSinceEpoch, scheduledDepartureDate = Some(scheduledDeparture),feedSource = LiveBaseFeedSource))
     offerAndCheck(liveBaseSource, ciriumArrivals,
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.Scheduled == scheduled.millisSinceEpoch)
 
-    offerAndCheck(forecastArrivalSource, List(arrival(actPax = Some(90))),
+    offerAndCheck(forecastArrivalSource, List(arrival(actPax = Some(90),feedSource = ApiFeedSource)),
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture &&
         a.FeedSources.contains(ForecastFeedSource) &&
         a.Scheduled == scheduled.millisSinceEpoch)
@@ -216,8 +216,8 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(scheduled, ArrivalDataSanitiser(Option(4), None))
     ).run()
 
-    forecastBaseSource.offer(List(arrival()))
-    val ciriumArrivals = List(arrival(estimated = Option(scheduled.addHours(5).millisSinceEpoch)))
+    forecastBaseSource.offer(List(arrival(feedSource = ApiFeedSource)))
+    val ciriumArrivals = List(arrival(estimated = Option(scheduled.addHours(5).millisSinceEpoch),feedSource = LiveFeedSource))
     offerAndCheck(liveBaseSource, ciriumArrivals, (a: Arrival) => a.Estimated.isEmpty)
 
     success
@@ -229,9 +229,9 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(scheduled, ArrivalDataSanitiser(Option(4), None))
     ).run()
 
-    forecastBaseSource.offer(List(arrival()))
+    forecastBaseSource.offer(List(arrival(feedSource = AclFeedSource)))
     val lateEstimatedTime = scheduled.addHours(5)
-    val liveArrivals = List(arrival(estimated = Option(lateEstimatedTime.millisSinceEpoch)))
+    val liveArrivals = List(arrival(estimated = Option(lateEstimatedTime.millisSinceEpoch),feedSource = LiveFeedSource))
 
     offerAndCheck(liveSource, liveArrivals, (a: Arrival) => a.Estimated == Option(lateEstimatedTime.millisSinceEpoch))
 
@@ -245,10 +245,10 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(scheduled, ArrivalDataSanitiser(Option(4), None))
     ).run()
 
-    forecastBaseSource.offer(List(arrival()))
+    forecastBaseSource.offer(List(arrival(feedSource = AclFeedSource)))
     val estTime = scheduled.addHours(5)
-    liveSource.offer(List(arrival(estimated = Option(estTime.millisSinceEpoch))))
-    val ciriumArrivals = List(arrival(estChox = Option(estTime.addHours(-1).millisSinceEpoch)))
+    liveSource.offer(List(arrival(estimated = Option(estTime.millisSinceEpoch),feedSource = LiveBaseFeedSource)))
+    val ciriumArrivals = List(arrival(estChox = Option(estTime.addHours(-1).millisSinceEpoch),feedSource = LiveFeedSource))
 
     offerAndCheck(liveBaseSource, ciriumArrivals, (a: Arrival) => a.EstimatedChox.isEmpty)
 
@@ -262,10 +262,10 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(scheduled, ArrivalDataSanitiser(Option(4), None))
     ).run()
 
-    forecastBaseSource.offer(List(arrival()))
+    forecastBaseSource.offer(List(arrival(feedSource = AclFeedSource)))
     val estTime = scheduled.addHours(5)
-    liveSource.offer(List(arrival(estimated = Option(estTime.millisSinceEpoch))))
-    val ciriumArrivals = List(arrival(estChox = Option(estTime.millisSinceEpoch)))
+    liveSource.offer(List(arrival(estimated = Option(estTime.millisSinceEpoch),feedSource = LiveBaseFeedSource)))
+    val ciriumArrivals = List(arrival(estChox = Option(estTime.millisSinceEpoch),feedSource = LiveFeedSource))
 
     offerAndCheck(liveBaseSource, ciriumArrivals, (a: Arrival) => a.EstimatedChox.isEmpty)
 
@@ -276,7 +276,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     val (_, _, liveBaseSource, _, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(scheduled)).run()
     val liveBaseActual = Option(scheduled.millisSinceEpoch)
 
-    liveBaseSource.offer(List(arrival(actual = liveBaseActual)))
+    liveBaseSource.offer(List(arrival(actual = liveBaseActual,feedSource = LiveBaseFeedSource)))
 
     val updateCounts: Seq[Int] = probe.receiveWhile(5.seconds) {
       case ad: ArrivalsDiff => ad.toUpdate.size
@@ -289,9 +289,9 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     val (forecastBaseSource, _, liveBaseSource, _, _) = TestableArrivalsGraphStage(probe, TestableArrivalsGraphStage.buildArrivalsGraphStage(scheduled)).run()
     val baseLiveEstimated = Option(scheduled.millisSinceEpoch)
 
-    liveBaseSource.offer(List(arrival(estimated = baseLiveEstimated)))
+    liveBaseSource.offer(List(arrival(estimated = baseLiveEstimated,feedSource = LiveBaseFeedSource)))
 
-    offerAndCheck(forecastBaseSource, List(arrival()), (a: Arrival) => a.Estimated == baseLiveEstimated)
+    offerAndCheck(forecastBaseSource, List(arrival(feedSource = AclFeedSource)), (a: Arrival) => a.Estimated == baseLiveEstimated)
 
     success
   }
@@ -301,7 +301,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
 
     val predictions = Predictions(0L, Map(WalkTimeModelAndFeatures.targetName -> walkTimeSeconds))
 
-    val arrival1 = arrival(predictions = predictions)
+    val arrival1 = arrival(predictions = predictions,feedSource = LiveBaseFeedSource)
     val pcpTime = pcpTimeCalc(arrival1)
 
     val expected = SDate(arrival1.Scheduled)
@@ -324,7 +324,8 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
               status: ArrivalStatus = ArrivalStatus("test"),
               scheduledDate: MillisSinceEpoch = scheduled.millisSinceEpoch,
               scheduledDepartureDate: Option[MillisSinceEpoch] = None,
-              actPax: Option[Int] = None
+              actPax: Option[Int] = None,
+              feedSource: FeedSource
              ): Arrival =
     Arrival(
       Operator = None,
@@ -337,8 +338,6 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       Gate = gate,
       Stand = None,
       MaxPax = None,
-      ActPax = actPax,
-      TranPax = None,
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = PortCode("STN"),
@@ -350,7 +349,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       PcpTime = None,
       FeedSources = Set(),
       CarrierScheduled = None,
-      ApiPax = None,
-      ScheduledDeparture = scheduledDepartureDate
+      ScheduledDeparture = scheduledDepartureDate,
+      TotalPax = Map(feedSource -> Passengers(actPax,None))
     )
 }

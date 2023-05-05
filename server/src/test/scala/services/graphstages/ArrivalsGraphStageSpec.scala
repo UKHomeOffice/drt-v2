@@ -31,7 +31,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
   val scheduled = s"${date}T${hour}Z"
 
   val dateNow: SDateLike = SDate(date + "T00:00Z")
-  val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001", schDt = scheduled, actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
+  val arrival_v1_with_no_chox_time: Arrival = arrival(iata = "BA0001", schDt = scheduled, totalPax = Map(LiveFeedSource -> Passengers(Option(100), None)), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource))
 
   val arrival_v2_with_chox_time: Arrival = arrival_v1_with_no_chox_time.copy(Stand = Option("Stand1"), EstimatedChox = Option(SDate(scheduled).millisSinceEpoch))
 
@@ -84,10 +84,10 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         arrival_v2_with_chox_time.copy(ActualChox = Option(SDate(scheduled).millisSinceEpoch), Stand = Option("I will update"))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival_v2_with_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Map(LiveFeedSource -> Option(100))))))
+      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Map(LiveFeedSource -> Passengers(Option(100), None))))))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival_v3_with_an_update_to_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v3_with_an_update_to_chox_time.copy(TotalPax = Map(LiveFeedSource -> Option(100))))))
+      expectArrivals(Iterable(withPcpTime(arrival_v3_with_an_update_to_chox_time.copy(TotalPax = Map(LiveFeedSource -> Passengers(Option(100), None))))))
 
       success
     }
@@ -100,7 +100,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       )))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v2_with_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Map(LiveFeedSource->arrival_v2_with_chox_time.ActPax)))))
+      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = arrival_v2_with_chox_time.TotalPax))))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
       expectFeedSources(Set(LiveFeedSource))
@@ -110,11 +110,11 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" >> {
       val voyageManifests: ManifestsFeedResponse = ManifestsFeedSuccess(DqManifests(0, Set(
-        VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival(date), ManifestTimeOfArrival(hour), xOfPaxType(arrival_v2_with_chox_time.ActPax.get, euIdCard))
+        VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival(date), ManifestTimeOfArrival(hour), xOfPaxType(arrival_v2_with_chox_time.TotalPax.get(ApiFeedSource).flatMap(_.actual).getOrElse(0), euIdCard))
       )))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v2_with_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Map(LiveFeedSource->arrival_v2_with_chox_time.ActPax)))))
+      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = arrival_v2_with_chox_time.TotalPax))))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
       expectFeedSources(Set(LiveFeedSource, ApiFeedSource))
@@ -124,8 +124,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     "once an acl and a forecast input arrives for the flight, it will update the arrivals FeedSource so that it has ACLFeed and ForecastFeed" >> {
       val forecastScheduled = "2017-01-01T10:25Z"
-      val aclFlight = arrival(iata = "BA0002", schDt = forecastScheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
-      val forecastArrival = arrival(schDt = forecastScheduled, iata = "BA0002", terminal = T1, actPax = Option(21), feedSources = Set(ForecastFeedSource))
+      val aclFlight = arrival(iata = "BA0002", schDt = forecastScheduled, totalPax = Map(AclFeedSource -> Passengers(Option(10), None)), feedSources = Set(AclFeedSource))
+      val forecastArrival = arrival(schDt = forecastScheduled, iata = "BA0002", terminal = T1, totalPax = Map(ForecastFeedSource -> Passengers(Option(21), None)), feedSources = Set(ForecastFeedSource))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(aclFlight))))
       offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(Flights(List(forecastArrival))))
@@ -138,8 +138,8 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "Given 2 arrivals, one international and the other domestic " >> {
       "I should only see the international arrival in the port state" >> {
         val scheduled = "2017-01-01T10:25Z"
-        val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
-        val arrivalDom: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("BHX"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
+        val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, totalPax = Map(AclFeedSource -> Passengers(Option(10), None)), feedSources = Set(AclFeedSource))
+        val arrivalDom: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("BHX"), schDt = scheduled, totalPax = Map(AclFeedSource -> Passengers(Option(10), None)), feedSources = Set(AclFeedSource))
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(arrivalInt, arrivalDom))))
         expectUniqueArrival(arrivalInt.unique)
@@ -152,9 +152,9 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "Given 3 arrivals, one international, one domestic and one CTA " >> {
       "I should only see the international and CTA arrivals in the port state" >> {
         val scheduled = "2017-01-01T10:25Z"
-        val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
-        val arrivalDom: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("BHX"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
-        val arrivalCta: Arrival = ArrivalGenerator.arrival(iata = "BA0004", origin = PortCode("IOM"), schDt = scheduled, actPax = Option(10), feedSources = Set(AclFeedSource))
+        val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, totalPax = Map(AclFeedSource -> Passengers(Option(10), None)), feedSources = Set(AclFeedSource))
+        val arrivalDom: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("BHX"), schDt = scheduled, totalPax = Map(AclFeedSource -> Passengers(Option(10), None)), feedSources = Set(AclFeedSource))
+        val arrivalCta: Arrival = ArrivalGenerator.arrival(iata = "BA0004", origin = PortCode("IOM"), schDt = scheduled, totalPax = Map(AclFeedSource -> Passengers(Option(10), None)), feedSources = Set(AclFeedSource))
 
         val aclFlight: Flights = Flights(List(arrivalInt, arrivalDom, arrivalCta))
 
@@ -170,9 +170,9 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "Given 3 arrivals, one international, one domestic and one CTA " >> {
       "I should only see the international flight's passengers and NOT and domestic or CTA pax" >> {
         val scheduled = "2017-01-01T00:05Z"
-        val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, actPax = Option(15), feedSources = Set(AclFeedSource))
-        val arrivalDom: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("BHX"), schDt = scheduled, actPax = Option(11), feedSources = Set(AclFeedSource))
-        val arrivalCta: Arrival = ArrivalGenerator.arrival(iata = "BA0004", origin = PortCode("IOM"), schDt = scheduled, actPax = Option(12), feedSources = Set(AclFeedSource))
+        val arrivalInt: Arrival = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = scheduled, totalPax = Map(AclFeedSource -> Passengers(Option(15), None)), feedSources = Set(AclFeedSource))
+        val arrivalDom: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("BHX"), schDt = scheduled, totalPax = Map(AclFeedSource -> Passengers(Option(11), None)), feedSources = Set(AclFeedSource))
+        val arrivalCta: Arrival = ArrivalGenerator.arrival(iata = "BA0004", origin = PortCode("IOM"), schDt = scheduled, totalPax = Map(AclFeedSource -> Passengers(Option(12), None)), feedSources = Set(AclFeedSource))
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(arrivalInt, arrivalDom, arrivalCta))))
         expectPaxNos(15)
@@ -182,15 +182,15 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     }
 
     "Given an empty PortState I should only see arrivals without a suffix in the port state" >> {
-      val withSuffixP: Arrival = ArrivalGenerator.arrival(iata = "BA0001P", origin = PortCode("JFK"), schDt = "2017-01-01T10:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
-      val withSuffixF: Arrival = ArrivalGenerator.arrival(iata = "BA0002F", origin = PortCode("JFK"), schDt = "2017-01-01T11:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
-      val withoutSuffix: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("JFK"), schDt = "2017-01-01T12:25Z", actPax = Option(10), feedSources = Set(AclFeedSource))
+      val withSuffixP: Arrival = ArrivalGenerator.arrival(iata = "BA0001P", origin = PortCode("JFK"), schDt = "2017-01-01T10:25Z", totalPax = Map(AclFeedSource -> Passengers(Option(10), None)), feedSources = Set(AclFeedSource))
+      val withSuffixF: Arrival = ArrivalGenerator.arrival(iata = "BA0002F", origin = PortCode("JFK"), schDt = "2017-01-01T11:25Z", totalPax = Map(AclFeedSource -> Passengers(Option(10), None)), feedSources = Set(AclFeedSource))
+      val withoutSuffix: Arrival = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("JFK"), schDt = "2017-01-01T12:25Z", totalPax = Map(AclFeedSource -> Passengers(Option(10), None)), feedSources = Set(AclFeedSource))
 
       "Given 3 international ACL arrivals, one with suffix F, another with P, and another with no suffix" >> {
         val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
-        expectArrivals(Iterable(withPcpTime(withoutSuffix.copy(TotalPax = Map(AclFeedSource -> withoutSuffix.ActPax)))))
+        expectArrivals(Iterable(withPcpTime(withoutSuffix.copy(TotalPax = withoutSuffix.TotalPax))))
 
         success
       }
@@ -208,8 +208,10 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     "Given a live arrival and a cirium arrival" >> {
       "When they have matching number, schedule, terminal and origin" >> {
         "I should see the live arrival with the cirium arrival's status merged" >> {
-          val liveArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
-          val ciriumArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), estDt = scheduled)
+          val liveArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"),
+            feedSources = Set(LiveFeedSource),totalPax = Map(LiveFeedSource -> Passengers(None, None)))
+          val ciriumArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), estDt = scheduled,
+            feedSources = Set(LiveBaseFeedSource),totalPax = Map(LiveBaseFeedSource -> Passengers(None, None)))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
           expectUniqueArrival(liveArrival.unique)
@@ -218,7 +220,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           val expected = liveArrival.copy(
             Estimated = Option(SDate(scheduled).millisSinceEpoch),
             FeedSources = Set(LiveFeedSource, LiveBaseFeedSource),
-            TotalPax = Map(LiveFeedSource -> liveArrival.ActPax, LiveBaseFeedSource -> ciriumArrival.ActPax))
+            TotalPax = liveArrival.TotalPax ++ ciriumArrival.TotalPax)
 
           expectArrivals(Iterable(withPcpTime(expected)))
 
@@ -230,16 +232,16 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         "I should see the live arrival without the cirium arrival's status merged" >> {
           val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
           val ciriumArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("BBB"), estDt = scheduled)
-          val updatedArrival = liveArrival.copy(ActualChox = Option(SDate(scheduled).millisSinceEpoch))
+          val updatedArrival = liveArrival.copy(ActualChox = Option(SDate(scheduled).millisSinceEpoch), TotalPax = Map(LiveFeedSource -> Passengers(None, None)))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
           expectUniqueArrival(liveArrival.unique)
 
           offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
-          expectArrivals(Iterable(withPcpTime(liveArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = Map(LiveFeedSource -> updatedArrival.ActPax)))))
+          expectArrivals(Iterable(withPcpTime(liveArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = updatedArrival.TotalPax))))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(updatedArrival))))
-          expectArrivals(Iterable(withPcpTime(updatedArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = Map(LiveFeedSource -> updatedArrival.ActPax)))))
+          expectArrivals(Iterable(withPcpTime(updatedArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = updatedArrival.TotalPax))))
 
           success
         }
@@ -279,9 +281,9 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         val now = "2021-06-01T12:00"
         val aclScheduled = "2021-06-02T11:00"
         val ciriumScheduled = "2021-06-02T12:05"
-        val aclArrival = ArrivalGenerator.arrival("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"), actPax = Option(100))
+        val aclArrival = ArrivalGenerator.arrival("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"), totalPax = Map(AclFeedSource -> Passengers(Option(100), None)))
         val ciriumArrival = ArrivalGenerator.arrival("AA0001", schDt = ciriumScheduled, terminal = T1, origin = PortCode("AAA"), estDt = ciriumScheduled)
-        val forecastArrival = ArrivalGenerator.arrival("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"), actPax = Option(101))
+        val forecastArrival = ArrivalGenerator.arrival("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"), totalPax = Map(ForecastFeedSource -> Passengers(Option(101), None)))
 
         val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(now)))
 
@@ -296,10 +298,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
         val expected = forecastArrival.copy(
           FeedSources = Set(AclFeedSource, ForecastFeedSource),
-          TotalPax = Map(
-            AclFeedSource -> aclArrival.ActPax,
-            ForecastFeedSource -> forecastArrival.ActPax,
-          ))
+          TotalPax = aclArrival.TotalPax ++ forecastArrival.TotalPax)
 
         crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(flights, _, _) =>

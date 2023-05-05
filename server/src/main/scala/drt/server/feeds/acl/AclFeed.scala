@@ -10,7 +10,7 @@ import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -219,8 +219,6 @@ object AclFeed {
         Gate = None,
         Stand = None,
         MaxPax = Option(maxPax),
-        ActPax = Option(actPax),
-        TranPax = None,
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = fields(AclColIndex.Airport),
@@ -230,7 +228,8 @@ object AclFeed {
         Origin = fields(AclColIndex.Origin),
         Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(AclFeedSource)
+        FeedSources = Set(AclFeedSource),
+        TotalPax = Map(AclFeedSource -> Passengers(Option(actPax),None))
       )
     }
   }

@@ -2,8 +2,8 @@ package services
 
 import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, TotalPaxSource}
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, TotalPaxSource}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.DurationInt
@@ -12,7 +12,7 @@ class ArrivalSpec extends Specification {
   "Given an arrival with negative passengers" >> {
     "When I ask for the minimum value of the pcp range" >> {
       "I should get zero" >> {
-        val arrival = ArrivalGenerator.arrival(actPax = Option(-1))
+        val arrival = ArrivalGenerator.arrival(totalPax =  Map(AclFeedSource -> Passengers(Option(-1),None)))
         val result = arrival.pcpRange.min
         result === 0
       }
@@ -22,7 +22,7 @@ class ArrivalSpec extends Specification {
   "When I ask for the minutesOfPaxArrivals" >> {
     "Given an arrival with 0 pax" >> {
       "I should get 0" >> {
-        val arrival = ArrivalGenerator.arrival(actPax = Option(0))
+        val arrival = ArrivalGenerator.arrival(totalPax =  Map(AclFeedSource -> Passengers(Option(0),None)))
         val result = arrival.minutesOfPaxArrivals
 
         result === 0
@@ -31,7 +31,7 @@ class ArrivalSpec extends Specification {
 
     "Given an arrival with -1 pax" >> {
       "I should get 0" >> {
-        val arrival = ArrivalGenerator.arrival(actPax = Option(-1))
+        val arrival = ArrivalGenerator.arrival(totalPax =  Map(AclFeedSource -> Passengers(Option(-1),None)))
         val result = arrival.minutesOfPaxArrivals
 
         result === 0
@@ -41,7 +41,7 @@ class ArrivalSpec extends Specification {
 
   "Given an arrival arriving at pcp at noon 2019-01-01 with 100 pax " >> {
     val pcpTime = "2019-01-01T12:00"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", actPax = Option(100), pcpDt = "2019-01-01T12:00", totalPax = Map(LiveFeedSource -> Option(100)))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", totalPax =  Map(LiveFeedSource -> Passengers(Option(100),None)), pcpDt = "2019-01-01T12:00")
 
     val pcpRange = arrival.pcpRange
 
@@ -66,7 +66,7 @@ class ArrivalSpec extends Specification {
 
   "Given an arrival arriving at pcp at noon 2019-01-01 with 99 pax " >> {
     val pcpTime = "2019-01-01T12:00"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", actPax = Option(99), pcpDt = "2019-01-01T12:00", totalPax = Map(LiveFeedSource -> Option(99)))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", pcpDt = "2019-01-01T12:00", totalPax = Map(LiveFeedSource -> Passengers(Option(99),None)))
 
     val pcpRange = arrival.pcpRange
     "When I ask how many minutes I should see 5" >> {
@@ -90,7 +90,7 @@ class ArrivalSpec extends Specification {
 
   "Given an arrival arriving at pcp at noon 2019-01-01 with 101 pax " >> {
     val pcpTime = "2019-01-01T12:00"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", actPax = Option(101), pcpDt = "2019-01-01T12:00", totalPax = Map(LiveFeedSource -> Option(101)))
+    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", totalPax = Map(LiveFeedSource -> Passengers(Option(101),None)), pcpDt = "2019-01-01T12:00")
 
     val pcpRange = arrival.pcpRange
 
@@ -171,70 +171,70 @@ class ArrivalSpec extends Specification {
   "Given an arrival" >> {
     "When flight Actual Chox time exists" >> {
       "display status should be On Chocks" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("On Chocks")
       }
     }
     "When flight Actual time exists and Actual Chox time does not exists" >> {
       "display status should be Landed" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), actDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), actDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Landed")
       }
     }
     "When flight Estimated Arrival is more than 15 minutes later than scheduled time" >> {
       "display status should be Delayed" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:20Z")
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:20Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Delayed")
       }
     }
     "When flight Estimated Arrival is less than 15 minutes later than scheduled time" >> {
       "display status should be Expected" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z")
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Expected")
       }
     }
     "When flight status is redirected" >> {
       "display status should be Diverted" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("redirected"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("redirected"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Diverted")
       }
     }
     "When flight status is DIVERTED" >> {
       "display status should be Diverted" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("DIVERTED"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("DIVERTED"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Diverted")
       }
     }
     "When flight status is CANCELLED" >> {
       "display status should be Cancelled" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("CANCELLED"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("CANCELLED"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
     "When flight status is C" >> {
       "display status should be Cancelled" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("C"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("C"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
     "When flight status is Canceled" >> {
       "display status should be Cancelled" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("Canceled"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("Canceled"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
     "When flight status is Deleted / Removed Flight Record" >> {
       "display status should be Cancelled" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(10), status = ArrivalStatus("Deleted / Removed Flight Record"))
+        val arrival: Arrival = ArrivalGenerator.arrival(totalPax = Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("Deleted / Removed Flight Record"))
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }

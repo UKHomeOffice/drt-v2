@@ -6,12 +6,12 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import services.crunch.VoyageManifestGenerator.{euPassport, inTransitFlag}
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, Passengers, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiFeedSource, LiveFeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{Seq, SortedMap}
@@ -53,8 +53,8 @@ class TransferPaxInApiSpec extends CrunchTestLike {
           schDt = scheduled,
           iata = "BA0001",
           terminal = T1,
-          actPax = Option(2),
-          tranPax = Option(1))
+          totalPax = Map(LiveFeedSource -> Passengers(Option(2), Option(1)))
+        )
       ))
 
       val crunch = runCrunchGraph(TestConfig(
@@ -90,9 +90,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
           origin = PortCode("JFK"),
           schDt = scheduled,
           iata = "TST001",
-          terminal = T1,
-          actPax = None,
-          tranPax = None)
+          terminal = T1)
       ))
 
       val portCode = PortCode("LHR")

@@ -216,7 +216,8 @@ object PaxSplitsDisplayTests extends TestSuite {
       }
 
       "Given a flight with percentage splits, when I ask for pax per queue I should see the total pax broken down per queue" - {
-        val flight = ArrivalGenerator.apiFlight(actPax = Option(152), totalPax = Map(LiveFeedSource -> Option(152)))
+        val flight = ArrivalGenerator
+          .apiFlight(totalPax = Map(LiveFeedSource -> Passengers(Option(152), None)))
         val splits = Splits(
           Set(
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 11.399999999999999, None, None),
@@ -240,7 +241,8 @@ object PaxSplitsDisplayTests extends TestSuite {
       }
 
       "Given a flight with PaxNumbers splits when I ask for pax per queue I should see the total broken down per queue" - {
-        val flight = ArrivalGenerator.apiFlight(actPax = Option(100), totalPax = Map(LiveFeedSource -> Option(100)))
+        val flight = ArrivalGenerator
+          .apiFlight(totalPax = Map(LiveFeedSource -> Passengers(Option(100), None)))
         val splits = Splits(Set(
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 15, None, None),
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 5, None, None)),
@@ -257,7 +259,9 @@ object PaxSplitsDisplayTests extends TestSuite {
       }
 
       "Given a flight with no pax number for live feed and splits ApiSplitsWithHistoricalEGateAndFTPercentages I should see the total broken down per queue" - {
-        val flight: Arrival = ArrivalGenerator.apiFlight(actPax = None, feedSources = Set(LiveFeedSource)).copy(ApiPax = Some(100))
+        val flight: Arrival = ArrivalGenerator
+          .apiFlight(totalPax = Map(), feedSources = Set(LiveFeedSource))
+          .copy(TotalPax = Map(LiveFeedSource -> Passengers(Some(100), None)))
         val splits = Splits(Set(
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 15, None, None),
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 5, None, None)),

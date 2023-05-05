@@ -9,10 +9,10 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Passengers, TotalPaxSource, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, Queues}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.SortedMap
@@ -90,7 +90,8 @@ class PortStateSpec extends CrunchTestLike {
   "Given a PortState with a flight scheduled before midnight and pax arriving after midnight " +
     "When I ask for a window containing the period immediately after midnight " +
     "Then the flight should be in the returned PortState" >> {
-    val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", actPax = Option(100), pcpDt = "2019-01-02T00:01"), Set())
+    val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00",
+      totalPax = Map(LiveFeedSource -> Passengers(Option(100), None)), pcpDt = "2019-01-02T00:01"), Set())
 
     val portState = PortState(Seq(flight), Seq(), Seq())
 
@@ -102,7 +103,8 @@ class PortStateSpec extends CrunchTestLike {
   "Given a PortState with a flight scheduled after next midnight and pax arriving before next midnight " +
     "When I ask for a window containing the period immediately before midnight " +
     "Then the flight should be in the returned PortState" >> {
-    val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-03T12:00", actPax = Option(100), pcpDt = "2019-01-02T14:00"), Set())
+    val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-03T12:00",
+      totalPax = Map(LiveFeedSource -> Passengers(Option(100), None)), pcpDt = "2019-01-02T14:00"), Set())
 
     val portState = PortState(Seq(flight), Seq(), Seq())
 
@@ -127,11 +129,12 @@ class PortStateSpec extends CrunchTestLike {
           initialLiveArrivals = initialLiveArrivals,
         ))
 
-        val newArrival = ArrivalGenerator.arrival("BA0010", schDt = scheduled, terminal = T2, actPax = Option(100))
+        val newArrival = ArrivalGenerator.arrival("BA0010", schDt = scheduled, terminal = T2,
+          totalPax = Map(AclFeedSource -> Passengers(Option(100), None)))
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(newArrival))))
 
-        val expected = newArrival.copy(FeedSources = Set(AclFeedSource), TotalPax = Map(AclFeedSource -> newArrival.ActPax))
+        val expected = newArrival.copy(FeedSources = Set(AclFeedSource), TotalPax = newArrival.TotalPax)
         crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(flights, _, _) =>
             flights.size == 1 && flights.values.head.apiFlight == expected

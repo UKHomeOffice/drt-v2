@@ -6,7 +6,7 @@ import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
 import uk.gov.homeoffice.drt.time.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
 
@@ -52,8 +52,6 @@ trait BHXLiveArrivals extends BHXArrivals {
       Gate = if (StringUtils.isBlank(flightRecord.getGate)) None else Option(flightRecord.getGate),
       Stand = if (StringUtils.isBlank(flightRecord.getStand)) None else Option(flightRecord.getStand),
       MaxPax = if (flightRecord.getCapacity == 0) None else Option(flightRecord.getCapacity),
-      ActPax = if (actPax == 0) None else Option(actPax),
-      TranPax = if (actPax == 0) None else Option(transPax),
       RunwayID = if (StringUtils.isBlank(flightRecord.getRunway)) None else Option(flightRecord.getRunway),
       BaggageReclaimId = Option(flightRecord.getBelt),
       AirportID = "BHX",
@@ -63,7 +61,8 @@ trait BHXLiveArrivals extends BHXArrivals {
       Origin = PortCode(flightRecord.getOrigin),
       Scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource)
+      FeedSources = Set(LiveFeedSource),
+      TotalPax= Map(LiveFeedSource -> Passengers(if (actPax == 0) None else Option(actPax),if (actPax == 0) None else Option(transPax)))
     )
   }
 }
@@ -85,8 +84,6 @@ trait BHXForecastArrivals extends BHXArrivals {
       Gate = None,
       Stand = None,
       MaxPax = if (maxPax == 0) None else Option(maxPax),
-      ActPax = if (actPax == 0) None else Option(actPax),
-      TranPax = if (actPax == 0) None else Option(transPax),
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = "BHX",
@@ -96,7 +93,8 @@ trait BHXForecastArrivals extends BHXArrivals {
       Origin = flightRecord.getOrigin,
       Scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
       PcpTime = None,
-      FeedSources = Set(ForecastFeedSource)
+      FeedSources = Set(ForecastFeedSource),
+      TotalPax = Map(ForecastFeedSource->Passengers(if (actPax == 0) None else Option(actPax),if (actPax == 0) None else Option(transPax)))
     )
   }
 }

@@ -3,7 +3,7 @@ package drt.server.feeds.stn
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
 class STNForecastXLSExtractorSpec extends Specification {
@@ -49,8 +49,6 @@ class STNForecastXLSExtractorSpec extends Specification {
         Gate = None,
         Stand = None,
         MaxPax = Some(100),
-        ActPax = Some(50),
-        TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = PortCode("STN"),
@@ -60,10 +58,9 @@ class STNForecastXLSExtractorSpec extends Specification {
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
         CarrierScheduled = None,
-        ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map.empty),
+        TotalPax = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -78,8 +75,6 @@ class STNForecastXLSExtractorSpec extends Specification {
         Gate = None,
         Stand = None,
         MaxPax = Some(100),
-        ActPax = Some(50),
-        TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = PortCode("STN"),
@@ -89,10 +84,9 @@ class STNForecastXLSExtractorSpec extends Specification {
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
         CarrierScheduled = None,
-        ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax= Map.empty),
+        TotalPax = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -107,8 +101,6 @@ class STNForecastXLSExtractorSpec extends Specification {
         Gate = None,
         Stand = None,
         MaxPax = Some(100),
-        ActPax = Some(50),
-        TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = PortCode("STN"),
@@ -118,10 +110,9 @@ class STNForecastXLSExtractorSpec extends Specification {
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
         CarrierScheduled = None,
-        ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax= Map.empty),
+        TotalPax = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -136,8 +127,6 @@ class STNForecastXLSExtractorSpec extends Specification {
         Gate = None,
         Stand = None,
         MaxPax = Some(100),
-        ActPax = Some(50),
-        TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = PortCode("STN"),
@@ -147,10 +136,9 @@ class STNForecastXLSExtractorSpec extends Specification {
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
         CarrierScheduled = None,
-        ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map.empty))
+        TotalPax = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))))
 
     result === expected
   }

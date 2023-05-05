@@ -12,7 +12,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeed
 import drt.server.feeds.bhx._
 import drt.shared.FlightsApi.Flights
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
@@ -397,8 +397,6 @@ class BHXFeedSpec extends CrunchTestLike {
       Gate = Option("6"),
       Stand = Option("55"),
       MaxPax = Option(175),
-      ActPax = Option(65),
-      TranPax = None,
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = PortCode("BHX"),
@@ -408,7 +406,8 @@ class BHXFeedSpec extends CrunchTestLike {
       Origin = PortCode("JNB"),
       Scheduled = SDate(scheduledTimeString).millisSinceEpoch,
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource)
+      FeedSources = Set(LiveFeedSource),
+      TotalPax = Map(LiveFeedSource -> Passengers(Option(65),None))
     )
 
     result === expected
@@ -421,7 +420,7 @@ class BHXFeedSpec extends CrunchTestLike {
       .result(client.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
     val actMax = result match {
-      case Flights(f :: _) => (f.ActPax, f.MaxPax)
+      case Flights(f :: _) => (f.TotalPax.get(LiveFeedSource).flatMap(_.actual), f.MaxPax)
     }
 
     val expected = (Some(0), Some(0))

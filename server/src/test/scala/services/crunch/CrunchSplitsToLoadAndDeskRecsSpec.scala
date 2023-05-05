@@ -6,12 +6,12 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import services.crunch.VoyageManifestGenerator._
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, Passengers, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
-import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
@@ -32,7 +32,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           val egSplit = 0.75
 
           val flights = Flights(List(
-            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
+            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Map(LiveFeedSource -> Passengers(Option(21), None)))
           ))
 
           val airportConfigWithEgates = defaultAirportConfig.copy(
@@ -75,8 +75,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           val scheduled2 = "2017-01-01T00:01Z"
 
           val flights = Flights(List(
-            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(1)),
-            ArrivalGenerator.arrival(schDt = scheduled2, iata = "SA123", terminal = T1, actPax = Option(1))
+            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Map(LiveFeedSource -> Passengers(Option(1), None))),
+            ArrivalGenerator.arrival(schDt = scheduled2, iata = "SA123", terminal = T1, totalPax = Map(LiveFeedSource -> Passengers(Option(1), None)))
           ))
 
           val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
@@ -108,7 +108,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           val scheduled = "2017-01-01T00:00Z"
 
           val flights = Flights(List(
-            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(100))
+            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Map(LiveFeedSource -> Passengers(Option(100), None)))
           ))
 
           val crunch = runCrunchGraph(TestConfig(
@@ -152,7 +152,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           "Then I should see a pax load of 20 - ie 100% of the passengers as there is only one split" >> {
             val scheduled = "2017-01-01T00:00Z"
 
-            val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(20))
+            val flight = ArrivalGenerator
+              .arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Map(LiveFeedSource -> Passengers(Option(20), None)))
             val flights = Flights(List(flight))
 
             val crunch = runCrunchGraph(TestConfig(
@@ -198,7 +199,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             val scheduled = "2017-01-01T00:00Z"
 
-            val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(10), airportId = PortCode("LHR"))
+            val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1,
+              totalPax = Map(LiveFeedSource -> Passengers(Option(10), None)), airportId = PortCode("LHR"))
 
             val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduled),

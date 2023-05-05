@@ -7,10 +7,11 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch._
+import uk.gov.homeoffice.drt.arrivals.Passengers
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, SortedMap}
@@ -54,7 +55,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             val scheduledDuringBst = "2017-06-01T00:00Z"
 
             val flights = Flights(List(
-              ArrivalGenerator.arrival(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, actPax = Option(1))
+              ArrivalGenerator.arrival(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, totalPax = Map(AclFeedSource -> Passengers(Option(1),None)))
             ))
 
             val fiveMinutes = 600d / 60

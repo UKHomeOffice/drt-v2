@@ -5,7 +5,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch.europeLondonTimeZone
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -77,8 +77,6 @@ object LhrForecastArrival {
         Gate = None,
         Stand = None,
         MaxPax = Option(maxPaxField),
-        ActPax = Option(actPax),
-        TranPax = Option(transPax),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = "LHR",
@@ -88,7 +86,8 @@ object LhrForecastArrival {
         Origin = origin(fields),
         Scheduled = scheduled(fields).millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource)
+        FeedSources = Set(ForecastFeedSource),
+        TotalPax = Map(ForecastFeedSource -> Passengers(Option(actPax), Option(transPax)))
       )
     } match {
       case Failure(t) =>

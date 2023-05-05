@@ -3,7 +3,7 @@ package feeds.lhr
 import drt.server.feeds.lhr.forecast.{LhrForecastArrival, LhrForecastArrivals}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T3
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
@@ -35,8 +35,6 @@ class LhrForecastSpec extends Specification {
       Gate = None,
       Stand = None,
       MaxPax = Option(337),
-      ActPax = Option(333),
-      TranPax = Option(142),
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = PortCode("LHR"),
@@ -46,7 +44,8 @@ class LhrForecastSpec extends Specification {
       Origin = PortCode("CPT"),
       FeedSources = Set(ForecastFeedSource),
       Scheduled = SDate("2018-02-22T04:45:00").millisSinceEpoch,
-      PcpTime = None)
+      PcpTime = None,
+      TotalPax = Map(ForecastFeedSource -> Passengers(Option(333), Option(142))))
 
     arrival === expected
   }
@@ -61,9 +60,11 @@ class LhrForecastSpec extends Specification {
     val arrivalLines = csvContent.split("\n").drop(1)
 
     val arrival: Arrival = LhrForecastArrivals(arrivalLines).head
-    val actMaxTran = (arrival.ActPax, arrival.MaxPax, arrival.TranPax)
+    val actMaxTran = arrival.TotalPax.get(ForecastFeedSource)
+      .map(a => (arrival.MaxPax, a.actual, a.transit))
+      .getOrElse((None, None, None))
 
-    val expected = (Some(0),Some(0),Some(0) )
+    val expected = (Some(0), Some(0), Some(0))
 
     actMaxTran === expected
   }

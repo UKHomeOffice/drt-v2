@@ -3,7 +3,7 @@ package feeds.lhr.forecast
 import drt.server.feeds.lhr.forecast.{LHRForecastCSVExtractor, LHRForecastFlightRow}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T2
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 
@@ -129,8 +129,6 @@ class LHRForecastCSVSpec extends Specification {
         Gate = None,
         Stand = None,
         MaxPax = None,
-        ActPax = Option(290),
-        TranPax = Option(90),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = PortCode("LHR"),
@@ -140,7 +138,8 @@ class LHRForecastCSVSpec extends Specification {
         Origin = PortCode("TST"),
         Scheduled = SDate("2019-04-04T05:00Z").millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource)
+        FeedSources = Set(ForecastFeedSource),
+        TotalPax = Map(ForecastFeedSource -> Passengers(Option(290), Option(90)))
       ),
 
       Arrival(
@@ -154,8 +153,6 @@ class LHRForecastCSVSpec extends Specification {
         Gate = None,
         Stand = None,
         MaxPax = None,
-        ActPax = Option(290),
-        TranPax = Option(90),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = PortCode("LHR"),
@@ -165,7 +162,8 @@ class LHRForecastCSVSpec extends Specification {
         Origin = PortCode("TST"),
         Scheduled = SDate("2019-05-04T05:00Z").millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource)
+        FeedSources = Set(ForecastFeedSource),
+        TotalPax = Map(ForecastFeedSource -> Passengers(Option(290), Option(90)))
       )
     )
 

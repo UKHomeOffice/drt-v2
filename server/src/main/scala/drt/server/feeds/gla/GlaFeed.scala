@@ -16,7 +16,7 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -115,8 +115,6 @@ object GlaFeed {
     Gate = ga.GateCode,
     Stand = ga.StandCode,
     MaxPax = ga.MaxPax,
-    ActPax = ga.TotalPassengerCount,
-    TranPax = None,
     RunwayID = ga.Runway,
     BaggageReclaimId = ga.CarouselCode,
     AirportID = "GLA",
@@ -126,7 +124,8 @@ object GlaFeed {
     Origin = ga.OriginDestAirportIATA,
     Scheduled = SDate(ga.ScheduledDateTime).millisSinceEpoch,
     PcpTime = None,
-    FeedSources = Set(LiveFeedSource)
+    FeedSources = Set(LiveFeedSource),
+    TotalPax = Map(LiveFeedSource -> Passengers(ga.TotalPassengerCount, None))
   )
 
   object JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {

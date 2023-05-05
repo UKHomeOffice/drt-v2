@@ -16,7 +16,7 @@ import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -99,8 +99,6 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       Gate = ltnFeedFlight.GateCode,
       Stand = ltnFeedFlight.StandCode,
       MaxPax = ltnFeedFlight.MaxPax,
-      ActPax = ltnFeedFlight.TotalPassengerCount,
-      TranPax = None,
       RunwayID = ltnFeedFlight.Runway,
       BaggageReclaimId = ltnFeedFlight.BaggageClaimUnit,
       AirportID = "LTN",
@@ -112,7 +110,8 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       Origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
       Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource)
+      FeedSources = Set(LiveFeedSource),
+      TotalPax = Map(LiveFeedSource -> Passengers(ltnFeedFlight.TotalPassengerCount, None))
     )
   }
 

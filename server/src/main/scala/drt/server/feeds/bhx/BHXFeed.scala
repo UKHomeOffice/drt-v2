@@ -16,7 +16,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -299,8 +299,6 @@ object BHXFlight extends NodeSeqUnmarshaller {
       Gate = f.passengerGate,
       Stand = f.aircraftParkingPosition,
       MaxPax = f.seatCapacity,
-      ActPax = f.paxCount,
-      TranPax = None,
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = f.arrivalAirport,
@@ -310,7 +308,8 @@ object BHXFlight extends NodeSeqUnmarshaller {
       Origin = f.departureAirport,
       Scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource)
+      FeedSources = Set(LiveFeedSource),
+      TotalPax = Map(LiveFeedSource -> Passengers(f.paxCount, None))
     )
   }
 

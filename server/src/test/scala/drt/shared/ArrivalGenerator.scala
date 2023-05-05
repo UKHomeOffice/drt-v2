@@ -1,7 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction, Predictions, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Passengers, Prediction, Predictions, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -30,7 +30,7 @@ object ArrivalGenerator {
                airportId: PortCode = PortCode(""),
                feedSources: Set[FeedSource] = Set(),
                pcpTime: Option[MillisSinceEpoch] = None,
-               totalPax: Map[FeedSource, Option[Int]] = Map.empty
+               totalPax: Map[FeedSource, Passengers] = Map.empty
              ): Arrival =
     Arrival(
       Operator = operator,
@@ -43,8 +43,6 @@ object ArrivalGenerator {
       Gate = gate,
       Stand = stand,
       MaxPax = maxPax,
-      ActPax = actPax,
-      TranPax = tranPax,
       RunwayID = runwayId,
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
@@ -55,7 +53,7 @@ object ArrivalGenerator {
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (sch != 0L) Some(sch) else None,
       Scheduled = sch,
       FeedSources = feedSources,
-      TotalPax = if (totalPax.nonEmpty) totalPax else actPax.map(p => LiveFeedSource -> Option(p)).toMap
+      TotalPax = if (totalPax.nonEmpty) totalPax else Map(LiveFeedSource -> Passengers(actPax,tranPax))
     )
 
   def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(

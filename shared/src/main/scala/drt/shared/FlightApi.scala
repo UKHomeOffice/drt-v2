@@ -33,7 +33,7 @@ object FlightsApi {
       )
   }
 
-  case class PaxForArrivals(pax: Map[UniqueArrival, Map[FeedSource, Option[Int]]]) extends FlightUpdates {
+  case class PaxForArrivals(pax: Map[UniqueArrival, Map[FeedSource, Passengers]]) extends FlightUpdates {
     def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
       val updatedFlights = pax.map {
         case (key, newPax) =>
@@ -77,11 +77,11 @@ object FlightsApi {
                     case None =>
                       fws.apiFlight
                     case Some(liveSplit) =>
-                      val totalPax = Math.round(liveSplit.totalExcludingTransferPax).toInt
+                      val totalPax: Int = Math.round(liveSplit.totalPax).toInt
+                      val transPax: Int = Math.round(liveSplit.totalPax - liveSplit.totalExcludingTransferPax).toInt
                       val sources = fws.apiFlight.FeedSources + ApiFeedSource
-                      val totalPaxSources = fws.apiFlight.TotalPax.updated(ApiFeedSource, Some(totalPax))
+                      val totalPaxSources = fws.apiFlight.TotalPax.updated(ApiFeedSource, Passengers(Some(totalPax), Option(transPax)))
                       fws.apiFlight.copy(
-                        ApiPax = Option(totalPax),
                         FeedSources = sources,
                         TotalPax = totalPaxSources
                       )

@@ -4,8 +4,9 @@ import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.FlightsApi.Flights
 import drt.shared.{PortState, TQM}
+import uk.gov.homeoffice.drt.arrivals.Passengers
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
@@ -15,8 +16,8 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
     "When I monitor pax loads " +
     "I should see only pax loads from the highest pax arrival" >> {
     val sch = "2019-01-01T00:00"
-    val arrival1 = ArrivalGenerator.arrival(iata="BA0001", schDt = sch, actPax = Option(15), origin = PortCode("AAA"))
-    val arrival2 = ArrivalGenerator.arrival(iata="AA0002", schDt = sch, actPax = Option(10), origin = PortCode("AAA"))
+    val arrival1 = ArrivalGenerator.arrival(iata="BA0001", schDt = sch, totalPax =  Map(LiveFeedSource -> Passengers(Option(15),None)), origin = PortCode("AAA"))
+    val arrival2 = ArrivalGenerator.arrival(iata="AA0002", schDt = sch, totalPax =  Map(LiveFeedSource -> Passengers(Option(10),None)), origin = PortCode("AAA"))
 
     val schSdate = SDate(sch)
     val crunch = runCrunchGraph(TestConfig(
@@ -35,7 +36,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
         }
     }
 
-    val updatedArrival2 = arrival2.copy(Estimated = Option(schSdate.addMinutes(1).millisSinceEpoch), ActPax = Option(16))
+    val updatedArrival2 = arrival2.copy(Estimated = Option(schSdate.addMinutes(1).millisSinceEpoch), TotalPax =  Map(LiveFeedSource -> Passengers(Option(16),None)))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(updatedArrival2))))
 

@@ -100,8 +100,6 @@ class EdiFeedSpecs extends CrunchTestLike {
         Gate = Some("14"),
         Stand = Some("15A"),
         MaxPax = Some(189),
-        ActPax = None,
-        TranPax = None,
         RunwayID = Some("06"),
         BaggageReclaimId = Some("8"),
         AirportID = PortCode("PSA"),
@@ -111,10 +109,9 @@ class EdiFeedSpecs extends CrunchTestLike {
         PcpTime = None,
         FeedSources = Set(LiveFeedSource),
         CarrierScheduled = None,
-        ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map.empty))
+        TotalPax = Map(LiveFeedSource -> Passengers(None, None))))
 
     val arrival = ediFeed.ediFlightDetailsToArrival(List(ediFlightDetail), LiveFeedSource)
     arrival mustEqual expectedArrival

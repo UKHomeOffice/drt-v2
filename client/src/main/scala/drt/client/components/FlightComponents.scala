@@ -31,7 +31,7 @@ object FlightComponents {
       else if (directRedListFlight.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
       else ""
 
-    val pcpPaxNumber = flightWithSplits.pcpPaxEstimate.pax.map(_.toString).getOrElse("n/a")
+    val pcpPaxNumber = flightWithSplits.pcpPaxEstimate.getPcpPax.map(_.toString).getOrElse("n/a")
 
     <.div(
       ^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
@@ -58,17 +58,17 @@ object FlightComponents {
   def paxNumberSources(flight: ApiFlightWithSplits): VdomTagOf[Span] = {
     val paxSources = flight.apiFlight.TotalPax.toList.sortBy(_._1.name).map {
       case (feedSource, pax) =>
-        <.p(s"${feedSource.displayName} - ${pax.map(_.toString).getOrElse("")}")
+        <.p(s"${feedSource.displayName} - ${pax.actual.map(_.toString).getOrElse("")}")
     }
 
     val apiPax = List(
-      flight.totalPaxFromApiExcludingTransfer.map(p => <.p(s"API: ${p.pax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
+      flight.totalPaxFromApiExcludingTransfer.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
     )
     <.span((paxSources ++ apiPax).toVdomArray)
   }
 
   def paxTransferComponent(flight: Arrival): VdomTagOf[Div] = {
-    val transPax = if (flight.Origin.isCta) "-" else flight.TranPax.getOrElse("-")
+    val transPax = if (flight.Origin.isCta) "-" else flight.bestPcpPaxEstimate.passengers.transit.getOrElse("-")
     <.div(
       ^.className := "right",
       s"$transPax"

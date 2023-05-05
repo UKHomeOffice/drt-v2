@@ -1,7 +1,7 @@
 package services
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T2
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PortCode}
 import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
@@ -22,8 +22,6 @@ class ApiFlightsToProtoBufSpec extends Specification {
         Gate = Option("10"),
         Stand = Option("10A"),
         MaxPax = Option(200),
-        ActPax = Option(150),
-        TranPax = Option(10),
         RunwayID = Option("1"),
         BaggageReclaimId = Option("A"),
         AirportID = PortCode("LHR"),
@@ -34,7 +32,8 @@ class ApiFlightsToProtoBufSpec extends Specification {
         PcpTime = Option(1451655000000L),
         Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch,
         FeedSources = Set(ApiFeedSource),
-        CarrierScheduled = Option(100L)
+        CarrierScheduled = Option(100L),
+        TotalPax = Map(ApiFeedSource -> Passengers(Option(150),Option(10)))
       )
       val flightMessage = apiFlightToFlightMessage(apiFlight)
       val deserialised = flightMessageToApiFlight(flightMessage)

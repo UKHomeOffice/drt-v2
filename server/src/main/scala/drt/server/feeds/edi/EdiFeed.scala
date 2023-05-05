@@ -128,8 +128,6 @@ case class EdiFeed(ediClient: EdiClient)
         Gate = flight.DepartureGate,
         Stand = flight.StandCode,
         MaxPax = flight.MAXPAX_Aircraft,
-        ActPax = flight.Passengers,
-        TranPax = None,
         RunwayID = flight.RunWayCode,
         BaggageReclaimId = flight.BagageReclaim,
         AirportID = PortCode(flight.AirportCode_IATA),
@@ -139,10 +137,9 @@ case class EdiFeed(ediClient: EdiClient)
         PcpTime = None,
         FeedSources = Set(feedSource),
         CarrierScheduled = None,
-        ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map.empty
+        TotalPax = Map(feedSource -> Passengers(flight.Passengers, None))
       )
     } match {
       case Success(a) => Option(a)

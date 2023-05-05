@@ -5,7 +5,7 @@ import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
 import drt.shared.FlightsApi.Flights
 import drt.shared.PortState
-import uk.gov.homeoffice.drt.arrivals.TotalPaxSource
+import uk.gov.homeoffice.drt.arrivals.{Passengers, TotalPaxSource}
 import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
 import uk.gov.homeoffice.drt.ports.Queues._
@@ -28,8 +28,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         schDt = scheduled,
         iata = "BA0001",
         terminal = T1,
-        actPax = Option(21),
-        totalPax = Map(AclFeedSource -> Option(21)),
+        totalPax = Map(AclFeedSource -> Passengers(Option(21),None)),
       )
       val initialBaseArrivals = Set(flight)
       val deskStats = ActualDeskStats(Map(
@@ -75,7 +74,8 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
       val scheduled = "2017-01-01T00:00Z"
 
-      val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
+      val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1,
+        totalPax = Map(AclFeedSource ->Passengers(Option(21),None)))
       val initialBaseArrivals = Set(flight)
       val deskStats = ActualDeskStats(Map(
         T1 -> Map(
@@ -128,5 +128,3 @@ class BlackJackFlowSpec extends CrunchTestLike {
     }
   }
 }
-
-

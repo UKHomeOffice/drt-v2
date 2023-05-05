@@ -11,7 +11,7 @@ import drt.shared.FlightsApi.Flights
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Operator, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Operator, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
 
@@ -56,8 +56,6 @@ object StreamingChromaFlow {
         Gate = if (StringUtils.isBlank(flight.Gate)) None else Option(flight.Gate),
         Stand = if (StringUtils.isBlank(flight.Stand)) None else Option(flight.Stand),
         MaxPax = if (flight.MaxPax == 0) None else Option(flight.MaxPax),
-        ActPax = if (flight.ActPax == 0) None else Option(flight.ActPax),
-        TranPax = if (flight.ActPax == 0) None else Option(flight.TranPax),
         RunwayID = if (StringUtils.isBlank(flight.RunwayID)) None else Option(flight.RunwayID),
         BaggageReclaimId = if (StringUtils.isBlank(flight.BaggageReclaimId)) None else Option(flight.BaggageReclaimId),
         AirportID = flight.AirportID,
@@ -67,7 +65,8 @@ object StreamingChromaFlow {
         Origin = flight.Origin,
         PcpTime = Some(pcpTime),
         Scheduled = SDate(flight.SchDT).millisSinceEpoch,
-        FeedSources = Set(LiveFeedSource)
+        FeedSources = Set(LiveFeedSource),
+        TotalPax = Map(LiveFeedSource -> Passengers(if (flight.ActPax == 0) None else Option(flight.ActPax), if (flight.ActPax == 0) None else Option(flight.TranPax)))
       )
     }).toList
   }
@@ -87,8 +86,6 @@ object StreamingChromaFlow {
         Gate = None,
         Stand = None,
         MaxPax = None,
-        ActPax = if (flight.EstPax == 0) None else Option(flight.EstPax),
-        TranPax = if (flight.EstPax == 0) None else Option(flight.EstTranPax),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = flight.AirportID,
@@ -98,7 +95,8 @@ object StreamingChromaFlow {
         Origin = flight.Origin,
         PcpTime = Option(pcpTime),
         FeedSources = Set(ForecastFeedSource),
-        Scheduled = SDate(flight.SchDT).millisSinceEpoch
+        Scheduled = SDate(flight.SchDT).millisSinceEpoch,
+        TotalPax = Map(ForecastFeedSource -> Passengers(if (flight.EstPax == 0) None else Option(flight.EstPax), if (flight.EstPax == 0) None else Option(flight.EstTranPax)))
       )
     }).toList
   }

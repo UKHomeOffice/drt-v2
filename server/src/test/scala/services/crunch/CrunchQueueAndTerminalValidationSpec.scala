@@ -4,11 +4,12 @@ import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.FlightsApi.Flights
 import drt.shared._
+import uk.gov.homeoffice.drt.arrivals.Passengers
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PaxTypes, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -26,7 +27,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           val scheduled = "2017-01-01T00:00Z"
 
           val flights = Flights(Seq(
-            ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, actPax = Option(15))
+            ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, totalPax =  Map(LiveFeedSource -> Passengers(Option(15),None)))
             ))
 
           val fiveMinutes = 600d / 60
@@ -67,8 +68,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T00:00Z"
 
         val flights = Flights(Seq(
-          ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(15)),
-          ArrivalGenerator.arrival(schDt = scheduled, iata = "FR8819", terminal = InvalidTerminal, actPax = Option(10))
+          ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax =  Map(LiveFeedSource -> Passengers(Option(15),None))),
+          ArrivalGenerator.arrival(schDt = scheduled, iata = "FR8819", terminal = InvalidTerminal, totalPax =  Map(LiveFeedSource -> Passengers(Option(10),None)))
         ))
 
         val fiveMinutes = 600d / 60

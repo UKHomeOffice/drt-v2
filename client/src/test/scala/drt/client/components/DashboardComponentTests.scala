@@ -3,9 +3,9 @@ package drt.client.components
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.splits.ApiSplitsToSplitRatio
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Passengers}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxTypeAndQueue, PaxTypes, Queues}
 import utest._
 
 object DashboardComponentTests extends TestSuite {
@@ -186,7 +186,7 @@ object DashboardComponentTests extends TestSuite {
 
     "Given a list of CrunchMinutes when asking for the highest PCP pressure I should get the Minute with the most pax back" - {
       val startDate = SDate("2017-10-30T00:00:00Z")
-      val highestMinute = CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(15).millisSinceEpoch, 30,  40, 10, 10, Option(10), None, None)
+      val highestMinute = CrunchMinute(T1, Queues.EeaDesk, startDate.addMinutes(15).millisSinceEpoch, 30, 40, 10, 10, Option(10), None, None)
       val cms = List(
         CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 40, 10, 10, Option(10), None, None),
         highestMinute,
@@ -202,7 +202,7 @@ object DashboardComponentTests extends TestSuite {
     "When I ask for a break down of flights and queues per hour" - {
       "Given 1 flight and 1 Crunch Minute for the same period" - {
         val startDate = SDate("2017-10-30T00:00:00Z")
-        val flights = List(ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:00:00Z", actPax = Option(15)), Set()))
+        val flights = List(ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:00:00Z", totalPax = Map(ApiFeedSource -> Passengers(actual = Option(15), transit = None))), Set()))
         val cms = List(CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
 
         val result = hourSummary(flights, cms, startDate)
@@ -219,10 +219,10 @@ object DashboardComponentTests extends TestSuite {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(
           ApiFlightWithSplits(
-            ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:00:00Z", actPax = Option(15)), Set()
+            ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:00:00Z", totalPax = Map(ApiFeedSource -> Passengers(actual = Option(15), transit = None))), Set()
           ),
           ApiFlightWithSplits(
-            ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:01:00Z", actPax = Option(15)), Set()
+            ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:01:00Z", totalPax = Map(ApiFeedSource -> Passengers(actual = Option(15), transit = None))), Set()
           )
         )
         val cms = List(CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
@@ -240,10 +240,10 @@ object DashboardComponentTests extends TestSuite {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(
           ApiFlightWithSplits(
-            ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:00:00Z", actPax = Option(15)), Set()
+            ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:00:00Z", totalPax = Map(ApiFeedSource -> Passengers(actual = Option(15), transit = None))), Set()
           ),
           ApiFlightWithSplits(
-            ArrivalGenerator.apiFlight(schDt = "2017-10-30T01:00:00Z", actPax = Option(15)), Set()
+            ArrivalGenerator.apiFlight(schDt = "2017-10-30T01:00:00Z", totalPax = Map(ApiFeedSource -> Passengers(actual = Option(15), transit = None))), Set()
           )
         )
         val cms = List(CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
@@ -261,10 +261,10 @@ object DashboardComponentTests extends TestSuite {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(
           ApiFlightWithSplits(
-            ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:00:00Z", actPax = Option(15)), Set()
+            ArrivalGenerator.apiFlight(schDt = "2017-10-30T00:00:00Z", totalPax = Map(ApiFeedSource -> Passengers(actual = Option(15), transit = None))), Set()
           ),
           ApiFlightWithSplits(
-            ArrivalGenerator.apiFlight(schDt = "2017-10-30T01:00:00Z", actPax = Option(15)), Set()
+            ArrivalGenerator.apiFlight(schDt = "2017-10-30T01:00:00Z", totalPax = Map(ApiFeedSource -> Passengers(actual = Option(15), transit = None))), Set()
           )
         )
         val cms = List(

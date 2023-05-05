@@ -10,7 +10,7 @@ import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, Splits, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, Passengers, Splits, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.{NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources._
@@ -54,7 +54,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       bestManifest
     }
 
-    val testArrival = arrival(iata = "SA0234", schDt = "2019-06-22T06:24:00Z", actPax = Option(100), terminal = T2, origin = PortCode("USA"))
+    val testArrival = arrival(iata = "SA0234", schDt = "2019-06-22T06:24:00Z", totalPax = Map(LiveFeedSource -> Passengers(Option(100),None)), terminal = T2, origin = PortCode("USA"))
 
     "When adjusting adult EGate use based on under age pax in API Data using an eGate split of 50%" >> {
       val terminalQueueAllocationMap: Map[Terminal, Map[PaxType, List[(Queue, Double)]]] = Map(T2 -> Map(
@@ -414,7 +414,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       DisembarkationPortCode = None,
       PassengerIdentifier = None)
 
-    val testArrival = arrival(iata = "SA0234", schDt = "2019-06-22T06:24:00Z", actPax = Option(100), terminal = T2, origin = PortCode("USA"))
+    val testArrival = arrival(iata = "SA0234", schDt = "2019-06-22T06:24:00Z", totalPax = Map(LiveFeedSource -> Passengers(Option(100),None)), terminal = T2, origin = PortCode("USA"))
 
     "When adjusting adult EGate use based on under age pax in API Data using an eGate split of 50%" >> {
       val terminalQueueAllocationMap: Map[Terminal, Map[PaxType, List[(Queue, Double)]]] = Map(T2 -> Map(

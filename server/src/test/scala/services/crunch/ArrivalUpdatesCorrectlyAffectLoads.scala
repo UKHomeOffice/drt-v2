@@ -6,10 +6,10 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import services.crunch.VoyageManifestGenerator._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes, Passengers}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
-import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Map, SortedMap}
@@ -25,9 +25,9 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
       queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
     )
   ))
-  val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", actPax = Option(100))
+  val arrivalOne: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", totalPax = Map(LiveFeedSource -> Passengers(Option(100), None)))
 
-  val arrivalTwo: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05", actPax = Option(117))
+  val arrivalTwo: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05", totalPax = Map(LiveFeedSource -> Passengers(Option(117), None)))
 
   "Given crunch inputs and an arrival" >> {
 
@@ -51,7 +51,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     "When I send an updated act pax" >> {
       val updatedArrival = arrivalOne.copy(
         Estimated = Option(SDate("2019-01-01T00:07").millisSinceEpoch),
-        ActPax = Option(105)
+        TotalPax = Map(LiveFeedSource -> Passengers(Option(105), None))
       )
 
       offerAndCheckResult(Seq(updatedArrival))
@@ -61,7 +61,7 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     "When I send an updated act pax & estimated time & manifest" >> {
       val updatedArrival = arrivalOne.copy(
         Estimated = Option(SDate("2019-01-01T00:01").millisSinceEpoch),
-        ActPax = Option(76)
+        TotalPax = Map(LiveFeedSource -> Passengers(Option(76), None))
       )
       val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
         manifestForArrival(updatedArrival, manifestPax(25, visa) ++
@@ -77,15 +77,15 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     "When I send another updated act pax & estimated time & manifest" >> {
       val updatedArrival = arrivalOne.copy(
         Estimated = Option(SDate("2019-01-01T00:25").millisSinceEpoch),
-        ActPax = Option(35)
+        TotalPax = Map(LiveFeedSource -> Passengers(Option(35), None))
       )
       val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
         manifestForArrival(updatedArrival,
-          manifestPax(7,visa) ++
-          manifestPax(7,euPassport) ++
-          manifestPax(7,euPassport) ++
-          manifestPax(7,euPassport) ++
-          manifestPax(7,nonVisa))
+          manifestPax(7, visa) ++
+            manifestPax(7, euPassport) ++
+            manifestPax(7, euPassport) ++
+            manifestPax(7, euPassport) ++
+            manifestPax(7, nonVisa))
       )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
@@ -96,13 +96,13 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     "When I send a second arrival with a manifest" >> {
       val updatedArrival = arrivalOne.copy(
         Estimated = Option(SDate("2019-01-01T00:25").millisSinceEpoch),
-        ActPax = Option(211)
+        TotalPax = Map(LiveFeedSource -> Passengers(Option(211), None))
       )
       val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
         manifestForArrival(updatedArrival,
           manifestPax(42, visa) ++
-          manifestPax(127, euPassport) ++
-          manifestPax(42, nonVisa)),
+            manifestPax(127, euPassport) ++
+            manifestPax(42, nonVisa)),
         manifestForArrival(arrivalTwo, manifestPax(110, euIdCard) ++ manifestPax(7, nonVisa))
       )))
 
@@ -114,15 +114,15 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
     "When I send a second arrival with a manifest" >> {
       val updatedArrivalOne = arrivalOne.copy(
         Estimated = Option(SDate("2019-01-01T00:03").millisSinceEpoch),
-        ActPax = Option(401)
+        TotalPax = Map(LiveFeedSource -> Passengers(Option(401), None))
       )
       val updatedArrivalTwo = arrivalTwo.copy(
         Estimated = Option(SDate("2019-01-01T00:03").millisSinceEpoch),
-        ActPax = Option(176)
+        TotalPax = Map(LiveFeedSource -> Passengers(Option(176), None))
       )
       val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
         manifestForArrival(updatedArrivalOne, manifestPax(300, visa) ++ manifestPax(99, euPassport) ++ manifestPax(2, nonVisa)),
-        manifestForArrival(updatedArrivalTwo, manifestPax(30, euIdCard) ++ manifestPax( 30, nonVisa) ++ manifestPax(116, euPassport))
+        manifestForArrival(updatedArrivalTwo, manifestPax(30, euIdCard) ++ manifestPax(30, nonVisa) ++ manifestPax(116, euPassport))
       )))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
@@ -152,8 +152,8 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
 
     val arrivalsExist = arrivals.foldLeft(true) { case (soFar, a) => soFar && flights.contains(a.unique) }
 
-    val arrivalsPaxTotal = arrivals.map {
-      _.ActPax.getOrElse(-1)
+    val arrivalsPaxTotal = arrivals.flatMap {
+      _.TotalPax.get(LiveFeedSource).map(_.actual.getOrElse(-1))
     }.sum
 
     val (firstPaxLoadMinute, paxLoadTotal, queuesOk) = crunchMins match {
