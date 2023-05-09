@@ -28,7 +28,7 @@ trait WorkloadCalculatorLike {
   def combineCodeShares(flights: Iterable[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
       .toList
-      .sortBy(_.apiFlight.TotalPax.get(ApiFeedSource).map(_.actual))
+      .sortBy(_.apiFlight.bestPcpPaxEstimate.getPcpPax)
       .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
       .toMap.values
     uniqueFlights
