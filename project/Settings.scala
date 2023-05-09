@@ -75,7 +75,7 @@ object Settings {
     val slick = "3.4.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
-    val scalaJsReactMaterialUi = "v0.1.15"
+    val scalaJsReactMaterialUi = "0.1.15"
     val sprayJsonScalaJs = "1.3.5-7"
     val scalaTestVersion = "3.2.15"
   }
