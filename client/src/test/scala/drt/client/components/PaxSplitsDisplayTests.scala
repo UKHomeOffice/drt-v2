@@ -4,7 +4,7 @@ import drt.shared.splits.ApiSplitsToSplitRatio
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage, Ratio}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypes, Queues}
 import utest.{TestSuite, _}
 
 
@@ -228,7 +228,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 15, None, None),
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.3, None, None)), Historical, None, Percentage)
 
-        val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)))
+        val result: Option[Map[Queues.Queue, Int]] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)))
 
         val expected: Option[Map[Queues.Queue, Int]] = Option(Map(
           Queues.EeaDesk -> 69,
@@ -260,8 +260,8 @@ object PaxSplitsDisplayTests extends TestSuite {
 
       "Given a flight with no pax number for live feed and splits ApiSplitsWithHistoricalEGateAndFTPercentages I should see the total broken down per queue" - {
         val flight: Arrival = ArrivalGenerator
-          .apiFlight(totalPax = Map(), feedSources = Set(LiveFeedSource))
-          .copy(TotalPax = Map(LiveFeedSource -> Passengers(Some(100), None)))
+          .apiFlight(totalPax = Map(), feedSources = Set(ApiFeedSource))
+          .copy(TotalPax = Map(ApiFeedSource -> Passengers(Some(100), None)))
         val splits = Splits(Set(
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 15, None, None),
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 5, None, None)),
