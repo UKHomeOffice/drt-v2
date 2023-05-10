@@ -53,7 +53,7 @@ object ArrivalGenerator {
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (sch != 0L) Some(sch) else None,
       Scheduled = sch,
       FeedSources = feedSources,
-      TotalPax = if (totalPax.nonEmpty) totalPax else Map(LiveFeedSource -> Passengers(actPax,tranPax))
+      TotalPax = if (totalPax.nonEmpty) totalPax else if(feedSources.nonEmpty) Map(LiveFeedSource -> Passengers(actPax,tranPax)) else Map.empty
     )
 
   def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(

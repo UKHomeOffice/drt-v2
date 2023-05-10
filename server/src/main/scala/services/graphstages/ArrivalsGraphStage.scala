@@ -424,7 +424,7 @@ class ArrivalsGraphStage(name: String = "",
 
     def mergeBestFields(baseArrival: Arrival, bestArrival: Arrival): Arrival = {
       val key = UniqueArrival(baseArrival)
-      val (pax, transPax) = bestPaxNos(key, baseArrival.bestPcpPaxEstimate.passengers.actual, baseArrival.bestPcpPaxEstimate.passengers.transit)
+      val (pax, transPax) = bestPaxNos(key, baseArrival.bestPaxEstimate.passengers.actual, baseArrival.bestPaxEstimate.passengers.transit)
       bestArrival.copy(
         CarrierCode = baseArrival.CarrierCode,
         VoyageNumber = baseArrival.VoyageNumber,

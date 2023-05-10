@@ -62,13 +62,13 @@ object FlightComponents {
     }
 
     val apiPax = List(
-      flight.totalPaxFromApiExcludingTransfer.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
+      flight.totalPaxFromApi.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
     )
     <.span((paxSources ++ apiPax).toVdomArray)
   }
 
   def paxTransferComponent(flight: Arrival): VdomTagOf[Div] = {
-    val transPax = if (flight.Origin.isCta) "-" else flight.bestPcpPaxEstimate.passengers.transit.getOrElse("-")
+    val transPax = if (flight.Origin.isCta) "-" else flight.bestPaxEstimate.passengers.transit.getOrElse("-")
     <.div(
       ^.className := "right",
       s"$transPax"

@@ -176,7 +176,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
               .groupBy(fws => fws.apiFlight.Terminal)
               .map {
                 case (terminal, flights) =>
-                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate.getPcpPax.getOrElse(0)).sum
+                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate.getOrElse(0)).sum
                   (terminal, paxNos.toDouble)
               }
         }.runWith(Sink.seq)
