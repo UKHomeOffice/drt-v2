@@ -7,11 +7,11 @@ import scalacss.ScalaCssReactImplicits
 import scalacss.internal.mutable.StyleSheet
 
 object DrtTheme extends StyleSheet.Inline with ScalaCssReactImplicits {
-  val typographyOptions: TypographyOptions = TypographyOptions(
+  private val typographyOptions: TypographyOptions = TypographyOptions(
     fontSize = 20,
     button = TypographyStyleOptions(textTransform = "")
   )
-//
+
   def theme: Theme = {
     createTheme(
       options = ThemeOptions(
@@ -36,15 +36,6 @@ object DrtTheme extends StyleSheet.Inline with ScalaCssReactImplicits {
             `900` = "#111224",
           )
         ),
-        //      components = Components(
-        //        MuiButton = ComponentOptions(
-        //          styleOverrides = Map(
-        //            "root" -> Map(
-        //              "fontSize" -> "50px",
-        //            ).toJSDictionary.asInstanceOf[js.Object],
-        //          ).toJSDictionary.asInstanceOf[js.Object]
-        //        )
-        //      ),
       )
     )
   }

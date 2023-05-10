@@ -109,14 +109,12 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
         def passengerWeightingFields = {
 
           <.div(
-//            DefaultFormFieldsStyle.formHelperText,
             MuiTextField(
               label = "Passenger weighting".toVdom,
               helperText = MuiTypography(variant = MuiTypography.Variant.caption)(
                 "e.g. '2' will give you double the passengers on each flight."
               )
             )(
-//              DefaultFormFieldsStyle.textField,
               `type` := "number",
               id := "passenger-weighting",
               value := state.simulationFormFields.passengerWeighting.map(_.toString).getOrElse(""),
