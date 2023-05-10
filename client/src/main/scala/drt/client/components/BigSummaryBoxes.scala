@@ -83,7 +83,7 @@ object BigSummaryBoxes {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }
 
-  def sumActPax(flights: Seq[ApiFlightWithSplits]): Int = flights.flatMap(_.apiFlight.TotalPax.get(ApiFeedSource).flatMap(_.actual)).sum
+  def sumActPax(flights: Seq[ApiFlightWithSplits]): Int = flights.flatMap(_.apiFlight.PassengerSources.get(ApiFeedSource).flatMap(_.actual)).sum
 
   def sumBestPax(bestFlightSplitPax: ApiFlightWithSplits => Double)(flights: Seq[ApiFlightWithSplits]): Double = flights.map(bestFlightSplitPax).sum
 

@@ -66,7 +66,7 @@ object StreamingChromaFlow {
         PcpTime = Some(pcpTime),
         Scheduled = SDate(flight.SchDT).millisSinceEpoch,
         FeedSources = Set(LiveFeedSource),
-        TotalPax = Map(LiveFeedSource -> Passengers(if (flight.ActPax == 0) None else Option(flight.ActPax), if (flight.ActPax == 0) None else Option(flight.TranPax)))
+        PassengerSources = Map(LiveFeedSource -> Passengers(if (flight.ActPax == 0) None else Option(flight.ActPax), if (flight.ActPax == 0) None else Option(flight.TranPax)))
       )
     }).toList
   }
@@ -96,7 +96,7 @@ object StreamingChromaFlow {
         PcpTime = Option(pcpTime),
         FeedSources = Set(ForecastFeedSource),
         Scheduled = SDate(flight.SchDT).millisSinceEpoch,
-        TotalPax = Map(ForecastFeedSource -> Passengers(if (flight.EstPax == 0) None else Option(flight.EstPax), if (flight.EstPax == 0) None else Option(flight.EstTranPax)))
+        PassengerSources = Map(ForecastFeedSource -> Passengers(if (flight.EstPax == 0) None else Option(flight.EstPax), if (flight.EstPax == 0) None else Option(flight.EstTranPax)))
       )
     }).toList
   }

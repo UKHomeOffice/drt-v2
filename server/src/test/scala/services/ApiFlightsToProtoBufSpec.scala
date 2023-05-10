@@ -33,7 +33,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
         Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch,
         FeedSources = Set(ApiFeedSource),
         CarrierScheduled = Option(100L),
-        TotalPax = Map(ApiFeedSource -> Passengers(Option(150),Option(10)))
+        PassengerSources = Map(ApiFeedSource -> Passengers(Option(150),Option(10)))
       )
       val flightMessage = apiFlightToFlightMessage(apiFlight)
       val deserialised = flightMessageToApiFlight(flightMessage)

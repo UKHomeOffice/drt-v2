@@ -62,7 +62,7 @@ trait BHXLiveArrivals extends BHXArrivals {
       Scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
-      TotalPax= Map(LiveFeedSource -> Passengers(if (actPax == 0) None else Option(actPax),if (actPax == 0) None else Option(transPax)))
+      PassengerSources= Map(LiveFeedSource -> Passengers(if (actPax == 0) None else Option(actPax),if (actPax == 0) None else Option(transPax)))
     )
   }
 }
@@ -94,7 +94,7 @@ trait BHXForecastArrivals extends BHXArrivals {
       Scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(ForecastFeedSource),
-      TotalPax = Map(ForecastFeedSource->Passengers(if (actPax == 0) None else Option(actPax),if (actPax == 0) None else Option(transPax)))
+      PassengerSources = Map(ForecastFeedSource->Passengers(if (actPax == 0) None else Option(actPax),if (actPax == 0) None else Option(transPax)))
     )
   }
 }

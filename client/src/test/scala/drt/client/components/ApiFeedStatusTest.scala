@@ -16,10 +16,10 @@ class ApiFeedStatusTest extends AnyWordSpec with Matchers {
     val afterNow = "2022-05-31T12:30"
     val considerPredictions = true
 
-    val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow, totalPax=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None)))
-    val landedWithNoPax = ArrivalGenerator.apiFlight(schDt = beforeNow, totalPax=Map(ApiFeedSource -> Passengers(actual = None,transit = None)))
-    val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow, totalPax=Map(LiveFeedSource -> Passengers(actual = Option(100),transit = None)), feedSources = Set(LiveFeedSource))
-    val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow, totalPax=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None))), Set())
+    val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None)))
+    val landedWithNoPax = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = None,transit = None)))
+    val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(LiveFeedSource -> Passengers(actual = Option(100),transit = None)), feedSources = Set(LiveFeedSource))
+    val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None))), Set())
     val ctaLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("ORK")), Set())
     val domesticLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("EMA")), Set())
     val landedWithValidApi = ApiFlightWithSplits(landedWithNoSources, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))

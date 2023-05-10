@@ -95,7 +95,7 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
           ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
       }
 
-      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(fcBase.copy(TotalPax = Map(LiveFeedSource->Passengers(Option(200),None)))))))
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(fcBase.copy(PassengerSources = Map(LiveFeedSource->Passengers(Option(200),None)))))))
 
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
         case ps: PortState =>
@@ -119,7 +119,7 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
           ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
       }
 
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(live.copy(TotalPax = Map(LiveFeedSource->Passengers(Option(200),None)))))))
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(live.copy(PassengerSources = Map(LiveFeedSource->Passengers(Option(200),None)))))))
 
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
         case ps: PortState =>
@@ -202,7 +202,7 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
 
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
         case ps: PortState =>
-          ps.flights.values.map(a => (a.apiFlight.flightCodeString, a.apiFlight.BaggageReclaimId, a.apiFlight.TotalPax.get(LiveFeedSource).flatMap(_.actual))) == List(("BA1111", Option("1"), Option(100)))
+          ps.flights.values.map(a => (a.apiFlight.flightCodeString, a.apiFlight.BaggageReclaimId, a.apiFlight.PassengerSources.get(LiveFeedSource).flatMap(_.actual))) == List(("BA1111", Option("1"), Option(100)))
       }
 
       success

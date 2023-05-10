@@ -26,7 +26,7 @@ class FlightUpdatesAndRemovalsSpec extends Specification {
     "When I apply a FlightsWithSplitsDiff it should contain the updates and remove and record any removals" >> {
       val removals = Seq((update1500, fws3.unique))
       val updatesAndRemovals = FlightUpdatesAndRemovals(Seq(fws1, fws2), removals)
-      val fws1v2 = fws1.copy(arrival1.copy(TotalPax = Map(ApiFeedSource -> Passengers(Option(100), None))))
+      val fws1v2 = fws1.copy(arrival1.copy(PassengerSources = Map(ApiFeedSource -> Passengers(Option(100), None))))
       val diff = FlightsWithSplitsDiff(Seq(fws1v2), Seq(fws2.unique))
 
       val expected = FlightUpdatesAndRemovals(Seq(fws1v2), removals ++ Seq((update2000, fws2.unique)))

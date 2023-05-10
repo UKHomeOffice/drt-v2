@@ -203,7 +203,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
         withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(FeedSources = arrival.FeedSources + ApiFeedSource,
-          TotalPax = arrival.TotalPax.updated(ApiFeedSource, Passengers(Option(1), None))
+          PassengerSources = arrival.PassengerSources.updated(ApiFeedSource, Passengers(Option(1), None))
         ), Set(splits)))
       }
 
@@ -265,7 +265,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     val crunchRequestSource = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
     val result: immutable.Seq[(ProcessingRequest, List[ApiFlightWithSplits])] = Await.result(crunchRequestSource.via(flow).runWith(Sink.seq), 1.second)
-    result.head._2.exists(_.apiFlight.TotalPax === expectedPaxSources)
+    result.head._2.exists(_.apiFlight.PassengerSources === expectedPaxSources)
   }
 
   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =

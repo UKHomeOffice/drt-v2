@@ -87,7 +87,7 @@ object LhrForecastArrival {
         Scheduled = scheduled(fields).millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
-        TotalPax = Map(ForecastFeedSource -> Passengers(Option(actPax), Option(transPax)))
+        PassengerSources = Map(ForecastFeedSource -> Passengers(Option(actPax), Option(transPax)))
       )
     } match {
       case Failure(t) =>

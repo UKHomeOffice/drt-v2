@@ -233,7 +233,7 @@ class LCYFlightTransformSpec extends CrunchTestLike {
       Scheduled = SDate(scheduledTimeString).millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
-      TotalPax = Map(LiveFeedSource -> Passengers(Option(65), None))
+      PassengerSources = Map(LiveFeedSource -> Passengers(Option(65), None))
     )
 
     result === expected

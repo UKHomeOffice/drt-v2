@@ -84,10 +84,10 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         arrival_v2_with_chox_time.copy(ActualChox = Option(SDate(scheduled).millisSinceEpoch), Stand = Option("I will update"))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival_v2_with_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = Map(LiveFeedSource -> Passengers(Option(100), None))))))
+      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(PassengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))))))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival_v3_with_an_update_to_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v3_with_an_update_to_chox_time.copy(TotalPax = Map(LiveFeedSource -> Passengers(Option(100), None))))))
+      expectArrivals(Iterable(withPcpTime(arrival_v3_with_an_update_to_chox_time.copy(PassengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))))))
 
       success
     }
@@ -100,7 +100,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       )))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v2_with_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = arrival_v2_with_chox_time.TotalPax))))
+      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(PassengerSources = arrival_v2_with_chox_time.PassengerSources))))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
       expectFeedSources(Set(LiveFeedSource))
@@ -110,11 +110,11 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" >> {
       val voyageManifests: ManifestsFeedResponse = ManifestsFeedSuccess(DqManifests(0, Set(
-        VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival(date), ManifestTimeOfArrival(hour), xOfPaxType(arrival_v2_with_chox_time.TotalPax.get(ApiFeedSource).flatMap(_.actual).getOrElse(0), euIdCard))
+        VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival(date), ManifestTimeOfArrival(hour), xOfPaxType(arrival_v2_with_chox_time.PassengerSources.get(ApiFeedSource).flatMap(_.actual).getOrElse(0), euIdCard))
       )))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival_v2_with_chox_time))))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(TotalPax = arrival_v2_with_chox_time.TotalPax))))
+      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.copy(PassengerSources = arrival_v2_with_chox_time.PassengerSources))))
 
       offerAndWait(crunch.manifestsLiveInput, voyageManifests)
       expectFeedSources(Set(LiveFeedSource, ApiFeedSource))
@@ -190,7 +190,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         val aclFlight: Flights = Flights(List(withSuffixP, withSuffixF, withoutSuffix))
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
-        expectArrivals(Iterable(withPcpTime(withoutSuffix.copy(TotalPax = withoutSuffix.TotalPax))))
+        expectArrivals(Iterable(withPcpTime(withoutSuffix.copy(PassengerSources = withoutSuffix.PassengerSources))))
 
         success
       }
@@ -220,7 +220,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           val expected = liveArrival.copy(
             Estimated = Option(SDate(scheduled).millisSinceEpoch),
             FeedSources = Set(LiveFeedSource, LiveBaseFeedSource),
-            TotalPax = liveArrival.TotalPax ++ ciriumArrival.TotalPax)
+            PassengerSources = liveArrival.PassengerSources ++ ciriumArrival.PassengerSources)
 
           expectArrivals(Iterable(withPcpTime(expected)))
 
@@ -232,16 +232,16 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         "I should see the live arrival without the cirium arrival's status merged" >> {
           val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
           val ciriumArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("BBB"), estDt = scheduled)
-          val updatedArrival = liveArrival.copy(ActualChox = Option(SDate(scheduled).millisSinceEpoch), TotalPax = Map(LiveFeedSource -> Passengers(None, None)))
+          val updatedArrival = liveArrival.copy(ActualChox = Option(SDate(scheduled).millisSinceEpoch), PassengerSources = Map(LiveFeedSource -> Passengers(None, None)))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
           expectUniqueArrival(liveArrival.unique)
 
           offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
-          expectArrivals(Iterable(withPcpTime(liveArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = updatedArrival.TotalPax))))
+          expectArrivals(Iterable(withPcpTime(liveArrival.copy(FeedSources = Set(LiveFeedSource), PassengerSources = updatedArrival.PassengerSources))))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(updatedArrival))))
-          expectArrivals(Iterable(withPcpTime(updatedArrival.copy(FeedSources = Set(LiveFeedSource), TotalPax = updatedArrival.TotalPax))))
+          expectArrivals(Iterable(withPcpTime(updatedArrival.copy(FeedSources = Set(LiveFeedSource), PassengerSources = updatedArrival.PassengerSources))))
 
           success
         }
@@ -298,7 +298,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
         val expected = forecastArrival.copy(
           FeedSources = Set(AclFeedSource, ForecastFeedSource),
-          TotalPax = aclArrival.TotalPax ++ forecastArrival.TotalPax)
+          PassengerSources = aclArrival.PassengerSources ++ forecastArrival.PassengerSources)
 
         crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(flights, _, _) =>

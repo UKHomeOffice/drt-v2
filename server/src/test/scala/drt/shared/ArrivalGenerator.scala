@@ -1,7 +1,7 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Passengers, Prediction, Predictions, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Passengers, Prediction, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -30,7 +30,7 @@ object ArrivalGenerator {
                airportId: PortCode = PortCode(""),
                feedSources: Set[FeedSource] = Set(),
                pcpTime: Option[MillisSinceEpoch] = None,
-               totalPax: Map[FeedSource, Passengers] = Map.empty
+               passengerSources: Map[FeedSource, Passengers] = Map.empty
              ): Arrival =
     Arrival(
       Operator = operator,
@@ -53,7 +53,7 @@ object ArrivalGenerator {
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (sch != 0L) Some(sch) else None,
       Scheduled = sch,
       FeedSources = feedSources,
-      TotalPax = if (totalPax.nonEmpty) totalPax else if(feedSources.nonEmpty) Map(LiveFeedSource -> Passengers(actPax,tranPax)) else Map.empty
+      PassengerSources = if (passengerSources.nonEmpty) passengerSources else if(feedSources.nonEmpty) Map(LiveFeedSource -> Passengers(actPax,tranPax)) else Map.empty
     )
 
   def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(

@@ -60,7 +60,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))),
+        PassengerSources = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -86,7 +86,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))),
+        PassengerSources = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -112,7 +112,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))),
+        PassengerSources = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))),
       Arrival(
         Operator = None,
         CarrierCode = CarrierCode("TST"),
@@ -138,7 +138,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         CarrierScheduled = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))))
+        PassengerSources = Map(ForecastFeedSource -> Passengers(Some(50), Some(0)))))
 
     result === expected
   }

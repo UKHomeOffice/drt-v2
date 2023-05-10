@@ -10,7 +10,7 @@ object CodeShares {
       (apiFlightFromGenFlight(f).Scheduled, apiFlightFromGenFlight(f).Terminal, apiFlightFromGenFlight(f).Origin)
     )
     grouped.values.map(flights => {
-      val mainFlight: GenFlight = flights.sortBy(f => apiFlightFromGenFlight(f).TotalPax.values.map(_.actual)).reverse.head
+      val mainFlight: GenFlight = flights.sortBy(f => apiFlightFromGenFlight(f).PassengerSources.values.map(_.actual)).reverse.head
       val shares: Set[Arrival] = flights
         .filter(_ != mainFlight)
         .toSet

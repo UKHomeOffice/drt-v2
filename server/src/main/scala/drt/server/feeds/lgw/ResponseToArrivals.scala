@@ -4,7 +4,7 @@ import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, Passengers, Predictions, TotalPaxSource, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, Passengers, Predictions, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
 import uk.gov.homeoffice.drt.time.SDate
@@ -59,7 +59,7 @@ case class ResponseToArrivals(data: String) {
       CarrierScheduled = None,
       ScheduledDeparture = None,
       RedListPax = None,
-      TotalPax = Map(LiveFeedSource -> Passengers(actPax, if (actPax.isEmpty) None else transPax)),
+      PassengerSources = Map(LiveFeedSource -> Passengers(actPax, if (actPax.isEmpty) None else transPax)),
     )
     log.debug(s"parsed arrival: $arrival")
     arrival

@@ -139,7 +139,7 @@ class LHRForecastCSVSpec extends Specification {
         Scheduled = SDate("2019-04-04T05:00Z").millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
-        TotalPax = Map(ForecastFeedSource -> Passengers(Option(290), Option(90)))
+        PassengerSources = Map(ForecastFeedSource -> Passengers(Option(290), Option(90)))
       ),
 
       Arrival(
@@ -163,7 +163,7 @@ class LHRForecastCSVSpec extends Specification {
         Scheduled = SDate("2019-05-04T05:00Z").millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
-        TotalPax = Map(ForecastFeedSource -> Passengers(Option(290), Option(90)))
+        PassengerSources = Map(ForecastFeedSource -> Passengers(Option(290), Option(90)))
       )
     )
 

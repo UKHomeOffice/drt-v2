@@ -309,7 +309,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
       Scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
-      TotalPax = Map(LiveFeedSource -> Passengers(f.paxCount, None))
+      PassengerSources = Map(LiveFeedSource -> Passengers(f.paxCount, None))
     )
   }
 

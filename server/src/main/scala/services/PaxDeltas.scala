@@ -113,11 +113,11 @@ object PaxDeltas {
       case normal => normal
     }
 
-    val updatedPax = arrival.TotalPax.map { case (k, v) =>
+    val updatedPax = arrival.PassengerSources.map { case (k, v) =>
       k -> Passengers(v.actual.map(pax => (pax * saneDelta).round.toInt), v.transit.map(pax => (pax * saneDelta).round.toInt))
     }
 
-    arrival.copy(TotalPax = updatedPax)
+    arrival.copy(PassengerSources = updatedPax)
 
   }
 }

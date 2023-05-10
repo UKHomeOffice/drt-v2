@@ -9,7 +9,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Passengers, TotalPaxSource, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Passengers, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource, Queues}
@@ -134,7 +134,7 @@ class PortStateSpec extends CrunchTestLike {
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(newArrival))))
 
-        val expected = newArrival.copy(FeedSources = Set(AclFeedSource), TotalPax = newArrival.TotalPax)
+        val expected = newArrival.copy(FeedSources = Set(AclFeedSource), PassengerSources = newArrival.PassengerSources)
         crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(flights, _, _) =>
             flights.size == 1 && flights.values.head.apiFlight == expected

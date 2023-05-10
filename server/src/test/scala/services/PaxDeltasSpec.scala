@@ -80,19 +80,19 @@ class PaxDeltasSpec extends Specification {
     "Given a delta of 0.5, I should get an arrival with 50 pax" >> {
       val delta = 0.5
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.TotalPax.get(LiveFeedSource).flatMap(_.actual) === Option(50)
+      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(50)
     }
 
     "Given a delta of -0.5, I should get an arrival with pax capped at 0" >> {
       val delta = -0.5
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.TotalPax.get(LiveFeedSource).flatMap(_.actual) === Option(0)
+      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(0)
     }
 
     "Given a delta of 2, I should get an arrival with pax capped at 100" >> {
       val delta = 2
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.TotalPax.get(LiveFeedSource).flatMap(_.actual) === Option(100)
+      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(100)
     }
   }
 }

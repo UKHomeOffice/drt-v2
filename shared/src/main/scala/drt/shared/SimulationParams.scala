@@ -1,6 +1,6 @@
 package drt.shared
 
-import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Passengers, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Passengers}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -50,12 +50,12 @@ case class SimulationParams(
   def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits): FlightsWithSplits =
     FlightsWithSplits(flightsWithSplits.flights.flatMap {
       case (ua, fws) =>
-        fws.apiFlight.TotalPax.headOption.map { case (_, p) =>
+        fws.apiFlight.PassengerSources.headOption.map { case (_, p) =>
           val actualPax: Option[Int] = p.actual.map(_ * passengerWeighting.toInt)
           val tranPax: Option[Int] = p.transit.map(_ * passengerWeighting.toInt)
           val updatedArrival = fws.apiFlight.copy(
             FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
-            TotalPax = Map(ScenarioSimulationSource -> Passengers(actualPax, tranPax))
+            PassengerSources = Map(ScenarioSimulationSource -> Passengers(actualPax, tranPax))
           )
           ua -> fws.copy(apiFlight = updatedArrival)
         }

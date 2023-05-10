@@ -194,7 +194,7 @@ object MagFeed {
     Scheduled = SDate(ma.arrival.scheduled).millisSinceEpoch,
     PcpTime = None,
     FeedSources = Set(LiveFeedSource),
-    TotalPax = Map(LiveFeedSource -> Passengers(ma.passenger.count, ma.passenger.transferCount))
+    PassengerSources = Map(LiveFeedSource -> Passengers(ma.passenger.count, ma.passenger.transferCount))
   )
 
   case class IataIcao(iata: String, icao: String)

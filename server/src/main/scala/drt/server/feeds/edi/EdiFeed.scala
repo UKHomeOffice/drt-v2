@@ -139,7 +139,7 @@ case class EdiFeed(ediClient: EdiClient)
         CarrierScheduled = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map(feedSource -> Passengers(flight.Passengers, None))
+        PassengerSources = Map(feedSource -> Passengers(flight.Passengers, None))
       )
     } match {
       case Success(a) => Option(a)

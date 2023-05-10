@@ -51,7 +51,7 @@ class LHRFeedSpec extends CrunchTestLike {
             AirportID = PortCode("LHR"), Terminal = T4, rawICAO = "QR005", rawIATA = "QR005", Origin = PortCode("DOH"),
             Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
             PcpTime = Option(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch), FeedSources = Set(LiveFeedSource),
-            TotalPax = Map(LiveFeedSource -> Passengers(actual = Option(142), transit = Option(1)))
+            PassengerSources = Map(LiveFeedSource -> Passengers(actual = Option(142), transit = Option(1)))
           )
         )
       )
@@ -97,7 +97,7 @@ class LHRFeedSpec extends CrunchTestLike {
             Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
             PcpTime = Option(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch),
             FeedSources = Set(LiveFeedSource),
-            TotalPax = Map(LiveFeedSource -> Passengers(actual = Option(0), transit = Option(0)))
+            PassengerSources = Map(LiveFeedSource -> Passengers(actual = Option(0), transit = Option(0)))
           )
         )
       )

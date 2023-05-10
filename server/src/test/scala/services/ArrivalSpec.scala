@@ -2,7 +2,7 @@ package services
 
 import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.time.SDate
 

@@ -95,7 +95,7 @@ object CiriumFeed {
       else
         Option(carrierScheduledTime),
       ScheduledDeparture = Some(f.departureDate).map(_.millis),
-      TotalPax = Map(LiveBaseFeedSource -> Passengers(None, None))
+      PassengerSources = Map(LiveBaseFeedSource -> Passengers(None, None))
     )
   }
 

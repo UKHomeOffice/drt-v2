@@ -125,7 +125,7 @@ object GlaFeed {
     Scheduled = SDate(ga.ScheduledDateTime).millisSinceEpoch,
     PcpTime = None,
     FeedSources = Set(LiveFeedSource),
-    TotalPax = Map(LiveFeedSource -> Passengers(ga.TotalPassengerCount, None))
+    PassengerSources = Map(LiveFeedSource -> Passengers(ga.TotalPassengerCount, None))
   )
 
   object JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {

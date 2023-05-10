@@ -1,7 +1,7 @@
 package drt.shared
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, EventTypes, Passengers, Splits, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, EventTypes, Passengers, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiPaxTypeAndQueueCount, FeedSource, LiveFeedSource, Queues}
@@ -90,7 +90,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, sources = Set())
 
-        val result = flightWithSplits.totalPax.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
+        val result = flightWithSplits.bestPaxSource.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
 
         result === 0
       }
@@ -101,7 +101,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, sources = Set(AclFeedSource))
 
-        val result = flightWithSplits.totalPax.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
+        val result = flightWithSplits.bestPaxSource.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
 
         result === 100
       }
@@ -112,7 +112,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, Set(), Set(LiveFeedSource))
 
-        val result = flightWithSplits.totalPax.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
+        val result = flightWithSplits.bestPaxSource.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
 
         result === 100
       }
@@ -123,7 +123,7 @@ class PassengerNumberEstSpec extends Specification {
 
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, splits = liveApiSplits(directPax = 96), sources = Set(LiveFeedSource))
 
-        val result = flightWithSplits.totalPax.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
+        val result = flightWithSplits.bestPaxSource.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
 
         result === 96
       }
@@ -135,7 +135,7 @@ class PassengerNumberEstSpec extends Specification {
         val splits = liveApiSplits(directPax = 95, transferPax = 1)
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, splits = splits, sources = Set(LiveFeedSource))
 
-        val result = flightWithSplits.totalPax.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
+        val result = flightWithSplits.bestPaxSource.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
 
         result === 96
       }
@@ -149,7 +149,7 @@ class PassengerNumberEstSpec extends Specification {
         val sources: Set[FeedSource] = Set(LiveFeedSource)
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, splits = splits, sources = sources)
 
-        val result = flightWithSplits.totalPax.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
+        val result = flightWithSplits.bestPaxSource.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
 
         result === 100
       }
@@ -163,7 +163,7 @@ class PassengerNumberEstSpec extends Specification {
         val sources: Set[FeedSource] = Set()
         val flightWithSplits: ApiFlightWithSplits = flightWithPaxAndApiSplits(actPax = 100, transferPax = 1, splits = splits, sources = sources)
 
-        val result = flightWithSplits.totalPax.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
+        val result = flightWithSplits.bestPaxSource.flatMap(_.passengers.actual.map(_.toInt)).getOrElse(0)
 
         result === 51
       }
@@ -179,7 +179,7 @@ class PassengerNumberEstSpec extends Specification {
       actPax = Option(actPax),
       tranPax = Option(transferPax),
       feedSources = sources,
-      totalPax = sources.map(s => (s, Passengers(Option(actPax), Option(transferPax)))).toMap
+      passengerSources = sources.map(s => (s, Passengers(Option(actPax), Option(transferPax)))).toMap
     )
 
     ApiFlightWithSplits(flight, splits)

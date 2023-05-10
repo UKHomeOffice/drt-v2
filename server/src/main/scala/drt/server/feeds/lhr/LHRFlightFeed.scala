@@ -115,7 +115,7 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         Origin = flight.from,
         PcpTime = if (pcpTime == 0) None else Some(pcpTime),
         FeedSources = Set(LiveFeedSource),
-        TotalPax = Map(LiveFeedSource -> Passengers(flight.actPax, if (flight.actPax.isEmpty) None else flight.connPax)),
+        PassengerSources = Map(LiveFeedSource -> Passengers(flight.actPax, if (flight.actPax.isEmpty) None else flight.connPax)),
         Scheduled = SDate(schDtIso).millisSinceEpoch)
     }).toList
 }

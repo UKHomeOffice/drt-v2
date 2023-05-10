@@ -99,7 +99,7 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
     val result: Flights = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
     val actMax = result match {
-      case Flights(f :: _) => (f.TotalPax.get(LiveFeedSource).flatMap(_.actual), f.MaxPax)
+      case Flights(f :: _) => (f.PassengerSources.get(LiveFeedSource).flatMap(_.actual), f.MaxPax)
     }
 
     val expected = (None, Some(0))

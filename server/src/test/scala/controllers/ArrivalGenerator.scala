@@ -1,7 +1,7 @@
 package controllers
 
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Passengers, Prediction, Predictions, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Passengers, Prediction, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -52,7 +52,7 @@ object ArrivalGenerator {
       PcpTime = pcpTime,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       FeedSources = feedSources,
-      TotalPax = totalPax
+      PassengerSources = totalPax
     )
   }
 

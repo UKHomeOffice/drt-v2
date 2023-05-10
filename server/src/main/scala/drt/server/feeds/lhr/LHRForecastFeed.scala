@@ -37,7 +37,7 @@ object LHRForecastFeed {
         Scheduled = flightRow.scheduledDate.millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
-        TotalPax = Map(ForecastFeedSource -> Passengers(if (flightRow.totalPax == 0) None else Option(flightRow.totalPax), if (flightRow.totalPax == 0) None else Option(flightRow.transferPax)))
+        PassengerSources = Map(ForecastFeedSource -> Passengers(if (flightRow.totalPax == 0) None else Option(flightRow.totalPax), if (flightRow.totalPax == 0) None else Option(flightRow.transferPax)))
       )
     }
   }

@@ -2,7 +2,7 @@ package actors.persistent.arrivals
 
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, TotalPaxSource, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, UniqueArrival}
 import uk.gov.homeoffice.drt.feeds.FeedStatusSuccess
 import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage

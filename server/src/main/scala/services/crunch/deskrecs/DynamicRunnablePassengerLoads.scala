@@ -16,7 +16,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.DynamicQueueStatusProvider
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -194,8 +194,8 @@ object DynamicRunnablePassengerLoads {
             if (flight.apiFlight.hasNoPaxSource) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
-                  val totalPax: Map[FeedSource, Passengers] = flight.apiFlight.TotalPax.updated(HistoricApiFeedSource, Passengers(manifestPaxLike.pax, None))
-                  val updatedArrival = flight.apiFlight.copy(TotalPax = totalPax)
+                  val totalPax: Map[FeedSource, Passengers] = flight.apiFlight.PassengerSources.updated(HistoricApiFeedSource, Passengers(manifestPaxLike.pax, None))
+                  val updatedArrival = flight.apiFlight.copy(PassengerSources = totalPax)
                   flight.copy(apiFlight = updatedArrival)
                 case None => flight
               }.recover { case e =>
@@ -308,7 +308,7 @@ object DynamicRunnablePassengerLoads {
             val apiPax = liveSplits.totalExcludingTransferPax.toInt
             val arrival = flight.apiFlight.copy(
               FeedSources = flight.apiFlight.FeedSources + ApiFeedSource,
-              TotalPax = flight.apiFlight.TotalPax.updated(ApiFeedSource, Passengers(Option(apiPax), None))
+              PassengerSources = flight.apiFlight.PassengerSources.updated(ApiFeedSource, Passengers(Option(apiPax), None))
             )
 
             flight.copy(apiFlight = arrival)

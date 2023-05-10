@@ -36,7 +36,7 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
         }
     }
 
-    val updatedArrival2 = arrival2.copy(Estimated = Option(schSdate.addMinutes(1).millisSinceEpoch), TotalPax =  Map(LiveFeedSource -> Passengers(Option(16),None)))
+    val updatedArrival2 = arrival2.copy(Estimated = Option(schSdate.addMinutes(1).millisSinceEpoch), PassengerSources =  Map(LiveFeedSource -> Passengers(Option(16),None)))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(updatedArrival2))))
 

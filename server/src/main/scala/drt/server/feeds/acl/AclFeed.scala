@@ -229,7 +229,7 @@ object AclFeed {
         Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(AclFeedSource),
-        TotalPax = Map(AclFeedSource -> Passengers(Option(actPax),None))
+        PassengerSources = Map(AclFeedSource -> Passengers(Option(actPax),None))
       )
     }
   }

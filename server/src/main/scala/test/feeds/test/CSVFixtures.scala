@@ -61,7 +61,7 @@ object CSVFixtures {
         Scheduled = timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
         PcpTime = None,
         FeedSources = Set(LiveFeedSource),
-        TotalPax = Map(LiveFeedSource -> Passengers(Option(fields(ActPax).toInt), Option(fields(TranPax).toInt)))
+        PassengerSources = Map(LiveFeedSource -> Passengers(Option(fields(ActPax).toInt), Option(fields(TranPax).toInt)))
       ))
     })
 

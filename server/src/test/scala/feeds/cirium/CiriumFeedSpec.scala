@@ -135,7 +135,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       PcpTime = None,
       FeedSources = Set(LiveBaseFeedSource),
       ScheduledDeparture = Option(SDate(publishedDepartureTime).millisSinceEpoch),
-      TotalPax = Map(LiveBaseFeedSource -> Passengers(None, None))
+      PassengerSources = Map(LiveBaseFeedSource -> Passengers(None, None))
     )
   }
 

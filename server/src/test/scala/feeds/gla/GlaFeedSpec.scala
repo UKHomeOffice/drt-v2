@@ -132,8 +132,6 @@ class GlaFeedSpec extends CrunchTestLike {
       Gate = Some("G"),
       Stand = Some("ST"),
       MaxPax = Some(50),
-      //      ActPax = Some(20),
-      //      TranPax = None,
       RunwayID = Some("3"),
       BaggageReclaimId = Some("2"),
       AirportID = PortCode("GLA"),
@@ -145,7 +143,7 @@ class GlaFeedSpec extends CrunchTestLike {
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None,
-      TotalPax = Map(LiveFeedSource -> Passengers(Some(20), None))
+      PassengerSources = Map(LiveFeedSource -> Passengers(Some(20), None))
     )
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
@@ -205,7 +203,7 @@ class GlaFeedSpec extends CrunchTestLike {
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None,
-      TotalPax = Map(LiveFeedSource -> Passengers(Some(55), None))
+      PassengerSources = Map(LiveFeedSource -> Passengers(Some(55), None))
     )
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
@@ -219,7 +217,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) =>
-        (arrival.TotalPax.get(LiveFeedSource).flatMap(_.actual), arrival.MaxPax) === ((Some(0), Some(0)))
+        (arrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual), arrival.MaxPax) === ((Some(0), Some(0)))
     }
   }
 
@@ -303,7 +301,7 @@ class GlaFeedSpec extends CrunchTestLike {
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
       CarrierScheduled = None,
-      TotalPax = Map(LiveFeedSource -> Passengers(None, None))
+      PassengerSources = Map(LiveFeedSource -> Passengers(None, None))
     )
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {

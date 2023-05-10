@@ -20,7 +20,7 @@ import test.TestDrtSystem
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -78,8 +78,6 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             Gate = Option(flight.Gate),
             Stand = Option(flight.Stand),
             MaxPax = Option(flight.MaxPax).filter(_ != 0),
-//            ActPax = actPax,
-//            TranPax = if (actPax.isEmpty) None else Option(flight.TranPax),
             RunwayID = Option(flight.RunwayID),
             BaggageReclaimId = Option(flight.BaggageReclaimId),
             AirportID = PortCode(flight.AirportID),
@@ -89,7 +87,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             Origin = PortCode(flight.Origin),
             PcpTime = Option(pcpTime),
             FeedSources = Set(LiveFeedSource),
-            TotalPax = Map(LiveFeedSource -> Passengers(actPax,if (actPax.isEmpty) None else Option(flight.TranPax))),
+            PassengerSources = Map(LiveFeedSource -> Passengers(actPax,if (actPax.isEmpty) None else Option(flight.TranPax))),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
           )
           saveArrival(arrival).map(_ => Created)

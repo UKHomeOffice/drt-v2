@@ -113,7 +113,7 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         Scheduled = 1338619560000L,
         PcpTime = None,
         FeedSources = Set(LiveFeedSource),
-        TotalPax = Map(LiveFeedSource -> Passengers(Some(40), Some(35)))
+        PassengerSources = Map(LiveFeedSource -> Passengers(Some(40), Some(35)))
       )
     }
 
@@ -146,7 +146,7 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         Scheduled = 1338623160000L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
-        TotalPax = Map(ForecastFeedSource -> Passengers(Some(40), Some(35)))
+        PassengerSources = Map(ForecastFeedSource -> Passengers(Some(40), Some(35)))
       )
     }
 

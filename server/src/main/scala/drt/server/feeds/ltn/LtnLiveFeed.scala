@@ -111,7 +111,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
-      TotalPax = Map(LiveFeedSource -> Passengers(ltnFeedFlight.TotalPassengerCount, None))
+      PassengerSources = Map(LiveFeedSource -> Passengers(ltnFeedFlight.TotalPassengerCount, None))
     )
   }
 

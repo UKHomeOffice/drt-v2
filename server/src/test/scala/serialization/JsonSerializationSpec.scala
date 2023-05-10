@@ -143,7 +143,7 @@ class JsonSerializationSpec extends Specification {
             Arrival(None, ArrivalStatus("scheduled"), None, Predictions(0L, Map()), None, None, None, None, None, None, None, None, PortCode("test"),
               T1, "test", "test", PortCode("test"), 0L, None,
               Set(AclFeedSource, LiveFeedSource),
-              TotalPax = Map()),
+              PassengerSources = Map()),
             Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)), None)), Historical, None, Percentage))
           )
         ),

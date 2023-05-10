@@ -350,6 +350,6 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       FeedSources = Set(),
       CarrierScheduled = None,
       ScheduledDeparture = scheduledDepartureDate,
-      TotalPax = Map(feedSource -> Passengers(actPax,None))
+      PassengerSources = Map(feedSource -> Passengers(actPax,None))
     )
 }

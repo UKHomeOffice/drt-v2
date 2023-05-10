@@ -45,7 +45,7 @@ class LhrForecastSpec extends Specification {
       FeedSources = Set(ForecastFeedSource),
       Scheduled = SDate("2018-02-22T04:45:00").millisSinceEpoch,
       PcpTime = None,
-      TotalPax = Map(ForecastFeedSource -> Passengers(Option(333), Option(142))))
+      PassengerSources = Map(ForecastFeedSource -> Passengers(Option(333), Option(142))))
 
     arrival === expected
   }
@@ -60,7 +60,7 @@ class LhrForecastSpec extends Specification {
     val arrivalLines = csvContent.split("\n").drop(1)
 
     val arrival: Arrival = LhrForecastArrivals(arrivalLines).head
-    val actMaxTran = arrival.TotalPax.get(ForecastFeedSource)
+    val actMaxTran = arrival.PassengerSources.get(ForecastFeedSource)
       .map(a => (arrival.MaxPax, a.actual, a.transit))
       .getOrElse((None, None, None))
 

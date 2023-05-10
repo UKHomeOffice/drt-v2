@@ -7,13 +7,13 @@ import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
 import org.scalajs.dom.html.{Div, Span}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, BestPaxSource}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports._
 
 
 object FlightComponents {
-  def paxFeedSourceClass(paxSource: TotalPaxSource): String = (paxSource.feedSource) match {
+  def paxFeedSourceClass(paxSource: BestPaxSource): String = (paxSource.feedSource) match {
     case (ApiFeedSource) => "pax-rag-green"
     case (LiveFeedSource) => "pax-rag-green"
     case (HistoricApiFeedSource) => "pax-rag-amber"
@@ -56,13 +56,13 @@ object FlightComponents {
   }
 
   def paxNumberSources(flight: ApiFlightWithSplits): VdomTagOf[Span] = {
-    val paxSources = flight.apiFlight.TotalPax.toList.sortBy(_._1.name).map {
+    val paxSources = flight.apiFlight.PassengerSources.toList.sortBy(_._1.name).map {
       case (feedSource, pax) =>
         <.p(s"${feedSource.displayName} - ${pax.actual.map(_.toString).getOrElse("")}")
     }
 
     val apiPax = List(
-      flight.totalPaxFromApi.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
+      flight.bestPaxFromApi.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
     )
     <.span((paxSources ++ apiPax).toVdomArray)
   }

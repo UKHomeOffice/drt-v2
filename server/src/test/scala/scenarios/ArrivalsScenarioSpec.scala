@@ -15,7 +15,7 @@ import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
