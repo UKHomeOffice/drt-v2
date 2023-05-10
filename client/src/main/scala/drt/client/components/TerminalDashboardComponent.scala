@@ -17,7 +17,7 @@ import drt.shared.redlist.RedList
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -43,6 +43,8 @@ object TerminalDashboardComponent {
 
   val defaultSlotSize = 120
 
+  implicit val propsReuse: Reusability[Props] = Reusability.always[Props]
+
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalDashboard")
     .render_P { props =>
       val slotSize = Try {
@@ -66,7 +68,7 @@ object TerminalDashboardComponent {
       val portStateRCP: ReactConnectProxy[Pot[PortState]] = SPACircuit.connect(_.portStatePot)
 
       portStateRCP { portStateProxy =>
-        <.div(^.className := "terminal-dashboard",
+        <.div(
           portStateProxy().render { portState =>
             val currentSlotPs = portState.window(start, end)
             val prevSlotPs = portState.window(prevSlotStart, start)
@@ -75,7 +77,7 @@ object TerminalDashboardComponent {
               case (_, cm) if cm.terminal == props.terminalPageTabLoc.terminal => cm.paxLoad
             }.sum.round
 
-            <.div(
+            <.div(^.className := "terminal-dashboard",
               if (props.terminalPageTabLoc.queryParams.contains("showArrivals")) {
                 val closeArrivalsPopupLink = props.terminalPageTabLoc.copy(
                   queryParams = props.terminalPageTabLoc.queryParams - "showArrivals"
@@ -178,6 +180,7 @@ object TerminalDashboardComponent {
         )
       }
     }
+    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(page = s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}")
     })
