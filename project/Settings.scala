@@ -152,7 +152,7 @@ object Settings {
     "javax.mail" % "mail" % "1.4.7",
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % "4.0.0",
     "com.sun.xml.ws" % "rt" % "4.0.1",
-    "javax.xml.bind" % "jaxb-api" % "2.2.12",
+    "javax.xml.bind" % "jaxb-api" % "2.3.1",
 
     "com.h2database" % "h2" % h2 % Test,
     "com.typesafe" % "config" % typesafeConfig,
