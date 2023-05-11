@@ -59,7 +59,7 @@ object Settings {
     val bluebus = "0.5.0-DRT"
     val postgres = "42.6.0"
     val sshJ = "0.24.0"
-    val jodaTime = "2.9.9"
+    val jodaTime = "2.12.5"
     val playJsonJoda = "2.6.9"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
@@ -203,11 +203,9 @@ object Settings {
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
 
-    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
-    "io.netty" % "netty-all" % "4.1.91.Final",
-    "io.lemonlabs" %% "scala-uri" % "4.0.3",
+    "io.netty" % "netty-all" % "4.1.92.Final",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
