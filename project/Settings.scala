@@ -42,7 +42,7 @@ object Settings {
     val akkaStreamContrib = "0.9"
 
     val specs2 = "4.20.0"
-    val react = "17.0.2"
+    val react = "18.2.0"
 
     val bootstrap = "3.3.6"
 
@@ -75,7 +75,7 @@ object Settings {
     val slick = "3.4.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
-    val scalaJsReactMaterialUi = "0.3.1"
+    val scalaJsReactMaterialUi = "0.1.15"
     val sprayJsonScalaJs = "1.3.5-7"
     val scalaTestVersion = "3.2.15"
   }
@@ -94,9 +94,10 @@ object Settings {
     "@tippyjs/react" -> "4.1.0",
     "react-chartjs-2" -> "^4.0.0",
     "moment" -> ">=2.29.4",
-    "@material-ui/core" -> "3.9.4",
-    "@material-ui/icons" -> "3.0.2",
-    "@material-ui/lab" -> "3.0.0-alpha.30"
+    "@mui/system" -> "5.11.16",
+    "@mui/material" -> "5.11.16",
+    "@mui/icons-material" -> "5.11.16",
+    "@mui/lab" -> "5.0.0-alpha.119"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -117,12 +118,13 @@ object Settings {
     "com.lihaoyi" %% "pprint" % pprint,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs,
 
-    "io.kinoplan" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
-    "io.kinoplan" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
-    "io.kinoplan" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
+    "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
+    "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
+    "com.freshcodelimited" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
 
     "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
     "com.dedipresta" %%% "scala-crypto" % "1.0.0",
+    "io.lemonlabs" %%% "scala-uri" % "4.0.3",
 
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
@@ -142,11 +144,9 @@ object Settings {
 
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
-    "com.amazonaws" % "aws-java-sdk" % awsSdk,
     "com.github.gphat" %% "censorinus" % censorinus,
     "com.pauldijou" %% "jwt-core" % "5.0.0",
     "com.hierynomus" % "sshj" % sshJ,
-    "com.lihaoyi" %% "pprint" % pprint,
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
     "javax.mail" % "mail" % "1.4.7",
@@ -186,8 +186,6 @@ object Settings {
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
-    "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.5.1",
-    "com.fasterxml.jackson.core" % "jackson-core" % "2.10.5",
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.poi" % "poi" % poi,

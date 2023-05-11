@@ -3,7 +3,6 @@ package drt.client.components.scenarios
 import diode.UseValueEq
 import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.modules.GoogleEventTracker
-import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
@@ -39,7 +38,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
           <.h2("Arrival Scenario Simulation"),
           MuiPaper()(
             DefaultFormFieldsStyle.simulation,
-            MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 16)(
+            MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 2)(
               MuiGrid(item = true, xs = 2)(
                 ScenarioSimulationFormComponent(props.date, props.terminal, props.airportConfig)
               ),
@@ -54,7 +53,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
       GoogleEventTracker.sendPageView(s"Arrival Simulations Page")
     }).build
 
-  def apply(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig, portState: PortState): VdomElement =
+  def apply(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig): VdomElement =
     component(Props(date, terminal, airportConfig))
 }
 

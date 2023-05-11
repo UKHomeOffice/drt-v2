@@ -52,11 +52,11 @@ object PassengerInfo {
       .groupBy(identity).view.mapValues(_.size).toMap
   }
 
-  def manifestToPassengerInfoSummary(manifest: VoyageManifest): Option[PassengerInfoSummary] =
+  def manifestToFlightManifestSummary(manifest: VoyageManifest): Option[FlightManifestSummary] =
     manifest
       .maybeKey
       .map(arrivalKey =>
-        PassengerInfoSummary(
+        FlightManifestSummary(
           arrivalKey,
           manifestToAgeRangeCount(manifest),
           manifestToNationalityCount(manifest),

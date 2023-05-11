@@ -2,13 +2,17 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain._
+import drt.client.components.styles.DrtTheme
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiButtonGroup}
+import japgolly.scalajs.react.callback.CallbackTo
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ReactEventTypes, ScalaComponent}
 
 sealed trait TimeRangeHours {
   def start: Int
@@ -65,30 +69,31 @@ object TimeRangeFilter {
         .router
         .set(props.terminalPageTab.withUrlParameters(UrlTimeRangeEnd(Option(v))))
 
-      def nowActive =
-        if (selectedWindow.start == currentWindow.start && selectedWindow.end == currentWindow.end)
-          "active"
-        else ""
-
-      def dayActive = if (selectedWindow.start == wholeDayWindow.start && selectedWindow.end == wholeDayWindow.end)
-        "active"
-      else ""
+      val nowSelected = selectedWindow.start == currentWindow.start && selectedWindow.end == currentWindow.end
+      val nowTheme = if(nowSelected) DrtTheme.buttonSelectedTheme else DrtTheme.buttonTheme
+      val twenty4HoursSelected = selectedWindow.start == wholeDayWindow.start && selectedWindow.end == wholeDayWindow.end
+      val twenty4HoursTheme = if(twenty4HoursSelected) DrtTheme.buttonSelectedTheme else DrtTheme.buttonTheme
 
       val viewDateLocal = props.terminalPageTab.maybeViewDate.map(_.toISOString)
+      val nowOnClick: ReactEventFromInput => CallbackTo[Unit] = (_: ReactEventFromInput) => {
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "now")
+        props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(viewDateLocal), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
+      }
+
+      val allDayOnClick: ReactEventFromInput => CallbackTo[Unit] = (_: ReactEventFromInput) => {
+        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "24 hours")
+        props.router.set(props.terminalPageTab.withUrlParameters(
+          UrlDateParameter(viewDateLocal), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString)))
+        )
+      }
+      val nowButton = if (props.showNow) List(("Now", "now", nowOnClick, nowTheme)) else List()
+      val twenty4HoursButton = ("24 hours", "hours24", allDayOnClick, twenty4HoursTheme)
+      val buttons = (nowButton :+ twenty4HoursButton).map {
+        case (label, id, callback, theme) => ThemeProvider(theme)(MuiButton()(label, ^.id := id, ^.onClick ==> callback))
+      }.toTagMod
+
       <.div(^.className := "time-view-selector-container",
-        <.div(^.className := "btn-group no-gutters date-time-buttons-container", VdomAttr("data-toggle") := "buttons",
-          if (props.showNow)
-            <.div(^.id := "now", ^.className := s"btn btn-primary $nowActive", "Now", ^.onClick ==> ((_: ReactEventFromInput) => {
-              GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "now")
-              props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(viewDateLocal), UrlTimeRangeStart(None), UrlTimeRangeEnd(None)))
-            })) else "",
-          <.div(^.id := "hours24", ^.className := s"btn btn-primary $dayActive", "24 hours", ^.onClick ==> ((_: ReactEventFromInput) => {
-            GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Time Range", "24 hours")
-            props.router.set(props.terminalPageTab.withUrlParameters(
-              UrlDateParameter(viewDateLocal), UrlTimeRangeStart(Option(wholeDayWindow.start.toString)), UrlTimeRangeEnd(Option(wholeDayWindow.end.toString)))
-            )
-          }))
-        ),
+        MuiButtonGroup(variant = "contained")(buttons),
         <.div(
           ^.className := "time-range",
           <.select(^.className := "form-control",

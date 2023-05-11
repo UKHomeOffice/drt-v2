@@ -1,7 +1,7 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
-import drt.shared.api.{AgeRange, PassengerInfoSummary, UnknownAge}
+import drt.shared.api.{AgeRange, FlightManifestSummary, UnknownAge}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
@@ -15,14 +15,14 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
   override val headings: String = ArrivalExportHeadings.arrivalWithSplitsAndRawApiHeadings
 
   override def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Seq[String] = {
-    val maybePaxSummary = maybeManifest.flatMap(PassengerInfo.manifestToPassengerInfoSummary)
+    val maybePaxSummary = maybeManifest.flatMap(PassengerInfo.manifestToFlightManifestSummary)
 
     (flightWithSplitsToCsvRow(fws) :::
       actualAPISplitsForFlightInHeadingOrder(fws, ArrivalExportHeadings.actualApiHeadings.split(",")).toList).map(s => s"$s") :::
       List(s""""${nationalitiesFromSummary(maybePaxSummary)}"""", s""""${ageRangesFromSummary(maybePaxSummary)}"""")
   }
 
-  def nationalitiesFromSummary(maybeSummary: Option[PassengerInfoSummary]): String =
+  def nationalitiesFromSummary(maybeSummary: Option[FlightManifestSummary]): String =
     maybeSummary.map {
       _.nationalities
         .toList
@@ -35,7 +35,7 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
         .mkString(",")
     }.getOrElse("")
 
-  def ageRangesFromSummary(maybeSummary: Option[PassengerInfoSummary]): String =
+  def ageRangesFromSummary(maybeSummary: Option[FlightManifestSummary]): String =
     maybeSummary.map {
       _.ageRanges
         .toList

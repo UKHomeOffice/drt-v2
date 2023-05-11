@@ -207,7 +207,7 @@ object MonthlyStaffing {
         ),
         maybeClockChangeDate(viewingDate).map { clockChangeDate =>
           val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
-          MuiGrid(container = true, direction = "column", spacing = 8)(
+          MuiGrid(container = true, direction = "column", spacing = 1)(
             MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("font-weight" -> "bold"))),
             MuiGrid(item = true)(<.span("Please ensure no staff are entered in the cells with a dash '-'. They are there to enable you to " +
               s"allocate staff in the additional hour on $prettyDate.")),

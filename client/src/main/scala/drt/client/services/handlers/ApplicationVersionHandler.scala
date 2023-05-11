@@ -16,8 +16,6 @@ import scala.util.{Failure, Success, Try}
 class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetApplicationVersion =>
-      log.info(s"Calling getApplicationVersion")
-
       val nextCallEffect = Effect(Future(GetApplicationVersion)).after(PollDelay.recoveryDelay)
 
       val effect = Effect(DrtApi.get("version").map(response => {
@@ -29,7 +27,6 @@ class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]
               case Ready(ClientServerVersions(clientVersion, _)) if buildInfo.version != clientVersion =>
                 UpdateServerApplicationVersion(buildInfo.version)
               case Ready(_) =>
-                log.info(s"server application version unchanged (${buildInfo.version})")
                 NoAction
               case Empty =>
                 SetApplicationVersion(buildInfo.version)

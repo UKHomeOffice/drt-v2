@@ -3,11 +3,11 @@ package drt.client.actions
 import diode.Action
 import diode.data.Pot
 import drt.client.components.scenarios.SimulationFormFields
-import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
+import drt.client.components.{Country, FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared._
-import drt.shared.api.{ForecastAccuracy, PassengerInfoSummary, WalkTimes}
+import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
 import org.scalajs.dom.{Element, File, FormData}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
 import scala.collection.immutable.HashSet
 import scala.concurrent.duration.FiniteDuration
@@ -122,9 +122,11 @@ object Actions {
 
   case class SetWalktimes(walkTimes: WalkTimes) extends Action
 
-  case class GetPassengerInfoSummary(arrivalKey: ArrivalKey) extends Action
+  case class GetManifestSummariesForDate(date: UtcDate) extends Action
 
-  case class SetPassengerInfoSummary(arrivalKey: ArrivalKey, infoSummary: PassengerInfoSummary) extends Action
+  case class GetManifestSummaries(arrivalKeys: Set[ArrivalKey]) extends Action
+
+  case class SetManifestSummaries(summaries: Set[FlightManifestSummary]) extends Action
 
   case object GetPassengerInfoForCurrentFlights extends Action
 
@@ -196,7 +198,7 @@ object Actions {
 
   case object GetGateStandWalktime extends Action
 
-  case class UpdateGateStandWalktime(walkTimes:WalkTimes) extends Action
+  case class UpdateGateStandWalktime(walkTimes: WalkTimes) extends Action
 
   case class RequestForecastRecrunch(recalculateSplits: Boolean) extends Action
 
@@ -209,4 +211,14 @@ object Actions {
   case class UpdateForecastAccuracy(forecastAccuracy: ForecastAccuracy) extends Action
 
   case class SetTimeMachineDate(date: SDateLike) extends Action
+
+  case class AddFlaggedNationality(country: Country) extends Action
+
+  case class RemoveFlaggedNationality(country: Country) extends Action
+
+  case object ClearFlaggedNationalities extends Action
+
+  case class SetNationalityFlaggerOpen(open: Boolean) extends Action
+
+  case class UpdateNationalityFlaggerInputText(value: String) extends Action
 }

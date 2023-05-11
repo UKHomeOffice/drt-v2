@@ -16,8 +16,6 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfShifts]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetShiftsForMonth(month, terminalName) =>
-      log.info(msg = s"Calling getShifts for Month")
-
       val apiCallEffect: EffectSingle[Action] = Effect(AjaxClient[Api].getShiftsForMonth(month.millisSinceEpoch, terminalName).call()
         .map(shiftAssignments => SetShiftsForMonth(MonthOfShifts(month.millisSinceEpoch, shiftAssignments)))
         .recoverWith {

@@ -14,9 +14,10 @@ import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
 import drt.shared.api.WalkTimes
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.extra.ReusabilityOverlay
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -32,8 +33,9 @@ object TerminalComponent {
 
   case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]) extends FastEqLowPri
 
-  case class TerminalModel(portStatePot: Pot[PortState],
-                           forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
+  implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
+
+  case class TerminalModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
                            potShifts: Pot[ShiftAssignments],
                            potMonthOfShifts: Pot[MonthOfShifts],
                            potFixedPoints: Pot[FixedPointAssignments],
@@ -45,7 +47,6 @@ object TerminalComponent {
                            viewMode: ViewMode,
                            minuteTicker: Int,
                            featureFlags: Pot[FeatureFlags],
-                           arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                            redListPorts: Pot[HashSet[PortCode]],
                            redListUpdates: Pot[RedListUpdates],
                            timeMachineEnabled: Boolean,
@@ -54,27 +55,25 @@ object TerminalComponent {
 
   private val activeClass = "active"
 
-  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Terminal")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalComponent")
     .render_P { props =>
       val modelRCP = SPACircuit.connect(model => TerminalModel(
-        model.portStatePot,
-        model.forecastPeriodPot,
-        model.shifts,
-        model.monthOfShifts,
-        model.fixedPoints,
-        model.staffMovements,
-        model.airportConfig,
-        model.loadingState,
-        model.showActualIfAvailable,
-        model.loggedInUserPot,
-        model.viewMode,
-        model.minuteTicker,
-        model.featureFlags,
-        model.arrivalSources,
-        model.redListPorts,
-        model.redListUpdates,
-        model.maybeTimeMachineDate.isDefined,
-        model.gateStandWalkTime,
+        forecastPeriodPot = model.forecastPeriodPot,
+        potShifts = model.shifts,
+        potMonthOfShifts = model.monthOfShifts,
+        potFixedPoints = model.fixedPoints,
+        potStaffMovements = model.staffMovements,
+        airportConfig = model.airportConfig,
+        loadingState = model.loadingState,
+        showActuals = model.showActualIfAvailable,
+        loggedInUserPot = model.loggedInUserPot,
+        viewMode = model.viewMode,
+        minuteTicker = model.minuteTicker,
+        featureFlags = model.featureFlags,
+        redListPorts = model.redListPorts,
+        redListUpdates = model.redListUpdates,
+        timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
+        walkTimes = model.gateStandWalkTime,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -83,77 +82,77 @@ object TerminalComponent {
         dialogueStateRCP(dialogueStateMP => <.div(dialogueStateMP().map(dialogueState => StaffAdjustmentDialogue(dialogueState)()).whenDefined)),
         modelRCP(modelMP => {
           val model: TerminalModel = modelMP()
-
-          <.div(model.airportConfig.render(airportConfig => {
-
+          for {
+            airportConfig <- model.airportConfig
+            loggedInUser <- model.loggedInUserPot
+            redListUpdates <- model.redListUpdates
+          } yield {
             val timeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
 
-            model.loggedInUserPot.render { loggedInUser =>
-              model.redListUpdates.render { redListUpdates =>
-                val terminalContentProps = TerminalContentComponent.Props(
-                  portStatePot = model.portStatePot,
-                  potShifts = model.potShifts,
-                  potFixedPoints = model.potFixedPoints,
-                  potStaffMovements = model.potStaffMovements,
-                  airportConfig = airportConfig,
-                  terminalPageTab = props.terminalPageTab,
-                  defaultTimeRangeHours = timeRangeHours,
-                  router = props.router,
-                  showActuals = model.showActuals,
-                  viewMode = model.viewMode,
-                  loggedInUser = loggedInUser,
-                  minuteTicker = model.minuteTicker,
-                  featureFlags = model.featureFlags,
-                  arrivalSources = model.arrivalSources,
-                  redListPorts = model.redListPorts,
-                  redListUpdates = model.redListUpdates,
-                  walkTimes = model.walkTimes,
-                )
-                <.div(
-                  <.div(^.className := "terminal-nav-wrapper", terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled)),
-                  <.div(^.className := "tab-content",
-                    props.terminalPageTab.mode match {
-                      case Current =>
-                        <.div(
-                          DaySelectorComponent(DaySelectorComponent.Props(props.router,
-                            props.terminalPageTab,
-                            model.loadingState,
-                            model.minuteTicker,
-                            PcpPaxSummariesComponent(terminalContentProps.portStatePot, terminalContentProps.viewMode, props.terminalPageTab.terminal, model.minuteTicker),
-                          )),
-                          TerminalContentComponent(terminalContentProps)
-                        )
-                      case Dashboard =>
-                        terminalContentProps.portStatePot.renderReady(ps =>
-                          TerminalDashboardComponent(
-                            terminalPageTabLoc = props.terminalPageTab,
-                            airportConfig = terminalContentProps.airportConfig,
-                            portState = ps,
+            val terminalContentProps = TerminalContentComponent.Props(
+              potShifts = model.potShifts,
+              potFixedPoints = model.potFixedPoints,
+              potStaffMovements = model.potStaffMovements,
+              airportConfig = airportConfig,
+              terminalPageTab = props.terminalPageTab,
+              defaultTimeRangeHours = timeRangeHours,
+              router = props.router,
+              showActuals = model.showActuals,
+              viewMode = model.viewMode,
+              loggedInUser = loggedInUser,
+              minuteTicker = model.minuteTicker,
+              featureFlags = model.featureFlags,
+              redListPorts = model.redListPorts,
+              redListUpdates = model.redListUpdates,
+              walkTimes = model.walkTimes,
+            )
+            <.div(
+              <.div(^.className := "terminal-nav-wrapper", terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled)),
+              <.div(^.className := "tab-content",
+                props.terminalPageTab.mode match {
+                  case Current =>
+                    val headerClass = if (model.timeMachineEnabled) "terminal-content-header__time-machine" else ""
+                    <.div(
+                      <.div(^.className := s"terminal-content-header $headerClass",
+                        DaySelectorComponent(
+                          DaySelectorComponent.Props(
                             router = props.router,
-                            featureFlags = model.featureFlags,
-                            loggedInUser = loggedInUser,
-                            redListPorts = model.redListPorts,
-                            redListUpdates = redListUpdates,
-                            walkTimes = model.walkTimes,
-                          )
-                        )
-                      case Planning =>
-                        <.div(model.forecastPeriodPot.render(fp => {
-                          TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
-                        }))
-                      case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                        model.potMonthOfShifts.render { ms =>
-                          MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
-                        }
+                            terminalPageTab = props.terminalPageTab,
+                            loadingState = model.loadingState,
+                            minuteTicker = model.minuteTicker,
+                          )),
+                        PcpPaxSummariesComponent(terminalContentProps.viewMode, model.minuteTicker)
+                      ),
+                      TerminalContentComponent(terminalContentProps)
+                    )
+                  case Dashboard =>
+                    TerminalDashboardComponent(
+                      terminalPageTabLoc = props.terminalPageTab,
+                      airportConfig = terminalContentProps.airportConfig,
+                      router = props.router,
+                      featureFlags = model.featureFlags,
+                      loggedInUser = loggedInUser,
+                      redListPorts = model.redListPorts,
+                      redListUpdates = redListUpdates,
+                      walkTimes = model.walkTimes,
+                    )
+
+                  case Planning =>
+                    <.div(model.forecastPeriodPot.render(fp => {
+                      TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
+                    }))
+                  case Staffing if loggedInUser.roles.contains(StaffEdit) =>
+                    model.potMonthOfShifts.render { ms =>
+                      MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
                     }
-                  )
-                )
-              }
-            }
-          }))
-        })
-      )
+                }
+              )
+            )
+          }
+        }.getOrElse(LoadingOverlay())
+        ))
     }
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean): VdomTagOf[UList] = {

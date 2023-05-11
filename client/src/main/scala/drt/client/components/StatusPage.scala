@@ -11,6 +11,7 @@ import drt.client.services.handlers.CheckFeed
 import drt.shared.CrunchApi.MillisSinceEpoch
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
@@ -20,6 +21,8 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{PortFeedUpload, SuperAdmin}
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
 import uk.gov.homeoffice.drt.ports._
+
+import scala.scalajs.js
 
 
 object StatusPage {
@@ -76,7 +79,7 @@ object StatusPage {
               if (feed.feedSource.name == "API")
                 <.h3(feed.feedSource.displayName, " ", apiDataTooltip)
               else if (manualCheckAllowed)
-                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "outlined", size = "medium", color = Color.default)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "outlined", size = "medium", color = Color.primary)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
               else if (isCiriumAsPortLive)
                 <.h3("Live arrival")
               else
@@ -121,9 +124,9 @@ object StatusPage {
             <.br(),
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
-              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Re-crunch forecast", ^.onClick --> requestForecastRecrunch())),
-              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Refresh splits", ^.onClick --> requestSplitsRefresh())),
-              MuiButton(variant = "outlined", size = "medium", color = Color.default)(<.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.primary)(<.div("Re-crunch forecast", ^.onClick --> requestForecastRecrunch())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.primary)(<.div("Refresh splits", ^.onClick --> requestSplitsRefresh())),
+              MuiButton(variant = "outlined", size = "medium", color = Color.primary)(<.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())),
             )
           ) else EmptyVdom
         }

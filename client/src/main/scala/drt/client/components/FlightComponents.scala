@@ -75,15 +75,6 @@ object FlightComponents {
     )
   }
 
-  def maxCapacityLine(maxFlightPax: Int, flight: Arrival): TagMod = {
-    flight.MaxPax.filter(_ > 0)
-      .map(maxPaxMillis => <.div(^.className := "pax-capacity", ^.width := paxBarWidth(maxFlightPax, maxPaxMillis)))
-      .getOrElse(VdomArray.empty())
-  }
-
-  def paxBarWidth(maxFlightPax: Int, apiPax: Int): String =
-    s"${apiPax.toDouble / maxFlightPax * 100}%"
-
   def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.displayName}"
 
   object SplitsGraph {
@@ -111,13 +102,5 @@ object FlightComponents {
         )
       )
     }
-  }
-
-  def splitsSummaryTooltip(splits: Seq[(String, Int)]): TagMod = {
-    <.table(^.className := "table table-flex table-responsive table-striped table-hover table-sm ",
-      <.tbody(
-        splits.map {
-          case (label, paxCount) => <.tr(<.td(s"$paxCount $label"))
-        }.toTagMod))
   }
 }

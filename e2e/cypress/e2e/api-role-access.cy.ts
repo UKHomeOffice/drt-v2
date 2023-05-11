@@ -339,13 +339,13 @@ describe('API role access', () => {
     },
     {
       roles: ["test"],
-      endpoint: "/manifest/" + today.format("YYYY-MM-DD") + "/summary",
+      endpoint: "/manifest-summaries/" + today.format("YYYY-MM-DD") + "/summary",
       method: "GET",
       shouldBeGranted: false
     },
     {
       roles: ["test", "enhanced-api-view"],
-      endpoint: "/manifest/" + today.format("YYYY-MM-DD") + "/summary",
+      endpoint: "/manifest-summaries/" + today.format("YYYY-MM-DD") + "/summary",
       method: "GET",
       shouldBeGranted: true
     },

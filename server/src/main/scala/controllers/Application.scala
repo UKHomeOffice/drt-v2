@@ -128,7 +128,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithStaffing
     with WithApplicationInfo
     with WithSimulations
-    with WithPassengerInfo
+    with WithManifests
     with WithWalkTimes
     with WithDebug
     with WithEmailFeedback
