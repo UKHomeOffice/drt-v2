@@ -186,8 +186,6 @@ object Settings {
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
-//    "com.fasterxml.jackson.core" % "jackson-databind" % "2.10.5.1",
-//    "com.fasterxml.jackson.core" % "jackson-core" % "2.10.5",
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
     "org.apache.poi" % "poi" % poi,
@@ -203,6 +201,7 @@ object Settings {
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
 
+    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "io.netty" % "netty-all" % "4.1.92.Final",
