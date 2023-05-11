@@ -39,6 +39,7 @@ object FlightTable {
                    walkTimes: WalkTimes,
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
+                   showFlagger: Boolean = true,
                   ) extends UseValueEq
 
   implicit val reuseProps: Reusability[Props] = Reusability {
@@ -78,7 +79,7 @@ object FlightTable {
             case _ => <.div()
           },
           <.div(
-            NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)),
+            if (props.showFlagger) NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)) else EmptyVdom,
             <.div(
               model.portStatePot.render { portState =>
                 flightTableContent(
