@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 case class PcpPaxSummary(totalPax: Int, queuesPax: Map[Queue, Double])
 
 object PcpPaxSummary {
-  def apply(start: SDateLike, durationMinutes: Int, crunchMinutes: Iterable[CrunchMinute], queues: Set[Queue]): PcpPaxSummary = {
+  def apply(start: SDateLike, durationMinutes: Int, crunchMinutes: Seq[CrunchMinute], queues: Set[Queue]): PcpPaxSummary = {
     val startRounded = start.roundToMinute()
     val minuteMillisRange = (startRounded.millisSinceEpoch until startRounded.addMinutes(durationMinutes).millisSinceEpoch by 60000).toList
     val relevantMinutes = crunchMinutes.filter(cm => minuteMillisRange.contains(cm.minute))
@@ -56,7 +56,7 @@ object PcpPaxSummariesComponent {
                 boxes.zipWithIndex.map {
                   case (label, box) =>
                     val start = now.addMinutes(box * 5)
-                    val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes, queues.toSet)
+                    val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes.toSeq, queues.toSet)
                     summaryBox(box, label, start, queues, summary)
                 }.toVdomArray
               )
