@@ -2,7 +2,6 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain._
-import drt.client.components.styles.DrtTheme
 import drt.client.components.styles.DrtTheme._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -12,7 +11,6 @@ import drt.client.util.DateUtil.isNotValidDate
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.ReusabilityOverlay
 import japgolly.scalajs.react.extra.router.{RouterCtl, SetRouteVia}
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
@@ -29,7 +27,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                    terminalPageTab: TerminalPageTabLoc,
                    loadingState: LoadingState,
                    minuteTicker: Int,
-//                   additionalContent: VdomElement,
                   ) extends UseValueEq
 
   case class DisplayDate(date: LocalDate, isNotValid: Boolean)

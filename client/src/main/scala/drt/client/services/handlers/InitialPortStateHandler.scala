@@ -57,16 +57,6 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       val actions = hideLoader + fetchOrigins + fetchRedList
 
-      val manifests = manifestSummariesModel.value
-      val manifestsToFetch = portState.flights.values
-        .filter(f => f.hasValidApi && !manifests.contains(ArrivalKey(f.apiFlight)))
-        .map(f => ArrivalKey(f.apiFlight)).toSet
-
-      val manifestRequest = if (manifestsToFetch.nonEmpty) {
-        println(s"Requesting initial manifests for ${manifestsToFetch.size} flights")
-        Option(Effect(Future(GetManifestSummaries(manifestsToFetch))))
-      } else None
-
       val effects = if (getCurrentViewMode().isHistoric(SDate.now()))
         actions + Effect(Future(GetPassengerInfoForFlights))
       else {

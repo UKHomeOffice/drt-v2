@@ -37,7 +37,6 @@ class FlightManifestSummariesHandler[M](modelRW: ModelRW[M, Map[ArrivalKey, Flig
       }
 
     case SetManifestSummaries(manifestSummaries) =>
-      println(s"Updating manifest summaries with ${manifestSummaries.size} summaries")
       val existing = value
       updated(existing ++ manifestSummaries.map(ms => ms.arrivalKey -> ms))
   }

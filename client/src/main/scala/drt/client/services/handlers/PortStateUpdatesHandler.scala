@@ -61,7 +61,6 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
             .map(f => ArrivalKey(f.apiFlight)).toSet
 
           val manifestRequest = if (manifestsToFetch.nonEmpty) {
-            println(s"Requesting manifests for ${manifestsToFetch.size} flights")
             List(Effect(Future(GetManifestSummaries(manifestsToFetch))))
           } else List.empty
 
