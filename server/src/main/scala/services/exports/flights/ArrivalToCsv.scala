@@ -5,7 +5,7 @@ import uk.gov.homeoffice.drt.arrivals.Arrival
 
 object ArrivalToCsv {
 
-  val arrivalHeadings = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
+  val arrivalHeadings: String = "IATA,ICAO,Origin,Gate/Stand,Status,Scheduled Date,Scheduled Time,Est Arrival,Act Arrival,Est Chox,Act Chox,Est PCP,Total Pax"
   val arrivalHeadingsWithTransfer: String = arrivalHeadings + ",Transfer Pax"
 
   def arrivalToCsvFields(arrival: Arrival,

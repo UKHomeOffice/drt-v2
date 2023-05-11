@@ -205,19 +205,15 @@ object Settings {
 
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
-
-    "com.box" % "box-java-sdk" % "2.58.0",
-    "com.eclipsesource.minimal-json" % "minimal-json" % "0.9.5",
-    "org.bitbucket.b_c" % "jose4j" % "0.4.4",
-
-    "io.netty" % "netty-all" % "4.1.91.Final",
+    
+    "io.netty" % "netty-all" % "4.1.92.Final",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "3.17.3-RELEASE"
+    "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

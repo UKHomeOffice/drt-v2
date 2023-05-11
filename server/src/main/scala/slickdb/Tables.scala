@@ -3,6 +3,7 @@ package slickdb
 
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
+import slick.lifted.ProvenShape
 
 import java.sql.Timestamp
 import scala.concurrent.Future
@@ -69,7 +70,7 @@ trait Tables {
   }
 
   class ProcessedZip(_tableTag: Tag) extends profile.api.Table[ProcessedZipRow](_tableTag, maybeSchema, "processed_zip") {
-    def * = (zip_file_name, success, processed_at) <> (ProcessedZipRow.tupled, ProcessedZipRow.unapply)
+    override def * : ProvenShape[ProcessedZipRow] = (zip_file_name, success, processed_at) <> (ProcessedZipRow.tupled, ProcessedZipRow.unapply)
 
     val zip_file_name: Rep[String] = column[String]("zip_file_name")
     val success: Rep[Boolean] = column[Boolean]("success")

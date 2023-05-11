@@ -155,7 +155,8 @@ case class BatchOfWork(loads: List[Work]) {
   lazy val completed: BatchOfWork = BatchOfWork(loads.filter(_.completed))
   lazy val outstanding: BatchOfWork = BatchOfWork(loads.filter(!_.completed))
 
+  // scalastyle:ignore
   def +(loadsToAdd: List[Work]): BatchOfWork = this.copy(loads = (loads ::: loadsToAdd).sortBy(_.createdAt))
-
+  // scalastyle:ignore
   def +(loadToAdd: Work): BatchOfWork = this.copy(loads = (loadToAdd :: loads).sortBy(_.createdAt))
 }

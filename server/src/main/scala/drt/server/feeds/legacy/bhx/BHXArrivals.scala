@@ -1,9 +1,9 @@
 package drt.server.feeds.legacy.bhx
 
 import drt.server.feeds.Implicits._
+import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
-import org.springframework.util.StringUtils
 import uk.gov.homeoffice.drt.time.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
@@ -49,12 +49,12 @@ trait BHXLiveArrivals extends BHXArrivals {
       Actual = convertToUTC(flightRecord.getTouchdownTime).map(SDate(_).millisSinceEpoch),
       EstimatedChox = convertToUTC(flightRecord.getEstimatedChoxTime).map(SDate(_).millisSinceEpoch),
       ActualChox = convertToUTC(flightRecord.getChoxTime).map(SDate(_).millisSinceEpoch),
-      Gate = if (StringUtils.isEmpty(flightRecord.getGate)) None else Option(flightRecord.getGate),
-      Stand = if (StringUtils.isEmpty(flightRecord.getStand)) None else Option(flightRecord.getStand),
+      Gate = if (StringUtils.isBlank(flightRecord.getGate)) None else Option(flightRecord.getGate),
+      Stand = if (StringUtils.isBlank(flightRecord.getStand)) None else Option(flightRecord.getStand),
       MaxPax = if (flightRecord.getCapacity == 0) None else Option(flightRecord.getCapacity),
       ActPax = if (actPax == 0) None else Option(actPax),
       TranPax = if (actPax == 0) None else Option(transPax),
-      RunwayID = if (StringUtils.isEmpty(flightRecord.getRunway)) None else Option(flightRecord.getRunway),
+      RunwayID = if (StringUtils.isBlank(flightRecord.getRunway)) None else Option(flightRecord.getRunway),
       BaggageReclaimId = Option(flightRecord.getBelt),
       AirportID = "BHX",
       Terminal = Terminal(s"T${flightRecord.getTerminal}"),

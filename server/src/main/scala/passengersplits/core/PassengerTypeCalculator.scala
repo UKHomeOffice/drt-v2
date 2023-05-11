@@ -10,7 +10,11 @@ object PassengerTypeCalculator {
 
   import PassengerTypeCalculatorValues._
 
-  case class PaxTypeInfo(disembarkationPortCode: Option[PortCode], inTransitFlag: String, documentCountry: Nationality, documentType: Option[DocumentType], nationalityCode: Option[Nationality])
+  case class PaxTypeInfo(disembarkationPortCode: Option[PortCode],
+                         inTransitFlag: String,
+                         documentCountry: Nationality,
+                         documentType: Option[DocumentType],
+                         nationalityCode: Option[Nationality])
 
   def isEea(country: Nationality): Boolean = EEACountries contains country.code
 

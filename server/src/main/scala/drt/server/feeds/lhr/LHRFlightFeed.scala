@@ -44,7 +44,7 @@ case class LHRLiveFlight(
 }
 
 case class LHRCsvException(originalLine: String, idx: Int, innerException: Throwable) extends Exception {
-  override def toString = s"$originalLine : $idx $innerException"
+  override def toString: String = s"$originalLine : $idx $innerException"
 }
 
 case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {

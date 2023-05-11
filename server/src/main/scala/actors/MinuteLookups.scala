@@ -50,9 +50,12 @@ trait MinuteLookupsLike {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[UpdatedMillis]
     }
 
-  val queuesLoadsLookup: MinutesLookup[PassengersMinute, TQM] = lookup[PassengersMinute, TQM](TerminalDayQueueLoadsActor.props, TerminalDayQueueLoadsActor.propsPointInTime)
-  val queuesLookup: MinutesLookup[CrunchMinute, TQM] = lookup[CrunchMinute, TQM](TerminalDayQueuesActor.props, TerminalDayQueuesActor.propsPointInTime)
-  val staffLookup: MinutesLookup[StaffMinute, TM] = lookup[StaffMinute, TM](TerminalDayStaffActor.props, TerminalDayStaffActor.propsPointInTime)
+  val queuesLoadsLookup: MinutesLookup[PassengersMinute, TQM] =
+    lookup[PassengersMinute, TQM](TerminalDayQueueLoadsActor.props, TerminalDayQueueLoadsActor.propsPointInTime)
+  val queuesLookup: MinutesLookup[CrunchMinute, TQM] =
+    lookup[CrunchMinute, TQM](TerminalDayQueuesActor.props, TerminalDayQueuesActor.propsPointInTime)
+  val staffLookup: MinutesLookup[StaffMinute, TM] =
+    lookup[StaffMinute, TM](TerminalDayStaffActor.props, TerminalDayStaffActor.propsPointInTime)
 
   def lookup[A, B <: WithTimeAccessor]: ((Terminal, UtcDate, () => SDateLike) => Props, (Terminal, UtcDate, () => SDateLike, MillisSinceEpoch) => Props) => MinutesLookup[A, B] = {
     (nonPitProps: (Terminal, UtcDate, () => SDateLike) => Props, pitProps: (Terminal, UtcDate, () => SDateLike, MillisSinceEpoch) => Props) =>

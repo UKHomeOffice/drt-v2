@@ -12,7 +12,8 @@ import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 
