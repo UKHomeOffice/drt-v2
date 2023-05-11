@@ -162,7 +162,7 @@ object FlightTableRow {
       )
       val lastCells = List[TagMod](
         <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.pcpPaxEstimate)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
+        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.bestPaxSource)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
       )
 
       val flightFields = firstCells ++ lastCells
