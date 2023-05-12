@@ -166,31 +166,9 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        if (props.flaggedNationalities.nonEmpty) {
-          <.td(
-            props.manifestSummary.map { summary =>
-              <.div(
-                ^.style := js.Dictionary("display" -> "flex", "flexWrap" -> "wrap", "gap" -> "8px"),
-                props.flaggedNationalities
-                  .map { country =>
-                    val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
-                    if (pax > 0) Option(MuiChip(
-                      label = VdomNode(s"${country.threeLetterCode} ($pax)"),
-                      sx = SxProps(Map(
-                        "color" -> "#FFFFFF",
-                        "backgroundColor" -> "#316CCC",
-                      ))
-                    )())
-                    else None
-                  }
-                  .collect {
-                    case Some(chip) => chip
-                  }
-                  .toTagMod
-              )
-            }.getOrElse(EmptyVdom)
-          )
-        } else EmptyVdom,
+        if (props.flaggedNationalities.nonEmpty)
+          <.td(^.className := "arrivals__table__flags-column", nationalityChips(props.flaggedNationalities, props.manifestSummary))
+        else EmptyVdom,
         <.td(gateOrStand(flight, props.airportConfig.defaultWalkTimeMillis(flight.Terminal), props.directRedListFlight.paxDiversion, props.walkTimes)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
@@ -236,6 +214,30 @@ object FlightTableRow {
     }
     .configure(Reusability.shouldComponentUpdate)
     .build
+
+  private def nationalityChips(flaggedNationalities: Set[Country], manifestSummary: Option[FlightManifestSummary]): html_<^.VdomNode = {
+    manifestSummary.map { summary =>
+      <.div(
+        ^.style := js.Dictionary("display" -> "flex", "flexWrap" -> "wrap", "gap" -> "8px"),
+        flaggedNationalities
+          .map { country =>
+            val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
+            if (pax > 0) Option(MuiChip(
+              label = VdomNode(s"${country.threeLetterCode} ($pax)"),
+              sx = SxProps(Map(
+                "color" -> "#FFFFFF",
+                "backgroundColor" -> "#316CCC",
+              ))
+            )())
+            else None
+          }
+          .collect {
+            case Some(chip) => chip
+          }
+          .toTagMod
+      )
+    }.getOrElse(EmptyVdom)
+  }
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
     val gateOrStand = <.span(^.key := "gate-or-stand", ^.className := "no-wrap", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")

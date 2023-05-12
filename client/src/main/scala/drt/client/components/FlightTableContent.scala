@@ -188,7 +188,7 @@ object FlightTableContent {
       Option((if (isMobile) "Ori" else "Origin", None)),
       Option(("Country", Option("country"))),
       Option((redListHeading, None)),
-      if (showFlagger) Option("Nationality ICAO code", None) else None,
+      if (showFlagger) Option(("Nationality ICAO code", Option("arrivals__table__flags-column"))) else None,
       Option((if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand"))),
       Option(("Status", Option("status"))),
       Option((if (isMobile || shortLabel) "Sch" else "Scheduled", None)),
