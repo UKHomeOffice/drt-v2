@@ -62,14 +62,6 @@ object TerminalStaffing {
       }
     )
 
-    def filterByTerminal(fixedPoints: String, terminalName: String): String = fixedPoints
-      .split("\n")
-      .filter { line =>
-        val cells = line.split(",").map(cell => cell.trim())
-        cells(1) == terminalName
-      }
-      .mkString("\n")
-
     def staffOverTheDay(movements: Seq[StaffMovement],
                         shifts: ShiftAssignments,
                         terminalName: Terminal): VdomTagOf[Div] = {
@@ -258,18 +250,6 @@ object TerminalStaffing {
 }
 
 object FixedPoints {
-  def removeTerminalNameAndDate(rawFixedPoints: String): String = {
-    val lines = rawFixedPoints.split("\n").toList.map(line => {
-      val withTerminal = line.split(",").toList.map(_.trim)
-      val withOutTerminal = withTerminal match {
-        case fpName :: _ :: _ :: tail => fpName :: tail
-        case _ => Nil
-      }
-      withOutTerminal.mkString(", ")
-    })
-    lines.mkString("\n")
-  }
-
   def addTerminalNameAndDate(rawFixedPoints: String, terminalName: Terminal): String = {
     val today: SDateLike = SDate.midnightThisMorning()
     val todayString = today.ddMMyyString
