@@ -39,7 +39,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T00:00Z"
 
         val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1,
-          totalPax = Map(LiveFeedSource -> Passengers(Option(21), None)))
+          passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
         val inputFlightsBefore = Flights(List(flight))
         val updatedArrival = flight.copy(PassengerSources = Map(LiveFeedSource -> Passengers(Option(50), None)))
         val inputFlightsAfter = Flights(List(updatedArrival))
@@ -69,7 +69,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
         val scheduled = "2017-01-01T00:00Z"
 
-        val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Map(LiveFeedSource -> Passengers(Option(21), None)))
+        val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
         val inputFlightsBefore = Flights(List(flight))
         val updatedArrival = flight.copy(PassengerSources = Map(LiveFeedSource -> Passengers(Option(50), None)))
         val inputFlightsAfter = Flights(List(updatedArrival))
@@ -98,7 +98,7 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
       "Then I should see the pax nos and workloads fall to zero for the flight that was removed" >> {
         val scheduled = "2017-01-01T00:00Z"
 
-        val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Map(AclFeedSource -> Passengers(Option(21), None)))
+        val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)))
         val oneFlight = Flights(List(flight))
         val zeroFlights = Flights(List())
 

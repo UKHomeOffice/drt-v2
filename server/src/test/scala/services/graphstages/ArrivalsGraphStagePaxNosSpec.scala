@@ -142,7 +142,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
 
     "Given an arrival with a zero pax, undefined trans pax, and max pax of 100" >> {
-      val arrival = ArrivalGenerator.arrival(maxPax = Option(100), totalPax = Map(AclFeedSource -> Passengers(Option(0), None)))
+      val arrival = ArrivalGenerator.arrival(maxPax = Option(100), passengerSources = Map(AclFeedSource -> Passengers(Option(0), None)))
       "When I ask for the best pax" >> {
         val bestPax = arrival.bestPcpPaxEstimate
         "I should see 0" >> {
@@ -169,7 +169,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
                           status: String = "",
                           actChoxDt: String = "",
                           feedSource:FeedSource): QueueOfferResult = {
-    val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, totalPax = Map(feedSource -> Passengers(actPax, tranPax)), maxPax = maxPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
+    val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, passengerSources = Map(feedSource -> Passengers(actPax, tranPax)), maxPax = maxPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
     offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive))))
   }
 }

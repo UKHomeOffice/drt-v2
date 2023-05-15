@@ -24,7 +24,7 @@ class PCPPaxNosSpec extends CrunchTestLike {
   val scheduled = "2019-11-20T00:00Z"
 
   val flights: Flights = Flights(List(
-    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, totalPax = Map(LiveFeedSource -> Passengers(Option(101), None)), origin = PortCode("JFK"))
+    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, passengerSources = Map(LiveFeedSource -> Passengers(Option(101), None)), origin = PortCode("JFK"))
   ))
 
   val manifests: ManifestsFeedResponse =

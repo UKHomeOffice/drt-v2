@@ -26,8 +26,8 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = Flights(List(
-      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, totalPax =  Map(LiveFeedSource -> Passengers(Option(15),None))),
-      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = InvalidTerminal, totalPax =  Map(LiveFeedSource -> Passengers(Option(10),None)))
+      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, passengerSources =  Map(LiveFeedSource -> Passengers(Option(15),None))),
+      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = InvalidTerminal, passengerSources =  Map(LiveFeedSource -> Passengers(Option(10),None)))
       ))
 
     val fiveMinutes = 600d / 60
@@ -67,10 +67,10 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = Flights(List(
-      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, totalPax =  Map(LiveFeedSource -> Passengers(Option(15),None)), status = ArrivalStatus("On time")),
-      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = T1, totalPax =  Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("xx cancelled xx")),
-      ArrivalGenerator.arrival(schDt = scheduled02, iata = "BA1000", terminal = T1, totalPax =  Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("xx canceled xx")),
-      ArrivalGenerator.arrival(schDt = scheduled03, iata = "ZX0888", terminal = T1, totalPax =  Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("xx deleted xx"))
+      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, passengerSources =  Map(LiveFeedSource -> Passengers(Option(15),None)), status = ArrivalStatus("On time")),
+      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = T1, passengerSources =  Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("xx cancelled xx")),
+      ArrivalGenerator.arrival(schDt = scheduled02, iata = "BA1000", terminal = T1, passengerSources =  Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("xx canceled xx")),
+      ArrivalGenerator.arrival(schDt = scheduled03, iata = "ZX0888", terminal = T1, passengerSources =  Map(LiveFeedSource -> Passengers(Option(10),None)), status = ArrivalStatus("xx deleted xx"))
       ))
 
     val fiveMinutes = 600d / 60

@@ -16,8 +16,8 @@ class CodeshareWorkloadSpec extends CrunchTestLike {
     "When I monitor pax loads " +
     "I should see only pax loads from the highest pax arrival" >> {
     val sch = "2019-01-01T00:00"
-    val arrival1 = ArrivalGenerator.arrival(iata="BA0001", schDt = sch, totalPax =  Map(LiveFeedSource -> Passengers(Option(15),None)), origin = PortCode("AAA"))
-    val arrival2 = ArrivalGenerator.arrival(iata="AA0002", schDt = sch, totalPax =  Map(LiveFeedSource -> Passengers(Option(10),None)), origin = PortCode("AAA"))
+    val arrival1 = ArrivalGenerator.arrival(iata="BA0001", schDt = sch, passengerSources =  Map(LiveFeedSource -> Passengers(Option(15),None)), origin = PortCode("AAA"))
+    val arrival2 = ArrivalGenerator.arrival(iata="AA0002", schDt = sch, passengerSources =  Map(LiveFeedSource -> Passengers(Option(10),None)), origin = PortCode("AAA"))
 
     val schSdate = SDate(sch)
     val crunch = runCrunchGraph(TestConfig(

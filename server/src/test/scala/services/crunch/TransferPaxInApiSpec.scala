@@ -53,7 +53,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
           schDt = scheduled,
           iata = "BA0001",
           terminal = T1,
-          totalPax = Map(LiveFeedSource -> Passengers(Option(2), Option(1)))
+          passengerSources = Map(LiveFeedSource -> Passengers(Option(2), Option(1)))
         )
       ))
 

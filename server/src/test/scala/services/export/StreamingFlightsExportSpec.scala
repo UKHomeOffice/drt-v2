@@ -31,7 +31,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      totalPax = Map(LiveFeedSource -> Passengers(Option(98), None),
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(98), None),
         ApiFeedSource -> Passengers(Option(100), None))
     ),
     Set(Splits(
@@ -68,7 +68,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(ApiFeedSource),
-      totalPax = Map(ApiFeedSource -> Passengers(Option(100), None))
+      passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None))
     ),
     Set(Splits(
       Set(
@@ -104,7 +104,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      totalPax = Map(LiveFeedSource -> Passengers(Option(100), None))
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))
     ),
     Set(Splits(
       Set(
@@ -129,7 +129,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         operator = Option(Operator("SA")),
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
-        totalPax = Map(AclFeedSource -> Passengers(Option(100), None))
+        passengerSources = Map(AclFeedSource -> Passengers(Option(100), None))
       ),
 
       Set(Splits(
@@ -157,7 +157,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
         feedSources = Set(LiveFeedSource),
-        totalPax = Map(LiveFeedSource -> Passengers(Option(100), None))
+        passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))
       ),
       Set(Splits(
         Set(
@@ -184,7 +184,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
         feedSources = Set(LiveFeedSource),
-        totalPax = Map(LiveFeedSource -> Passengers(Option(105), None))
+        passengerSources = Map(LiveFeedSource -> Passengers(Option(105), None))
       ),
       Set(Splits(
         Set(
@@ -395,7 +395,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   }
 
   private def invalidApiFieldValue(actPax: Int, apiPax: Int, feedSources: Set[FeedSource], totalPax: Map[FeedSource, Passengers]): String = {
-    val arrival = ArrivalGenerator.arrival(feedSources = feedSources, totalPax = totalPax)
+    val arrival = ArrivalGenerator.arrival(feedSources = feedSources, passengerSources = totalPax)
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, apiPax, None, None)),
       SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
     val fws = ApiFlightWithSplits(arrival, Set(splits))

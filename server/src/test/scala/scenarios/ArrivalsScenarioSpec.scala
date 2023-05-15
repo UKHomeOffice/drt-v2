@@ -44,7 +44,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
 
   val splitsCalculator: SplitsCalculator = SplitsCalculator(testPaxTypeAllocator, defaultAirportConfig.terminalPaxSplits, ChildEGateAdjustments(1.0))
   private val arrival: Arrival = ArrivalGenerator.arrival(schDt = "2021-03-08T00:00",
-    totalPax = Map(LiveFeedSource -> Passengers(Option(100),None)))
+    passengerSources = Map(LiveFeedSource -> Passengers(Option(100),None)))
   val arrivals: List[Arrival] = List(arrival)
 
   def flightsProvider(cr: ProcessingRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =

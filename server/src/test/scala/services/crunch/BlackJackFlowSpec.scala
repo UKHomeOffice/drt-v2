@@ -28,7 +28,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         schDt = scheduled,
         iata = "BA0001",
         terminal = T1,
-        totalPax = Map(AclFeedSource -> Passengers(Option(21),None)),
+        passengerSources = Map(AclFeedSource -> Passengers(Option(21),None)),
       )
       val initialBaseArrivals = Set(flight)
       val deskStats = ActualDeskStats(Map(
@@ -75,7 +75,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1,
-        totalPax = Map(AclFeedSource ->Passengers(Option(21),None)))
+        passengerSources = Map(AclFeedSource ->Passengers(Option(21),None)))
       val initialBaseArrivals = Set(flight)
       val deskStats = ActualDeskStats(Map(
         T1 -> Map(

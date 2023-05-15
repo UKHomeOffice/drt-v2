@@ -12,13 +12,13 @@ import scala.collection.immutable.SortedMap
 class ArrivalsActorSpec extends Specification {
   val arrival1: Arrival = ArrivalGenerator
     .arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05",
-      totalPax = Map(AclFeedSource -> Passengers(Option(100),None)))
+      passengerSources = Map(AclFeedSource -> Passengers(Option(100),None)))
   val arrival2: Arrival = ArrivalGenerator
     .arrival(iata = "BA0002", terminal = T1, origin = PortCode("ABC"), schDt = "2019-01-01T00:35",
-      totalPax = Map(AclFeedSource -> Passengers(Option(200),None)))
+      passengerSources = Map(AclFeedSource -> Passengers(Option(200),None)))
   val arrival3: Arrival = ArrivalGenerator
     .arrival(iata = "BA0003", terminal = T1, origin = PortCode("ZZZ"), schDt = "2019-01-01T00:55",
-      totalPax = Map(AclFeedSource -> Passengers(Option(250),None)))
+      passengerSources = Map(AclFeedSource -> Passengers(Option(250),None)))
 
   "Given no existing arrivals and one incoming " +
   "When I ask for removals and updates " +

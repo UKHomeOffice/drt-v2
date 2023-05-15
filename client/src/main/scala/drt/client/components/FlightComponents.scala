@@ -62,7 +62,7 @@ object FlightComponents {
     }
 
     val apiPax = List(
-      flight.bestPaxFromApi.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
+      flight.paxFromApi.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
     )
     <.span((paxSources ++ apiPax).toVdomArray)
   }
