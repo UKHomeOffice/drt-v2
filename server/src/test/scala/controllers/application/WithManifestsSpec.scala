@@ -4,7 +4,8 @@ import drt.shared.{ArrivalGenerator, ArrivalKey}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.arrivals.Passengers
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.duration.DurationInt
@@ -18,11 +19,11 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
 
   val scheduledDay1 = SDate(UtcDate(2023, 4, 26))
   val scheduled1 = scheduledDay1.addHours(6)
-  val arrival1 = ArrivalGenerator.arrival(sch = scheduled1.millisSinceEpoch, origin = PortCode("JFK"), actPax = Option(100))
+  val arrival1 = ArrivalGenerator.arrival(sch = scheduled1.millisSinceEpoch, origin = PortCode("JFK"), passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
 
   val scheduledDay2 = SDate(UtcDate(2023, 4, 27))
   val scheduled2 = scheduledDay2.addHours(12)
-  val arrival2 = ArrivalGenerator.arrival(sch = scheduled2.millisSinceEpoch, origin = PortCode("BHX"), actPax = Option(100))
+  val arrival2 = ArrivalGenerator.arrival(sch = scheduled2.millisSinceEpoch, origin = PortCode("BHX"), passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
 
   val manifests = Map(
     scheduledDay1.millisSinceEpoch -> VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival1, List()))),
