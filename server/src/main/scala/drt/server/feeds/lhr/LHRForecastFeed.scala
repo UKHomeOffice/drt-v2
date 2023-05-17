@@ -15,6 +15,8 @@ object LHRForecastFeed {
   def log: Logger = LoggerFactory.getLogger(getClass)
 
   def lhrFieldsToArrival(flightRow: LHRForecastFlightRow): Try[Arrival] = {
+    val actualPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax)
+    val transitPax = if (flightRow.transferPax == 0) None else Option(flightRow.transferPax)
     Try {
       Arrival(
         Operator = None,
@@ -37,7 +39,7 @@ object LHRForecastFeed {
         Scheduled = flightRow.scheduledDate.millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
-        PassengerSources = Map(ForecastFeedSource -> Passengers(if (flightRow.totalPax == 0) None else Option(flightRow.totalPax), if (flightRow.totalPax == 0) None else Option(flightRow.transferPax)))
+        PassengerSources = Map(ForecastFeedSource -> Passengers(actualPax, transitPax))
       )
     }
   }

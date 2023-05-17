@@ -81,6 +81,7 @@ object STNForecastXLSExtractor {
 
 
   def stnFieldsToArrival(flightRow: STNForecastFlightRow): Try[Arrival] = {
+    val totalPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax)
     Try {
       Arrival(
         Operator = None,
@@ -103,7 +104,7 @@ object STNForecastXLSExtractor {
         Scheduled = flightRow.scheduledDate.millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
-        PassengerSources = Map(ForecastFeedSource -> Passengers(if (flightRow.totalPax == 0) None else Option(flightRow.totalPax), Some(0)))
+        PassengerSources = Map(ForecastFeedSource -> Passengers(totalPax, Some(0)))
       )
     }
   }

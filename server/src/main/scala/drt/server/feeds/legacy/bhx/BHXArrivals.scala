@@ -33,6 +33,12 @@ sealed trait BHXArrivals {
     utcDatePlusOneHour.toString(ISODateTimeFormat.dateTime)
   }
 
+  protected def getPassengerSource(actPax: Int, transPax: Int) = {
+    val actualPax = if (actPax == 0) None else Option(actPax)
+    val transitPax = if (transPax == 0) None else Option(transPax)
+    Passengers(actualPax, transitPax)
+  }
+
 }
 
 trait BHXLiveArrivals extends BHXArrivals {
@@ -62,7 +68,7 @@ trait BHXLiveArrivals extends BHXArrivals {
       Scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
-      PassengerSources= Map(LiveFeedSource -> Passengers(if (actPax == 0) None else Option(actPax),if (actPax == 0) None else Option(transPax)))
+      PassengerSources = Map(LiveFeedSource -> getPassengerSource(actPax, transPax))
     )
   }
 }
@@ -94,7 +100,7 @@ trait BHXForecastArrivals extends BHXArrivals {
       Scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(ForecastFeedSource),
-      PassengerSources = Map(ForecastFeedSource->Passengers(if (actPax == 0) None else Option(actPax),if (actPax == 0) None else Option(transPax)))
+      PassengerSources = Map(ForecastFeedSource -> getPassengerSource(actPax, transPax))
     )
   }
 }

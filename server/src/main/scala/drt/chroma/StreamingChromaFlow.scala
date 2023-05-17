@@ -66,9 +66,15 @@ object StreamingChromaFlow {
         PcpTime = Some(pcpTime),
         Scheduled = SDate(flight.SchDT).millisSinceEpoch,
         FeedSources = Set(LiveFeedSource),
-        PassengerSources = Map(LiveFeedSource -> Passengers(if (flight.ActPax == 0) None else Option(flight.ActPax), if (flight.ActPax == 0) None else Option(flight.TranPax)))
+        PassengerSources = Map(LiveFeedSource -> getLivePassengerSource(flight))
       )
     }).toList
+  }
+
+  private def getLivePassengerSource(flight: ChromaLiveFlight) = {
+    val actualPax = if (flight.ActPax == 0) None else Option(flight.ActPax)
+    val transitPax = if (flight.ActPax == 0) None else Option(flight.TranPax)
+    Passengers(actualPax, transitPax)
   }
 
   def forecastChromaToArrival(chromaArrivals: Seq[ChromaForecastFlight]): List[Arrival] = {
@@ -96,9 +102,15 @@ object StreamingChromaFlow {
         PcpTime = Option(pcpTime),
         FeedSources = Set(ForecastFeedSource),
         Scheduled = SDate(flight.SchDT).millisSinceEpoch,
-        PassengerSources = Map(ForecastFeedSource -> Passengers(if (flight.EstPax == 0) None else Option(flight.EstPax), if (flight.EstPax == 0) None else Option(flight.EstTranPax)))
+        PassengerSources = Map(ForecastFeedSource -> getForecastPassengerSource(flight))
       )
     }).toList
+  }
+
+  private def getForecastPassengerSource(flight: ChromaForecastFlight) = {
+    val actualPax = if (flight.EstPax == 0) None else Option(flight.EstPax)
+    val transitPax = if (flight.EstPax == 0) None else Option(flight.EstTranPax)
+    Passengers(actualPax, transitPax)
   }
 
 }

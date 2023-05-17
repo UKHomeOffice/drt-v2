@@ -373,30 +373,30 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   }
 
   "Given a flight with API pax count within the 5% threshold of the feed pax count, and no live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(AclFeedSource), totalPax = Map(AclFeedSource -> Passengers(Option(100), None),
+    invalidApiFieldValue(feedSources = Set(AclFeedSource), passengerSources = Map(AclFeedSource -> Passengers(Option(100), None),
       ApiFeedSource -> Passengers(Option(98), None))) === ""
   }
 
   "Given a flight with API pax count within the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(LiveFeedSource, AclFeedSource),
-      totalPax = Map(LiveFeedSource -> Passengers(Option(100), None),
-        ApiFeedSource -> Passengers(Option(75), None))) === ""
+    invalidApiFieldValue(feedSources = Set(LiveFeedSource, ApiFeedSource),
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None),
+        ApiFeedSource -> Passengers(Option(98), None))) === ""
   }
 
   "Given a flight with API pax count outside the 5% threshold of the feed pax count, but with no live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(AclFeedSource),
-      totalPax = Map(LiveFeedSource -> Passengers(Option(100), None))) === ""
+    invalidApiFieldValue(feedSources = Set(AclFeedSource),
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))) === ""
   }
 
   "Given a flight with API pax count outside the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be 'Y'" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(LiveFeedSource, AclFeedSource),
-      totalPax = Map(LiveFeedSource -> Passengers(Option(100), None),
+    invalidApiFieldValue(feedSources = Set(LiveFeedSource, ApiFeedSource),
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None),
         ApiFeedSource -> Passengers(Option(75), None))) === "Y"
   }
 
-  private def invalidApiFieldValue(actPax: Int, apiPax: Int, feedSources: Set[FeedSource], totalPax: Map[FeedSource, Passengers]): String = {
-    val arrival = ArrivalGenerator.arrival(feedSources = feedSources, passengerSources = totalPax)
-    val splits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, apiPax, None, None)),
+  private def invalidApiFieldValue(feedSources: Set[FeedSource], passengerSources: Map[FeedSource, Passengers]): String = {
+    val arrival = ArrivalGenerator.arrival(feedSources = feedSources, passengerSources = passengerSources)
+    val splits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, passengerSources.get(ApiFeedSource).flatMap(_.actual).getOrElse(0).toDouble, None, None)),
       SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
     val fws = ApiFlightWithSplits(arrival, Set(splits))
     val eventualResult = withActualApiExport.csvStream(Source(List((FlightsWithSplits(Iterable(fws)), VoyageManifests.empty)))).runWith(Sink.seq)

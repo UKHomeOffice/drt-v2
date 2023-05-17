@@ -35,8 +35,8 @@ class AclFeedSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduledLive),
         passengerAdjustments = arrivals => Future.successful(
-          arrivals.map(a => a.copy(PassengerSources = a.PassengerSources.map(a => a._1 -> Passengers(a._2.actual.map(_ + adjustment), a._2.transit))))),
-      ))
+          arrivals.map(a => a.copy(PassengerSources = a.PassengerSources.view.mapValues(a => Passengers(a.actual.map(_ + adjustment), a.transit)).toMap))
+        )))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastFlights))

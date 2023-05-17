@@ -176,8 +176,6 @@ class PassengerNumberEstSpec extends Specification {
                                 sources: Set[FeedSource] = Set()
                                ): ApiFlightWithSplits = {
     val flight: Arrival = ArrivalGenerator.arrival(
-      actPax = Option(actPax),
-      tranPax = Option(transferPax),
       feedSources = sources,
       passengerSources = sources.map(s => (s, Passengers(Option(actPax), Option(transferPax)))).toMap
     )
