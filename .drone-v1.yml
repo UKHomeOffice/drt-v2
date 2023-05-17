@@ -48,7 +48,7 @@ steps:
 
   - name: sonar-scanner
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/sonar-scanner:v3.0.1
+    image: quay.io/ukhomeofficedigital/sonar-scanner:v4.6
     commands:
       - sonar-scanner -Dsonar.projectVersion=B${DRONE_BUILD_NUMBER}
     environment:
