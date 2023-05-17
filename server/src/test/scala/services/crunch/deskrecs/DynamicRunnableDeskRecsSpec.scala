@@ -203,7 +203,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
         withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(FeedSources = arrival.FeedSources + ApiFeedSource,
-          PassengerSources = arrival.PassengerSources.updated(ApiFeedSource, Passengers(Option(1), None))
+          PassengerSources = arrival.PassengerSources.updated(ApiFeedSource, Passengers(Option(1), Option(0)))
         ), Set(splits)))
       }
 

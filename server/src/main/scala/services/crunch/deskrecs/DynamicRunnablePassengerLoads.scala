@@ -305,12 +305,10 @@ object DynamicRunnablePassengerLoads {
           case None =>
             flight
           case Some(liveSplits) =>
-            val apiPax = liveSplits.totalExcludingTransferPax.toInt
             val arrival = flight.apiFlight.copy(
               FeedSources = flight.apiFlight.FeedSources + ApiFeedSource,
-              PassengerSources = flight.apiFlight.PassengerSources.updated(ApiFeedSource, Passengers(Option(apiPax), None))
+              PassengerSources = flight.apiFlight.PassengerSources.updated(ApiFeedSource, Passengers(Option(liveSplits.totalPax), Option(liveSplits.transPax)))
             )
-
             flight.copy(apiFlight = arrival)
         }
       }
