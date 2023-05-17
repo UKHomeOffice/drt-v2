@@ -3,7 +3,7 @@ package test.feeds.test
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
 
 import scala.collection.immutable.Seq
@@ -51,8 +51,6 @@ object CSVFixtures {
         Gate = None,
         Stand = Option(fields(Stand)),
         MaxPax = Option(fields(MaxPax).toInt),
-        ActPax = Option(fields(ActPax).toInt),
-        TranPax = Option(fields(TranPax).toInt),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = PortCode("TEST"),
@@ -62,7 +60,8 @@ object CSVFixtures {
         Origin = PortCode(fields(Origin)),
         Scheduled = timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
         PcpTime = None,
-        FeedSources = Set(LiveFeedSource)
+        FeedSources = Set(LiveFeedSource),
+        PassengerSources = Map(LiveFeedSource -> Passengers(Option(fields(ActPax).toInt), Option(fields(TranPax).toInt)))
       ))
     })
 

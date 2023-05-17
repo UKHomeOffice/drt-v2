@@ -1,9 +1,9 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, Operator, Prediction, Predictions, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{FeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object ArrivalGenerator {
@@ -11,7 +11,6 @@ object ArrivalGenerator {
                iata: String = "",
                icao: String = "",
                sch: MillisSinceEpoch = 0L,
-               actPax: Option[Int] = None,
                maxPax: Option[Int] = None,
                terminal: Terminal = Terminal("T1"),
                origin: PortCode = PortCode(""),
@@ -24,13 +23,12 @@ object ArrivalGenerator {
                actChox: MillisSinceEpoch = 0L,
                gate: Option[String] = None,
                stand: Option[String] = None,
-               tranPax: Option[Int] = None,
                runwayId: Option[String] = None,
                baggageReclaimId: Option[String] = None,
                airportId: PortCode = PortCode(""),
                feedSources: Set[FeedSource] = Set(),
                pcpTime: Option[MillisSinceEpoch] = None,
-               totalPax: Map[FeedSource, Option[Int]] = Map.empty
+               passengerSources: Map[FeedSource, Passengers] = Map.empty
              ): Arrival =
     Arrival(
       Operator = operator,
@@ -43,8 +41,6 @@ object ArrivalGenerator {
       Gate = gate,
       Stand = stand,
       MaxPax = maxPax,
-      ActPax = actPax,
-      TranPax = tranPax,
       RunwayID = runwayId,
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
@@ -55,7 +51,7 @@ object ArrivalGenerator {
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (sch != 0L) Some(sch) else None,
       Scheduled = sch,
       FeedSources = feedSources,
-      TotalPax = if (totalPax.nonEmpty) totalPax else actPax.map(p => LiveFeedSource -> Option(p)).toMap
+      PassengerSources = passengerSources
     )
 
   def flightWithSplitsForDayAndTerminal(date: SDateLike, terminal: Terminal = T1): ApiFlightWithSplits = ApiFlightWithSplits(

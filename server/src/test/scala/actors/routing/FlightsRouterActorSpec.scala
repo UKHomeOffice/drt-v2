@@ -19,12 +19,12 @@ import drt.shared._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Passengers, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaNonMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals._
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PortCode, UnknownFeedSource}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
@@ -265,7 +265,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val router = lookups.flightsRouterActor
 
       val scheduled = "2021-06-01T00:00"
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, terminal = T1)
+      val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
       val requestForFlights = GetFlights(SDate(scheduled).millisSinceEpoch, SDate(scheduled).addHours(6).millisSinceEpoch)
 
       "When I send it a flight with no splits" >> {
@@ -310,7 +310,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None)
         val redListPassengers = RedListPassengers("BA0001", PortCode("LHR"), SDate(scheduled), redListPax)
         val neboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => redListNow))
-        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
         val flightsRouter = lookups.flightsRouterActor
 
         Await.ready(neboArrivalActor ? redListPassengers, 10.second)
@@ -330,8 +330,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None)
         val flightsRouter = lookups.flightsRouterActor
         val scheduled2 = "2021-06-24T15:05"
-        val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
-        val arrivalT2 = ArrivalGenerator.arrival(iata = "AB1234", terminal = T2, schDt = scheduled2)
+        val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
+        val arrivalT2 = ArrivalGenerator.arrival(iata = "AB1234", terminal = T2, schDt = scheduled2, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
         Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrivalT1, arrivalT2), Seq()), 1.second)
         val redListPax = util.RandomString.getNRandomString(10, 10)
         val redListPassengers = Seq(
@@ -359,7 +359,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val redListNow = SDate("2021-06-24T12:10:00")
         val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()))
         val flightsRouter = lookups.flightsRouterActor
-        val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled)
+        val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
         val redListPax = util.RandomString.getNRandomString(10, 10)
         val redListPassengers = RedListPassengers("BA0001", PortCode("LHR"), SDate(scheduled), redListPax)
         Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrivalT1), Seq()), 1.second)

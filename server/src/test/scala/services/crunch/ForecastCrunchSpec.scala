@@ -32,9 +32,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val base = "2017-01-04T00:00Z"
 
-    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
+    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
     val liveFlights = Flights(List(liveArrival))
-    val baseArrival = ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = T1, actPax = Option(21))
+    val baseArrival = ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)))
     val baseFlights = Flights(List(baseArrival))
 
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = CrunchMocks.mockCrunchWholePax))
@@ -66,8 +66,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val afterMidnight = "2017-01-04T00:15Z"
 
     val baseArrivals = List(
-      ArrivalGenerator.arrival(schDt = beforeMidnight, iata = "BA0001", terminal = T1, actPax = Option(20)),
-      ArrivalGenerator.arrival(schDt = afterMidnight, iata = "BA0002", terminal = T1, actPax = Option(20))
+      ArrivalGenerator.arrival(schDt = beforeMidnight, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(20), None))),
+      ArrivalGenerator.arrival(schDt = afterMidnight, iata = "BA0002", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(20), None)))
     )
     val baseFlights = Flights(baseArrivals)
 
@@ -119,7 +119,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val today = "2017-01-01T00:00Z"
     val baseScheduled = "2017-01-02T00:00Z"
 
-    val baseArrival = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
+    val baseArrival = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)))
     val baseFlights = Flights(List(baseArrival))
 
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(today)))
@@ -145,7 +145,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     val forecastScheduled = "2017-01-01T00:01Z"
 
-    val forecastArrival = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
+    val forecastArrival = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BA0001", terminal = T1, passengerSources = Map(ForecastFeedSource -> Passengers(Option(21), None)))
     val forecastArrivals = Flights(List(forecastArrival))
 
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(forecastScheduled).addDays(-1)))
@@ -166,8 +166,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseScheduled = "2017-01-01T00:00Z"
     val forecastScheduled = "2017-01-01T00:01Z"
 
-    val baseArrival = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
-    val forecastArrival = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
+    val baseArrival = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)))
+    val forecastArrival = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BA0001", terminal = T1, passengerSources = Map(ForecastFeedSource -> Passengers(Option(21), None)))
     val baseArrivals = Flights(List(baseArrival))
     val forecastArrivals = Flights(List(forecastArrival))
 
@@ -177,7 +177,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
 
     val expectedForecastArrivals = Set(baseArrival.copy(FeedSources = Set(AclFeedSource),
-      TotalPax = Map(AclFeedSource -> baseArrival.ActPax)))
+      PassengerSources = baseArrival.PassengerSources))
 
     crunch.portStateTestProbe.fishForMessage(10.seconds) {
       case ps: PortState =>
@@ -195,8 +195,8 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseScheduled = "2017-01-01T00:00Z"
     val forecastScheduled = baseScheduled
 
-    val baseArrival = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
-    val forecastArrival = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BAW0001", terminal = T1, actPax = Option(50), tranPax = Option(25))
+    val baseArrival = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)))
+    val forecastArrival = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BAW0001", terminal = T1, passengerSources = Map(ForecastFeedSource -> Passengers(Option(50), Option(25))))
     val baseArrivals = Flights(List(baseArrival))
     val forecastArrivals = Flights(List(forecastArrival))
 
@@ -205,12 +205,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
 
-    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = Some(50), TranPax = Some(25),
+    val expectedForecastArrivals = Set(baseArrival.copy(
       FeedSources = Set(ForecastFeedSource, AclFeedSource),
-      TotalPax = Map(
-        AclFeedSource -> baseArrival.ActPax,
-        ForecastFeedSource -> forecastArrival.ActPax,
-      )))
+      PassengerSources = baseArrival.PassengerSources ++ forecastArrival.PassengerSources))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
@@ -229,9 +226,9 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val forecastScheduled = baseScheduled
     val liveScheduled = baseScheduled
 
-    val baseArrival = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
-    val forecastArrival = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BAW0001", terminal = T1, actPax = Option(50), tranPax = Option(25))
-    val liveArrival = ArrivalGenerator.arrival(schDt = liveScheduled, iata = "BA0001", terminal = T1, actPax = None, tranPax = None, estDt = liveScheduled)
+    val baseArrival = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)))
+    val forecastArrival = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BAW0001", terminal = T1, passengerSources = Map(ForecastFeedSource -> Passengers(Option(50), Option(25))))
+    val liveArrival = ArrivalGenerator.arrival(schDt = liveScheduled, iata = "BA0001", terminal = T1, estDt = liveScheduled, passengerSources = Map(LiveFeedSource -> Passengers(None, None)))
     val baseArrivals = Flights(List(baseArrival))
     val forecastArrivals = Flights(List(forecastArrival))
     val liveArrivals = Flights(List(liveArrival))
@@ -242,19 +239,15 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals))
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveArrivals))
 
-    val expectedForecastArrivals = Set(baseArrival.copy(ActPax = forecastArrival.ActPax,
-      TranPax = forecastArrival.TranPax, Estimated = Some(SDate(liveScheduled).millisSinceEpoch),
+    val expectedForecastArrivals = Set(baseArrival.copy(Estimated = Some(SDate(liveScheduled).millisSinceEpoch),
       FeedSources = Set(AclFeedSource, ForecastFeedSource, LiveFeedSource),
-      TotalPax = Map(
-        AclFeedSource -> baseArrival.ActPax,
-        ForecastFeedSource -> forecastArrival.ActPax,
-        LiveFeedSource -> liveArrival.ActPax,
-      )))
+      PassengerSources = baseArrival.PassengerSources ++ forecastArrival.PassengerSources ++ liveArrival.PassengerSources
+    ))
+
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val crunchForecastArrivals = ps.flights.values.map(_.apiFlight).toSet
-
         crunchForecastArrivals == expectedForecastArrivals
     }
 
@@ -268,10 +261,10 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseScheduled = "2017-01-01T00:00Z"
     val forecastScheduled = baseScheduled
 
-    val baseArrival1 = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, actPax = Option(21), status = ArrivalStatus("ACL Forecast"))
-    val baseArrival2 = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "AA1110", terminal = T1, actPax = Option(22), status = ArrivalStatus("ACL Forecast"))
-    val forecastArrival1 = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BAW0001", terminal = T1, actPax = Option(51), status = ArrivalStatus("Port Forecast"))
-    val forecastArrival2 = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "AAW1110", terminal = T1, actPax = Option(52), status = ArrivalStatus("Port Forecast"))
+    val baseArrival1 = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)), status = ArrivalStatus("ACL Forecast"))
+    val baseArrival2 = ArrivalGenerator.arrival(schDt = baseScheduled, iata = "AA1110", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(22), None)), status = ArrivalStatus("ACL Forecast"))
+    val forecastArrival1 = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "BAW0001", terminal = T1, passengerSources = Map(ForecastFeedSource -> Passengers(Option(51), None)), status = ArrivalStatus("Port Forecast"))
+    val forecastArrival2 = ArrivalGenerator.arrival(schDt = forecastScheduled, iata = "AAW1110", terminal = T1, passengerSources = Map(ForecastFeedSource -> Passengers(Option(52), None)), status = ArrivalStatus("Port Forecast"))
     val baseArrivals = Flights(List(baseArrival1, baseArrival2))
     val forecastArrivals1st = Flights(List(forecastArrival1))
     val forecastArrivals2nd = Flights(List(forecastArrival2))
@@ -285,18 +278,13 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals2nd))
 
     val expectedForecastArrivals = Set(
-      baseArrival1.copy(ActPax = Some(51), Status = ArrivalStatus("Port Forecast"),
+      baseArrival1.copy(Status = ArrivalStatus("Port Forecast"),
         FeedSources = Set(ForecastFeedSource, AclFeedSource),
-        TotalPax = Map(
-          AclFeedSource->baseArrival1.ActPax,
-          ForecastFeedSource->forecastArrival1.ActPax,
-        )),
-      baseArrival2.copy(ActPax = Some(52), Status = ArrivalStatus("Port Forecast"),
+        PassengerSources = baseArrival1.PassengerSources ++ forecastArrival1.PassengerSources),
+      baseArrival2.copy(Status = ArrivalStatus("Port Forecast"),
         FeedSources = Set(ForecastFeedSource, AclFeedSource),
-        TotalPax = Map(
-          AclFeedSource->baseArrival2.ActPax,
-          ForecastFeedSource->forecastArrival2.ActPax,
-        )))
+        PassengerSources = baseArrival2.PassengerSources ++ forecastArrival2.PassengerSources
+      ))
 
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
@@ -313,13 +301,15 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val base = "2017-01-04T00:00Z"
 
-    val initialBaseArrivals = SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = T1, actPax = Option(21))).map(a => (a.unique, a))
+    val initialBaseArrivals = SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = T1,
+      passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)))).map(a => (a.unique, a))
     val initialPortStateArrivals = Seq(
-      ArrivalGenerator.arrival(schDt = base, iata = "FR0001", terminal = T1, actPax = Option(101)),
-      ArrivalGenerator.arrival(schDt = base, iata = "EZ1100", terminal = T1, actPax = Option(250))
+      ArrivalGenerator.arrival(schDt = base, iata = "FR0001", terminal = T1, passengerSources = Map(ForecastFeedSource -> Passengers(Option(101), None))),
+      ArrivalGenerator.arrival(schDt = base, iata = "EZ1100", terminal = T1, passengerSources = Map(ForecastFeedSource -> Passengers(Option(250), None)))
     ).map(a => (a.unique, ApiFlightWithSplits(a, Set())))
 
-    val updatedBaseArrivals = SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(schDt = base, iata = "AA0099", terminal = T1, actPax = Option(55))).map(a => (a.unique, a))
+    val updatedBaseArrivals = SortedMap[UniqueArrival, Arrival]() ++ List(ArrivalGenerator.arrival(schDt = base, iata = "AA0099", terminal = T1,
+      passengerSources = Map(ForecastFeedSource -> Passengers(Option(55), None)))).map(a => (a.unique, a))
 
     val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
@@ -350,13 +340,14 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val aclPax = 100
     val paxDelta = 0.1
 
-    val arrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(aclPax))
+    val arrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(aclPax), None)))
     val baseArrivals = List(arrival)
 
     val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
-      passengerAdjustments = arrivals => Future.successful(arrivals.map(a => a.copy(ActPax = a.ActPax.map(pax => (pax * paxDelta).toInt))))
-    ))
+      passengerAdjustments = arrivals => Future.successful(arrivals
+        .map(a => a.copy(PassengerSources = a.PassengerSources.map(pax => pax._1 -> Passengers(pax._2.actual.map(at => (at * paxDelta).toInt), pax._2.transit.map(t => (t * paxDelta).toInt))))
+        ))))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(baseArrivals)))
 
@@ -365,7 +356,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(flightsWithSplits, _, _) =>
         if (flightsWithSplits.nonEmpty) {
-          val actPax = flightsWithSplits.values.head.apiFlight.ActPax
+          val actPax = flightsWithSplits.values.head.apiFlight.bestPaxEstimate.passengers.actual
           println(s"actPax: $actPax, expectedActPax: $expectedActPax")
           actPax == expectedActPax
         } else false

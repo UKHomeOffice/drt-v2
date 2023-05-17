@@ -7,7 +7,7 @@ import services.crunch.CrunchTestLike
 import services.exports.flights.templates._
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.arrivals.{Passengers, _}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.SDate
@@ -24,8 +24,6 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       iata = "SA324",
       icao = "SA0324",
       schDt = "2017-01-01T20:00:00Z",
-      actPax = Option(98),
-      apiPax = Option(100),
       maxPax = Option(100),
       terminal = T1,
       origin = PortCode("JHB"),
@@ -33,7 +31,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      totalPax = Map(LiveFeedSource -> Option(98), ApiFeedSource -> Option(100))
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(98), None),
+        ApiFeedSource -> Passengers(Option(100), None))
     ),
     Set(Splits(
       Set(
@@ -62,16 +61,14 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       iata = "SA324",
       icao = "SA0324",
       schDt = "2017-01-01T20:00:00Z",
-      actPax = None,
-      apiPax = Option(100),
       maxPax = Option(100),
       terminal = T1,
       origin = PortCode("JHB"),
       operator = Option(Operator("SA")),
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
-      feedSources = Set(LiveFeedSource),
-      totalPax = Map(LiveFeedSource -> Option(100))
+      feedSources = Set(ApiFeedSource),
+      passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None))
     ),
     Set(Splits(
       Set(
@@ -100,7 +97,6 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       iata = "SA325",
       icao = "SA0325",
       schDt = "2017-01-01T20:00:00Z",
-      actPax = Option(100),
       maxPax = Option(100),
       terminal = T1,
       origin = PortCode("JHC"),
@@ -108,7 +104,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      totalPax = Map(LiveFeedSource -> Option(100))
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))
     ),
     Set(Splits(
       Set(
@@ -127,14 +123,13 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         iata = "SA326",
         icao = "SA0326",
         schDt = "2017-01-01T20:00:00Z",
-        actPax = Option(100),
         maxPax = Option(100),
         terminal = T1,
         origin = PortCode("JHD"),
         operator = Option(Operator("SA")),
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
-        totalPax = Map(AclFeedSource -> Option(100))
+        passengerSources = Map(AclFeedSource -> Passengers(Option(100), None))
       ),
 
       Set(Splits(
@@ -155,7 +150,6 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         iata = "SA326",
         icao = "SA0326",
         schDt = "2017-01-01T20:00:00Z",
-        actPax = Option(100),
         maxPax = Option(100),
         terminal = T1,
         origin = PortCode("JHD"),
@@ -163,7 +157,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
         feedSources = Set(LiveFeedSource),
-        totalPax = Map(LiveFeedSource -> Option(100))
+        passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))
       ),
       Set(Splits(
         Set(
@@ -183,7 +177,6 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         iata = "SA326",
         icao = "SA0326",
         schDt = "2017-01-01T20:00:00Z",
-        actPax = Option(105),
         maxPax = Option(105),
         terminal = T1,
         origin = PortCode("JHB"),
@@ -191,7 +184,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
         feedSources = Set(LiveFeedSource),
-        totalPax = Map(LiveFeedSource -> Option(105))
+        passengerSources = Map(LiveFeedSource -> Passengers(Option(105), None))
       ),
       Set(Splits(
         Set(
@@ -380,26 +373,30 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   }
 
   "Given a flight with API pax count within the 5% threshold of the feed pax count, and no live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(AclFeedSource), totalPax = Map(AclFeedSource -> Option(100), ApiFeedSource-> Option(98))) === ""
+    invalidApiFieldValue(feedSources = Set(AclFeedSource), passengerSources = Map(AclFeedSource -> Passengers(Option(100), None),
+      ApiFeedSource -> Passengers(Option(98), None))) === ""
   }
 
   "Given a flight with API pax count within the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 98, feedSources = Set(LiveFeedSource, AclFeedSource), totalPax = Map(LiveFeedSource -> Option(100),
-      ApiFeedSource-> Option(75))) === ""
+    invalidApiFieldValue(feedSources = Set(LiveFeedSource, ApiFeedSource),
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None),
+        ApiFeedSource -> Passengers(Option(98), None))) === ""
   }
 
   "Given a flight with API pax count outside the 5% threshold of the feed pax count, but with no live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(AclFeedSource), totalPax = Map(LiveFeedSource -> Option(100))) === ""
+    invalidApiFieldValue(feedSources = Set(AclFeedSource),
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))) === ""
   }
 
   "Given a flight with API pax count outside the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be 'Y'" >> {
-    invalidApiFieldValue(actPax = 100, apiPax = 75, feedSources = Set(LiveFeedSource, AclFeedSource), totalPax = Map(LiveFeedSource -> Option(100),
-      ApiFeedSource-> Option(75))) === "Y"
+    invalidApiFieldValue(feedSources = Set(LiveFeedSource, ApiFeedSource),
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None),
+        ApiFeedSource -> Passengers(Option(75), None))) === "Y"
   }
 
-  private def invalidApiFieldValue(actPax: Int, apiPax: Int, feedSources: Set[FeedSource], totalPax: Map[FeedSource, Option[Int]]): String = {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(actPax), feedSources = feedSources, totalPax = totalPax)
-    val splits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, apiPax, None, None)),
+  private def invalidApiFieldValue(feedSources: Set[FeedSource], passengerSources: Map[FeedSource, Passengers]): String = {
+    val arrival = ArrivalGenerator.arrival(feedSources = feedSources, passengerSources = passengerSources)
+    val splits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, passengerSources.get(ApiFeedSource).flatMap(_.actual).getOrElse(0).toDouble, None, None)),
       SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
     val fws = ApiFlightWithSplits(arrival, Set(splits))
     val eventualResult = withActualApiExport.csvStream(Source(List((FlightsWithSplits(Iterable(fws)), VoyageManifests.empty)))).runWith(Sink.seq)

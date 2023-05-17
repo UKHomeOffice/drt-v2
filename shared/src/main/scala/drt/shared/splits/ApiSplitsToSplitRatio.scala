@@ -4,8 +4,6 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, SplitStyle, Splits}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, Queues}
 
-import scala.collection.immutable.Map
-
 
 object ApiSplitsToSplitRatio {
 
@@ -26,7 +24,7 @@ object ApiSplitsToSplitRatio {
 
   def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, fws: ApiFlightWithSplits): Map[Queue, Int] =
     queueTotals(
-      applyPaxSplitsToFlightPax(splits, fws.pcpPaxEstimate.pax.getOrElse(0))
+      applyPaxSplitsToFlightPax(splits, fws.bestPaxSource.getPcpPax.getOrElse(0))
         .splits
         .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
         .toMap

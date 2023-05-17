@@ -9,7 +9,7 @@ import services.graphstages.Crunch.SplitMinutes
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{PaxType, PaxTypeAndQueue}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxType, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange}
@@ -28,7 +28,7 @@ trait WorkloadCalculatorLike {
   def combineCodeShares(flights: Iterable[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
       .toList
-      .sortBy(_.apiFlight.ActPax.getOrElse(0))
+      .sortBy(_.apiFlight.bestPaxEstimate.passengers.actual.getOrElse(0))
       .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
       .toMap.values
     uniqueFlights

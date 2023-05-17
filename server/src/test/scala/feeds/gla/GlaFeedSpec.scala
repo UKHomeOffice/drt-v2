@@ -9,7 +9,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed}
 import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
 import drt.shared.FlightsApi.Flights
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
@@ -132,8 +132,6 @@ class GlaFeedSpec extends CrunchTestLike {
       Gate = Some("G"),
       Stand = Some("ST"),
       MaxPax = Some(50),
-      ActPax = Some(20),
-      TranPax = None,
       RunwayID = Some("3"),
       BaggageReclaimId = Some("2"),
       AirportID = PortCode("GLA"),
@@ -144,7 +142,8 @@ class GlaFeedSpec extends CrunchTestLike {
       Scheduled = SDate("2019-11-13T12:34:00Z").millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
-      CarrierScheduled = None
+      CarrierScheduled = None,
+      PassengerSources = Map(LiveFeedSource -> Passengers(Some(20), None))
     )
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
@@ -193,8 +192,6 @@ class GlaFeedSpec extends CrunchTestLike {
       Gate = Some("GATE"),
       Stand = Some("STAND"),
       MaxPax = Some(75),
-      ActPax = Some(55),
-      TranPax = None,
       RunwayID = Some("4"),
       BaggageReclaimId = Some("2"),
       AirportID = PortCode("GLA"),
@@ -205,7 +202,8 @@ class GlaFeedSpec extends CrunchTestLike {
       Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
-      CarrierScheduled = None
+      CarrierScheduled = None,
+      PassengerSources = Map(LiveFeedSource -> Passengers(Some(55), None))
     )
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
@@ -219,7 +217,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) =>
-        (arrival.ActPax, arrival.MaxPax) === ((Some(0), Some(0)))
+        (arrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual), arrival.MaxPax) === ((Some(0), Some(0)))
     }
   }
 
@@ -292,8 +290,6 @@ class GlaFeedSpec extends CrunchTestLike {
       Gate = None,
       Stand = None,
       MaxPax = None,
-      ActPax = None,
-      TranPax = None,
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = PortCode("GLA"),
@@ -304,7 +300,8 @@ class GlaFeedSpec extends CrunchTestLike {
       Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set(LiveFeedSource),
-      CarrierScheduled = None
+      CarrierScheduled = None,
+      PassengerSources = Map(LiveFeedSource -> Passengers(None, None))
     )
 
     Await.result(mockFeed.requestArrivals(), 1.second) match {
@@ -341,54 +338,54 @@ class GlaFeedSpec extends CrunchTestLike {
 
   def containingADepartureJson(domesticScheduledTime: String): String =
     s"""[{
-        |      "AIBT": "2019-11-13T13:30:00+00:00",
-        |      "AirlineIATA": "TS",
-        |      "AirlineICAO": "TST",
-        |      "ALDT": "2019-11-13T13:31:00+00:00",
-        |      "AODBProbableDateTime": "2019-11-13T13:32:00+00:00",
-        |      "CarouselCode": "2",
-        |      "CodeShareFlights": "",
-        |      "CodeShareInd": "N",
-        |      "DepartureArrivalType": "A",
-        |      "EIBT": "2019-11-13T12:33:00+00:00",
-        |      "FlightNumber": "234",
-        |      "FlightStatus": "S",
-        |      "FlightStatusDesc": "Flight is on schedule",
-        |      "GateCode": "G",
-        |      "MaxPax": 50,
-        |      "OriginDestAirportIATA": "TST",
-        |      "OriginDestAirportICAO": "TSTT",
-        |      "PaxEstimated": null,
-        |      "Runway": "3",
-        |      "ScheduledDateTime": "2019-11-13T12:34:00+00:00",
-        |      "StandCode": "ST",
-        |      "TerminalCode": "T1",
-        |      "TotalPassengerCount": 20
-        |},
-        |{
-        |      "AIBT": null,
-        |      "AirlineIATA": "TT",
-        |      "AirlineICAO": "TTT",
-        |      "ALDT": null,
-        |      "AODBProbableDateTime": null,
-        |      "CarouselCode": null,
-        |      "CodeShareFlights": null,
-        |      "CodeShareInd": null,
-        |      "DepartureArrivalType": "D",
-        |      "EIBT": null,
-        |      "FlightNumber": "244",
-        |      "FlightStatus": "C",
-        |      "FlightStatusDesc": "Flight is cancelled",
-        |      "GateCode": null,
-        |      "MaxPax": null,
-        |      "OriginDestAirportIATA": "TTT",
-        |      "OriginDestAirportICAO": "TTTT",
-        |      "PaxEstimated": null,
-        |      "Runway": null,
-        |      "ScheduledDateTime": "$domesticScheduledTime",
-        |      "StandCode": null,
-        |      "TerminalCode": "T1",
-        |      "TotalPassengerCount": null
-        |}]""".stripMargin
+       |      "AIBT": "2019-11-13T13:30:00+00:00",
+       |      "AirlineIATA": "TS",
+       |      "AirlineICAO": "TST",
+       |      "ALDT": "2019-11-13T13:31:00+00:00",
+       |      "AODBProbableDateTime": "2019-11-13T13:32:00+00:00",
+       |      "CarouselCode": "2",
+       |      "CodeShareFlights": "",
+       |      "CodeShareInd": "N",
+       |      "DepartureArrivalType": "A",
+       |      "EIBT": "2019-11-13T12:33:00+00:00",
+       |      "FlightNumber": "234",
+       |      "FlightStatus": "S",
+       |      "FlightStatusDesc": "Flight is on schedule",
+       |      "GateCode": "G",
+       |      "MaxPax": 50,
+       |      "OriginDestAirportIATA": "TST",
+       |      "OriginDestAirportICAO": "TSTT",
+       |      "PaxEstimated": null,
+       |      "Runway": "3",
+       |      "ScheduledDateTime": "2019-11-13T12:34:00+00:00",
+       |      "StandCode": "ST",
+       |      "TerminalCode": "T1",
+       |      "TotalPassengerCount": 20
+       |},
+       |{
+       |      "AIBT": null,
+       |      "AirlineIATA": "TT",
+       |      "AirlineICAO": "TTT",
+       |      "ALDT": null,
+       |      "AODBProbableDateTime": null,
+       |      "CarouselCode": null,
+       |      "CodeShareFlights": null,
+       |      "CodeShareInd": null,
+       |      "DepartureArrivalType": "D",
+       |      "EIBT": null,
+       |      "FlightNumber": "244",
+       |      "FlightStatus": "C",
+       |      "FlightStatusDesc": "Flight is cancelled",
+       |      "GateCode": null,
+       |      "MaxPax": null,
+       |      "OriginDestAirportIATA": "TTT",
+       |      "OriginDestAirportICAO": "TTTT",
+       |      "PaxEstimated": null,
+       |      "Runway": null,
+       |      "ScheduledDateTime": "$domesticScheduledTime",
+       |      "StandCode": null,
+       |      "TerminalCode": "T1",
+       |      "TotalPassengerCount": null
+       |}]""".stripMargin
 
 }

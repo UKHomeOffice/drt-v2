@@ -6,6 +6,8 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import org.specs2.mutable.Specification
 import services.PaxDeltas.maybePctDeltas
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.arrivals.Passengers
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 class PaxDeltasSpec extends Specification {
   val now: () => SDateLike = () => SDate("2020-04-01", Crunch.utcTimeZone)
@@ -73,24 +75,24 @@ class PaxDeltasSpec extends Specification {
   }
 
   "When I ask for an arrival with 100 pax to have its pax adjusted" >> {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(100))
+    val arrival = ArrivalGenerator.arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)))
 
     "Given a delta of 0.5, I should get an arrival with 50 pax" >> {
       val delta = 0.5
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.ActPax === Option(50)
+      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(50)
     }
 
     "Given a delta of -0.5, I should get an arrival with pax capped at 0" >> {
       val delta = -0.5
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.ActPax === Option(0)
+      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(0)
     }
 
     "Given a delta of 2, I should get an arrival with pax capped at 100" >> {
       val delta = 2
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.ActPax === Option(100)
+      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(100)
     }
   }
 }

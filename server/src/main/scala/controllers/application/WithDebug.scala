@@ -8,9 +8,9 @@ import controllers.Application
 import play.api.mvc.{Action, AnyContent}
 import services.ActorTree
 import uk.gov.homeoffice.drt.auth.Roles.Debug
+import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import uk.gov.homeoffice.drt.time.SDate
-
 import scala.collection.SortedMap
 
 
@@ -106,10 +106,10 @@ trait WithDebug {
                       "<td>" + a.getFlight.status.getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.gate.getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.stand.getOrElse("-") + "</td>" +
-                      "<td>" + a.getFlight.actPax.getOrElse("-") + "</td>" +
-                      "<td>" + a.getFlight.apiPax.getOrElse("-") + "</td>" +
+                      "<td>" + s"${if(a.getFlight.totalPax.isEmpty) "-" else a.getFlight.totalPax.map(_.passengers.map(_.actual + ",").getOrElse(""))}" + "</td>" +
+                      "<td>" + a.getFlight.totalPax.find(_.feedSource == Option(ApiFeedSource)).flatMap(_.passengers.map(_.actual)).getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.maxPax.getOrElse("-") + "</td>" +
-                      "<td>" + a.getFlight.tranPax.getOrElse("-") + "</td>" +
+                      "<td>" + a.getFlight.totalPax.find(_.feedSource == Option(ApiFeedSource)).flatMap(_.passengers.map(_.transit)).getOrElse("-") + "</td>" +
                       "<tr>"
 
                   }).mkString("\n") +

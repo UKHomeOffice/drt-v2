@@ -5,9 +5,9 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource, PortCode}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -223,8 +223,6 @@ class LCYFlightTransformSpec extends CrunchTestLike {
       Gate = Option("6"),
       Stand = Option("55"),
       MaxPax = Option(175),
-      ActPax = Option(65),
-      TranPax = None,
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = PortCode("LCY"),
@@ -234,7 +232,8 @@ class LCYFlightTransformSpec extends CrunchTestLike {
       Origin = PortCode("JNB"),
       Scheduled = SDate(scheduledTimeString).millisSinceEpoch,
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource)
+      FeedSources = Set(LiveFeedSource),
+      PassengerSources = Map(LiveFeedSource -> Passengers(Option(65), None))
     )
 
     result === expected

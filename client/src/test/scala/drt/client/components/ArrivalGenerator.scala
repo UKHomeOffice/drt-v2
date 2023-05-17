@@ -2,7 +2,7 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Prediction, Predictions, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Prediction, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 
@@ -11,7 +11,6 @@ object ArrivalGenerator {
                  iata: String = "",
                  icao: String = "",
                  schDt: String = "",
-                 actPax: Option[Int] = None,
                  maxPax: Option[Int] = None,
                  terminal: Terminal = Terminal("T1"),
                  origin: PortCode = PortCode(""),
@@ -24,13 +23,12 @@ object ArrivalGenerator {
                  actChoxDt: String = "",
                  gate: Option[String] = None,
                  stand: Option[String] = None,
-                 tranPax: Option[Int] = None,
                  runwayId: Option[String] = None,
                  baggageReclaimId: Option[String] = None,
                  airportId: PortCode = PortCode(""),
                  feedSources: Set[FeedSource] = Set(),
                  pcpTime: Option[MillisSinceEpoch] = None,
-                 totalPax : Map[FeedSource, Option[Int]] = Map.empty
+                 passengerSources : Map[FeedSource, Passengers] = Map.empty
                ): Arrival =
     Arrival(
       Operator = operator,
@@ -43,8 +41,6 @@ object ArrivalGenerator {
       Gate = gate,
       Stand = stand,
       MaxPax = maxPax,
-      ActPax = actPax,
-      TranPax = tranPax,
       RunwayID = runwayId,
       BaggageReclaimId = baggageReclaimId,
       AirportID = airportId,
@@ -55,6 +51,6 @@ object ArrivalGenerator {
       PcpTime = if (pcpTime.isDefined) Option(pcpTime.get) else if (schDt.nonEmpty) Some(SDate(schDt).millisSinceEpoch) else None,
       Scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0L,
       FeedSources = feedSources,
-      TotalPax = totalPax
+      PassengerSources = passengerSources
     )
 }

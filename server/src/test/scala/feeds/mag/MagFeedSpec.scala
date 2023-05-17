@@ -8,7 +8,7 @@ import drt.server.feeds.mag.{FeedRequesterLike, MagFeed, ProdFeedRequester}
 import drt.shared.FlightsApi.Flights
 import pdi.jwt.JwtAlgorithm
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
@@ -80,7 +80,7 @@ class MagFeedSpec extends CrunchTestLike {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrivalWith0Pax))
 
     val actMax = Await.result(feed.requestArrivals(SDate.now()), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrivals),_) => (arrivals.head.ActPax, arrivals.head.MaxPax)
+      case ArrivalsFeedSuccess(Flights(arrivals), _) => (arrivals.head.PassengerSources.get(LiveFeedSource).flatMap(_.actual), arrivals.head.MaxPax)
       case _ => List()
     }
 

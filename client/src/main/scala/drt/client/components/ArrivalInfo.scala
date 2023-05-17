@@ -77,8 +77,8 @@ object FeedSourceRow {
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
       val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
-      val paxTotal: String = arrival.ActPax.map(_.toString).getOrElse("-")
-      val paxTrans: String = arrival.TranPax.map(_.toString).getOrElse("-")
+      val paxTotal: String = arrival.bestPaxEstimate.passengers.actual.map(_.toString).getOrElse("-")
+      val paxTrans: String = arrival.bestPaxEstimate.passengers.transit.map(_.toString).getOrElse("-")
       val flightFields = List[TagMod](
         <.td(feedDisplayName(isCiriumAsPortLive, feedSource)),
         <.td(arrival.flightCodeString),

@@ -7,9 +7,10 @@ import drt.shared.{ArrivalsDiff, PortState}
 import services.crunch.CrunchTestLike
 import test.TestActors.ResetData
 import test.{MockDrtParameters, TestDrtSystem}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.UnknownFeedSource
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -22,7 +23,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     val drtSystem = TestDrtSystem(defaultAirportConfig, MockDrtParameters())
 
     "When I send its port state actor an arrival" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly)
+      val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
       Await.ready(drtSystem.portStateActor.ask(ArrivalsDiff(List(arrival), List())), 1.second)
 
       "Then I should see the arrival when I check its port state" >> {

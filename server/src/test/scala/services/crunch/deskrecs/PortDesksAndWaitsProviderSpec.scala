@@ -6,13 +6,13 @@ import services.crunch.CrunchTestLike
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
 import services.{OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Passengers, Splits}
 import uk.gov.homeoffice.drt.egates.Desk
 import uk.gov.homeoffice.drt.ports.PaxTypes.GBRNational
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue, PortCode}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypeAndQueue, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
@@ -118,7 +118,12 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     val end = scheduled.addMinutes(14).millisSinceEpoch
     val flights = flightParams.zipWithIndex.map {
       case ((pax, splits), idx) =>
-        val arrival = ArrivalGenerator.arrival(iata = s"BA${idx.toString}", origin = PortCode(idx.toString), terminal = T1, sch = scheduled.millisSinceEpoch, actPax = Option(pax), pcpTime = Option(scheduled.millisSinceEpoch))
+        val arrival = ArrivalGenerator.arrival(iata = s"BA${idx.toString}",
+          origin = PortCode(idx.toString),
+          terminal = T1, sch = scheduled.millisSinceEpoch,
+          feedSources = Set(LiveFeedSource),
+          pcpTime = Option(scheduled.millisSinceEpoch),
+          passengerSources = Map(LiveFeedSource -> Passengers(Option(pax), None)))
         ApiFlightWithSplits(
           arrival,
           Set(Splits(splits, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None))

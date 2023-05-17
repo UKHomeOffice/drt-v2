@@ -25,7 +25,7 @@ object FlightsApi {
     def from(arrivals: Iterable[Arrival], feedSource: FeedSource): PaxForArrivals =
       PaxForArrivals(arrivals
         .map { arrival =>
-          val histApiPax = arrival.TotalPax.view.filterKeys(_ == feedSource).toMap
+          val histApiPax = arrival.PassengerSources.view.filterKeys(_ == feedSource).toMap
           (arrival.unique, histApiPax)
         }
         .collect { case (key, nonEmptyPax) if nonEmptyPax.nonEmpty => (key, nonEmptyPax) }
@@ -33,7 +33,7 @@ object FlightsApi {
       )
   }
 
-  case class PaxForArrivals(pax: Map[UniqueArrival, Map[FeedSource, Option[Int]]]) extends FlightUpdates {
+  case class PaxForArrivals(pax: Map[UniqueArrival, Map[FeedSource, Passengers]]) extends FlightUpdates {
     def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
       val updatedFlights = pax.map {
         case (key, newPax) =>
@@ -41,15 +41,15 @@ object FlightsApi {
             .map { fws =>
               val updatedPax = newPax.filter {
                 case (source, pax) =>
-                  val existingPax = fws.apiFlight.TotalPax.get(source)
-                  existingPax.isEmpty || existingPax != pax
+                  val existingPax = fws.apiFlight.PassengerSources.get(source)
+                  existingPax.isEmpty || existingPax.exists(_ != pax)
               }
               (fws, updatedPax)
             }
             .collect {
               case (fws, updatedPax) if updatedPax.nonEmpty =>
-                val mergedPax = fws.apiFlight.TotalPax ++ updatedPax
-                val updatedArrival = fws.apiFlight.copy(TotalPax = mergedPax)
+                val mergedPax = fws.apiFlight.PassengerSources ++ updatedPax
+                val updatedArrival = fws.apiFlight.copy(PassengerSources = mergedPax)
                 fws.copy(apiFlight = updatedArrival, lastUpdated = Option(nowMillis))
             }
       }.collect { case Some(flight) => flight }
@@ -77,13 +77,13 @@ object FlightsApi {
                     case None =>
                       fws.apiFlight
                     case Some(liveSplit) =>
-                      val totalPax = Math.round(liveSplit.totalExcludingTransferPax).toInt
+                      val totalPax: Int = Math.round(liveSplit.totalPax).toInt
+                      val transPax: Int = Math.round(liveSplit.totalPax - liveSplit.totalExcludingTransferPax).toInt
                       val sources = fws.apiFlight.FeedSources + ApiFeedSource
-                      val totalPaxSources = fws.apiFlight.TotalPax.updated(ApiFeedSource, Some(totalPax))
+                      val totalPaxSources = fws.apiFlight.PassengerSources.updated(ApiFeedSource, Passengers(Some(totalPax), Option(transPax)))
                       fws.apiFlight.copy(
-                        ApiPax = Option(totalPax),
                         FeedSources = sources,
-                        TotalPax = totalPaxSources
+                        PassengerSources = totalPaxSources
                       )
                   }
 

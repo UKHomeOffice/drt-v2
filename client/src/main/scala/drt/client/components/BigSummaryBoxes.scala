@@ -12,7 +12,7 @@ import org.scalajs.dom.HTMLElement
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.Try
@@ -59,7 +59,7 @@ object BigSummaryBoxes {
         splits.find { case Splits(_, _, _, t) => t == Percentage } match {
           case None => Set()
           case Some(apiSplits) => apiSplits.splits.map {
-            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * fws.pcpPaxEstimate.pax.getOrElse(0))
+            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * fws.bestPaxSource.getPcpPax.getOrElse(0))
           }
         }
       }
@@ -83,7 +83,7 @@ object BigSummaryBoxes {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }
 
-  def sumActPax(flights: Seq[ApiFlightWithSplits]): Int = flights.flatMap(_.apiFlight.ActPax).sum
+  def sumActPax(flights: Seq[ApiFlightWithSplits]): Int = flights.flatMap(_.apiFlight.PassengerSources.get(ApiFeedSource).flatMap(_.actual)).sum
 
   def sumBestPax(bestFlightSplitPax: ApiFlightWithSplits => Double)(flights: Seq[ApiFlightWithSplits]): Double = flights.map(bestFlightSplitPax).sum
 

@@ -17,7 +17,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -184,8 +184,6 @@ object MagFeed {
     Gate = ma.gate.map(_.name.replace("Gate ", "")),
     Stand = ma.stand.flatMap(_.name.map(_.replace("Stand ", ""))),
     MaxPax = ma.passenger.maximum,
-    ActPax = ma.passenger.count,
-    TranPax = ma.passenger.transferCount,
     RunwayID = None,
     BaggageReclaimId = None,
     AirportID = ma.arrivalAirport.iata,
@@ -195,7 +193,8 @@ object MagFeed {
     Origin = ma.departureAirport.iata,
     Scheduled = SDate(ma.arrival.scheduled).millisSinceEpoch,
     PcpTime = None,
-    FeedSources = Set(LiveFeedSource)
+    FeedSources = Set(LiveFeedSource),
+    PassengerSources = Map(LiveFeedSource -> Passengers(ma.passenger.count, ma.passenger.transferCount))
   )
 
   case class IataIcao(iata: String, icao: String)

@@ -12,8 +12,7 @@ object LiveArrivalsUtil {
       Gate = if (portFeedArrival.Gate.isEmpty) baseLiveArrival.Gate else portFeedArrival.Gate,
       Status = if (portFeedArrival.Status.description == "UNK") baseLiveArrival.Status else portFeedArrival.Status,
       ScheduledDeparture = if (portFeedArrival.ScheduledDeparture.isEmpty) baseLiveArrival.ScheduledDeparture else portFeedArrival.ScheduledDeparture,
-      TotalPax = portFeedArrival.TotalPax ++ baseLiveArrival.TotalPax
+      PassengerSources = portFeedArrival.PassengerSources ++ baseLiveArrival.PassengerSources
     )
   }
 }
-

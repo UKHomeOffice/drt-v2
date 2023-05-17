@@ -6,7 +6,8 @@ import actors.routing.FlightsRouterActor._
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Passengers}
+import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
@@ -34,7 +35,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
   "Given a flight scheduled on 2020-09-28" >> {
     "When I ask if it's scheduled on 2020-09-28" >> {
       "Then I should get a true response" >> {
-        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
+        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-28T12:00Z", passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
         val result = scheduledInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.Scheduled)
         result === true
       }
@@ -44,7 +45,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
   "Given a flight scheduled on 2020-09-29 with pax at the pcp a day earlier" >> {
     "When I ask if its pcp range falls within 2020-09-28" >> {
       "Then I should get a true response" >> {
-        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-29T12:00Z", pcpDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
+        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-29T12:00Z", pcpDt = "2020-09-28T12:00Z", passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
         val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange)
         result === true
       }
@@ -54,7 +55,8 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
   "Given a flight scheduled on 2020-09-27 with pax at the pcp a day later" >> {
     "When I ask if its pcp range falls within 2020-09-28" >> {
       "Then I should get a true response" >> {
-        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-27T12:00Z", pcpDt = "2020-09-28T12:00Z", actPax = Option(100)), Set())
+        val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-27T12:00Z", pcpDt = "2020-09-28T12:00Z",
+          passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
         val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange)
         result === true
       }
@@ -62,14 +64,22 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
   }
 
   "Given map of UtcDate to flights spanning several days, each containing flights that have pcp times the day before, after or on time" >> {
-    val flight0109 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-01T12:00Z", pcpDt = "2020-09-01T12:00Z", actPax = Option(100)), Set())
-    val flight0209onTime = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-02T23:00Z", pcpDt = "2020-09-02T23:00Z", actPax = Option(100)), Set())
-    val flight0209Late = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-02T23:10Z", pcpDt = "2020-09-03T01:00Z", actPax = Option(100)), Set())
-    val flight0309 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-03T12:00Z", pcpDt = "2020-09-03T12:00Z", actPax = Option(100)), Set())
-    val flight0409 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-04T12:00Z", pcpDt = "2020-09-04T12:00Z", actPax = Option(100)), Set())
-    val flight0509OnTime = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:00Z", pcpDt = "2020-09-05T01:00Z", actPax = Option(100)), Set())
-    val flight0509Early = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:10Z", pcpDt = "2020-09-04T23:50Z", actPax = Option(100)), Set())
-    val flight0609 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-06T12:00Z", pcpDt = "2020-09-06T12:00Z", actPax = Option(100)), Set())
+    val flight0109 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-01T12:00Z", pcpDt = "2020-09-01T12:00Z",
+      passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
+    val flight0209onTime = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-02T23:00Z", pcpDt = "2020-09-02T23:00Z",
+      passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
+    val flight0209Late = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-02T23:10Z", pcpDt = "2020-09-03T01:00Z",
+      passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
+    val flight0309 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-03T12:00Z", pcpDt = "2020-09-03T12:00Z",
+      passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
+    val flight0409 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-04T12:00Z", pcpDt = "2020-09-04T12:00Z",
+      passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
+    val flight0509OnTime = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:00Z", pcpDt = "2020-09-05T01:00Z",
+      passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
+    val flight0509Early = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-05T01:10Z", pcpDt = "2020-09-04T23:50Z",
+      passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
+    val flight0609 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-06T12:00Z", pcpDt = "2020-09-06T12:00Z", passengerSources =
+      Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
 
     val earlyOnTimeAndLateFlights = (_: Option[MillisSinceEpoch]) => (utcDate: UtcDate) => (_: Terminal) =>
       Future(Map(
