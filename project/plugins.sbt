@@ -1,5 +1,12 @@
 // repository for Typesafe plugins
 resolvers += "Typesafe Releases" at "https://repo.typesafe.com/typesafe/ivy-releases/"
+val pluginSbtScoverageVersion = sys.props.getOrElse(
+  "plugin.sbtscoverage.version", "2.0.7"
+)
+ThisBuild / libraryDependencySchemes += "org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always
+ThisBuild / evictionErrorLevel := Level.Info
+
+addSbtPlugin("org.scoverage" % "sbt-scoverage" % pluginSbtScoverageVersion)
 
 addSbtPlugin("org.portable-scala" % "sbt-scalajs-crossproject" % "1.3.1")
 
@@ -11,7 +18,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-less" % "1.1.2")
 
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.9")
 
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.8.19")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.9.0-M4")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.4")
 

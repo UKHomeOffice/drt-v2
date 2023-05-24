@@ -105,7 +105,7 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact,
     "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
-    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
+    "uk.gov.homeoffice" %%% "drt-lib" % drtLib excludeAll("org.apache.spark", "spark-mllib"),
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
 
     "io.suzaku" %%% "diode" % diode,
@@ -138,7 +138,7 @@ object Settings {
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
-    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
+    "uk.gov.homeoffice" %%% "drt-lib" % drtLib excludeAll("org.apache.spark", "spark-mllib"),
     "io.suzaku" %%% "boopickle" % booPickle
   ))
 
@@ -174,7 +174,7 @@ object Settings {
     "com.typesafe.akka" %% "akka-http" % akkaHttp,
     "com.typesafe.akka" %% "akka-http-caching" % akkaHttp,
     "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
+    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp excludeAll("org.scala-lang.modules", "scala-xml"),
     "com.typesafe.akka" %% "akka-stream" % akka,
 
     "com.typesafe.slick" %% "slick" % slick,
@@ -208,10 +208,9 @@ object Settings {
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
-    "uk.gov.homeoffice" %% "drt-lib" % drtLib,
-    "uk.gov.homeoffice" %% "bluebus" % bluebus,
-
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE"
+    "uk.gov.homeoffice" %% "drt-lib" % drtLib excludeAll("org.apache.spark", "spark-mllib"),
+    "uk.gov.homeoffice" %% "bluebus" % bluebus excludeAll("org.scala-lang.modules", "scala-xml"),
+    "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE",
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
