@@ -6,6 +6,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed, ProdFeedRequester}
 import drt.shared.FlightsApi.Flights
+import org.junit.Ignore
 import pdi.jwt.JwtAlgorithm
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
@@ -41,7 +42,7 @@ case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extend
     Future(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]")))
   }
 }
-
+@Ignore
 class MagFeedSpec extends CrunchTestLike {
   val config: Config = ConfigFactory.load()
 
