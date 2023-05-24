@@ -138,7 +138,7 @@ object Settings {
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
-    "uk.gov.homeoffice" %%% "drt-lib" % drtLib excludeAll("org.apache.spark", "spark-mllib"),
+    "uk.gov.homeoffice" %%% "drt-lib" % drtLib excludeAll("org.scala-lang.modules", "scala-xml"),
     "io.suzaku" %%% "boopickle" % booPickle
   ))
 
@@ -208,7 +208,7 @@ object Settings {
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
-    "uk.gov.homeoffice" %% "drt-lib" % drtLib excludeAll("org.apache.spark", "spark-mllib"),
+    "uk.gov.homeoffice" %% "drt-lib" % drtLib excludeAll("org.scala-lang.modules", "scala-xml"),
     "uk.gov.homeoffice" %% "bluebus" % bluebus excludeAll("org.scala-lang.modules", "scala-xml"),
     "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE",
   ))
