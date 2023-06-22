@@ -1,62 +1,58 @@
 package drt.client.components
 
-import diode.UseValueEq
-import drt.client.services.SPACircuit
+import drt.client.SPAMain
+import drt.client.components.styles.WithScalaCssImplicits
+import drt.client.modules.GoogleEventTracker
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.html_<^.{<, VdomTagOf, ^, _}
-import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
+import uk.gov.homeoffice.drt.training.TrainingData
 
-object TrainingModalComponent {
-  case class State(showDialogue: Boolean, count: Int) extends UseValueEq
-
-  case class Props()
+import scala.language.postfixOps
 
 
-  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ContactUs")
-    .initialStateFromProps(p => State(showDialogue = false, count = 0))
-    .renderS((scope, state) => {
-      //      val contactDetailsRCP = SPACircuit.connect(m => ContactModel(m.contactDetails, m.oohStatus))
-      //      <.div(
-      //        contactDetailsRCP(contactDetailsMP => {
-      //          <.div(
-      //            contactDetailsMP().contactDetails.renderReady(details => {
-      //              contactDetailsMP().oohStatus.renderReady(oohStatus => {
+object TrainingModalComponent extends WithScalaCssImplicits {
+  case class State(currentStep: Double)
 
+  case class Props(showDialog: Boolean, closeDialog: ReactEvent => Callback, trainingDataTemplates: Seq[TrainingData])
 
-      def newFeatureDialog =
-        MuiDialog(open = state.showDialogue, maxWidth = "lg")(
-          MuiDialogTitle()(
-            <.h4(s"New Features")
-          ),
+  class Backend($: BackendScope[Props, State]) {
+
+    def render(props: Props, state: State) = {
+      val carouselItems =
+        MuiDialog(open = props.showDialog, maxWidth = "lg", fullWidth= true)(
+          MuiDialogTitle()(<.p(s"New Features")),
           MuiDialogContent()(
-            MuiGrid(container = true, spacing = 2)(
-              MuiGrid(item = true, xs = 8)(
-                <.div(^.className := "training-grid-item" ,
-                <.video(VdomAttr("src") := "/assets/feature1.webm", VdomAttr("autoPlay") := true,
-                  VdomAttr("controls") := true, VdomAttr("width") := "100%", VdomAttr("height") := "100%"))),
-                MuiGrid(item = true, xs = 4)(
-                  <.div(^.className := "training-grid-item" ,"This is a test video")
+              Flickity()(props.trainingDataTemplates.map { data =>
+              MuiGrid(container = true, spacing = 2)(
+                MuiGrid(item = true, xs = 12)(
+                  <.div(^.className := "training-grid-item", <.p(data.title))),
+                  MuiGrid(item = true, xs = 8)(
+                    <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"training-video/${data.fileName.getOrElse("")}"), VdomAttr("autoPlay") := false,
+                      VdomAttr("controls") := true, VdomAttr("width") := "100%", VdomAttr("height") := "100%")),
+                  MuiGrid(item = true, xs = 4)(
+                    <.div(^.className := "training-grid-item", data.markdownContent))
                 )
-            ),
-            MuiDialogActions()(
-              MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Cancel", ^.onClick --> scope.modState(_.copy(showDialogue = false))),
-            )
-          )
+            })
+          ),
+          MuiDialogActions()(
+            MuiButton(color = Color.primary, variant = "outlined", size = "medium")
+            ("Cancel", ^.onClick ==> props.closeDialog))
         )
+      <.div(^.className := "training-modal", carouselItems)
+    }
+  }
 
-      <.div(^.className := "contact-us-link",<.a(^.onClick --> scope.modState(_.copy(showDialogue = true, count = state.count + 1)), "New Features"), newFeatureDialog)
-
-      //              })
-      //            })
-      //          )
-      //        })
-      //      )
-
-    })
+  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("NavBar")
+    .initialStateFromProps(_ => State(1))
+    .renderBackend[Backend]
+    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("training-data")))
     .build
 
-  def apply(): VdomElement = component(Props())
+
+  def apply(showDialog: Boolean, closeDialog: ReactEvent => Callback,
+    trainingDataTemplates: Seq[TrainingData]): VdomElement = component(Props(showDialog, closeDialog, trainingDataTemplates))
 
 }

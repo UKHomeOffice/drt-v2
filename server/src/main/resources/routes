@@ -103,7 +103,11 @@ DELETE        /staff-movements/:uuid                                            
 # Feed import
 POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
-
+# Training
+ +nocsrf
+GET           /training-video/:filename                                               controllers.S3FileController.getFile(filename:String)
+ +nocsrf
+GET           /training-data                                                          controllers.Application.getTrainingData()
 # Test related
  +nocsrf
 POST          /test/arrival                                                           test.controllers.TestController.addArrival

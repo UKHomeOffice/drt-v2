@@ -9,7 +9,7 @@ import drt.client.components.{ContactPage, ForecastFileUploadPage, GlobalStyles,
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.GetFeedSourceStatuses
+import drt.client.services.handlers.{GetFeedSourceStatuses, GetTrainingDataTemplates}
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._

@@ -89,7 +89,13 @@ object Settings {
     "@mui/system" -> "5.11.16",
     "@mui/material" -> "5.11.16",
     "@mui/icons-material" -> "5.11.16",
-    "@mui/lab" -> "5.0.0-alpha.119"
+    "@mui/lab" -> "5.0.0-alpha.119",
+    "aws-sdk" -> "2.1397.0",
+    "react-responsive-carousel" -> "3.2.12",
+    "react-material-ui-carousel" -> "3.4.2",
+//    "react-swipeable-views"->"0.14.0",
+    "flickity" -> "2.3.0",
+    "react-flickity-component" -> "4.0.6",
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -99,12 +105,12 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
     "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
-
+//    "org.scala-lang.modules" %%% "scala-xml" % "2.1.0" force(),
     "io.suzaku" %%% "diode" % diode,
     "io.suzaku" %%% "diode-react" % diode,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0",
-
+//    "software.amazon.awssdk" %%% "aws-sdk-js" % "2.1397.0",
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "com.lihaoyi" %% "pprint" % pprint,
@@ -113,10 +119,13 @@ object Settings {
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
-
+//    "com.github.karasiq" %%% "scalajs-bootstrap" % "2.4.0",
+//    "com.github.karasiq" % "scalajs-bootstrap-v4_sjs0.6_2.12" % "2.4.2",
+//    "com.github.karasiq" %%% "scalajs-bootstrap-v4" % "2.4.2",
     "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
     "com.dedipresta" %%% "scala-crypto" % "1.0.0",
     "io.lemonlabs" %%% "scala-uri" % "4.0.3",
+//    "org.webjars.npm" % "react-responsive-carousel" % "3.1.49",
 
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
@@ -182,9 +191,11 @@ object Settings {
     "org.codehaus.janino" % "janino" % janinoVersion,
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
-    "org.apache.poi" % "poi" % poi, // exclude("org.slf4j"),
+    "org.apache.poi" % "poi" % poi,
     "org.apache.poi" % "poi-ooxml" % poi,
     "org.codehaus.janino" % "janino" % "3.0.16",
+    "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
+    "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,
@@ -195,6 +206,7 @@ object Settings {
 
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
+    "org.webjars.npm" % "react-responsive-carousel" % "3.1.49",
 
     "io.netty" % "netty-all" % "4.1.94.Final",
 
@@ -204,6 +216,9 @@ object Settings {
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
     "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE"
+    "software.amazon.awssdk" % "s3" % "2.16.96",
+
+    "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

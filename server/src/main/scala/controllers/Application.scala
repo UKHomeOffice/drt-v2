@@ -15,12 +15,13 @@ import drt.shared._
 import drt.users.KeyCloakClient
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
+import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
-import slickdb.UserTableLike
+import slickdb.{TrainingData, UserTableLike}
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports
@@ -180,6 +181,14 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
+  def getTrainingMediaFile(fileName:String) = {
+    Ok("Intial response")
+  }
+
+  def getTrainingData(): Action[AnyContent] = Action.async { _ =>
+    val trainingDataJson: Future[String] = TrainingData.getTrainingData()
+    trainingDataJson.map(Ok(_))
+  }
 
   def autowireApi(path: String): Action[RawBuffer] = authByRole(BorderForceStaff) {
     Action.async(parse.raw) {
