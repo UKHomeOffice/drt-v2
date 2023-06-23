@@ -54,6 +54,8 @@ trait DrtParameters {
 
   //ignore ACL flight removals X seconds after the end of the day.
   val maybeRemovalCutOffSeconds: Option[FiniteDuration]
+
+  val usePassengerPredictions: Boolean
 }
 
 case class ProdDrtParameters(config: Configuration) extends DrtParameters {
@@ -110,4 +112,5 @@ case class ProdDrtParameters(config: Configuration) extends DrtParameters {
   //ignore ACL flight removals X seconds after the end of the day.
   override val maybeRemovalCutOffSeconds: Option[FiniteDuration] = config.getOptional[Int]("acl.removal-cutoff-seconds").map(s => s.seconds)
 
+  override val usePassengerPredictions: Boolean = config.get[Boolean]("feature-flags.use-passenger-predictions")
 }
