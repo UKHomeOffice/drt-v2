@@ -61,10 +61,8 @@ object FlightComponents {
         <.p(s"${feedSource.displayName} - ${pax.actual.map(_.toString).getOrElse("")}")
     }
 
-    val apiPax = List(
-      flight.paxFromApi.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
-    )
-    <.span((paxSources ++ apiPax).toVdomArray)
+    val maxPax = <.p(s"Seats: ${flight.apiFlight.MaxPax.getOrElse("-")}")
+    <.span((paxSources :+ maxPax).toVdomArray)
   }
 
   def paxTransferComponent(flight: Arrival): VdomTagOf[Div] = {
