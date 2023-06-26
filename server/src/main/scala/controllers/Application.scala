@@ -158,8 +158,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
-  val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl))
-
   val log: LoggingAdapter = system.log
 
   log.info(s"Starting DRTv2 build ${BuildInfo.version}")
