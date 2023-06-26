@@ -26,7 +26,8 @@ trait WithAuth {
         "userName" -> user.userName,
         "id" -> user.id,
         "email" -> user.email,
-        "roles" -> user.roles.map(_.name)
+        "roles" -> user.roles.map(_.name),
+        "viewedFeatureContent" -> user.viewedFeatureContent
       )
     }
 

@@ -8,7 +8,7 @@ import drt.client.components.TerminalDesksAndQueues.Backend
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.{CheckFeed, CloseTrainingDialog, GetTrainingDataTemplates, SetTrainingDataTemplates, SetTrainingDataTemplatesEmpty, TrainingDialog}
-import io.kinoplan.scalajs.react.material.ui.core.MuiSnackbar
+import io.kinoplan.scalajs.react.material.ui.core.{MuiBadge, MuiSnackbar}
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.{BaseUrl, RouterCtl}
@@ -19,10 +19,13 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.training.TrainingData
+
+import scala.scalajs.js
+
 case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]],
-                      snackbarMessage: Pot[String],
-                      trainingDataTemplates: Pot[Seq[TrainingData]],
-                      toggleDialog: Pot[Boolean])
+  snackbarMessage: Pot[String],
+  trainingDataTemplates: Pot[Seq[TrainingData]],
+  toggleDialog: Pot[Boolean])
 
 object Navbar {
   case class Props(ctl: RouterCtl[Loc],
@@ -30,7 +33,7 @@ object Navbar {
     loggedInUser: LoggedInUser,
     airportConfig: AirportConfig)
 
-  case class State(showDropDown: Boolean)
+  case class State(showDropDown: Boolean, toViewsFeatures:Seq[String])
 
   def handleClose: (ReactEvent, String) => Callback = (_, _) => {
     Callback(SPACircuit.dispatch(SetSnackbarMessage(Empty)))
@@ -39,6 +42,7 @@ object Navbar {
 
   class Backend($: BackendScope[Props, State]) {
     val rcp: ReactConnectProxy[NavbarModel] = SPACircuit.connect(m => NavbarModel(m.feedStatuses, m.snackbarMessage, m.trainingDataTemplates, m.toggleDialog))
+
     def handleOpenDialog(e: ReactEvent): Callback = {
       println("here....in open dialog")
       e.preventDefaultCB >>
@@ -50,6 +54,15 @@ object Navbar {
       println("here....in close dialog")
       val closeDialog = Callback(SPACircuit.dispatch(CloseTrainingDialog()))
       e.preventDefaultCB >> closeDialog
+    }
+
+    def handleBadgeCount(viewedFeatureCount: Seq[String], templateFeatureIds: Seq[String]) : Seq[String] = {
+      import scala.scalajs.js.JSConverters._
+      val viewedFeatureCountS: Seq[String] = viewedFeatureCount.map(_.replaceAll("\"", ""))
+      val count: js.Array[String] = templateFeatureIds.toJSArray.diff(viewedFeatureCountS)
+      val b: Seq[String] = count.toSeq
+      $.setState(State(showDropDown = false, toViewsFeatures = b))
+      b
     }
 
     def render(props: Props, state: State) = {
@@ -94,11 +107,20 @@ object Navbar {
                 <.div(^.className := "main-menu-items",
                   <.div(<.a(^.onClick ==> {
                     handleOpenDialog
-                  }, "New Feature")),
+                  }, MuiBadge(badgeContent = {
+                    val a = handleBadgeCount(props.loggedInUser.viewedFeatureContent,
+                      navbarModel.trainingDataTemplates.getOrElse(Seq()).map(_.id.map(_.toString).getOrElse("0")))
+                    <.span(a.length)
+                  }, showZero = true, color = "secondary")("New Feature"))),
                   <.div(
                     navbarModel.trainingDataTemplates.renderReady { trainingDataTemplates =>
                       navbarModel.toggleDialog.render { toggleDialog =>
-                        TrainingModalComponent(toggleDialog, handleDialogClose, trainingDataTemplates)
+                        TrainingModalComponent(toggleDialog,
+                          handleDialogClose,
+                          trainingDataTemplates.filter{ a =>
+                           val b: Seq[String] = handleBadgeCount(props.loggedInUser.viewedFeatureContent,
+                              navbarModel.trainingDataTemplates.getOrElse(Seq()).map(_.id.map(_.toString).getOrElse("0")))
+                            b.contains(a.id.map(_.toString).getOrElse(""))})
                       }
                     }
                   ),
@@ -114,7 +136,7 @@ object Navbar {
   }
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("NavBar")
-    .initialState(if (dom.window.innerWidth > 768) State(true) else State(false))
+    .initialState(if (dom.window.innerWidth > 768) State(true,Seq.empty) else State(false,Seq.empty))
     .renderBackend[Backend]
     .build
 

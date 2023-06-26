@@ -102,9 +102,10 @@ trait UserRoleProviderLike {
       userName = headers.get("X-Auth-Username").getOrElse("Unknown"),
       id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
       email = headers.get("X-Auth-Email").getOrElse("Unknown"),
-      roles = roles
+      roles = roles,
+      viewedFeatureContent = headers.get("X-Auth-ViewedFeatureContent").getOrElse("Unknown").split(","),
     )
-    userService.insertOrUpdateUser(loggedInUser, None, None)
+    userService.insertOrUpdateUser(loggedInUser, None, None,None)
 
     loggedInUser
   }

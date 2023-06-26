@@ -7,26 +7,27 @@ import java.sql.Timestamp
 import java.util.Date
 import scala.concurrent.{ExecutionContext, Future}
 
-
 case class UserRow(
                     id: String,
                     username: String,
                     email: String,
                     latest_login: java.sql.Timestamp,
                     inactive_email_sent: Option[java.sql.Timestamp],
-                    revoked_access: Option[java.sql.Timestamp])
+                    revoked_access: Option[java.sql.Timestamp],
+                    viewed_feature_content: Option[String])
 
 trait UserTableLike {
 
   def selectAll: Future[Seq[UserRow]]
+  def selectUser(email:String)(implicit ec: ExecutionContext): Future[Option[UserRow]]
 
   def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int]
 
   def insertOrUpdateUser(user: LoggedInUser,
                          inactive_email_sent: Option[java.sql.Timestamp],
-                         revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int]
+                         revoked_access: Option[java.sql.Timestamp],
+                         viewed_feature_content:Option[String])(implicit ec: ExecutionContext): Future[Int]
 }
-
 
 case class UserTable(tables: Tables) extends UserTableLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -39,7 +40,9 @@ case class UserTable(tables: Tables) extends UserTableLike {
   def selectAll: Future[Seq[UserRow]] = {
     tables.run(userTableQuery.result).mapTo[Seq[UserRow]]
   }
-
+  def selectUser(email:String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = {
+    tables.run(userTableQuery.filter(_.email === email).result).mapTo[Seq[UserRow]].map(_.headOption)
+  }
   def removeUser(id: String)(implicit ec: ExecutionContext): Future[Int] = {
     tables.run(userTableQuery.filter(matchId(id)).delete)
       .recover {
@@ -49,8 +52,12 @@ case class UserTable(tables: Tables) extends UserTableLike {
       }
   }
 
-  def insertOrUpdateUser(user: LoggedInUser, inactive_email_sent: Option[java.sql.Timestamp], revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int] = {
-    tables.run(userTableQuery.insertOrUpdate(UserRow(user.id, user.userName, user.email, new Timestamp(new Date().getTime), inactive_email_sent, revoked_access)))
+  def insertOrUpdateUser(user: LoggedInUser,
+    inactive_email_sent: Option[java.sql.Timestamp],
+    revoked_access: Option[java.sql.Timestamp],
+    viewed_feature_content:Option[String])(implicit ec: ExecutionContext): Future[Int] = {
+    tables.run(userTableQuery.insertOrUpdate(
+      UserRow(user.id, user.userName, user.email, new Timestamp(new Date().getTime), inactive_email_sent, revoked_access, viewed_feature_content)))
       .recover {
         case throwable =>
           log.error(s"insertOrUpdate failed", throwable)

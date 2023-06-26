@@ -151,7 +151,7 @@ trait Tables {
   }
 
   class User(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
-    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access) <> (UserRow.tupled, UserRow.unapply)
+    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access,viewed_feature_content) <> (UserRow.tupled, UserRow.unapply)
 
     val id: Rep[String] = column[String]("id")
     val userName: Rep[String] = column[String]("username")
@@ -159,10 +159,14 @@ trait Tables {
     val latest_login: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("latest_login")
     val inactive_email_sent: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("inactive_email_sent")
     val revoked_access: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("revoked_access")
+    val viewed_feature_content: Rep[Option[String]] = column[Option[String]]("viewed_feature_content")
+
     val pk = primaryKey("user_pkey", (id))
     val index1 = index("username", userName)
     val index2 = index("email", email)
     val index3 = index("latest_login", latest_login)
+    val index4 = index("viewed_feature_content", viewed_feature_content)
+
   }
 
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */

@@ -22,25 +22,27 @@ object TrainingModalComponent extends WithScalaCssImplicits {
 
     def render(props: Props, state: State) = {
       val carouselItems =
-        MuiDialog(open = props.showDialog, maxWidth = "lg", fullWidth= true)(
-          MuiDialogTitle()(<.p(s"New Features")),
-          MuiDialogContent()(
+        MuiDialog(open = props.showDialog, maxWidth = "lg", fullWidth = true)(
+          <.div(^.className := "training-modal-content",
+            MuiDialogTitle()(<.h3(s"New Features available for DRT")),
+            MuiDialogContent()(
               Flickity()(props.trainingDataTemplates.map { data =>
-              MuiGrid(container = true, spacing = 2)(
-                MuiGrid(item = true, xs = 12)(
-                  <.div(^.className := "training-grid-item", <.p(data.title))),
+                MuiGrid(container = true, spacing = 2)(
                   MuiGrid(item = true, xs = 8)(
-                    <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"training-video/${data.fileName.getOrElse("")}"), VdomAttr("autoPlay") := false,
-                      VdomAttr("controls") := true, VdomAttr("width") := "100%", VdomAttr("height") := "100%")),
+                    <.div(^.className := "training-grid-item",
+                      <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"training-video/${data.fileName.getOrElse("")}"), VdomAttr("autoPlay") := false,
+                        VdomAttr("controls") := true, VdomAttr("width") := "100%", VdomAttr("height") := "100%"))),
                   MuiGrid(item = true, xs = 4)(
-                    <.div(^.className := "training-grid-item", data.markdownContent))
+                    <.div(^.className := "training-grid-item",
+                      <.div(<.h4(data.title)),
+                      <.div(data.markdownContent)))
                 )
-            })
-          ),
-          MuiDialogActions()(
-            MuiButton(color = Color.primary, variant = "outlined", size = "medium")
-            ("Cancel", ^.onClick ==> props.closeDialog))
-        )
+              })
+            ),
+            MuiDialogActions()(
+              MuiButton(color = Color.primary, variant = "outlined", size = "small")
+              ("Cancel", ^.onClick ==> props.closeDialog))
+          ))
       <.div(^.className := "training-modal", carouselItems)
     }
   }

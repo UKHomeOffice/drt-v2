@@ -23,13 +23,18 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
           |  userName: ${user.userName},
           |  id: ${user.id},
           |  email: ${user.email},
-          |  roles: ${write(user.roles.map(_.name))}
+          |  roles: ${write(user.roles.map(_.name))},
+          |  viewedFeatureContent: ${write(user.viewedFeatureContent)}
           | }
       """.stripMargin
 
     }, (s: Value) => {
-      LoggedInUser(s("userName").toString(), s("id").toString(), s("email").toString(), s("roles").arr
-        .map(r => Roles.parse(r.value.toString)).collect { case Some(r) => r }.toSet)
+      LoggedInUser(s("userName").toString(),
+        s("id").toString(),
+        s("email").toString(),
+        s("roles").arr.map(r => Roles.parse(r.value.toString)).collect { case Some(r) => r }.toSet,
+        s("viewedFeatureContent").arr.map(_.toString).toSeq
+      )
     })
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
