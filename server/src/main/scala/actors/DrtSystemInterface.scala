@@ -341,7 +341,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     (requestQueueActor, deskRecsKillSwitch)
   }
 
-  private def modelNamesForPort: Seq[String] = {
+  private def enabledPredictionModelNames: Seq[String] = {
     val forAll = Seq(
       OffScheduleModelAndFeatures.targetName,
       ToChoxModelAndFeatures.targetName,
@@ -373,7 +373,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
           TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
           PredictionModelActor.Terminal(a.Terminal.toString),
         ),
-        Flight().getModels(modelNamesForPort),
+        Flight().getModels(enabledPredictionModelNames),
         Map(
           OffScheduleModelAndFeatures.targetName -> 45,
           ToChoxModelAndFeatures.targetName -> 20,

@@ -185,8 +185,6 @@ object Settings {
     "org.apache.poi" % "poi" % poi,
     "org.apache.poi" % "poi-ooxml" % poi,
     "org.codehaus.janino" % "janino" % "3.0.16",
-//    "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
-//    "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,

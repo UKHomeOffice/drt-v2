@@ -34,9 +34,9 @@ case class LGWFeed(lGWAzureClient: LGWAzureClient)(val system: ActorSystem) {
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
   def requestArrivals(): Future[List[Arrival]] = lGWAzureClient.receive.map(xmlString => {
-    if (xmlString.trim().nonEmpty) {
+    if (xmlString.trim().nonEmpty)
       ResponseToArrivals(xmlString).getArrivals
-    } else
+    else
       List()
   })
 
