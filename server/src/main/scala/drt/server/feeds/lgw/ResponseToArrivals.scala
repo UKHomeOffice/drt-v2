@@ -17,9 +17,8 @@ case class ResponseToArrivals(data: String) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def getArrivals: List[Arrival] = Try {
-    scala.xml.Utility.trimProper(
-      scala.xml.XML.loadString(data)
-    )
+    scala.xml.Utility
+      .trimProper(scala.xml.XML.loadString(data))
       .map(nodeToArrival)
 
   } match {
