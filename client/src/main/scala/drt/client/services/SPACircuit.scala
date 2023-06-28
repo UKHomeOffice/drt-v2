@@ -14,7 +14,7 @@ import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -158,6 +158,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      maybeTimeMachineDate: Option[SDateLike] = None,
                      flaggedNationalities: Set[Country] = Set(),
                      flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary] = Map(),
+                     paxFeedSourceOrder: List[FeedSource] = List(),
                     )
 
 object PollDelay {

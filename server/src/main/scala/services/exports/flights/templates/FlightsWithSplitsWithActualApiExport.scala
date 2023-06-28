@@ -5,6 +5,7 @@ import drt.shared.api.{AgeRange, FlightManifestSummary, UnknownAge}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
+import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -51,6 +52,6 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
 
 }
 
-case class FlightsWithSplitsWithActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal) extends FlightsWithSplitsWithActualApiExport {
+case class FlightsWithSplitsWithActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal, paxFeedSourceOrder: List[FeedSource]) extends FlightsWithSplitsWithActualApiExport {
   override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = standardFilter
 }

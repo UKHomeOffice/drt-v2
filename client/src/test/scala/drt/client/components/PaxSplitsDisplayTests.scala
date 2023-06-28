@@ -4,13 +4,15 @@ import drt.shared.splits.ApiSplitsToSplitRatio
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage, Ratio}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.ports._
 import utest.{TestSuite, _}
 
 
 object PaxSplitsDisplayTests extends TestSuite {
 
   import drt.shared.splits.ApiSplitsToSplitRatio._
+
+  val paxFeedSourceOrder = List(ApiFeedSource, LiveFeedSource)
 
   def tests = Tests {
     "When calculating the splits for each PaxType and Queue the the split should be applied as a ratio to flight pax" - {
@@ -228,7 +230,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk, 15, None, None),
             ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.FastTrack, 0.3, None, None)), Historical, None, Percentage)
 
-        val result: Option[Map[Queues.Queue, Int]] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)))
+        val result: Option[Map[Queues.Queue, Int]] = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)), paxFeedSourceOrder)
 
         val expected: Option[Map[Queues.Queue, Int]] = Option(Map(
           Queues.EeaDesk -> 69,
@@ -248,7 +250,7 @@ object PaxSplitsDisplayTests extends TestSuite {
           ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 5, None, None)),
           Historical, None, PaxNumbers)
 
-        val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)))
+        val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(ApiFlightWithSplits(flight, Set(splits)), paxFeedSourceOrder)
 
         val expected: Option[Map[Queues.Queue, Int]] = Option(Map(
           Queues.NonEeaDesk -> 75,
@@ -274,7 +276,7 @@ object PaxSplitsDisplayTests extends TestSuite {
             ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.FastTrack, 5, None, None)),
           ApiSplitsWithHistoricalEGateAndFTPercentages, None, PaxNumbers))
         )
-        val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(apiFlightWithSplits)
+        val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(apiFlightWithSplits, paxFeedSourceOrder)
 
         val expected: Option[Map[Queues.Queue, Int]] = Option(Map(
           Queues.NonEeaDesk -> 15,

@@ -132,7 +132,7 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val userService: UserTableLike = MockUserTable()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-  val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal)
+  val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder)
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
   override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor
   override val queuesRouterActor: ActorRef = minuteLookups.queueMinutesRouterActor

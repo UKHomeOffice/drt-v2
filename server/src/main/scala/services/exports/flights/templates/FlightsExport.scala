@@ -11,6 +11,7 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import services.exports.Exports
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalExportHeadings, FlightsWithSplits}
+import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
@@ -37,6 +38,8 @@ trait FlightsExport {
 
   val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean
 
+  val paxFeedSourceOrder: List[FeedSource]
+
   private def flightToCsvRow(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): String = rowValues(fws, maybeManifest).mkString(",")
 
   def millisToLocalDateTimeStringFn: MillisSinceEpoch => String =
@@ -56,7 +59,7 @@ trait FlightsExport {
     fws
       .splits
       .find(_.source == splitSource)
-      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws))
+      .map(splits => ApiSplitsToSplitRatio.flightPaxPerQueueUsingSplitsAsRatio(splits, fws, paxFeedSourceOrder))
       .getOrElse(Map())
 
   def actualAPISplitsForFlightInHeadingOrder(flight: ApiFlightWithSplits, headings: Iterable[String]): Iterable[Double] =

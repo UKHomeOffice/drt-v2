@@ -30,7 +30,9 @@ class WorkloadSpec extends CrunchTestLike {
       Map(T1 -> procTimes, T2 -> procTimes, T3 -> procTimes, T4 -> procTimes, T5 -> procTimes),
       QueueFallbacks(Map()),
       filter,
-      AirportConfigDefaults.fallbackProcessingTime)
+      AirportConfigDefaults.fallbackProcessingTime,
+      paxFeedSourceOrder,
+    )
 
   private val procTime = 1.5
 
@@ -40,10 +42,11 @@ class WorkloadSpec extends CrunchTestLike {
     val procTimes = Map(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> procTime)
     workloadCalculator(procTimes, filter)
       .flightLoadMinutes(
-        arrival.pcpRange,
+        arrival.pcpRange(paxFeedSourceOrder),
         FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))),
         redListedZimbabwe,
-        (_: Terminal) => (_: Queue, _: MillisSinceEpoch) => Open
+        (_: Terminal) => (_: Queue, _: MillisSinceEpoch) => Open,
+        paxFeedSourceOrder
       )
       .minutes.values.map(_.workLoad).sum
   }
@@ -69,10 +72,11 @@ class WorkloadSpec extends CrunchTestLike {
 
     val workloads = workloadCalculator(procTimes, FlightFilter.regular(List(T1)))
       .flightLoadMinutes(
-        arrival.pcpRange,
+        arrival.pcpRange(paxFeedSourceOrder),
         FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, splits, None))),
         RedListUpdates.empty,
-        _ => (_: Queue, _: MillisSinceEpoch) => Open
+        _ => (_: Queue, _: MillisSinceEpoch) => Open,
+        paxFeedSourceOrder
       )
 
     val startTime = SDate(workloads.minutes.keys.toList.minBy(_.minute).minute).toISOString

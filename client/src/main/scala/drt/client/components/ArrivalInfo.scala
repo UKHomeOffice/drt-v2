@@ -14,7 +14,7 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 
 object ArrivalInfo {
 
-  case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]], airportConfig: AirportConfig) extends UseValueEq
+  case class Props(arrivalSources: Pot[List[Option[FeedSourceArrival]]], airportConfig: AirportConfig, paxFeedSourceOrder: List[FeedSource]) extends UseValueEq
 
   def SourcesTable: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalSourcesTable")
     .render_P { props =>
@@ -26,7 +26,7 @@ object ArrivalInfo {
               tableHead,
               <.tbody(
                 sources.collect { case Some(sourceArrival) =>
-                  FeedSourceRow.component(FeedSourceRow.Props(sourceArrival, props.airportConfig))
+                  FeedSourceRow.component(FeedSourceRow.Props(sourceArrival, props.airportConfig, props.paxFeedSourceOrder))
                 }.toTagMod
               )))
         case Pending(_) => <.div("Waiting for sources")
@@ -65,7 +65,7 @@ object ArrivalInfo {
 
 object FeedSourceRow {
 
-  case class Props(feedSourceArrival: FeedSourceArrival, airportConfig: AirportConfig) extends UseValueEq
+  case class Props(feedSourceArrival: FeedSourceArrival, airportConfig: AirportConfig, paxFeedSourceOrder: List[FeedSource]) extends UseValueEq
 
   def feedDisplayName(isCiriumAsPortLive: Boolean, feedSource: FeedSource): String =
     if (isCiriumAsPortLive) "Live arrival"
@@ -77,8 +77,8 @@ object FeedSourceRow {
       val feedSource = props.feedSourceArrival.feedSource
       val arrival = props.feedSourceArrival.arrival
       val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
-      val paxTotal: String = arrival.bestPaxEstimate.passengers.actual.map(_.toString).getOrElse("-")
-      val paxTrans: String = arrival.bestPaxEstimate.passengers.transit.map(_.toString).getOrElse("-")
+      val paxTotal: String = arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse("-")
+      val paxTrans: String = arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.transit.map(_.toString).getOrElse("-")
       val flightFields = List[TagMod](
         <.td(feedDisplayName(isCiriumAsPortLive, feedSource)),
         <.td(arrival.flightCodeString),

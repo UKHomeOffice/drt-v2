@@ -1,11 +1,12 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
-import uk.gov.homeoffice.drt.ports.Terminals._
 import drt.shared._
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import services.AirportToCountry
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -36,11 +37,15 @@ trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
 case class LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start: SDateLike,
                                                                            end: SDateLike,
                                                                            terminal: Terminal,
-                                                                           redListUpdates: RedListUpdates)
+                                                                           redListUpdates: RedListUpdates,
+                                                                           paxFeedSourceOrder: List[FeedSource],
+                                                                          )
   extends FlightsWithSplitsWithoutActualApiExport with LHRFlightsWithSplitsExportWithDiversions
 
 case class LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start: SDateLike,
                                                                         end: SDateLike,
                                                                         terminal: Terminal,
-                                                                        redListUpdates: RedListUpdates)
+                                                                        redListUpdates: RedListUpdates,
+                                                                        paxFeedSourceOrder: List[FeedSource],
+                                                                       )
   extends FlightsWithSplitsWithActualApiExport with LHRFlightsWithSplitsExportWithDiversions

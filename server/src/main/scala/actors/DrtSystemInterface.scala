@@ -154,6 +154,23 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] = (date: LocalDate) =>
     paxForDay(date, None)
 
+  val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    MlFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  ) else List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  )
+
   private def paxForDay(date: LocalDate, maybeAtTime: Option[SDateLike]): Future[Map[Terminal, Double]] = {
     val start = SDate(date)
     val end = start.addDays(1).addMinutes(-1)
@@ -176,7 +193,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
               .groupBy(fws => fws.apiFlight.Terminal)
               .map {
                 case (terminal, flights) =>
-                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate.getOrElse(0)).sum
+                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
                   (terminal, paxNos.toDouble)
               }
         }.runWith(Sink.seq)
@@ -216,7 +233,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), egatesProvider)
+  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), egatesProvider, paxFeedSourceOrder)
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] =
     terminal => egatesProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))

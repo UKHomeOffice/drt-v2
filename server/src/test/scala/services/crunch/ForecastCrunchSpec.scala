@@ -1,6 +1,5 @@
 package services.crunch
 
-import akka.actor.{Actor, Props}
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
@@ -23,7 +22,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
   sequential
   isolated
   stopOnFail
-
 
   "Given a live flight and a base flight arriving 3 days later " +
     "When I ask for pax loads " +
@@ -356,7 +354,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case PortState(flightsWithSplits, _, _) =>
         if (flightsWithSplits.nonEmpty) {
-          val actPax = flightsWithSplits.values.head.apiFlight.bestPaxEstimate.passengers.actual
+          val actPax = flightsWithSplits.values.head.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual
           println(s"actPax: $actPax, expectedActPax: $expectedActPax")
           actPax == expectedActPax
         } else false

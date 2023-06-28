@@ -21,7 +21,8 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
-case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: ExecutionContext) {
+case class ArrivalFeedExport(paxFeedSourceOrder: List[FeedSource])
+                            (implicit system: ActorSystem, executionContext: ExecutionContext) {
 
   val lineEnding = "\n"
 
@@ -75,7 +76,8 @@ case class ArrivalFeedExport()(implicit system: ActorSystem, executionContext: E
         ArrivalToCsv.arrivalWithTransferToCsvFields(
           a,
           Exports.millisToLocalIsoDateOnly,
-          Exports.millisToLocalDateTimeString
+          Exports.millisToLocalDateTimeString,
+          paxFeedSourceOrder,
         )
       )
     csvData

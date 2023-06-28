@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
-import diode.data.{Pending, Pot, Ready}
+import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
@@ -14,26 +14,23 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
-import drt.shared.api.{FlightManifestSummary, WalkTimes}
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes, RedList}
+import drt.shared.api.WalkTimes
+import drt.shared.redlist.RedList
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiCircularProgress}
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.component.ScalaFn
-import japgolly.scalajs.react.extra.ReusabilityOverlay
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Div
-import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -55,6 +52,7 @@ object TerminalContentComponent {
                    redListPorts: Pot[HashSet[PortCode]],
                    redListUpdates: Pot[RedListUpdates],
                    walkTimes: Pot[WalkTimes],
+                   paxFeedSourceOrder: List[FeedSource],
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -210,6 +208,8 @@ object TerminalContentComponent {
                       walkTimes = walkTimes,
                       viewStart = viewStart,
                       viewEnd = viewEnd,
+                      showFlagger = true,
+                      paxFeedSourceOrder = props.paxFeedSourceOrder,
                     )
                   )
                 }

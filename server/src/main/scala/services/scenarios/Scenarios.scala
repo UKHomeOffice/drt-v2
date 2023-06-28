@@ -21,7 +21,7 @@ import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWait
 import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDate
@@ -43,7 +43,9 @@ object Scenarios {
                        flightsActor: ActorRef,
                        portStateActor: ActorRef,
                        redListUpdatesProvider: () => Future[RedListUpdates],
-                       egateBanksProvider: () => Future[PortEgateBanksUpdates])
+                       egateBanksProvider: () => Future[PortEgateBanksUpdates],
+                       paxFeedSourceOrder: List[FeedSource],
+                      )
                       (implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
 
     implicit val ec: ExecutionContextExecutor = system.dispatcher
@@ -54,7 +56,8 @@ object Scenarios {
         simulationAirportConfig,
         OptimiserWithFlexibleProcessors.crunchWholePax,
         FlightFilter.forPortConfig(simulationAirportConfig),
-        egateBanksProvider
+        egateBanksProvider,
+        paxFeedSourceOrder,
       )
 
     val terminalEgatesProvider = (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))

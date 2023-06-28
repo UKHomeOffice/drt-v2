@@ -117,19 +117,19 @@ trait WithFlightsExport {
   private val exportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
     (user, _, _) =>
       (start, end, terminal) =>
-        if (user.hasRole(ApiView)) FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
-        else FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
+        if (user.hasRole(ApiView)) FlightsWithSplitsWithActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
+        else FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
 
   private val redListDiversionsExportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
     (user, portCode, redListUpdates) =>
       (start, end, terminal) =>
         (user.hasRole(ApiView), portCode) match {
-          case (true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates)
-          case (false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates)
-          case (true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start, end, terminal)
-          case (false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start, end, terminal)
-          case (true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal)
-          case (false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal)
+          case (true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates, ctrl.paxFeedSourceOrder)
+          case (false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates, ctrl.paxFeedSourceOrder)
+          case (true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start, end, terminal, ctrl.paxFeedSourceOrder)
+          case (false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start, end, terminal, ctrl.paxFeedSourceOrder)
+          case (true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
+          case (false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
         }
 
   def exportArrivalsFromFeed(terminalString: String,
@@ -148,7 +148,7 @@ trait WithFlightsExport {
     Action(FeedSource(feedSourceString) match {
       case Some(fs) =>
         val persistenceId = feedSourceToPersistenceId(fs)
-        val arrivalsExport = ArrivalFeedExport()
+        val arrivalsExport = ArrivalFeedExport(ctrl.paxFeedSourceOrder)
         val startDate = SDate(startPit)
         val numberOfDays = startDate.getLocalLastMidnight.daysBetweenInclusive(SDate(endPit))
 

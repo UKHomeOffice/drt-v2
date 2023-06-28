@@ -3,6 +3,7 @@ package services.simulations
 import controllers.ArrivalGenerator
 import drt.shared._
 import org.specs2.mutable.Specification
+import services.crunch.TestDefaults
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Passengers}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
@@ -10,6 +11,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.LocalDate
 
 class SimulationParamsSpec extends Specification {
+  val paxFeedSourceOrder = TestDefaults.paxFeedSourceOrder
 
   val testConfig: AirportConfig = DrtPortConfigs.confByPort(PortCode("TEST"))
 
@@ -124,7 +126,7 @@ class SimulationParamsSpec extends Specification {
 
     val result = weightingOfOne.applyPassengerWeighting(flights)
 
-    result.flights.values.head.apiFlight.bestPcpPaxEstimate === flightWithSplits.apiFlight.bestPcpPaxEstimate
+    result.flights.values.head.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder) === flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder)
   }
 
   "Given I am applying a passenger weighting to a flight, it should have the ScenarioSimulationSource added to it" >> {
@@ -148,7 +150,7 @@ class SimulationParamsSpec extends Specification {
     val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(passengerSources = Map(ScenarioSimulationSource->Passengers(Option(200),Option(100)))),Set())
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 
-    result.flights.values.head.apiFlight.bestPcpPaxEstimate === flightWithSplits.apiFlight.bestPcpPaxEstimate
+    result.flights.values.head.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder) === flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder)
   }
 
 }
