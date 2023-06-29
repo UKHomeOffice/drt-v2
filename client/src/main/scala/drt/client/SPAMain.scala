@@ -209,6 +209,7 @@ object SPAMain {
       GetUserHasPortAccess,
       GetLoggedInStatus,
       GetAirportConfig,
+      GetPaxFeedSourceOrder,
       UpdateMinuteTicker,
       GetFeedSourceStatuses(),
       GetAlerts(0L),
