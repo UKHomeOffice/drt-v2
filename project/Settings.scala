@@ -50,7 +50,7 @@ object Settings {
     val poi = "5.2.3"
     val pprint = "0.5.9"
     val akkaPersistenceJdbc = "5.2.0"
-    val bluebus = "v89"
+    val bluebus = "v92"
     val postgres = "42.6.0"
     val sshJ = "0.24.0"
     val jodaTime = "2.12.5"
