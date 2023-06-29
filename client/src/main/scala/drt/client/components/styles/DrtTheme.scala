@@ -8,7 +8,8 @@ import scalacss.internal.mutable.StyleSheet
 
 object DrtTheme extends StyleSheet.Inline with ScalaCssReactImplicits {
   private val typographyOptions: TypographyOptions = TypographyOptions(
-    fontSize = 20,
+    fontSize = 16,
+    htmlFontSize = 10,
     button = TypographyStyleOptions(textTransform = "")
   )
 
