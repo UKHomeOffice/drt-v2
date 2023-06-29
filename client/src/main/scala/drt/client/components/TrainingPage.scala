@@ -3,12 +3,14 @@ package drt.client.components
 import drt.client.SPAMain
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.DrtApi
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
 import uk.gov.homeoffice.drt.training.TrainingData
+import upickle.default.write
 
 import scala.language.postfixOps
 
@@ -20,28 +22,41 @@ object TrainingModalComponent extends WithScalaCssImplicits {
 
   class Backend($: BackendScope[Props, State]) {
 
+    def handleOnPlayVideo(filename:String)(e: ReactEvent): Callback = {
+       {
+        Callback(DrtApi.post(s"viewed-video/$filename", write("")))
+      }
+    }
     def render(props: Props, state: State) = {
       val carouselItems =
         MuiDialog(open = props.showDialog, maxWidth = "lg", fullWidth = true)(
           <.div(^.className := "training-modal-content",
-            MuiDialogTitle()(<.h3(s"New Features available for DRT")),
-            MuiDialogContent()(
-              Flickity()(props.trainingDataTemplates.map { data =>
-                MuiGrid(container = true, spacing = 2)(
-                  MuiGrid(item = true, xs = 8)(
-                    <.div(^.className := "training-grid-item",
-                      <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"training-video/${data.fileName.getOrElse("")}"), VdomAttr("autoPlay") := false,
-                        VdomAttr("controls") := true, VdomAttr("width") := "100%", VdomAttr("height") := "100%"))),
-                  MuiGrid(item = true, xs = 4)(
-                    <.div(^.className := "training-grid-item",
-                      <.div(<.h4(data.title)),
-                      <.div(data.markdownContent)))
-                )
-              })
-            ),
-            MuiDialogActions()(
-              MuiButton(color = Color.primary, variant = "outlined", size = "small")
-              ("Cancel", ^.onClick ==> props.closeDialog))
+            MuiGrid(container = true, spacing = 2)(
+              MuiGrid(item = true, xs = 8)(
+                MuiDialogTitle()(<.h3(s"New Features available for DRT"))),
+              MuiGrid(item = true, xs = 4)(
+                MuiDialogActions()(
+                  MuiIconButton(color = Color.primary)(^.onClick ==> props.closeDialog, ^.aria.label := "Close")(
+                    Icon.close))),
+            )),
+          MuiDialogContent()(
+            Flickity()(props.trainingDataTemplates.map { data =>
+              MuiGrid(container = true, spacing = 2)(
+                MuiGrid(item = true, xs = 8)(
+                  <.div(^.className := "training-grid-item",
+                    <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"training-video/${data.fileName.getOrElse("")}"),
+                      VdomAttr("autoPlay") := false,
+                      VdomAttr("controls") := true,
+                      VdomAttr("width") := "100%",
+                      VdomAttr("height") := "100%",
+                      ^.onPlay ==> handleOnPlayVideo(data.fileName.getOrElse(""))))),
+                MuiGrid(item = true, xs = 4)(
+                  <.div(^.className := "training-grid-item",
+                    <.div(<.h4(data.title)),
+                    TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
+                    ))
+
+            })
           ))
       <.div(^.className := "training-modal", carouselItems)
     }

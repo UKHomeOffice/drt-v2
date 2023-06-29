@@ -24,7 +24,6 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
           |  id: ${user.id},
           |  email: ${user.email},
           |  roles: ${write(user.roles.map(_.name))},
-          |  viewedFeatureContent: ${write(user.viewedFeatureContent)}
           | }
       """.stripMargin
 
@@ -33,7 +32,6 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
         s("id").toString(),
         s("email").toString(),
         s("roles").arr.map(r => Roles.parse(r.value.toString)).collect { case Some(r) => r }.toSet,
-        s("viewedFeatureContent").arr.map(_.toString).toSeq
       )
     })
 

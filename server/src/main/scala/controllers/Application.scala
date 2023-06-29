@@ -15,18 +15,16 @@ import drt.shared._
 import drt.users.KeyCloakClient
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
-import slickdb.{TrainingData, UserTableLike}
+import slickdb.{TrainingData, UserFeatureView, UserTableLike}
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
-import uk.gov.homeoffice.drt.ports
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, FeedSource, ForecastFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.nio.ByteBuffer
@@ -102,10 +100,9 @@ trait UserRoleProviderLike {
       userName = headers.get("X-Auth-Username").getOrElse("Unknown"),
       id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
       email = headers.get("X-Auth-Email").getOrElse("Unknown"),
-      roles = roles,
-      viewedFeatureContent = headers.get("X-Auth-ViewedFeatureContent").getOrElse("Unknown").split(","),
-    )
-    userService.insertOrUpdateUser(loggedInUser, None, None,None)
+      roles = roles)
+
+    userService.insertOrUpdateUser(loggedInUser, None, None)
 
     loggedInUser
   }
@@ -182,13 +179,28 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
-  def getTrainingMediaFile(fileName:String) = {
-    Ok("Intial response")
-  }
-
   def getTrainingData(): Action[AnyContent] = Action.async { _ =>
     val trainingDataJson: Future[String] = TrainingData.getTrainingData()
     trainingDataJson.map(Ok(_))
+  }
+
+  def trackViewedFile(filename: String): Action[AnyContent] = authByRole(BorderForceStaff) {
+    Action.async { implicit request =>
+      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      TrainingData.getFileId(filename).flatMap {
+        case Some(id) => UserFeatureView.insertOrUpdate(id, userEmail)
+          .map(_ => Ok(s"File $filename viewed updated"))
+        case None =>
+          Future.successful(Ok(s"File $filename viewed not updated as file not found"))
+      }
+    }
+  }
+
+  def viewCountByUser(): Action[AnyContent] = authByRole(BorderForceStaff) {
+    Action.async { implicit request =>
+      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      UserFeatureView.fileViewedCount(userEmail).map(count => Ok(count.toString))
+    }
   }
 
   def autowireApi(path: String): Action[RawBuffer] = authByRole(BorderForceStaff) {

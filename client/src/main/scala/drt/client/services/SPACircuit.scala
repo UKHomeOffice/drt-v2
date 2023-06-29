@@ -162,6 +162,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary] = Map(),
                      paxFeedSourceOrder: List[FeedSource] = List(),
                      toggleDialog  : Pot[Boolean] = Empty,
+                     userFeatureViewCount: Pot[Int] = Ready(0),
                     )
 
 object PollDelay {
@@ -231,6 +232,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FlaggedNationalitiesHandler(zoomRW(_.flaggedNationalities)((m, v) => m.copy(flaggedNationalities = v))),
       new TrainingDataTemplateHandler(zoomRW(_.trainingDataTemplates)((m, v) => m.copy(trainingDataTemplates = v))),
       new ToggleDialogHandler(zoomRW(_.toggleDialog)((m, v) => m.copy(toggleDialog = v))),
+      new UserViewFeatureHandler(zoomRW(_.userFeatureViewCount)((m, v) => m.copy(userFeatureViewCount = v))),
     )
     composedHandlers
   }

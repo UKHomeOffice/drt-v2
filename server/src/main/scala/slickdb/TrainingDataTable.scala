@@ -46,8 +46,14 @@ object TrainingData extends TrainingDataTemplateLike {
   }
 
   def selectAll: Future[Seq[TrainingDataTemplate]] = {
-    val selectAction = trainingDataTemplates.result
+    val selectAction = trainingDataTemplates.sortBy(_.uploadTime.desc).result
     PostgresTables.db.run(selectAction)
+  }
+
+  def getFileId(filename:String)(implicit ec: ExecutionContext)  = {
+    val selectAction = trainingDataTemplates.filter(_.fileName === filename).map(_.id).result
+    val fileIds: Future[Seq[Option[Int]]] = PostgresTables.db.run(selectAction)
+    fileIds.map(_.headOption.flatten)
   }
 
 
