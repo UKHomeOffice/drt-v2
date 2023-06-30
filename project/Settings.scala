@@ -203,7 +203,7 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE"
+    "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
