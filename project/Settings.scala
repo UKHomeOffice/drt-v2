@@ -68,7 +68,7 @@ object Settings {
     val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.1.15"
     val sprayJsonScalaJs = "1.3.5-7"
-    val scalaTestVersion = "3.2.15"
+    val scalaTestVersion = "3.2.16"
     val twirlApi = "1.5.2"
   }
 
