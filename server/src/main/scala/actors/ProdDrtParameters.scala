@@ -54,13 +54,17 @@ trait DrtParameters {
 
   //ignore ACL flight removals X seconds after the end of the day.
   val maybeRemovalCutOffSeconds: Option[FiniteDuration]
+
+  val usePassengerPredictions: Boolean
 }
 
 case class ProdDrtParameters(config: Configuration) extends DrtParameters {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override val gateWalkTimesFilePath: Option[String] = Option(config.get[String]("walk_times.gates-file-path")).filter(p => p.nonEmpty && Files.exists(Paths.get(p)))
-  override val standWalkTimesFilePath: Option[String] = Option(config.get[String]("walk_times.stands-file-path")).filter(p => p.nonEmpty && Files.exists(Paths.get(p)))
+  override val gateWalkTimesFilePath: Option[String] =
+    Option(config.get[String]("walk_times.gates-file-path")).filter(p => p.nonEmpty && Files.exists(Paths.get(p)))
+  override val standWalkTimesFilePath: Option[String] =
+    Option(config.get[String]("walk_times.stands-file-path")).filter(p => p.nonEmpty && Files.exists(Paths.get(p)))
 
   override val forecastMaxDays: Int = config.get[Int]("crunch.forecast.max_days")
   override val aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)
@@ -108,4 +112,5 @@ case class ProdDrtParameters(config: Configuration) extends DrtParameters {
   //ignore ACL flight removals X seconds after the end of the day.
   override val maybeRemovalCutOffSeconds: Option[FiniteDuration] = config.getOptional[Int]("acl.removal-cutoff-seconds").map(s => s.seconds)
 
+  override val usePassengerPredictions: Boolean = config.get[Boolean]("feature-flags.use-passenger-predictions")
 }

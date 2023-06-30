@@ -13,7 +13,7 @@ import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -28,7 +28,7 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
 
   def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     source
-      .mapAsync(1){_ =>
+      .mapAsync(1) { _ =>
         makeRequest()
           .map(fs => {
             log.debug(s"Got ${fs.size} arrivals from Cirium")
@@ -80,8 +80,6 @@ object CiriumFeed {
       Gate = f.airportResources.flatMap(_.arrivalGate),
       Stand = None,
       MaxPax = None,
-      ActPax = None,
-      TranPax = None,
       RunwayID = None,
       BaggageReclaimId = f.airportResources.flatMap(_.baggage),
       AirportID = f.arrivalAirportFsCode,
@@ -96,8 +94,8 @@ object CiriumFeed {
         None
       else
         Option(carrierScheduledTime),
-      ApiPax = None,
-      ScheduledDeparture = Some(f.departureDate).map(_.millis)
+      ScheduledDeparture = Some(f.departureDate).map(_.millis),
+      PassengerSources = Map(LiveBaseFeedSource -> Passengers(None, None))
     )
   }
 

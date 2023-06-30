@@ -38,8 +38,6 @@ class FeedsHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedSourceStatuses]]]) extends
       updated(Ready(statuses), scheduledRequest)
 
     case GetFeedSourceStatuses() =>
-      log.info(s"Calling getFeedStatuses")
-
       val apiCallEffect = Effect(DrtApi.get("feeds/statuses")
         .map(r => SetFeedSourceStatuses(read[Seq[FeedSourceStatuses]](r.responseText)))
         .recoverWith {

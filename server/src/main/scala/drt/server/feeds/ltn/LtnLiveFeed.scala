@@ -16,7 +16,7 @@ import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -99,18 +99,19 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       Gate = ltnFeedFlight.GateCode,
       Stand = ltnFeedFlight.StandCode,
       MaxPax = ltnFeedFlight.MaxPax,
-      ActPax = ltnFeedFlight.TotalPassengerCount,
-      TranPax = None,
       RunwayID = ltnFeedFlight.Runway,
       BaggageReclaimId = ltnFeedFlight.BaggageClaimUnit,
       AirportID = "LTN",
       Terminal = Terminal(ltnFeedFlight.TerminalCode.getOrElse(throw new Exception("Missing terminal"))),
-      rawICAO = ltnFeedFlight.AirlineICAO.getOrElse(throw new Exception("Missing ICAO carrier code")) + ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
-      rawIATA = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing IATA carrier code")) + ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
+      rawICAO = ltnFeedFlight.AirlineICAO.getOrElse(throw new Exception("Missing ICAO carrier code")) +
+        ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
+      rawIATA = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing IATA carrier code")) +
+        ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
       Origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
       Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource)
+      FeedSources = Set(LiveFeedSource),
+      PassengerSources = Map(LiveFeedSource -> Passengers(ltnFeedFlight.TotalPassengerCount, None))
     )
   }
 
@@ -147,4 +148,3 @@ case class LtnLiveFlight(TotalPassengerCount: Option[Int],
 object LtnLiveFlightProtocol extends DefaultJsonProtocol {
   implicit val ltnLiveFlightConverter: RootJsonFormat[LtnLiveFlight] = jsonFormat21(LtnLiveFlight)
 }
-

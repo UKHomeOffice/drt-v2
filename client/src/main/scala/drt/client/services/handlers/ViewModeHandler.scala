@@ -12,7 +12,9 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class ViewModeHandler[M](now: () => SDateLike, viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)]) extends LoggingActionHandler(viewModePortStateMP) {
+class ViewModeHandler[M](now: () => SDateLike,
+                         viewModePortStateMP: ModelRW[M, (ViewMode, Pot[PortState], MillisSinceEpoch)]
+                        ) extends LoggingActionHandler(viewModePortStateMP) {
 
   def midnightThisMorning: SDateLike = SDate.midnightOf(SDate.now())
 
@@ -32,7 +34,9 @@ class ViewModeHandler[M](now: () => SDateLike, viewModePortStateMP: ModelRW[M, (
     val effects = Effect(Future(GetInitialPortState(newViewMode))) +
       Effect(Future(GetStaffMovements(newViewMode))) +
       Effect(Future(GetShifts(newViewMode))) +
-      Effect(Future(GetFixedPoints(newViewMode)))
+      Effect(Future(GetFixedPoints(newViewMode))) +
+      Effect(Future(GetManifestSummariesForDate(newViewMode.dayEnd.toUtcDate))) +
+      Effect(Future(GetManifestSummariesForDate(newViewMode.dayEnd.addDays(-1).toUtcDate)))
 
     val isHistoricView = newViewMode.dayEnd < now().getLocalLastMidnight
 

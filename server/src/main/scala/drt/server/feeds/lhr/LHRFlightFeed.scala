@@ -11,7 +11,7 @@ import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
@@ -44,7 +44,7 @@ case class LHRLiveFlight(
 }
 
 case class LHRCsvException(originalLine: String, idx: Int, innerException: Throwable) extends Exception {
-  override def toString = s"$originalLine : $idx $innerException"
+  override def toString: String = s"$originalLine : $idx $innerException"
 }
 
 case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
@@ -106,8 +106,6 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         Gate = None,
         Stand = flight.stand,
         MaxPax = flight.maxPax,
-        ActPax = flight.actPax,
-        TranPax = if (flight.actPax.isEmpty) None else flight.connPax,
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = "LHR",
@@ -117,6 +115,7 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         Origin = flight.from,
         PcpTime = if (pcpTime == 0) None else Some(pcpTime),
         FeedSources = Set(LiveFeedSource),
+        PassengerSources = Map(LiveFeedSource -> Passengers(flight.actPax, if (flight.actPax.isEmpty) None else flight.connPax)),
         Scheduled = SDate(schDtIso).millisSinceEpoch)
     }).toList
 }

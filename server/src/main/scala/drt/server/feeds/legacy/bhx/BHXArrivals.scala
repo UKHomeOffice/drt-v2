@@ -1,12 +1,12 @@
 package drt.server.feeds.legacy.bhx
 
 import drt.server.feeds.Implicits._
+import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
-import org.springframework.util.StringUtils
 import uk.gov.homeoffice.drt.time.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
 
@@ -33,6 +33,12 @@ sealed trait BHXArrivals {
     utcDatePlusOneHour.toString(ISODateTimeFormat.dateTime)
   }
 
+  protected def getPassengerSource(actPax: Int, transPax: Int) = {
+    val actualPax = if (actPax == 0) None else Option(actPax)
+    val transitPax = if (transPax == 0) None else Option(transPax)
+    Passengers(actualPax, transitPax)
+  }
+
 }
 
 trait BHXLiveArrivals extends BHXArrivals {
@@ -49,12 +55,10 @@ trait BHXLiveArrivals extends BHXArrivals {
       Actual = convertToUTC(flightRecord.getTouchdownTime).map(SDate(_).millisSinceEpoch),
       EstimatedChox = convertToUTC(flightRecord.getEstimatedChoxTime).map(SDate(_).millisSinceEpoch),
       ActualChox = convertToUTC(flightRecord.getChoxTime).map(SDate(_).millisSinceEpoch),
-      Gate = if (StringUtils.isEmpty(flightRecord.getGate)) None else Option(flightRecord.getGate),
-      Stand = if (StringUtils.isEmpty(flightRecord.getStand)) None else Option(flightRecord.getStand),
+      Gate = if (StringUtils.isBlank(flightRecord.getGate)) None else Option(flightRecord.getGate),
+      Stand = if (StringUtils.isBlank(flightRecord.getStand)) None else Option(flightRecord.getStand),
       MaxPax = if (flightRecord.getCapacity == 0) None else Option(flightRecord.getCapacity),
-      ActPax = if (actPax == 0) None else Option(actPax),
-      TranPax = if (actPax == 0) None else Option(transPax),
-      RunwayID = if (StringUtils.isEmpty(flightRecord.getRunway)) None else Option(flightRecord.getRunway),
+      RunwayID = if (StringUtils.isBlank(flightRecord.getRunway)) None else Option(flightRecord.getRunway),
       BaggageReclaimId = Option(flightRecord.getBelt),
       AirportID = "BHX",
       Terminal = Terminal(s"T${flightRecord.getTerminal}"),
@@ -63,7 +67,8 @@ trait BHXLiveArrivals extends BHXArrivals {
       Origin = PortCode(flightRecord.getOrigin),
       Scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       PcpTime = None,
-      FeedSources = Set(LiveFeedSource)
+      FeedSources = Set(LiveFeedSource),
+      PassengerSources = Map(LiveFeedSource -> getPassengerSource(actPax, transPax))
     )
   }
 }
@@ -85,8 +90,6 @@ trait BHXForecastArrivals extends BHXArrivals {
       Gate = None,
       Stand = None,
       MaxPax = if (maxPax == 0) None else Option(maxPax),
-      ActPax = if (actPax == 0) None else Option(actPax),
-      TranPax = if (actPax == 0) None else Option(transPax),
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = "BHX",
@@ -96,7 +99,8 @@ trait BHXForecastArrivals extends BHXArrivals {
       Origin = flightRecord.getOrigin,
       Scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
       PcpTime = None,
-      FeedSources = Set(ForecastFeedSource)
+      FeedSources = Set(ForecastFeedSource),
+      PassengerSources = Map(ForecastFeedSource -> getPassengerSource(actPax, transPax))
     )
   }
 }

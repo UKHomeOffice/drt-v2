@@ -128,7 +128,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     with WithStaffing
     with WithApplicationInfo
     with WithSimulations
-    with WithPassengerInfo
+    with WithManifests
     with WithWalkTimes
     with WithDebug
     with WithEmailFeedback
@@ -157,8 +157,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   lazy val govNotifyReference = config.get[String]("notifications.reference")
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
-
-  val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl))
 
   val log: LoggingAdapter = system.log
 

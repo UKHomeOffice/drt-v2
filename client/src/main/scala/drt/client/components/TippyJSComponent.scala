@@ -93,17 +93,18 @@ object Tippy extends ScalaCssReactImplicits {
 
   case class Props(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String, maybeOnClick: Option[ReactEventFromInput => Callback]) extends UseValueEq
 
-  val component = ScalaComponent.builder[Props]("FlightChart")
+  val component = ScalaComponent.builder[Props]("TippyJs")
     .render_P(props => {
-
       val trigger = props.maybeOnClick match {
         case Some(onClick) => <.span(
+          ^.key := "tippy-trigger",
           ^.className := "tooltip-trigger-onclick",
           ^.onClick ==> onClick,
           props.trigger)
         case None => props.trigger
       }
       val triggerWithTabIndex = <.span(
+        ^.key := "tippy-trigger-wrapper",
         ^.className := "tooltip-trigger",
         DefaultToolTipsStyle.triggerHoverIndicator,
         trigger,
@@ -120,7 +121,7 @@ object Tippy extends ScalaCssReactImplicits {
     component(Props(content, interactive, trigger, triggerEvent, triggerCallback))
 
   def interactive(content: VdomElement, trigger: VdomNode) =
-    apply(content, interactive = true, <.div(trigger))
+    apply(content, interactive = true, <.div(^.key := "trigger-wrapper", trigger))
 
   def describe(content: VdomElement, trigger: TagMod) =
     apply(content, interactive = false, <.span(trigger))

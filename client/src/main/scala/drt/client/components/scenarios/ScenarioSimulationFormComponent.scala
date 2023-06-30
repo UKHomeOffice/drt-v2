@@ -3,12 +3,11 @@ package drt.client.components.scenarios
 import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.actions.Actions.GetSimulation
-import drt.client.components.styles.DefaultFormFieldsStyle
+import io.kinoplan.scalajs.react.material.ui.core._
 import drt.client.components.styles.ScalaCssImplicits._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
-import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.{MuiIcons, MuiIconsModule}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.all.{`type`, id, onChange, onClick, value}
@@ -110,15 +109,12 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
         def passengerWeightingFields = {
 
           <.div(
-            DefaultFormFieldsStyle.formHelperText,
             MuiTextField(
               label = "Passenger weighting".toVdom,
-              margin = MuiTextField.Margin.normal,
               helperText = MuiTypography(variant = MuiTypography.Variant.caption)(
                 "e.g. '2' will give you double the passengers on each flight."
               )
             )(
-              DefaultFormFieldsStyle.textField,
               `type` := "number",
               id := "passenger-weighting",
               value := state.simulationFormFields.passengerWeighting.map(_.toString).getOrElse(""),
@@ -134,15 +130,12 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
               case (ptq, maybeProcTime) =>
                 val queueDisplayName = Queues.displayName(ptq.queueType)
                 <.div(^.className := "form-check", ^.key := ptq.key,
-                  DefaultFormFieldsStyle.formHelperText,
                   MuiTextField(
                     label = s"${PaxTypes.displayNameShort(ptq.passengerType)} to $queueDisplayName".toVdom,
-                    margin = MuiTextField.Margin.normal,
                     helperText = MuiTypography(variant = MuiTypography.Variant.caption)(
                       s"Seconds to process ${PaxTypes.displayName(ptq.passengerType)} at $queueDisplayName"
                     )
                   )(
-                    DefaultFormFieldsStyle.textField,
                     `type` := "number",
                     id := s"${ptq.passengerType}_${ptq.queueType}",
                     value := maybeProcTime.map(_.toString).getOrElse(""),
@@ -160,9 +153,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                 <.div(^.className := "form-check", ^.key := q.toString,
                   MuiTextField(
                     label = s"${Queues.displayName(q)} (at least 3 minutes)".toVdom,
-                    margin = MuiTextField.Margin.normal
                   )(
-                    DefaultFormFieldsStyle.textField,
                     `type` := "number",
                     id := s"${q}_sla",
                     value := maybeSla.map(_.toString).getOrElse(""),
@@ -179,14 +170,11 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
               <.div(
                 ^.className := "form-check", ^.key := q.toString,
                 MuiFormLabel()(
-                  DefaultFormFieldsStyle.labelWide,
                   s"${Queues.displayName(q)}"
                 ),
                 MuiTextField(
                   label = s"Min".toVdom,
-                  margin = MuiTextField.Margin.normal
                 )(
-                  DefaultFormFieldsStyle.textFieldSmall,
                   `type` := "number",
                   id := s"${q}_min",
                   value := state.simulationFormFields.minDesks(q).map(_.toString).getOrElse(""),
@@ -194,9 +182,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                 ),
                 MuiTextField(
                   label = s"Max".toVdom,
-                  margin = MuiTextField.Margin.normal
                 )(
-                  DefaultFormFieldsStyle.textFieldSmall,
                   `type` := "number",
                   id := s"${q}_max",
                   value := state.simulationFormFields.maxDesks(q).map(_.toString).getOrElse(""),
@@ -209,9 +195,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                 <.div(^.key := s"bank-size-$idx",
                   MuiTextField(
                     label = s"e-Gates in bank ${idx + 1}".toVdom,
-                    margin = MuiTextField.Margin.normal
                   )(
-                    DefaultFormFieldsStyle.textField,
                     `type` := "number",
                     id := s"egate-bank-size-$idx",
                     value := bankSize.map(_.toString).getOrElse(""),
@@ -245,64 +229,62 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
         val showCharts: Callback = Callback(SPACircuit.dispatch(GetSimulation(state.simulationFormFields)))
 
         <.div(
-          DefaultFormFieldsStyle.regularText,
-          MuiExpansionPanel(square = true, expanded = isOpen("passengerWeighting"))(
+          MuiAccordion(expanded = isOpen("passengerWeighting"))(
             onChange --> togglePanel("passengerWeighting"),
-            MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
+            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_passenger_numbers",
                 "Adjust Passenger Numbers"
               )
             ),
-            MuiExpansionPanelDetails()(passengerWeightingFields)
+            MuiAccordionDetails()(passengerWeightingFields)
           ),
-          MuiExpansionPanel(square = true, expanded = isOpen("processingTimes"))(
+          MuiAccordion(expanded = isOpen("processingTimes"))(
             onChange --> togglePanel("processingTimes"),
-            MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
+            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_processing_times",
                 "Adjust Processing Times"
               )
             ),
-            MuiExpansionPanelDetails()(processingTimesFields)
+            MuiAccordionDetails()(processingTimesFields)
           ),
-          MuiExpansionPanel(square = true, expanded = isOpen("slaFields"))(
+          MuiAccordion(expanded = isOpen("slaFields"))(
             onChange --> togglePanel("slaFields"),
-            MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
+            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_queue_slas",
                 "Adjust Queue SLAs"
               )
             ),
-            MuiExpansionPanelDetails()(slaFields)
+            MuiAccordionDetails()(slaFields)
           ),
-          MuiExpansionPanel(square = true, expanded = isOpen("minMaxDesksFields"))(
+          MuiAccordion(expanded = isOpen("minMaxDesksFields"))(
             onChange --> togglePanel("minMaxDesksFields"),
-            MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
+            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_available_desks",
                 "Adjust Available Desks"
               )
             ),
-            MuiExpansionPanelDetails()(minMaxDesksFields)
+            MuiAccordionDetails()(minMaxDesksFields)
           ),
-          MuiExpansionPanel(square = true, expanded = isOpen("configureEGatesFields"))(
+          MuiAccordion(expanded = isOpen("configureEGatesFields"))(
             onChange --> togglePanel("configureEGatesFields"),
-            MuiExpansionPanelSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
+            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_egate_open_times",
                 "Adjust eGate Open Times"
               )
             ),
-            MuiExpansionPanelDetails()(eGatesOpen)
+            MuiAccordionDetails()(eGatesOpen)
           ),
           MuiDivider(variant = MuiDivider.Variant.middle)(),
           <.div(
-            DefaultFormFieldsStyle.buttons,
             submitButton(showCharts, state.simulationFormFields),
             MuiButton(
               variant = MuiButton.Variant.contained,
-              color = MuiButton.Color.default,
+              color = MuiButton.Color.primary,
             )(
               ^.className := "button",
               ^.target := "_blank",
@@ -322,7 +304,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
     val (colour, callback) = if (form.isValid)
       (MuiButton.Color.primary, showCharts)
     else
-      (MuiButton.Color.default, Callback.empty)
+      (MuiButton.Color.secondary, Callback.empty)
 
     MuiButton(
       variant = MuiButton.Variant.contained,

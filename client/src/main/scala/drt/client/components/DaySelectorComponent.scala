@@ -2,17 +2,18 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain._
-import drt.client.components.styles.DefaultFormFieldsStyle
+import drt.client.components.styles.DrtTheme._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{LoadingState, ViewDay}
 import drt.client.util.DateUtil.isNotValidDate
-import io.kinoplan.scalajs.react.material.ui.core.{MuiCircularProgress, MuiDivider, MuiTextField}
+import io.kinoplan.scalajs.react.material.ui.core._
+import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{RouterCtl, SetRouteVia}
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -26,7 +27,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                    terminalPageTab: TerminalPageTabLoc,
                    loadingState: LoadingState,
                    minuteTicker: Int,
-                   additionalContent: VdomElement,
                   ) extends UseValueEq
 
   case class DisplayDate(date: LocalDate, isNotValid: Boolean)
@@ -41,7 +41,8 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
     def updateValidity(isNotValid: Boolean): State = copy(stateDate = DisplayDate(date = stateDate.date, isNotValid = isNotValid))
   }
 
-  val today: SDateLike = SDate.now()
+  implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.stateDate == b.stateDate && a.maybeTimeMachineDate.map(_.date.millisSinceEpoch) == b.maybeTimeMachineDate.map(_.date.millisSinceEpoch))
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps { p =>
@@ -141,36 +142,36 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           <.div(^.className := "time-machine-action", <.div(Icon.arrowRight, ^.className := s"btn btn-primary", ^.onClick ==> loadTimeMachineDate))
       }
 
-      val yesterdayActive = if (state.selectedDate.ddMMyyString == SDate.now().addDays(-1).ddMMyyString) "active" else ""
+      val isYesterday = state.selectedDate.ddMMyyString == SDate.now().addDays(-1).ddMMyyString
 
-      def isTodayActive = state.selectedDate.ddMMyyString == SDate.now().ddMMyyString
+      def isToday = state.selectedDate.ddMMyyString == SDate.now().ddMMyyString
 
-      val todayActive = if (isTodayActive) "active" else ""
+      val isTomorrow = state.selectedDate.ddMMyyString == SDate.now().addDays(1).ddMMyyString
 
-      val tomorrowActive = if (state.selectedDate.ddMMyyString == SDate.now().addDays(1).ddMMyyString) "active" else ""
+      def defaultTimeRangeWindow: TimeRangeHours = if (isToday) CurrentWindow() else WholeDayWindow()
 
-      def defaultTimeRangeWindow: TimeRangeHours = if (isTodayActive) CurrentWindow() else WholeDayWindow()
+      val liveViewButtonTheme = if (state.maybeTimeMachineDate.isEmpty) buttonSelectedTheme else buttonTheme
+      val timeMachineViewButtonTheme = if (state.maybeTimeMachineDate.nonEmpty) buttonSelectedTheme else buttonTheme
 
-      val liveViewClass = if (state.maybeTimeMachineDate.isEmpty) "active" else ""
-      val timeMachineViewClass = if (state.maybeTimeMachineDate.nonEmpty) "active" else ""
-      val headerClass = if (state.maybeTimeMachineDate.nonEmpty) "terminal-content-header__time-machine" else ""
+      val yesterdayButtonTheme = if (isYesterday) buttonSelectedTheme else buttonTheme
+      val todayButtonTheme = if (isToday) buttonSelectedTheme else buttonTheme
+      val tomorrowButtonTheme = if (isTomorrow) buttonSelectedTheme else buttonTheme
 
-      <.div(^.className := s"terminal-content-header $headerClass",
+      <.div(
+        ^.className := s"flex-horz-between",
         <.div(
           ^.className := "date-component-wrapper",
           <.div(
             ^.className := "date-select-wrapper",
-            DefaultFormFieldsStyle.daySelector,
-            <.div(^.className := "btn-group no-gutters date-quick-days date-time-buttons-container", VdomAttr("data-toggle") := "buttons",
-              <.div(^.id := "yesterday", ^.className := s"btn btn-primary $yesterdayActive", "Yesterday", ^.onClick ==> selectYesterday),
-              <.div(^.id := "today", ^.className := s"btn btn-primary $todayActive", "Today", ^.onClick ==> selectToday),
-              <.div(^.id := "tomorrow", ^.className := s"btn btn-primary $tomorrowActive end-spacer", "Tomorrow", ^.onClick ==> selectTomorrow)
+            MuiButtonGroup(variant = "contained")(
+              ThemeProvider(theme = yesterdayButtonTheme)(MuiButton()("Yesterday", ^.onClick ==> selectYesterday, ^.id := "yesterday")),
+              ThemeProvider(theme = todayButtonTheme)(MuiButton()("Today", ^.onClick ==> selectToday, ^.id := "today")),
+              ThemeProvider(theme = tomorrowButtonTheme)(MuiButton()("Tomorrow", ^.onClick ==> selectTomorrow, ^.id := "tomorrow")),
             ),
             <.div(
               ^.className := "date-picker",
               MuiTextField()(
                 ^.width := "100%",
-                DefaultFormFieldsStyle.datePicker,
                 ^.`type` := "date",
                 ^.defaultValue := s"${state.stateDate.date.toISOString}",
                 ^.onChange ==> updateDisplayDate,
@@ -178,7 +179,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
             )
           ),
           TimeRangeFilter(
-            TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isTodayActive, props.minuteTicker)
+            TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isToday, props.minuteTicker)
           ),
           MuiDivider()(),
           <.div(^.className := "time-machine",
@@ -192,9 +193,9 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                   )
                 ),
               ),
-              <.div(^.className := "btn-group no-gutters time-machine-switch-buttons",
-                <.div(^.id := "live-view", ^.className := s"btn btn-primary $liveViewClass", s"Off", ^.onClick ==> selectLatestView),
-                <.div(^.id := "time-machine-view", ^.className := s"btn btn-primary $timeMachineViewClass", "On", ^.onClick ==> selectTimeMachineView),
+              MuiButtonGroup(variant = "contained")(
+                ThemeProvider(liveViewButtonTheme)(MuiButton()(^.id := "live-view", s"Off", ^.onClick ==> selectLatestView)),
+                ThemeProvider(timeMachineViewButtonTheme)(MuiButton()(^.id := "time-machine-view", "On", ^.onClick ==> selectTimeMachineView)),
               ),
             ),
           ),
@@ -230,9 +231,9 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
             )
           case None => EmptyVdom
         },
-        props.additionalContent
       )
     }
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): VdomElement = component(props)

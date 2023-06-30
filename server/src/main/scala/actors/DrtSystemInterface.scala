@@ -62,13 +62,13 @@ import services.staffing.StaffMinutesChecker
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
-import uk.gov.homeoffice.drt.actor.WalkTimeProvider
+import uk.gov.homeoffice.drt.actor.{PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
+import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
@@ -176,7 +176,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
               .groupBy(fws => fws.apiFlight.Terminal)
               .map {
                 case (terminal, flights) =>
-                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate.pax.getOrElse(0)).sum
+                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate.getOrElse(0)).sum
                   (terminal, paxNos.toDouble)
               }
         }.runWith(Sink.seq)
@@ -341,6 +341,19 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     (requestQueueActor, deskRecsKillSwitch)
   }
 
+  private def enabledPredictionModelNames: Seq[String] = {
+    val forAll = Seq(
+      OffScheduleModelAndFeatures.targetName,
+      ToChoxModelAndFeatures.targetName,
+      WalkTimeModelAndFeatures.targetName,
+    )
+
+    if (params.usePassengerPredictions)
+      forAll :+ PaxCapModelAndFeatures.targetName
+    else
+      forAll
+  }
+
   def startCrunchSystem(initialPortState: Option[PortState],
                         initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
@@ -358,12 +371,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         (a: Arrival) => Iterable(
           TerminalOrigin(a.Terminal.toString, a.Origin.iata),
           TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
+          PredictionModelActor.Terminal(a.Terminal.toString),
         ),
-        Flight().getModels,
+        Flight().getModels(enabledPredictionModelNames),
         Map(
           OffScheduleModelAndFeatures.targetName -> 45,
           ToChoxModelAndFeatures.targetName -> 20,
           WalkTimeModelAndFeatures.targetName -> 30 * 60,
+          PaxCapModelAndFeatures.targetName -> 100,
         ),
         15
       ).addPredictions

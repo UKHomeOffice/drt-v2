@@ -14,7 +14,10 @@ import scala.util.Failure
 object OfferHandler {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def offerWithRetries[A](queue: SourceQueueWithComplete[A], thingToOffer: A, retries: Int, maybeOnSuccess: Option[() => Unit] = None)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
+  def offerWithRetries[A](queue: SourceQueueWithComplete[A],
+                          thingToOffer: A,
+                          retries: Int,
+                          maybeOnSuccess: Option[() => Unit] = None)(implicit ec: ExecutionContext, s: Scheduler): Unit = {
     val eventualResult = queue.offer(thingToOffer)
 
     maybeOnSuccess.foreach(onSuccess => eventualResult.foreach(_ => onSuccess()))
@@ -28,7 +31,10 @@ object OfferHandler {
 }
 
 object Retry {
-  def retry[T](futureToRetry: => Future[T], delay: Seq[FiniteDuration], retries: Int, defaultDelay: FiniteDuration)(implicit ec: ExecutionContext, s: Scheduler): Future[T] = futureToRetry
+  def retry[T](futureToRetry: => Future[T],
+               delay: Seq[FiniteDuration],
+               retries: Int,
+               defaultDelay: FiniteDuration)(implicit ec: ExecutionContext, s: Scheduler): Future[T] = futureToRetry
     .recoverWith {
       case _ if retries > 0 =>
         val nextDelayDuration = delay.headOption.getOrElse(defaultDelay)

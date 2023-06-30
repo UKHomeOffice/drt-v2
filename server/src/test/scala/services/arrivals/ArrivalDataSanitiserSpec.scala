@@ -29,8 +29,6 @@ class ArrivalDataSanitiserSpec extends Specification {
       Gate = gate,
       Stand = None,
       MaxPax = None,
-      ActPax = None,
-      TranPax = None,
       RunwayID = None,
       BaggageReclaimId = None,
       AirportID = PortCode("STN"),

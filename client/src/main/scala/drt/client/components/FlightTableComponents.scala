@@ -42,7 +42,7 @@ object FlightTableComponents {
   def pcpTimeRange(fws: ApiFlightWithSplits, firstPaxOffMillis: MillisSinceEpoch, walkTimes: WalkTimes): VdomElement =
     fws.apiFlight.PcpTime.map { pcpTime: MillisSinceEpoch =>
       val sdateFrom = SDate(MilliDate(pcpTime))
-      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.pcpPaxEstimate.pax.getOrElse(0))))
+      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.bestPaxSource.getPcpPax.getOrElse(0))))
       val predictedWalkTime = fws.apiFlight.Predictions.predictions.get(WalkTimeModelAndFeatures.targetName).map(c => s"${c / 60}m").getOrElse("-")
       val gateOrStandWalkTime = if (fws.apiFlight.Gate.isDefined || fws.apiFlight.Stand.isDefined) {
         val wtMillis = walkTimes.walkTimeMillisForArrival(0L)(fws.apiFlight.Gate, fws.apiFlight.Stand, fws.apiFlight.Terminal)

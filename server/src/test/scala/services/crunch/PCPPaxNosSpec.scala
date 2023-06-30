@@ -5,10 +5,10 @@ import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser._
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, Passengers, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource, PaxTypeAndQueue, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -24,7 +24,7 @@ class PCPPaxNosSpec extends CrunchTestLike {
   val scheduled = "2019-11-20T00:00Z"
 
   val flights: Flights = Flights(List(
-    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(101), origin = PortCode("JFK"))
+    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, passengerSources = Map(LiveFeedSource -> Passengers(Option(101), None)), origin = PortCode("JFK"))
   ))
 
   val manifests: ManifestsFeedResponse =

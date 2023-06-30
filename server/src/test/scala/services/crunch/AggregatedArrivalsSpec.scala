@@ -14,7 +14,8 @@ import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import test.feeds.test.GetArrivals
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -84,7 +85,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
+    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21),None)))
     val liveFlights = Flights(List(liveArrival))
 
     val testProbe = TestProbe("arrivals-probe")
@@ -114,11 +115,11 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     val scheduledExpired = "2017-01-05T00:00Z"
     val scheduled = "2017-01-05T00:01Z"
 
-    val expiredArrival = ArrivalGenerator.arrival(schDt = scheduledExpired, iata = "BA0022", terminal = T1, actPax = Option(21))
+    val expiredArrival = ArrivalGenerator.arrival(schDt = scheduledExpired, iata = "BA0022", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21),None)))
 
     table.insertOrUpdateArrival(expiredArrival)
 
-    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, actPax = Option(21))
+    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21),None)))
     val liveFlights = Flights(List(liveArrival))
 
     val testProbe = TestProbe("arrivals-probe")
@@ -152,7 +153,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     val scheduledDescheduled = "2017-01-10T00:00Z"
     val scheduled = "2017-01-05T00:00Z"
 
-    val descheduledArrival = ArrivalGenerator.arrival(schDt = scheduledDescheduled, iata = "BA0022", terminal = T1, actPax = Option(21))
+    val descheduledArrival = ArrivalGenerator.arrival(schDt = scheduledDescheduled, iata = "BA0022", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21),None)))
 
     table.insertOrUpdateArrival(descheduledArrival)
 
@@ -182,4 +183,3 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     arrivalsResult1.size === 1 && arrivalsResult2 === Set()
   }
 }
-

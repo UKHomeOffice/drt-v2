@@ -4,7 +4,7 @@ import drt.server.feeds.common.XlsExtractorUtil._
 import org.apache.poi.ss.usermodel.{CellType, DateUtil}
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -81,6 +81,7 @@ object STNForecastXLSExtractor {
 
 
   def stnFieldsToArrival(flightRow: STNForecastFlightRow): Try[Arrival] = {
+    val totalPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax)
     Try {
       Arrival(
         Operator = None,
@@ -93,8 +94,6 @@ object STNForecastXLSExtractor {
         Gate = None,
         Stand = None,
         MaxPax = Some(flightRow.maxPax),
-        ActPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax),
-        TranPax = Some(0),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = PortCode("STN"),
@@ -104,7 +103,8 @@ object STNForecastXLSExtractor {
         Origin = PortCode(flightRow.origin),
         Scheduled = flightRow.scheduledDate.millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource)
+        FeedSources = Set(ForecastFeedSource),
+        PassengerSources = Map(ForecastFeedSource -> Passengers(totalPax, Some(0)))
       )
     }
   }

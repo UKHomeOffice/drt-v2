@@ -56,14 +56,15 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       val showClass = if (state.showDialogue) "show" else "fade"
 
       def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {
-        MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+        val key = label.replace("[^0-9a-zA-Z]+", "-")
+        MuiGrid(container = true, spacing = 2)(
           MuiGrid(item = true, xs = 1)(
-            ^.key := "date-picker-label",
+            ^.key := s"date-picker-label-$key",
             DefaultFormFieldsStyle.datePickerLabel,
             MuiFormLabel()(label),
           ),
           MuiGrid(item = true, xs = 4)(
-            ^.key := "date-picker-date",
+            ^.key := s"date-picker-date-$key",
             MuiTextField()(
               DefaultFormFieldsStyle.datePicker,
               ^.`type` := "date",
@@ -72,7 +73,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             )
           ),
           MuiGrid(item = true, xs = 6)(
-            ^.key := "date-picker-type",
+            ^.key := s"date-picker-type-$key",
             if (label == "From")
               validDateIndicator(state.startDate.isNotValid)
             else
@@ -118,7 +119,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
       <.div(
         ^.className := "export-button-wrapper",
-        MuiButton(color = Color.default, variant = "outlined", size = "medium")(
+        MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
           MuiIcons(GetApp)(fontSize = "small"),
           "Multi Day Export",
           ^.className := "btn btn-default",
@@ -142,7 +143,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                 ^.className := "modal-body",
                 ^.id := "multi-day-export-modal-body",
                 MuiGrid(container = true)(
-                  MuiGrid(container = true, spacing = MuiGrid.Spacing.`16`)(
+                  MuiGrid(container = true, spacing = 2)(
                     datePickerWithLabel(setStartDate, "From", state.startDate.date),
                     datePickerWithLabel(setEndDate, "To", state.endDate.date),
                     if (state.startDate.date > state.endDate.date)
@@ -185,7 +186,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
 
   private def exportLinksGroup(props: Props, state: State, gridXs: Int, exports: List[ExportType], title: String): VdomElement =
-    MuiGrid(container = true, item = true, spacing = MuiGrid.Spacing.`16`)(
+    MuiGrid(container = true, item = true, spacing = 2)(
       MuiGrid(item = true, xs = 12)(title, ^.key := "export-group-title"),
       exports.map(export =>
         MuiGrid(item = true, xs = gridXs)(

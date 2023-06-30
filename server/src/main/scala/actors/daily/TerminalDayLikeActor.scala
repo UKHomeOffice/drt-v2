@@ -42,7 +42,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
-      log.info(s"Received MinutesContainer for persistence")
+      log.debug(s"Received MinutesContainer for persistence")
       updateAndPersistDiff(container)
 
     case GetState =>

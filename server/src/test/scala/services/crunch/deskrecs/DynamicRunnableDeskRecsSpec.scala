@@ -191,7 +191,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   }
 
   "Given a flight and a mock splits calculator" >> {
-    val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), totalPax = Map(LiveFeedSource -> Option(100)))
+    val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)))
     val flights = Seq(ApiFlightWithSplits(arrival, Set()))
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
     val mockSplits: SplitsForArrival = (_, _) => splits
@@ -202,8 +202,8 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         val manifestsForArrival = manifestsByKey(manifest)
         val withLiveManifests = addManifests(flights, manifestsForArrival, mockSplits)
 
-        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(ApiPax = Option(1), FeedSources = arrival.FeedSources + ApiFeedSource,
-          TotalPax = arrival.TotalPax.updated(ApiFeedSource, Option(1))
+        withLiveManifests === Seq(ApiFlightWithSplits(arrival.copy(FeedSources = arrival.FeedSources + ApiFeedSource,
+          PassengerSources = arrival.PassengerSources.updated(ApiFeedSource, Passengers(Option(1), Option(0)))
         ), Set(splits)))
       }
 
@@ -236,9 +236,9 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "add historic API pax" >> {
       "When I have no Feed I should get some pax from historic API" >> {
-        val arrival = ArrivalGenerator.arrival(actPax = Option(100), origin = PortCode("JFK"), feedSources = Set(),
-          totalPax = Map.empty)
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Map(HistoricApiFeedSource -> Option(10)))
+        val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), feedSources = Set(),
+          passengerSources = Map.empty)
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Map(HistoricApiFeedSource -> Passengers(Option(10), None)))
       }
     }
   }
@@ -260,12 +260,12 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   private def checkPaxSource(arrival: Arrival,
                              maybeHistoricArrivalManifestPax: Map[Arrival, Option[List[PassengerInfoJson]]],
-                             expectedPaxSources: Map[FeedSource, Option[Int]]) = {
+                             expectedPaxSources: Map[FeedSource, Passengers]) = {
     val flow = DynamicRunnablePassengerLoads.addPax(mockHistoricManifestsPaxProvider(maybeHistoricArrivalManifestPax))
 
     val crunchRequestSource = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
     val result: immutable.Seq[(ProcessingRequest, List[ApiFlightWithSplits])] = Await.result(crunchRequestSource.via(flow).runWith(Sink.seq), 1.second)
-    result.head._2.exists(_.apiFlight.TotalPax === expectedPaxSources)
+    result.head._2.exists(_.apiFlight.PassengerSources === expectedPaxSources)
   }
 
   def manifestsByKey(manifest: VoyageManifest): Map[ArrivalKey, VoyageManifest] =
@@ -276,8 +276,8 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   "Given an arrival with 100 pax " >> {
 
-    val arrival = ArrivalGenerator.arrival("BA0001", actPax = Option(100), schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource),
-      totalPax = Map(LiveFeedSource -> Option(100)))
+    val arrival = ArrivalGenerator.arrival("BA0001", schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource),
+      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)))
 
     "When I provide no live and no historic manifests, terminal splits should be applied (50% desk, 50% egates)" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)
@@ -336,8 +336,12 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   }
 
   "validApiPercentage" >> {
-    val validApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
-    val invalidApi = ApiFlightWithSplits(ArrivalGenerator.arrival(actPax = Option(100), feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    val validApi = ApiFlightWithSplits(ArrivalGenerator
+      .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)),
+        feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    val invalidApi = ApiFlightWithSplits(ArrivalGenerator
+      .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)),
+        feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
     "Given no flights, then validApiPercentage should give 100%" >> {
       DynamicRunnablePassengerLoads.validApiPercentage(Seq()) === 100d
     }

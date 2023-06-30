@@ -7,7 +7,7 @@ import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -175,8 +175,6 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
     Gate = f.passengerGate,
     Stand = f.aircraftParkingPosition,
     MaxPax = f.seatCapacity,
-    ActPax = f.paxCount,
-    TranPax = None,
     RunwayID = None,
     BaggageReclaimId = None,
     AirportID = f.arrivalAirport,
@@ -186,7 +184,8 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
     Origin = f.departureAirport,
     Scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
     PcpTime = None,
-    FeedSources = Set(LiveFeedSource)
+    FeedSources = Set(LiveFeedSource),
+    PassengerSources = Map(LiveFeedSource -> Passengers(f.paxCount, None))
   )
 
 

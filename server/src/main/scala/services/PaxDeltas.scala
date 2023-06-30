@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
@@ -113,8 +113,11 @@ object PaxDeltas {
       case normal => normal
     }
 
-    val updatedPax = arrival.ActPax.map(pax => (pax * saneDelta).round.toInt)
+    val updatedPax = arrival.PassengerSources.map { case (k, v) =>
+      k -> Passengers(v.actual.map(pax => (pax * saneDelta).round.toInt), v.transit.map(pax => (pax * saneDelta).round.toInt))
+    }
 
-    arrival.copy(ActPax = updatedPax)
+    arrival.copy(PassengerSources = updatedPax)
+
   }
 }

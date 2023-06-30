@@ -100,7 +100,8 @@ case class EdiFeed(ediClient: EdiClient)
 
   def flightNumberSplitToComponent(flightNumberStr: String): (VoyageNumber, Option[FlightCodeSuffix]) = {
     if (flightNumberStr.matches("[0-9]+[a-zA-Z]"))
-      (VoyageNumber(flightNumberStr.substring(0, flightNumberStr.length - 1).toInt), Option(FlightCodeSuffix(flightNumberStr.substring(flightNumberStr.length - 1, flightNumberStr.length))))
+      (VoyageNumber(flightNumberStr.substring(0, flightNumberStr.length - 1).toInt),
+        Option(FlightCodeSuffix(flightNumberStr.substring(flightNumberStr.length - 1, flightNumberStr.length))))
     else (VoyageNumber(flightNumberStr.toInt), None)
 
   }
@@ -127,8 +128,6 @@ case class EdiFeed(ediClient: EdiClient)
         Gate = flight.DepartureGate,
         Stand = flight.StandCode,
         MaxPax = flight.MAXPAX_Aircraft,
-        ActPax = flight.Passengers,
-        TranPax = None,
         RunwayID = flight.RunWayCode,
         BaggageReclaimId = flight.BagageReclaim,
         AirportID = PortCode(flight.AirportCode_IATA),
@@ -138,10 +137,9 @@ case class EdiFeed(ediClient: EdiClient)
         PcpTime = None,
         FeedSources = Set(feedSource),
         CarrierScheduled = None,
-        ApiPax = None,
         ScheduledDeparture = None,
         RedListPax = None,
-        TotalPax = Map.empty
+        PassengerSources = Map(feedSource -> Passengers(flight.Passengers, None))
       )
     } match {
       case Success(a) => Option(a)
@@ -154,6 +152,3 @@ case class EdiFeed(ediClient: EdiClient)
     case _ => InvalidTerminal
   }
 }
-
-
-

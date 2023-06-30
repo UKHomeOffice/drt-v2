@@ -7,7 +7,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed}
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.N
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
@@ -40,8 +40,6 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       Gate = None,
       Stand = None,
       MaxPax = Some(308),
-      ActPax = Some(120),
-      TranPax = None,
       RunwayID = Some("08R"),
       BaggageReclaimId = None,
       AirportID = PortCode("LGW"),
@@ -51,7 +49,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       Origin = PortCode("LHR"),
       FeedSources = Set(LiveFeedSource),
       Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch, PcpTime = None,
-      TotalPax = Map(LiveFeedSource -> Option(120)))
+      PassengerSources = Map(LiveFeedSource -> Passengers(Option(120), None)))
 
   }
 
@@ -73,8 +71,6 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       Gate = None,
       Stand = None,
       MaxPax = Some(0),
-      ActPax = Some(0),
-      TranPax = None,
       RunwayID = Some("08R"),
       BaggageReclaimId = None,
       AirportID = PortCode("LGW"),
@@ -85,8 +81,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
       FeedSources = Set(LiveFeedSource),
       Scheduled = SDate("2018-06-03T19:50:00Z").millisSinceEpoch,
       PcpTime = None,
-      TotalPax = Map(LiveFeedSource-> Option(0)))
-
+      PassengerSources = Map(LiveFeedSource -> Passengers(Some(0), None)))
   }
 
   "An empty response returns an empty list of arrivals" in {

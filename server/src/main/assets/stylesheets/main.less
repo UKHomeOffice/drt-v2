@@ -685,11 +685,6 @@ table.headlines tr:nth-child(odd) {
   display: inline-flex;
 }
 
-.exports a {
-  padding: 2px 7px;
-  width: 149px;
-}
-
 .table-xcondensed {
   > thead,
   > tbody,
@@ -1199,6 +1194,13 @@ p {
   color: #7E8588;
 }
 
+.flex-horz-between {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  flex-grow: 1;
+}
+
 .terminal-content-header {
   display: flex;
   gap: 15px;
@@ -1246,10 +1248,6 @@ p {
   justify-content: flex-end;
   align-items: baseline;
   gap: 15px;
-}
-
-.time-machine-switch-buttons {
-  display: flex;
 }
 
 .time-machine-switch-label i {
@@ -1839,6 +1837,10 @@ th h2 {
   cursor: pointer;
 }
 
+.arrivals__table__flags-column {
+  width: 110px;
+}
+
 .arrivals__table__flight-est-pcp {
   width: 110px;
 }
@@ -2003,7 +2005,7 @@ th h2 {
 }
 
 #arrivals table thead {
-  background-color: #2989C6;
+  background-color: #335096;
   color: #fff;
 }
 

@@ -73,9 +73,25 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
     val estChox = f.EstimatedChox.map(new Timestamp(_))
     val actChox = f.ActualChox.map(new Timestamp(_))
     val pcp = new Timestamp(f.PcpTime.getOrElse(f.Scheduled))
-    val pcpPax = f.ActPax.map(ap => ap - f.TranPax.getOrElse(0))
+    val pcpPax = f.bestPaxEstimate.passengers.getPcpPax
     val scheduledDeparture = f.ScheduledDeparture.map(new Timestamp(_))
 
-    ArrivalRow(f.flightCodeString, f.VoyageNumber.numeric, portCode.iata, f.Origin.toString, f.Terminal.toString, f.Gate, f.Stand, f.Status.description, sch, est, act, estChox, actChox, pcp, f.ActPax, pcpPax, scheduledDeparture)
+    ArrivalRow(f.flightCodeString,
+      f.VoyageNumber.numeric,
+      portCode.iata,
+      f.Origin.toString,
+      f.Terminal.toString,
+      f.Gate,
+      f.Stand,
+      f.Status.description,
+      sch,
+      est,
+      act,
+      estChox,
+      actChox,
+      pcp,
+      f.bestPaxEstimate.passengers.actual,
+      pcpPax,
+      scheduledDeparture)
   }
 }

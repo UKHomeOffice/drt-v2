@@ -132,8 +132,13 @@ object MonthlyStaffing {
 
   private val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
 
-  def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] =
-    if (timeSlotMinutes == 60) hourlyToQuarterHourlySlots(changes) else changes
+  def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] = {
+    timeSlotMinutes match {
+      case 15 => changes
+      case 30 => halfHourlyToQuarterHourlySlots(changes)
+      case 60 => hourlyToQuarterHourlySlots(changes)
+    }
+  }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
   implicit val stateReuse: Reusability[State] = Reusability.always[State]
@@ -186,8 +191,8 @@ object MonthlyStaffing {
               <.label("Time Resolution", ^.className := "staffing-controls-label"),
               <.div(^.className := "staffing-controls-select",
                 drawSelect(
-                  values = Seq("15", "60"),
-                  names = Seq("Quarter Hourly", "Hourly"),
+                  values = Seq("15", "30", "60"),
+                  names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
                   defaultValue = s"${props.timeSlotMinutes}",
                   callback = (e: ReactEventFromInput) =>
                     props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
@@ -207,7 +212,7 @@ object MonthlyStaffing {
         ),
         maybeClockChangeDate(viewingDate).map { clockChangeDate =>
           val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
-          MuiGrid(container = true, direction = "column", spacing = 8)(
+          MuiGrid(container = true, direction = "column", spacing = 1)(
             MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("font-weight" -> "bold"))),
             MuiGrid(item = true)(<.span("Please ensure no staff are entered in the cells with a dash '-'. They are there to enable you to " +
               s"allocate staff in the additional hour on $prettyDate.")),
@@ -258,9 +263,14 @@ object MonthlyStaffing {
     case Some(a) => a
   }
 
-  private def hourlyToQuarterHourlySlots(hourlySlots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = hourlySlots.flatMap {
+  private def hourlyToQuarterHourlySlots(slots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = slots.flatMap {
     case ((slotIdx, dayIdx), staff) =>
       (0 to 3).map(offset => (((slotIdx * 4) + offset, dayIdx), staff))
+  }
+
+  private def halfHourlyToQuarterHourlySlots(slots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = slots.flatMap {
+    case ((slotIdx, dayIdx), staff) =>
+      (0 to 1).map(offset => (((slotIdx * 2) + offset, dayIdx), staff))
   }
 
   private def memoize[I, O](f: I => O): I => O = new mutable.HashMap[I, O]() {
@@ -273,10 +283,12 @@ object MonthlyStaffing {
 
   private def daysInMonthByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] =
     consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
-      .map(day => timeZoneSafeTimeSlots(
-        slotsInDay(day, timeSlotMinutes),
-        timeSlotMinutes
-      ))
+      .map { day =>
+        timeZoneSafeTimeSlots(
+          slotsInDay(day, timeSlotMinutes),
+          timeSlotMinutes
+        )
+      }
       .transpose
 
   private def maybeClockChangeDate(viewingDate: SDateLike): Option[SDateLike] = {

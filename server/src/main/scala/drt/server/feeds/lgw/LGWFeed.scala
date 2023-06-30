@@ -14,7 +14,8 @@ import uk.gov.homeoffice.drt.arrivals.Arrival
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object LGWFeed {
-  def serviceBusClient(namespace: String, sasToKey: String, serviceBusUrl: String): ServiceBusClient = new ServiceBusClient(
+  def serviceBusClient(namespace: String, sasToKey: String, serviceBusUrl: String)
+                      (implicit system: ActorSystem): ServiceBusClient = new ServiceBusClient(
     SBusConfig(new java.net.URL(serviceBusUrl), s"$namespace/to", s"${namespace}to", sasToKey)
   )
 }

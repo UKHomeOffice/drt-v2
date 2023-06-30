@@ -5,12 +5,9 @@ import scalacss.internal.mutable.StyleSheet
 
 case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends StyleSheet.Inline {
 
-  import common.theme
   import dsl._
 
   val textField = style(
-    marginLeft(theme.spacing.unit.px),
-    marginRight(theme.spacing.unit.px),
     width(150.px),
     unsafeChild("label")(
       fontSize(1.5.rem)
@@ -20,6 +17,7 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
   val datePicker = style(
     marginBottom(1.2.rem),
     width(150.px),
+    padding(4.px, 0.px, 5.px),
     unsafeChild("input")(
       fontSize(1.5.rem)
     )
@@ -37,8 +35,6 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
   )
 
   val textFieldSmall = style(
-    marginLeft(theme.spacing.unit.px),
-    marginRight(theme.spacing.unit.px),
     width(45.px),
     unsafeChild("label")(
       fontSize(1.5.rem)
@@ -69,10 +65,6 @@ case class FormFieldsStyle(common: CommonStyle = DefaultCommonStyle) extends Sty
   val simulation = style(
     padding(15.px),
     minHeight(550.px),
-  )
-
-  val buttons = style(
-    marginTop(theme.spacing.unit.px)
   )
 
   val simulationCharts = style(

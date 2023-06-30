@@ -9,21 +9,21 @@
   "author": "UK Home Office",
   "license": "UNLICENSED",
   "devDependencies": {
-    "@types/node": "^18.15.3",
-    "@typescript-eslint/eslint-plugin": "^5.54.0",
-    "@typescript-eslint/parser": "^5.56.0",
-    "cypress": "^12.7.0",
-    "eslint": "^8.36.0",
-    "eslint-plugin-cypress": "^2.12.1",
+    "@types/node": "^18.16.0",
+    "@typescript-eslint/eslint-plugin": "^5.59.7",
+    "@typescript-eslint/parser": "^5.59.7",
+    "cypress": "^12.12.0",
+    "eslint": "^8.41.0",
+    "eslint-plugin-cypress": "^2.13.3",
     "ts-loader": "^9.4.2",
-    "typescript": "^4.9.5"
+    "typescript": "^5.0.4"
   },
   "dependencies": {
     "@types/papaparse": "^5.3.7",
     "har-validator": "5.1.5",
     "moment": "^2.29.4",
-    "moment-timezone": "^0.5.41",
+    "moment-timezone": "^0.5.43",
     "npm-run-all": "^4.1.5",
-    "papaparse": "^5.3.2"
+    "papaparse": "^5.4.1"
   }
 }

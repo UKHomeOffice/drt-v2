@@ -4,7 +4,7 @@ package drt.server.feeds.lhr
 import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.forecast.LHRForecastFlightRow
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.ForecastFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -15,6 +15,8 @@ object LHRForecastFeed {
   def log: Logger = LoggerFactory.getLogger(getClass)
 
   def lhrFieldsToArrival(flightRow: LHRForecastFlightRow): Try[Arrival] = {
+    val actualPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax)
+    val transitPax = if (flightRow.transferPax == 0) None else Option(flightRow.transferPax)
     Try {
       Arrival(
         Operator = None,
@@ -27,8 +29,6 @@ object LHRForecastFeed {
         Gate = None,
         Stand = None,
         MaxPax = None,
-        ActPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax),
-        TranPax = if (flightRow.totalPax == 0) None else Option(flightRow.transferPax),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = "LHR",
@@ -38,7 +38,8 @@ object LHRForecastFeed {
         Origin = flightRow.origin,
         Scheduled = flightRow.scheduledDate.millisSinceEpoch,
         PcpTime = None,
-        FeedSources = Set(ForecastFeedSource)
+        FeedSources = Set(ForecastFeedSource),
+        PassengerSources = Map(ForecastFeedSource -> Passengers(actualPax, transitPax))
       )
     }
   }

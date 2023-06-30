@@ -2,8 +2,8 @@ package services.graphstages
 
 import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalStatus}
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalStatus, Passengers}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.config.Lhr
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
@@ -64,6 +64,6 @@ class FlightFilterSpec extends Specification {
   }
 
   private def fws(origin: PortCode, terminal: Terminal): ApiFlightWithSplits = {
-    ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2021-06-01T12:00", actPax = Option(10), origin = origin, terminal = terminal), Set())
+    ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2021-06-01T12:00", passengerSources = Map(ApiFeedSource -> Passengers(Option(10),None)), origin = origin, terminal = terminal), Set())
   }
 }

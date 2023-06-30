@@ -4,11 +4,12 @@ import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.FlightsApi.Flights
 import services.crunch.TestDefaults.airportConfigForSplits
+import uk.gov.homeoffice.drt.arrivals.Passengers
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.List
@@ -30,7 +31,7 @@ class QueueDiversionSpec extends CrunchTestLike {
 
     "Given an arrival" >> {
       val pax = 100
-      val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), actPax = Option(pax))
+      val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), passengerSources = Map(LiveFeedSource -> Passengers(Option(pax),None)))
 
       "When all queues are open I should see pax headed to all queues in the default splits" >> {
         implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(

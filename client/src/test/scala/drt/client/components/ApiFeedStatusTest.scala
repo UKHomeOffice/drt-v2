@@ -4,8 +4,8 @@ import drt.client.services.JSDateConversions.SDate
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Passengers, Splits}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -16,10 +16,10 @@ class ApiFeedStatusTest extends AnyWordSpec with Matchers {
     val afterNow = "2022-05-31T12:30"
     val considerPredictions = true
 
-    val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow, actPax = Option(100))
-    val landedWithNoPax = ArrivalGenerator.apiFlight(schDt = beforeNow, actPax = None)
-    val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow, actPax = Option(100), feedSources = Set(LiveFeedSource))
-    val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow, actPax = Option(100)), Set())
+    val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None)))
+    val landedWithNoPax = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = None,transit = None)))
+    val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(LiveFeedSource -> Passengers(actual = Option(100),transit = None)), feedSources = Set(LiveFeedSource))
+    val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None))), Set())
     val ctaLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("ORK")), Set())
     val domesticLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("EMA")), Set())
     val landedWithValidApi = ApiFlightWithSplits(landedWithNoSources, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))

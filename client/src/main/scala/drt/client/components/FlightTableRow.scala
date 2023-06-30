@@ -8,12 +8,14 @@ import drt.client.components.FlightComponents.{SplitsGraph, paxFeedSourceClass}
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.TimeUtil.millisToMinutes
 import drt.shared._
-import drt.shared.api.WalkTimes
+import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist._
 import drt.shared.splits.ApiSplitsToSplitRatio
-import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import io.kinoplan.scalajs.react.material.ui.core.MuiChip
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.extra.ReusabilityOverlay
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
@@ -29,6 +31,8 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.scalajs.js
+
 object FlightTableRow {
 
   import FlightTableComponents._
@@ -40,7 +44,6 @@ object FlightTableRow {
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShares: Set[Arrival],
                    idx: Int,
-                   timelineComponent: Option[Arrival => html_<^.VdomNode],
                    originMapper: OriginMapperF = portCode => portCode.toString,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
@@ -55,20 +58,24 @@ object FlightTableRow {
                    redListUpdates: RedListUpdates,
                    includeIndirectRedListColumn: Boolean,
                    walkTimes: WalkTimes,
+                   flaggedNationalities: Set[Country],
+                   manifestSummary: Option[FlightManifestSummary],
                   ) extends UseValueEq
 
-  case class RowState(hasChanged: Boolean)
+  implicit val propsReuse: Reusability[Props] = Reusability {
+    (a, b) => a.flightWithSplits.lastUpdated == b.flightWithSplits.lastUpdated &&
+      a.manifestSummary == b.manifestSummary &&
+      a.flaggedNationalities == b.flaggedNationalities
+  }
 
-  val component: Component[Props, RowState, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
-    .initialState[RowState](RowState(false))
-    .render_PS { (props, state) =>
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
+    .render_P { props =>
       val isMobile = dom.window.innerWidth < 800
       val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
       val allCodes = flight.flightCodeString :: codeShares.map(_.flightCodeString).toList
 
-      val hasChangedStyle = if (state.hasChanged) ^.background := "rgba(255, 200, 200, 0.5) " else ^.outline := ""
       val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
@@ -128,15 +135,19 @@ object FlightTableRow {
 
       val expectedContent = maybeLocalTimeWithPopup(bestExpectedTime, Option(timesPopUp), None)
 
+      val charts = (flightWithSplits.hasValidApi, props.manifestSummary) match {
+        case (true, Some(manifestSummary)) =>
+          <.div(^.className := "arrivals__table__flight-code__info",
+            FlightChartComponent(FlightChartComponent.Props(manifestSummary)))
+        case _ => EmptyVdom
+      }
+
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(
             ^.cls := "arrivals__table__flight-code-wrapper",
             flightCodeElement(flightCodes, props.directRedListFlight.outgoingDiversion, props.directRedListFlight.incomingDiversion),
-            if (flightWithSplits.hasValidApi)
-              <.div(^.className := "arrivals__table__flight-code__info",
-                FlightChartComponent(FlightChartComponent.Props(flightWithSplits)))
-            else EmptyVdom
+            charts
           )),
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
@@ -155,6 +166,9 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
+        if (props.flaggedNationalities.nonEmpty)
+          <.td(^.className := "arrivals__table__flags-column", nationalityChips(props.flaggedNationalities, props.manifestSummary))
+        else EmptyVdom,
         <.td(gateOrStand(flight, props.airportConfig.defaultWalkTimeMillis(flight.Terminal), props.directRedListFlight.paxDiversion, props.walkTimes)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
@@ -162,7 +176,7 @@ object FlightTableRow {
       )
       val lastCells = List[TagMod](
         <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.pcpPaxEstimate)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
+        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.bestPaxSource)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
       )
 
       val flightFields = firstCells ++ lastCells
@@ -170,8 +184,6 @@ object FlightTableRow {
       val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
 
       val flightId = flight.uniqueId.toString
-
-      val timeLineTagMod = props.timelineComponent.map(timeline => <.td(timeline(flight))).toList.toTagMod
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
@@ -187,8 +199,6 @@ object FlightTableRow {
         <.tr(
           ^.key := flightId,
           ^.className := trClassName,
-          hasChangedStyle,
-          timeLineTagMod,
           flightFields.toTagMod,
           queueSplits,
           <.td(FlightComponents.paxTransferComponent(flight))
@@ -197,18 +207,40 @@ object FlightTableRow {
         <.tr(
           ^.key := flightId,
           ^.className := trClassName,
-          hasChangedStyle,
-          timeLineTagMod,
           flightFields.toTagMod,
           queueSplits
         )
       }
-
     }
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
+  private def nationalityChips(flaggedNationalities: Set[Country], manifestSummary: Option[FlightManifestSummary]): html_<^.VdomNode = {
+    manifestSummary.map { summary =>
+      <.div(
+        ^.style := js.Dictionary("display" -> "flex", "flexWrap" -> "wrap", "gap" -> "8px"),
+        flaggedNationalities
+          .map { country =>
+            val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
+            if (pax > 0) Option(MuiChip(
+              label = VdomNode(s"${country.threeLetterCode} ($pax)"),
+              sx = SxProps(Map(
+                "color" -> "#FFFFFF",
+                "backgroundColor" -> "#316CCC",
+              ))
+            )())
+            else None
+          }
+          .collect {
+            case Some(chip) => chip
+          }
+          .toTagMod
+      )
+    }.getOrElse(EmptyVdom)
+  }
+
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
-    val gateOrStand = <.span(^.className := "no-wrap", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
+    val gateOrStand = <.span(^.key := "gate-or-stand", ^.className := "no-wrap", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
     val maybeActualWalkTime = walkTimes.maybeWalkTimeMinutes(arrival.Gate, arrival.Stand, arrival.Terminal)
 
     val description = (paxAreDiverted, maybeActualWalkTime.isDefined) match {
@@ -220,7 +252,7 @@ object FlightTableRow {
     }
     val walkTime = maybeActualWalkTime.getOrElse((terminalWalkTime / oneMinuteMillis).toInt)
     val walkTimeString = MinuteAsAdjective(walkTime).display + " " + description
-    <.span(^.className := "no-wrap", Tippy.interactive(<.span(walkTimeString), gateOrStand))
+    <.span(^.className := "no-wrap", Tippy.interactive(<.span(^.key := "walk-time", walkTimeString), gateOrStand))
   }
 
   def offScheduleClass(arrival: Arrival, considerPredictions: Boolean): String = {
@@ -236,5 +268,4 @@ object FlightTableRow {
   def isRedListCountry(country: String, date: SDateLike, redListUpdates: RedListUpdates): Boolean =
     redListUpdates.countryCodesByName(date.millisSinceEpoch).keys.exists(_.toLowerCase == country.toLowerCase)
 
-  //  def apply(props: Props): Unmounted[Props, RowState, Unit] = component(props)
 }

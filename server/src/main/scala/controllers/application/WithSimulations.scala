@@ -40,15 +40,14 @@ trait WithSimulations {
   self: Application =>
 
   def simulationExport(): Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
+    implicit val timeout: Timeout = new Timeout(10 minutes)
+
     Action(parse.defaultBodyParser).async {
       request =>
-        implicit val timeout: Timeout = new Timeout(10 minutes)
-
         SimulationParams
           .fromQueryStringParams(request.queryString) match {
           case Success(simulationParams) =>
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
-
             val date = SDate(simulationParams.date)
             val start = date.getLocalLastMidnight
             val end = date.getLocalNextMidnight
@@ -184,13 +183,14 @@ trait WithSimulations {
         None
       )
 
-      Try(sourceToCsvResponse(stream, fileName)) match {
+      val result: Result = Try(sourceToCsvResponse(stream, fileName)) match {
         case Success(value) => value
         case Failure(t) =>
           log.error("Failed to get CSV export", t)
           BadRequest("Failed to get CSV export")
       }
 
+      result
     })
   }
 

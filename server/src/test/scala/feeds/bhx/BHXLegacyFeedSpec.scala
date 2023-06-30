@@ -9,7 +9,7 @@ import org.specs2.mock.Mockito
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.co.bhx.online.flightinformation._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
 
@@ -103,8 +103,6 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         Gate = Some("44"),
         Stand = Some("57R"),
         MaxPax = Some(80),
-        ActPax = Some(40),
-        TranPax = Some(35),
         RunwayID = Some("R1"),
         BaggageReclaimId = Some("7A"),
         AirportID = PortCode("BHX"),
@@ -114,7 +112,8 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         Origin = PortCode("CPH"),
         Scheduled = 1338619560000L,
         PcpTime = None,
-        FeedSources = Set(LiveFeedSource)
+        FeedSources = Set(LiveFeedSource),
+        PassengerSources = Map(LiveFeedSource -> Passengers(Some(40), Some(35)))
       )
     }
 
@@ -137,8 +136,6 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         Gate = None,
         Stand = None,
         MaxPax = Some(80),
-        ActPax = Some(40),
-        TranPax = Some(35),
         RunwayID = None,
         BaggageReclaimId = None,
         AirportID = PortCode("BHX"),
@@ -149,6 +146,7 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         Scheduled = 1338623160000L, // BHX Forecast is incorrect. This should be 1338619613123L or 2012-06-02T06:46:53.123Z
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),
+        PassengerSources = Map(ForecastFeedSource -> Passengers(Some(40), Some(35)))
       )
     }
 
@@ -170,7 +168,7 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
       println(s"We got ${arrivals.size} Arrivals.")
       arrivals.foreach(println)
       ok
-      }.pendingUntilFixed("used to test if the BHX feed is working locally given you can ssh into a whitelisted IP address")
+    }.pendingUntilFixed("used to test if the BHX feed is working locally given you can ssh into a whitelisted IP address")
   }
 
 }

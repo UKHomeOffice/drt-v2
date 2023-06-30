@@ -1,6 +1,5 @@
 package services.crunch.desklimits.flexed
 
-import dispatch.Future
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.EgatesCapacityProvider
@@ -13,7 +12,7 @@ import uk.gov.homeoffice.drt.time.MilliTimes.oneHourMillis
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.NumericRange
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
 
 object WorkloadProcessorsHelper {

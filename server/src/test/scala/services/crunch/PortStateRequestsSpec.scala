@@ -12,8 +12,8 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._
 import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, UnknownFeedSource}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
@@ -78,7 +78,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     resetData(T1, myNow())
 
     "When I send it a flight and then ask for its flights" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1)
+      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
       val eventualAck = ps.ask(ArrivalsDiff(Iterable(arrival), List()))
 
       "Then I should see the flight I sent it" >> {
@@ -89,7 +89,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     }
 
     "When I send it a flight and then ask for updates since just before now" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1)
+      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
       val eventualAck = ps.ask(ArrivalsDiff(Iterable(arrival), List()))
 
       "Then I should see the flight I sent it in the port state" >> {
@@ -103,8 +103,8 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
     "When I send it 2 flights consecutively and then ask for its flights" >> {
       val scheduled2 = "2020-01-01T00:25"
-      val arrival1 = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1)
-      val arrival2 = ArrivalGenerator.arrival(iata = "FR5000", schDt = scheduled2, terminal = T1)
+      val arrival1 = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
+      val arrival2 = ArrivalGenerator.arrival(iata = "FR5000", schDt = scheduled2, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
       val eventualAck = ps.ask(ArrivalsDiff(Seq(arrival1), List())).flatMap(_ => ps.ask(ArrivalsDiff(Seq(arrival2), List())))
 
       "Then I should see both flights I sent it" >> {
@@ -185,7 +185,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     }
 
     "When I send it a flight, a queue & a staff minute, and ask for the terminal state" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1)
+      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
       val drm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
       val sm1 = StaffMinute(T1, myNow().millisSinceEpoch, 1, 2, 3)
 

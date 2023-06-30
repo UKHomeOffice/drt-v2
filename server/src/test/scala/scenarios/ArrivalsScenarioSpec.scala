@@ -15,7 +15,7 @@ import services.crunch.CrunchTestLike
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, TotalPaxSource}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -43,7 +43,8 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     TerminalQueueAllocatorWithFastTrack(terminalQueueAllocationMap))
 
   val splitsCalculator: SplitsCalculator = SplitsCalculator(testPaxTypeAllocator, defaultAirportConfig.terminalPaxSplits, ChildEGateAdjustments(1.0))
-  private val arrival: Arrival = ArrivalGenerator.arrival(actPax = Option(100), schDt = "2021-03-08T00:00", totalPax = Map(LiveFeedSource -> Option(100)))
+  private val arrival: Arrival = ArrivalGenerator.arrival(schDt = "2021-03-08T00:00",
+    passengerSources = Map(LiveFeedSource -> Passengers(Option(100),None)))
   val arrivals: List[Arrival] = List(arrival)
 
   def flightsProvider(cr: ProcessingRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
@@ -118,4 +119,3 @@ class AkkingActor extends Actor {
     case _ => sender() ! Ack
   }
 }
-

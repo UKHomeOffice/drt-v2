@@ -118,6 +118,8 @@ object VoyageManifestGenerator {
       paxInfos = pax,
       scheduledDate = ManifestDateOfArrival(date),
       scheduledTime = ManifestTimeOfArrival(time.take(5)),
-      voyageNumber = arrival.VoyageNumber)
+      voyageNumber = arrival.VoyageNumber,
+      departurePortCode = arrival.Origin,
+    )
   }
 }

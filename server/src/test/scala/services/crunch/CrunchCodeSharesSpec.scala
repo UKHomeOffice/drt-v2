@@ -2,11 +2,13 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
+import drt.shared.CodeShares.uniqueArrivalsWithCodeShares
 import drt.shared.FlightsApi.Flights
 import drt.shared._
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -27,10 +29,12 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       "Then I should see workload representing only the flight with the highest passenger numbers" >> {
       val scheduled = "2017-01-01T00:00Z"
 
-      val flights = Flights(List(
-        ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, actPax = Option(10), origin = PortCode("JFK")),
-        ArrivalGenerator.arrival(iata = "FR8819", schDt = scheduled, actPax = Option(10), origin = PortCode("JFK"))
-      ))
+
+      val arrivals = List(
+        ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(15), None)), origin = PortCode("JFK")),
+        ArrivalGenerator.arrival(iata = "FR8819", schDt = scheduled, terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), origin = PortCode("JFK"))
+      )
+      val flights = Flights(arrivals)
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
@@ -41,7 +45,7 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+      val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState =>
@@ -60,9 +64,9 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Flights(List(
-        ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, actPax = Option(15)),
-        ArrivalGenerator.arrival(schDt = scheduled00, iata = "FR8819", terminal = T1, actPax = Option(10)),
-        ArrivalGenerator.arrival(schDt = scheduled15, iata = "EZ1010", terminal = T2, actPax = Option(12))
+        ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, passengerSources =  Map(LiveFeedSource -> Passengers(Option(15),None))),
+        ArrivalGenerator.arrival(schDt = scheduled00, iata = "FR8819", terminal = T1, passengerSources =  Map(LiveFeedSource -> Passengers(Option(10),None))),
+        ArrivalGenerator.arrival(schDt = scheduled15, iata = "EZ1010", terminal = T2, passengerSources =  Map(LiveFeedSource -> Passengers(Option(12),None)))
       ))
 
       val crunch = runCrunchGraph(TestConfig(
