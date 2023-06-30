@@ -12,10 +12,10 @@
     "@types/node": "^18.16.0",
     "@typescript-eslint/eslint-plugin": "^5.59.7",
     "@typescript-eslint/parser": "^5.59.7",
-    "cypress": "^12.12.0",
+    "cypress": "^12.16.0",
     "eslint": "^8.41.0",
     "eslint-plugin-cypress": "^2.13.3",
-    "ts-loader": "^9.4.2",
+    "ts-loader": "^9.4.3",
     "typescript": "^5.0.4"
   },
   "dependencies": {

@@ -27,7 +27,7 @@ object Settings {
   object versions {
     val drtLib = "v548"
 
-    val scala = "2.13.10"
+    val scala = "2.13.11"
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
@@ -68,7 +68,7 @@ object Settings {
     val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.1.15"
     val sprayJsonScalaJs = "1.3.5-7"
-    val scalaTestVersion = "3.2.15"
+    val scalaTestVersion = "3.2.16"
     val twirlApi = "1.5.2"
   }
 
@@ -196,14 +196,14 @@ object Settings {
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
-    "io.netty" % "netty-all" % "4.1.92.Final",
+    "io.netty" % "netty-all" % "4.1.94.Final",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
     "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE"
+    "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
