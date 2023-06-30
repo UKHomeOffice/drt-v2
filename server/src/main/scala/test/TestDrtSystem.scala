@@ -10,13 +10,11 @@ import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
-import drt.shared.coachTime.CoachWalkTime
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import uk.gov.homeoffice.drt.time.SDate
 import slickdb.{UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._
@@ -25,7 +23,7 @@ import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.sql.Timestamp
 import scala.collection.SortedSet
@@ -91,6 +89,7 @@ case class MockDrtParameters() extends DrtParameters {
   override val lcyLiveUsername: String = ""
   override val lcyLivePassword: String = ""
   override val maybeRemovalCutOffSeconds: Option[FiniteDuration] = None
+  override val usePassengerPredictions: Boolean = true
 }
 
 case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)

@@ -14,11 +14,11 @@ import uk.gov.homeoffice.drt.ports._
 
 object FlightComponents {
   def paxFeedSourceClass(paxSource: PaxSource): String = (paxSource.feedSource) match {
-    case (ApiFeedSource) => "pax-rag-green"
-    case (LiveFeedSource) => "pax-rag-green"
-    case (HistoricApiFeedSource) => "pax-rag-amber"
-    case (ForecastFeedSource) => "pax-rag-amber"
-    case (AclFeedSource) => "pax-rag-red"
+    case ApiFeedSource => "pax-rag-green"
+    case LiveFeedSource => "pax-rag-green"
+    case HistoricApiFeedSource => "pax-rag-amber"
+    case ForecastFeedSource => "pax-rag-amber"
+    case AclFeedSource => "pax-rag-red"
     case _ => "pax-rag-red"
   }
 
@@ -61,10 +61,8 @@ object FlightComponents {
         <.p(s"${feedSource.displayName} - ${pax.actual.map(_.toString).getOrElse("")}")
     }
 
-    val apiPax = List(
-      flight.paxFromApi.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
-    )
-    <.span((paxSources ++ apiPax).toVdomArray)
+    val maxPax = <.p(s"Seats: ${flight.apiFlight.MaxPax.getOrElse("-")}")
+    <.span((paxSources :+ maxPax).toVdomArray)
   }
 
   def paxTransferComponent(flight: Arrival): VdomTagOf[Div] = {
