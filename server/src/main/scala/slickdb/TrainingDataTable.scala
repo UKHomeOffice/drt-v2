@@ -23,7 +23,8 @@ class TrainingDataTemplateTable(tag: Tag) extends Table[TrainingDataTemplate](ta
 
   def markdownContent: Rep[String] = column[String]("markdown_content")
 
-  def * : ProvenShape[TrainingDataTemplate] = (id, uploadTime, fileName, title, markdownContent).mapTo[TrainingDataTemplate]
+  def * : ProvenShape[TrainingDataTemplate] =
+    (id, uploadTime, fileName, title, markdownContent).mapTo[TrainingDataTemplate]
 }
 
 sealed trait TrainingDataTemplateLike

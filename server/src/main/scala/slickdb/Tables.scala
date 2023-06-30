@@ -159,12 +159,10 @@ trait Tables {
     val latest_login: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("latest_login")
     val inactive_email_sent: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("inactive_email_sent")
     val revoked_access: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("revoked_access")
-
     val pk = primaryKey("user_pkey", (id))
     val index1 = index("username", userName)
     val index2 = index("email", email)
     val index3 = index("latest_login", latest_login)
-
   }
 
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */

@@ -93,7 +93,6 @@ object Settings {
     "aws-sdk" -> "2.1397.0",
     "react-responsive-carousel" -> "3.2.12",
     "react-material-ui-carousel" -> "3.4.2",
-//    "react-swipeable-views"->"0.14.0",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
   )
@@ -105,12 +104,10 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
     "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
-//    "org.scala-lang.modules" %%% "scala-xml" % "2.1.0" force(),
     "io.suzaku" %%% "diode" % diode,
     "io.suzaku" %%% "diode-react" % diode,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0",
-//    "software.amazon.awssdk" %%% "aws-sdk-js" % "2.1397.0",
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "com.lihaoyi" %% "pprint" % pprint,
@@ -119,13 +116,9 @@ object Settings {
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
-//    "com.github.karasiq" %%% "scalajs-bootstrap" % "2.4.0",
-//    "com.github.karasiq" % "scalajs-bootstrap-v4_sjs0.6_2.12" % "2.4.2",
-//    "com.github.karasiq" %%% "scalajs-bootstrap-v4" % "2.4.2",
     "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
     "com.dedipresta" %%% "scala-crypto" % "1.0.0",
     "io.lemonlabs" %%% "scala-uri" % "4.0.3",
-//    "org.webjars.npm" % "react-responsive-carousel" % "3.1.49",
 
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
@@ -206,7 +199,6 @@ object Settings {
 
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
-    "org.webjars.npm" % "react-responsive-carousel" % "3.1.49",
 
     "io.netty" % "netty-all" % "4.1.94.Final",
 

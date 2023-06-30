@@ -26,10 +26,11 @@ case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]],
   userFeatureViewCount: Pot[Int])
 
 object Navbar {
-  case class Props(ctl: RouterCtl[Loc],
-    page: Loc,
-    loggedInUser: LoggedInUser,
-    airportConfig: AirportConfig)
+  case class Props(
+                    ctl: RouterCtl[Loc],
+                    page: Loc,
+                    loggedInUser: LoggedInUser,
+                    airportConfig: AirportConfig)
 
   case class State(showDropDown: Boolean)
 
@@ -58,7 +59,7 @@ object Navbar {
 
     def componentDidMount() = {
       Callback(SPACircuit.dispatch(GetUserViewFeatureCount())) >>
-      Callback(SPACircuit.dispatch(GetTrainingDataTemplates()))
+        Callback(SPACircuit.dispatch(GetTrainingDataTemplates()))
     }
 
     def render(props: Props, state: State) = {

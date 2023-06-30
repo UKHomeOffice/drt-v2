@@ -3,13 +3,10 @@ package controllers
 import akka.stream.IOResult
 import akka.stream.scaladsl.{Source, StreamConverters}
 import akka.util.ByteString
-import play.api.ConfigLoader.configLoader
 import play.api.http.HttpEntity
-import play.api.http.Status.OK
 import play.api.mvc.{InjectedController, ResponseHeader, Result}
 import play.api.{Configuration, Environment}
-import play.mvc.Controller
-import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, DefaultCredentialsProvider, StaticCredentialsProvider}
+import software.amazon.awssdk.auth.credentials.{AwsBasicCredentials, StaticCredentialsProvider}
 import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.core.async.AsyncResponseTransformer
 import software.amazon.awssdk.regions.Region
@@ -32,7 +29,7 @@ class S3FileController @Inject()(implicit val config: Configuration, env: Enviro
     .create(AwsBasicCredentials.create(accessKey, secretKey))
 
   val s3Client: S3AsyncClient = S3AsyncClient.builder()
-    .region(Region.EU_WEST_2) // Set the appropriate AWS region
+    .region(Region.EU_WEST_2)
     .credentialsProvider(credentialsProvider)
     .build()
 
@@ -49,20 +46,16 @@ class S3FileController @Inject()(implicit val config: Configuration, env: Enviro
 
     val s3Response: Future[InputStream] = responseBytes.map(_.asInputStream())
 
-    val contentTypeF: Future[String] = responseBytes.map(_.response().contentType())
-
     val responseTransformer: Future[Source[ByteString, Future[IOResult]]] =
       s3Response.map { inputStream =>
         StreamConverters.fromInputStream(() => inputStream)
       }
 
-    val result = contentTypeF.map { contentType =>
+    responseBytes.map(_.response().contentType()).map { contentType =>
       Result(
         header = ResponseHeader(OK, Map("Content-Type" -> contentType)),
         body = HttpEntity.Streamed(Source.futureSource(responseTransformer), None, Some(contentType))
       )
     }
-
-    result
   }
 }

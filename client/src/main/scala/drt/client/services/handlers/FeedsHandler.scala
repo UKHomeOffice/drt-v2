@@ -34,7 +34,7 @@ class FeedsHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedSourceStatuses]]]) extends
       noChange
 
     case SetFeedSourceStatuses(statuses) =>
-      val scheduledRequest = Effect(Future(GetFeedSourceStatuses()))//.after(15 seconds)
+      val scheduledRequest = Effect(Future(GetFeedSourceStatuses())).after(15 seconds)
       updated(Ready(statuses), scheduledRequest)
 
     case GetFeedSourceStatuses() =>

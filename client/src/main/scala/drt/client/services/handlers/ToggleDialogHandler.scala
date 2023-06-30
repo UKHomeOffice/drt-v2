@@ -11,12 +11,10 @@ class ToggleDialogHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends LoggingA
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case TrainingDialog(toggleDialog) => {
-      println(s"TrainingDialog......$toggleDialog")
       updated(Ready(toggleDialog))
     }
 
     case CloseTrainingDialog() => {
-      println(s"CloseTrainingDialog......")
       updated(Ready(false))
     }
   }

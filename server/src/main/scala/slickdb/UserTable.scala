@@ -52,8 +52,8 @@ trait UserTableLike {
   def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int]
 
   def insertOrUpdateUser(user: LoggedInUser,
-    inactive_email_sent: Option[java.sql.Timestamp],
-    revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int]
+                         inactive_email_sent: Option[java.sql.Timestamp],
+                          revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int]
 }
 
 case class UserTable(tables: Tables) extends UserTableLike with RateLimit {

@@ -52,7 +52,7 @@ case class MockUserTable()(implicit ec: ExecutionContext) extends UserTableLike 
 
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = ???
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(None)
 }
 
 case class MockDrtParameters() extends DrtParameters {

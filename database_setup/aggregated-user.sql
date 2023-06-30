@@ -9,9 +9,6 @@ CREATE TABLE public.user
     PRIMARY KEY (id)
 );
 
-ALTER TABLE public.user
-    ADD COLUMN viewed_feature_content text ;
-
 CREATE INDEX username ON public.user (username);
 CREATE INDEX latestLogin ON public.user (latest_login ASC);
 CREATE INDEX userEmail ON public.user (email);

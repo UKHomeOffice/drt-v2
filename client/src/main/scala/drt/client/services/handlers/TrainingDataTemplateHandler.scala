@@ -1,12 +1,12 @@
 package drt.client.services.handlers
 
-import diode.data.{Empty, Pot, Ready, Unavailable}
+import diode.data.{Empty, Pot, Ready}
 import diode.{Action, ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{RetryActionAfter, SetSnackbarMessage}
+import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
 import uk.gov.homeoffice.drt.training.TrainingData
-import TrainingData._
+import uk.gov.homeoffice.drt.training.TrainingData._
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
@@ -23,15 +23,12 @@ class TrainingDataTemplateHandler[M](modelRW: ModelRW[M, Pot[Seq[TrainingData]]]
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case SetTrainingDataTemplatesEmpty() =>
-      println("SetTrainingDataTemplatesEmpty......")
       updated(Empty)
 
     case SetTrainingDataTemplates(trainingDataTemplates) =>
-      println("SetTrainingDataTemplates......")
       updated(Ready(trainingDataTemplates))
 
     case GetTrainingDataTemplates() =>
-      println("GetTrainingDataTemplates......")
       val apiCallEffect = Effect(DrtApi.get("training-data")
         .map(r => SetTrainingDataTemplates(getTrainingDataConversion(r.responseText)))
         .recoverWith {
