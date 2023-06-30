@@ -358,18 +358,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     (requestQueueActor, deskRecsKillSwitch)
   }
 
-  private def enabledPredictionModelNames: Seq[String] = {
-    val forAll = Seq(
-      OffScheduleModelAndFeatures.targetName,
-      ToChoxModelAndFeatures.targetName,
-      WalkTimeModelAndFeatures.targetName,
-    )
-
-    if (params.usePassengerPredictions)
-      forAll :+ PaxCapModelAndFeatures.targetName
-    else
-      forAll
-  }
+  private def enabledPredictionModelNames: Seq[String] = Seq(
+    OffScheduleModelAndFeatures.targetName,
+    ToChoxModelAndFeatures.targetName,
+    WalkTimeModelAndFeatures.targetName,
+    PaxCapModelAndFeatures.targetName,
+  )
 
   def startCrunchSystem(initialPortState: Option[PortState],
                         initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
