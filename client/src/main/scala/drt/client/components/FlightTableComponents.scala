@@ -7,6 +7,7 @@ import drt.shared.api.WalkTimes
 import japgolly.scalajs.react.vdom.TagMod
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.prediction.arrival.{ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 
@@ -39,10 +40,10 @@ object FlightTableComponents {
   private def estMinutesToChox(arrival: Arrival): Option[MillisSinceEpoch] =
     arrival.EstimatedChox.flatMap(c => arrival.Actual.map(a => (c - a) / oneMinuteMillis))
 
-  def pcpTimeRange(fws: ApiFlightWithSplits, firstPaxOffMillis: MillisSinceEpoch, walkTimes: WalkTimes): VdomElement =
+  def pcpTimeRange(fws: ApiFlightWithSplits, firstPaxOffMillis: MillisSinceEpoch, walkTimes: WalkTimes, paxFeedSourceOrder: List[FeedSource]): VdomElement =
     fws.apiFlight.PcpTime.map { pcpTime: MillisSinceEpoch =>
       val sdateFrom = SDate(MilliDate(pcpTime))
-      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.bestPaxSource.getPcpPax.getOrElse(0))))
+      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.bestPaxSource(paxFeedSourceOrder).getPcpPax.getOrElse(0))))
       val predictedWalkTime = fws.apiFlight.Predictions.predictions.get(WalkTimeModelAndFeatures.targetName).map(c => s"${c / 60}m").getOrElse("-")
       val gateOrStandWalkTime = if (fws.apiFlight.Gate.isDefined || fws.apiFlight.Stand.isDefined) {
         val wtMillis = walkTimes.walkTimeMillisForArrival(0L)(fws.apiFlight.Gate, fws.apiFlight.Stand, fws.apiFlight.Terminal)

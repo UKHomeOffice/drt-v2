@@ -29,7 +29,6 @@ case class ResponseToArrivals(data: String) {
   }
 
   def nodeToArrival: Node => Arrival = (n: Node) => {
-
     val operator = (n \ "AirlineIATA") text
     val actPax = parsePaxCount(n, "70A").orElse(None)
     val transPax = parsePaxCount(n, "TIP")

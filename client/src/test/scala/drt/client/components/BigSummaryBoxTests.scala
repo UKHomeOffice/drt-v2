@@ -18,6 +18,8 @@ object BigSummaryBoxTests extends TestSuite {
 
   import BigSummaryBoxes._
 
+  val paxFeedSourceOrder = List(ApiFeedSource, LiveFeedSource)
+
   def tests = Tests {
     "Summary for the next 3 hours" - {
       "Given a rootModel with flightsWithSplits with flights arriving 2017-05-01T12:01Z onwards" - {
@@ -150,7 +152,7 @@ object BigSummaryBoxTests extends TestSuite {
                 List(ApiFlightWithSplits(apiFlight1, Set(splits1)),
                   ApiFlightWithSplits(apiFlight2, Set(splits2))), List())
 
-              val aggSplits = aggregateSplits(flights.flightsToUpdate)
+              val aggSplits = aggregateSplits(flights.flightsToUpdate, paxFeedSourceOrder)
 
               val expectedAggSplits = Map(
                 PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (41 + 11),
@@ -177,7 +179,7 @@ object BigSummaryBoxTests extends TestSuite {
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 60, None, None)),
                     SplitSources.Historical, None, Percentage))))
 
-              val aggSplits = aggregateSplits(flights)
+              val aggSplits = aggregateSplits(flights, paxFeedSourceOrder)
 
               val expectedAggSplits = Map(
                 PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> (30 + 40),
@@ -201,7 +203,7 @@ object BigSummaryBoxTests extends TestSuite {
                         ApiPaxTypeAndQueueCount(PaxTypes.Transit, Queues.Transfer, 20, None, None)),
                         SplitSources.Historical, None, PaxNumbers))))
 
-                  val aggSplits = aggregateSplits(flights)
+                  val aggSplits = aggregateSplits(flights, paxFeedSourceOrder)
 
                   val expectedAggSplits = Map(
                     PaxTypeAndQueue(PaxTypes.NonVisaNational, Queues.NonEeaDesk) -> 60,

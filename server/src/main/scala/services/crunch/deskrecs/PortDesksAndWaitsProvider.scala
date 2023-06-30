@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable
@@ -30,6 +30,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      crunchOffsetMinutes: Int,
                                      tryCrunch: TryCrunchWholePax,
                                      workloadCalculator: WorkloadCalculatorLike,
+                                     paxFeedSourceOrder: List[FeedSource],
                                     ) extends PortDesksAndWaitsProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -55,7 +56,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                               redListUpdates: RedListUpdates,
                               terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
                              (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, PassengersMinute] = workloadCalculator
-    .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses).minutes
+    .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses, paxFeedSourceOrder).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
         TQM(t, finalQueueName, m)
@@ -111,14 +112,20 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 }
 
 object PortDesksAndWaitsProvider {
-  def apply(airportConfig: AirportConfig, tryCrunch: TryCrunchWholePax, flightFilter: FlightFilter, egatesProvider: () => Future[PortEgateBanksUpdates])
+  def apply(airportConfig: AirportConfig,
+            tryCrunch: TryCrunchWholePax,
+            flightFilter: FlightFilter,
+            egatesProvider: () => Future[PortEgateBanksUpdates],
+            paxFeedSourceOrder: List[FeedSource],
+           )
            (implicit ec: ExecutionContext): PortDesksAndWaitsProvider = {
 
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
       QueueFallbacks(airportConfig.queuesByTerminal),
       flightFilter,
-      AirportConfigDefaults.fallbackProcessingTime
+      AirportConfigDefaults.fallbackProcessingTime,
+      paxFeedSourceOrder
     )
 
     PortDesksAndWaitsProvider(
@@ -131,7 +138,8 @@ object PortDesksAndWaitsProvider {
       minutesToCrunch = airportConfig.minutesToCrunch,
       crunchOffsetMinutes = airportConfig.crunchOffsetMinutes,
       tryCrunch = tryCrunch,
-      workloadCalculator = calculator
+      workloadCalculator = calculator,
+      paxFeedSourceOrder = paxFeedSourceOrder,
     )
   }
 }

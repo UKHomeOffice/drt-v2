@@ -17,7 +17,6 @@ import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProce
 import drt.server.feeds.{Feed, ManifestsFeedResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import drt.shared.coachTime.CoachWalkTime
 import manifests.ManifestLookup
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
@@ -68,7 +67,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
-  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables))), name = "aggregated-arrivals-actor")
+  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
 
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
@@ -87,7 +86,8 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     system,
     now,
     airportConfig.queuesByTerminal,
-    params.maybeRemovalCutOffSeconds
+    params.maybeRemovalCutOffSeconds,
+    paxFeedSourceOrder,
   )
 
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor

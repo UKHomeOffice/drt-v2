@@ -13,6 +13,7 @@ import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, S
 import drt.shared.FlightsApi.{PaxForArrivals, SplitsForArrivals}
 import drt.shared._
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, FlightsWithSplitsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
@@ -33,7 +34,9 @@ class PartitionedPortStateTestActor(probe: ActorRef,
                                     staffUpdatesActor: ActorRef,
                                     flightUpdatesActor: ActorRef,
                                     now: () => SDateLike,
-                                    queues: Map[Terminal, Seq[Queue]])
+                                    queues: Map[Terminal, Seq[Queue]],
+                                    paxFeedSourceOrder: List[FeedSource],
+                                   )
   extends PartitionedPortStateActor(
     flightsActor,
     queuesActor,
@@ -79,8 +82,8 @@ class PartitionedPortStateTestActor(probe: ActorRef,
           val updatedMillis: Iterable[MillisSinceEpoch] = pax.pax.keys.map(_.scheduled)
           updateFlights(actor, Seq(), updatedMillis.min, updatedMillis.max)
 
-        case arrivalsDiff@ArrivalsDiff(_, removals) if arrivalsDiff.updateMinutes.nonEmpty =>
-          updateFlights(actor, removals.map(_.unique), arrivalsDiff.updateMinutes.min, arrivalsDiff.updateMinutes.max)
+        case arrivalsDiff@ArrivalsDiff(_, removals) if arrivalsDiff.updateMinutes(paxFeedSourceOrder).nonEmpty =>
+          updateFlights(actor, removals.map(_.unique), arrivalsDiff.updateMinutes(paxFeedSourceOrder).min, arrivalsDiff.updateMinutes(paxFeedSourceOrder).max)
 
         case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
           updateFlights(
@@ -88,7 +91,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
             flightsWithSplitsDiff.arrivalsToRemove.collect {
               case ua: UniqueArrival => ua
             },
-            flightsWithSplitsDiff.updateMinutes.min, flightsWithSplitsDiff.updateMinutes.max
+            flightsWithSplitsDiff.updateMinutes(paxFeedSourceOrder).min, flightsWithSplitsDiff.updateMinutes(paxFeedSourceOrder).max
           )
 
         case mc: MinutesContainer[_, _] =>

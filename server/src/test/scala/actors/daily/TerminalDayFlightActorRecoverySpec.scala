@@ -41,7 +41,6 @@ class PersistMessageForIdActor(idToPersist: String) extends PersistentActor {
 
 
 class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
-
   "Given a TerminalDayFlightActor that has persisted state" >> {
     "When I restore to a point in time " >> {
       "Then diffs created after that point in time should be ignored" >> {
@@ -82,7 +81,7 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
     val cutOffThreshold = 1.second
 
     def actorForTerminalAndDate(terminal: Terminal, date: UtcDate): ActorRef = {
-      system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), Some(cutOffThreshold)))
+      system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), Some(cutOffThreshold), paxFeedSourceOrder))
     }
 
     "When I have a removal message that came through after the day for this actor " >> {
@@ -135,6 +134,6 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
 
 
   def actorForTerminalAndDatePit(terminal: Terminal, date: UtcDate, pit: SDateLike): ActorRef = {
-    system.actorOf(TerminalDayFlightActor.propsPointInTime(terminal, date, () => SDate(date), pit.millisSinceEpoch, None))
+    system.actorOf(TerminalDayFlightActor.propsPointInTime(terminal, date, () => SDate(date), pit.millisSinceEpoch, None, paxFeedSourceOrder))
   }
 }

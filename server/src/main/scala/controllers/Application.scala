@@ -113,7 +113,7 @@ trait UserRoleProviderLike {
 class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController
     with AirportConfProvider
-    with WithAirportConfig
+    with WithConfig
     with WithAirportInfo
     with WithRedLists
     with WithEgateBanks

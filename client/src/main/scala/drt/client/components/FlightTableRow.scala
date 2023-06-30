@@ -15,7 +15,6 @@ import drt.shared.splits.ApiSplitsToSplitRatio
 import io.kinoplan.scalajs.react.material.ui.core.MuiChip
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.ReusabilityOverlay
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
@@ -26,7 +25,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -60,6 +59,7 @@ object FlightTableRow {
                    walkTimes: WalkTimes,
                    flaggedNationalities: Set[Country],
                    manifestSummary: Option[FlightManifestSummary],
+                   paxFeedSourceOrder: List[FeedSource],
                   ) extends UseValueEq
 
   implicit val propsReuse: Reusability[Props] = Reusability {
@@ -79,7 +79,7 @@ object FlightTableRow {
       val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
-        .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits).getOrElse(Map[Queue, Int]())
+        .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.paxFeedSourceOrder).getOrElse(Map[Queue, Int]())
 
       val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
         "arrivals__table__flight-code arrivals__table__flight-code--clickable"
@@ -175,8 +175,8 @@ object FlightTableRow {
         <.td(expectedContent),
       )
       val lastCells = List[TagMod](
-        <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.bestPaxSource)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta))
+        <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder), ^.className := "arrivals__table__flight-est-pcp"),
+        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.bestPaxSource(props.paxFeedSourceOrder))}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
       )
 
       val flightFields = firstCells ++ lastCells
@@ -201,7 +201,7 @@ object FlightTableRow {
           ^.className := trClassName,
           flightFields.toTagMod,
           queueSplits,
-          <.td(FlightComponents.paxTransferComponent(flight))
+          <.td(FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder))
         )
       } else {
         <.tr(

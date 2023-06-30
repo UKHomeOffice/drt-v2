@@ -15,7 +15,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object PortDashboardPage {
@@ -28,16 +28,16 @@ object PortDashboardPage {
     def apply(start: SDateLike, hours: Int = 3): DisplayPeriod = DisplayPeriod(start, start.addHours(hours))
   }
 
-  private case class PortDashboardModel(
-                                         airportConfig: Pot[AirportConfig],
-                                         portState: Pot[PortState],
-                                         featureFlags: Pot[FeatureFlags]
+  private case class PortDashboardModel(airportConfig: Pot[AirportConfig],
+                                        portState: Pot[PortState],
+                                        featureFlags: Pot[FeatureFlags],
+                                        paxFeedSourceOrder: List[FeedSource],
                                        )
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("PortDashboard")
     .render_P(p => {
 
-      val modelRCP = SPACircuit.connect(rm => PortDashboardModel(rm.airportConfig, rm.portStatePot, rm.featureFlags))
+      val modelRCP = SPACircuit.connect(rm => PortDashboardModel(rm.airportConfig, rm.portStatePot, rm.featureFlags, rm.paxFeedSourceOrder))
 
       modelRCP { modelMP: ModelProxy[PortDashboardModel] =>
         val portDashboardModel: PortDashboardModel = modelMP()
@@ -80,7 +80,8 @@ object PortDashboardPage {
                       val portStateForDashboard = portState.windowWithTerminalFilter(
                         displayPeriod.start,
                         displayPeriod.end,
-                        portConfig.queuesByTerminal.view.filterKeys(_ == terminalName).toMap
+                        portConfig.queuesByTerminal.view.filterKeys(_ == terminalName).toMap,
+                        portDashboardModel.paxFeedSourceOrder,
                       )
                       val scheduledFlightsInTerminal = portStateForDashboard
                         .flights
@@ -101,7 +102,8 @@ object PortDashboardPage {
                             paxTypeAndQueueOrder(terminalName).splits.map(_.paxType),
                             terminalQueuesInOrder,
                             displayPeriod.start,
-                            displayPeriod.end
+                            displayPeriod.end,
+                            portDashboardModel.paxFeedSourceOrder,
                           )
                         )
                       }

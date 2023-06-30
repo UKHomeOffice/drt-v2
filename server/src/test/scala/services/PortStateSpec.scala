@@ -69,7 +69,7 @@ class PortStateSpec extends CrunchTestLike {
 
     val ps = PortState(List(), cms.toList, sms.toList)
 
-    val result = ps.window(SDate("2019-01-02"), SDate("2019-01-03"))
+    val result = ps.window(SDate("2019-01-02"), SDate("2019-01-03"), paxFeedSourceOrder)
 
     val expectedCms = for {
       (terminal, queues) <- terminalQueues
@@ -95,7 +95,7 @@ class PortStateSpec extends CrunchTestLike {
 
     val portState = PortState(Seq(flight), Seq(), Seq())
 
-    val windowedFlights = portState.window(SDate("2019-01-02T00:00"), SDate("2019-01-02T12:00")).flights.values.toSet
+    val windowedFlights = portState.window(SDate("2019-01-02T00:00"), SDate("2019-01-02T12:00"), paxFeedSourceOrder).flights.values.toSet
 
     windowedFlights === Set(flight)
   }
@@ -108,7 +108,7 @@ class PortStateSpec extends CrunchTestLike {
 
     val portState = PortState(Seq(flight), Seq(), Seq())
 
-    val windowedFlights = portState.window(SDate("2019-01-02T00:00"), SDate("2019-01-02T23:59")).flights.values.toSet
+    val windowedFlights = portState.window(SDate("2019-01-02T00:00"), SDate("2019-01-02T23:59"), paxFeedSourceOrder).flights.values.toSet
 
     windowedFlights === Set(flight)
   }

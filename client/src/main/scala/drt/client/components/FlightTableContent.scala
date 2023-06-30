@@ -19,7 +19,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -45,6 +45,7 @@ object FlightTableContent {
                    flaggedNationalities: Set[Country],
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
+                   paxFeedSourceOrder: List[FeedSource],
                   ) extends UseValueEq
 
   implicit val reuseProps: Reusability[Props] = Reusability {
@@ -66,7 +67,7 @@ object FlightTableContent {
         case _ => DefaultFlightDisplayFilter
       }
 
-      val flights = props.portState.window(props.viewStart, props.viewEnd).flights.values.toList
+      val flights = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder).flights.values.toList
       val flightsForTerminal =
         flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
       val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsForTerminal.toSeq)
@@ -103,7 +104,8 @@ object FlightTableContent {
                     includeIndirectRedListColumn = redListPaxExist,
                     walkTimes = props.walkTimes,
                     flaggedNationalities = props.flaggedNationalities,
-                    manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight))
+                    manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
+                    paxFeedSourceOrder = props.paxFeedSourceOrder,
                   ))
               }.toTagMod)
           ),

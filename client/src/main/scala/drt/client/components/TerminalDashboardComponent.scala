@@ -17,11 +17,11 @@ import drt.shared.redlist.RedList
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -39,6 +39,7 @@ object TerminalDashboardComponent {
                    redListPorts: Pot[HashSet[PortCode]],
                    redListUpdates: RedListUpdates,
                    walkTimes: Pot[WalkTimes],
+                   paxFeedSourceOrder: List[FeedSource],
                   ) extends UseValueEq
 
   val defaultSlotSize = 120
@@ -79,8 +80,8 @@ object TerminalDashboardComponent {
           walkTimes <- props.walkTimes
           portState <- portStatePot
         } yield {
-          val currentSlotPs = portState.window(start, end)
-          val prevSlotPs = portState.window(prevSlotStart, start)
+          val currentSlotPs = portState.window(start, end, props.paxFeedSourceOrder)
+          val prevSlotPs = portState.window(prevSlotStart, start, props.paxFeedSourceOrder)
 
           val terminalPax = currentSlotPs.crunchMinutes.collect {
             case (_, cm) if cm.terminal == props.terminalPageTabLoc.terminal => cm.paxLoad
@@ -116,6 +117,7 @@ object TerminalDashboardComponent {
                         viewStart = start,
                         viewEnd = end,
                         showFlagger = false,
+                        paxFeedSourceOrder = props.paxFeedSourceOrder,
                       )
                     )
 
@@ -205,6 +207,7 @@ object TerminalDashboardComponent {
             redListPorts: Pot[HashSet[PortCode]],
             redListUpdates: RedListUpdates,
             walkTimes: Pot[WalkTimes],
+            paxFeedSourceOrder: List[FeedSource],
            ): VdomElement =
     component(Props(
       terminalPageTabLoc,
@@ -214,7 +217,8 @@ object TerminalDashboardComponent {
       loggedInUser,
       redListPorts,
       redListUpdates,
-      walkTimes
+      walkTimes,
+      paxFeedSourceOrder,
     ))
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {

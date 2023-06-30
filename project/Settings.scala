@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v533"
+    val drtLib = "v549"
 
     val scala = "2.13.11"
     val scalaDom = "2.0.0"
@@ -47,10 +47,10 @@ object Settings {
 
     val renjin = "0.9.2725"
     val csvCommons = "1.10.0"
-    val poi = "5.1.0"
+    val poi = "5.2.3"
     val pprint = "0.5.9"
     val akkaPersistenceJdbc = "5.2.0"
-    val bluebus = "v89"
+    val bluebus = "v92"
     val postgres = "42.6.0"
     val sshJ = "0.24.0"
     val jodaTime = "2.12.5"
@@ -130,7 +130,7 @@ object Settings {
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
-    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
+    "uk.gov.homeoffice" %%% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "io.suzaku" %%% "boopickle" % booPickle
   ))
 
@@ -182,7 +182,7 @@ object Settings {
     "org.codehaus.janino" % "janino" % janinoVersion,
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
-    "org.apache.poi" % "poi" % poi,
+    "org.apache.poi" % "poi" % poi, // exclude("org.slf4j"),
     "org.apache.poi" % "poi-ooxml" % poi,
     "org.codehaus.janino" % "janino" % "3.0.16",
     "org.postgresql" % "postgresql" % postgres,
@@ -200,7 +200,7 @@ object Settings {
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
-    "uk.gov.homeoffice" %% "drt-lib" % drtLib,
+    "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
     "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE"

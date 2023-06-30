@@ -20,7 +20,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.SortedSet
-import scala.collection.immutable.Map
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -40,7 +39,7 @@ class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
   val mockCrunch: TryCrunchWholePax = CrunchMocks.mockCrunchWholePax
 
   val staffToDeskLimits: StaffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, egatesProvider)
-  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))
+  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig), paxFeedSourceOrder)
 
   def setupGraphAndCheckQueuePax(minutes: MinutesContainer[PassengersMinute, TQM],
                                  expectedQueuePax: PartialFunction[Any, Boolean]): Any = {

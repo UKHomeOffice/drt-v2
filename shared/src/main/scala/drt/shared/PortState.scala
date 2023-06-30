@@ -2,6 +2,7 @@ package drt.shared
 
 import drt.shared.CrunchApi._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -14,36 +15,41 @@ import scala.collection.{Map, SortedMap}
 case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
                      crunchMinutes: ISortedMap[TQM, CrunchMinute],
                      staffMinutes: ISortedMap[TM, StaffMinute]) extends PortStateLike {
-  def window(start: SDateLike, end: SDateLike): PortState = {
+  def window(start: SDateLike, end: SDateLike, sourceOrderPreference: List[FeedSource]): PortState = {
     val roundedStart = start.roundToMinute()
     val roundedEnd = end.roundToMinute()
 
-    val fs = flightsRange(roundedStart, roundedEnd)
+    val fs = flightsRange(roundedStart, roundedEnd, sourceOrderPreference)
     val cms = crunchMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch)
     val sms = staffMinuteRange(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch)
 
     PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
   }
 
-  def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: IMap[Terminal, Seq[Queue]]): PortState = {
+  def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: IMap[Terminal, Seq[Queue]], sourceOrderPreference: List[FeedSource]): PortState = {
     val roundedStart = start.roundToMinute()
     val roundedEnd = end.roundToMinute()
 
-    val fs = flightsRangeWithTerminals(roundedStart, roundedEnd, portQueues)
+    val fs = flightsRangeWithTerminals(roundedStart, roundedEnd, portQueues, sourceOrderPreference)
     val cms = crunchMinuteRangeWithTerminals(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues)
     val sms = staffMinuteRangeWithTerminals(roundedStart.millisSinceEpoch, roundedEnd.millisSinceEpoch, portQueues.keys.toSeq)
 
     PortState(flights = fs, crunchMinutes = cms, staffMinutes = sms)
   }
 
-  def flightsRange(roundedStart: SDateLike, roundedEnd: SDateLike): ISortedMap[UniqueArrival, ApiFlightWithSplits]
+  def flightsRange(roundedStart: SDateLike, roundedEnd: SDateLike, sourceOrderPreference: List[FeedSource]): ISortedMap[UniqueArrival, ApiFlightWithSplits]
   = ISortedMap[UniqueArrival, ApiFlightWithSplits]() ++ flights
     .filter {
-      case (_, f) => f.apiFlight.isRelevantToPeriod(roundedStart, roundedEnd)
+      case (_, f) => f.apiFlight.isRelevantToPeriod(roundedStart, roundedEnd, sourceOrderPreference)
     }
 
-  def flightsRangeWithTerminals(roundedStart: SDateLike, roundedEnd: SDateLike, portQueues: IMap[Terminal, Seq[Queue]]): ISortedMap[UniqueArrival, ApiFlightWithSplits] = flightsRange(roundedStart, roundedEnd)
-    .filter { case (_, fws) => portQueues.contains(fws.apiFlight.Terminal) }
+  def flightsRangeWithTerminals(roundedStart: SDateLike,
+                                roundedEnd: SDateLike,
+                                portQueues: IMap[Terminal, Seq[Queue]],
+                                sourceOrderPreference: List[FeedSource],
+                               ): ISortedMap[UniqueArrival, ApiFlightWithSplits] =
+    flightsRange(roundedStart, roundedEnd, sourceOrderPreference)
+      .filter { case (_, fws) => portQueues.contains(fws.apiFlight.Terminal) }
 
   def crunchMinuteRange(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): ISortedMap[TQM, CrunchMinute] = crunchMinutes
     .range(TQM.atTime(startMillis), TQM.atTime(endMillis))
@@ -212,7 +218,7 @@ sealed trait PortStateLike {
     List(latestFlights, latestCrunch, latestStaff).max
   }
 
-  def window(start: SDateLike, end: SDateLike): PortState
+  def window(start: SDateLike, end: SDateLike, sourceOrderPreference: List[FeedSource]): PortState
 
-  def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: IMap[Terminal, Seq[Queue]]): PortState
+  def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: IMap[Terminal, Seq[Queue]], sourceOrderPreference: List[FeedSource]): PortState
 }

@@ -5,13 +5,15 @@ import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.PortState
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
-import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource, Queues}
 import utest.{TestSuite, _}
 
 object FilterCrunchByRangeTests extends TestSuite {
 
   import TerminalContentComponent._
+
+  val paxFeedSourceOrder = List(ApiFeedSource, LiveFeedSource)
 
   def tests: Tests = Tests {
     test("Given an hour range of 10 to 14") - {
@@ -26,7 +28,7 @@ object FilterCrunchByRangeTests extends TestSuite {
 
         val state = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
         val (start, end) = viewStartAndEnd(dateWithinRange.toLocalDate, range)
-        val result = state.window(start, end)
+        val result = state.window(start, end, paxFeedSourceOrder)
         val expected = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
 
         assert(result == expected)
@@ -39,7 +41,7 @@ object FilterCrunchByRangeTests extends TestSuite {
 
         val state = PortState(List(flightNotWithinRange), List(crunchMinuteNotWithinRange), List(staffMinuteNotWithinRange))
         val (start, end) = viewStartAndEnd(dateWithinRange.toLocalDate, range)
-        val result = state.window(start, end)
+        val result = state.window(start, end, paxFeedSourceOrder)
         val expected = PortState.empty
 
         assert(result == expected)
@@ -60,7 +62,7 @@ object FilterCrunchByRangeTests extends TestSuite {
           List(staffMinuteNotWithinRange, staffMinuteWithinRange))
 
         val (start, end) = viewStartAndEnd(dateWithinRange.toLocalDate, range)
-        val result = portState.window(start, end)
+        val result = portState.window(start, end, paxFeedSourceOrder)
 
         val expected = PortState(List(flightWithinRange), List(crunchMinuteWithinRange), List(staffMinuteWithinRange))
 

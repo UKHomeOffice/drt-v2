@@ -22,7 +22,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     def fishForArrivalWithActPax(actPax: Option[Int], status: String = ""): Success = {
       crunch.portStateTestProbe.fishForMessage(1.second) {
         case PortState(flights, _, _) =>
-          flights.values.toList.exists(fws => fws.apiFlight.flightCodeString == "BA0001" && fws.apiFlight.bestPaxEstimate.passengers.actual == actPax && fws.apiFlight.Status == ArrivalStatus(status))
+          flights.values.toList.exists(fws => fws.apiFlight.flightCodeString == "BA0001" && fws.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual == actPax && fws.apiFlight.Status == ArrivalStatus(status))
       }
 
       success
@@ -144,7 +144,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     "Given an arrival with a zero pax, undefined trans pax, and max pax of 100" >> {
       val arrival = ArrivalGenerator.arrival(maxPax = Option(100), passengerSources = Map(AclFeedSource -> Passengers(Option(0), None)))
       "When I ask for the best pax" >> {
-        val bestPax = arrival.bestPcpPaxEstimate
+        val bestPax = arrival.bestPcpPaxEstimate(paxFeedSourceOrder)
         "I should see 0" >> {
           bestPax === Some(0)
         }

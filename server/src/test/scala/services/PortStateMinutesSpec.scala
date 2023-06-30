@@ -4,12 +4,16 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.specs2.mutable.Specification
+import services.crunch.TestDefaults
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, FlightsWithSplitsDiff}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.time.SDate
 
 class PortStateMinutesSpec extends Specification {
   val now: MillisSinceEpoch = SDate.now().millisSinceEpoch
+
+  val paxFeedSourceOrder = TestDefaults.paxFeedSourceOrder
 
   "When I apply a FlightsWithSplits " >> {
     "Containing only new arrivals " >> {
@@ -20,7 +24,7 @@ class PortStateMinutesSpec extends Specification {
 
       "To an empty PortState" >> {
         "Then I should see those flights in the PortState" >> {
-          val (portState, _) = newFlightsWithSplits.applyTo(FlightsWithSplits.empty, now)
+          val (portState, _) = newFlightsWithSplits.applyTo(FlightsWithSplits.empty, now, paxFeedSourceOrder)
           val expected = PortState(newFlightsWithSplits.flightsToUpdate.map(_.copy(lastUpdated = Option(now))), List(), List())
 
           portState.flights === expected.flights

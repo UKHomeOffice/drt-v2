@@ -3,7 +3,7 @@ package slickdb
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{Arrival => DrtArrival}
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 import java.sql.Timestamp
@@ -27,13 +27,13 @@ object AggregatedArrival {
   )
 }
 
-case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTableLike {
+case class ArrivalTable(portCode: PortCode, tables: Tables, paxFeedSourceOrder: List[FeedSource]) extends ArrivalTableLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
   import tables.{Arrival, ArrivalRow}
 
-  val arrivalsTableQuery = TableQuery[Arrival]
+  private val arrivalsTableQuery = TableQuery[Arrival]
 
   def selectAll: AggregatedArrivals = {
     val eventualArrivals = tables.run(arrivalsTableQuery.result).map(arrivalRows =>
@@ -73,7 +73,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
     val estChox = f.EstimatedChox.map(new Timestamp(_))
     val actChox = f.ActualChox.map(new Timestamp(_))
     val pcp = new Timestamp(f.PcpTime.getOrElse(f.Scheduled))
-    val pcpPax = f.bestPaxEstimate.passengers.getPcpPax
+    val pcpPax = f.bestPaxEstimate(paxFeedSourceOrder).passengers.getPcpPax
     val scheduledDeparture = f.ScheduledDeparture.map(new Timestamp(_))
 
     ArrivalRow(f.flightCodeString,
@@ -90,7 +90,7 @@ case class ArrivalTable(portCode: PortCode, tables: Tables) extends ArrivalTable
       estChox,
       actChox,
       pcp,
-      f.bestPaxEstimate.passengers.actual,
+      f.bestPaxEstimate(paxFeedSourceOrder).passengers.actual,
       pcpPax,
       scheduledDeparture)
   }

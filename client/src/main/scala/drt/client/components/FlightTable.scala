@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -39,7 +39,8 @@ object FlightTable {
                    walkTimes: WalkTimes,
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
-                   showFlagger: Boolean = true,
+                   showFlagger: Boolean,
+                   paxFeedSourceOrder: List[FeedSource],
                   ) extends UseValueEq
 
   implicit val reuseProps: Reusability[Props] = Reusability {
@@ -74,7 +75,7 @@ object FlightTable {
             case (true, Some((_, sourcesPot))) =>
               <.div(^.tabIndex := 0,
                 <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
-                <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.airportConfig)))
+                <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.airportConfig, props.paxFeedSourceOrder)))
               )
             case _ => <.div()
           },
@@ -103,6 +104,7 @@ object FlightTable {
                     model.flaggedNationalities,
                     props.viewStart,
                     props.viewEnd,
+                    props.paxFeedSourceOrder,
                   ))
               }
             ),

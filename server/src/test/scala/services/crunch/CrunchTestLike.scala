@@ -211,6 +211,17 @@ object TestDefaults {
     ))
 
   def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
+
+  val paxFeedSourceOrder: List[FeedSource] = List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    MlFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  )
+
 }
 
 class CrunchTestLike
@@ -220,6 +231,8 @@ class CrunchTestLike
     with AfterEach {
   isolated
   sequential
+
+  val paxFeedSourceOrder = TestDefaults.paxFeedSourceOrder
 
   implicit def probe2Success[R <: Probe[_]](r: R): Result = success
 
