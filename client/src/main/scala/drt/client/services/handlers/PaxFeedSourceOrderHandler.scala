@@ -22,7 +22,6 @@ class PaxFeedSourceOrderHandler[M](modelRW: ModelRW[M, List[FeedSource]]) extend
             Future(RetryActionAfter(GetPaxFeedSourceOrder, PollDelay.recoveryDelay))
         }))
     case UpdateGetPaxFeedSourceOrder(paxFeedSources) =>
-      println(s"setting pax feed sources to $paxFeedSources")
       updated(paxFeedSources)
   }
 }
