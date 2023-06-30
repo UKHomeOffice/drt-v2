@@ -70,7 +70,7 @@ object Settings {
     val drtCirium = "186"
     val playJson = "2.6.0"
     val playIteratees = "2.6.1"
-    val uPickle = "3.1.0"
+    val uPickle = "2.0.0"
     val akkaHttp = "10.2.6"
     val slick = "3.4.1"
     val censorinus = "2.1.16"
