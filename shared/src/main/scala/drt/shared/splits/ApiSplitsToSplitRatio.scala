@@ -6,10 +6,6 @@ import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PaxType
 
 
 object ApiSplitsToSplitRatio {
-//  def queuesFromPaxTypeAndQueue(ptq: Seq[PaxTypeAndQueue]): Seq[Queue] = ptq.map {
-//    case PaxTypeAndQueue(_, q) => q
-//  }.distinct
-
   def queueTotals(splits: Map[PaxTypeAndQueue, Int]): Map[Queue, Int] = splits
     .foldLeft(Map[Queue, Int]())((map, ptqc) => {
       ptqc match {

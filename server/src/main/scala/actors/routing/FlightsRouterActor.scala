@@ -26,16 +26,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object FlightsRouterActor {
 
-//  sealed trait QueryLike extends Ordered[QueryLike] {
-//    val date: UtcDate
-//
-//    override def compare(that: QueryLike): Int = date.compare(that.date)
-//  }
-
-//  case class Query(date: UtcDate) extends QueryLike
-
-//  def queryStream(dates: Seq[UtcDate]): Source[QueryLike, NotUsed] = Source(dates.map(Query).toList)
-
   def scheduledInRange(start: SDateLike, end: SDateLike, scheduled: MillisSinceEpoch): Boolean = {
     val scheduledDate = SDate(scheduled)
     start <= scheduledDate && scheduledDate <= end
@@ -68,33 +58,6 @@ object FlightsRouterActor {
       .filter { case (_, flights) => flights.nonEmpty }
   }
 
-//  def flightsAndManifestsByDaySource(flightsLookupByDayAndTerminal: FlightsLookup, manifestLookup: ManifestLookup)
-//                                    (start: SDateLike,
-//                                     end: SDateLike,
-//                                     terminals: Iterable[Terminal],
-//                                     maybePit: Option[MillisSinceEpoch],
-//                                     paxFeedSourceOrder: List[FeedSource],
-//                                    )
-//                                    (implicit ec: ExecutionContext): Source[(FlightsWithSplits, VoyageManifests), NotUsed] = {
-//    val dates: Seq[UtcDate] = DateRange.utcDateRangeWithBuffer(2, 1)(start, end)
-//
-//    val reduceAndSort = SourceUtils.reduceFutureIterables(terminals, reduceAndSortFlightsWithSplits)
-//    val flightsLookupByDay = flightsLookupByDayAndTerminal(maybePit)
-//
-//    Source(dates.toList)
-//      .mapAsync(1) { d =>
-//        reduceAndSort(flightsLookupByDay(d)).flatMap { f =>
-//          manifestLookup(d, maybePit).map { m => (f, m) }
-//        }
-//      }
-//      .map { case (flights, manifests) =>
-//        (flights.scheduledOrPcpWindow(start, end, paxFeedSourceOrder), manifests)
-//      }
-//      .filter { case (flights, _) =>
-//        flights.nonEmpty
-//      }
-//  }
-
   val reduceAndSortFlightsWithSplits: Iterable[FlightsWithSplits] => FlightsWithSplits = (allFlightsWithSplits: Iterable[FlightsWithSplits]) => {
     val reducedFlightsWithSplits = allFlightsWithSplits
       .reduce(_ ++ _)
@@ -104,16 +67,6 @@ object FlightsRouterActor {
     }
     FlightsWithSplits(reducedFlightsWithSplits)
   }
-
-//  def forwardRequestAndKillActor(killActor: ActorRef)
-//                                (implicit ec: ExecutionContext, timeout: Timeout): (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] =
-//    (tempActor: ActorRef, replyTo: ActorRef, message: DateRangeLike) => {
-//      killActor
-//        .ask(RequestAndTerminate(tempActor, message))
-//        .mapTo[FlightsWithSplits]
-//        .map(fwss => Source(List(fwss)))
-//        .pipeTo(replyTo)
-//    }
 
   def runAndCombine(eventualSource: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]])
                    (implicit mat: Materializer, ec: ExecutionContext): Future[FlightsWithSplits] = eventualSource
@@ -129,8 +82,6 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
                          paxFeedSourceOrder: List[FeedSource],
                         ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate)] {
   val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), "flights-router-actor-kill-actor")
-//  val forwardRequestAndKillActor: (ActorRef, ActorRef, DateRangeLike) => Future[Source[FlightsWithSplits, NotUsed]] =
-//    FlightsRouterActor.forwardRequestAndKillActor(killActor)
 
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
