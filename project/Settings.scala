@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v549"
+    val drtLib = "v550"
 
     val scala = "2.13.11"
     val scalaDom = "2.0.0"
@@ -72,7 +72,7 @@ object Settings {
     val twirlApi = "1.5.2"
   }
 
-  import versions.*
+  import versions._
 
   val clientNpmDependencies = Seq(
     "react" -> react,
@@ -91,8 +91,6 @@ object Settings {
     "@mui/icons-material" -> "5.11.16",
     "@mui/lab" -> "5.0.0-alpha.119",
     "aws-sdk" -> "2.1397.0",
-    "react-responsive-carousel" -> "3.2.12",
-    "react-material-ui-carousel" -> "3.4.2",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
   )
@@ -187,8 +185,6 @@ object Settings {
     "org.apache.poi" % "poi" % poi,
     "org.apache.poi" % "poi-ooxml" % poi,
     "org.codehaus.janino" % "janino" % "3.0.16",
-    "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
-    "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,
@@ -207,7 +203,7 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE"
+    "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE",
     "software.amazon.awssdk" % "s3" % "2.16.96",
 
     "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE"
