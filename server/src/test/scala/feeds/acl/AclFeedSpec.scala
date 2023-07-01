@@ -46,7 +46,7 @@ class AclFeedSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(5.seconds) {
         case PortState(flights, _, _) =>
           val flight = flights.head._2.apiFlight
-          val actPaxOk = flight.bestPcpPaxEstimate == Option(50)
+          val actPaxOk = flight.bestPcpPaxEstimate(paxFeedSourceOrder) == Option(50)
           val totalPaxOk = flight.PassengerSources == Map(
             AclFeedSource -> Passengers(Option(105), None),
             ForecastFeedSource -> Passengers(Option(50), None),

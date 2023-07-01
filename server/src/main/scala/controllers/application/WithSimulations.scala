@@ -75,6 +75,7 @@ trait WithSimulations {
                 portStateActor,
                 () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
                 () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
+                ctrl.paxFeedSourceOrder,
               )
             }.flatten
 
@@ -122,6 +123,7 @@ trait WithSimulations {
                 portStateActor = portStateActor,
                 redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
                 egateBanksProvider = () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
+                ctrl.paxFeedSourceOrder,
               )
             }
             }.flatten

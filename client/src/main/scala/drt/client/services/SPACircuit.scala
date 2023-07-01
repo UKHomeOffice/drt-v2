@@ -14,7 +14,7 @@ import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -158,6 +158,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      maybeTimeMachineDate: Option[SDateLike] = None,
                      flaggedNationalities: Set[Country] = Set(),
                      flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary] = Map(),
+                     paxFeedSourceOrder: List[FeedSource] = List(),
                     )
 
 object PollDelay {
@@ -192,6 +193,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FlightManifestSummariesHandler(zoomRW(_.flightManifestSummaries)((m, v) => m.copy(flightManifestSummaries = v))),
       new ArrivalSourcesHandler(zoomRW(_.arrivalSources)((m, v) => m.copy(arrivalSources = v))),
       new AirportConfigHandler(zoomRW(_.airportConfig)((m, v) => m.copy(airportConfig = v))),
+      new PaxFeedSourceOrderHandler(zoomRW(_.paxFeedSourceOrder)((m, v) => m.copy(paxFeedSourceOrder = v))),
       new ContactDetailsHandler(zoomRW(_.contactDetails)((m, v) => m.copy(contactDetails = v))),
       new OohForSupportHandler(zoomRW(_.oohStatus)((m, v) => m.copy(oohStatus = v))),
       new FeatureFlagHandler(zoomRW(_.featureFlags)((m, v) => m.copy(featureFlags = v))),

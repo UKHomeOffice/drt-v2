@@ -16,6 +16,7 @@ import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.Logger
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
+import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
@@ -256,8 +257,9 @@ object TestActors {
   class TestFlightsRouterActor(terminals: Iterable[Terminal],
                                byDayLookup: FlightsLookup,
                                updateMinutes: FlightsUpdate,
-                               val resetData: (Terminal, UtcDate) => Future[Any])
-    extends FlightsRouterActor(terminals, byDayLookup, updateMinutes) {
+                               val resetData: (Terminal, UtcDate) => Future[Any],
+                               paxFeedSourceOrder: List[FeedSource])
+    extends FlightsRouterActor(terminals, byDayLookup, updateMinutes, paxFeedSourceOrder) {
     override def receive: Receive = resetReceive orElse super.receive
 
     private var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
@@ -363,7 +365,9 @@ object TestActors {
                                    month: Int,
                                    day: Int,
                                    terminal: Terminal,
-                                   now: () => SDateLike) extends TerminalDayFlightActor(year, month, day, terminal, now, None, None) with Resettable {
+                                   now: () => SDateLike,
+                                   paxFeedSourceOrder: List[FeedSource],
+                                  ) extends TerminalDayFlightActor(year, month, day, terminal, now, None, None, paxFeedSourceOrder) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

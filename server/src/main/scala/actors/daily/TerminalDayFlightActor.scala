@@ -12,6 +12,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
@@ -21,11 +22,20 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 import scala.concurrent.duration.FiniteDuration
 
 object TerminalDayFlightActor {
-  def propsWithRemovalsCutoff(terminal: Terminal, date: UtcDate, now: () => SDateLike, cutOff: Option[FiniteDuration]): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, cutOff))
+  def propsWithRemovalsCutoff(terminal: Terminal,
+                              date: UtcDate,
+                              now: () => SDateLike,
+                              cutOff: Option[FiniteDuration],
+                              paxFeedSourceOrder: List[FeedSource]): Props =
+    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, cutOff, paxFeedSourceOrder))
 
-  def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch, cutOff: Option[FiniteDuration]): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), cutOff))
+  def propsPointInTime(terminal: Terminal,
+                       date: UtcDate,
+                       now: () => SDateLike,
+                       pointInTime: MillisSinceEpoch,
+                       cutOff: Option[FiniteDuration],
+                       paxFeedSourceOrder: List[FeedSource]): Props =
+    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), cutOff, paxFeedSourceOrder))
 }
 
 class TerminalDayFlightActor(year: Int,
@@ -35,6 +45,7 @@ class TerminalDayFlightActor(year: Int,
                              val now: () => SDateLike,
                              override val maybePointInTime: Option[MillisSinceEpoch],
                              maybeRemovalMessageCutOff: Option[FiniteDuration],
+                             paxFeedSourceOrder: List[FeedSource],
                             ) extends RecoveryActorLike {
 
   val loggerSuffix: String = maybePointInTime match {
@@ -116,7 +127,7 @@ class TerminalDayFlightActor(year: Int,
   }
 
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit = {
-    val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch)
+    val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch, paxFeedSourceOrder)
     state = updatedState
 
     val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))

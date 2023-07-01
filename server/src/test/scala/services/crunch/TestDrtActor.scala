@@ -31,7 +31,7 @@ import test.TestActors.MockAggregatedArrivalsActor
 import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
@@ -88,6 +88,16 @@ class TestDrtActor extends Actor {
   var maybeCrunchQueueActor: Option[ActorRef] = None
   var maybeDeploymentQueueActor: Option[ActorRef] = None
 
+  val paxFeedSourceOrder: List[FeedSource] = List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    MlFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  )
+
   override def postStop(): Unit = {
     log.info(s"TestDrtActor stopped")
   }
@@ -116,7 +126,7 @@ class TestDrtActor extends Actor {
 
       val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
 
-      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal)
+      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder)
       val flightsActor: ActorRef = flightLookups.flightsRouterActor
       val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor
@@ -125,7 +135,7 @@ class TestDrtActor extends Actor {
       val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
       val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
       val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
-      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal)))
+      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal, paxFeedSourceOrder)))
       tc.initialPortState.foreach(ps => portStateActor ! ps)
 
       val portEgatesProvider = tc.maybeEgatesProvider match {
@@ -139,7 +149,7 @@ class TestDrtActor extends Actor {
           (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
       }
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), portEgatesProvider)
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), portEgatesProvider, paxFeedSourceOrder)
 
       val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
         PortDeskLimits.flexed(tc.airportConfig, terminalEgatesProvider)

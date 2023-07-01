@@ -4,8 +4,8 @@ import diode.UseValueEq
 import drt.shared.redlist.DirectRedListFlight
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
+import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.vdom.{TagOf, VdomArray}
 import org.scalajs.dom.html.{Div, Span}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, PaxSource}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
@@ -14,15 +14,15 @@ import uk.gov.homeoffice.drt.ports._
 
 object FlightComponents {
   def paxFeedSourceClass(paxSource: PaxSource): String = (paxSource.feedSource) match {
-    case (ApiFeedSource) => "pax-rag-green"
-    case (LiveFeedSource) => "pax-rag-green"
-    case (HistoricApiFeedSource) => "pax-rag-amber"
-    case (ForecastFeedSource) => "pax-rag-amber"
-    case (AclFeedSource) => "pax-rag-red"
+    case ApiFeedSource => "pax-rag-green"
+    case LiveFeedSource => "pax-rag-green"
+    case HistoricApiFeedSource => "pax-rag-amber"
+    case ForecastFeedSource => "pax-rag-amber"
+    case AclFeedSource => "pax-rag-red"
     case _ => "pax-rag-red"
   }
 
-  def paxComp(flightWithSplits: ApiFlightWithSplits, directRedListFlight: DirectRedListFlight, noPcpPax: Boolean): TagMod = {
+  def paxComp(flightWithSplits: ApiFlightWithSplits, directRedListFlight: DirectRedListFlight, noPcpPax: Boolean, paxFeedSourceOrder: List[FeedSource]): TagMod = {
     val isNotApiData = if (flightWithSplits.hasValidApi) "" else "notApiData"
     val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else ""
 
@@ -31,7 +31,7 @@ object FlightComponents {
       else if (directRedListFlight.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
       else ""
 
-    val pcpPaxNumber = flightWithSplits.bestPaxSource.getPcpPax.map(_.toString).getOrElse("n/a")
+    val pcpPaxNumber = flightWithSplits.bestPaxSource(paxFeedSourceOrder).getPcpPax.map(_.toString).getOrElse("n/a")
 
     <.div(
       ^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
@@ -61,14 +61,12 @@ object FlightComponents {
         <.p(s"${feedSource.displayName} - ${pax.actual.map(_.toString).getOrElse("")}")
     }
 
-    val apiPax = List(
-      flight.paxFromApi.map(p => <.p(s"API: ${p.getPcpPax.map(_.toString).getOrElse("")}")).getOrElse(EmptyVdom),
-    )
-    <.span((paxSources ++ apiPax).toVdomArray)
+    val maxPax = <.p(s"Seats: ${flight.apiFlight.MaxPax.getOrElse("-")}")
+    <.span((paxSources :+ maxPax).toVdomArray)
   }
 
-  def paxTransferComponent(flight: Arrival): VdomTagOf[Div] = {
-    val transPax = if (flight.Origin.isCta) "-" else flight.bestPaxEstimate.passengers.transit.getOrElse("-")
+  def paxTransferComponent(flight: Arrival, paxFeedSourceOrder: List[FeedSource]): VdomTagOf[Div] = {
+    val transPax = if (flight.Origin.isCta) "-" else flight.bestPaxEstimate(paxFeedSourceOrder).passengers.transit.getOrElse("-")
     <.div(
       ^.className := "right",
       s"$transPax"

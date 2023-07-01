@@ -185,7 +185,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
       (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.Scheduled == scheduled.millisSinceEpoch)
 
     offerAndCheck(forecastArrivalSource, List(arrival(actPax = Some(90),feedSource = ForecastFeedSource)),
-      (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.bestPaxEstimate.passengers.actual == Option(90))
+      (a: Arrival) => a.ScheduledDeparture.get == scheduledDeparture && a.bestPaxEstimate(paxFeedSourceOrder).passengers.actual == Option(90))
 
     success
   }

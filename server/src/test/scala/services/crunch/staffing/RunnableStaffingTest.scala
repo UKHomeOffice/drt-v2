@@ -3,7 +3,6 @@ package services.crunch.staffing
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.testkit.TestProbe
-import dispatch.Future
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared._
 import uk.gov.homeoffice.drt.time.SDate
@@ -13,6 +12,8 @@ import services.crunch.deskrecs.RunnableOptimisation.{ProcessingRequest, Termina
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+
+import scala.concurrent.Future
 
 class RunnableStaffingTest extends CrunchTestLike {
   val date: SDateLike = SDate("2022-06-17", Crunch.europeLondonTimeZone)

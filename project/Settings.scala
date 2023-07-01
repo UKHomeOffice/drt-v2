@@ -1,5 +1,5 @@
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
-import sbt._
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
+import sbt.*
 
 /**
  * Application settings. Configure the build for your application here.
@@ -25,9 +25,9 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v499"
+    val drtLib = "v549"
 
-    val scala = "2.13.10"
+    val scala = "2.13.11"
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
@@ -39,28 +39,21 @@ object Settings {
     val h2 = "2.1.214"
 
     val akka = "2.7.0"
-    val akkaStreamContrib = "0.9"
 
     val specs2 = "4.20.0"
     val react = "18.2.0"
 
     val bootstrap = "3.3.6"
 
-    val playScripts = "0.5.0"
-    val sprayVersion = "1.3.4"
-    val levelDb = "0.12"
-    val levelDbJni = "1.8"
     val renjin = "0.9.2725"
-    val awsSdk = "1.11.1034"
     val csvCommons = "1.10.0"
-    val poi = "5.1.0"
+    val poi = "5.2.3"
     val pprint = "0.5.9"
     val akkaPersistenceJdbc = "5.2.0"
-    val bluebus = "0.5.0-DRT"
+    val bluebus = "v95"
     val postgres = "42.6.0"
     val sshJ = "0.24.0"
     val jodaTime = "2.12.5"
-    val playJsonJoda = "2.6.9"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.4.2"
@@ -68,19 +61,18 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
-    val playJson = "2.6.0"
-    val playIteratees = "2.6.1"
     val uPickle = "2.0.0"
-    val akkaHttp = "10.2.6"
+    val akkaHttp = "10.5.2"
     val slick = "3.4.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.1.15"
     val sprayJsonScalaJs = "1.3.5-7"
-    val scalaTestVersion = "3.2.15"
+    val scalaTestVersion = "3.2.16"
+    val twirlApi = "1.5.2"
   }
 
-  import versions._
+  import versions.*
 
   val clientNpmDependencies = Seq(
     "react" -> react,
@@ -138,7 +130,7 @@ object Settings {
   val sharedDependencies = Def.setting(Seq(
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
-    "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
+    "uk.gov.homeoffice" %%% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "io.suzaku" %%% "boopickle" % booPickle
   ))
 
@@ -177,6 +169,8 @@ object Settings {
     "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
     "com.typesafe.akka" %% "akka-stream" % akka,
 
+    "com.typesafe.play" %% "twirl-api" % twirlApi,
+
     "com.typesafe.slick" %% "slick" % slick,
     "com.typesafe.slick" %% "slick-hikaricp" % slick,
     "com.typesafe.slick" %% "slick-codegen" % slick,
@@ -188,11 +182,9 @@ object Settings {
     "org.codehaus.janino" % "janino" % janinoVersion,
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
-    "org.apache.poi" % "poi" % poi,
+    "org.apache.poi" % "poi" % poi, // exclude("org.slf4j"),
     "org.apache.poi" % "poi-ooxml" % poi,
     "org.codehaus.janino" % "janino" % "3.0.16",
-    "org.fusesource.leveldbjni" % "leveldbjni-all" % levelDbJni,
-    "org.iq80.leveldb" % "leveldb" % levelDb,
     "org.postgresql" % "postgresql" % postgres,
 
     "org.renjin" % "renjin-script-engine" % renjin,
@@ -204,14 +196,14 @@ object Settings {
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
-    "io.netty" % "netty-all" % "4.1.92.Final",
+    "io.netty" % "netty-all" % "4.1.94.Final",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
-    "uk.gov.homeoffice" %% "drt-lib" % drtLib,
+    "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE"
+    "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

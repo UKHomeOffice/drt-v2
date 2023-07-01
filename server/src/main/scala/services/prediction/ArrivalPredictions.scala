@@ -27,7 +27,7 @@ object ArrivalPredictions {
 }
 
 case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
-                              modelAndFeaturesProvider: WithId => Future[Models],
+                              getModels: WithId => Future[Models],
                               modelThresholds: Map[String, Int],
                               minimumImprovementPctThreshold: Int)
                              (implicit ec: ExecutionContext, mat: Materializer) {
@@ -48,7 +48,7 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
     Source(idsToArrivalKey)
       .foldAsync(arrivals) {
         case (arrivalsAcc, (key, uniqueArrivals)) =>
-          if (oldValuesExist(lastUpdatedThreshold, arrivalsAcc, uniqueArrivals))
+          if (needsUpdate(lastUpdatedThreshold, arrivalsAcc, uniqueArrivals))
             findAndApplyForKey(key, uniqueArrivals.map(arrivalsAcc(_)))
               .map(updates => updates.foldLeft(arrivalsAcc)((acc, a) => acc.updated(a.unique, a)))
           else
@@ -58,46 +58,25 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
       .runWith(Sink.head)
   }
 
-  private def oldValuesExist(lastUpdatedThreshold: MillisSinceEpoch,
-                             arrivalsAcc: Map[UniqueArrival, Arrival],
-                             uniqueArrivals: Iterable[UniqueArrival]): Boolean =
-    uniqueArrivals.map(arrivalsAcc(_)).exists(_.Predictions.lastChecked < lastUpdatedThreshold)
+  private def needsUpdate(lastUpdatedThreshold: MillisSinceEpoch,
+                          arrivals: Map[UniqueArrival, Arrival],
+                          uniqueArrivals: Iterable[UniqueArrival]): Boolean = {
+    val expiredPredictionExists = uniqueArrivals.map(arrivals(_)).exists(_.Predictions.lastChecked < lastUpdatedThreshold)
+    val noExistingPredictions = !uniqueArrivals.map(arrivals(_)).exists(_.Predictions.predictions.nonEmpty)
 
-  private def findAndApplyForKey(key: WithId, arrivals: Iterable[Arrival]): Future[Iterable[Arrival]] =
-    modelAndFeaturesProvider(key).map { models =>
+    noExistingPredictions || expiredPredictionExists
+  }
+
+  private def findAndApplyForKey(modelKey: WithId, arrivals: Iterable[Arrival]): Future[Iterable[Arrival]] =
+    getModels(modelKey).map { models =>
       arrivals.map { arrival =>
         models.models.values.foldLeft(arrival) {
           case (arrival, model: ArrivalModelAndFeatures) =>
-            updatePrediction(arrival, model, model.prediction)
+            model.updatePrediction(arrival, minimumImprovementPctThreshold, modelThresholds.get(model.targetName), SDate.now())
           case (_, unknownModel) =>
             log.error(s"Unknown model type ${unknownModel.getClass}")
             arrival
         }
       }
-    }
-
-  private def updatePrediction(arrival: Arrival, model: ModelAndFeatures, predictionProvider: Arrival => Option[Int]): Arrival = {
-    val updatedPredictions: Map[String, Int] = maybePrediction(arrival, model, predictionProvider) match {
-      case None => arrival.Predictions.predictions.removed(model.targetName)
-      case Some(update) => arrival.Predictions.predictions.updated(model.targetName, update)
-    }
-    arrival.copy(Predictions = arrival.Predictions.copy(predictions = updatedPredictions, lastChecked = SDate.now().millisSinceEpoch))
-  }
-
-  private def maybePrediction(arrival: Arrival,
-                              model: ModelAndFeatures,
-                              predictor: Arrival => Option[Int]): Option[Int] =
-    if (model.improvementPct > minimumImprovementPctThreshold) {
-      for {
-        valueThreshold <- modelThresholds.get(model.targetName)
-        maybeValue <- predictor(arrival)
-        maybePrediction <- if (abs(maybeValue) < valueThreshold)
-          Option(maybeValue)
-        else {
-          None
-        }
-      } yield maybePrediction
-    } else {
-      None
     }
 }

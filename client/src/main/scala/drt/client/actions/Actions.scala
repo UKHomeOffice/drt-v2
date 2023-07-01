@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
@@ -64,7 +64,10 @@ object Actions {
 
   case object GetAirportConfig extends Action
 
+  case object GetPaxFeedSourceOrder extends Action
+
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
+  case class UpdateGetPaxFeedSourceOrder(sources: List[FeedSource]) extends Action
 
   case object GetOohStatus extends Action
 

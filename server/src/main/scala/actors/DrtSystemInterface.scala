@@ -62,13 +62,13 @@ import services.staffing.StaffMinutesChecker
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
-import uk.gov.homeoffice.drt.actor.WalkTimeProvider
+import uk.gov.homeoffice.drt.actor.{PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
+import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
@@ -154,6 +154,23 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] = (date: LocalDate) =>
     paxForDay(date, None)
 
+  val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    MlFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  ) else List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  )
+
   private def paxForDay(date: LocalDate, maybeAtTime: Option[SDateLike]): Future[Map[Terminal, Double]] = {
     val start = SDate(date)
     val end = start.addDays(1).addMinutes(-1)
@@ -176,7 +193,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
               .groupBy(fws => fws.apiFlight.Terminal)
               .map {
                 case (terminal, flights) =>
-                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate.getOrElse(0)).sum
+                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
                   (terminal, paxNos.toDouble)
               }
         }.runWith(Sink.seq)
@@ -216,7 +233,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), egatesProvider)
+  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), egatesProvider, paxFeedSourceOrder)
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] =
     terminal => egatesProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
@@ -341,6 +358,13 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     (requestQueueActor, deskRecsKillSwitch)
   }
 
+  private def enabledPredictionModelNames: Seq[String] = Seq(
+    OffScheduleModelAndFeatures.targetName,
+    ToChoxModelAndFeatures.targetName,
+    WalkTimeModelAndFeatures.targetName,
+    PaxCapModelAndFeatures.targetName,
+  )
+
   def startCrunchSystem(initialPortState: Option[PortState],
                         initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
@@ -358,12 +382,14 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         (a: Arrival) => Iterable(
           TerminalOrigin(a.Terminal.toString, a.Origin.iata),
           TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
+          PredictionModelActor.Terminal(a.Terminal.toString),
         ),
-        Flight().getModels,
+        Flight().getModels(enabledPredictionModelNames),
         Map(
           OffScheduleModelAndFeatures.targetName -> 45,
           ToChoxModelAndFeatures.targetName -> 20,
           WalkTimeModelAndFeatures.targetName -> 30 * 60,
+          PaxCapModelAndFeatures.targetName -> 100,
         ),
         15
       ).addPredictions

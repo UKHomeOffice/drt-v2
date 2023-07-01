@@ -46,7 +46,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
     "When I ask if its pcp range falls within 2020-09-28" >> {
       "Then I should get a true response" >> {
         val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-29T12:00Z", pcpDt = "2020-09-28T12:00Z", passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
-        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange)
+        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange(paxFeedSourceOrder))
         result === true
       }
     }
@@ -57,7 +57,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
       "Then I should get a true response" >> {
         val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2020-09-27T12:00Z", pcpDt = "2020-09-28T12:00Z",
           passengerSources = Map(ApiFeedSource -> Passengers(Some(100), None))), Set())
-        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange)
+        val result = FlightsRouterActor.pcpFallsInRange(SDate(2020, 9, 28), SDate(2020, 9, 28, 23, 59), flight.apiFlight.pcpRange(paxFeedSourceOrder))
         result === true
       }
     }
@@ -96,7 +96,7 @@ class StreamingFlightsByDaySpec extends CrunchTestLike {
         val startDate = SDate(2020, 9, 3)
         val endDate = SDate(2020, 9, 4, 23, 59)
 
-        val flights = FlightsRouterActor.multiTerminalFlightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, Seq(T1), None)
+        val flights = FlightsRouterActor.multiTerminalFlightsByDaySource(earlyOnTimeAndLateFlights)(startDate, endDate, Seq(T1), None, paxFeedSourceOrder)
         val result = Await.result(FlightsRouterActor.runAndCombine(Future(flights)), 1.second)
         val expected = FlightsWithSplits(Seq(flight0209Late, flight0309, flight0409, flight0509Early))
         result === expected

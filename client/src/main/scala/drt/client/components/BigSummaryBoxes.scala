@@ -12,7 +12,7 @@ import org.scalajs.dom.HTMLElement
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.{PaxNumbers, Percentage}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.util.Try
@@ -45,7 +45,7 @@ object BigSummaryBoxes {
     })
   }
 
-  val bestFlightSplits: ApiFlightWithSplits => Set[(PaxTypeAndQueue, Double)] = {
+  def bestFlightSplits(paxFeedSourceOrder: List[FeedSource]): ApiFlightWithSplits => Set[(PaxTypeAndQueue, Double)] = {
     case ApiFlightWithSplits(_, s, _) if s.isEmpty => Set()
     case fws@ApiFlightWithSplits(_, splits, _) =>
       if (splits.exists { case Splits(_, _, _, t) => t == PaxNumbers }) {
@@ -59,15 +59,16 @@ object BigSummaryBoxes {
         splits.find { case Splits(_, _, _, t) => t == Percentage } match {
           case None => Set()
           case Some(apiSplits) => apiSplits.splits.map {
-            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * fws.bestPaxSource.getPcpPax.getOrElse(0))
+            s => (PaxTypeAndQueue(s.passengerType, s.queueType), s.paxCount / 100 * fws.bestPaxSource(paxFeedSourceOrder).getPcpPax.getOrElse(0))
           }
         }
       }
   }
 
-  def aggregateSplits(flights: Iterable[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = {
+  def aggregateSplits(flights: Iterable[ApiFlightWithSplits], paxFeedSourceOrder: List[FeedSource]): Map[PaxTypeAndQueue, Int] = {
     val newSplits = Map[PaxTypeAndQueue, Double]()
-    val allSplits: Iterable[(PaxTypeAndQueue, Double)] = flights.flatMap(bestFlightSplits)
+    val getSplits = bestFlightSplits(paxFeedSourceOrder)
+    val allSplits: Iterable[(PaxTypeAndQueue, Double)] = flights.flatMap(getSplits)
     val splitsExcludingTransfers = allSplits.filter(_._1.queueType != Queues.Transfer)
     val aggSplits: Map[PaxTypeAndQueue, Double] = splitsExcludingTransfers.foldLeft(newSplits) {
       case (agg, (k, v)) =>

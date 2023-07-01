@@ -7,7 +7,7 @@ import services.graphstages.Crunch.LoadMinute
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
+import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PaxType}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.annotation.tailrec
@@ -21,6 +21,7 @@ object WholePassengerQueueSplits {
              processingTime: Terminal => (PaxType, Queue) => Double,
              queueStatus: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
              queueFallbacks: QueueFallbacks,
+             paxFeedSourceOrder: List[FeedSource],
             ): Map[TQM, LoadMinute] =
     flights
       .groupBy(_.apiFlight.Terminal)
@@ -30,7 +31,7 @@ object WholePassengerQueueSplits {
           val procTimes = processingTime(terminal)
           flights
             .flatMap { flight =>
-              flightSplits(minuteMillis, flight, procTimes, queueStatus(flight.apiFlight.Terminal), queueFallbacks)
+              flightSplits(minuteMillis, flight, procTimes, queueStatus(flight.apiFlight.Terminal), queueFallbacks, paxFeedSourceOrder)
                 .flatMap { case (queue, byMinute) =>
                   byMinute.map {
                     case (minute, passengers) =>
@@ -51,11 +52,12 @@ object WholePassengerQueueSplits {
                            processingTime: (PaxType, Queue) => Double,
                            queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
                            queueFallbacks: QueueFallbacks,
-                  ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
+                           paxFeedSourceOrder: List[FeedSource],
+                          ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
     flight.bestSplits match {
       case Some(splitsToUse) =>
-        val pcpPax = flight.apiFlight.bestPcpPaxEstimate.getOrElse(0)
-        val startMinute = SDate(flight.apiFlight.pcpRange.min)
+        val pcpPax = flight.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)
+        val startMinute = SDate(flight.apiFlight.pcpRange(paxFeedSourceOrder).min)
         val terminalQueueFallbacks = (q: Queue, pt: PaxType) => queueFallbacks.availableFallbacks(flight.apiFlight.Terminal, q, pt).toList
         val wholePaxSplits = wholePassengerSplits(pcpPax, splitsToUse.splits)
         wholePaxPerQueuePerMinute(minuteMillis, pcpPax, wholePaxSplits, processingTime, queueStatus, terminalQueueFallbacks, startMinute)
@@ -68,7 +70,7 @@ object WholePassengerQueueSplits {
   private def maybeFallbackQueue(queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
                                  queueFallbacks: List[Queue],
                                  minute: MillisSinceEpoch,
-                        ): Option[Queue] =
+                                ): Option[Queue] =
     queueFallbacks match {
       case Nil => None
       case queue :: tail =>

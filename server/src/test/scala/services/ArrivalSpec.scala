@@ -2,18 +2,21 @@ package services
 
 import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
+import services.crunch.TestDefaults
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.DurationInt
 
 class ArrivalSpec extends Specification {
+  val paxFeedSourceOrder = TestDefaults.paxFeedSourceOrder
+
   "Given an arrival with negative passengers" >> {
     "When I ask for the minimum value of the pcp range" >> {
       "I should get zero" >> {
         val arrival = ArrivalGenerator.arrival(passengerSources =  Map(AclFeedSource -> Passengers(Option(-1),None)))
-        val result = arrival.pcpRange.min
+        val result = arrival.pcpRange(paxFeedSourceOrder).min
         result === 0
       }
     }
@@ -23,7 +26,7 @@ class ArrivalSpec extends Specification {
     "Given an arrival with 0 pax" >> {
       "I should get 0" >> {
         val arrival = ArrivalGenerator.arrival(passengerSources =  Map(AclFeedSource -> Passengers(Option(0),None)))
-        val result = arrival.minutesOfPaxArrivals
+        val result = arrival.minutesOfPaxArrivals(paxFeedSourceOrder)
 
         result === 0
       }
@@ -32,7 +35,7 @@ class ArrivalSpec extends Specification {
     "Given an arrival with -1 pax" >> {
       "I should get 0" >> {
         val arrival = ArrivalGenerator.arrival(passengerSources =  Map(AclFeedSource -> Passengers(Option(-1),None)))
-        val result = arrival.minutesOfPaxArrivals
+        val result = arrival.minutesOfPaxArrivals(paxFeedSourceOrder)
 
         result === 0
       }
@@ -43,7 +46,7 @@ class ArrivalSpec extends Specification {
     val pcpTime = "2019-01-01T12:00"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", passengerSources =  Map(LiveFeedSource -> Passengers(Option(100),None)), pcpDt = "2019-01-01T12:00")
 
-    val pcpRange = arrival.pcpRange
+    val pcpRange = arrival.pcpRange(paxFeedSourceOrder)
 
     "When I ask how many minutes I should see 5" >> {
       pcpRange.length === 5
@@ -68,7 +71,7 @@ class ArrivalSpec extends Specification {
     val pcpTime = "2019-01-01T12:00"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", pcpDt = "2019-01-01T12:00", passengerSources = Map(LiveFeedSource -> Passengers(Option(99),None)))
 
-    val pcpRange = arrival.pcpRange
+    val pcpRange = arrival.pcpRange(paxFeedSourceOrder)
     "When I ask how many minutes I should see 5" >> {
       pcpRange.length === 5
     }
@@ -92,7 +95,7 @@ class ArrivalSpec extends Specification {
     val pcpTime = "2019-01-01T12:00"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", passengerSources = Map(LiveFeedSource -> Passengers(Option(101),None)), pcpDt = "2019-01-01T12:00")
 
-    val pcpRange = arrival.pcpRange
+    val pcpRange = arrival.pcpRange(paxFeedSourceOrder)
 
     "When I ask how many minutes I should see 6" >> {
       pcpRange.length === 6
@@ -127,7 +130,7 @@ class ArrivalSpec extends Specification {
         pcpDt = "2020-10-22T10:00Z"
       )
 
-      val result = arrival.isRelevantToPeriod(startTime, endTime)
+      val result = arrival.isRelevantToPeriod(startTime, endTime, paxFeedSourceOrder)
       result === expected
     }
     "Given any of the flights times are inside the range then it should be relevant" >> {
@@ -163,7 +166,7 @@ class ArrivalSpec extends Specification {
         flightWithPcpTimeInRange
       )
 
-      val result = flightsInRange.filter(Arrival.isRelevantToPeriod(startTime, endTime))
+      val result = flightsInRange.filter(Arrival.isRelevantToPeriod(startTime, endTime, paxFeedSourceOrder))
       result === flightsInRange
     }
   }

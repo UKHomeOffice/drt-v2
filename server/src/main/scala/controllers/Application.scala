@@ -113,7 +113,7 @@ trait UserRoleProviderLike {
 class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController
     with AirportConfProvider
-    with WithAirportConfig
+    with WithConfig
     with WithAirportInfo
     with WithRedLists
     with WithEgateBanks
@@ -157,8 +157,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   lazy val govNotifyReference = config.get[String]("notifications.reference")
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
-
-  val virusScanner: VirusScanner = VirusScanner(VirusScanService(virusScannerUrl))
 
   val log: LoggingAdapter = system.log
 

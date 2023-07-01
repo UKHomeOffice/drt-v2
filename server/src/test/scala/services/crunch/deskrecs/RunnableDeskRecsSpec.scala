@@ -9,7 +9,6 @@ import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
-import dispatch.Future
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MinutesContainer, PassengersMinute}
 import drt.shared.FlightsApi.{Flights, PaxForArrivals, SplitsForArrivals}
@@ -36,7 +35,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.{Map, Seq, SortedMap}
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
 
 
@@ -109,7 +108,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
 
     val splitsCalc = SplitsCalculator(paxAllocation, airportConfig.terminalPaxSplits, AdjustmentsNoop)
-    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig))
+    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig), paxFeedSourceOrder)
 
     implicit val timeout: Timeout = new Timeout(50.milliseconds)
     val deskRecsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(

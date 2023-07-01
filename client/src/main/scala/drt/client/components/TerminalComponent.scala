@@ -14,15 +14,13 @@ import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
 import drt.shared.api.WalkTimes
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.extra.ReusabilityOverlay
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
-import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.HashSet
@@ -35,23 +33,24 @@ object TerminalComponent {
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
 
-  case class TerminalModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
-                           potShifts: Pot[ShiftAssignments],
-                           potMonthOfShifts: Pot[MonthOfShifts],
-                           potFixedPoints: Pot[FixedPointAssignments],
-                           potStaffMovements: Pot[StaffMovements],
-                           airportConfig: Pot[AirportConfig],
-                           loadingState: LoadingState,
-                           showActuals: Boolean,
-                           loggedInUserPot: Pot[LoggedInUser],
-                           viewMode: ViewMode,
-                           minuteTicker: Int,
-                           featureFlags: Pot[FeatureFlags],
-                           redListPorts: Pot[HashSet[PortCode]],
-                           redListUpdates: Pot[RedListUpdates],
-                           timeMachineEnabled: Boolean,
-                           walkTimes: Pot[WalkTimes],
-                          ) extends UseValueEq
+  private case class TerminalModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
+                                   potShifts: Pot[ShiftAssignments],
+                                   potMonthOfShifts: Pot[MonthOfShifts],
+                                   potFixedPoints: Pot[FixedPointAssignments],
+                                   potStaffMovements: Pot[StaffMovements],
+                                   airportConfig: Pot[AirportConfig],
+                                   loadingState: LoadingState,
+                                   showActuals: Boolean,
+                                   loggedInUserPot: Pot[LoggedInUser],
+                                   viewMode: ViewMode,
+                                   minuteTicker: Int,
+                                   featureFlags: Pot[FeatureFlags],
+                                   redListPorts: Pot[HashSet[PortCode]],
+                                   redListUpdates: Pot[RedListUpdates],
+                                   timeMachineEnabled: Boolean,
+                                   walkTimes: Pot[WalkTimes],
+                                   paxFeedSourceOrder: List[FeedSource],
+                                  ) extends UseValueEq
 
   private val activeClass = "active"
 
@@ -74,6 +73,7 @@ object TerminalComponent {
         redListUpdates = model.redListUpdates,
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
+        paxFeedSourceOrder = model.paxFeedSourceOrder,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -105,6 +105,7 @@ object TerminalComponent {
               redListPorts = model.redListPorts,
               redListUpdates = model.redListUpdates,
               walkTimes = model.walkTimes,
+              paxFeedSourceOrder = model.paxFeedSourceOrder,
             )
             <.div(
               <.div(^.className := "terminal-nav-wrapper", terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled)),
@@ -135,6 +136,7 @@ object TerminalComponent {
                       redListPorts = model.redListPorts,
                       redListUpdates = redListUpdates,
                       walkTimes = model.walkTimes,
+                      paxFeedSourceOrder = model.paxFeedSourceOrder,
                     )
 
                   case Planning =>

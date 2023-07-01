@@ -56,7 +56,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     clearDatabase()
   }
 
-  val table: ArrivalTable = ArrivalTable(defaultAirportConfig.portCode, H2Tables)
+  val table: ArrivalTable = ArrivalTable(defaultAirportConfig.portCode, H2Tables, paxFeedSourceOrder)
 
   def clearDatabase(): Unit = {
     Try(dropTables())

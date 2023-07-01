@@ -9,6 +9,7 @@ GET           /                                                                 
 GET           /health-check                                                           controllers.Application.healthCheck
 
 GET           /airport-config                                                         controllers.Application.getAirportConfig
+GET           /pax-feed-source-order                                                  controllers.Application.getPaxFeedSourceOrder
 GET           /contact-details                                                        controllers.Application.getContactDetails
 
 GET           /ooh-status                                                             controllers.Application.getOOHStatus

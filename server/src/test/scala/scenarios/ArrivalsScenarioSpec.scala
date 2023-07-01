@@ -80,6 +80,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(defaultAirportConfig.eGateBankSizes.map {
         case (terminal, banks) => (terminal, EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))
       })),
+      paxFeedSourceOrder = paxFeedSourceOrder,
     )
 
     val result = Await.result(futureResult, 1.second)

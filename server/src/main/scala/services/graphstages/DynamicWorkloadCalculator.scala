@@ -9,7 +9,7 @@ import services.graphstages.Crunch.SplitMinutes
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxType, PaxTypeAndQueue}
+import uk.gov.homeoffice.drt.ports.{FeedSource, PaxType, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{Map, NumericRange}
@@ -22,13 +22,17 @@ trait WorkloadCalculatorLike {
   def flightLoadMinutes(minuteMillis: NumericRange[MillisSinceEpoch],
                         flights: FlightsWithSplits,
                         redListUpdates: RedListUpdates,
-                        terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
+                        terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
+                        paxFeedSourceOrder: List[FeedSource],
+                       )
                        (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes
 
-  def combineCodeShares(flights: Iterable[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] = {
+  def combineCodeShares(flights: Iterable[ApiFlightWithSplits],
+                        paxFeedSourceOrder: List[FeedSource],
+                       ): Iterable[ApiFlightWithSplits] = {
     val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
       .toList
-      .sortBy(_.apiFlight.bestPaxEstimate.passengers.actual.getOrElse(0))
+      .sortBy(_.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0))
       .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
       .toMap.values
     uniqueFlights
@@ -44,7 +48,9 @@ trait WorkloadCalculatorLike {
 case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                                      fallbacksProvider: QueueFallbacks,
                                      flightHasWorkload: FlightFilter,
-                                     fallbackProcessingTime: Double)
+                                     fallbackProcessingTime: Double,
+                                     paxFeedSourceOrder: List[FeedSource],
+                                    )
   extends WorkloadCalculatorLike {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -52,14 +58,16 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
   override def flightLoadMinutes(minuteMillis: NumericRange[MillisSinceEpoch],
                                  flights: FlightsWithSplits,
                                  redListUpdates: RedListUpdates,
-                                 terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
+                                 terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
+                                 paxFeedSourceOrder: List[FeedSource],
+                                )
                                 (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes = {
-    val relevantFlights = flightsWithPcpWorkload(combineCodeShares(flights.flights.values), redListUpdates)
+    val relevantFlights = flightsWithPcpWorkload(combineCodeShares(flights.flights.values, paxFeedSourceOrder), redListUpdates)
     val procTimes = (terminal: Terminal) => (paxType: PaxType, queue: Queue) =>
       terminalProcTimes
         .getOrElse(terminal, Map.empty)
         .getOrElse(PaxTypeAndQueue(paxType, queue), fallbackProcessingTime)
 
-    SplitMinutes(WholePassengerQueueSplits.splits(minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider))
+    SplitMinutes(WholePassengerQueueSplits.splits(minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider, paxFeedSourceOrder))
   }
 }

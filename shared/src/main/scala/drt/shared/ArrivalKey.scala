@@ -51,9 +51,10 @@ object ArrivalsDiff {
 }
 
 case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: Iterable[Arrival]) extends FlightUpdates {
-  private val minutesFromUpdate: Iterable[MillisSinceEpoch] = toUpdate.values.flatMap(_.pcpRange)
-  private val minutesFromRemoval: Iterable[MillisSinceEpoch] = toRemove.flatMap(_.pcpRange)
-  val updateMinutes: Iterable[MillisSinceEpoch] = minutesFromUpdate ++ minutesFromRemoval
+  private def minutesFromUpdate(paxFeedSourceOrder: List[FeedSource]): Iterable[MillisSinceEpoch] = toUpdate.values.flatMap(_.pcpRange(paxFeedSourceOrder))
+  private def minutesFromRemoval(paxFeedSourceOrder: List[FeedSource]): Iterable[MillisSinceEpoch] = toRemove.flatMap(_.pcpRange(paxFeedSourceOrder))
+  def updateMinutes(paxFeedSourceOrder: List[FeedSource]): Iterable[MillisSinceEpoch] =
+    minutesFromUpdate(paxFeedSourceOrder) ++ minutesFromRemoval(paxFeedSourceOrder)
 
   def diffWith(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
     val updatedFlights = toUpdate

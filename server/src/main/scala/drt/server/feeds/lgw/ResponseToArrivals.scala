@@ -17,9 +17,8 @@ case class ResponseToArrivals(data: String) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def getArrivals: List[Arrival] = Try {
-    scala.xml.Utility.trimProper(
-      scala.xml.XML.loadString(data)
-    )
+    scala.xml.Utility
+      .trimProper(scala.xml.XML.loadString(data))
       .map(nodeToArrival)
 
   } match {
@@ -30,7 +29,6 @@ case class ResponseToArrivals(data: String) {
   }
 
   def nodeToArrival: Node => Arrival = (n: Node) => {
-
     val operator = (n \ "AirlineIATA") text
     val actPax = parsePaxCount(n, "70A").orElse(None)
     val transPax = parsePaxCount(n, "TIP")
