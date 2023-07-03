@@ -33,6 +33,12 @@ trait WithAuth {
     Ok(Json.toJson(user))
   }
 
+  def userTracking() = Action.async { request =>
+    val loggedInUser  = ctrl.getLoggedInUser(config, request.headers, request.session)
+        ctrl.userService.insertOrUpdateUser(loggedInUser, None, None)
+        Future.successful(Ok(s"User-tracked"))
+  }
+
   def keyCloakClientWithHeader(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token")
       .getOrElse(throw new Exception(JsError("X-Auth-Token missing from headers, we need this to query the Key Cloak API.")))

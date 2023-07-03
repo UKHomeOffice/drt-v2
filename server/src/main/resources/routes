@@ -80,6 +80,9 @@ GET           /assets/*file                                                     
 POST          /api/*path                                                              controllers.Application.autowireApi(path: String)
 
 GET           /data/user                                                              controllers.Application.getLoggedInUser()
+
+GET           /data/user-tracking                                                     controllers.Application.userTracking()
+
  +nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin()
 
@@ -107,6 +110,8 @@ POST          /data/feed/:feedType/:portCode                                    
 GET           /training-video/:filename                                               controllers.S3FileController.getFile(filename:String)
 
 GET           /training-data                                                          controllers.Application.getTrainingData()
+
+GET           /isNewFeatureAvailableSinceLastLogin                                    controllers.Application.isNewFeatureAvailableSinceLastLogin
 
 POST          /viewed-video/:filename                                                 controllers.Application.trackViewedFile(filename:String)
 

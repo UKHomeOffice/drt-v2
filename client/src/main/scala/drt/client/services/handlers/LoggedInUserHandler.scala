@@ -1,12 +1,11 @@
 package drt.client.services.handlers
 
 import diode.data.{Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.{Action, ActionResult, Effect, ModelRW}
 import uk.gov.homeoffice.drt.auth.{LoggedInUser, Roles}
 import drt.client.SPAMain
 import drt.client.actions.Actions._
 import drt.client.logger.log
-
 import org.scalajs.dom
 import org.scalajs.dom.XMLHttpRequest
 import ujson.Value
@@ -14,6 +13,8 @@ import upickle.default._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+
+case class UserTracking() extends Action
 
 class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends LoggingActionHandler(modelRW) {
 
@@ -51,5 +52,14 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
       )))
     case SetLoggedInUser(loggedInUser) =>
       updated(Ready(loggedInUser))
+
+    case UserTracking() => {
+      val url = SPAMain.absoluteUrl("data/user-tracking")
+      val eventualRequest: Future[XMLHttpRequest] = dom.ext.Ajax.get(url = url)
+      eventualRequest.map(r => {
+        log.info(s"User tracking response: ${r.responseText}")
+      })
+      noChange
+    }
   }
 }

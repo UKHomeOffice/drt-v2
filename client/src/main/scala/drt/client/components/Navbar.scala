@@ -3,10 +3,11 @@ package drt.client.components
 import diode.data.{Empty, Pot}
 import diode.react.ReactConnectProxy
 import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.{SetSnackbarMessage}
+import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{CloseTrainingDialog, GetTrainingDataTemplates, GetUserViewFeatureCount, TrainingDialog}
+import drt.client.services.handlers.{CloseTrainingDialog, GetTrainingDataTemplates,
+  GetUserViewFeatureCount, IsNewFeatureAvailable, TrainingDialog, UserTracking}
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import io.kinoplan.scalajs.react.material.ui.core.{MuiBadge, MuiSnackbar}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -58,8 +59,10 @@ object Navbar {
     }
 
     def componentDidMount() = {
-      Callback(SPACircuit.dispatch(GetUserViewFeatureCount())) >>
-        Callback(SPACircuit.dispatch(GetTrainingDataTemplates()))
+      Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
+        Callback(SPACircuit.dispatch(GetUserViewFeatureCount())) >>
+        Callback(SPACircuit.dispatch(GetTrainingDataTemplates())) >>
+        Callback(SPACircuit.dispatch(UserTracking()))
     }
 
     def render(props: Props, state: State) = {
@@ -102,8 +105,8 @@ object Navbar {
                       <.div(<.a(^.onClick ==> {
                         handleOpenDialog
                       }, MuiBadge(badgeContent = {
-                        val a = handleBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
-                        <.span(a)
+                        val badgeCount = handleBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
+                        <.span(badgeCount)
                       }, showZero = true, color = "secondary")("New Feature"))),
                       <.div(
                         navbarModel.trainingDataTemplates.renderReady { trainingDataTemplates =>

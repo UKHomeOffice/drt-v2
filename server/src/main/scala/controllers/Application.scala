@@ -28,6 +28,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.nio.ByteBuffer
+import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
@@ -102,7 +103,6 @@ trait UserRoleProviderLike {
       email = headers.get("X-Auth-Email").getOrElse("Unknown"),
       roles = roles)
 
-    userService.insertOrUpdateUser(loggedInUser, None, None)
 
     loggedInUser
   }
@@ -182,6 +182,21 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   def getTrainingData(): Action[AnyContent] = Action.async { _ =>
     val trainingDataJson: Future[String] = TrainingData.getTrainingData()
     trainingDataJson.map(Ok(_))
+  }
+
+  def isNewFeatureAvailableSinceLastLogin = Action.async { implicit request =>
+    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val latestFeatureDateF: Future[Option[Timestamp]] = TrainingData.selectAll.map(_.headOption.map(_.uploadTime))
+    val latestLoginDateF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.map(_.latest_login))
+    for {
+      latestFeatureDate <- latestFeatureDateF
+      latestLoginDate <- latestLoginDateF
+    } yield (latestFeatureDate, latestLoginDate) match {
+      case (Some(featureDate), Some(loginDate)) =>
+        Ok(featureDate.after(loginDate).toString)
+      case _ =>
+        Ok(false.toString)
+    }
   }
 
   def trackViewedFile(filename: String): Action[AnyContent] = authByRole(BorderForceStaff) {
