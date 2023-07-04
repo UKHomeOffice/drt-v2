@@ -434,6 +434,7 @@ class ArrivalsGraphStage(name: String = "",
         FeedSources = feedSources(key),
         ScheduledDeparture = if (bestArrival.ScheduledDeparture.isEmpty) baseArrival.ScheduledDeparture else bestArrival.ScheduledDeparture,
         PassengerSources = totalPaxSources(key),
+        MaxPax = if (bestArrival.MaxPax.nonEmpty) bestArrival.MaxPax else baseArrival.MaxPax
       )
     }
 
