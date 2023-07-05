@@ -96,7 +96,7 @@ POST          /email/feedback/:feedback                                         
 POST          /logging                                                                controllers.Application.logging
 
 POST          /data/staff                                                             controllers.Application.saveStaff
-GET           /staff-movements                                                        controllers.Application.getStaffMovements(pointInTime: Option[Long])
+GET           /staff-movements/:date                                                  controllers.Application.getStaffMovements(date: String)
 POST          /staff-movements                                                        controllers.Application.addStaffMovements()
 DELETE        /staff-movements/:uuid                                                  controllers.Application.removeStaffMovements(uuid: String)
 

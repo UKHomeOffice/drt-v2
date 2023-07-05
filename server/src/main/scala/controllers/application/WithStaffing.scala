@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors._
 import actors.persistent.staffing._
 import akka.NotUsed
 import akka.actor.{ActorRef, PoisonPill, Props}
@@ -12,12 +11,10 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
-import uk.gov.homeoffice.drt.time.SDate
 import services.exports.StaffMovementsExport
-import uk.gov.homeoffice.drt.auth.Roles.{StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
-import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView}
+import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import upickle.default.{read, write}
 
 import java.util.UUID
@@ -112,19 +109,10 @@ trait WithStaffing {
     }
   }
 
-  def getStaffMovements(maybePointInTime: Option[MillisSinceEpoch]): Action[AnyContent] = authByRole(BorderForceStaff) {
+  def getStaffMovements(date: String): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async {
-      val eventualStaffMovements = maybePointInTime match {
-        case None =>
-          ctrl.staffMovementsActor.ask(GetState)
-            .map { case StaffMovements(movements) => movements }
-            .recoverWith { case _ => Future(Seq()) }
-
-        case Some(millis) =>
-          val date = SDate(millis)
-
-          staffMovementsForDay(date)
-      }
+      val localDate = SDate(date).toLocalDate
+      val eventualStaffMovements = staffMovementsForDay(localDate)
 
       eventualStaffMovements.map(sms => Ok(write(sms)))
     }
@@ -134,7 +122,7 @@ trait WithStaffing {
     authByRole(StaffMovementsExportRole) {
       Action {
         val terminal = Terminal(terminalString)
-        val date = SDate(pointInTime)
+        val date = SDate(pointInTime).toLocalDate
         val eventualStaffMovements = staffMovementsForDay(date)
 
         val csvSource: Source[String, NotUsed] = Source
@@ -148,22 +136,24 @@ trait WithStaffing {
           CsvFileStreaming.makeFileName(
             "staff-movements",
             terminal,
-            date.toLocalDate,
-            date.toLocalDate,
+            date,
+            date,
             portCode
           ))
       }
     }
 
-  def staffMovementsForDay(date: SDateLike): Future[Seq[StaffMovement]] = {
+  def staffMovementsForDay(date: LocalDate): Future[Seq[StaffMovement]] = {
     val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-    val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], date, DrtStaticParameters.time48HoursAgo(() => date)), actorName)
+    val pointInTime = SDate(date).addDays(1)
+    val expireBefore = () => pointInTime.addDays(-1)
+    val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], pointInTime, expireBefore), actorName)
 
     val eventualStaffMovements: Future[Seq[StaffMovement]] = staffMovementsReadActor.ask(GetState)
       .map {
         case movements: StaffMovements =>
           staffMovementsReadActor ! PoisonPill
-          movements.forDay(date.toLocalDate)(ld => SDate(ld))
+          movements.forDay(date)(ld => SDate(ld))
       }
       .recoverWith {
         case _ =>

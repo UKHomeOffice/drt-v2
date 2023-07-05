@@ -59,7 +59,7 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
       noChange
 
     case GetStaffMovements(viewMode) =>
-      val uri = if (viewMode.isHistoric(SDate.now())) s"staff-movements?pointInTime=${viewMode.millis}" else "staff-movements"
+      val uri = if (viewMode.isHistoric(SDate.now())) s"staff-movements/${viewMode.localDate}" else "staff-movements"
 
       val apiCallEffect = Effect(DrtApi.get(uri)
         .map(res => {
