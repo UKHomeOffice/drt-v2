@@ -35,7 +35,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
 
       val carouselItems =
         ThemeProvider(DrtTheme.theme)(
-          MuiDialog(open = props.showDialog, maxWidth = "lg" ,scroll = "body", fullWidth = true)(
+          MuiDialog(open = props.showDialog, maxWidth = "lg", scroll = "body", fullWidth = true)(
             <.div(
               MuiGrid(container = true, spacing = 2, sx = SxProps(Map(
                 "backgroundColor" -> DrtTheme.theme.palette.primary.`50`,
@@ -56,40 +56,39 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
               "padding-top" -> "0px",
               "padding-left" -> "24px",
               "padding-right" -> "24px",
-              "padding-bottom" -> "40px",
+              "padding-bottom" -> "64px",
               "overflow" -> "hidden"
             )))(Flickity()(props.trainingDataTemplates.map { data =>
-                <.div(^.className := "flickity-div" ,
+              MuiGrid(container = true, spacing = 2)(
+                MuiGrid(item = true, xs = 8, sx = SxProps(Map(
+                  "backgroundColor" -> "#FFFFFF",
+                  "border" -> "16px solid #C0C7DE"
+                )))(
+                  <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"feature-guide-video/${data.fileName.getOrElse("")}"),
+                    VdomAttr("autoPlay") := false,
+                    VdomAttr("controls") := true,
+                    VdomAttr("width") := "100%",
+                    VdomAttr("height") := "100%",
+                    ^.onPlay ==> handleOnPlayVideo(data.fileName.getOrElse("")))),
+                MuiGrid(item = true, xs = 4, sx = SxProps(Map(
+                  "backgroundColor" -> "#FFFFFF",
+                  "padding" -> "16px",
+                  "border-top" -> "16px solid #C0C7DE",
+                  "border-right" -> "16px solid #C0C7DE",
+                  "border-bottom" -> "16px solid #C0C7DE",
+                  "border-left" -> "0px solid #C0C7DE",
+                )))(
                   MuiGrid(container = true, spacing = 2)(
-                  MuiGrid(item = true, xs = 8, sx = SxProps(Map(
-                    "backgroundColor" -> "#FFFFFF",
-                    "border" -> "16px solid #C0C7DE"
-                  )))(
-                    <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"feature-guide-video/${data.fileName.getOrElse("")}"),
-                      VdomAttr("autoPlay") := false,
-                      VdomAttr("controls") := true,
-                      VdomAttr("width") := "100%",
-                      VdomAttr("height") := "100%",
-                      ^.onPlay ==> handleOnPlayVideo(data.fileName.getOrElse("")))),
-                  MuiGrid(item = true, xs = 4, sx = SxProps(Map(
-                    "backgroundColor" -> "#FFFFFF",
-                    "padding" -> "16px",
-                    "border-top" -> "16px solid #C0C7DE",
-                    "border-right" -> "16px solid #C0C7DE",
-                    "border-bottom" -> "16px solid #C0C7DE",
-                    "border-left" -> "0px solid #C0C7DE",
-                  )))(
-                    MuiGrid(container = true, spacing = 2)(
-                      MuiGrid(item = true, xs = 12, sx = SxProps(Map(
-                        "font-size" -> DrtTheme.theme.typography.h3.fontSize,
-                        "font-weight" -> DrtTheme.theme.typography.h3.fontWeight,
-                        "padding-bottom" -> "16px",
-                      )))(<.span(data.title)),
-                      MuiGrid(item = true, xs = 12, sx = SxProps(Map(
-                      )))(TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
-                    )
-                  ))
-                )})
+                    MuiGrid(item = true, xs = 12, sx = SxProps(Map(
+                      "font-size" -> DrtTheme.theme.typography.h3.fontSize,
+                      "font-weight" -> DrtTheme.theme.typography.h3.fontWeight,
+                      "padding-bottom" -> "16px",
+                    )))(<.span(data.title)),
+                    MuiGrid(item = true, xs = 12, sx = SxProps(Map(
+                    )))(TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
+                  )
+                ))
+            })
             )))
       <.div(carouselItems)
     }

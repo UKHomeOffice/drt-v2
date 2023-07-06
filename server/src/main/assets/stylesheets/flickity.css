@@ -82,6 +82,7 @@ https://flickity.metafizzy.co
 
 .flickity-prev-next-button {
     /*top: 50%;*/
+    margin-top: 16px;
     width: 30px;
     height: 30px;
     border-radius: 50%;
@@ -118,9 +119,9 @@ https://flickity.metafizzy.co
 .flickity-page-dots {
     position: absolute;
     width: 100%;
-    bottom: -20px;
+    /*bottom: -20px;*/
     padding: 0;
-    margin: 0;
+    margin: 24px 0 0;
     list-style: none;
     text-align: center;
     line-height: 1;
@@ -143,8 +144,4 @@ https://flickity.metafizzy.co
 
 .flickity-page-dots .dot.is-selected {
     opacity: 1;
-}
-
-.flickity-div {
-    padding-bottom: 16px;
 }
