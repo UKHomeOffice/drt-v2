@@ -53,7 +53,10 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
               )),
             MuiDialogContent(sx = SxProps(Map(
               "backgroundColor" -> DrtTheme.theme.palette.primary.`50`,
-              "padding-bottom" -> "48px",
+              "padding-top" -> "0px",
+              "padding-left" -> "24px",
+              "padding-right" -> "24px",
+              "padding-bottom" -> "40px",
               "overflow" -> "hidden"
             )))(Flickity()(props.trainingDataTemplates.map { data =>
                 <.div(^.className := "flickity-div" ,
