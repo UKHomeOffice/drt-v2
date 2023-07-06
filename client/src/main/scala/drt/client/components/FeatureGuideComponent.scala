@@ -35,8 +35,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
 
       val carouselItems =
         ThemeProvider(DrtTheme.theme)(
-          MuiDialog(open = props.showDialog, maxWidth = "lg", scroll = "body", fullWidth = true,
-            sx = SxProps(Map("overflowY" -> "auto", "height" -> "700px")))(
+          MuiDialog(open = props.showDialog, maxWidth = "lg" ,scroll = "body", fullWidth = true)(
             <.div(
               MuiGrid(container = true, spacing = 2, sx = SxProps(Map(
                 "backgroundColor" -> DrtTheme.theme.palette.primary.`50`,
@@ -54,11 +53,11 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
               )),
             MuiDialogContent(sx = SxProps(Map(
               "backgroundColor" -> DrtTheme.theme.palette.primary.`50`,
-              "padding" -> "16px",
+              "padding-bottom" -> "48px",
               "overflow" -> "hidden"
-            )))(
-              Flickity()(props.trainingDataTemplates.map { data =>
-                MuiGrid(container = true, spacing = 2)(
+            )))(Flickity()(props.trainingDataTemplates.map { data =>
+                <.div(^.className := "flickity-div" ,
+                  MuiGrid(container = true, spacing = 2)(
                   MuiGrid(item = true, xs = 8, sx = SxProps(Map(
                     "backgroundColor" -> "#FFFFFF",
                     "border" -> "16px solid #C0C7DE"
@@ -87,7 +86,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                       )))(TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
                     )
                   ))
-              })
+                )})
             )))
       <.div(carouselItems)
     }

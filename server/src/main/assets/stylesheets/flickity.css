@@ -90,10 +90,10 @@ https://flickity.metafizzy.co
 }
 
 .flickity-prev-next-button.previous {
-    left: 40%;
+    left: 35%;
 }
 .flickity-prev-next-button.next {
-    right: 40%;
+    right: 35%;
 }
 /* right to left */
 .flickity-rtl .flickity-prev-next-button.previous {
@@ -143,4 +143,8 @@ https://flickity.metafizzy.co
 
 .flickity-page-dots .dot.is-selected {
     opacity: 1;
+}
+
+.flickity-div {
+    padding: 16px;
 }

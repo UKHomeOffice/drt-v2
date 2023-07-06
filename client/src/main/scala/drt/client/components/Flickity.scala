@@ -16,19 +16,12 @@ object Flickity {
   @js.native
   private object FlickityRaw extends js.Object
 
-  //  val elementRef: Simple[HTMLElement] = Ref[HTMLElement]
-
   @js.native
   trait Props extends js.Object {
-    //    var interactive: Boolean = js.native
-    //    var theme: String = js.native
-    var style: js.UndefOr[js.Object] = js.native // Add a style property
+    var style: js.UndefOr[js.Object] = js.native
   }
-
   def props(): Props = {
     val p = (new js.Object).asInstanceOf[Props]
-    //    p.interactive = interactive
-    //    p.theme = "light-border"
     p
   }
 
