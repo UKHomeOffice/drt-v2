@@ -10,7 +10,16 @@ object DrtTheme extends StyleSheet.Inline with ScalaCssReactImplicits {
   private val typographyOptions: TypographyOptions = TypographyOptions(
     fontSize = 16,
     htmlFontSize = 10,
-    button = TypographyStyleOptions(textTransform = "")
+    button = TypographyStyleOptions(textTransform = ""),
+    fontFamily = "Arial",
+    h2 = TypographyStyleOptions(
+      fontSize = "40px",
+      fontWeight = "bold",
+    ),
+    h3 = TypographyStyleOptions(
+      fontSize = "28px",
+      fontWeight = "bold",
+    )
   )
 
   def theme: Theme = {

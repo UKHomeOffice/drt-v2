@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v550"
+    val drtLib = "v551"
 
     val scala = "2.13.11"
     val scalaDom = "2.0.0"
@@ -90,7 +90,6 @@ object Settings {
     "@mui/material" -> "5.11.16",
     "@mui/icons-material" -> "5.11.16",
     "@mui/lab" -> "5.0.0-alpha.119",
-    "aws-sdk" -> "2.1397.0",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
   )
@@ -204,9 +203,7 @@ object Settings {
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
     "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE",
-    "software.amazon.awssdk" % "s3" % "2.16.96",
-
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.1-RELEASE"
+    "software.amazon.awssdk" % "s3" % "2.16.96"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

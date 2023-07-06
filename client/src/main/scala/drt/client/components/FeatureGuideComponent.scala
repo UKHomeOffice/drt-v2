@@ -10,24 +10,24 @@ import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
-import uk.gov.homeoffice.drt.training.TrainingData
 import upickle.default.write
 
 import scala.language.postfixOps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiDialog, MuiDialogContent, MuiDialogTitle}
+import uk.gov.homeoffice.drt.training.FeatureGuide
 
 
-object TrainingModalComponent extends WithScalaCssImplicits {
+object FeatureGuideModalComponent extends WithScalaCssImplicits {
 
   case class State(currentStep: Double)
 
-  case class Props(showDialog: Boolean, closeDialog: ReactEvent => Callback, trainingDataTemplates: Seq[TrainingData])
+  case class Props(showDialog: Boolean, closeDialog: ReactEvent => Callback, trainingDataTemplates: Seq[FeatureGuide])
 
   class Backend($: BackendScope[Props, State]) {
 
     def handleOnPlayVideo(filename: String)(e: ReactEvent): Callback = {
       {
-        Callback(DrtApi.post(s"viewed-video/$filename", write("")))
+        Callback(DrtApi.post(s"record-feature-guide-view/$filename", write("")))
       }
     }
 
@@ -35,7 +35,8 @@ object TrainingModalComponent extends WithScalaCssImplicits {
 
       val carouselItems =
         ThemeProvider(DrtTheme.theme)(
-          MuiDialog(open = props.showDialog, maxWidth = "lg", fullWidth = true)(
+          MuiDialog(open = props.showDialog, maxWidth = "lg", scroll = "body", fullWidth = true,
+            sx = SxProps(Map("overflowY" -> "auto", "height" -> "700px")))(
             <.div(
               MuiGrid(container = true, spacing = 2, sx = SxProps(Map(
                 "backgroundColor" -> DrtTheme.theme.palette.primary.`50`,
@@ -43,9 +44,8 @@ object TrainingModalComponent extends WithScalaCssImplicits {
                 MuiGrid(item = true, xs = 10)(
                   MuiDialogTitle(sx = SxProps(Map(
                     "color" -> DrtTheme.theme.palette.primary.`700`,
-                    "font-family" -> "Arial",
-                    "font-size" -> "40px",
-                    "font-weight" -> "bold"
+                    "font-size" -> DrtTheme.theme.typography.h2.fontSize,
+                    "font-weight" -> DrtTheme.theme.typography.h2.fontWeight
                   )))(<.span(s"New features available for DRT"))),
                 MuiGrid(item = true, xs = 2)(
                   MuiDialogActions()(
@@ -55,6 +55,7 @@ object TrainingModalComponent extends WithScalaCssImplicits {
             MuiDialogContent(sx = SxProps(Map(
               "backgroundColor" -> DrtTheme.theme.palette.primary.`50`,
               "padding" -> "16px",
+              "overflow" -> "hidden"
             )))(
               Flickity()(props.trainingDataTemplates.map { data =>
                 MuiGrid(container = true, spacing = 2)(
@@ -62,7 +63,7 @@ object TrainingModalComponent extends WithScalaCssImplicits {
                     "backgroundColor" -> "#FFFFFF",
                     "border" -> "16px solid #C0C7DE"
                   )))(
-                    <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"training-video/${data.fileName.getOrElse("")}"),
+                    <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"feature-guide-video/${data.fileName.getOrElse("")}"),
                       VdomAttr("autoPlay") := false,
                       VdomAttr("controls") := true,
                       VdomAttr("width") := "100%",
@@ -75,18 +76,14 @@ object TrainingModalComponent extends WithScalaCssImplicits {
                     "border-right" -> "16px solid #C0C7DE",
                     "border-bottom" -> "16px solid #C0C7DE",
                     "border-left" -> "0px solid #C0C7DE",
-                    "font-family" -> "Arial",
                   )))(
                     MuiGrid(container = true, spacing = 2)(
                       MuiGrid(item = true, xs = 12, sx = SxProps(Map(
-                        "font-family" -> "Arial",
-                        "font-size" -> "28px",
-                        "font-weight" -> "bold",
+                        "font-size" -> DrtTheme.theme.typography.h3.fontSize,
+                        "font-weight" -> DrtTheme.theme.typography.h3.fontWeight,
                         "padding-bottom" -> "16px",
                       )))(<.span(data.title)),
                       MuiGrid(item = true, xs = 12, sx = SxProps(Map(
-                        "font-family" -> "Arial",
-                        "font-size" -> "16px"
                       )))(TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
                     )
                   ))
@@ -99,11 +96,11 @@ object TrainingModalComponent extends WithScalaCssImplicits {
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("NavBar")
     .initialStateFromProps(_ => State(1))
     .renderBackend[Backend]
-    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("training-data")))
+    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("feature-guide")))
     .build
 
 
   def apply(showDialog: Boolean, closeDialog: ReactEvent => Callback,
-    trainingDataTemplates: Seq[TrainingData]): VdomElement = component(Props(showDialog, closeDialog, trainingDataTemplates))
+    trainingDataTemplates: Seq[FeatureGuide]): VdomElement = component(Props(showDialog, closeDialog, trainingDataTemplates))
 
 }

@@ -107,15 +107,15 @@ DELETE        /staff-movements/:uuid                                            
 POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
 # Training
-GET           /training-video/:filename                                               controllers.S3FileController.getFile(filename:String)
+GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
-GET           /training-data                                                          controllers.Application.getTrainingData()
+GET           /feature-guides                                                         controllers.Application.getTrainingData()
 
 GET           /isNewFeatureAvailableSinceLastLogin                                    controllers.Application.isNewFeatureAvailableSinceLastLogin
 
-POST          /viewed-video/:filename                                                 controllers.Application.trackViewedFile(filename:String)
+POST          /record-feature-guide-view/:filename                                    controllers.Application.trackViewedFile(filename:String)
 
-GET          /viewed-video-count                                                      controllers.Application.viewCountByUser()
+GET          /viewed-feature-guides                                                   controllers.Application.viewCountByUser()
 # Test related
  +nocsrf
 POST          /test/arrival                                                           test.controllers.TestController.addArrival

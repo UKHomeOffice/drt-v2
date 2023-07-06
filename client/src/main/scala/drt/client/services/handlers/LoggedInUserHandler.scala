@@ -24,7 +24,7 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
           |  userName: ${user.userName},
           |  id: ${user.id},
           |  email: ${user.email},
-          |  roles: ${write(user.roles.map(_.name))},
+          |  roles: ${write(user.roles.map(_.name))}
           | }
       """.stripMargin
 

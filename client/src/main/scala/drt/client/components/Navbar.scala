@@ -6,8 +6,7 @@ import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{CloseTrainingDialog, GetTrainingDataTemplates,
-  GetUserViewFeatureCount, IsNewFeatureAvailable, TrainingDialog, UserTracking}
+import drt.client.services.handlers.{CloseFeatureGuideDialog, FeatureGuideDialog, GetFeatureGuides, GetViewedFeatureCount, IsNewFeatureAvailable, UserTracking}
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import io.kinoplan.scalajs.react.material.ui.core.{MuiBadge, MuiSnackbar}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -18,20 +17,20 @@ import org.scalajs.dom
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.training.TrainingData
+import uk.gov.homeoffice.drt.training.FeatureGuide
 
 case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]],
   snackbarMessage: Pot[String],
-  trainingDataTemplates: Pot[Seq[TrainingData]],
+  trainingDataTemplates: Pot[Seq[FeatureGuide]],
   toggleDialog: Pot[Boolean],
-  userFeatureViewCount: Pot[Int])
+  featureGuideViewIds: Pot[Seq[String]])
 
 object Navbar {
   case class Props(
-                    ctl: RouterCtl[Loc],
-                    page: Loc,
-                    loggedInUser: LoggedInUser,
-                    airportConfig: AirportConfig)
+    ctl: RouterCtl[Loc],
+    page: Loc,
+    loggedInUser: LoggedInUser,
+    airportConfig: AirportConfig)
 
   case class State(showDropDown: Boolean)
 
@@ -42,26 +41,26 @@ object Navbar {
 
   class Backend($: BackendScope[Props, State]) {
     val rcp: ReactConnectProxy[NavbarModel] = SPACircuit
-      .connect(m => NavbarModel(m.feedStatuses, m.snackbarMessage, m.trainingDataTemplates, m.toggleDialog, m.userFeatureViewCount))
+      .connect(m => NavbarModel(m.feedStatuses, m.snackbarMessage, m.featureGuides, m.toggleDialog, m.featureGuideViewedIds))
 
     def handleOpenDialog(e: ReactEvent): Callback = {
       e.preventDefaultCB >>
-        Callback(SPACircuit.dispatch(TrainingDialog(true)))
+        Callback(SPACircuit.dispatch(FeatureGuideDialog(true)))
     }
 
     def handleDialogClose(e: ReactEvent): Callback = {
-      val closeDialog = Callback(SPACircuit.dispatch(CloseTrainingDialog()))
+      val closeDialog = Callback(SPACircuit.dispatch(CloseFeatureGuideDialog()))
       e.preventDefaultCB >> closeDialog
     }
 
-    def handleBadgeCount(viewedFeatureCount: Int, templateFeatureIds: Seq[String]): Int = {
-      templateFeatureIds.length - viewedFeatureCount
+    def handleBadgeCount(viewedFeatureCount: Seq[String], templateFeatureIds: Seq[String]): Int = {
+      templateFeatureIds.count(id => !viewedFeatureCount.contains(id))
     }
 
     def componentDidMount() = {
       Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
-        Callback(SPACircuit.dispatch(GetUserViewFeatureCount())) >>
-        Callback(SPACircuit.dispatch(GetTrainingDataTemplates())) >>
+        Callback(SPACircuit.dispatch(GetViewedFeatureCount())) >>
+        Callback(SPACircuit.dispatch(GetFeatureGuides())) >>
         Callback(SPACircuit.dispatch(UserTracking()))
     }
 
@@ -100,18 +99,20 @@ object Navbar {
               <.div(^.className := "main-menu-content",
                 MainMenu(props.ctl, props.page, navbarModel.feedStatuses.getOrElse(Seq()), props.airportConfig, props.loggedInUser),
                 navbarModel.trainingDataTemplates.renderReady { trainingDataTemplates =>
-                  navbarModel.userFeatureViewCount.renderReady { userFeatureViewCount =>
+                  navbarModel.featureGuideViewIds.renderReady { userFeatureViewCount =>
                     <.div(^.className := "main-menu-items",
-                      <.div(<.a(^.onClick ==> {
-                        handleOpenDialog
-                      }, MuiBadge(badgeContent = {
-                        val badgeCount = handleBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
-                        <.span(badgeCount)
-                      }, showZero = true, color = "secondary")("New Feature"))),
+                      <.div(if (trainingDataTemplates.nonEmpty) {
+                        <.a(^.onClick ==> {
+                          handleOpenDialog
+                        }, MuiBadge(badgeContent = {
+                          val badgeCount = handleBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
+                          <.span(badgeCount)
+                        }, showZero = true, color = "secondary")("New Feature"))
+                      } else EmptyVdom),
                       <.div(
                         navbarModel.trainingDataTemplates.renderReady { trainingDataTemplates =>
                           navbarModel.toggleDialog.render { toggleDialog =>
-                            TrainingModalComponent(toggleDialog,
+                            FeatureGuideModalComponent(toggleDialog,
                               handleDialogClose,
                               trainingDataTemplates)
                           }

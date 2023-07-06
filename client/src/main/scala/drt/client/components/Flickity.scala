@@ -22,6 +22,7 @@ object Flickity {
   trait Props extends js.Object {
     //    var interactive: Boolean = js.native
     //    var theme: String = js.native
+    var style: js.UndefOr[js.Object] = js.native // Add a style property
   }
 
   def props(): Props = {

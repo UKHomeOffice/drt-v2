@@ -10,9 +10,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import upickle.default._
 
-case class TrainingDataTemplate(id: Option[Int], uploadTime: Timestamp, fileName: Option[String], title: Option[String], markdownContent: String)
+case class FeatureGuideRow(id: Option[Int], uploadTime: Timestamp, fileName: Option[String], title: Option[String], markdownContent: String)
 
-class TrainingDataTemplateTable(tag: Tag) extends Table[TrainingDataTemplate](tag, "training_data_template") {
+class FeatureGuideTable(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_guide") {
   def id: Rep[Option[Int]] = column[Option[Int]]("id", O.PrimaryKey, O.AutoInc)
 
   def uploadTime: Rep[Timestamp] = column[Timestamp]("upload_time")
@@ -23,11 +23,11 @@ class TrainingDataTemplateTable(tag: Tag) extends Table[TrainingDataTemplate](ta
 
   def markdownContent: Rep[String] = column[String]("markdown_content")
 
-  def * : ProvenShape[TrainingDataTemplate] =
-    (id, uploadTime, fileName, title, markdownContent).mapTo[TrainingDataTemplate]
+  def * : ProvenShape[FeatureGuideRow] =
+    (id, uploadTime, fileName, title, markdownContent).mapTo[FeatureGuideRow]
 }
 
-sealed trait TrainingDataTemplateLike
+sealed trait FeatureGuideLike
 {
   import upickle.default.{ReadWriter, macroRW}
 
@@ -35,24 +35,24 @@ sealed trait TrainingDataTemplateLike
     timestamp => timestamp.getTime.toString,
     str => new Timestamp(str.toLong)
   )
-  implicit val rw: ReadWriter[TrainingDataTemplate] = macroRW
+  implicit val rw: ReadWriter[FeatureGuideRow] = macroRW
 }
 
-object TrainingData extends TrainingDataTemplateLike {
+object FeatureGuideRow extends FeatureGuideLike {
 
-  val trainingDataTemplates = TableQuery[TrainingDataTemplateTable]
+  val featureGuideTable = TableQuery[FeatureGuideTable]
 
-  def getTrainingData()(implicit ec: ExecutionContext): Future[String] = {
+  def getAll()(implicit ec: ExecutionContext): Future[String] = {
     selectAll.map(write(_))
   }
 
-  def selectAll: Future[Seq[TrainingDataTemplate]] = {
-    val selectAction = trainingDataTemplates.sortBy(_.uploadTime.desc).result
+  def selectAll: Future[Seq[FeatureGuideRow]] = {
+    val selectAction = featureGuideTable.sortBy(_.uploadTime.desc).result
     PostgresTables.db.run(selectAction)
   }
 
-  def getFileId(filename:String)(implicit ec: ExecutionContext)  = {
-    val selectAction = trainingDataTemplates.filter(_.fileName === filename).map(_.id).result
+  def getGuideIdForFilename(filename:String)(implicit ec: ExecutionContext): Future[Option[Int]] = {
+    val selectAction = featureGuideTable.filter(_.fileName === filename).map(_.id).result
     val fileIds: Future[Seq[Option[Int]]] = PostgresTables.db.run(selectAction)
     fileIds.map(_.headOption.flatten)
   }

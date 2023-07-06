@@ -20,7 +20,8 @@ import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
-import slickdb.{TrainingData, UserFeatureView, UserTableLike}
+import slickdb.{FeatureGuideRow, FeatureGuideView, UserTableLike}
+import spray.json.DefaultJsonProtocol.StringJsonFormat
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -97,10 +98,11 @@ trait UserRoleProviderLike {
     val baseRoles = Set()
     val roles: Set[Role] =
       getRoles(config, headers, session) ++ baseRoles
+    val email = headers.get("X-Auth-Email").getOrElse("Unknown")
     val loggedInUser: LoggedInUser = LoggedInUser(
-      userName = headers.get("X-Auth-Username").getOrElse("Unknown"),
-      id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
-      email = headers.get("X-Auth-Email").getOrElse("Unknown"),
+      email = email,
+      userName = headers.get("X-Auth-Username").getOrElse(email),
+      id = headers.get("X-Auth-Userid").getOrElse(email),
       roles = roles)
 
 
@@ -180,13 +182,13 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   }
 
   def getTrainingData(): Action[AnyContent] = Action.async { _ =>
-    val trainingDataJson: Future[String] = TrainingData.getTrainingData()
+    val trainingDataJson: Future[String] = FeatureGuideRow.getAll()
     trainingDataJson.map(Ok(_))
   }
 
   def isNewFeatureAvailableSinceLastLogin = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-    val latestFeatureDateF: Future[Option[Timestamp]] = TrainingData.selectAll.map(_.headOption.map(_.uploadTime))
+    val latestFeatureDateF: Future[Option[Timestamp]] = FeatureGuideRow.selectAll.map(_.headOption.map(_.uploadTime))
     val latestLoginDateF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.map(_.latest_login))
     for {
       latestFeatureDate <- latestFeatureDateF
@@ -202,8 +204,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   def trackViewedFile(filename: String): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-      TrainingData.getFileId(filename).flatMap {
-        case Some(id) => UserFeatureView.insertOrUpdate(id, userEmail)
+      FeatureGuideRow.getGuideIdForFilename(filename).flatMap {
+        case Some(id) => FeatureGuideView.insertOrUpdate(id, userEmail)
           .map(_ => Ok(s"File $filename viewed updated"))
         case None =>
           Future.successful(Ok(s"File $filename viewed not updated as file not found"))
@@ -213,8 +215,18 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   def viewCountByUser(): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
+      import spray.json._
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-      UserFeatureView.fileViewedCount(userEmail).map(count => Ok(count.toString))
+      implicit val stringListFormat: JsonFormat[Seq[String]] = new JsonFormat[Seq[String]] {
+        def write(seq: Seq[String]): JsValue = JsArray(seq.map(JsString(_)).toVector)
+
+        def read(json: JsValue): Seq[String] = json match {
+          case JsArray(elements) => elements.map(_.convertTo[String])
+          case _ => throw new DeserializationException("Expected JsArray")
+        }
+      }
+
+      FeatureGuideView.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
     }
   }
 
