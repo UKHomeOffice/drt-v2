@@ -203,7 +203,7 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE"
+    "uk.gov.service.notify" % "notifications-java-client" % "4.1.0-RELEASE"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
