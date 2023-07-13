@@ -10,7 +10,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 import upickle.default._
 
-case class FeatureGuideRow(id: Option[Int], uploadTime: Timestamp, fileName: Option[String], title: Option[String], markdownContent: String)
+case class FeatureGuideRow(id: Option[Int], uploadTime: Timestamp, fileName: Option[String], title: Option[String], markdownContent: String, published: Boolean)
 
 class FeatureGuideTable(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_guide") {
   def id: Rep[Option[Int]] = column[Option[Int]]("id", O.PrimaryKey, O.AutoInc)
@@ -23,12 +23,14 @@ class FeatureGuideTable(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_g
 
   def markdownContent: Rep[String] = column[String]("markdown_content")
 
+  def published: Rep[Boolean] = column[Boolean]("published")
+
   def * : ProvenShape[FeatureGuideRow] =
-    (id, uploadTime, fileName, title, markdownContent).mapTo[FeatureGuideRow]
+    (id, uploadTime, fileName, title, markdownContent, published).mapTo[FeatureGuideRow]
 }
 
-sealed trait FeatureGuideLike
-{
+sealed trait FeatureGuideLike {
+
   import upickle.default.{ReadWriter, macroRW}
 
   implicit val timestampReader: ReadWriter[java.sql.Timestamp] = readwriter[String].bimap[java.sql.Timestamp](
@@ -47,11 +49,11 @@ object FeatureGuideRow extends FeatureGuideLike {
   }
 
   def selectAll: Future[Seq[FeatureGuideRow]] = {
-    val selectAction = featureGuideTable.sortBy(_.uploadTime.desc).result
+    val selectAction = featureGuideTable.filter(_.published).sortBy(_.uploadTime.desc).result
     PostgresTables.db.run(selectAction)
   }
 
-  def getGuideIdForFilename(filename:String)(implicit ec: ExecutionContext): Future[Option[Int]] = {
+  def getGuideIdForFilename(filename: String)(implicit ec: ExecutionContext): Future[Option[Int]] = {
     val selectAction = featureGuideTable.filter(_.fileName === filename).map(_.id).result
     val fileIds: Future[Seq[Option[Int]]] = PostgresTables.db.run(selectAction)
     fileIds.map(_.headOption.flatten)
