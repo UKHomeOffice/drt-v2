@@ -1,3 +1,4 @@
 -Dfile.encoding=UTF8
 -Xms2000m
--Xmx2500m
+-Xmx5000m
+-XX:+UseG1GC

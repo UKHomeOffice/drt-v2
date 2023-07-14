@@ -8,7 +8,7 @@ import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 import com.sksamuel.scapegoat.sbt.ScapegoatSbtPlugin.autoImport._
 
 scalaVersion := Settings.versions.scala
-ThisBuild / scapegoatVersion  := "2.1.2"
+ThisBuild / scapegoatVersion  := "2.1.1"
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
 
