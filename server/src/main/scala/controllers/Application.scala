@@ -20,7 +20,7 @@ import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
-import slickdb.{FeatureGuideRow, FeatureGuideView, UserTableLike}
+import slickdb.{FeatureGuideRow, FeatureGuideViewRow, UserTableLike}
 import spray.json.DefaultJsonProtocol.StringJsonFormat
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
@@ -205,7 +205,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
       FeatureGuideRow.getGuideIdForFilename(filename).flatMap {
-        case Some(id) => FeatureGuideView.insertOrUpdate(id, userEmail)
+        case Some(id) => FeatureGuideViewRow.insertOrUpdate(id, userEmail)
           .map(_ => Ok(s"File $filename viewed updated"))
         case None =>
           Future.successful(Ok(s"File $filename viewed not updated as file not found"))
@@ -226,7 +226,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         }
       }
 
-      FeatureGuideView.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
+      FeatureGuideViewRow.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
     }
   }
 
