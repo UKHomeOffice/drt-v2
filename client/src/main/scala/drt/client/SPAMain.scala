@@ -5,11 +5,12 @@ import drt.client.SPAMain.TerminalPageModes.{Current, Planning, Staffing}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles._
-import drt.client.components.{ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.{ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage,
+  PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.GetFeedSourceStatuses
+import drt.client.services.handlers.{GetFeedSourceStatuses}
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._

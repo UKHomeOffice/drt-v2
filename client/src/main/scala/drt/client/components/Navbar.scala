@@ -6,7 +6,7 @@ import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{CloseFeatureGuideDialog, FeatureGuideDialog, GetFeatureGuides, GetViewedFeatureCount, IsNewFeatureAvailable, UserTracking}
+import drt.client.services.handlers.{CloseFeatureGuideDialog, FeatureGuideDialog, GetFeatureGuides, GetViewedFeatureCount, IsNewFeatureAvailable}
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import io.kinoplan.scalajs.react.material.ui.core.{MuiBadge, MuiSnackbar}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -58,10 +58,8 @@ object Navbar {
     }
 
     def componentDidMount() = {
-      Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
         Callback(SPACircuit.dispatch(GetViewedFeatureCount())) >>
-        Callback(SPACircuit.dispatch(GetFeatureGuides())) >>
-        Callback(SPACircuit.dispatch(UserTracking()))
+        Callback(SPACircuit.dispatch(GetFeatureGuides()))
     }
 
     def render(props: Props, state: State) = {
