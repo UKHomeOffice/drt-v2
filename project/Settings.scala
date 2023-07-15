@@ -27,7 +27,7 @@ object Settings {
   object versions {
     val drtLib = "v549"
 
-    val scala = "2.13.11"
+    val scala = "2.13.10"
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
@@ -203,7 +203,7 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE"
+    "uk.gov.service.notify" % "notifications-java-client" % "4.1.0-RELEASE"
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

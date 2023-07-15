@@ -406,4 +406,30 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       }
     }
   }
+
+  "Max pax from ACL" should {
+    "Remain after receiving a live feed without max pax" in {
+      val aclFlight = ArrivalGenerator.arrival("BA0001", schDt = "2021-05-01T12:50", origin = PortCode("JFK"), passengerSources = Map(AclFeedSource -> Passengers(Option(80), None)), maxPax = Option(100))
+      val liveFlight = ArrivalGenerator.arrival("BA0001", schDt = "2021-05-01T12:50", origin = PortCode("JFK"), passengerSources = Map(LiveFeedSource -> Passengers(Option(95), None)), maxPax = None)
+
+      val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate("2021-05-01T12:50")))
+
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclFlight))))
+
+      crunch.portStateTestProbe.fishForMessage(1.second) {
+        case PortState(flights, _, _) =>
+          flights.values.exists(a => a.apiFlight.bestPcpPaxEstimate(List(AclFeedSource)) == Option(80))
+      }
+
+      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveFlight))))
+
+      crunch.portStateTestProbe.fishForMessage(1.second) {
+        case PortState(flights, _, _) =>
+          println(s"flights: ${flights.values.map(_.apiFlight.MaxPax)}")
+          flights.values.exists(a => a.apiFlight.bestPcpPaxEstimate(List(LiveFeedSource)) == Option(95) && a.apiFlight.MaxPax == Option(100))
+      }
+
+      success
+    }
+  }
 }
