@@ -1,14 +1,13 @@
 package drt.server.feeds.legacy.bhx
 
 import drt.server.feeds.Implicits._
-import org.apache.commons.lang3.StringUtils
 import org.joda.time.format.ISODateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone}
-import uk.gov.homeoffice.drt.time.SDate
 import uk.co.bhx.online.flightinformation.{FlightRecord, ScheduledFlightRecord}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDate
 
 import javax.xml.datatype.XMLGregorianCalendar
 
@@ -55,10 +54,10 @@ trait BHXLiveArrivals extends BHXArrivals {
       Actual = convertToUTC(flightRecord.getTouchdownTime).map(SDate(_).millisSinceEpoch),
       EstimatedChox = convertToUTC(flightRecord.getEstimatedChoxTime).map(SDate(_).millisSinceEpoch),
       ActualChox = convertToUTC(flightRecord.getChoxTime).map(SDate(_).millisSinceEpoch),
-      Gate = if (StringUtils.isBlank(flightRecord.getGate)) None else Option(flightRecord.getGate),
-      Stand = if (StringUtils.isBlank(flightRecord.getStand)) None else Option(flightRecord.getStand),
+      Gate = if (flightRecord.getGate.isBlank) None else Option(flightRecord.getGate),
+      Stand = if (flightRecord.getStand.isBlank) None else Option(flightRecord.getStand),
       MaxPax = if (flightRecord.getCapacity == 0) None else Option(flightRecord.getCapacity),
-      RunwayID = if (StringUtils.isBlank(flightRecord.getRunway)) None else Option(flightRecord.getRunway),
+      RunwayID = if (flightRecord.getRunway.isBlank) None else Option(flightRecord.getRunway),
       BaggageReclaimId = Option(flightRecord.getBelt),
       AirportID = "BHX",
       Terminal = Terminal(s"T${flightRecord.getTerminal}"),
