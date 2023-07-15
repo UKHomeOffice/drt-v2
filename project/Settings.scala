@@ -28,7 +28,7 @@ object Settings {
     val drtLib = "v549"
 
     val scala = "2.13.10"
-    val scalaDom = "2.0.0"
+    val scalaDom = "2.6.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
     val scalaJsMomentJs = "0.10.9"
