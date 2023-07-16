@@ -12,9 +12,8 @@ import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage}
-import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementsStateSnapshotMessage}
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
@@ -100,16 +99,6 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
     case rsmm: RemoveStaffMovementMessage =>
       rsmm.uUID.map(uuidToRemove => updateState(removeFromState(uuidToRemove)))
-  }
-
-  override def postRecoveryComplete(): Unit = {
-    println(s"\n\nStaffMovementsActorBase postRecoveryComplete ${state.staffMovements.movements.length} movements\n\n")
-    state.staffMovements.movements.groupBy(a => SDate(a.time).toLocalDate)
-      .toList.sortBy(d => SDate(d._1).millisSinceEpoch)
-      .foreach { case (date, movements) =>
-        println(s"$date - ${movements.length} movements")
-      }
-    println(s"\n\nnow: ${now().toISOString}\n\n")
   }
 
   def removeFromState(uuidToRemove: String): StaffMovements =
