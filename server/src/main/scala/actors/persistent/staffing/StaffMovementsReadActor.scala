@@ -1,7 +1,7 @@
 package actors.persistent.staffing
 
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 
 class StaffMovementsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike) extends StaffMovementsActorBase(() => pointInTime, expireBefore) {
@@ -11,7 +11,11 @@ class StaffMovementsReadActor(pointInTime: SDateLike, expireBefore: () => SDateL
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case StaffMovementsMessage(movements, Some(createdAt)) =>
-      if (createdAt <= pointInTime.millisSinceEpoch) updateState(addToState(movements))
+      if (createdAt <= pointInTime.millisSinceEpoch) {
+        println(s"Processing StaffMovementsMessage with createdAt ${SDate(createdAt).toISOString}")
+        updateState(addToState(movements))
+      }
+      else println(s"Skipping StaffMovementsMessage with createdAt ${SDate(createdAt).toISOString}")
 
     case RemoveStaffMovementMessage(Some(uuidToRemove), Some(createdAt)) =>
       if (createdAt <= pointInTime.millisSinceEpoch) updateState(removeFromState(uuidToRemove))

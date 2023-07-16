@@ -65,7 +65,7 @@ GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource           
 GET           /export/planning/:weekStarting/:terminalName                            controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
 GET           /export/headlines/:weekStarting/:terminalName                           controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 GET           /export/users                                                           controllers.Application.exportUsers
-GET           /export/staff-movements/:pointInTime/:terminal                          controllers.Application.exportStaffMovements(terminal: String, pointInTime: Long)
+GET           /export/staff-movements/:date/:terminal                                 controllers.Application.exportStaffMovements(terminal: String, date: String)
 GET           /export/desk-rec-simulation                                             controllers.Application.simulationExport
 GET           /desk-rec-simulation                                                    controllers.Application.simulation
 

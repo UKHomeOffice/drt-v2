@@ -14,7 +14,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementsStateSnapshotMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
@@ -90,7 +90,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: StaffMovementsStateSnapshotMessage =>
-      log.info(s"Processing a snapshot message")
+      log.info(s"\n\nProcessing a snapshot message with ${snapshot.staffMovements.length} movements\n\n")
       state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }
 
@@ -100,6 +100,16 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
     case rsmm: RemoveStaffMovementMessage =>
       rsmm.uUID.map(uuidToRemove => updateState(removeFromState(uuidToRemove)))
+  }
+
+  override def postRecoveryComplete(): Unit = {
+    println(s"\n\nStaffMovementsActorBase postRecoveryComplete ${state.staffMovements.movements.length} movements\n\n")
+    state.staffMovements.movements.groupBy(a => SDate(a.time).toLocalDate)
+      .toList.sortBy(d => SDate(d._1).millisSinceEpoch)
+      .foreach { case (date, movements) =>
+        println(s"$date - ${movements.length} movements")
+      }
+    println(s"\n\nnow: ${now().toISOString}\n\n")
   }
 
   def removeFromState(uuidToRemove: String): StaffMovements =
@@ -180,7 +190,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
     reason = Some(sm.reason),
     time = Some(sm.time),
     delta = Some(sm.delta),
-    uUID = Some(sm.uUID.toString),
+    uUID = Some(sm.uUID),
     queueName = sm.queue.map(_.toString),
     createdAt = Option(now().millisSinceEpoch),
     createdBy = sm.createdBy

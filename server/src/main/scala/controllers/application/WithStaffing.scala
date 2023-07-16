@@ -7,7 +7,6 @@ import akka.pattern._
 import akka.stream.scaladsl.Source
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import drt.staff.ImportStaff
 import play.api.mvc.{Action, AnyContent, Request}
@@ -118,26 +117,27 @@ trait WithStaffing {
     }
   }
 
-  def exportStaffMovements(terminalString: String, pointInTime: MillisSinceEpoch): Action[AnyContent] =
+  def exportStaffMovements(terminalString: String, date: String): Action[AnyContent] =
     authByRole(StaffMovementsExportRole) {
       Action {
         val terminal = Terminal(terminalString)
-        val date = SDate(pointInTime).toLocalDate
-        val eventualStaffMovements = staffMovementsForDay(date)
+        val localDate = SDate(date).toLocalDate
+        val eventualStaffMovements = staffMovementsForDay(localDate)
 
-        val csvSource: Source[String, NotUsed] = Source
-          .fromFuture(eventualStaffMovements
-            .map(sm => {
+        val csvSource: Source[String, NotUsed] =
+          Source.future(
+            eventualStaffMovements.map { sm =>
               StaffMovementsExport.toCSVWithHeader(sm, terminal)
-            }))
+            }
+          )
 
         CsvFileStreaming.sourceToCsvResponse(
           csvSource,
           CsvFileStreaming.makeFileName(
             "staff-movements",
             terminal,
-            date,
-            date,
+            localDate,
+            localDate,
             portCode
           ))
       }
@@ -146,10 +146,10 @@ trait WithStaffing {
   def staffMovementsForDay(date: LocalDate): Future[Seq[StaffMovement]] = {
     val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
     val pointInTime = SDate(date).addDays(1)
-    val expireBefore = () => pointInTime.addDays(-1)
+    val expireBefore = () => SDate(date).addDays(-1)
     val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], pointInTime, expireBefore), actorName)
 
-    val eventualStaffMovements: Future[Seq[StaffMovement]] = staffMovementsReadActor.ask(GetState)
+    staffMovementsReadActor.ask(GetState)
       .map {
         case movements: StaffMovements =>
           staffMovementsReadActor ! PoisonPill
@@ -158,8 +158,7 @@ trait WithStaffing {
       .recoverWith {
         case _ =>
           staffMovementsReadActor ! PoisonPill
-          Future(Seq())
+          Future.successful(Seq.empty[StaffMovement])
       }
-    eventualStaffMovements
   }
 }
