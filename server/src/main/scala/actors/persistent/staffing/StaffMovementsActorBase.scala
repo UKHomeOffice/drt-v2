@@ -12,8 +12,7 @@ import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{StaffMovementMessage, StaffMovementsMessage}
-import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementsStateSnapshotMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 
@@ -90,7 +89,6 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: StaffMovementsStateSnapshotMessage =>
-      log.info(s"Processing a snapshot message")
       state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }
 
@@ -180,7 +178,7 @@ class StaffMovementsActorBase(val now: () => SDateLike,
     reason = Some(sm.reason),
     time = Some(sm.time),
     delta = Some(sm.delta),
-    uUID = Some(sm.uUID.toString),
+    uUID = Some(sm.uUID),
     queueName = sm.queue.map(_.toString),
     createdAt = Option(now().millisSinceEpoch),
     createdBy = sm.createdBy
