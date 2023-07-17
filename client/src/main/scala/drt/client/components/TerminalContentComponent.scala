@@ -99,9 +99,9 @@ object TerminalContentComponent {
       val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeRangeHours)
       val terminalName = terminal.toString
       val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
-      val movementsExportMillis = props.viewMode match {
-        case ViewLive => SDate.now().millisSinceEpoch
-        case ViewDay(localDate, _) => SDate(localDate).getLocalNextMidnight.millisSinceEpoch
+      val movementsExportDate: LocalDate = props.viewMode match {
+        case ViewLive => SDate.now().toLocalDate
+        case ViewDay(localDate, _) => localDate
       }
 
       <.div(^.className := "queues-and-arrivals",
@@ -156,7 +156,7 @@ object TerminalContentComponent {
                   terminalName,
                   ExportStaffMovements,
                   SPAMain.absoluteUrl(
-                    s"export/staff-movements/$movementsExportMillis/$terminal"
+                    s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"
                   )
                 ),
                 StaffMovementsExport,
