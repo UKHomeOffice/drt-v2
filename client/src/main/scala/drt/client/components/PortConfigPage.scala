@@ -33,9 +33,6 @@ object PortConfigPage {
       } yield
         <.div(
           <.h3("Port Config"),
-          if (user.hasRole(RedListsEdit)) {
-            RedListEditor(redListUpdates)
-          } else EmptyVdom,
           if (user.hasRole(EgateBanksEdit)) {
             <.div(
               <.h2("E-gates"),
@@ -73,8 +70,8 @@ object PortConfigDetails {
               minMaxDesksTable(props.airportConfig.minMaxDesksByTerminalQueue24Hrs(tn))
             ),
             <.div(^.className := "container config-container",
-              <.h4("Default Processing Times", " ", defaultProcessingTimesTooltip),
-              defaultProcessingTimesTable(props.airportConfig.terminalProcessingTimes(tn))
+              <.h4("Processing Times", " ", processingTimesTooltip),
+              processingTimesTable(props.airportConfig.terminalProcessingTimes(tn))
             ),
             <.div(^.className := "container config-container",
               <.h4("Passenger Queue Allocation"),
@@ -119,11 +116,11 @@ object PortConfigDetails {
       )
   }.toTagMod
 
-  def defaultProcessingTimesTable(defaultProcessingTimes: Map[PaxTypeAndQueue, Double]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
+  def processingTimesTable(defaultProcessingTimes: Map[PaxTypeAndQueue, Double]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
     <.table(^.className := "table table-bordered table-hover",
       <.tbody(
         <.tr(
-          <.th(^.className := "col", "Passenger Type / Queue"),
+          <.th(^.className := "col", "Passenger Type & Queue"),
           <.th(^.className := "col", "Seconds")
         ),
         defaultProcessingTimes
