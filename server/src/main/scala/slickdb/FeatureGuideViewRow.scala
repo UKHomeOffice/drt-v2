@@ -3,7 +3,6 @@ package slickdb
 import actors.PostgresTables
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
-import upickle.default._
 
 import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,18 +22,7 @@ class FeatureGuideViewTable(tag: Tag) extends Table[FeatureGuideViewRow](tag, "f
 
 }
 
-sealed trait FeatureGuideViewLike {
-
-  import upickle.default.{ReadWriter, macroRW}
-
-  implicit val timestampReader: ReadWriter[java.sql.Timestamp] = readwriter[String].bimap[java.sql.Timestamp](
-    timestamp => timestamp.getTime.toString,
-    str => new Timestamp(str.toLong)
-  )
-  implicit val rw: ReadWriter[FeatureGuideViewRow] = macroRW
-}
-
-object FeatureGuideViewRow extends FeatureGuideViewLike {
+object FeatureGuideViewRow {
 
   val userFeatureView = TableQuery[FeatureGuideViewTable]
 

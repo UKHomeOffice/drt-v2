@@ -25,9 +25,9 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v558"
+    val drtLib = "v561"
 
-    val scala = "2.13.11"
+    val scala = "2.13.10"
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
@@ -36,7 +36,7 @@ object Settings {
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
-    val h2 = "2.1.214"
+    val h2 = "2.2.220"
 
     val akka = "2.7.0"
 
@@ -202,7 +202,7 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE",
+    "uk.gov.service.notify" % "notifications-java-client" % "4.1.0-RELEASE",
     "software.amazon.awssdk" % "s3" % "2.16.96"
   ))
 
