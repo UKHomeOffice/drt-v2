@@ -89,7 +89,6 @@ class StaffMovementsActorBase(val now: () => SDateLike,
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: StaffMovementsStateSnapshotMessage =>
-      log.info(s"\n\nProcessing a snapshot message with ${snapshot.staffMovements.length} movements\n\n")
       state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }
 
