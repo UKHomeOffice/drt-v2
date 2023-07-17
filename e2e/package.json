@@ -13,7 +13,7 @@
     "@typescript-eslint/eslint-plugin": "^5.60.1",
     "@typescript-eslint/parser": "^5.62.0",
     "cypress": "^12.16.0",
-    "eslint": "^8.41.0",
+    "eslint": "^8.45.0",
     "eslint-plugin-cypress": "^2.13.3",
     "ts-loader": "^9.4.3",
     "typescript": "^5.0.4"
