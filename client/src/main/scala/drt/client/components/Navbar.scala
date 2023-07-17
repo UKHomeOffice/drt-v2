@@ -6,7 +6,7 @@ import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{CloseFeatureGuideDialog, FeatureGuideDialog, GetFeatureGuides, GetViewedFeatureCount, IsNewFeatureAvailable}
+import drt.client.services.handlers.{CloseFeatureGuideDialog, FeatureGuideDialog, GetFeatureGuides, GetViewedFeatureIds, IsNewFeatureAvailable}
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import io.kinoplan.scalajs.react.material.ui.core.{MuiBadge, MuiSnackbar}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -20,17 +20,17 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.training.FeatureGuide
 
 case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]],
-  snackbarMessage: Pot[String],
-  trainingDataTemplates: Pot[Seq[FeatureGuide]],
-  toggleDialog: Pot[Boolean],
-  featureGuideViewIds: Pot[Seq[String]])
+                       snackbarMessage: Pot[String],
+                       trainingDataTemplates: Pot[Seq[FeatureGuide]],
+                       toggleDialog: Pot[Boolean],
+                       featureGuideViewIds: Pot[Seq[String]])
 
 object Navbar {
   case class Props(
-    ctl: RouterCtl[Loc],
-    page: Loc,
-    loggedInUser: LoggedInUser,
-    airportConfig: AirportConfig)
+                    ctl: RouterCtl[Loc],
+                    page: Loc,
+                    loggedInUser: LoggedInUser,
+                    airportConfig: AirportConfig)
 
   case class State(showDropDown: Boolean)
 
@@ -53,12 +53,12 @@ object Navbar {
       e.preventDefaultCB >> closeDialog
     }
 
-    def handleBadgeCount(viewedFeatureCount: Seq[String], templateFeatureIds: Seq[String]): Int = {
-      templateFeatureIds.count(id => !viewedFeatureCount.contains(id))
+    def handleBadgeCount(viewedFeatureIds: Seq[String], templateFeatureIds: Seq[String]): Int = {
+      templateFeatureIds.count(id => !viewedFeatureIds.contains(id))
     }
 
     def componentDidMount() = {
-        Callback(SPACircuit.dispatch(GetViewedFeatureCount())) >>
+      Callback(SPACircuit.dispatch(GetViewedFeatureIds())) >>
         Callback(SPACircuit.dispatch(GetFeatureGuides()))
     }
 
@@ -129,11 +129,13 @@ object Navbar {
     }
   }
 
-  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("NavBar")
-    .initialState(if (dom.window.innerWidth > 768) State(true) else State(false))
-    .renderBackend[Backend]
-    .componentDidMount(_.backend.componentDidMount())
-    .build
+  val component: Component[Props, State, Backend, CtorType.Props] =
+    ScalaComponent
+      .builder[Props]("NavBar")
+      .initialState(if (dom.window.innerWidth > 768) State(true) else State(false))
+      .renderBackend[Backend]
+      .componentDidMount(_.backend.componentDidMount())
+      .build
 
 
   def apply(props: Props): Unmounted[Props, State, Backend] = component(props)

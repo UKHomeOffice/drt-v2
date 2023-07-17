@@ -35,7 +35,7 @@ class FeatureGuideDialogHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends Lo
     }
 
     case CloseFeatureGuideDialog() => {
-      val apiCallEffect = Effect(DrtApi.get("data/user-tracking")
+      val apiCallEffect = Effect(DrtApi.get("data/track-user")
         .map(_ => FeatureGuideDialog(false))
         .recoverWith {
           case _ =>

@@ -58,6 +58,4 @@ object FeatureGuideRow extends FeatureGuideLike {
     val fileIds: Future[Seq[Option[Int]]] = PostgresTables.db.run(selectAction)
     fileIds.map(_.headOption.flatten)
   }
-
-
 }

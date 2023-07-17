@@ -81,7 +81,7 @@ POST          /api/*path                                                        
 
 GET           /data/user                                                              controllers.Application.getLoggedInUser()
 
-GET           /data/user-tracking                                                     controllers.Application.userTracking()
+GET           /data/track-user                                                        controllers.Application.trackUser()
 
  +nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin()
@@ -109,11 +109,11 @@ POST          /data/feed/:feedType/:portCode                                    
 # Training
 GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
-GET           /feature-guides                                                         controllers.Application.getTrainingData()
+GET           /feature-guides                                                         controllers.Application.featureGuides()
 
 GET           /isNewFeatureAvailableSinceLastLogin                                    controllers.Application.isNewFeatureAvailableSinceLastLogin
 
-POST          /record-feature-guide-view/:filename                                    controllers.Application.trackViewedFile(filename:String)
+POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
 
 GET          /viewed-feature-guides                                                   controllers.Application.viewCountByUser()
 # Test related

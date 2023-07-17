@@ -113,27 +113,27 @@ trait UserRoleProviderLike {
 @Singleton
 class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController
-    with AirportConfProvider
-    with WithConfig
-    with WithAirportInfo
-    with WithRedLists
-    with WithEgateBanks
-    with WithAlerts
-    with WithAuth
-    with WithContactDetails
-    with WithFeatureFlags
-    with WithExports
-    with WithFeeds
-    with WithImports
-    with WithPortState
-    with WithStaffing
-    with WithApplicationInfo
-    with WithSimulations
-    with WithManifests
-    with WithWalkTimes
-    with WithDebug
-    with WithEmailFeedback
-    with WithForecastAccuracy {
+  with AirportConfProvider
+  with WithConfig
+  with WithAirportInfo
+  with WithRedLists
+  with WithEgateBanks
+  with WithAlerts
+  with WithAuth
+  with WithContactDetails
+  with WithFeatureFlags
+  with WithExports
+  with WithFeeds
+  with WithImports
+  with WithPortState
+  with WithStaffing
+  with WithApplicationInfo
+  with WithSimulations
+  with WithManifests
+  with WithWalkTimes
+  with WithDebug
+  with WithEmailFeedback
+  with WithForecastAccuracy {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
   implicit val mat: Materializer = DrtActorSystem.mat
@@ -181,9 +181,9 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
-  def getTrainingData(): Action[AnyContent] = Action.async { _ =>
-    val trainingDataJson: Future[String] = FeatureGuideRow.getAll()
-    trainingDataJson.map(Ok(_))
+  def featureGuides(): Action[AnyContent] = Action.async { _ =>
+    val featureGuidesJson: Future[String] = FeatureGuideRow.getAll()
+    featureGuidesJson.map(Ok(_))
   }
 
   def isNewFeatureAvailableSinceLastLogin = Action.async { implicit request =>
@@ -201,12 +201,14 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
-  def trackViewedFile(filename: String): Action[AnyContent] = authByRole(BorderForceStaff) {
+  def recordFeatureGuideView(filename: String): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
       FeatureGuideRow.getGuideIdForFilename(filename).flatMap {
-        case Some(id) => FeatureGuideViewRow.insertOrUpdate(id, userEmail)
-          .map(_ => Ok(s"File $filename viewed updated"))
+        case Some(id) =>
+          FeatureGuideViewRow
+            .insertOrUpdate(id, userEmail)
+            .map(_ => Ok(s"File $filename viewed updated"))
         case None =>
           Future.successful(Ok(s"File $filename viewed not updated as file not found"))
       }
@@ -289,8 +291,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     )
 
     val feedsToMonitor = ctrl.feedActorsForPort
-      .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
-      .values.toList
+                             .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
+                             .values.toList
 
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
@@ -363,9 +365,9 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token")
-      .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+                       .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
-      .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+                            .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
@@ -380,8 +382,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         val logLevel = postStringValOrElse("level", "ERROR")
 
         val millis = request.body.get("timestamp")
-          .map(_.head.toLong)
-          .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+                            .map(_.head.toLong)
+                            .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
 
         val logMessage = Map(
           "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),

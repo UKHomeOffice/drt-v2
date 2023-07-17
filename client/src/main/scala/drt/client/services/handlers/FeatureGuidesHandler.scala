@@ -22,7 +22,7 @@ class FeatureGuidesHandler[M](modelRW: ModelRW[M, Pot[Seq[FeatureGuide]]]) exten
 
     case GetFeatureGuides() =>
       val apiCallEffect = Effect(DrtApi.get("feature-guides")
-        .map(r => SetFeatureGuides(FeatureGuide.getFeatureGuideConversion(r.responseText)))
+        .map(r => SetFeatureGuides(FeatureGuide.deserializeFromJsonString(r.responseText)))
         .recoverWith {
           case _ =>
             log.error(s"Failed to get training data. Re-requesting after ${PollDelay.recoveryDelay}")

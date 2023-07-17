@@ -25,7 +25,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
 
   class Backend($: BackendScope[Props, State]) {
 
-    def handleOnPlayVideo(filename: String)(e: ReactEvent): Callback = {
+    def recordFeatureGuideView(filename: String)(e: ReactEvent): Callback = {
       {
         Callback(DrtApi.post(s"record-feature-guide-view/$filename", write("")))
       }
@@ -69,7 +69,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                     VdomAttr("controls") := true,
                     VdomAttr("width") := "100%",
                     VdomAttr("height") := "100%",
-                    ^.onPlay ==> handleOnPlayVideo(data.fileName.getOrElse("")))),
+                    ^.onPlay ==> recordFeatureGuideView(data.fileName.getOrElse("")))),
                 MuiGrid(item = true, xs = 4, sx = SxProps(Map(
                   "backgroundColor" -> "#FFFFFF",
                   "padding" -> "16px",

@@ -26,10 +26,10 @@ trait UserTableLike {
 
   def insertOrUpdateUser(user: LoggedInUser,
                          inactive_email_sent: Option[java.sql.Timestamp],
-                          revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int]
+                         revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int]
 }
 
-case class UserTable(tables: Tables) extends UserTableLike  {
+case class UserTable(tables: Tables) extends UserTableLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
@@ -47,23 +47,23 @@ case class UserTable(tables: Tables) extends UserTableLike  {
 
   def removeUser(id: String)(implicit ec: ExecutionContext): Future[Int] = {
     tables.run(userTableQuery.filter(matchId(id)).delete)
-      .recover {
-        case throwable =>
-          log.error(s"delete failed", throwable)
-          0
-      }
+          .recover {
+            case throwable =>
+              log.error(s"delete failed", throwable)
+              0
+          }
   }
 
   def insertOrUpdateUser(user: LoggedInUser,
-    inactive_email_sent: Option[java.sql.Timestamp],
-    revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int] = {
-      tables.run(userTableQuery.insertOrUpdate(
-        UserRow(user.id, user.userName, user.email, new Timestamp(new Date().getTime), inactive_email_sent, revoked_access)))
-        .recover {
-          case throwable =>
-            log.error(s"insertOrUpdate failed", throwable)
-            0
-        }
+                         inactive_email_sent: Option[java.sql.Timestamp],
+                         revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int] = {
+    tables.run(userTableQuery.insertOrUpdate(
+      UserRow(user.id, user.userName, user.email, new Timestamp(new Date().getTime), inactive_email_sent, revoked_access)))
+          .recover {
+            case throwable =>
+              log.error(s"insertOrUpdate failed", throwable)
+              0
+          }
   }
 
   def matchId(id: String): tables.User => Rep[Boolean] = (userTracking: User) =>

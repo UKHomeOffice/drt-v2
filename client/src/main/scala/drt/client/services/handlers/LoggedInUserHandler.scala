@@ -14,7 +14,7 @@ import upickle.default._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-case class UserTracking() extends Action
+case class trackUser() extends Action
 
 class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends LoggingActionHandler(modelRW) {
 
@@ -53,8 +53,8 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
     case SetLoggedInUser(loggedInUser) =>
       updated(Ready(loggedInUser))
 
-    case UserTracking() => {
-      val url = SPAMain.absoluteUrl("data/user-tracking")
+    case trackUser() => {
+      val url = SPAMain.absoluteUrl("data/track-user")
       val eventualRequest: Future[XMLHttpRequest] = dom.ext.Ajax.get(url = url)
       eventualRequest.map(r => {
         log.info(s"User tracking response: ${r.responseText}")
