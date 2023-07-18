@@ -3,6 +3,7 @@ package services.exports.flights.templates
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
+import uk.gov.homeoffice.drt.ports.MlFeedSource
 
 
 trait FlightsWithSplitsExport extends FlightsExport {
@@ -27,12 +28,21 @@ trait FlightsWithSplitsExport extends FlightsExport {
   }
 
   protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
-    val apiIsInvalid = if (fws.hasApi && !fws.hasValidApi) "Y" else ""
-    val pcpPax = if (fws.apiFlight.Origin.isDomesticOrCta) "-" else fws.bestPaxSource(paxFeedSourceOrder).getPcpPax.map(_.toString).getOrElse("0")
     flightWithSplitsToCsvFields(fws, millisToLocalDateTimeStringFn) ++
-      List(pcpPax, apiIsInvalid) ++
+      List(pcpPax(fws), apiIsInvalid(fws)) ++
       splitsForSources(fws)
   }
+
+  def apiIsInvalid(fws: ApiFlightWithSplits): String =
+    if (fws.hasApi && !fws.hasValidApi) "Y" else ""
+
+  def pcpPax(fws: ApiFlightWithSplits): String =
+    if (fws.apiFlight.Origin.isDomesticOrCta) "-"
+    else fws.bestPaxSource(paxFeedSourceOrder).getPcpPax.map(_.toString).getOrElse("0")
+
+  def predictedPcpPax(fws: ApiFlightWithSplits): String =
+    if (fws.apiFlight.Origin.isDomesticOrCta) "-"
+    else fws.apiFlight.PassengerSources.get(MlFeedSource).flatMap(p => p.getPcpPax.map(_.toString)).getOrElse("-")
 
   override val headings: String = ArrivalExportHeadings.arrivalWithSplitsHeadings
 
