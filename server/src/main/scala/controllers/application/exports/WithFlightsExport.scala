@@ -117,9 +117,10 @@ trait WithFlightsExport {
   private val exportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
     (user, _, _) =>
       (start, end, terminal) =>
-        if (user.hasRole(ApiView))
+        if (user.hasRole(SuperAdmin))
+          AdminExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
+        else if (user.hasRole(ApiView))
           FlightsWithSplitsWithActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
-        else if(user.hasRole(SuperAdmin)) AdminExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
         else FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
 
   private val redListDiversionsExportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =

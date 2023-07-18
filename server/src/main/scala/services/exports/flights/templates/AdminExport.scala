@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 
 trait AdminExport extends FlightsWithSplitsWithActualApiExport {
-  override val headings: String = ArrivalExportHeadings.arrivalWithSplitsAndRawApiHeadings.replace("PCP Pax", "Predicted PCP Pax")
+  override val headings: String = ArrivalExportHeadings.arrivalWithSplitsAndRawApiHeadings.replace("PCP Pax", "PCP Pax,Predicted PCP Pax")
 
   override def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Seq[String] = {
     val maybePaxSummary = maybeManifest.flatMap(PassengerInfo.manifestToFlightManifestSummary)
@@ -33,6 +33,6 @@ trait AdminExport extends FlightsWithSplitsWithActualApiExport {
   }
 }
 
-case class AdminExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal, paxFeedSourceOrder: List[FeedSource]) extends FlightsWithSplitsWithActualApiExport {
+case class AdminExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal, paxFeedSourceOrder: List[FeedSource]) extends AdminExport {
   override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = standardFilter
 }
