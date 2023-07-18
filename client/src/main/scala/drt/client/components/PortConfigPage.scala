@@ -116,14 +116,14 @@ object PortConfigDetails {
       )
   }.toTagMod
 
-  def processingTimesTable(defaultProcessingTimes: Map[PaxTypeAndQueue, Double]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
+  def processingTimesTable(processingTimes: Map[PaxTypeAndQueue, Double]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
     <.table(^.className := "table table-bordered table-hover",
       <.tbody(
         <.tr(
           <.th(^.className := "col", "Passenger Type & Queue"),
           <.th(^.className := "col", "Seconds")
         ),
-        defaultProcessingTimes
+        processingTimes
           .toList
           .sortBy {
             case (paxTypeAndQueue, _) => paxTypeAndQueue.queueType.toString + paxTypeAndQueue.passengerType
