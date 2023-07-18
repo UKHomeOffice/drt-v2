@@ -21,7 +21,7 @@ import uk.gov.homeoffice.drt.training.FeatureGuide
 
 case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]],
                        snackbarMessage: Pot[String],
-                       trainingDataTemplates: Pot[Seq[FeatureGuide]],
+                       featureGuides: Pot[Seq[FeatureGuide]],
                        showNewFeatureGuideOnLogin: Pot[Boolean],
                        featureGuideViewIds: Pot[Seq[String]])
 
@@ -96,7 +96,7 @@ object Navbar {
             if (isLargeDisplay || state.showDropDown)
               <.div(^.className := "main-menu-content",
                 MainMenu(props.ctl, props.page, navbarModel.feedStatuses.getOrElse(Seq()), props.airportConfig, props.loggedInUser),
-                navbarModel.trainingDataTemplates.renderReady { trainingDataTemplates =>
+                navbarModel.featureGuides.renderReady { trainingDataTemplates =>
                   navbarModel.featureGuideViewIds.renderReady { userFeatureViewCount =>
                     <.div(^.className := "main-menu-items",
                       <.div(if (trainingDataTemplates.nonEmpty) {
@@ -108,7 +108,7 @@ object Navbar {
                         }, showZero = true, color = "primary")("New Feature"))
                       } else EmptyVdom),
                       <.div(
-                        navbarModel.trainingDataTemplates.renderReady { trainingDataTemplates =>
+                        navbarModel.featureGuides.renderReady { trainingDataTemplates =>
                           navbarModel.showNewFeatureGuideOnLogin.renderReady { showNewFeatureGuideOnLogin =>
                             FeatureGuideModalComponent(state.toggleDialog || showNewFeatureGuideOnLogin,
                               handleDialogClose,
