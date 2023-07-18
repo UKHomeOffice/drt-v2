@@ -10,14 +10,14 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import drt.client.logger.log
 
 case class CloseFeatureGuideDialog() extends Action
-case class FeatureGuideDialog(toggleDialog: Boolean) extends Action
+case class FeatureGuideDialog(showNewFeatureGuideOnLogin: Boolean) extends Action
 case class IsNewFeatureAvailable() extends Action
 class FeatureGuideDialogHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends LoggingActionHandler(modelRW) {
 
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case IsNewFeatureAvailable() => {
-      val apiCallEffect = Effect(DrtApi.get("isNewFeatureAvailableSinceLastLogin")
+      val apiCallEffect = Effect(DrtApi.get("is-new-feature-available-since-last-login")
         .map(r => FeatureGuideDialog(r.responseText match {
           case "true" => true
           case _ => false
@@ -30,8 +30,8 @@ class FeatureGuideDialogHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends Lo
       effectOnly(apiCallEffect)
     }
 
-    case FeatureGuideDialog(toggleDialog) => {
-      updated(Ready(toggleDialog))
+    case FeatureGuideDialog(showNewFeatureGuideOnLogin) => {
+      updated(Ready(showNewFeatureGuideOnLogin))
     }
 
     case CloseFeatureGuideDialog() => {

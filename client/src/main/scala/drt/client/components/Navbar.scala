@@ -22,7 +22,7 @@ import uk.gov.homeoffice.drt.training.FeatureGuide
 case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]],
                        snackbarMessage: Pot[String],
                        trainingDataTemplates: Pot[Seq[FeatureGuide]],
-                       toggleDialog: Pot[Boolean],
+                       showNewFeatureGuideOnLogin: Pot[Boolean],
                        featureGuideViewIds: Pot[Seq[String]])
 
 object Navbar {
@@ -32,25 +32,25 @@ object Navbar {
                     loggedInUser: LoggedInUser,
                     airportConfig: AirportConfig)
 
-  case class State(showDropDown: Boolean)
+  case class State(showDropDown: Boolean, toggleDialog: Boolean)
 
   def handleClose: (ReactEvent, String) => Callback = (_, _) => {
     Callback(SPACircuit.dispatch(SetSnackbarMessage(Empty)))
   }
 
-
   class Backend($: BackendScope[Props, State]) {
     val rcp: ReactConnectProxy[NavbarModel] = SPACircuit
-      .connect(m => NavbarModel(m.feedStatuses, m.snackbarMessage, m.featureGuides, m.toggleDialog, m.featureGuideViewedIds))
+      .connect(m => NavbarModel(m.feedStatuses, m.snackbarMessage, m.featureGuides, m.showNewFeatureGuideOnLogin, m.featureGuideViewedIds))
 
-    def handleOpenDialog(e: ReactEvent): Callback = {
+    def handleOpenDialog(e: ReactEvent) = {
       e.preventDefaultCB >>
-        Callback(SPACircuit.dispatch(FeatureGuideDialog(true)))
+        $.modState(s => s.copy(toggleDialog = true))
     }
 
-    def handleDialogClose(e: ReactEvent): Callback = {
-      val closeDialog = Callback(SPACircuit.dispatch(CloseFeatureGuideDialog()))
-      e.preventDefaultCB >> closeDialog
+    def handleDialogClose(e: ReactEvent) = {
+      e.preventDefaultCB >>
+        $.modState(s => s.copy(toggleDialog = false)) >>
+        Callback(SPACircuit.dispatch(CloseFeatureGuideDialog()))
     }
 
     def calculateBadgeCount(viewedFeatureIds: Seq[String], templateFeatureIds: Seq[String]): Int = {
@@ -109,8 +109,8 @@ object Navbar {
                       } else EmptyVdom),
                       <.div(
                         navbarModel.trainingDataTemplates.renderReady { trainingDataTemplates =>
-                          navbarModel.toggleDialog.render { toggleDialog =>
-                            FeatureGuideModalComponent(toggleDialog,
+                          navbarModel.showNewFeatureGuideOnLogin.renderReady { showNewFeatureGuideOnLogin =>
+                            FeatureGuideModalComponent(state.toggleDialog || showNewFeatureGuideOnLogin,
                               handleDialogClose,
                               trainingDataTemplates)
                           }
@@ -132,7 +132,7 @@ object Navbar {
   val component: Component[Props, State, Backend, CtorType.Props] =
     ScalaComponent
       .builder[Props]("NavBar")
-      .initialState(if (dom.window.innerWidth > 768) State(true) else State(false))
+      .initialState(if (dom.window.innerWidth > 768) State(true, false) else State(false, false))
       .renderBackend[Backend]
       .componentDidMount(_.backend.componentDidMount())
       .build

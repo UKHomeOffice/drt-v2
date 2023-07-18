@@ -94,14 +94,17 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
     }
   }
 
-  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("NavBar")
-    .initialStateFromProps(_ => State(1))
-    .renderBackend[Backend]
-    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("feature-guide")))
-    .build
+  val component: Component[Props, State, Backend, CtorType.Props] =
+    ScalaComponent
+      .builder[Props]("NavBar")
+      .initialStateFromProps(_ => State(1))
+      .renderBackend[Backend]
+      .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("feature-guide")))
+      .build
 
-
-  def apply(showDialog: Boolean, closeDialog: ReactEvent => Callback,
-    trainingDataTemplates: Seq[FeatureGuide]): VdomElement = component(Props(showDialog, closeDialog, trainingDataTemplates))
+  def apply(showDialog: Boolean,
+            closeDialog: ReactEvent => Callback,
+            trainingDataTemplates: Seq[FeatureGuide]): VdomElement =
+    component(Props(showDialog, closeDialog, trainingDataTemplates))
 
 }
