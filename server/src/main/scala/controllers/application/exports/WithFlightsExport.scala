@@ -17,7 +17,7 @@ import services.exports.flights.ArrivalFeedExport
 import services.exports.flights.templates._
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView}
+import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, SuperAdmin}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -117,7 +117,9 @@ trait WithFlightsExport {
   private val exportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
     (user, _, _) =>
       (start, end, terminal) =>
-        if (user.hasRole(ApiView)) FlightsWithSplitsWithActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
+        if (user.hasRole(ApiView))
+          FlightsWithSplitsWithActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
+        else if(user.hasRole(SuperAdmin)) AdminExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
         else FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
 
   private val redListDiversionsExportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
