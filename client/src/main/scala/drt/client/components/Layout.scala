@@ -4,7 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain._
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{IsNewFeatureAvailable, trackUser}
+import drt.client.services.handlers.{IsNewFeatureAvailable, TrackUser}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
@@ -72,7 +72,7 @@ object Layout {
       }
     }).componentDidMount(_ =>
     Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
-      Callback(SPACircuit.dispatch(trackUser()))
+      Callback(SPACircuit.dispatch(TrackUser()))
   ).build
 
   def feedBackNavBar(user: LoggedInUser, port: PortCode): VdomTagOf[Div] =

@@ -215,19 +215,11 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
-  def viewCountByUser(): Action[AnyContent] = authByRole(BorderForceStaff) {
+  def viewedFeatureGuideIds(): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
       import spray.json._
+      import spray.json.DefaultJsonProtocol.{StringJsonFormat, immSeqFormat}
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-      implicit val stringListFormat: JsonFormat[Seq[String]] = new JsonFormat[Seq[String]] {
-        def write(seq: Seq[String]): JsValue = JsArray(seq.map(JsString(_)).toVector)
-
-        def read(json: JsValue): Seq[String] = json match {
-          case JsArray(elements) => elements.map(_.convertTo[String])
-          case _ => throw new DeserializationException("Expected JsArray")
-        }
-      }
-
       FeatureGuideViewRow.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
     }
   }

@@ -53,7 +53,7 @@ object Navbar {
       e.preventDefaultCB >> closeDialog
     }
 
-    def handleBadgeCount(viewedFeatureIds: Seq[String], templateFeatureIds: Seq[String]): Int = {
+    def calculateBadgeCount(viewedFeatureIds: Seq[String], templateFeatureIds: Seq[String]): Int = {
       templateFeatureIds.count(id => !viewedFeatureIds.contains(id))
     }
 
@@ -103,7 +103,7 @@ object Navbar {
                         <.a(^.onClick ==> {
                           handleOpenDialog
                         }, MuiBadge(badgeContent = {
-                          val badgeCount = handleBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
+                          val badgeCount = calculateBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
                           <.span(badgeCount)
                         }, showZero = true, color = "primary")("New Feature"))
                       } else EmptyVdom),

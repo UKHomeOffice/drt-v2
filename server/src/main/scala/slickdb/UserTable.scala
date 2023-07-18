@@ -18,8 +18,6 @@ case class UserRow(
 
 trait UserTableLike {
 
-  def selectAll: Future[Seq[UserRow]]
-
   def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]]
 
   def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int]
@@ -36,10 +34,6 @@ case class UserTable(tables: Tables) extends UserTableLike {
   import tables.User
 
   val userTableQuery = TableQuery[User]
-
-  def selectAll: Future[Seq[UserRow]] = {
-    tables.run(userTableQuery.result).mapTo[Seq[UserRow]]
-  }
 
   def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = {
     tables.run(userTableQuery.filter(_.email === email).result).mapTo[Seq[UserRow]].map(_.headOption)

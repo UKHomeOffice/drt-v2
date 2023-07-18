@@ -111,11 +111,11 @@ GET           /feature-guide-video/:filename                                    
 
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 
-GET           /isNewFeatureAvailableSinceLastLogin                                    controllers.Application.isNewFeatureAvailableSinceLastLogin
+GET           /is-new-feature-available-since-last-login                              controllers.Application.isNewFeatureAvailableSinceLastLogin
 
 POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
 
-GET          /viewed-feature-guides                                                   controllers.Application.viewCountByUser()
+GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds()
 # Test related
  +nocsrf
 POST          /test/arrival                                                           test.controllers.TestController.addArrival
