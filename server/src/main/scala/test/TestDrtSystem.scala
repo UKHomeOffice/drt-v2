@@ -54,7 +54,8 @@ case class MockUserTable()(implicit ec: ExecutionContext) extends UserTableLike 
 }
 
 case class MockFeatureGuideRowTable() extends FeatureGuideRowTableLike {
-  override def getAll()(implicit ec: ExecutionContext): Future[String] = Future.successful("")
+  override def getAll()(implicit ec: ExecutionContext): Future[String] =
+    Future.successful("""[{"id":[1],"uploadTime":1686066599088,"fileName":["test1"],"title":["Test1"],"markdownContent":"Here is markdown example","published":true}]""")
 
   override def selectAll(implicit ec: ExecutionContext): Future[Seq[FeatureGuideRow]] = Future.successful(Seq.empty)
 
