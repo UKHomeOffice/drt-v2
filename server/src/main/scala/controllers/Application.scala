@@ -20,7 +20,7 @@ import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
-import slickdb.{FeatureGuideRowTableLike, FeatureGuideViewRowLike, UserTableLike}
+import slickdb.{FeatureGuideTableLike, FeatureGuideViewLike, UserTableLike}
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -86,9 +86,9 @@ trait AirportConfProvider extends AirportConfiguration {
 
 trait FeatureGuideProviderLike {
 
-  val featureGuideService: FeatureGuideRowTableLike
+  val featureGuideService: FeatureGuideTableLike
 
-  val featureGuideViewService: FeatureGuideViewRowLike
+  val featureGuideViewService: FeatureGuideViewLike
 
 }
 

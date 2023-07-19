@@ -9,7 +9,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class FeatureGuideViewRow(email: String, fileId: Int, viewTime: Timestamp)
 
-class FeatureGuideViewTable(tag: Tag) extends Table[FeatureGuideViewRow](tag, "feature_guide_view") {
+class FeatureGuideView(tag: Tag) extends Table[FeatureGuideViewRow](tag, "feature_guide_view") {
   def email: Rep[String] = column[String]("email")
 
   def featureGuideId: Rep[Int] = column[Int]("file_id")
@@ -22,15 +22,15 @@ class FeatureGuideViewTable(tag: Tag) extends Table[FeatureGuideViewRow](tag, "f
 
 }
 
-trait FeatureGuideViewRowLike {
+trait FeatureGuideViewLike {
   def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String]
 
   def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]]
 }
 
-case class FeatureGuideViewRowTable(tables: Tables) extends FeatureGuideViewRowLike {
+case class FeatureGuideViewTable(tables: Tables) extends FeatureGuideViewLike {
 
-  val userFeatureView = TableQuery[FeatureGuideViewTable]
+  val userFeatureView = TableQuery[FeatureGuideView]
 
   def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String] = {
     val insertOrUpdateAction = userFeatureView.insertOrUpdate(FeatureGuideViewRow(email, fileId, new Timestamp(System.currentTimeMillis())))

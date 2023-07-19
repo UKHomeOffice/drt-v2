@@ -10,7 +10,7 @@ import FeatureGuide.serializeToJsonString
 
 case class FeatureGuideRow(id: Option[Int], uploadTime: Timestamp, fileName: Option[String], title: Option[String], markdownContent: String, published: Boolean)
 
-class FeatureGuideTable(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_guide") {
+class FeatureGuide(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_guide") {
   def id: Rep[Option[Int]] = column[Option[Int]]("id", O.PrimaryKey, O.AutoInc)
 
   def uploadTime: Rep[Timestamp] = column[Timestamp]("upload_time")
@@ -27,7 +27,7 @@ class FeatureGuideTable(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_g
     (id, uploadTime, fileName, title, markdownContent, published).mapTo[FeatureGuideRow]
 }
 
-trait FeatureGuideRowTableLike {
+trait FeatureGuideTableLike {
   def getAll()(implicit ec: ExecutionContext): Future[String]
 
   def selectAll(implicit ec: ExecutionContext): Future[Seq[FeatureGuideRow]]
@@ -35,9 +35,9 @@ trait FeatureGuideRowTableLike {
   def getGuideIdForFilename(filename: String)(implicit ec: ExecutionContext): Future[Option[Int]]
 }
 
-case class FeatureGuideRowTable(table: Tables) extends FeatureGuideRowTableLike {
+case class FeatureGuideTable(table: Tables) extends FeatureGuideTableLike {
 
-  val featureGuideTable = TableQuery[FeatureGuideTable]
+  val featureGuideTable = TableQuery[FeatureGuide]
 
   def getAll()(implicit ec: ExecutionContext): Future[String] = {
     selectAll.map(_.map(row =>

@@ -15,7 +15,7 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.{FeatureGuideRow, FeatureGuideRowTableLike, FeatureGuideViewRowLike, UserRow, UserTableLike}
+import slickdb.{FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
@@ -53,7 +53,7 @@ case class MockUserTable()(implicit ec: ExecutionContext) extends UserTableLike 
   override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(None)
 }
 
-case class MockFeatureGuideRowTable() extends FeatureGuideRowTableLike {
+case class MockFeatureGuideTable() extends FeatureGuideTableLike {
   override def getAll()(implicit ec: ExecutionContext): Future[String] =
     Future.successful("""[{"id":[1],"uploadTime":1686066599088,"fileName":["test1"],"title":["Test1"],"markdownContent":"Here is markdown example","published":true}]""")
 
@@ -62,7 +62,7 @@ case class MockFeatureGuideRowTable() extends FeatureGuideRowTableLike {
   override def getGuideIdForFilename(filename: String)(implicit ec: ExecutionContext): Future[Option[Int]] = Future.successful(None)
 }
 
-case class MockFeatureGuideViewRowTable() extends FeatureGuideViewRowLike {
+case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
   override def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String] = Future.successful("")
 
   override def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]] = Future.successful(Seq.empty)
@@ -146,8 +146,8 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val userService: UserTableLike = MockUserTable()
-  override val featureGuideService: FeatureGuideRowTableLike = MockFeatureGuideRowTable()
-  override val featureGuideViewService: FeatureGuideViewRowLike = MockFeatureGuideViewRowTable()
+  override val featureGuideService: FeatureGuideTableLike = MockFeatureGuideTable()
+  override val featureGuideViewService: FeatureGuideViewLike = MockFeatureGuideViewTable()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder)
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
@@ -223,10 +223,11 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     system.scheduler.schedule(1 second, 1 day)({
       val startDay = SDate.now()
       DateRange.utcDateRange(startDay, startDay.addDays(30)).map(day => {
-        val arrivals = CSVFixtures.csvPathToArrivalsOnDate(day.toISOString, file)
-                                  .collect {
-                                    case Success(arrival) => arrival
-                                  }
+        val arrivals = CSVFixtures
+          .csvPathToArrivalsOnDate(day.toISOString, file)
+          .collect {
+            case Success(arrival) => arrival
+          }
         arrivals.map(testArrivalActor.ask)
 
         val manifests = arrivals.map(a => {
