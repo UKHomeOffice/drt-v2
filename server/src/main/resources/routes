@@ -80,6 +80,9 @@ GET           /assets/*file                                                     
 POST          /api/*path                                                              controllers.Application.autowireApi(path: String)
 
 GET           /data/user                                                              controllers.Application.getLoggedInUser()
+
+GET           /data/track-user                                                        controllers.Application.trackUser()
+
  +nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin()
 
@@ -103,7 +106,16 @@ DELETE        /staff-movements/:uuid                                            
 # Feed import
 POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
+# Training
+GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
+GET           /feature-guides                                                         controllers.Application.featureGuides()
+
+GET           /is-new-feature-available-since-last-login                              controllers.Application.isNewFeatureAvailableSinceLastLogin
+
+POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
+
+GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds()
 # Test related
  +nocsrf
 POST          /test/arrival                                                           test.controllers.TestController.addArrival

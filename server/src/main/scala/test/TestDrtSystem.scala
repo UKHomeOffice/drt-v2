@@ -47,10 +47,9 @@ case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Mater
 case class MockUserTable()(implicit ec: ExecutionContext) extends UserTableLike {
   override def insertOrUpdateUser(user: LoggedInUser, inactive_email_sent: Option[Timestamp],
                                   revoked_access: Option[Timestamp])(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
-
-  override def selectAll: Future[Seq[UserRow]] = Future.successful(Seq.empty)
-
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(None)
 }
 
 case class MockDrtParameters() extends DrtParameters {

@@ -17,6 +17,7 @@ import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.training.FeatureGuide
 
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
@@ -155,10 +156,13 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
                      gateStandWalkTime: Pot[WalkTimes] = Empty,
                      passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
+                     featureGuides: Pot[Seq[FeatureGuide]] = Empty,
                      maybeTimeMachineDate: Option[SDateLike] = None,
                      flaggedNationalities: Set[Country] = Set(),
                      flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary] = Map(),
                      paxFeedSourceOrder: List[FeedSource] = List(),
+                     showNewFeatureGuideOnLogin: Pot[Boolean] = Empty,
+                     featureGuideViewedIds: Pot[Seq[String]] = Empty,
                     )
 
 object PollDelay {
@@ -226,8 +230,10 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AppControlHandler(zoomRW(identity)((m, _) => m)),
       new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
       new FlaggedNationalitiesHandler(zoomRW(_.flaggedNationalities)((m, v) => m.copy(flaggedNationalities = v))),
+      new FeatureGuidesHandler(zoomRW(_.featureGuides)((m, v) => m.copy(featureGuides = v))),
+      new FeatureGuideDialogHandler(zoomRW(_.showNewFeatureGuideOnLogin)((m, v) => m.copy(showNewFeatureGuideOnLogin = v))),
+      new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),
     )
-
     composedHandlers
   }
 }
