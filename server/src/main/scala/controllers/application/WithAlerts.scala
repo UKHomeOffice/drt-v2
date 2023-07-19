@@ -27,7 +27,7 @@ trait WithAlerts {
     eventualAlerts.map(alerts => Ok(write(alerts)))
   }
 
-  def addAlert(): Action[AnyContent] = authByRole(CreateAlerts) {
+  def addAlert: Action[AnyContent] = authByRole(CreateAlerts) {
     Action.async {
       implicit request =>
         log.info(s"Adding an Alert!")
@@ -46,7 +46,7 @@ trait WithAlerts {
     }
   }
 
-  def deleteAlerts(): Action[AnyContent] = authByRole(CreateAlerts) {
+  def deleteAlerts: Action[AnyContent] = authByRole(CreateAlerts) {
     Action.async {
       val futureAlerts = ctrl.alertsActor.ask(DeleteAlerts)(new Timeout(5 second))
       futureAlerts.map(s => {
