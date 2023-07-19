@@ -85,7 +85,6 @@ trait AirportConfProvider extends AirportConfiguration {
 }
 
 trait FeatureGuideProviderLike {
-  val log: Logger = LoggerFactory.getLogger(getClass)
 
   val featureGuideService: FeatureGuideRowTableLike
 

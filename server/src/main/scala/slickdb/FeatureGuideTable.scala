@@ -1,6 +1,5 @@
 package slickdb
 
-import actors.PostgresTables
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
 import uk.gov.homeoffice.drt.training.FeatureGuide
