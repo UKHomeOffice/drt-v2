@@ -22,18 +22,24 @@ class FeatureGuideViewTable(tag: Tag) extends Table[FeatureGuideViewRow](tag, "f
 
 }
 
-object FeatureGuideViewRow {
+trait FeatureGuideViewRowLike {
+  def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String]
+
+  def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]]
+}
+
+case class FeatureGuideViewRowTable(tables: Tables) extends FeatureGuideViewRowLike {
 
   val userFeatureView = TableQuery[FeatureGuideViewTable]
 
   def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String] = {
     val insertOrUpdateAction = userFeatureView.insertOrUpdate(FeatureGuideViewRow(email, fileId, new Timestamp(System.currentTimeMillis())))
-    PostgresTables.db.run(insertOrUpdateAction).map(_ => "success")
+    tables.run(insertOrUpdateAction).map(_ => "success")
   }
 
   def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]] = {
     val selectAction = userFeatureView.filter(_.email === email).map(_.featureGuideId).result
-    val fileViewed = PostgresTables.db.run(selectAction).map(_.map(_.toString))
+    val fileViewed = tables.run(selectAction).map(_.map(_.toString))
     fileViewed
   }
 

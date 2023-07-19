@@ -20,8 +20,7 @@ import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
-import slickdb.{FeatureGuideRow, FeatureGuideViewRow, UserTableLike}
-import spray.json.DefaultJsonProtocol.StringJsonFormat
+import slickdb.{FeatureGuideRowTableLike, FeatureGuideViewRowLike, UserTableLike}
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -83,6 +82,15 @@ trait AirportConfProvider extends AirportConfiguration {
 
     configForPort
   }
+}
+
+trait FeatureGuideProviderLike {
+  val log: Logger = LoggerFactory.getLogger(getClass)
+
+  val featureGuideService: FeatureGuideRowTableLike
+
+  val featureGuideViewService: FeatureGuideViewRowLike
+
 }
 
 trait UserRoleProviderLike {
@@ -182,13 +190,13 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   }
 
   def featureGuides(): Action[AnyContent] = Action.async { _ =>
-    val featureGuidesJson: Future[String] = FeatureGuideRow.getAll()
+    val featureGuidesJson: Future[String] = ctrl.featureGuideService.getAll()
     featureGuidesJson.map(Ok(_))
   }
 
   def isNewFeatureAvailableSinceLastLogin = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-    val latestFeatureDateF: Future[Option[Timestamp]] = FeatureGuideRow.selectAll.map(_.headOption.map(_.uploadTime))
+    val latestFeatureDateF: Future[Option[Timestamp]] = ctrl.featureGuideService.selectAll.map(_.headOption.map(_.uploadTime))
     val latestLoginDateF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.map(_.latest_login))
     for {
       latestFeatureDate <- latestFeatureDateF
@@ -204,11 +212,11 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   def recordFeatureGuideView(filename: String): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-      FeatureGuideRow.getGuideIdForFilename(filename).flatMap {
+      ctrl.featureGuideService.getGuideIdForFilename(filename).flatMap {
         case Some(id) =>
-          FeatureGuideViewRow
-            .insertOrUpdate(id, userEmail)
-            .map(_ => Ok(s"File $filename viewed updated"))
+          ctrl.featureGuideViewService
+              .insertOrUpdate(id, userEmail)
+              .map(_ => Ok(s"File $filename viewed updated"))
         case None =>
           Future.successful(Ok(s"File $filename viewed not updated as file not found"))
       }
@@ -217,10 +225,10 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   def viewedFeatureGuideIds(): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
-      import spray.json._
       import spray.json.DefaultJsonProtocol.{StringJsonFormat, immSeqFormat}
+      import spray.json._
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-      FeatureGuideViewRow.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
+      ctrl.featureGuideViewService.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
     }
   }
 

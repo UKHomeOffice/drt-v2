@@ -8,6 +8,7 @@ import uk.gov.homeoffice.drt.training.FeatureGuide
 import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, Future}
 import FeatureGuide.serializeToJsonString
+
 case class FeatureGuideRow(id: Option[Int], uploadTime: Timestamp, fileName: Option[String], title: Option[String], markdownContent: String, published: Boolean)
 
 class FeatureGuideTable(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_guide") {
@@ -27,7 +28,15 @@ class FeatureGuideTable(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_g
     (id, uploadTime, fileName, title, markdownContent, published).mapTo[FeatureGuideRow]
 }
 
-object FeatureGuideRow {
+trait FeatureGuideRowTableLike {
+  def getAll()(implicit ec: ExecutionContext): Future[String]
+
+  def selectAll(implicit ec: ExecutionContext): Future[Seq[FeatureGuideRow]]
+
+  def getGuideIdForFilename(filename: String)(implicit ec: ExecutionContext): Future[Option[Int]]
+}
+
+case class FeatureGuideRowTable(table: Tables) extends FeatureGuideRowTableLike {
 
   val featureGuideTable = TableQuery[FeatureGuideTable]
 
@@ -38,13 +47,13 @@ object FeatureGuideRow {
 
   def selectAll(implicit ec: ExecutionContext): Future[Seq[FeatureGuideRow]] = {
     val selectAction = featureGuideTable.filter(_.published).sortBy(_.uploadTime.desc).result
-    PostgresTables.db.run(selectAction)
+    table.run(selectAction)
 
   }
 
   def getGuideIdForFilename(filename: String)(implicit ec: ExecutionContext): Future[Option[Int]] = {
     val selectAction = featureGuideTable.filter(_.fileName === filename).map(_.id).result
-    val fileIds: Future[Seq[Option[Int]]] = PostgresTables.db.run(selectAction)
+    val fileIds: Future[Seq[Option[Int]]] = table.run(selectAction)
     fileIds.map(_.headOption.flatten)
   }
 }
