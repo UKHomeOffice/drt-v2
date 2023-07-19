@@ -1,6 +1,5 @@
 package slickdb
 
-import actors.PostgresTables
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
 import uk.gov.homeoffice.drt.training.FeatureGuide
@@ -8,9 +7,10 @@ import uk.gov.homeoffice.drt.training.FeatureGuide
 import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, Future}
 import FeatureGuide.serializeToJsonString
+
 case class FeatureGuideRow(id: Option[Int], uploadTime: Timestamp, fileName: Option[String], title: Option[String], markdownContent: String, published: Boolean)
 
-class FeatureGuideTable(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_guide") {
+class FeatureGuide(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_guide") {
   def id: Rep[Option[Int]] = column[Option[Int]]("id", O.PrimaryKey, O.AutoInc)
 
   def uploadTime: Rep[Timestamp] = column[Timestamp]("upload_time")
@@ -27,9 +27,17 @@ class FeatureGuideTable(tag: Tag) extends Table[FeatureGuideRow](tag, "feature_g
     (id, uploadTime, fileName, title, markdownContent, published).mapTo[FeatureGuideRow]
 }
 
-object FeatureGuideRow {
+trait FeatureGuideTableLike {
+  def getAll()(implicit ec: ExecutionContext): Future[String]
 
-  val featureGuideTable = TableQuery[FeatureGuideTable]
+  def selectAll(implicit ec: ExecutionContext): Future[Seq[FeatureGuideRow]]
+
+  def getGuideIdForFilename(filename: String)(implicit ec: ExecutionContext): Future[Option[Int]]
+}
+
+case class FeatureGuideTable(table: Tables) extends FeatureGuideTableLike {
+
+  val featureGuideTable = TableQuery[FeatureGuide]
 
   def getAll()(implicit ec: ExecutionContext): Future[String] = {
     selectAll.map(_.map(row =>
@@ -38,13 +46,13 @@ object FeatureGuideRow {
 
   def selectAll(implicit ec: ExecutionContext): Future[Seq[FeatureGuideRow]] = {
     val selectAction = featureGuideTable.filter(_.published).sortBy(_.uploadTime.desc).result
-    PostgresTables.db.run(selectAction)
+    table.run(selectAction)
 
   }
 
   def getGuideIdForFilename(filename: String)(implicit ec: ExecutionContext): Future[Option[Int]] = {
     val selectAction = featureGuideTable.filter(_.fileName === filename).map(_.id).result
-    val fileIds: Future[Seq[Option[Int]]] = PostgresTables.db.run(selectAction)
+    val fileIds: Future[Seq[Option[Int]]] = table.run(selectAction)
     fileIds.map(_.headOption.flatten)
   }
 }

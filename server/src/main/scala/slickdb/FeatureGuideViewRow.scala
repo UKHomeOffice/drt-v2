@@ -9,7 +9,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class FeatureGuideViewRow(email: String, fileId: Int, viewTime: Timestamp)
 
-class FeatureGuideViewTable(tag: Tag) extends Table[FeatureGuideViewRow](tag, "feature_guide_view") {
+class FeatureGuideView(tag: Tag) extends Table[FeatureGuideViewRow](tag, "feature_guide_view") {
   def email: Rep[String] = column[String]("email")
 
   def featureGuideId: Rep[Int] = column[Int]("file_id")
@@ -22,18 +22,24 @@ class FeatureGuideViewTable(tag: Tag) extends Table[FeatureGuideViewRow](tag, "f
 
 }
 
-object FeatureGuideViewRow {
+trait FeatureGuideViewLike {
+  def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String]
 
-  val userFeatureView = TableQuery[FeatureGuideViewTable]
+  def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]]
+}
+
+case class FeatureGuideViewTable(tables: Tables) extends FeatureGuideViewLike {
+
+  val userFeatureView = TableQuery[FeatureGuideView]
 
   def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String] = {
     val insertOrUpdateAction = userFeatureView.insertOrUpdate(FeatureGuideViewRow(email, fileId, new Timestamp(System.currentTimeMillis())))
-    PostgresTables.db.run(insertOrUpdateAction).map(_ => "success")
+    tables.run(insertOrUpdateAction).map(_ => "success")
   }
 
   def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]] = {
     val selectAction = userFeatureView.filter(_.email === email).map(_.featureGuideId).result
-    val fileViewed = PostgresTables.db.run(selectAction).map(_.map(_.toString))
+    val fileViewed = tables.run(selectAction).map(_.map(_.toString))
     fileViewed
   }
 
