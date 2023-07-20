@@ -308,6 +308,7 @@ object Icon {
   def krw : Icon = apply("krw")
   def language : Icon = apply("language")
   def laptop : Icon = apply("laptop")
+  def laptopLg: Icon = apply("laptop", "fa-lg")
   def lastfm : Icon = apply("lastfm")
   def lastfmSquare : Icon = apply("lastfm-square")
   def leaf : Icon = apply("leaf")

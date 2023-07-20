@@ -90,7 +90,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                 ))
             })
             )))
-      <.div(carouselItems)
+      carouselItems
     }
   }
 
