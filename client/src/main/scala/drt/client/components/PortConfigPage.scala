@@ -4,6 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.{WalkTime, WalkTimes}
 import japgolly.scalajs.react.component.Scala.Component
@@ -14,8 +15,10 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{EgateBanksEdit, RedListsEdit}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+
 import scala.collection.immutable.Map
 
 object PortConfigPage {
@@ -25,7 +28,6 @@ object PortConfigPage {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigPage")
     .render_P { props =>
       val mp = for {
-        redListUpdates <- props.redListUpdates
         portEgateBanksUpdates <- props.portEgateBanksUpdates
         user <- props.user
         airportConfig <- props.airportConfig
@@ -33,9 +35,6 @@ object PortConfigPage {
       } yield
         <.div(
           <.h3("Port Config"),
-          if (user.hasRole(RedListsEdit)) {
-            RedListEditor(redListUpdates)
-          } else EmptyVdom,
           if (user.hasRole(EgateBanksEdit)) {
             <.div(
               <.h2("E-gates"),
@@ -46,7 +45,9 @@ object PortConfigPage {
               }.toTagMod
             )
           } else EmptyVdom,
-          PortConfigDetails(airportConfig, gateStandWalktime)
+          props.portEgateBanksUpdates.renderReady { updates =>
+            PortConfigDetails(airportConfig, gateStandWalktime, updates.updatesByTerminal)
+          }
         )
       mp.render(identity)
     }
@@ -60,21 +61,27 @@ object PortConfigPage {
 
 object PortConfigDetails {
 
-  case class Props(airportConfig: AirportConfig, gateStandWalktime: WalkTimes) extends UseValueEq
+  case class Props(airportConfig: AirportConfig, gateStandWalktime: WalkTimes, updatesByTerminal: Map[Terminal, EgateBanksUpdates]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigDetails")
     .render_P { props =>
       <.div(
-        props.airportConfig.terminals.map(tn =>
+        props.airportConfig.terminals.map(tn => {
+          val maybeUpdate = props.updatesByTerminal(tn).updatesForDate(SDate.now().millisSinceEpoch)
           <.div(
             <.h2(tn.toString),
             <.div(^.className := "container config-container",
-              <.h4("Min / Max Desks or eGate Banks by hour of day"),
-              minMaxDesksTable(props.airportConfig.minMaxDesksByTerminalQueue24Hrs(tn))
+              <.h4(s"Desks and Egates"),
+              <.p(s"${props.airportConfig.desksByTerminal.getOrElse(tn, "n/a")} desks"),
+              maybeUpdate.map { update =>
+                val openGatesByBank = update.banks.map { bank => bank.openCount }
+                val totalOpenGates = openGatesByBank.sum
+                <.p(s"$totalOpenGates egates in ${openGatesByBank.length} banks: ${openGatesByBank.mkString(", ")}")
+              },
             ),
             <.div(^.className := "container config-container",
-              <.h4("Default Processing Times", " ", defaultProcessingTimesTooltip),
-              defaultProcessingTimesTable(props.airportConfig.terminalProcessingTimes(tn))
+              <.h4("Processing Times", " ", processingTimesTooltip),
+              processingTimesTable(props.airportConfig.terminalProcessingTimes(tn))
             ),
             <.div(^.className := "container config-container",
               <.h4("Passenger Queue Allocation"),
@@ -92,41 +99,20 @@ object PortConfigDetails {
               )
             } else ""
           )
+        }
         ).toTagMod
       )
     }
     .build
 
-  def minMaxDesksTable(minMaxDesksByTerminalQueue: Map[Queue, (List[Int], List[Int])]): TagMod = minMaxDesksByTerminalQueue.map {
-    case (queue, (min, max)) =>
-      <.div(^.className := "config-block float-left",
-        <.h4(Queues.displayName(queue)),
-        <.table(^.className := "table table-bordered table-hover", <.tbody(
-          <.tr(
-            <.th(^.className := "col", "Hour"),
-            <.th(^.className := "col", "Min"),
-            <.th(^.className := "col", "Max")
-          ),
-          min.zip(max).zipWithIndex.map {
-            case ((mi, ma), hourOfDay) =>
-              <.tr(
-                <.th(^.scope := "row", f"$hourOfDay%02d:00"),
-                <.td(^.className := "text-right", mi),
-                <.td(^.className := "text-right", ma)
-              )
-          }.toTagMod
-        ))
-      )
-  }.toTagMod
-
-  def defaultProcessingTimesTable(defaultProcessingTimes: Map[PaxTypeAndQueue, Double]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
+  def processingTimesTable(processingTimes: Map[PaxTypeAndQueue, Double]): VdomTagOf[Div] = <.div(^.className := "config-block float-left",
     <.table(^.className := "table table-bordered table-hover",
       <.tbody(
         <.tr(
-          <.th(^.className := "col", "Passenger Type / Queue"),
+          <.th(^.className := "col", "Passenger Type & Queue"),
           <.th(^.className := "col", "Seconds")
         ),
-        defaultProcessingTimes
+        processingTimes
           .toList
           .sortBy {
             case (paxTypeAndQueue, _) => paxTypeAndQueue.queueType.toString + paxTypeAndQueue.passengerType
@@ -228,6 +214,9 @@ object PortConfigDetails {
     )
   )
 
-  def apply(airportConfig: AirportConfig, gateStandWalktime: WalkTimes): VdomElement = component(Props(airportConfig, gateStandWalktime))
+  def apply(airportConfig: AirportConfig,
+            gateStandWalktime: WalkTimes,
+            updatesByTerminal: Map[Terminal, EgateBanksUpdates],
+           ): VdomElement = component(Props(airportConfig, gateStandWalktime, updatesByTerminal))
 }
 
