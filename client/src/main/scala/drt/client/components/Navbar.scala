@@ -6,7 +6,7 @@ import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{CloseFeatureGuideDialog, FeatureGuideDialog, GetFeatureGuides, GetViewedFeatureIds, IsNewFeatureAvailable}
+import drt.client.services.handlers.{CloseFeatureGuideDialog, GetFeatureGuides, GetViewedFeatureIds}
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import io.kinoplan.scalajs.react.material.ui.core.{MuiBadge, MuiSnackbar}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -100,22 +100,18 @@ object Navbar {
                   navbarModel.featureGuideViewIds.renderReady { userFeatureViewCount =>
                     <.div(^.className := "main-menu-items",
                       <.div(if (trainingDataTemplates.nonEmpty) {
-                        <.a(^.onClick ==> {
-                          handleOpenDialog
-                        }, MuiBadge(badgeContent = {
-                          val badgeCount = calculateBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
-                          <.span(badgeCount)
-                        }, showZero = false, color = "primary")("New Feature"))
+                        val badgeCount = calculateBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
+                        <.a(MuiBadge(
+                          badgeContent = <.span(^.className := "badge-font", badgeCount), invisible = badgeCount == 0, color = "primary")(Icon.laptopLg),
+                          <.span(if (badgeCount != 0) ^.className := "badge-text" else " ", "New Feature"), ^.onClick ==> handleOpenDialog)
                       } else EmptyVdom),
-                      <.div(
-                        navbarModel.featureGuides.renderReady { trainingDataTemplates =>
-                          navbarModel.showNewFeatureGuideOnLogin.renderReady { showNewFeatureGuideOnLogin =>
-                            FeatureGuideModalComponent(state.toggleDialog || showNewFeatureGuideOnLogin,
-                              handleDialogClose,
-                              trainingDataTemplates)
-                          }
+                      navbarModel.featureGuides.renderReady { trainingDataTemplates =>
+                        navbarModel.showNewFeatureGuideOnLogin.renderReady { showNewFeatureGuideOnLogin =>
+                          FeatureGuideModalComponent(state.toggleDialog || showNewFeatureGuideOnLogin,
+                            handleDialogClose,
+                            trainingDataTemplates)
                         }
-                      ),
+                      },
                       <.div(^.className := "contact-us-link", props.ctl.link(ContactUsLoc)(Icon.envelope, " ", "Contact Us")),
                       <.div(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
                         ^.onClick --> Callback(GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "Log Out", props.loggedInUser.id))))
