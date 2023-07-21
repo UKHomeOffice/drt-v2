@@ -101,10 +101,9 @@ object Navbar {
                     <.div(^.className := "main-menu-items",
                       <.div(if (trainingDataTemplates.nonEmpty) {
                         val badgeCount = calculateBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
-                        <.a(MuiBadge(badgeContent = <.span(badgeCount),
-                          invisible = {
-                            badgeCount == 0
-                          }, color = "primary")(Icon.laptopLg), <.span(if (badgeCount != 0) ^.className := "badge-text" else " ", "New Feature"), ^.onClick ==> handleOpenDialog)
+                        <.a(MuiBadge(
+                          badgeContent = <.span(^.className := "badge-font", badgeCount), invisible = badgeCount == 0, color = "primary")(Icon.laptopLg),
+                          <.span(if (badgeCount != 0) ^.className := "badge-text" else " ", "New Feature"), ^.onClick ==> handleOpenDialog)
                       } else EmptyVdom),
                       navbarModel.featureGuides.renderReady { trainingDataTemplates =>
                         navbarModel.showNewFeatureGuideOnLogin.renderReady { showNewFeatureGuideOnLogin =>
