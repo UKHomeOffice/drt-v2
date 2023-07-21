@@ -28,7 +28,6 @@ steps:
   - name: analysis
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-    probability: 0.2
     commands:
       - /root/entrypoint.sh
       - sbt -ivy ./.ivy2 dependencyCheck
@@ -42,9 +41,10 @@ steps:
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
     when:
-      branch: master
       event:
-        - push
+        - cron
+      cron:
+        - nightly
     depends_on:
       - build
 
