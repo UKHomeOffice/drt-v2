@@ -41,6 +41,7 @@ steps:
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
     when:
+      branch: master
       event:
         - push
     depends_on:
