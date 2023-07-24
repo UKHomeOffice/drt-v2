@@ -3,17 +3,14 @@ package services.prediction
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.ArrivalsDiff
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
 import services.prediction.ArrivalPredictions.arrivalsByKey
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{Models, WithId}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
-import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.math.abs
 
 
 object ArrivalPredictions {
@@ -42,31 +39,15 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
         }
     }
 
-  def applyPredictionsByKey(arrivals: Map[UniqueArrival, Arrival], idsToArrivalKey: List[(WithId, Iterable[UniqueArrival])]): Future[Iterable[Arrival]] = {
-    val lastUpdatedThreshold = SDate.now().addDays(-7).millisSinceEpoch
-
+  def applyPredictionsByKey(arrivals: Map[UniqueArrival, Arrival], idsToArrivalKey: List[(WithId, Iterable[UniqueArrival])]): Future[Iterable[Arrival]] =
     Source(idsToArrivalKey)
       .foldAsync(arrivals) {
         case (arrivalsAcc, (key, uniqueArrivals)) =>
-          if (needsUpdate(lastUpdatedThreshold, arrivalsAcc, uniqueArrivals))
-            findAndApplyForKey(key, uniqueArrivals.map(arrivalsAcc(_)))
-              .map(updates => updates.foldLeft(arrivalsAcc)((acc, a) => acc.updated(a.unique, a)))
-          else
-            Future.successful(arrivalsAcc)
+          findAndApplyForKey(key, uniqueArrivals.map(arrivalsAcc(_)))
+            .map(updates => updates.foldLeft(arrivalsAcc)((acc, a) => acc.updated(a.unique, a)))
       }
       .map { things => things.values }
       .runWith(Sink.head)
-  }
-
-  private def needsUpdate(lastUpdatedThreshold: MillisSinceEpoch,
-                          arrivals: Map[UniqueArrival, Arrival],
-                          uniqueArrivals: Iterable[UniqueArrival]): Boolean = {
-    val expiredPredictionExists = uniqueArrivals.map(arrivals(_)).exists(_.Predictions.lastChecked < lastUpdatedThreshold)
-    val noExistingPredictions = !uniqueArrivals.map(arrivals(_)).exists(_.Predictions.predictions.nonEmpty)
-
-    noExistingPredictions || expiredPredictionExists
-    true
-  }
 
   private def findAndApplyForKey(modelKey: WithId, arrivals: Iterable[Arrival]): Future[Iterable[Arrival]] =
     getModels(modelKey).map { models =>
