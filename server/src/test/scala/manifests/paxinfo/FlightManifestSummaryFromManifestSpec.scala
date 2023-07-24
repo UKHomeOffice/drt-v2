@@ -16,11 +16,11 @@ import scala.collection.immutable.List
 class FlightManifestSummaryFromManifestSpec extends Specification {
 
   "When extracting passenger info " >> {
-    "Given a manifest with multiple GB passengers aged 10, 20 and 30 " >> {
+    "Given a manifest with multiple GB passengers aged 9, 20 and 30 " >> {
       "Then I should get a matching PassengerInfoSummary" >> {
 
         val voyageManifest = manifestWithPassengerAgesAndNats(List(
-          (Nationality("GBR"), 10),
+          (Nationality("GBR"), 9),
           (Nationality("GBR"), 20),
           (Nationality("GBR"), 30))
         )
@@ -29,7 +29,7 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
 
         val expected = Option(FlightManifestSummary(
           ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2020-11-09T00:00").millisSinceEpoch),
-          Map(AgeRange(0, Option(11)) -> 1, AgeRange(12, Option(24)) -> 1, AgeRange(25, Option(49)) -> 1),
+          Map(AgeRange(0, Option(9)) -> 1, AgeRange(10, Option(24)) -> 1, AgeRange(25, Option(49)) -> 1),
           Map(Nationality("GBR") -> 3),
           Map(
             PaxTypes.GBRNational -> 2,

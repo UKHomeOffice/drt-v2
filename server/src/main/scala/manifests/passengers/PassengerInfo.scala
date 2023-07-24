@@ -9,8 +9,8 @@ import uk.gov.homeoffice.drt.ports.{PaxAge, PaxType}
 object PassengerInfo {
 
   val ageRanges: List[AgeRange] = List(
-    AgeRange(0, 11),
-    AgeRange(12, 24),
+    AgeRange(0, 9),
+    AgeRange(10, 24),
     AgeRange(25, 49),
     AgeRange(50, 65),
     AgeRange(65),
