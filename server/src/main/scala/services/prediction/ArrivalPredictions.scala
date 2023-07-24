@@ -65,6 +65,7 @@ case class ArrivalPredictions(modelKeys: Arrival => Iterable[WithId],
     val noExistingPredictions = !uniqueArrivals.map(arrivals(_)).exists(_.Predictions.predictions.nonEmpty)
 
     noExistingPredictions || expiredPredictionExists
+    true
   }
 
   private def findAndApplyForKey(modelKey: WithId, arrivals: Iterable[Arrival]): Future[Iterable[Arrival]] =
