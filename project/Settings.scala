@@ -61,7 +61,7 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
-    val uPickle = "3.1.0"
+    val uPickle = "3.1.2"
     val akkaHttp = "10.5.2"
     val slick = "3.4.1"
     val censorinus = "2.1.16"
