@@ -195,7 +195,7 @@ object Settings {
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
-    "io.netty" % "netty-all" % "4.1.94.Final",
+    "io.netty" % "netty-all" % "4.1.95.Final",
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
