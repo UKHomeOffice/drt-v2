@@ -201,6 +201,40 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       .map(_.toMap)
   }
 
+  val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate, atTime: SDateLike) =>
+    arrivalsForDay(date, Option(atTime))
+
+  val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate) =>
+    arrivalsForDay(date, None)
+
+  private def arrivalsForDay(date: LocalDate, maybeAtTime: Option[SDateLike]): Future[Map[Terminal, Seq[Arrival]]] = {
+    val start = SDate(date)
+    val end = start.addDays(1).addMinutes(-1)
+    val rangeRequest = GetStateForDateRange(start.millisSinceEpoch, end.millisSinceEpoch)
+    val request = maybeAtTime match {
+      case Some(atTime) => PointInTimeQuery(atTime.millisSinceEpoch, rangeRequest)
+      case None => rangeRequest
+    }
+
+    flightsRouterActor.ask(request)
+      .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
+      .flatMap { source =>
+        source.mapConcat {
+          case (_, flights) =>
+            flights.flights
+              .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
+                SDate(apiFlight.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date
+              }
+              .values
+              .groupBy(fws => fws.apiFlight.Terminal)
+              .map {
+                case (terminal, flights) => (terminal, flights.map(fws => fws.apiFlight).toSeq)
+              }
+        }.runWith(Sink.seq)
+      }
+      .map(_.toMap)
+  }
+
   lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
     LiveFeedSource -> liveArrivalsActor,
     LiveBaseFeedSource -> liveBaseArrivalsActor,
