@@ -23,7 +23,7 @@ trait AdminExport extends FlightsWithSplitsWithActualApiExport {
 
   private def oldForecastPcpPax(fws: ApiFlightWithSplits): String =
     if (fws.apiFlight.Origin.isDomesticOrCta) "-"
-    else fws.apiFlight.bestPcpPaxEstimate(oldForecastFeedOrder).map(_.toString).getOrElse(0)
+    else fws.apiFlight.bestPcpPaxEstimate(oldForecastFeedOrder).map(_.toString).getOrElse("0")
 
   override def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
     flightWithSplitsToCsvFields(fws, millisToLocalDateTimeStringFn) ++
