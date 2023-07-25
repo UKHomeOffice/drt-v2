@@ -9,6 +9,7 @@ import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
+import scala.collection.immutable
 import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -67,7 +68,7 @@ object ForecastAccuracyCalculator {
               case Some(eventualAccuracies) => eventualAccuracies.map(_.map {
                 case (terminal, errors) => (dateToCalculate, terminal, errors)
               })
-              case None => Future.successful(Map[LocalDate, Terminal, ErrorValues]())
+              case None => Future.successful(immutable.Iterable[(LocalDate, Terminal, ErrorValues)]())
             }
           }
       }
