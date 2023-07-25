@@ -6,8 +6,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-case class AccuracyForDate(date: LocalDate,
-                           forecast: (LocalDate, SDateLike) => Future[Map[Terminal, Double]],
+case class AccuracyForDate(forecast: (LocalDate, SDateLike) => Future[Map[Terminal, Double]],
                            terminalActuals: Map[Terminal, Double],
                            today: LocalDate
                           )

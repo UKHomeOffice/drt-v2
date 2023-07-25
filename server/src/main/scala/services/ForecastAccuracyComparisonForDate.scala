@@ -10,8 +10,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class ErrorValues(predictionRmse: Option[Double], predictionError: Option[Double], legacyRmse: Option[Double], legacyError: Option[Double])
 
-case class ForecastAccuracyComparisonForDate(date: LocalDate,
-                                             forecast: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]],
+case class ForecastAccuracyComparisonForDate(forecast: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]],
                                              terminalActuals: Map[Terminal, Seq[Arrival]],
                                              today: LocalDate
                                             )

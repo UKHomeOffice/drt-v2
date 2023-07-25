@@ -1,5 +1,6 @@
 package controllers.application
 
+import akka.stream.scaladsl.Source
 import controllers.Application
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
 import play.api.mvc.{Action, AnyContent}
@@ -37,8 +38,9 @@ trait WithForecastAccuracy {
         .predictionsVsLegacyForecast(daysForComparison, daysAhead, ctrl.actualArrivals, ctrl.forecastArrivals, ctrl.now().toLocalDate)
         .map {
           case (date, terminal, e) =>
-            s"${date.toISOString},${terminal.toString},${maybeDoubleToString(e.predictionRmse)},${maybeDoubleToString(e.legacyRmse)},${maybeDoubleToString(e.predictionError)},${maybeDoubleToString(e.legacyError)}"
+            s"${date.toISOString},${terminal.toString},${maybeDoubleToString(e.predictionRmse)},${maybeDoubleToString(e.legacyRmse)},${maybeDoubleToString(e.predictionError)},${maybeDoubleToString(e.legacyError)}\n"
         }
+        .prepend(Source(List("Date,Terminal,Prediction RMSE,Legacy RMSE,Prediction Error,Legacy Error\n")))
 
       sourceToCsvResponse(stream, "forecast-accuracy.csv")
     }

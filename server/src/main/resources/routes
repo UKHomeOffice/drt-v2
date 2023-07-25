@@ -70,7 +70,7 @@ GET           /export/desk-rec-simulation                                       
 GET           /desk-rec-simulation                                                    controllers.Application.simulation
 
 GET           /forecast-accuracy/:date                                                controllers.Application.getForecastAccuracy(date: String)
-GET           /export/forecast-accuracy/:daysForComparison/:daysAhead                              controllers.Application.forecastAccuracyExport(daysForComparison: Int, daysAhead: Int)
+GET           /export/forecast-accuracy/:daysForComparison/:daysAhead                 controllers.Application.forecastAccuracyExport(daysForComparison: Int, daysAhead: Int)
 
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                                     controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
