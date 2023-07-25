@@ -8,7 +8,7 @@
 @import 'tippy-themes/light-border.css';
 @import 'tippy-themes/material.css';
 @import 'tippy-themes/translucent.css';
-
+@import 'flickity.css';
 /////////////////
 // Custom navbar
 /////////////////
@@ -19,6 +19,14 @@
 @colDefault: #333333;
 @colHighlight: #666666;
 @dropDown: false;
+
+.badge-text {
+  margin-left: 12px;
+}
+
+.badge-font {
+  font-size: 10px;
+}
 
 dl {
   margin: 0;
@@ -724,7 +732,7 @@ table.headlines tr:nth-child(odd) {
   opacity: 0.8;
 }
 
-.dot {
+.dot_c {
   height: @dotDiameter;
   width: @dotDiameter;
   border-radius: @dotDiameter/2;
@@ -734,7 +742,7 @@ table.headlines tr:nth-child(odd) {
   opacity: 0.9;
 }
 
-.dot:hover {
+.dot_c:hover {
   opacity: 1;
 }
 

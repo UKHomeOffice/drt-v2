@@ -13,7 +13,6 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import play.api.Configuration
 import play.api.http.HeaderNames
 import play.api.mvc.{Action, AnyContent, InjectedController, Session}
-import uk.gov.homeoffice.drt.time.SDate
 import spray.json._
 import test.TestActors.ResetData
 import test.TestDrtSystem
@@ -23,7 +22,7 @@ import test.roles.MockRoles.MockRolesProtocol._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.SDate
 
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
@@ -41,8 +40,6 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
 
   def ctrl: TestDrtSystem = DrtActorSystem.drtTestSystem
 
-  val baseTime: SDateLike = SDate.now()
-
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
     ctrl.testArrivalActor.ask(arrival).map { _ =>
@@ -55,12 +52,12 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
     ctrl.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
   }
 
-  def resetData(): Future[Any] = {
+  def resetData: Future[Any] = {
     log.info(s"Sending reset message")
     ctrl.restartActor.ask(ResetData)
   }
 
-  def addArrival(): Action[AnyContent] = Action.async {
+  def addArrival: Action[AnyContent] = Action.async {
     request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
         case Some(flight) =>
@@ -114,7 +111,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
     }
   }
 
-  def addManifest(): Action[AnyContent] = Action.async {
+  def addManifest: Action[AnyContent] = Action.async {
     request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
         case Some(vm) =>
@@ -125,7 +122,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
       }
   }
 
-  def setMockRoles(): Action[AnyContent] = Action {
+  def setMockRoles: Action[AnyContent] = Action {
     implicit request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[MockRoles]) match {
         case Some(roles) =>
@@ -140,7 +137,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
       }
   }
 
-  def setMockRolesByQueryString(): Action[AnyContent] = Action {
+  def setMockRolesByQueryString: Action[AnyContent] = Action {
     implicit request =>
       request.queryString.get("roles") match {
         case Some(rs) =>
@@ -150,7 +147,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
       }
   }
 
-  def deleteAllData(): Action[AnyContent] = Action.async { _ =>
-    resetData().map(_ => Accepted)
+  def deleteAllData: Action[AnyContent] = Action.async { _ =>
+    resetData.map(_ => Accepted)
   }
 }

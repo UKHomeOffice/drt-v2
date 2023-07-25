@@ -65,7 +65,7 @@ GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource           
 GET           /export/planning/:weekStarting/:terminalName                            controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
 GET           /export/headlines/:weekStarting/:terminalName                           controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 GET           /export/users                                                           controllers.Application.exportUsers
-GET           /export/staff-movements/:pointInTime/:terminal                          controllers.Application.exportStaffMovements(terminal: String, pointInTime: Long)
+GET           /export/staff-movements/:date/:terminal                                 controllers.Application.exportStaffMovements(terminal: String, date: String)
 GET           /export/desk-rec-simulation                                             controllers.Application.simulationExport
 GET           /desk-rec-simulation                                                    controllers.Application.simulation
 
@@ -80,6 +80,9 @@ GET           /assets/*file                                                     
 POST          /api/*path                                                              controllers.Application.autowireApi(path: String)
 
 GET           /data/user                                                              controllers.Application.getLoggedInUser()
+
+GET           /data/track-user                                                        controllers.Application.trackUser()
+
  +nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin()
 
@@ -96,14 +99,23 @@ POST          /email/feedback/:feedback                                         
 POST          /logging                                                                controllers.Application.logging
 
 POST          /data/staff                                                             controllers.Application.saveStaff
-GET           /staff-movements                                                        controllers.Application.getStaffMovements(pointInTime: Option[Long])
+GET           /staff-movements/:date                                                  controllers.Application.getStaffMovements(date: String)
 POST          /staff-movements                                                        controllers.Application.addStaffMovements()
 DELETE        /staff-movements/:uuid                                                  controllers.Application.removeStaffMovements(uuid: String)
 
 # Feed import
 POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
+# Training
+GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
+GET           /feature-guides                                                         controllers.Application.featureGuides()
+
+GET           /is-new-feature-available-since-last-login                              controllers.Application.isNewFeatureAvailableSinceLastLogin
+
+POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
+
+GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds()
 # Test related
  +nocsrf
 POST          /test/arrival                                                           test.controllers.TestController.addArrival

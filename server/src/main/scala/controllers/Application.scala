@@ -20,15 +20,15 @@ import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
-import slickdb.UserTableLike
+import slickdb.{FeatureGuideTableLike, FeatureGuideViewLike, UserTableLike}
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
-import uk.gov.homeoffice.drt.ports
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, FeedSource, ForecastFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.nio.ByteBuffer
+import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
@@ -84,6 +84,14 @@ trait AirportConfProvider extends AirportConfiguration {
   }
 }
 
+trait FeatureGuideProviderLike {
+
+  val featureGuideService: FeatureGuideTableLike
+
+  val featureGuideViewService: FeatureGuideViewLike
+
+}
+
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -97,13 +105,13 @@ trait UserRoleProviderLike {
     val baseRoles = Set()
     val roles: Set[Role] =
       getRoles(config, headers, session) ++ baseRoles
+    val email = headers.get("X-Auth-Email").getOrElse("Unknown")
     val loggedInUser: LoggedInUser = LoggedInUser(
-      userName = headers.get("X-Auth-Username").getOrElse("Unknown"),
-      id = headers.get("X-Auth-Userid").getOrElse("Unknown"),
-      email = headers.get("X-Auth-Email").getOrElse("Unknown"),
-      roles = roles
-    )
-    userService.insertOrUpdateUser(loggedInUser, None, None)
+      email = email,
+      userName = headers.get("X-Auth-Username").getOrElse(email),
+      id = headers.get("X-Auth-Userid").getOrElse(email),
+      roles = roles)
+
 
     loggedInUser
   }
@@ -112,27 +120,27 @@ trait UserRoleProviderLike {
 @Singleton
 class Application @Inject()(implicit val config: Configuration, env: Environment)
   extends InjectedController
-    with AirportConfProvider
-    with WithConfig
-    with WithAirportInfo
-    with WithRedLists
-    with WithEgateBanks
-    with WithAlerts
-    with WithAuth
-    with WithContactDetails
-    with WithFeatureFlags
-    with WithExports
-    with WithFeeds
-    with WithImports
-    with WithPortState
-    with WithStaffing
-    with WithApplicationInfo
-    with WithSimulations
-    with WithManifests
-    with WithWalkTimes
-    with WithDebug
-    with WithEmailFeedback
-    with WithForecastAccuracy {
+  with AirportConfProvider
+  with WithConfig
+  with WithAirportInfo
+  with WithRedLists
+  with WithEgateBanks
+  with WithAlerts
+  with WithAuth
+  with WithContactDetails
+  with WithFeatureFlags
+  with WithExports
+  with WithFeeds
+  with WithImports
+  with WithPortState
+  with WithStaffing
+  with WithApplicationInfo
+  with WithSimulations
+  with WithManifests
+  with WithWalkTimes
+  with WithDebug
+  with WithEmailFeedback
+  with WithForecastAccuracy {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
   implicit val mat: Materializer = DrtActorSystem.mat
@@ -180,6 +188,48 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
+  def featureGuides(): Action[AnyContent] = Action.async { _ =>
+    val featureGuidesJson: Future[String] = ctrl.featureGuideService.getAll()
+    featureGuidesJson.map(Ok(_))
+  }
+
+  def isNewFeatureAvailableSinceLastLogin = Action.async { implicit request =>
+    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val latestFeatureDateF: Future[Option[Timestamp]] = ctrl.featureGuideService.selectAll.map(_.headOption.map(_.uploadTime))
+    val latestLoginDateF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.map(_.latest_login))
+    for {
+      latestFeatureDate <- latestFeatureDateF
+      latestLoginDate <- latestLoginDateF
+    } yield (latestFeatureDate, latestLoginDate) match {
+      case (Some(featureDate), Some(loginDate)) =>
+        Ok(featureDate.after(loginDate).toString)
+      case _ =>
+        Ok(false.toString)
+    }
+  }
+
+  def recordFeatureGuideView(filename: String): Action[AnyContent] = authByRole(BorderForceStaff) {
+    Action.async { implicit request =>
+      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      ctrl.featureGuideService.getGuideIdForFilename(filename).flatMap {
+        case Some(id) =>
+          ctrl.featureGuideViewService
+              .insertOrUpdate(id, userEmail)
+              .map(_ => Ok(s"File $filename viewed updated"))
+        case None =>
+          Future.successful(Ok(s"File $filename viewed not updated as file not found"))
+      }
+    }
+  }
+
+  def viewedFeatureGuideIds(): Action[AnyContent] = authByRole(BorderForceStaff) {
+    Action.async { implicit request =>
+      import spray.json.DefaultJsonProtocol.{StringJsonFormat, immSeqFormat}
+      import spray.json._
+      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      ctrl.featureGuideViewService.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
+    }
+  }
 
   def autowireApi(path: String): Action[RawBuffer] = authByRole(BorderForceStaff) {
     Action.async(parse.raw) {
@@ -240,8 +290,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     )
 
     val feedsToMonitor = ctrl.feedActorsForPort
-      .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
-      .values.toList
+                             .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
+                             .values.toList
 
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
@@ -314,9 +364,9 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token")
-      .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+                       .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
-      .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+                            .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
@@ -331,8 +381,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         val logLevel = postStringValOrElse("level", "ERROR")
 
         val millis = request.body.get("timestamp")
-          .map(_.head.toLong)
-          .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+                            .map(_.head.toLong)
+                            .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
 
         val logMessage = Map(
           "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
