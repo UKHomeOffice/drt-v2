@@ -26,7 +26,7 @@ class PaxTypeInfoFromManifestSpec extends Specification {
 
   "Given a voyage manifest with 2 Adult and 1 child GBR Nationals then I should get Matching PaxTypes" >> {
     val voyageManifest = manifestWithPassengerAgesAndNats(List(
-      (Nationality("GBR"), 10),
+      (Nationality("GBR"), 9),
       (Nationality("GBR"), 20),
       (Nationality("GBR"), 30))
     )

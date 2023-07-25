@@ -112,8 +112,8 @@ describe('API splits', () => {
         },
 
         "ageRanges": [
-          ["25-49", 10],
-          ["0-11", 1]
+          ["0-9", 1],
+          ["25-49", 10]
         ],
 
         "nationalities": [
