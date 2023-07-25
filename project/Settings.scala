@@ -136,7 +136,7 @@ object Settings {
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
     "com.github.gphat" %% "censorinus" % censorinus,
-    "com.pauldijou" %% "jwt-core" % "5.0.0",
+    "com.github.jwt-scala" %% "jwt-core" % "9.4.3",
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
