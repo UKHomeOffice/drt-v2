@@ -224,7 +224,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
           case (_, flights) =>
             flights.flights
               .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
-                SDate(apiFlight.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date
+                SDate(apiFlight.Scheduled).toLocalDate == date
               }
               .values
               .groupBy(fws => fws.apiFlight.Terminal)
