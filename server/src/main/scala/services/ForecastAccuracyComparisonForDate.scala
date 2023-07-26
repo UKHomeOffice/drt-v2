@@ -29,10 +29,10 @@ case class ForecastAccuracyComparisonForDate(forecast: (LocalDate, SDateLike) =>
             val predictedPax = paxNosForFeeds(forecastArrivals, List(MlFeedSource))
             println(s"\n\n$date at ${atDate.toISOString} - ${actualArrivals.size} actual arrivals, ${forecastArrivals.size} forecast arrivals ${actualPax.length} actuals ${predictedPax.length} predictions\n\n")
             val legacyPax = paxNosForFeeds(forecastArrivals, List(ForecastFeedSource, HistoricApiFeedSource, AclFeedSource))
-            val predictionFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, predictedPax.toMap, 0.9)
-            val legacyFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, legacyPax.toMap, 0.9)
-            val predictionAbsoluteError = PassengerForecastAccuracy.maybeAbsoluteError(actualPax.toMap, predictedPax.toMap, 0.9)
-            val legacyAbsoluteError = PassengerForecastAccuracy.maybeAbsoluteError(actualPax.toMap, legacyPax.toMap, 0.9)
+            val predictionFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, predictedPax.toMap, 0.8)
+            val legacyFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, legacyPax.toMap, 0.8)
+            val predictionAbsoluteError = PassengerForecastAccuracy.maybeAbsoluteError(actualPax.toMap, predictedPax.toMap, 0.8)
+            val legacyAbsoluteError = PassengerForecastAccuracy.maybeAbsoluteError(actualPax.toMap, legacyPax.toMap, 0.8)
             (terminal, ErrorValues(predictionFlightError, legacyFlightError, predictionAbsoluteError, legacyAbsoluteError))
         }
       }
