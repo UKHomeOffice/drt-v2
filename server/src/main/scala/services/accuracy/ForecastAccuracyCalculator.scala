@@ -4,7 +4,7 @@ import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.api.ForecastAccuracy
-import services.{AccuracyForDate, ErrorValues, ForecastAccuracyComparisonForDate}
+import services.{AccuracyForDate, ErrorValues, ForecastAccuracyComparison}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
@@ -64,7 +64,7 @@ object ForecastAccuracyCalculator {
         val dateToCalculate = startDate.addDays(daysAgo).toLocalDate
         actualPaxNos(dateToCalculate)
           .flatMap { actuals =>
-            ForecastAccuracyComparisonForDate(forecastPaxNos, actuals, today).accuracy(dateToCalculate, daysAhead) match {
+            ForecastAccuracyComparison(forecastPaxNos, actuals, today).accuracy(dateToCalculate, daysAhead) match {
               case Some(eventualAccuracies) => eventualAccuracies.map(_.map {
                 case (terminal, errors) => (dateToCalculate, terminal, errors)
               })

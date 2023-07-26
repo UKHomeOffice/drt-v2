@@ -149,7 +149,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   val flightUpdates: ActorRef
 
   val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] = (date: LocalDate, atTime: SDateLike) =>
-    terminalValuesForDate(
+    flightValuesForDate(
       date,
       Option(atTime),
       arrival => SDate(arrival.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date,
@@ -157,7 +157,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     )
 
   val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] = (date: LocalDate) =>
-    terminalValuesForDate(
+    flightValuesForDate(
       date,
       None,
       arrival => SDate(arrival.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date,
@@ -181,11 +181,11 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     AclFeedSource,
   )
 
-  private def terminalValuesForDate[T](date: LocalDate,
-                                       maybeAtTime: Option[SDateLike],
-                                       flightIsRelevant: Arrival => Boolean,
-                                       extractValue: Iterable[Arrival] => T,
-                                      ): Future[Map[Terminal, T]] = {
+  private def flightValuesForDate[T](date: LocalDate,
+                                     maybeAtTime: Option[SDateLike],
+                                     flightIsRelevant: Arrival => Boolean,
+                                     extractValue: Iterable[Arrival] => T,
+                                    ): Future[Map[Terminal, T]] = {
     val start = SDate(date)
     val end = start.addDays(1).addMinutes(-1)
     val rangeRequest = GetStateForDateRange(start.millisSinceEpoch, end.millisSinceEpoch)
@@ -216,7 +216,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   }
 
   val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate, atTime: SDateLike) =>
-    terminalValuesForDate(
+    flightValuesForDate(
       date,
       Option(atTime),
       arrival => SDate(arrival.Scheduled).toLocalDate == date,
@@ -224,13 +224,13 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     )
 
   val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate) =>
-    terminalValuesForDate(
+    flightValuesForDate(
       date,
       None,
       arrival => SDate(arrival.Scheduled).toLocalDate == date,
       arrivals => arrivals.toSeq
     )
-  
+
   lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
     LiveFeedSource -> liveArrivalsActor,
     LiveBaseFeedSource -> liveBaseArrivalsActor,
