@@ -187,7 +187,9 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
           case (_, flights) =>
             flights.flights
               .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
-                SDate(apiFlight.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date
+                val pcpDateMatches = SDate(apiFlight.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date
+                val nonCtaOrDom = !apiFlight.Origin.isDomesticOrCta
+                pcpDateMatches && nonCtaOrDom
               }
               .values
               .groupBy(fws => fws.apiFlight.Terminal)
@@ -220,10 +222,12 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       .flatMap { source =>
         source.mapConcat {
-          case (utcDate, flights) =>
+          case (_, flights) =>
             flights.flights
               .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
-                !apiFlight.Origin.isDomesticOrCta && SDate(apiFlight.Scheduled).toLocalDate == date
+                val nonCtaOrDom = !apiFlight.Origin.isDomesticOrCta
+                val scheduledDateMatches = SDate(apiFlight.Scheduled).toLocalDate == date
+                nonCtaOrDom && scheduledDateMatches
               }
               .values
               .groupBy(fws => fws.apiFlight.Terminal)
