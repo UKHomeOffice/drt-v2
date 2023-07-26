@@ -10,18 +10,18 @@ import uk.gov.homeoffice.drt.ports.PaxTypes._
 trait PaxTypeAllocator {
   val b5JPlus: PartialFunction[ManifestPassengerProfile, PaxType] = {
     case ManifestPassengerProfile(country, _, Some(age), _, _)
-      if isB5JPlus(country) && age.isUnder(12) => B5JPlusNationalBelowEGateAge
+      if isB5JPlus(country) && age.isUnder(10) => B5JPlusNationalBelowEGateAge
     case ManifestPassengerProfile(country, _, _, _, _)
       if isB5JPlus(country) => B5JPlusNational
   }
 
   val countryAndDocumentTypes: PartialFunction[ManifestPassengerProfile, PaxType] = {
     case ManifestPassengerProfile(Nationality(CountryCodes.UK), _, Some(age), _, _)
-      if age.isUnder(12) => GBRNationalBelowEgateAge
+      if age.isUnder(10) => GBRNationalBelowEgateAge
     case ManifestPassengerProfile(Nationality(CountryCodes.UK), _, _, _, _) =>
       GBRNational
     case ManifestPassengerProfile(country, Some(docType), Some(age), _, _)
-      if isEea(country) && docType == DocumentType.Passport && age.isUnder(12) => EeaBelowEGateAge
+      if isEea(country) && docType == DocumentType.Passport && age.isUnder(10) => EeaBelowEGateAge
     case ManifestPassengerProfile(country, Some(docType), _, _, _)
       if isEea(country) && docType == DocumentType.Passport => EeaMachineReadable
     case ManifestPassengerProfile(country, _, _, _, _)
