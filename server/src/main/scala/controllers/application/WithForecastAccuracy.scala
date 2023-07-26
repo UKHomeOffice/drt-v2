@@ -38,7 +38,7 @@ trait WithForecastAccuracy {
         .predictionsVsLegacyForecast(daysForComparison, daysAhead, ctrl.actualArrivals, ctrl.forecastArrivals, ctrl.now().toLocalDate)
         .map {
           case (date, terminal, e) =>
-            s"${date.toISOString},${terminal.toString},${maybeDoubleToString(e.predictionRmse)},${maybeDoubleToString(e.legacyRmse)},${maybeDoubleToString(e.predictionError)},${maybeDoubleToString(e.legacyError)}\n"
+            f"${date.toISOString},${terminal.toString},${maybeDoubleToPctString(e.predictionRmse)},${maybeDoubleToPctString(e.legacyRmse)},${maybeDoubleToPctString(e.predictionError)},${maybeDoubleToPctString(e.legacyError)}\n"
         }
         .prepend(Source(List("Date,Terminal,Prediction RMSE,Legacy RMSE,Prediction Error,Legacy Error\n")))
 
@@ -46,7 +46,6 @@ trait WithForecastAccuracy {
     }
   }
 
-  private def maybeDoubleToString(rmse: Option[Double]) = {
-    rmse.map(_.toString).getOrElse("-")
-  }
+  private def maybeDoubleToPctString(double: Option[Double]): String =
+    double.map(d => f"${d * 100}%.3f").getOrElse("-")
 }

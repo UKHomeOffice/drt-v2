@@ -27,6 +27,7 @@ case class ForecastAccuracyComparisonForDate(forecast: (LocalDate, SDateLike) =>
             val forecastArrivals = terminalForecasts.getOrElse(terminal, Seq())
             val actualPax = paxNosForFeeds(actualArrivals, List(LiveFeedSource, ApiFeedSource))
             val predictedPax = paxNosForFeeds(forecastArrivals, List(MlFeedSource))
+            println(s"\n\n$date at ${atDate.toISOString} - ${actualArrivals.size} actual arrivals, ${forecastArrivals.size} forecast arrivals ${actualPax.length} actuals ${predictedPax.length} predictions\n\n")
             val legacyPax = paxNosForFeeds(forecastArrivals, List(ForecastFeedSource, HistoricApiFeedSource, AclFeedSource))
             val predictionFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, predictedPax.toMap, 0.9)
             val legacyFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, legacyPax.toMap, 0.9)
@@ -54,6 +55,7 @@ object PassengerForecastAccuracy {
 
   def maybeAverageFlightError(actuals: Map[UniqueArrival, Int], forecasts: Map[UniqueArrival, Int], minCoverage: Double): Option[Double] = {
     val coverage = PassengerForecastAccuracy.coverage(actuals.keySet, forecasts.keySet)
+    println(f"coverage: $coverage%.2f")
     if (coverage >= minCoverage) {
       val actualsSet = actuals.keySet
 
@@ -61,6 +63,7 @@ object PassengerForecastAccuracy {
 
       val totalError = intersect
         .toList
+        .filter(ua => actuals(ua) > 0)
         .map { ua =>
           Math.abs(forecasts(ua) - actuals(ua)).toDouble / actuals(ua)
         }
@@ -69,7 +72,10 @@ object PassengerForecastAccuracy {
       val averageError = (100 * (totalError / intersect.size)).round.toDouble / 100
 
       Option(averageError)
-    } else None
+    } else {
+      println(f"coverage too low: $coverage%.2f - ${actuals.size} actuals, ${forecasts.size} forecasts}")
+      None
+    }
   }
 
   def maybeAbsoluteError(actuals: Map[UniqueArrival, Int], forecasts: Map[UniqueArrival, Int], minCoverage: Double): Option[Double] = {

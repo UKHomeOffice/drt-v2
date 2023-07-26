@@ -208,6 +208,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     arrivalsForDay(date, None)
 
   private def arrivalsForDay(date: LocalDate, maybeAtTime: Option[SDateLike]): Future[Map[Terminal, Seq[Arrival]]] = {
+    println(s"\nLooking at arrivals for $date at ${maybeAtTime.map(_.toISOString).getOrElse("-")}\n")
     val start = SDate(date)
     val end = start.addDays(1).addMinutes(-1)
     val rangeRequest = GetStateForDateRange(start.millisSinceEpoch, end.millisSinceEpoch)
