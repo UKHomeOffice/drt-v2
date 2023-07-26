@@ -1,6 +1,8 @@
 package controllers.application
 
+import akka.stream.scaladsl.Source
 import controllers.Application
+import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
 import play.api.mvc.{Action, AnyContent}
 import services.accuracy.ForecastAccuracyCalculator
 import uk.gov.homeoffice.drt.time.LocalDate
@@ -19,7 +21,7 @@ trait WithForecastAccuracy {
       val maybeResponse = for {
         date <- LocalDate.parse(dateStr)
       } yield {
-        ForecastAccuracyCalculator(date, daysToCalculate, ctrl.actualPaxNos, ctrl.forecastPaxNos,ctrl.now().toLocalDate)
+        ForecastAccuracyCalculator(date, daysToCalculate, ctrl.actualPaxNos, ctrl.forecastPaxNos, ctrl.now().toLocalDate)
       }
       maybeResponse match {
         case Some(eventualAccuracy) =>
@@ -29,4 +31,21 @@ trait WithForecastAccuracy {
       }
     }
   }
+
+  def forecastAccuracyExport(daysForComparison: Int, daysAhead: Int): Action[AnyContent] = auth {
+    Action { _ =>
+      val stream = ForecastAccuracyCalculator
+        .predictionsVsLegacyForecast(daysForComparison, daysAhead, ctrl.actualArrivals, ctrl.forecastArrivals, ctrl.now().toLocalDate)
+        .map {
+          case (date, terminal, e) =>
+            f"${date.toISOString},${terminal.toString},${maybeDoubleToPctString(e.predictionRmse)},${maybeDoubleToPctString(e.legacyRmse)},${maybeDoubleToPctString(e.predictionError)},${maybeDoubleToPctString(e.legacyError)}\n"
+        }
+        .prepend(Source(List("Date,Terminal,Prediction RMSE,Legacy RMSE,Prediction Error,Legacy Error\n")))
+
+      sourceToCsvResponse(stream, "forecast-accuracy.csv")
+    }
+  }
+
+  private def maybeDoubleToPctString(double: Option[Double]): String =
+    double.map(d => f"${d * 100}%.3f").getOrElse("-")
 }
