@@ -44,7 +44,7 @@ steps:
       event:
         - cron
       cron:
-        - nightly
+        - daily
     depends_on:
       - build
 
