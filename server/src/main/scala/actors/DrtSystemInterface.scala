@@ -210,7 +210,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   private def arrivalsForDay(date: LocalDate, maybeAtTime: Option[SDateLike]): Future[Map[Terminal, Seq[Arrival]]] = {
     val start = SDate(date)
     val end = start.addDays(1).addMinutes(-1)
-    println(s"\nLooking at arrivals for $date at ${maybeAtTime.map(_.toISOString).getOrElse("-")} - request range: ${start.toISOString} -> ${end.toISOString}\n")
     val rangeRequest = GetStateForDateRange(start.millisSinceEpoch, end.millisSinceEpoch)
     val request = maybeAtTime match {
       case Some(atTime) => PointInTimeQuery(atTime.millisSinceEpoch, rangeRequest)
@@ -222,7 +221,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       .flatMap { source =>
         source.mapConcat {
           case (utcDate, flights) =>
-            println(s"\nGot ${flights.flights.size} flights for $utcDate\n")
             flights.flights
               .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
                 !apiFlight.Origin.isDomesticOrCta && SDate(apiFlight.Scheduled).toLocalDate == date

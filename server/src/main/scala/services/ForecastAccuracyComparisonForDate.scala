@@ -27,12 +27,11 @@ case class ForecastAccuracyComparisonForDate(forecast: (LocalDate, SDateLike) =>
             val forecastArrivals = terminalForecasts.getOrElse(terminal, Seq())
             val actualPax = paxNosForFeeds(actualArrivals, List(LiveFeedSource, ApiFeedSource))
             val predictedPax = paxNosForFeeds(forecastArrivals, List(MlFeedSource))
-            println(s"\n\n$date at ${atDate.toISOString} - ${actualArrivals.size} actual arrivals, ${forecastArrivals.size} forecast arrivals ${actualPax.length} actuals ${predictedPax.length} predictions\n\n")
             val legacyPax = paxNosForFeeds(forecastArrivals, List(ForecastFeedSource, HistoricApiFeedSource, AclFeedSource))
-            val predictionFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, predictedPax.toMap, 0.8)
-            val legacyFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, legacyPax.toMap, 0.8)
-            val predictionAbsoluteError = PassengerForecastAccuracy.maybeAbsoluteError(actualPax.toMap, predictedPax.toMap, 0.8)
-            val legacyAbsoluteError = PassengerForecastAccuracy.maybeAbsoluteError(actualPax.toMap, legacyPax.toMap, 0.8)
+            val predictionFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, predictedPax.toMap, 0.75)
+            val legacyFlightError = PassengerForecastAccuracy.maybeAverageFlightError(actualPax.toMap, legacyPax.toMap, 0.75)
+            val predictionAbsoluteError = PassengerForecastAccuracy.maybeAbsoluteError(actualPax.toMap, predictedPax.toMap, 0.75)
+            val legacyAbsoluteError = PassengerForecastAccuracy.maybeAbsoluteError(actualPax.toMap, legacyPax.toMap, 0.75)
             (terminal, ErrorValues(predictionFlightError, legacyFlightError, predictionAbsoluteError, legacyAbsoluteError))
         }
       }
@@ -50,12 +49,13 @@ case class ForecastAccuracyComparisonForDate(forecast: (LocalDate, SDateLike) =>
 }
 
 object PassengerForecastAccuracy {
+  private val log = LoggerFactory.getLogger(getClass)
+
   def coverage(actuals: Set[UniqueArrival], forecasts: Set[UniqueArrival]): Double =
     actuals.count(a => forecasts.contains(a)).toDouble / actuals.size.toDouble
 
   def maybeAverageFlightError(actuals: Map[UniqueArrival, Int], forecasts: Map[UniqueArrival, Int], minCoverage: Double): Option[Double] = {
     val coverage = PassengerForecastAccuracy.coverage(actuals.keySet, forecasts.keySet)
-    println(f"coverage: $coverage%.2f")
     if (coverage >= minCoverage) {
       val actualsSet = actuals.keySet
 
@@ -73,7 +73,7 @@ object PassengerForecastAccuracy {
 
       Option(averageError)
     } else {
-      println(f"coverage too low: $coverage%.2f - ${actuals.size} actuals, ${forecasts.size} forecasts}")
+      log.warn(f"coverage too low for comparison: ${coverage * 100}%.2f%% - ${actuals.size} actuals, ${forecasts.size} forecasts}")
       None
     }
   }
