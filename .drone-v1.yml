@@ -43,8 +43,6 @@ steps:
     when:
       event:
         - cron
-      cron:
-        - daily
     depends_on:
       - build
 
