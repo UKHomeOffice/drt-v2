@@ -45,8 +45,7 @@ steps:
         - cron
       cron:
         include:
-          - hourly
-          - daily
+          - buil-cron
     depends_on:
       - build
 
