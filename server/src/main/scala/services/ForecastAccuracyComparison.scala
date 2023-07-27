@@ -82,7 +82,7 @@ case class ForecastAccuracyComparison(forecast: (LocalDate, SDateLike) => Future
             val legacyFlightError = maybeAverageFlightError(actualPax.toMap, legacyPax.toMap, 0.75)
             val predictionAbsoluteError = maybeAbsoluteError(actualPax.toMap, predictedPax.toMap, 0.75)
             val legacyAbsoluteError = maybeAbsoluteError(actualPax.toMap, legacyPax.toMap, 0.75)
-            (terminal, ErrorValues(predictionFlightError, legacyFlightError, predictionAbsoluteError, legacyAbsoluteError))
+            (terminal, ErrorValues(predictionFlightError, predictionAbsoluteError, legacyFlightError, legacyAbsoluteError))
         }
       }
       Option(eventualAccuracy)
