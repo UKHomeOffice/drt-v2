@@ -40,9 +40,13 @@ steps:
       ENV_LOG_LEVEL: ERROR
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
-    when:
+    trigger:
       event:
         - cron
+      cron:
+        include:
+          - hourly
+          - daily
     depends_on:
       - build
 
