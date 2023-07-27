@@ -78,11 +78,14 @@ case class ForecastAccuracyComparison(forecast: (LocalDate, SDateLike) => Future
             val actualPax = paxNosForFeeds(actualArrivals, List(LiveFeedSource, ApiFeedSource))
             val predictedPax = paxNosForFeeds(forecastArrivals, List(MlFeedSource))
             val legacyPax = paxNosForFeeds(forecastArrivals, List(ForecastFeedSource, HistoricApiFeedSource, AclFeedSource))
-            val predictionFlightError = maybeAverageFlightError(actualPax.toMap, predictedPax.toMap, 0.75)
-            val legacyFlightError = maybeAverageFlightError(actualPax.toMap, legacyPax.toMap, 0.75)
-            val predictionAbsoluteError = maybeAbsoluteError(actualPax.toMap, predictedPax.toMap, 0.75)
-            val legacyAbsoluteError = maybeAbsoluteError(actualPax.toMap, legacyPax.toMap, 0.75)
-            (terminal, ErrorValues(predictionFlightError, legacyFlightError, predictionAbsoluteError, legacyAbsoluteError))
+            val minimumPopulated = 0.75
+            val errors = ErrorValues(
+              predictionRmse = maybeAverageFlightError(actualPax.toMap, predictedPax.toMap, minimumPopulated),
+              predictionError = maybeAbsoluteError(actualPax.toMap, predictedPax.toMap, minimumPopulated),
+              legacyRmse = maybeAverageFlightError(actualPax.toMap, legacyPax.toMap, minimumPopulated),
+              legacyError = maybeAbsoluteError(actualPax.toMap, legacyPax.toMap, minimumPopulated)
+            )
+            (terminal, errors)
         }
       }
       Option(eventualAccuracy)
