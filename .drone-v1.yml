@@ -43,11 +43,10 @@ steps:
     trigger:
       event:
         - cron
-      cron:
-        include:
-          - buil-cron
-    depends_on:
-      - build
+      when:
+        buil-cron
+  #    depends_on:
+#      - build
 
   - name: sonar-scanner
     pull: if-not-exists
