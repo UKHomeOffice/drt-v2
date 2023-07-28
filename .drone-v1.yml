@@ -40,13 +40,12 @@ steps:
       ENV_LOG_LEVEL: ERROR
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
-    trigger:
+    when:
       event:
         - cron
-      when:
-        buil-cron
-  #    depends_on:
-#      - build
+      cron:
+        - buil-cron
+        - hourly
 
   - name: sonar-scanner
     pull: if-not-exists
