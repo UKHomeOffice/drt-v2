@@ -260,7 +260,7 @@ object FlightTableRow {
     val differenceFromScheduled = eta - arrival.Scheduled
     val hourInMillis = 3600000
     val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)
-      "danger"
+      "arrivals-table__danger"
     else ""
     offScheduleClass
   }
