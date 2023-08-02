@@ -93,23 +93,29 @@ class TerminalDayFlightActor(year: Int,
 
   override def receiveCommand: Receive = {
     case redListCounts: RedListCounts =>
-      val stateDiff: FlightsWithSplitsDiff = redListCountDiffWith(redListCounts.passengers).forTerminal(terminal)
+      val diff: FlightsWithSplitsDiff = redListCountDiffWith(redListCounts.passengers).forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
-      updateAndPersistDiffAndAck(stateDiff)
+      updateAndPersistDiffAndAck(diff)
 
-    case diff: ArrivalsDiff =>
-      val stateDiff = diff
+    case arrivalDiff: ArrivalsDiff =>
+      val diff = arrivalDiff
         .diffWith(state, now().millisSinceEpoch)
         .forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
-      updateAndPersistDiffAndAck(stateDiff)
+      if (diff.flightsToUpdate.size == 30)
+        log.warn(s"Got suspicious 30 ArrivalsDiff flight updates for $terminal on $year-$month%02d-$day%02d")
+      updateAndPersistDiffAndAck(diff)
 
     case splits: SplitsForArrivals =>
       val diff = splits.diff(state, now().millisSinceEpoch)
+      if (diff.flightsToUpdate.size == 30)
+        log.warn(s"Got suspicious SplitsForArrivals 30 flight updates for $terminal on $year-$month%02d-$day%02d")
       updateAndPersistDiffAndAck(diff)
 
     case pax: PaxForArrivals =>
       val diff = pax.diff(state, now().millisSinceEpoch)
+      if (diff.flightsToUpdate.size == 30)
+        log.warn(s"Got suspicious PaxForArrivals 30 flight updates for $terminal on $year-$month%02d-$day%02d")
       updateAndPersistDiffAndAck(diff)
 
     case RemoveSplits =>
