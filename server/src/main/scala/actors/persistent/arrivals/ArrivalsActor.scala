@@ -10,12 +10,13 @@ import scalapb.GeneratedMessage
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{RecoveryActorLike, Sizes}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsRestorer, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, ArrivalsRestorer, UniqueArrival}
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.SortedMap
 
@@ -113,18 +114,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
     state = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
 
     persistFeedStatus(newStatus)
-    if (updatedArrivals.nonEmpty) persistArrivalUpdates(Set(), updatedArrivals)
+    if (updatedArrivals.nonEmpty) persistArrivalUpdates(ArrivalsDiff(updatedArrivals, Seq()))
   }
 
-  def persistArrivalUpdates(removals: Set[UniqueArrival], updatedArrivals: Iterable[Arrival]): Unit = {
-    val updateMessages = updatedArrivals.map(apiFlightToFlightMessage).toSeq
-    val removalMessages = removals.map(uniqueArrivalToMessage).toSeq
-    val diffMessage = FlightsDiffMessage(
-      createdAt = Option(SDate.now().millisSinceEpoch),
-      removals = removalMessages,
-      updates = updateMessages)
-
-    persistAndMaybeSnapshot(diffMessage)
+  def persistArrivalUpdates(arrivalsDiff: ArrivalsDiff): Unit = {
+    persistAndMaybeSnapshot(FlightMessageConversion.arrivalsDiffToMessage(arrivalsDiff))
   }
 
   def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))

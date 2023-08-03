@@ -19,7 +19,7 @@ import org.specs2.specification.{AfterAll, AfterEach}
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.JdbcProfile
 import slickdb.Tables
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.STN
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._

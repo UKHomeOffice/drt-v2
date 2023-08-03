@@ -14,7 +14,7 @@ import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import test.feeds.test.GetArrivals
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate
@@ -36,7 +36,7 @@ class TestAggregatedArrivalsActor(arrivalTable: ArrivalTableLike, probe: ActorRe
 
   override def receive: Receive = testReceive orElse super.receive
 
-  override def handleRemovals(toRemove: Iterable[Arrival]): Future[Done] = {
+  override def handleRemovals(toRemove: Iterable[UniqueArrival]): Future[Done] = {
     super.handleRemovals(toRemove).map { done =>
       if (toRemove.nonEmpty) probe ! RemovalHandled
       done

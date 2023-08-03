@@ -2,11 +2,10 @@ package services.prediction
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared.ArrivalsDiff
 import org.slf4j.LoggerFactory
 import services.prediction.ArrivalPredictions.arrivalsByKey
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{Models, WithId}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.time.SDate
 

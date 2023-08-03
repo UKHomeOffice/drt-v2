@@ -15,7 +15,7 @@ import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, Persiste
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.Logger
-import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
+import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -336,16 +336,6 @@ object TestActors {
                                    day: Int,
                                    terminal: Terminal,
                                    now: () => SDateLike) extends TerminalDayQueuesActor(year, month, day, terminal, now, None) with Resettable {
-    override def resetState(): Unit = state.clear()
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
-  class TestTerminalDayQueueLoadsActor(year: Int,
-                                       month: Int,
-                                       day: Int,
-                                       terminal: Terminal,
-                                       now: () => SDateLike) extends TerminalDayQueueLoadsActor(year, month, day, terminal, now, None) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

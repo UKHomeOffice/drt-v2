@@ -5,11 +5,11 @@ import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.FlightsApi.Flights
-import drt.shared.{ArrivalsDiff, PortState}
+import drt.shared.PortState
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
-import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalCarrierOrigin, TerminalFlightNumberOrigin, TerminalOrigin, WithId}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.actor.PredictionModelActor._
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.prediction._

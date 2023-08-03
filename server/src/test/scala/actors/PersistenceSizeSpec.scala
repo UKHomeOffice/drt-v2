@@ -35,7 +35,7 @@ class PersistenceSizeSpec extends Specification {
 
   "Given data for a day of arrival updates" >> {
     "I want to see which fields are updated and how often" >> {
-      skipped("This test is for manual use only")
+//      skipped("This test is for manual use only")
       val persistenceId = "terminal-flights-n-2023-07-01"
       val flights = mutable.Map.empty[UniqueArrival, ApiFlightWithSplits]
       var newCount = 0
@@ -50,6 +50,10 @@ class PersistenceSizeSpec extends Specification {
           envelope.event match {
             case FlightsWithSplitsDiffMessage(createdAt, removals, updates) =>
               println(s"${envelope.sequenceNr} @ ${SDate(envelope.timestamp).toISOString} Got ${updates.size} updates and ${removals.size} removals created at ${createdAt.map(SDate(_).toISOString)}")
+              val wrongDate = updates.count { fws =>
+                SDate(fws.flight.get.scheduled.get).toISODateOnly != "2023-07-01"
+              }
+              if (wrongDate > 0) println(s"*** $wrongDate updates with wrong date")
               uniqueArrivalsFromMessages(removals).collect {
                 case uniqueArrival: UniqueArrival => flights.remove(uniqueArrival)
               }
@@ -95,14 +99,13 @@ class PersistenceSizeSpec extends Specification {
                         }
                       }
                       else {
-                        if (old.apiFlight != fws.apiFlight)
-                          println(s"No updated fields but not equal....")
-
                         if (old.splits != fws.splits) {
 //                          println(s"Splits updated")
                           splitsCount += 1
+                        } else {
+                          noChangeCount += 1
+                          println(s"No changes")
                         }
-                        noChangeCount += 1
                       }
                     case None =>
 //                      println(s"New arrival")

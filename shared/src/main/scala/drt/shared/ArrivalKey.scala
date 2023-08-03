@@ -1,14 +1,10 @@
 package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 import upickle.default.{macroRW, _}
-
-import scala.collection.immutable.{SortedMap => ISortedMap}
 
 
 case class FeedSourceArrival(feedSource: FeedSource, arrival: Arrival)
@@ -40,58 +36,6 @@ object ArrivalKey {
   def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)
 
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
-}
-
-object ArrivalsDiff {
-  val empty: ArrivalsDiff = ArrivalsDiff(Seq(), Seq())
-
-  def apply(toUpdate: Iterable[Arrival], toRemove: Iterable[Arrival]): ArrivalsDiff = ArrivalsDiff(
-    ISortedMap[UniqueArrival, Arrival]() ++ toUpdate.map(a => (a.unique, a)), toRemove
-  )
-}
-
-case class ArrivalsDiff(toUpdate: ISortedMap[UniqueArrival, Arrival], toRemove: Iterable[Arrival]) extends FlightUpdates {
-  private def minutesFromUpdate(paxFeedSourceOrder: List[FeedSource]): Iterable[MillisSinceEpoch] = toUpdate.values.flatMap(_.pcpRange(paxFeedSourceOrder))
-  private def minutesFromRemoval(paxFeedSourceOrder: List[FeedSource]): Iterable[MillisSinceEpoch] = toRemove.flatMap(_.pcpRange(paxFeedSourceOrder))
-  def updateMinutes(paxFeedSourceOrder: List[FeedSource]): Iterable[MillisSinceEpoch] =
-    minutesFromUpdate(paxFeedSourceOrder) ++ minutesFromRemoval(paxFeedSourceOrder)
-
-  def diffWith(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
-    val updatedFlights = toUpdate
-      .map {
-        case (key, incomingArrival) =>
-          flights.flights.get(key) match {
-            case Some(existingFws) =>
-              val updatedArrival = existingFws.apiFlight.update(incomingArrival)
-              if (updatedArrival.isEqualTo(existingFws.apiFlight))
-                None
-              else
-                Some(existingFws.copy(apiFlight = updatedArrival, lastUpdated = Option(nowMillis)))
-            case None =>
-              Some(ApiFlightWithSplits(incomingArrival, Set(), Option(nowMillis)))
-          }
-      }
-      .collect { case Some(updatedFlight) => updatedFlight }
-
-    FlightsWithSplitsDiff(updatedFlights, toRemove.map(_.unique))
-  }
-
-  def splitByScheduledUtcDate(implicit millisToSdate: Long => SDateLike): List[(UtcDate, ArrivalsDiff)] = {
-    val updatesByDate = toUpdate.values.groupBy(d => millisToSdate(d.Scheduled).toUtcDate)
-    val removalsByDate = toRemove.groupBy(d => millisToSdate(d.Scheduled).toUtcDate)
-
-    val dates = updatesByDate.keys ++ removalsByDate.keys
-
-    dates
-      .map { date =>
-        val updates = updatesByDate.getOrElse(date, Seq())
-        val removals = removalsByDate.getOrElse(date, Seq())
-
-        (date, ArrivalsDiff(updates, removals))
-      }
-      .toList
-      .sortBy(_._1)
-  }
 }
 
 
