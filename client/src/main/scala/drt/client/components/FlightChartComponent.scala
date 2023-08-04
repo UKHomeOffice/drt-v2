@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsOptions, ChartJsProps}
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.services.JSDateConversions.SDate
 import drt.shared.api.FlightManifestSummary
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.component.Scala.Component
@@ -57,9 +58,11 @@ object FlightChartComponent {
       else
         200 + widthFactor * props.manifestSummary.nationalities.size
 
+      val isBeforeAgeEligibilityChangeDate : Long => Boolean = scheduled => scheduled < SDate("2023-07-25T00:00").millisSinceEpoch
+
       val paxTypeData: ChartJsData = ChartJsData(
         labels = sortedPaxTypes.map {
-          case (pt, _) => PaxTypes.displayNameShort(pt)
+          case (pt, _) => PaxTypes.displayNameShort(pt, isBeforeAgeEligibilityChangeDate(props.manifestSummary.arrivalKey.scheduled))
         },
         data = sortedPaxTypes.map(_._2.toDouble),
         dataSetLabel = "Live API",

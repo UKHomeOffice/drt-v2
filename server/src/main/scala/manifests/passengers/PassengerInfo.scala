@@ -5,18 +5,27 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import queueus.B5JPlusWithTransitTypeAllocator
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.ports.{PaxAge, PaxType}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 object PassengerInfo {
 
-  val ageRanges: List[AgeRange] = List(
-    AgeRange(0, 9),
-    AgeRange(10, 24),
-    AgeRange(25, 49),
-    AgeRange(50, 65),
-    AgeRange(65),
-  )
+  def ageRanges(viewDate: Option[SDateLike]): List[AgeRange] = {
+    val childEligibility = viewDate match {
+      case Some(date) if date < SDate("2023-07-25T01:00:01") =>
+        List(AgeRange(0, 11), AgeRange(12, 24))
+      case _ =>
+        List(AgeRange(0, 9), AgeRange(10, 24))
+    }
 
-  def ageRangeForAge(age: PaxAge): PaxAgeRange = ageRanges
+    childEligibility ++
+      List(
+        AgeRange(25, 49),
+        AgeRange(50, 65),
+        AgeRange(65),
+      )
+  }
+
+  def ageRangeForAge(age: PaxAge, viewDate: Option[SDateLike]): PaxAgeRange = ageRanges(viewDate)
     .find { ar =>
       val withinTop = ar.top match {
         case Some(top) => age.years <= top
@@ -31,7 +40,7 @@ object PassengerInfo {
   def manifestToAgeRangeCount(manifest: VoyageManifest): Map[PaxAgeRange, Int] = {
     manifest
       .uniquePassengers
-      .groupBy(_.age.map(ageRangeForAge).getOrElse(UnknownAge))
+      .groupBy(_.age.map(ageRangeForAge(_, manifest.scheduleArrivalDateTime)).getOrElse(UnknownAge))
       .map {
         case (ageRange, paxProfiles) => (ageRange, paxProfiles.size)
       }
