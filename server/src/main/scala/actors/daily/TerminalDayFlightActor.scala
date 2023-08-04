@@ -14,10 +14,10 @@ import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, SplitsForArrivalsMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
-import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffToMessage, flightMessageToApiFlight, flightWithSplitsDiffToMessage, flightWithSplitsFromMessage, uniqueArrivalsFromMessages}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffToMessage, flightMessageToApiFlight, flightWithSplitsDiffToMessage, flightWithSplitsFromMessage, splitsForArrivalsFromMessage, splitsForArrivalsToMessage, uniqueArrivalsFromMessages}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration
@@ -111,19 +111,13 @@ class TerminalDayFlightActor(year: Int,
       updateAndPersistDiffAndAck(diff)
 
     case splits: SplitsForArrivals =>
-      val diff = splits.diff(state, now().millisSinceEpoch)
-      noopUpdates(diff) match {
-        case x =>
-          if (x > 0) log.warn(s"Got suspicious noops SplitsForArrivals $x out of ${diff.flightsToUpdate.size} flight updates for $terminal on $year-$month%02d-$day%02d")
-      }
+      println(s"Got splits $splits")
+      val diff = splits.diff(state.flights.view.mapValues(_.splits).toMap)
+      println(s"Got diff $diff")
       updateAndPersistDiffAndAck(diff)
 
     case pax: PaxForArrivals =>
       val diff = pax.diff(state, now().millisSinceEpoch)
-      noopUpdates(diff) match {
-        case x =>
-          if (x > 0) log.warn(s"Got suspicious noops PaxForArrivals $x out of ${diff.flightsToUpdate.size} flight updates for $terminal on $year-$month%02d-$day%02d")
-      }
       updateAndPersistDiffAndAck(diff)
 
     case RemoveSplits =>
@@ -158,6 +152,15 @@ class TerminalDayFlightActor(year: Int,
     persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
   }
 
+  private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit = {
+    val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch, paxFeedSourceOrder)
+    state = updatedState
+
+    val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
+    val message = splitsForArrivalsToMessage(diff, now().millisSinceEpoch)
+    persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
+  }
+
   private def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {
     case Some(removalsCutoffTimestamp) => timestamp < removalsCutoffTimestamp
     case None => true
@@ -171,7 +174,11 @@ class TerminalDayFlightActor(year: Int,
         case _ =>
           if (isBeforeCutoff(createdAt))
             restorer.remove(uniqueArrivalsFromMessages(removals))
-          restorer.applyUpdates(updates.map(flightWithSplitsFromMessage))
+
+          val incomingFws = updates.map(flightWithSplitsFromMessage).map(fws => (fws.unique, fws)).toMap
+          val updateFws: (Option[ApiFlightWithSplits], ApiFlightWithSplits) => Option[ApiFlightWithSplits] = (_, newFws) =>
+            Option(newFws.copy(lastUpdated = Option(createdAt)))
+          restorer.applyUpdates(incomingFws, updateFws)
       }
 
     case FlightsDiffMessage(Some(createdAt), removals, updates, _) =>
@@ -181,14 +188,30 @@ class TerminalDayFlightActor(year: Int,
         case _ =>
           if (isBeforeCutoff(createdAt))
             restorer.remove(uniqueArrivalsFromMessages(removals))
-          val updatedArrivals = updates.map(flightMessageToApiFlight)
-          val updatedFws = updatedArrivals.map { arrival =>
-            state.flights.get(arrival.unique) match {
-              case Some(fws) => fws.copy(apiFlight = arrival, lastUpdated = Option(createdAt))
-              case None => ApiFlightWithSplits(arrival, Set(), lastUpdated = Option(createdAt))
+
+          val incomingArrivals = updates.map(flightMessageToApiFlight).map(a => (a.unique, a)).toMap
+          val updateFws: (Option[ApiFlightWithSplits], Arrival) => Option[ApiFlightWithSplits] = (maybeFws, incoming) =>
+            maybeFws match {
+              case Some(fws) => Option(fws.copy(apiFlight = incoming, lastUpdated = Option(createdAt)))
+              case None => Option(ApiFlightWithSplits(incoming, Set(), Option(createdAt)))
+            }
+
+          restorer.applyUpdates(incomingArrivals, updateFws)
+      }
+
+    case msg@SplitsForArrivalsMessage(Some(createdAt), _) =>
+      maybePointInTime match {
+        case Some(pit) if pit < createdAt =>
+          log.debug(s"Ignoring diff created more recently than the recovery point in time")
+        case _ =>
+          val incomingSplits = splitsForArrivalsFromMessage(msg).splits
+          val updateFws: (Option[ApiFlightWithSplits], Set[Splits]) => Option[ApiFlightWithSplits] = (maybeFws, incoming) => {
+            maybeFws.map { fws =>
+              val updatedSplits = fws.splits.map(s => (s.source, s)).toMap ++ incoming.map(s => (s.source, s))
+              fws.copy(splits = updatedSplits.values.toSet, lastUpdated = Option(createdAt))
             }
           }
-          restorer.applyUpdates(updatedFws)
+          restorer.applyUpdates(incomingSplits, updateFws)
       }
   }
 

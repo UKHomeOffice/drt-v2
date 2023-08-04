@@ -10,9 +10,9 @@ import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
-import drt.shared.FlightsApi.{PaxForArrivals, SplitsForArrivals}
+import drt.shared.FlightsApi.PaxForArrivals
 import drt.shared._
-import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, FlightsWithSplitsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

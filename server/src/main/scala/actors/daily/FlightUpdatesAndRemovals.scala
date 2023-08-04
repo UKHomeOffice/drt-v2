@@ -2,7 +2,7 @@ package actors.daily
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplitsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplitsDiff, SplitsForArrivals, UniqueArrival}
 
 import scala.collection.immutable.{Map, Set}
 
@@ -63,6 +63,21 @@ case class FlightUpdatesAndRemovals(updates: Map[UniqueArrival, ApiFlightWithSpl
       removals = removals ++ incomingRemovals.collect {
         case ua: UniqueArrival => (latestUpdateMillis, ua)
       }
+    )
+  }
+
+  def apply(diff: SplitsForArrivals, latestUpdateMillis: MillisSinceEpoch): FlightUpdatesAndRemovals = {
+    copy(
+      diff.splits
+        .map { case (ua, incoming) =>
+          updates.get(ua).map { existing =>
+            val updatedSplits = (existing.splits.map(s => (s.source, s)).toMap ++ incoming.map(s => (s.source, s))).values.toSet
+            (ua, existing.copy(splits = updatedSplits, lastUpdated = Option(latestUpdateMillis)))
+          }
+        }
+        .collect { case Some(fws) => fws }
+        .toMap,
+      removals = removals
     )
   }
 }

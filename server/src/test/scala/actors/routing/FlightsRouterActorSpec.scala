@@ -14,12 +14,11 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.SplitsForArrivals
 import drt.shared._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits, Passengers, Splits}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaNonMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
@@ -29,6 +28,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+
 
 class FlightsRouterActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1

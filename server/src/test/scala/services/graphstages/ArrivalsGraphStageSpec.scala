@@ -108,7 +108,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       success
     }
 
-    "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and a ApiFeed" >> {
+    "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and an ApiFeed" >> {
       val voyageManifests: ManifestsFeedResponse = ManifestsFeedSuccess(DqManifests(0, Set(
         VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival(date), ManifestTimeOfArrival(hour), xOfPaxType(arrival_v2_with_chox_time.PassengerSources.get(ApiFeedSource).flatMap(_.actual).getOrElse(0), euIdCard))
       )))

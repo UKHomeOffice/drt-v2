@@ -15,7 +15,7 @@ import drt.shared.FlightsApi._
 import drt.shared._
 import services.SourceUtils
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FlightsWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FlightsWithSplits, SplitsForArrivals, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
