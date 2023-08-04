@@ -2,7 +2,7 @@ package actors.daily
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplitsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplitsDiff, UniqueArrival}
 
 import scala.collection.immutable.{Map, Set}
 
@@ -38,6 +38,28 @@ case class FlightUpdatesAndRemovals(updates: Map[UniqueArrival, ApiFlightWithSpl
           log.warn(s"LegacyUniqueArrival is unsupported for streaming updates")
           updatesAcc
       } ++ diff.flightsToUpdate.map(f => (f.unique, f)),
+      removals = removals ++ incomingRemovals.collect {
+        case ua: UniqueArrival => (latestUpdateMillis, ua)
+      }
+    )
+  }
+
+  def apply(diff: ArrivalsDiff, latestUpdateMillis: MillisSinceEpoch): FlightUpdatesAndRemovals = {
+    val incomingRemovals = diff.toRemove
+    copy(
+      updates = incomingRemovals.foldLeft(updates) {
+        case (updatesAcc, removalKey: UniqueArrival) =>
+          if (updates.contains(removalKey)) updatesAcc - removalKey else updatesAcc
+        case (updatesAcc, _) =>
+          log.warn(s"LegacyUniqueArrival is unsupported for streaming updates")
+          updatesAcc
+      } ++ diff.toUpdate.map { case (ua, a) =>
+        val fws = updates.get(ua) match {
+          case Some(existing) => existing.copy(apiFlight = a, lastUpdated = Option(latestUpdateMillis))
+          case None => ApiFlightWithSplits(a, Set(), Option(latestUpdateMillis))
+        }
+        (ua, fws)
+      },
       removals = removals ++ incomingRemovals.collect {
         case ua: UniqueArrival => (latestUpdateMillis, ua)
       }

@@ -13,7 +13,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
-import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{flightWithSplitsDiffFromMessage, flightWithSplitsFromMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffFromMessage, flightWithSplitsDiffFromMessage, flightWithSplitsFromMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 
@@ -88,6 +89,14 @@ class TerminalDayFlightUpdatesActor(year: Int,
         .purgeOldUpdates(expireBeforeMillis)
 
       sender() ! Ack
+    case EventEnvelope(_, _, _, diffMessage: FlightsDiffMessage) =>
+      val diff = arrivalsDiffFromMessage(diffMessage)
+
+      updatesAndRemovals = updatesAndRemovals
+        .apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+        .purgeOldUpdates(expireBeforeMillis)
+
+      sender() ! Ack
   }
 
   override def receiveRecover: Receive = myReceiveRecover orElse streamingUpdatesReceiveRecover
@@ -99,6 +108,10 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
     case diffMessage: FlightsWithSplitsDiffMessage =>
       val diff = flightWithSplitsDiffFromMessage(diffMessage)
+      updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+
+    case diffMessage: FlightsDiffMessage =>
+      val diff = arrivalsDiffFromMessage(diffMessage)
       updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
   }
 }

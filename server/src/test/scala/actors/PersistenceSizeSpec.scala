@@ -35,7 +35,7 @@ class PersistenceSizeSpec extends Specification {
 
   "Given data for a day of arrival updates" >> {
     "I want to see which fields are updated and how often" >> {
-//      skipped("This test is for manual use only")
+      skipped("This test is for manual use only")
       val persistenceId = "terminal-flights-n-2023-07-01"
       val flights = mutable.Map.empty[UniqueArrival, ApiFlightWithSplits]
       var newCount = 0

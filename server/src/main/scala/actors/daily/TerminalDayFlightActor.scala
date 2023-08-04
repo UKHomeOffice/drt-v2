@@ -145,7 +145,7 @@ class TerminalDayFlightActor(year: Int,
     state = updatedState
 
     val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
-    val message = flightWithSplitsDiffToMessage(diff)
+    val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
     persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
   }
 
@@ -154,7 +154,7 @@ class TerminalDayFlightActor(year: Int,
     state = updatedState
 
     val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
-    val message = arrivalsDiffToMessage(diff)
+    val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
     persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
   }
 

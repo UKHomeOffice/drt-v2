@@ -118,7 +118,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   def persistArrivalUpdates(arrivalsDiff: ArrivalsDiff): Unit = {
-    persistAndMaybeSnapshot(FlightMessageConversion.arrivalsDiffToMessage(arrivalsDiff))
+    persistAndMaybeSnapshot(FlightMessageConversion.arrivalsDiffToMessage(arrivalsDiff, now().millisSinceEpoch))
   }
 
   def persistFeedStatus(feedStatus: FeedStatus): Unit = persistAndMaybeSnapshot(feedStatusToMessage(feedStatus))
