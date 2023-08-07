@@ -32,7 +32,7 @@ object ManifestBuilder {
       DeparturePortCode = PortCode("JFK"),
       VoyageNumber = VoyageNumber("0001"),
       CarrierCode = CarrierCode("BA"),
-      ScheduledDateOfArrival = ManifestDateOfArrival(scheduledDateString), //ManifestDateOfArrival("2020-11-09"),
+      ScheduledDateOfArrival = ManifestDateOfArrival(scheduledDateString),
       ScheduledTimeOfArrival = ManifestTimeOfArrival("00:00"),
       PassengerList = passengers
     )

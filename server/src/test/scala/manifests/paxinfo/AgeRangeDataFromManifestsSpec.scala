@@ -9,11 +9,13 @@ import uk.gov.homeoffice.drt.ports.PaxAge
 import scala.collection.immutable.List
 
 object AgeRangeDataFromManifestsSpec extends Specification {
+  private val egateAgeEligibilityDateChange = "2023-07-26"
+
   "When extracting Age data from a manifest" >> {
     "Given a voyage manifest with 1 passenger aged 9 " +
       "Then I should get back age data with 1 passenger in the 0-9 age range" >> {
 
-      val manifest = manifestWithPassengerAges(List(9), "2023-07-26")
+      val manifest = manifestWithPassengerAges(List(9), egateAgeEligibilityDateChange)
 
       val result = PassengerInfo.manifestToAgeRangeCount(manifest)
 
@@ -26,7 +28,7 @@ object AgeRangeDataFromManifestsSpec extends Specification {
     "Given a voyage manifest with 3 passengers aged 11, 12 and 30" +
       "Then I should get back age data with 1 passenger each in the 0-9, 10-24 and 25-40 ranges" >> {
 
-      val apiSplit = manifestWithPassengerAges(List(9, 10, 30), "2023-07-26")
+      val apiSplit = manifestWithPassengerAges(List(9, 10, 30), egateAgeEligibilityDateChange)
 
       val result = PassengerInfo.manifestToAgeRangeCount(apiSplit)
 
@@ -47,7 +49,7 @@ object AgeRangeDataFromManifestsSpec extends Specification {
           passengerBuilderWithOptions(age = None),
           passengerBuilderWithOptions(age = None),
           passengerBuilderWithOptions(age = Option(PaxAge(33))),
-        ), "2023-07-26"
+        ), egateAgeEligibilityDateChange
       )
 
       val result = PassengerInfo.manifestToAgeRangeCount(apiSplit)
@@ -61,11 +63,13 @@ object AgeRangeDataFromManifestsSpec extends Specification {
     }
   }
 
-  "When extracting Age data from a manifest before 2023-07-26" >> {
+  "When extracting Age data from a manifest before " + egateAgeEligibilityDateChange >> {
+    val beforeEgateEligibilityDateChange = "2023-07-25"
+
     "Given a voyage manifest with 1 passenger aged 9 " +
       "Then I should get back age data with 1 passenger in the 0-11 age range" >> {
 
-      val manifest = manifestWithPassengerAges(List(9), "2023-07-25")
+      val manifest = manifestWithPassengerAges(List(9), beforeEgateEligibilityDateChange)
 
       val result = PassengerInfo.manifestToAgeRangeCount(manifest)
 
@@ -78,7 +82,7 @@ object AgeRangeDataFromManifestsSpec extends Specification {
     "Given a voyage manifest with 3 passengers aged 11, 12 and 30" +
       "Then I should get back age data with 1 passenger each in the 0-11, 12-24 and 25-40 ranges" >> {
 
-      val apiSplit = manifestWithPassengerAges(List(9, 12, 30), "2023-07-25")
+      val apiSplit = manifestWithPassengerAges(List(9, 12, 30), beforeEgateEligibilityDateChange)
 
       val result = PassengerInfo.manifestToAgeRangeCount(apiSplit)
 
@@ -102,7 +106,7 @@ object AgeRangeDataFromManifestsSpec extends Specification {
       30, 26, 45,
       55,
       100, 99
-    ), "2023-07-26")
+    ), egateAgeEligibilityDateChange)
 
     val result = PassengerInfo.manifestToAgeRangeCount(manifest)
 

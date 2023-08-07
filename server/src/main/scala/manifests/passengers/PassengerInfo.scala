@@ -8,16 +8,16 @@ import uk.gov.homeoffice.drt.ports.{PaxAge, PaxType}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 object PassengerInfo {
-
-  def ageRanges(scheduled: Option[SDateLike]): List[AgeRange] = {
-    val childEligibility = scheduled match {
-      case Some(date) if date < SDate("2023-07-25T01:00:01") =>
+  val egateAgeEligibilityDateChange = "2023-07-25T00:00:00"
+  def ageRangesForDate(scheduled: Option[SDateLike]): List[AgeRange] = {
+    val egateEligibilityAgeRanges = scheduled match {
+      case Some(date) if date < SDate(egateAgeEligibilityDateChange) =>
         List(AgeRange(0, 11), AgeRange(12, 24))
       case _ =>
         List(AgeRange(0, 9), AgeRange(10, 24))
     }
 
-    childEligibility ++
+    egateEligibilityAgeRanges ++
       List(
         AgeRange(25, 49),
         AgeRange(50, 65),
@@ -25,7 +25,7 @@ object PassengerInfo {
       )
   }
 
-  def ageRangeForAge(age: PaxAge, scheduled: Option[SDateLike]): PaxAgeRange = ageRanges(scheduled)
+  def ageRangeForAge(age: PaxAge, scheduled: Option[SDateLike]): PaxAgeRange = ageRangesForDate(scheduled)
     .find { ar =>
       val withinTop = ar.top match {
         case Some(top) => age.years <= top
