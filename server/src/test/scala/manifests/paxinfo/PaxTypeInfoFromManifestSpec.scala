@@ -14,7 +14,7 @@ class PaxTypeInfoFromManifestSpec extends Specification {
     val voyageManifest = manifestWithPassengerAgesAndNats(List(
       (Nationality("GBR"), 20),
       (Nationality("GBR"), 20),
-      (Nationality("GBR"), 30)), "2023-08-07"
+      (Nationality("GBR"), 30)), "2023-07-26"
     )
 
     val result = PassengerInfo.manifestToPaxTypes(voyageManifest)
@@ -28,7 +28,7 @@ class PaxTypeInfoFromManifestSpec extends Specification {
     val voyageManifest = manifestWithPassengerAgesAndNats(List(
       (Nationality("GBR"), 9),
       (Nationality("GBR"), 20),
-      (Nationality("GBR"), 30)), "2023-08-07"
+      (Nationality("GBR"), 30)), "2023-07-26"
     )
 
     val result = PassengerInfo.manifestToPaxTypes(voyageManifest)
@@ -45,7 +45,7 @@ class PaxTypeInfoFromManifestSpec extends Specification {
     val voyageManifest = manifestWithPassengerAgesAndNats(List(
       (Nationality("ZWE"), 20),
       (Nationality("GBR"), 20),
-      (Nationality("GBR"), 30)), "2023-08-07"
+      (Nationality("GBR"), 30)), "2023-07-26"
     )
 
     val result = PassengerInfo.manifestToPaxTypes(voyageManifest)

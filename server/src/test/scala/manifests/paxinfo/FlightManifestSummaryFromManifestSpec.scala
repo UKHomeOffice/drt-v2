@@ -22,12 +22,12 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
         val voyageManifest = manifestWithPassengerAgesAndNats(List(
           (Nationality("GBR"), 9),
           (Nationality("GBR"), 20),
-          (Nationality("GBR"), 30)), "2023-08-07")
+          (Nationality("GBR"), 30)), "2023-07-26")
 
         val result = PassengerInfo.manifestToFlightManifestSummary(voyageManifest)
 
         val expected = Option(FlightManifestSummary(
-          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2023-08-07T00:00").millisSinceEpoch),
+          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2023-07-26T00:00").millisSinceEpoch),
           Map(AgeRange(0, Option(9)) -> 1, AgeRange(10, Option(24)) -> 1, AgeRange(25, Option(49)) -> 1),
           Map(Nationality("GBR") -> 3),
           Map(
@@ -48,12 +48,12 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
         val voyageManifest = manifestWithPassengerAgesNatsAndIds(List(
           (Nationality("GBR"), 25, Option("1")),
           (Nationality("GBR"), 25, Option("1")),
-        ), "2023-08-07")
+        ), "2023-07-26")
 
         val result = PassengerInfo.manifestToFlightManifestSummary(voyageManifest)
 
         val expected = Option(FlightManifestSummary(
-          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2023-08-07T00:00").millisSinceEpoch),
+          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2023-07-26T00:00").millisSinceEpoch),
           Map(AgeRange(25, Option(49)) -> 1),
           Map(Nationality("GBR") -> 1),
           Map(
@@ -78,13 +78,13 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
             passengerBuilder(inTransit = "Y"),
             passengerBuilder(),
             passengerBuilder(),
-          ), "2023-08-07"
+          ), "2023-07-26"
         )
 
         val result = PassengerInfo.manifestToFlightManifestSummary(voyageManifest)
 
         val expected = Option(FlightManifestSummary(
-          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2023-08-07T00:00").millisSinceEpoch),
+          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2023-07-26T00:00").millisSinceEpoch),
           Map(AgeRange(25, Option(49)) -> 6),
           Map(Nationality("GBR") -> 6),
           Map(

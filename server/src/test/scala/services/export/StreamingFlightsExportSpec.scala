@@ -317,7 +317,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     result === expected
   }
 
-  "Given a Flight With Splits and a VoyageManifests with a matching arrival I should get all the data with API nos plus the nationalities breakdown in size then alphabetical order, and age breakdowns in ascending range order" >> {
+  "Given a Flight With Splits and a VoyageManifests with a matching arrival " +
+    "I should get all the data with API nos plus the nationalities breakdown in size then alphabetical order, and age breakdowns in ascending range order" >> {
     val manifests = VoyageManifests(Set(VoyageManifest(DC, PortCode("AAA"), flightWithAllTypesOfAPISplit.apiFlight.Origin, flightWithAllTypesOfAPISplit.apiFlight.VoyageNumber,
       flightWithAllTypesOfAPISplit.apiFlight.CarrierCode, ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("20:00"), List(
         PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(50)), None, InTransit(false), None, Option(Nationality("GBR")), None),
@@ -332,7 +333,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,2017-01-01 20:00,98,98,Y,7,15,32,44,11,23,29,35,,,,,2.0,1.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.0,4.0,7.0,6.0,"FRA:2,GBR:1,USA:1","0-9:1,25-49:2,50-65:1"
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,2017-01-01 20:00,98,98,Y,7,15,32,44,11,23,29,35,,,,,2.0,1.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.0,4.0,7.0,6.0,"FRA:2,GBR:1,USA:1","0-11:1,25-49:2,50-65:1"
           |""".stripMargin
 
     result === expected
