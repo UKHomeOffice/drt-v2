@@ -12,7 +12,7 @@ object NationalityBreakdownFromManifestSpec extends Specification {
     "Given a manifest with 1 passenger with a nationality of GB " +
       "Then I should get a Map of GBR to 1" >> {
 
-      val voyageManifest = manifestWithPassengerNationalities(List("GBR"))
+      val voyageManifest = manifestWithPassengerNationalities(List("GBR"), "2023-08-07")
       val result = PassengerInfo.manifestToNationalityCount(voyageManifest)
 
       val expected = Map(Nationality("GBR") -> 1)
@@ -25,7 +25,7 @@ object NationalityBreakdownFromManifestSpec extends Specification {
     "Given a manifest with multiple GB passengers " +
       "Then I should see the total of all GB Pax for that nationality" >> {
 
-      val voyageManifest = manifestWithPassengerNationalities(List("GBR", "GBR", "GBR"))
+      val voyageManifest = manifestWithPassengerNationalities(List("GBR", "GBR", "GBR"), "2023-08-07")
 
       val result = PassengerInfo.manifestToNationalityCount(voyageManifest)
 
@@ -48,7 +48,7 @@ object NationalityBreakdownFromManifestSpec extends Specification {
           "ZWE",
           "GBR",
           "AUS",
-        ))
+        ), "2023-08-07")
 
       val result = PassengerInfo.manifestToNationalityCount(voyageManifest)
 
@@ -71,7 +71,7 @@ object NationalityBreakdownFromManifestSpec extends Specification {
         List(
           passengerBuilderWithOptions(nationality = None),
           passengerBuilderWithOptions(nationality = Option(Nationality("GBR"))),
-        ))
+        ), "2023-08-07")
 
       val result: Map[Nationality, Int] = PassengerInfo.manifestToNationalityCount(voyageManifest)
 

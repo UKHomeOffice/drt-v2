@@ -11,34 +11,34 @@ import scala.collection.immutable.List
 
 object ManifestBuilder {
 
-  def manifestWithPassengerAges(ages: List[Int]): VoyageManifest =
-    manifestWithPassengerAgesAndNats(ages.map(a => (Nationality("GBR"), a)))
+  def manifestWithPassengerAges(ages: List[Int], scheduledDateString: String): VoyageManifest =
+    manifestWithPassengerAgesAndNats(ages.map(a => (Nationality("GBR"), a)), scheduledDateString)
 
-  def manifestWithPassengerAgesAndNats(natAge: List[(Nationality, Int)]): VoyageManifest =
+  def manifestWithPassengerAgesAndNats(natAge: List[(Nationality, Int)], scheduledDateString: String): VoyageManifest =
     manifestWithPassengerAgesNatsAndIds(natAge.map {
       case (nat, age) => (nat, age, None)
-    })
+    }, scheduledDateString)
 
-  def manifestWithPassengerAgesNatsAndIds(natAgeId: List[(Nationality, Int, Option[String])]): VoyageManifest =
+  def manifestWithPassengerAgesNatsAndIds(natAgeId: List[(Nationality, Int, Option[String])], scheduledDateString: String): VoyageManifest =
     manifestForPassengers(natAgeId.map {
       case (nationality, age, id) =>
         passengerBuilder(nationality.code, age, id)
-    })
+    }, scheduledDateString)
 
-  def manifestForPassengers(passengers: List[PassengerInfoJson]): VoyageManifest =
+  def manifestForPassengers(passengers: List[PassengerInfoJson], scheduledDateString: String): VoyageManifest =
     VoyageManifest(
       EventCode = EventTypes.DC,
       ArrivalPortCode = PortCode("TST"),
       DeparturePortCode = PortCode("JFK"),
       VoyageNumber = VoyageNumber("0001"),
       CarrierCode = CarrierCode("BA"),
-      ScheduledDateOfArrival = ManifestDateOfArrival("2020-11-09"),
+      ScheduledDateOfArrival = ManifestDateOfArrival(scheduledDateString), //ManifestDateOfArrival("2020-11-09"),
       ScheduledTimeOfArrival = ManifestTimeOfArrival("00:00"),
       PassengerList = passengers
     )
 
-  def manifestWithPassengerNationalities(nats: List[String]): VoyageManifest =
-    manifestWithPassengerAgesAndNats(nats.map(n => (Nationality(n), 22)))
+  def manifestWithPassengerNationalities(nats: List[String], scheduledDateString: String): VoyageManifest =
+    manifestWithPassengerAgesAndNats(nats.map(n => (Nationality(n), 22)), scheduledDateString)
 
   def passengerBuilder(
                         nationality: String = "GBR",
