@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, SplitsForArrivalsMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffFromMessage, flightWithSplitsDiffFromMessage, flightWithSplitsFromMessage, splitsForArrivalsFromMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 
 class TerminalDayFlightUpdatesActor(year: Int,
@@ -85,7 +85,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
       val diff = flightWithSplitsDiffFromMessage(diffMessage)
 
       updatesAndRemovals = updatesAndRemovals
-        .apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+        .apply(diff, now().millisSinceEpoch)
         .purgeOldUpdates(expireBeforeMillis)
 
       sender() ! Ack
@@ -93,7 +93,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
       val diff = arrivalsDiffFromMessage(diffMessage)
 
       updatesAndRemovals = updatesAndRemovals
-        .apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+        .apply(diff, now().millisSinceEpoch)
         .purgeOldUpdates(expireBeforeMillis)
 
       sender() ! Ack
@@ -101,7 +101,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
       val diff = splitsForArrivalsFromMessage(diffMessage)
 
       updatesAndRemovals = updatesAndRemovals
-        .apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+        .apply(diff, now().millisSinceEpoch)
         .purgeOldUpdates(expireBeforeMillis)
 
       sender() ! Ack
@@ -116,14 +116,14 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
     case diffMessage: FlightsWithSplitsDiffMessage =>
       val diff = flightWithSplitsDiffFromMessage(diffMessage)
-      updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+      updatesAndRemovals = updatesAndRemovals.apply(diff, now().millisSinceEpoch)
 
     case diffMessage: FlightsDiffMessage =>
       val diff = arrivalsDiffFromMessage(diffMessage)
-      updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+      updatesAndRemovals = updatesAndRemovals.apply(diff, now().millisSinceEpoch)
 
     case diffMessage: SplitsForArrivalsMessage =>
       val diff = splitsForArrivalsFromMessage(diffMessage)
-      updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+      updatesAndRemovals = updatesAndRemovals.apply(diff, now().millisSinceEpoch)
   }
 }
