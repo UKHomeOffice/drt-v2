@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, FlightsW
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 object PartitionedPortStateTestActor {
   case class UpdateStateFlights(fws: FlightsWithSplits, removals: Iterable[UniqueArrival])
@@ -127,7 +127,9 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     val eventualSource = actor.ask(query).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
     FlightsRouterActor
       .runAndCombine(eventualSource)
-      .foreach(fws => self ! UpdateStateFlights(fws, removals))
+      .foreach { fws =>
+        self ! UpdateStateFlights(fws, removals)
+      }
   }
 
   def sendStateToProbe(): Unit = {

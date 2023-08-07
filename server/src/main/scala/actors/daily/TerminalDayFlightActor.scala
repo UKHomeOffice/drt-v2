@@ -111,9 +111,7 @@ class TerminalDayFlightActor(year: Int,
       updateAndPersistDiffAndAck(diff)
 
     case splits: SplitsForArrivals =>
-      println(s"Got splits $splits")
       val diff = splits.diff(state.flights.view.mapValues(_.splits).toMap)
-      println(s"Got diff $diff")
       updateAndPersistDiffAndAck(diff)
 
     case pax: PaxForArrivals =>
@@ -206,10 +204,7 @@ class TerminalDayFlightActor(year: Int,
         case _ =>
           val incomingSplits = splitsForArrivalsFromMessage(msg).splits
           val updateFws: (Option[ApiFlightWithSplits], Set[Splits]) => Option[ApiFlightWithSplits] = (maybeFws, incoming) => {
-            maybeFws.map { fws =>
-              val updatedSplits = fws.splits.map(s => (s.source, s)).toMap ++ incoming.map(s => (s.source, s))
-              fws.copy(splits = updatedSplits.values.toSet, lastUpdated = Option(createdAt))
-            }
+            maybeFws.map(fws => SplitsForArrivals.updateFlightWithSplits(fws, incoming, createdAt))
           }
           restorer.applyUpdates(incomingSplits, updateFws)
       }

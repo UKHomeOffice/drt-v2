@@ -78,7 +78,9 @@ object DynamicRunnablePassengerLoads {
       .mapAsync(1) {
         case (crunchRequest, flights) =>
           splitsSink
-            .ask(SplitsForArrivals(flights.map(fws => (fws.unique, fws.splits)).toMap))
+            .ask(SplitsForArrivals(flights.map { fws =>
+              (fws.unique, fws.splits)
+            }.toMap))
             .map(_ => (crunchRequest, flights))
             .recover {
               case t =>
@@ -290,6 +292,7 @@ object DynamicRunnablePassengerLoads {
         val maybeNewSplits = manifests
           .get(ArrivalKey(flight.apiFlight))
           .map(splitsForArrival(_, flight.apiFlight))
+
 
         val existingSplits = maybeNewSplits match {
           case Some(splits) if splits.source == ApiSplitsWithHistoricalEGateAndFTPercentages =>

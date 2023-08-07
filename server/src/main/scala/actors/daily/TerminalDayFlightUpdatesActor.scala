@@ -121,5 +121,9 @@ class TerminalDayFlightUpdatesActor(year: Int,
     case diffMessage: FlightsDiffMessage =>
       val diff = arrivalsDiffFromMessage(diffMessage)
       updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+
+    case diffMessage: SplitsForArrivalsMessage =>
+      val diff = splitsForArrivalsFromMessage(diffMessage)
+      updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
   }
 }
