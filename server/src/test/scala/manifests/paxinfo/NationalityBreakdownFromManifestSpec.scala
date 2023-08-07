@@ -8,13 +8,13 @@ import uk.gov.homeoffice.drt.Nationality
 import scala.collection.immutable.List
 
 object NationalityBreakdownFromManifestSpec extends Specification {
-  private val egateAgeEligibilityDateChange = "2023-07-26"
+  private val dateAfterEgateAgeEligibilityDateChange = "2023-07-26"
 
   "When extracting nationality breakdown" >> {
     "Given a manifest with 1 passenger with a nationality of GB " +
       "Then I should get a Map of GBR to 1" >> {
 
-      val voyageManifest = manifestWithPassengerNationalities(List("GBR"), egateAgeEligibilityDateChange)
+      val voyageManifest = manifestWithPassengerNationalities(List("GBR"), dateAfterEgateAgeEligibilityDateChange)
       val result = PassengerInfo.manifestToNationalityCount(voyageManifest)
 
       val expected = Map(Nationality("GBR") -> 1)
@@ -27,7 +27,7 @@ object NationalityBreakdownFromManifestSpec extends Specification {
     "Given a manifest with multiple GB passengers " +
       "Then I should see the total of all GB Pax for that nationality" >> {
 
-      val voyageManifest = manifestWithPassengerNationalities(List("GBR", "GBR", "GBR"), egateAgeEligibilityDateChange)
+      val voyageManifest = manifestWithPassengerNationalities(List("GBR", "GBR", "GBR"), dateAfterEgateAgeEligibilityDateChange)
 
       val result = PassengerInfo.manifestToNationalityCount(voyageManifest)
 
@@ -50,7 +50,7 @@ object NationalityBreakdownFromManifestSpec extends Specification {
           "ZWE",
           "GBR",
           "AUS",
-        ), egateAgeEligibilityDateChange)
+        ), dateAfterEgateAgeEligibilityDateChange)
 
       val result = PassengerInfo.manifestToNationalityCount(voyageManifest)
 
@@ -73,7 +73,7 @@ object NationalityBreakdownFromManifestSpec extends Specification {
         List(
           passengerBuilderWithOptions(nationality = None),
           passengerBuilderWithOptions(nationality = Option(Nationality("GBR"))),
-        ), egateAgeEligibilityDateChange)
+        ), dateAfterEgateAgeEligibilityDateChange)
 
       val result: Map[Nationality, Int] = PassengerInfo.manifestToNationalityCount(voyageManifest)
 
