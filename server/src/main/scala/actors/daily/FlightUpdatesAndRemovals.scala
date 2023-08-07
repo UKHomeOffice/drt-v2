@@ -67,18 +67,16 @@ case class FlightUpdatesAndRemovals(updates: Map[UniqueArrival, ApiFlightWithSpl
   }
 
   def apply(diff: SplitsForArrivals, latestUpdateMillis: MillisSinceEpoch): FlightUpdatesAndRemovals = {
-    copy(
-      diff.splits
-        .map { case (ua, incoming) =>
-          updates.get(ua).map { existing =>
-            val updatedSplits = (existing.splits.map(s => (s.source, s)).toMap ++ incoming.map(s => (s.source, s))).values.toSet
-            (ua, existing.copy(splits = updatedSplits, lastUpdated = Option(latestUpdateMillis)))
-          }
+    val map = diff.splits
+      .map { case (ua, incoming) =>
+        updates.get(ua).map { fws =>
+          val updatedSplits = (fws.splits.map(s => (s.source, s)).toMap ++ incoming.map(s => (s.source, s))).values.toSet
+          (ua, fws.copy(splits = updatedSplits, lastUpdated = Option(latestUpdateMillis)))
         }
-        .collect { case Some(fws) => fws }
-        .toMap,
-      removals = removals
-    )
+      }
+      .collect { case Some(fws) => fws }
+      .toMap
+    copy(updates = updates ++ map)
   }
 }
 
