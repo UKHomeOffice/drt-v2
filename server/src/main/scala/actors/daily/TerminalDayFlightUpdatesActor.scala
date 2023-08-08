@@ -51,7 +51,8 @@ class TerminalDayFlightUpdatesActor(year: Int,
       self ! PoisonPill
 
     case GetAllUpdatesSince(sinceMillis) =>
-      sender() ! updatesAndRemovals.updatesSince(sinceMillis)
+      val updatesToSend = updatesAndRemovals.updatesSince(sinceMillis)
+      sender() ! updatesToSend
 
     case StopUpdates =>
       stopUpdatesStream()
@@ -82,28 +83,13 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
   def myReceiveCommand: Receive = {
     case EventEnvelope(_, _, _, diffMessage: FlightsWithSplitsDiffMessage) =>
-      val diff = flightWithSplitsDiffFromMessage(diffMessage)
-
-      updatesAndRemovals = updatesAndRemovals
-        .apply(diff, now().millisSinceEpoch)
-        .purgeOldUpdates(expireBeforeMillis)
-
+      applyFlightsWithSplitsUpdate(diffMessage)
       sender() ! Ack
     case EventEnvelope(_, _, _, diffMessage: FlightsDiffMessage) =>
-      val diff = arrivalsDiffFromMessage(diffMessage)
-
-      updatesAndRemovals = updatesAndRemovals
-        .apply(diff, now().millisSinceEpoch)
-        .purgeOldUpdates(expireBeforeMillis)
-
+      applyFlightsUpdate(diffMessage)
       sender() ! Ack
     case EventEnvelope(_, _, _, diffMessage: SplitsForArrivalsMessage) =>
-      val diff = splitsForArrivalsFromMessage(diffMessage)
-
-      updatesAndRemovals = updatesAndRemovals
-        .apply(diff, now().millisSinceEpoch)
-        .purgeOldUpdates(expireBeforeMillis)
-
+      applySplitsUpdate(diffMessage)
       sender() ! Ack
   }
 
@@ -115,15 +101,36 @@ class TerminalDayFlightUpdatesActor(year: Int,
       updatesAndRemovals = updatesAndRemovals ++ flights
 
     case diffMessage: FlightsWithSplitsDiffMessage =>
-      val diff = flightWithSplitsDiffFromMessage(diffMessage)
-      updatesAndRemovals = updatesAndRemovals.apply(diff, now().millisSinceEpoch)
+      applyFlightsWithSplitsUpdate(diffMessage)
 
     case diffMessage: FlightsDiffMessage =>
-      val diff = arrivalsDiffFromMessage(diffMessage)
-      updatesAndRemovals = updatesAndRemovals.apply(diff, now().millisSinceEpoch)
+      applyFlightsUpdate(diffMessage)
 
     case diffMessage: SplitsForArrivalsMessage =>
-      val diff = splitsForArrivalsFromMessage(diffMessage)
-      updatesAndRemovals = updatesAndRemovals.apply(diff, now().millisSinceEpoch)
+      applySplitsUpdate(diffMessage)
+  }
+
+  private def applyFlightsWithSplitsUpdate(diffMessage: FlightsWithSplitsDiffMessage): Unit = {
+    val diff = flightWithSplitsDiffFromMessage(diffMessage)
+
+    updatesAndRemovals = updatesAndRemovals
+      .apply(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
+      .purgeOldUpdates(expireBeforeMillis)
+  }
+
+  private def applyFlightsUpdate(diffMessage: FlightsDiffMessage): Unit = {
+    val diff = arrivalsDiffFromMessage(diffMessage)
+
+    updatesAndRemovals = updatesAndRemovals
+      .apply(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
+      .purgeOldUpdates(expireBeforeMillis)
+  }
+
+  private def applySplitsUpdate(diffMessage: SplitsForArrivalsMessage): Unit = {
+    val diff = splitsForArrivalsFromMessage(diffMessage)
+
+    updatesAndRemovals = updatesAndRemovals
+      .apply(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
+      .purgeOldUpdates(expireBeforeMillis)
   }
 }
