@@ -9,6 +9,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplitsDiff
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -81,7 +82,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
 
       terminalsAndDaysUpdatesSource(terminalDays, sinceMillis)
         .log(getClass.getName)
-        .runWith(Sink.fold(FlightsWithSplitsDiff.empty)(_ ++ _))
+        .runWith(Sink.fold(FlightUpdatesAndRemovals.empty)(_ ++ _))
         .foreach(replyTo ! _)
 
     case UpdateLastRequest(terminal, day, lastRequestMillis) =>
@@ -107,24 +108,24 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
     }
 
   def terminalsAndDaysUpdatesSource(terminalDays: List[(Terminal, MillisSinceEpoch)],
-                                    sinceMillis: MillisSinceEpoch): Source[FlightsWithSplitsDiff, NotUsed] =
+                                    sinceMillis: MillisSinceEpoch): Source[FlightUpdatesAndRemovals, NotUsed] =
     Source(terminalDays)
       .mapAsync(1) {
         case (terminal, day) =>
           updatesActor(terminal, day)
             .ask(GetAllUpdatesSince(sinceMillis))
-            .mapTo[FlightsWithSplitsDiff]
-            .map { container =>
+            .mapTo[FlightUpdatesAndRemovals]
+            .map { updatesAndRemovals =>
               self ! UpdateLastRequest(terminal, day, now().millisSinceEpoch)
-              container
+              updatesAndRemovals
             }
             .recoverWith {
               case t: AskTimeoutException =>
                 log.warn(s"Timed out waiting for updates. Actor may have already been terminated", t)
-                Future(FlightsWithSplitsDiff.empty)
+                Future(FlightUpdatesAndRemovals.empty)
               case t =>
                 log.error(s"Failed to fetch updates from streaming updates actor: ${SDate(day).toISOString}", t)
-                Future(FlightsWithSplitsDiff.empty)
+                Future(FlightUpdatesAndRemovals.empty)
             }
       }
 }

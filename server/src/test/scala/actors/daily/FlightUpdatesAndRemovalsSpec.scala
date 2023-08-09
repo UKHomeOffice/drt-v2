@@ -1,6 +1,7 @@
 package actors.daily
 
 import controllers.ArrivalGenerator
+import drt.shared.FlightUpdatesAndRemovals
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource

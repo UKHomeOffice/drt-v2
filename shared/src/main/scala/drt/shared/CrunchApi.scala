@@ -1,12 +1,12 @@
 package drt.shared
 
 import uk.gov.homeoffice.drt.DataUpdates.{Combinable, MinuteUpdates}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival, WithLastUpdated, WithTimeAccessor}
+import uk.gov.homeoffice.drt.arrivals.{WithLastUpdated, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
-import upickle.default.{macroRW, _}
+import upickle.default._
 
 import scala.collection.immutable.{Map => IMap}
 import scala.util.Try
@@ -338,8 +338,7 @@ object CrunchApi {
   case class CrunchMinutes(minutes: Iterable[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
 
   case class PortStateUpdates(latest: MillisSinceEpoch,
-                              flights: Iterable[ApiFlightWithSplits],
-                              flightRemovals: Iterable[UniqueArrival],
+                              updatesAndRemovals: FlightUpdatesAndRemovals,
                               queueMinutes: Iterable[CrunchMinute],
                               staffMinutes: Iterable[StaffMinute])
 

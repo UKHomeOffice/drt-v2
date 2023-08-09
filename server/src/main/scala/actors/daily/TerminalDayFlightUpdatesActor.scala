@@ -5,17 +5,18 @@ import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.actor.PoisonPill
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
-import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
+import akka.persistence.{PersistentActor, RecoveryCompleted}
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, SplitsForArrivalsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.SplitsForArrivalsMessage
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
-import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffFromMessage, flightWithSplitsDiffFromMessage, flightWithSplitsFromMessage, splitsForArrivalsFromMessage}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffFromMessage, splitsForArrivalsFromMessage}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 
 class TerminalDayFlightUpdatesActor(year: Int,
@@ -82,47 +83,33 @@ class TerminalDayFlightUpdatesActor(year: Int,
   override def receiveCommand: Receive = myReceiveCommand orElse streamingUpdatesReceiveCommand
 
   def myReceiveCommand: Receive = {
-    case EventEnvelope(_, _, _, diffMessage: FlightsWithSplitsDiffMessage) =>
-      applyFlightsWithSplitsUpdate(diffMessage)
-      sender() ! Ack
     case EventEnvelope(_, _, _, diffMessage: FlightsDiffMessage) =>
       applyFlightsUpdate(diffMessage)
       sender() ! Ack
     case EventEnvelope(_, _, _, diffMessage: SplitsForArrivalsMessage) =>
       applySplitsUpdate(diffMessage)
       sender() ! Ack
+    case _:EventEnvelope =>
+      sender() ! Ack
   }
 
   override def receiveRecover: Receive = myReceiveRecover orElse streamingUpdatesReceiveRecover
 
   def myReceiveRecover: Receive = {
-    case SnapshotOffer(SnapshotMetadata(_, _, _), m: FlightsWithSplitsMessage) =>
-      val flights = m.flightWithSplits.map(flightWithSplitsFromMessage)
-      updatesAndRemovals = updatesAndRemovals ++ flights
-
-    case diffMessage: FlightsWithSplitsDiffMessage =>
-      applyFlightsWithSplitsUpdate(diffMessage)
-
     case diffMessage: FlightsDiffMessage =>
       applyFlightsUpdate(diffMessage)
 
     case diffMessage: SplitsForArrivalsMessage =>
       applySplitsUpdate(diffMessage)
-  }
 
-  private def applyFlightsWithSplitsUpdate(diffMessage: FlightsWithSplitsDiffMessage): Unit = {
-    val diff = flightWithSplitsDiffFromMessage(diffMessage)
-
-    updatesAndRemovals = updatesAndRemovals
-      .apply(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
-      .purgeOldUpdates(expireBeforeMillis)
+    case _ => ()
   }
 
   private def applyFlightsUpdate(diffMessage: FlightsDiffMessage): Unit = {
     val diff = arrivalsDiffFromMessage(diffMessage)
 
     updatesAndRemovals = updatesAndRemovals
-      .apply(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
+      .add(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
       .purgeOldUpdates(expireBeforeMillis)
   }
 
@@ -130,7 +117,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
     val diff = splitsForArrivalsFromMessage(diffMessage)
 
     updatesAndRemovals = updatesAndRemovals
-      .apply(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
+      .add(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
       .purgeOldUpdates(expireBeforeMillis)
   }
 }
