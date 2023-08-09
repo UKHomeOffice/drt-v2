@@ -29,7 +29,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
       "Then I should see the arrival when I check its port state" >> {
         val flightExists = doesFlightExist(drtSystem, arrival) === true
         val list = getUpdates(drtSystem).toList
-        val updatesExist = list.flatMap(_.flights).size === 1
+        val updatesExist = list.flatMap(_.updatesAndRemovals.arrivalUpdates).size === 1
         flightExists && updatesExist
       }
 
@@ -37,7 +37,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
         val existsBeforeReset = doesFlightExist(drtSystem, arrival) === true
         resetData(drtSystem)
         val emptyAfterReset = getPortState(drtSystem).flights.isEmpty
-        val noUpdatesAfterReset = getUpdates(drtSystem).toList.flatMap(_.flights).isEmpty
+        val noUpdatesAfterReset = getUpdates(drtSystem).toList.flatMap(_.updatesAndRemovals.arrivalUpdates).isEmpty
 
         existsBeforeReset && emptyAfterReset && noUpdatesAfterReset
       }

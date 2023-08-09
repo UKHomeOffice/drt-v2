@@ -95,7 +95,9 @@ class PortStateRequestsSpec extends CrunchTestLike {
       "Then I should see the flight I sent it in the port state" >> {
         val sinceMillis = myNow().addMinutes(-1).millisSinceEpoch
 
-        val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1.second).get.flights.headOption.map(_.apiFlight)
+        val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1.second)
+          .get
+          .updatesAndRemovals.arrivalUpdates.headOption.flatMap(_._2.toUpdate.headOption.map(_._2))
 
         result === Option(arrival)
       }
@@ -139,7 +141,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
         val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1.second)
         val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
-        result === Option(PortStateUpdates(myNow().millisSinceEpoch, Seq(), Seq(), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), Seq()))
+        result === Option(PortStateUpdates(myNow().millisSinceEpoch, FlightUpdatesAndRemovals(Map(), Map()), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), Seq()))
       }
     }
 

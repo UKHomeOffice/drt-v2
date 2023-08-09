@@ -136,18 +136,23 @@ class JsonSerializationSpec extends Specification {
     }
 
     "PortStateUpdates" >> {
+      val arrival = Arrival(None, ArrivalStatus("scheduled"), None, Predictions(0L, Map()), None, None, None, None, None, None, None, None, PortCode("test"),
+        T1, "test", "test", PortCode("test"), 0L, None,
+        Set(AclFeedSource, LiveFeedSource),
+        PassengerSources = Map())
+      val splits = Set(Splits(
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)), None)),
+        Historical,
+        None,
+        Percentage
+      ))
+      val updatesAndRemovals = FlightUpdatesAndRemovals(
+        Map(1L -> ArrivalsDiff(Seq(arrival), Seq(UniqueArrival(100, T1, 60000L, PortCode("STN"))))),
+        Map(1L -> SplitsForArrivals(Map(arrival.unique -> splits))),
+      )
       val cu = PortStateUpdates(
         0L,
-        Seq(
-          ApiFlightWithSplits(
-            Arrival(None, ArrivalStatus("scheduled"), None, Predictions(0L, Map()), None, None, None, None, None, None, None, None, PortCode("test"),
-              T1, "test", "test", PortCode("test"), 0L, None,
-              Set(AclFeedSource, LiveFeedSource),
-              PassengerSources = Map()),
-            Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)), None)), Historical, None, Percentage))
-          )
-        ),
-        Seq(UniqueArrival(100, T1, 60000L, PortCode("STN"))),
+        updatesAndRemovals,
         Seq(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),
         Seq(StaffMinute(T1, 0L, 1, 1,1,None))
       )

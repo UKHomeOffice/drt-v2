@@ -7,9 +7,9 @@ import akka.stream.scaladsl.Source
 import akka.testkit.{ImplicitSender, TestProbe}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PortStateUpdates, StaffMinute}
-import drt.shared.{PortState, TM, TQM}
+import drt.shared.{FlightUpdatesAndRemovals, PortState, TM, TQM}
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, FlightsWithSplitsDiff}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits, FlightsWithSplitsDiff}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.UtcDate
@@ -108,7 +108,8 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
       "Then I should see an Option of PortStateUpdates send with the update and the latest updated millis" >> {
         replyWithUpdates(0L, 0L, 0L, self)
-        expectMsg(Option(PortStateUpdates(updatedMillis, Seq(updatedFlight), Seq(), Seq(), Seq())))
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(updatedMillis -> ArrivalsDiff(Seq(updatedFlight.apiFlight), Seq())), Map())
+        expectMsg(Option(PortStateUpdates(updatedMillis, updatesAndRemovals, Seq(), Seq())))
         success
       }
     }
@@ -127,7 +128,8 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
       "Then I should see an Option of PortStateUpdates send with both updates and the latest updated millis" >> {
         replyWithUpdates(0L, 0L, 0L, self)
-        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, Seq(updatedFlight), Seq(), Seq(updatedQueueMinute), Seq())))
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(updatedFlight.apiFlight), Seq())), Map())
+        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, updatesAndRemovals, Seq(updatedQueueMinute), Seq())))
         success
       }
     }
@@ -147,7 +149,8 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
       "Then I should see an Option of PortStateUpdates send with both updates and the latest updated millis" >> {
         replyWithUpdates(0L, 0L, 0L, self)
-        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, Seq(updatedFlight), Seq(), Seq(updatedQueueMinute), Seq(updatedStaffMinute))))
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(updatedFlight.apiFlight), Seq())), Map())
+        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, updatesAndRemovals, Seq(updatedQueueMinute), Seq(updatedStaffMinute))))
         success
       }
     }
