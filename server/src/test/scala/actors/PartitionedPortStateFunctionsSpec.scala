@@ -84,7 +84,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
 
   "Given a replyWithUpdates function with mock requesters returning no updates" >> {
     "When I ask to reply with updates" >> {
-      val emptyFlights = FlightsWithSplitsDiff.empty
+      val emptyFlights = FlightUpdatesAndRemovals.empty
       val emptyQueues = MinutesContainer.empty[CrunchMinute, TQM]
       val emptyStaff = MinutesContainer.empty[StaffMinute, TM]
       val replyWithUpdates = makeReplyWithUpdates(emptyFlights, emptyQueues, emptyStaff)
@@ -100,15 +100,15 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
   "Given a replyWithUpdates function with mock requesters returning one updated flight" >> {
     "When I ask to reply with updates" >> {
       val updatedMillis = 100L
-      val updatedFlight = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001"), Set(), lastUpdated = Option(updatedMillis))
-      val updatedFlights = FlightsWithSplitsDiff(Seq(updatedFlight), Seq())
+      val arrival = ArrivalGenerator.arrival("BA0001")
+      val updates = FlightUpdatesAndRemovals(Map(updatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
       val emptyQueues = MinutesContainer.empty[CrunchMinute, TQM]
       val emptyStaff = MinutesContainer.empty[StaffMinute, TM]
-      val replyWithUpdates = makeReplyWithUpdates(updatedFlights, emptyQueues, emptyStaff)
+      val replyWithUpdates = makeReplyWithUpdates(updates, emptyQueues, emptyStaff)
 
       "Then I should see an Option of PortStateUpdates send with the update and the latest updated millis" >> {
         replyWithUpdates(0L, 0L, 0L, self)
-        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(updatedMillis -> ArrivalsDiff(Seq(updatedFlight.apiFlight), Seq())), Map())
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(updatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
         expectMsg(Option(PortStateUpdates(updatedMillis, updatesAndRemovals, Seq(), Seq())))
         success
       }
@@ -118,17 +118,17 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
   "Given a replyWithUpdates function with mock requesters returning one updated flight, and a more recently updated CrunchMinute" >> {
     "When I ask to reply with updates" >> {
       val maxUpdatedMillis = 100L
-      val updatedFlight = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001"), Set(), lastUpdated = Option(10L))
+      val arrival = ArrivalGenerator.arrival("BA0001")
+      val updates = FlightUpdatesAndRemovals(Map(10L -> ArrivalsDiff(Seq(arrival), Seq())), Map())
       val updatedQueueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, 0, 0, 0, None, lastUpdated = Option(maxUpdatedMillis))
 
-      val updatedFlights = FlightsWithSplitsDiff(Seq(updatedFlight), Seq())
       val updatedQueues = MinutesContainer[CrunchMinute, TQM](Seq(updatedQueueMinute))
       val emptyStaff = MinutesContainer.empty[StaffMinute, TM]
-      val replyWithUpdates = makeReplyWithUpdates(updatedFlights, updatedQueues, emptyStaff)
+      val replyWithUpdates = makeReplyWithUpdates(updates, updatedQueues, emptyStaff)
 
       "Then I should see an Option of PortStateUpdates send with both updates and the latest updated millis" >> {
         replyWithUpdates(0L, 0L, 0L, self)
-        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(updatedFlight.apiFlight), Seq())), Map())
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
         expectMsg(Option(PortStateUpdates(maxUpdatedMillis, updatesAndRemovals, Seq(updatedQueueMinute), Seq())))
         success
       }
@@ -138,18 +138,18 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
   "Given a replyWithUpdates function with mock requesters returning one updated flight, one updated CrunchMinute, and a more recently updated StaffMinute" >> {
     "When I ask to reply with updates" >> {
       val maxUpdatedMillis = 100L
-      val updatedFlight = ApiFlightWithSplits(ArrivalGenerator.arrival("BA0001"), Set(), lastUpdated = Option(10L))
+      val arrival = ArrivalGenerator.arrival("BA0001")
+      val updates = FlightUpdatesAndRemovals(Map(10L -> ArrivalsDiff(Seq(arrival), Seq())), Map())
       val updatedQueueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, 0, 0, 0, None, lastUpdated = Option(50L))
       val updatedStaffMinute = StaffMinute(T1, 0L, 0, 0, 0, lastUpdated = Option(maxUpdatedMillis))
 
-      val updatedFlights = FlightsWithSplitsDiff(Seq(updatedFlight), Seq())
       val updatedQueues = MinutesContainer[CrunchMinute, TQM](Seq(updatedQueueMinute))
       val updatedStaff = MinutesContainer[StaffMinute, TM](Seq(updatedStaffMinute))
-      val replyWithUpdates = makeReplyWithUpdates(updatedFlights, updatedQueues, updatedStaff)
+      val replyWithUpdates = makeReplyWithUpdates(updates, updatedQueues, updatedStaff)
 
       "Then I should see an Option of PortStateUpdates send with both updates and the latest updated millis" >> {
         replyWithUpdates(0L, 0L, 0L, self)
-        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(updatedFlight.apiFlight), Seq())), Map())
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
         expectMsg(Option(PortStateUpdates(maxUpdatedMillis, updatesAndRemovals, Seq(updatedQueueMinute), Seq(updatedStaffMinute))))
         success
       }
@@ -189,7 +189,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
     }
   }
 
-  private def makeReplyWithUpdates(flights: FlightsWithSplitsDiff,
+  private def makeReplyWithUpdates(flights: FlightUpdatesAndRemovals,
                                    queues: MinutesContainer[CrunchMinute, TQM],
                                    staff: MinutesContainer[StaffMinute, TM]): PortStateUpdatesRequester = {
     val mockFlightsRequester = (_: PortStateRequest) => Future(flights)

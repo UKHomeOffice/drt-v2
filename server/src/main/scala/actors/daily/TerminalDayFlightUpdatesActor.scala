@@ -101,8 +101,6 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
     case diffMessage: SplitsForArrivalsMessage =>
       applySplitsUpdate(diffMessage)
-
-    case _ => ()
   }
 
   private def applyFlightsUpdate(diffMessage: FlightsDiffMessage): Unit = {

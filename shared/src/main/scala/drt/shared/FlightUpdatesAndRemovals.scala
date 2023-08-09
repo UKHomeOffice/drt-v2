@@ -15,7 +15,6 @@ case class FlightUpdatesAndRemovals(arrivalUpdates: Map[Long, ArrivalsDiff],
 
   val nonEmpty: Boolean = arrivalUpdates.nonEmpty || splitsUpdates.nonEmpty
 
-
   def ++(other: FlightUpdatesAndRemovals): FlightUpdatesAndRemovals = {
     val combinedArrivalUpdates = other.arrivalUpdates.foldLeft(arrivalUpdates) {
       case (acc, (ts, diff)) => acc.get(ts) match {
@@ -35,24 +34,28 @@ case class FlightUpdatesAndRemovals(arrivalUpdates: Map[Long, ArrivalsDiff],
     )
   }
 
+  def purgeOldUpdates(expireBeforeMillis: MillisSinceEpoch): FlightUpdatesAndRemovals =
+    copy(
+      arrivalUpdates = arrivalUpdates.view.filterKeys(_ > expireBeforeMillis).toMap,
+      splitsUpdates = splitsUpdates.view.filterKeys(_ > expireBeforeMillis).toMap,
+    )
 
-  def purgeOldUpdates(expireBeforeMillis: MillisSinceEpoch): FlightUpdatesAndRemovals = copy(
-    arrivalUpdates = arrivalUpdates.view.filterKeys(_ < expireBeforeMillis).toMap,
-    splitsUpdates = splitsUpdates.view.filterKeys(_ < expireBeforeMillis).toMap,
-  )
+  def updatesSince(sinceMillis: MillisSinceEpoch): FlightUpdatesAndRemovals =
+    copy(
+      arrivalUpdates = arrivalUpdates.view.filterKeys(_ > sinceMillis).toMap,
+      splitsUpdates = splitsUpdates.view.filterKeys(_ > sinceMillis).toMap,
+    )
 
-  def updatesSince(sinceMillis: MillisSinceEpoch): FlightUpdatesAndRemovals = copy(
-    arrivalUpdates = arrivalUpdates.view.filterKeys(_ > sinceMillis).toMap,
-    splitsUpdates = splitsUpdates.view.filterKeys(_ > sinceMillis).toMap,
-  )
 
-  def add(arrivalsDiff: ArrivalsDiff, ts: MillisSinceEpoch): FlightUpdatesAndRemovals = copy(
-    arrivalUpdates = arrivalUpdates + (ts -> arrivalsDiff)
-  )
+  def add(arrivalsDiff: ArrivalsDiff, ts: MillisSinceEpoch): FlightUpdatesAndRemovals =
+    copy(
+      arrivalUpdates = arrivalUpdates + (ts -> arrivalsDiff)
+    )
 
-  def add(splitsForArrivals: SplitsForArrivals, ts: MillisSinceEpoch): FlightUpdatesAndRemovals = copy(
-    splitsUpdates = splitsUpdates + (ts -> splitsForArrivals)
-  )
+  def add(splitsForArrivals: SplitsForArrivals, ts: MillisSinceEpoch): FlightUpdatesAndRemovals =
+    copy(
+      splitsUpdates = splitsUpdates + (ts -> splitsForArrivals)
+    )
 }
 
 object FlightUpdatesAndRemovals {

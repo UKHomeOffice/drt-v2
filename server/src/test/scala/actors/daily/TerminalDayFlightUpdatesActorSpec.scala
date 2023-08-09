@@ -1,17 +1,15 @@
 package actors.daily
 
 import actors.InMemoryStreamingJournal
-import actors.routing.FlightsRouterActor
 import akka.actor.{PoisonPill, Props}
 import akka.pattern.ask
-import drt.shared.ArrivalGenerator
+import drt.shared.{ArrivalGenerator, FlightUpdatesAndRemovals}
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplitsDiff, Passengers, SplitStyle, Splits, SplitsForArrivals}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypes, PortCode, Queues, UnknownFeedSource}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.Await
@@ -35,9 +33,9 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
 
       val result1 = Await.result(updatesActor.ask(GetAllUpdatesSince(0L)), 1.second)
       updatesActor ! PoisonPill
-      result1 === FlightsWithSplitsDiff(List(), Set())
+      result1 === FlightUpdatesAndRemovals(Map(), Map())
     }
-    "When I ask it for updates when nothing has been persisted it should give an empty diff" >> {
+    "When I ask it for updates after an arrival has been persisted it should give those diffs" >> {
       val flightRoutesActor = system.actorOf(Props(
         new TerminalDayFlightActor(2023, 8, 8, T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource))
       ))
@@ -54,9 +52,9 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
         .flatMap(_ => updatesActor.ask(GetAllUpdatesSince(999L)))
 
       val result1 = Await.result(eventual, 1.second)
-      result1 === FlightsWithSplitsDiff(List(ApiFlightWithSplits(apiFlight = arrival, splits = Set(), lastUpdated = Option(1000L))), Set())
+      result1 === FlightUpdatesAndRemovals(Map(1000L -> ArrivalsDiff(Seq(arrival), Seq())), Map())
     }
-    "When I ask it for updates when nothing has been persisted it should give an empty diff" >> {
+    "When I ask it for updates after an arrival and splits have been persisted it should give those diffs" >> {
       val flightRoutesActor = system.actorOf(Props(
         new TerminalDayFlightActor(2023, 8, 8, T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource))
       ))
@@ -79,10 +77,8 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
         }
 
       val result1 = Await.result(eventual, 1.second)
-      result1 === FlightsWithSplitsDiff(List(ApiFlightWithSplits(apiFlight = arrival.copy(
-        FeedSources = arrival.FeedSources + ApiFeedSource,
-        PassengerSources = arrival.PassengerSources + (ApiFeedSource -> Passengers(Option(10), Option(0)))
-      ), splits = newSplits, lastUpdated = Option(1000L))), Set())
+
+      result1 === FlightUpdatesAndRemovals(Map(1000L -> ArrivalsDiff(Seq(arrival), Seq())), Map(1000L -> SplitsForArrivals(Map(arrival.unique -> newSplits))))
     }
   }
 }
