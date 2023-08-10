@@ -46,7 +46,6 @@ case class FlightUpdatesAndRemovals(arrivalUpdates: Map[Long, ArrivalsDiff],
       splitsUpdates = splitsUpdates.view.filterKeys(_ > sinceMillis).toMap,
     )
 
-
   def add(arrivalsDiff: ArrivalsDiff, ts: MillisSinceEpoch): FlightUpdatesAndRemovals =
     copy(
       arrivalUpdates = arrivalUpdates + (ts -> arrivalsDiff)

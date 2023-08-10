@@ -119,7 +119,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
     "When I ask to reply with updates" >> {
       val maxUpdatedMillis = 100L
       val arrival = ArrivalGenerator.arrival("BA0001")
-      val updates = FlightUpdatesAndRemovals(Map(10L -> ArrivalsDiff(Seq(arrival), Seq())), Map())
+      val updates = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
       val updatedQueueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, 0, 0, 0, None, lastUpdated = Option(maxUpdatedMillis))
 
       val updatedQueues = MinutesContainer[CrunchMinute, TQM](Seq(updatedQueueMinute))
@@ -139,7 +139,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
     "When I ask to reply with updates" >> {
       val maxUpdatedMillis = 100L
       val arrival = ArrivalGenerator.arrival("BA0001")
-      val updates = FlightUpdatesAndRemovals(Map(10L -> ArrivalsDiff(Seq(arrival), Seq())), Map())
+      val updates = FlightUpdatesAndRemovals(Map(100L -> ArrivalsDiff(Seq(arrival), Seq())), Map())
       val updatedQueueMinute = CrunchMinute(T1, EeaDesk, 0L, 0, 0, 0, 0, None, lastUpdated = Option(50L))
       val updatedStaffMinute = StaffMinute(T1, 0L, 0, 0, 0, lastUpdated = Option(maxUpdatedMillis))
 
