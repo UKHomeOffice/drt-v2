@@ -16,7 +16,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
-  
+
   object TimeControl {
     var now: SDateLike = SDate.now()
   }
@@ -50,11 +50,15 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
 
       TimeControl.now = SDate(1000L)
       val eventual = flightRoutesActor.ask(ArrivalsDiff(List(arrival), Set()))
-        .flatMap(_ => updatesActor.ask(GetAllUpdatesSince(999L)))
+        .flatMap { _ =>
+          Thread.sleep(500L)
+          updatesActor.ask(GetAllUpdatesSince(999L))
+        }
 
       val result1 = Await.result(eventual, 1.second)
       result1 === FlightUpdatesAndRemovals(Map(1000L -> ArrivalsDiff(Seq(arrival), Seq())), Map())
     }
+
     "When I ask it for updates after an arrival and splits have been persisted it should give those diffs" >> {
       val flightRoutesActor = system.actorOf(Props(
         new TerminalDayFlightActor(2023, 8, 8, T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource))
@@ -72,9 +76,10 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
       val eventual = flightRoutesActor.ask(ArrivalsDiff(List(arrival), Set()))
         .flatMap { _ =>
           flightRoutesActor.ask(SplitsForArrivals(Map(arrival.unique -> newSplits)))
-            .flatMap(_ =>
+            .flatMap { _ =>
+              Thread.sleep(500L)
               updatesActor.ask(GetAllUpdatesSince(999L))
-            )
+            }
         }
 
       val result1 = Await.result(eventual, 1.second)
