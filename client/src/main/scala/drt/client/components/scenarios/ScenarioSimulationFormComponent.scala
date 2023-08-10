@@ -131,7 +131,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                 val queueDisplayName = Queues.displayName(ptq.queueType)
                 <.div(^.className := "form-check", ^.key := ptq.key,
                   MuiTextField(
-                    label = s"${PaxTypes.displayNameShort(ptq.passengerType)} to $queueDisplayName".toVdom,
+                    label = s"${PaxTypes.displayNameShort(ptq.passengerType, false)} to $queueDisplayName".toVdom,
                     helperText = MuiTypography(variant = MuiTypography.Variant.caption)(
                       s"Seconds to process ${PaxTypes.displayName(ptq.passengerType)} at $queueDisplayName"
                     )
