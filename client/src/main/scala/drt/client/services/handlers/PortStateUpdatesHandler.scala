@@ -11,8 +11,8 @@ import drt.shared._
 import drt.shared.api.FlightManifestSummary
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, UniqueArrival, VoyageNumber}
-import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import upickle.default.read
 
 import scala.collection.immutable.SortedMap
@@ -26,8 +26,8 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
                                  manifestSummariesModel: ModelR[M, Map[ArrivalKey, FlightManifestSummary]],
                                  paxFeedSourceOrder: ModelR[M, List[FeedSource]],
                                 ) extends LoggingActionHandler(portStateModel) {
-  val liveRequestFrequency: FiniteDuration = 2 seconds
-  val forecastRequestFrequency: FiniteDuration = 15 seconds
+  private val liveRequestFrequency: FiniteDuration = 2 seconds
+  private val forecastRequestFrequency: FiniteDuration = 15 seconds
 
   val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
 
@@ -52,26 +52,11 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
           val scheduledUpdateRequest = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
 
+          val manifestRequest = manifestsRequest(crunchUpdates)
+
           val newOriginCodes = crunchUpdates.updatesAndRemovals.arrivalUpdates.flatMap(_._2.toUpdate.map(_._1.origin)).toSet
 
-          val airportsRequest = if (newOriginCodes.nonEmpty)
-            List(Effect(Future(GetAirportInfos(newOriginCodes))))
-          else
-            List.empty
-
-          val manifests = manifestSummariesModel.value
-          val manifestsToFetch = crunchUpdates.updatesAndRemovals
-            .splitsUpdates
-            .flatMap(_._2.splits.filter(_._2.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)))
-            .keys
-            .map(ua => ArrivalKey(ua.origin, VoyageNumber(ua.number),ua.scheduled))
-            .toSet
-
-          val manifestRequest = if (manifestsToFetch.nonEmpty) {
-            List(Effect(Future(GetManifestSummaries(manifestsToFetch))))
-          } else List.empty
-
-          val effects = (manifestRequest ++ airportsRequest)
+          val effects = (manifestRequest ++ airportsRequest(newOriginCodes))
             .foldLeft(new EffectSet(scheduledUpdateRequest, Set(), queue))(_ + _)
 
           updated((Ready(newState), crunchUpdates.latest), effects)
@@ -88,7 +73,34 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     case SchedulePortStateUpdateRequest(viewMode) => effectOnly(getCrunchUpdatesAfterDelay(viewMode))
   }
 
-  def processUpdatesRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
+  private def airportsRequest(newOriginCodes: Set[PortCode]) = {
+    val airportsRequest = if (newOriginCodes.nonEmpty)
+      List(Effect(Future(GetAirportInfos(newOriginCodes))))
+    else
+      List.empty
+    airportsRequest
+  }
+
+  private def manifestsRequest(crunchUpdates: PortStateUpdates): List[EffectSingle[GetManifestSummaries]] = {
+    val existingManifests = manifestSummariesModel.value
+    val manifestsToFetch = crunchUpdates.updatesAndRemovals
+      .splitsUpdates
+      .flatMap { case (_, splitsForArrivals) =>
+        splitsForArrivals.splits.filter { case (_, splits) =>
+          splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)
+        }
+      }
+      .keys
+      .map(ua => ArrivalKey(ua.origin, VoyageNumber(ua.number), ua.scheduled))
+      .toSet
+      .diff(existingManifests.keySet)
+
+    if (manifestsToFetch.nonEmpty) {
+      List(Effect(Future(GetManifestSummaries(manifestsToFetch))))
+    } else List.empty
+  }
+
+  private def processUpdatesRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] =
     call
       .map(r => read[Option[PortStateUpdates]](r.responseText))
       .map {
@@ -100,9 +112,8 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
           log.error(s"Call to crunch-state failed (${throwable.getMessage}. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(GetPortStateUpdates(viewMode), PollDelay.recoveryDelay))
       }
-  }
 
-  def updateStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: PortStateUpdates, existingState: PortState): PortState = {
+  private def updateStateFromUpdates(startMillis: MillisSinceEpoch, crunchUpdates: PortStateUpdates, existingState: PortState): PortState = {
     val withArrivalUpdates = crunchUpdates.updatesAndRemovals.arrivalUpdates.foldLeft(FlightsWithSplits(existingState.flights)) {
       case (acc, (ts, diff)) =>
         diff.applyTo(acc, ts, paxFeedSourceOrder.value)._1
@@ -118,7 +129,10 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     PortState(trimmedFlights, minutes, staff)
   }
 
-  def updateAndTrimCrunch(crunchUpdates: PortStateUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): SortedMap[TQM, CrunchApi.CrunchMinute] = {
+  private def updateAndTrimCrunch(crunchUpdates: PortStateUpdates,
+                                  existingState: PortState,
+                                  keepFromMillis: MillisSinceEpoch,
+                         ): SortedMap[TQM, CrunchApi.CrunchMinute] = {
     val relevantMinutes = existingState.crunchMinutes.dropWhile {
       case (TQM(_, _, m), _) => m < keepFromMillis
     }
@@ -127,7 +141,10 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     }
   }
 
-  def updateAndTrimStaff(crunchUpdates: PortStateUpdates, existingState: PortState, keepFromMillis: MillisSinceEpoch): SortedMap[TM, CrunchApi.StaffMinute] = {
+  private def updateAndTrimStaff(crunchUpdates: PortStateUpdates,
+                                 existingState: PortState,
+                                 keepFromMillis: MillisSinceEpoch,
+                                ): SortedMap[TM, CrunchApi.StaffMinute] = {
     val relevantMinutes = existingState.staffMinutes.dropWhile {
       case (TM(_, m), _) => m < keepFromMillis
     }
@@ -136,7 +153,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     }
   }
 
-  def trimFlights(flights: Map[UniqueArrival, ApiFlightWithSplits], keepFromMillis: MillisSinceEpoch): Map[UniqueArrival, ApiFlightWithSplits] = {
+  private def trimFlights(flights: Map[UniqueArrival, ApiFlightWithSplits], keepFromMillis: MillisSinceEpoch): Map[UniqueArrival, ApiFlightWithSplits] = {
     val thirtyMinutesMillis = 30 * 60000
     flights
       .filter { case (_, fws) => fws.apiFlight.PcpTime.isDefined }
