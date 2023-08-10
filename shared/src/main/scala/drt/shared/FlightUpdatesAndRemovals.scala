@@ -36,8 +36,8 @@ case class FlightUpdatesAndRemovals(arrivalUpdates: Map[Long, ArrivalsDiff],
 
   def purgeOldUpdates(expireBeforeMillis: MillisSinceEpoch): FlightUpdatesAndRemovals =
     copy(
-      arrivalUpdates = arrivalUpdates.view.filterKeys(_ > expireBeforeMillis).toMap,
-      splitsUpdates = splitsUpdates.view.filterKeys(_ > expireBeforeMillis).toMap,
+      arrivalUpdates = arrivalUpdates.view.filterKeys(_ >= expireBeforeMillis).toMap,
+      splitsUpdates = splitsUpdates.view.filterKeys(_ >= expireBeforeMillis).toMap,
     )
 
   def updatesSince(sinceMillis: MillisSinceEpoch): FlightUpdatesAndRemovals =

@@ -19,11 +19,8 @@ class FlightUpdatesAndRemovalsSpec extends Specification {
     maybeEventType = None,
     splitStyle = SplitStyle.Percentage,
   ))
-  private val fws1 = ApiFlightWithSplits(arrival1, splits(10, TerminalAverage), lastUpdated = Option(update1000))
   private val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), schDt = "2022-05-01T12:40")
-  private val fws2 = ApiFlightWithSplits(arrival2, splits(10, TerminalAverage), lastUpdated = Option(update1500))
   private val arrival3 = ArrivalGenerator.arrival(iata = "BA0003", passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), schDt = "2022-05-01T20:15")
-  private val fws3 = ApiFlightWithSplits(arrival3, splits(10, TerminalAverage), lastUpdated = Option(update2000))
   "Concerning FlightsWithSplitsDiffs" >> {
     "Given an empty FlightUpdatesAndRemovals" >> {
       "When I add an update it should retain it in its updates Map" >> {
@@ -33,72 +30,91 @@ class FlightUpdatesAndRemovalsSpec extends Specification {
       }
     }
 
-//    "Given a FlightUpdatesAndRemovals containing an arrival and a removal" >> {
-//      "When I apply a FlightsWithSplitsDiff it should contain the updates and remove and record any removals" >> {
-//        val removals = Seq((update1500, fws3.unique))
-//        val updatesAndRemovals = FlightUpdatesAndRemovals(Seq(fws1, fws2), removals)
-//        val fws1v2 = fws1.copy(arrival1.copy(PassengerSources = Map(ApiFeedSource -> Passengers(Option(100), None))))
-//        val diff = FlightsWithSplitsDiff(Seq(fws1v2), Seq(fws2.unique))
-//
-//        val expected = FlightUpdatesAndRemovals(Seq(fws1v2), removals ++ Seq((update2000, fws2.unique)))
-//
-//        updatesAndRemovals.apply(diff, update2000) === expected
-//      }
-//    }
+    "Given a FlightUpdatesAndRemovals containing an arrival and a removal" >> {
+      "When I add an ArrivalsDiff it should contain the updates and remove and record any removals" >> {
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(
+          update1000 -> ArrivalsDiff(Seq(arrival1), Seq()),
+          update1500 -> ArrivalsDiff(Seq(arrival2), Seq(arrival3.unique))
+        ), Map())
+        val arrival1v2 = arrival1.copy(PassengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
+        val diff = ArrivalsDiff(Seq(arrival1v2), Seq(arrival2.unique))
 
-//    "Given a FlightUpdatesAndRemovals containing arrivals and removals" >> {
-//      "When I ask for updates since 1500 it should return flights and removals with update times later than 1500" >> {
-//        val updatesAndRemovals = FlightUpdatesAndRemovals(Seq(fws1, fws2, fws3), Seq((update1500, fws1.unique), (update2000, fws2.unique)))
-//        updatesAndRemovals.updatesSince(update1500) === FlightsWithSplitsDiff(Seq(fws3), Set(fws2.unique))
-//      }
-//      "When I purge items older than 1500 it should return flights and removals with update times earlier than 1500" >> {
-//        val updatesAndRemovals = FlightUpdatesAndRemovals(
-//          Seq(fws1, fws2, fws3),
-//          Seq((update1000, fws1.unique), (update1500, fws2.unique), (update2000, fws3.unique)))
-//        val expected = FlightUpdatesAndRemovals(
-//          Seq(fws2, fws3),
-//          Seq((update1500, fws2.unique), (update2000, fws3.unique)))
-//
-//        updatesAndRemovals.purgeOldUpdates(update1500) === expected
-//      }
-//    }
+        val expected = FlightUpdatesAndRemovals(Map(
+          update1000 -> ArrivalsDiff(Seq(arrival1), Seq()),
+          update1500 -> ArrivalsDiff(Seq(arrival2), Seq(arrival3.unique)),
+          update2000 -> ArrivalsDiff(Seq(arrival1v2), Seq(arrival2.unique))
+        ), Map())
+
+        updatesAndRemovals.add(diff, update2000) === expected
+      }
+    }
+
+    "Given a FlightUpdatesAndRemovals containing arrivals and removals" >> {
+      "When I ask for updates since 1500 it should return flights and removals with update times later than 1500" >> {
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(
+          update1000 -> ArrivalsDiff(Seq(arrival1), Seq()),
+          update1500 -> ArrivalsDiff(Seq(arrival2), Seq(arrival1.unique)),
+          update2000 -> ArrivalsDiff(Seq(arrival3), Seq(arrival2.unique))
+        ), Map())
+        updatesAndRemovals.updatesSince(update1500) === FlightUpdatesAndRemovals(Map(
+          update2000 -> ArrivalsDiff(Seq(arrival3), Seq(arrival2.unique))
+        ), Map())
+
+      }
+      "When I purge items older than 1500 it should return flights and removals with update times earlier than 1500" >> {
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(
+          update1000 -> ArrivalsDiff(Seq(arrival1), Seq()),
+          update1500 -> ArrivalsDiff(Seq(arrival2), Seq()),
+          update2000 -> ArrivalsDiff(Seq(arrival3), Seq())
+        ), Map())
+        val expected = FlightUpdatesAndRemovals(Map(
+          update1500 -> ArrivalsDiff(Seq(arrival2), Seq()),
+          update2000 -> ArrivalsDiff(Seq(arrival3), Seq())
+        ), Map())
+
+        updatesAndRemovals.purgeOldUpdates(update1500) === expected
+      }
+    }
   }
 
-//  "Concerning ArrivalsDiff" >> {
-//    "Given a FlightUpdatesAndRemovals containing an arrival and a removal" >> {
-//      "When I apply a FlightsDiff it should contain the updates and remove and record any removals" >> {
-//        val removals = Seq((update1500, fws3.unique))
-//        val updatesAndRemovals = FlightUpdatesAndRemovals(Seq(fws1, fws2), removals)
-//        val arrivalv2 = arrival1.copy(PassengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
-//        val diff = ArrivalsDiff(Seq(arrivalv2), Seq(fws2.unique))
-//
-//        val expected = FlightUpdatesAndRemovals(Seq(fws1.copy(apiFlight = arrivalv2, lastUpdated = Option(update2000))), removals ++ Seq((update2000, fws2.unique)))
-//
-//        updatesAndRemovals.apply(diff, update2000) === expected
-//      }
-//    }
-//  }
+  "Concerning ArrivalsDiff" >> {
+    "Given a FlightUpdatesAndRemovals containing arrivals and a removal" >> {
+      "When I apply a FlightsDiff it should contain the updates and remove and record any removals" >> {
+        val updatesAndRemovals = FlightUpdatesAndRemovals(Map(
+          update1000 -> ArrivalsDiff(Seq(arrival1), Seq()),
+          update1500 -> ArrivalsDiff(Seq(arrival2), Seq(arrival3.unique)),
+        ), Map())
+        val arrivalv2 = arrival1.copy(PassengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
+        val diff = ArrivalsDiff(Seq(arrivalv2), Seq(arrival2.unique))
 
-//  "Concerning SplitsForArrivals" >> {
-//    "Given a FlightUpdatesAndRemovals containing 2 arrivals" >> {
-//      "When I apply a SplitsForArrivals with an API split for the first arrival" >> {
-//        "Then I should get that updated flight when I ask for updates" >> {
-//          val removals = Seq((update1500, fws3.unique))
-//          val updatesAndRemovals = FlightUpdatesAndRemovals(Seq(fws1, fws2), removals)
-//          val apiSplits = splits(9, ApiSplitsWithHistoricalEGateAndFTPercentages)
-//          val diff = SplitsForArrivals(Map(arrival1.unique -> apiSplits))
-//
-//          val updatedFws1 = fws1.copy(
-//            apiFlight = arrival1.copy(
-//              FeedSources = arrival1.FeedSources + ApiFeedSource,
-//              PassengerSources = arrival1.PassengerSources + (ApiFeedSource -> Passengers(Option(9), Option(0))),
-//            ),
-//            splits = splits(10, TerminalAverage) ++ apiSplits,
-//            lastUpdated = Option(update2000),
-//          )
-//          updatesAndRemovals.apply(diff, 2000L).updatesSince(update1500) === FlightsWithSplitsDiff(Seq(updatedFws1), Set())
-//        }
-//      }
-//    }
-//  }
+        val expected = FlightUpdatesAndRemovals(Map(
+          update1000 -> ArrivalsDiff(Seq(arrival1), Seq()),
+          update1500 -> ArrivalsDiff(Seq(arrival2), Seq(arrival3.unique)),
+          update2000 -> ArrivalsDiff(Seq(arrivalv2), Seq(arrival2.unique)),
+        ), Map())
+
+        updatesAndRemovals.add(diff, update2000) === expected
+      }
+    }
+  }
+
+  "Concerning SplitsForArrivals" >> {
+    "Given a FlightUpdatesAndRemovals containing 2 arrivals" >> {
+      "When I apply a SplitsForArrivals with an API split for the first arrival" >> {
+        "Then I should get that updated flight when I ask for updates" >> {
+          val updatesAndRemovals = FlightUpdatesAndRemovals(Map(
+            update1000 -> ArrivalsDiff(Seq(arrival1), Seq()),
+            update1500 -> ArrivalsDiff(Seq(arrival2), Seq(arrival3.unique)),
+          ), Map())
+
+          val apiSplits = splits(9, ApiSplitsWithHistoricalEGateAndFTPercentages)
+          val diff = SplitsForArrivals(Map(arrival1.unique -> apiSplits))
+
+          updatesAndRemovals.add(diff, update2000).updatesSince(update1500) === FlightUpdatesAndRemovals(Map(), Map(
+            update2000 -> SplitsForArrivals(Map(arrival1.unique -> apiSplits))
+          ))
+        }
+      }
+    }
+  }
 }
