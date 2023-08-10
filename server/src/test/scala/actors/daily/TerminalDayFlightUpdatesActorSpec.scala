@@ -16,6 +16,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
+  
   object TimeControl {
     var now: SDateLike = SDate.now()
   }

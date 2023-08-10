@@ -107,7 +107,7 @@ class TerminalDayFlightActor(year: Int,
       val diff = arrivalDiff
         .forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
-        .diffWith(state.flights.view.mapValues(_.apiFlight).toMap)
+        .diff(state.flights.view.mapValues(_.apiFlight).toMap)
       updateAndPersistDiffAndAck(diff)
 
     case splits: SplitsForArrivals =>
