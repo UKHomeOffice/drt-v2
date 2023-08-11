@@ -6,7 +6,7 @@ import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, PassengerInfoJson, VoyageManifest}
 import services.crunch.VoyageManifestGenerator._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, EventTypes, Passengers}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, EventTypes, Passengers}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Queues}

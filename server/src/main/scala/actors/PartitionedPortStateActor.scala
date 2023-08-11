@@ -14,7 +14,7 @@ import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
-import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, FlightsWithSplitsDiff, UniqueArrival, WithTimeAccessor}
+import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
@@ -45,7 +45,7 @@ object PartitionedPortStateActor {
 
   type FlightsRequester = PortStateRequest => Future[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-  private type FlightUpdatesRequester = PortStateRequest => Future[FlightsWithSplitsDiff]
+  private type FlightUpdatesRequester = PortStateRequest => Future[FlightUpdatesAndRemovals]
 
   type PortStateUpdatesRequester = (MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, ActorRef) => Future[Option[PortStateUpdates]]
 
@@ -71,7 +71,7 @@ object PartitionedPortStateActor {
 
   private def requestFlightUpdatesFn(actor: ActorRef)
                                     (implicit timeout: Timeout, ec: ExecutionContext): FlightUpdatesRequester =
-    request => actor.ask(request).mapTo[FlightsWithSplitsDiff].recoverWith {
+    request => actor.ask(request).mapTo[FlightUpdatesAndRemovals].recoverWith {
       case t => throw new Exception(s"Error receiving FlightsWithSplits from the flights actor, for request $request", t)
     }
 
@@ -98,15 +98,7 @@ object PartitionedPortStateActor {
                                            (implicit ec: ExecutionContext, mat: Materializer): PortStateRequester =
     replyWithPortStateFn(_ => Future(Source(List[(UtcDate, FlightsWithSplits)]())), queueMins, staffMins)
 
-  def forwardRequestAndKillActor(killActor: ActorRef)
-                                (implicit timeout: Timeout, ec: ExecutionContext): (ActorRef, ActorRef, DateRangeLike) => Future[Any] =
-    (tempActor: ActorRef, replyTo: ActorRef, message: DateRangeLike) => {
-      killActor
-        .ask(RequestAndTerminate(tempActor, message))
-        .pipeTo(replyTo)
-    }
-
-  private def combineToPortStateUpdates(eventualFlightsDiff: Future[FlightsWithSplitsDiff],
+  private def combineToPortStateUpdates(eventualFlightsDiff: Future[FlightUpdatesAndRemovals],
                                         eventualQueueMinutes: Future[MinutesContainer[CrunchMinute, TQM]],
                                         eventualStaffMinutes: Future[MinutesContainer[StaffMinute, TM]])
                                        (implicit ec: ExecutionContext): Future[Option[PortStateUpdates]] =
@@ -115,15 +107,11 @@ object PartitionedPortStateActor {
       queueMinutes <- eventualQueueMinutes
       staffMinutes <- eventualStaffMinutes
     } yield {
-      val fs = flightsDiff.flightsToUpdate
-      val ua = flightsDiff.arrivalsToRemove.collect {
-        case ua: UniqueArrival => ua
-      }
       val cms = queueMinutes.minutes.map(_.toMinute)
       val sms = staffMinutes.minutes.map(_.toMinute)
       val latestMillis = Seq(flightsDiff.latestUpdateMillis, queueMinutes.latestUpdateMillis, staffMinutes.latestUpdateMillis).max
-      if (fs.nonEmpty || ua.nonEmpty || cms.nonEmpty || sms.nonEmpty)
-        Option(PortStateUpdates(latestMillis, fs, ua, cms, sms))
+      if (flightsDiff.nonEmpty || cms.nonEmpty || sms.nonEmpty)
+        Option(PortStateUpdates(latestMillis, flightsDiff, cms, sms))
       else None
     }
 

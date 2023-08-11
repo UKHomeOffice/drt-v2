@@ -2,10 +2,9 @@ package services.graphstages
 
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared._
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.arrivals.ArrivalsDiff
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration._
 
@@ -35,7 +34,7 @@ class ArrivalsGraphStageRemovalsSpec extends CrunchTestLike {
     aclSource.offer(secondAclFeed)
 
     probe.fishForMessage(1.second) {
-      case ArrivalsDiff(_, removals) => removals.exists(_.Scheduled == arrivalThatIsRemoved.Scheduled)
+      case ArrivalsDiff(_, removals) => removals.exists(_.scheduled == arrivalThatIsRemoved.Scheduled)
     }
 
     success
