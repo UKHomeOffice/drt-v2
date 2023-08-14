@@ -24,6 +24,8 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
+      - pwd
+      - ls -la
       - /root/entrypoint.sh
       - sbt --error compile docker:stage
     environment:
