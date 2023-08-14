@@ -43,8 +43,7 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
     settings:
-      drone_s3_cache_folders:
-        - drt-v2/.ivy2
+      drone_s3_cache_folders: .ivy2
       drone_s3_cache_mode: push
     environment:
       DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
