@@ -8,6 +8,19 @@ platform:
   arch: amd64
 
 steps:
+  - name: drone_s3_cache_pull
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+    settings:
+      drone_s3_cache_folders: drt-v2/.ivy2
+      drone_s3_cache_mode: pull
+    environment:
+      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
+      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
+        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
+        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+
   - name: build
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
@@ -179,6 +192,22 @@ steps:
       - build
       - e2e-tests
       - unit-test
+
+  - name: drone_s3_cache_push
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+    settings:
+      drone_s3_cache_folders:
+        - drt-v2/.ivy2
+      drone_s3_cache_mode: push
+    environment:
+      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
+      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
+        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
+        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+    depends_on:
+      - build
 
 services:
   - name: docker
