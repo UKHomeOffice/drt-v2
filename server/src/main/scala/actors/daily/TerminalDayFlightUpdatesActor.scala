@@ -13,7 +13,7 @@ import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.SplitsForArrivalsMessage
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, SplitsForArrivalsMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffFromMessage, splitsForArrivalsFromMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
@@ -96,6 +96,8 @@ class TerminalDayFlightUpdatesActor(year: Int,
   override def receiveRecover: Receive = myReceiveRecover orElse streamingUpdatesReceiveRecover
 
   def myReceiveRecover: Receive = {
+    case FlightsWithSplitsDiffMessage =>
+      ()
     case diffMessage: FlightsDiffMessage =>
       applyFlightsUpdate(diffMessage)
 
