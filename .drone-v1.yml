@@ -36,6 +36,8 @@ steps:
     when:
       event:
         - push
+    depends_on:
+      - drone_s3_cache_pull
 
   - name: drone_s3_cache_push
     pull: if-not-exists
@@ -72,7 +74,7 @@ steps:
       event:
         - push
     depends_on:
-      - build
+      - drone_s3_cache_pull
 
   - name: sonar-scanner
     pull: if-not-exists
