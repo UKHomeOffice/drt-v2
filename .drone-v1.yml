@@ -20,6 +20,25 @@ steps:
       DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
         from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
 
+  - name: nve-mirror
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/nve-mirror:v0.1.0
+    commands:
+      - /root/entrypoint.sh
+      - nve-mirror
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+    depends_on:
+      - drone_s3_cache_pull
+
   - name: build
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
@@ -61,6 +80,7 @@ steps:
       - sbt scalastyle | true
       - sbt scapegoat | true
     environment:
+      NVD_BASE_URL: http://nvdmirror:8008
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt-artifactory-robot
@@ -209,6 +229,10 @@ services:
   - name: docker
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
 
+  - name: nvdmirror
+    image: sspringett/nvdmirror
+    ports:
+      - 8008
 volumes:
   - name: dockerclientconfig
     temp: { }
