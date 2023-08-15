@@ -136,7 +136,8 @@ lazy val server = (project in file("server"))
     Assets / LessKeys.compress := true,
     TwirlKeys.templateImports += "buildinfo._",
     Test / parallelExecution := false,
-    Compile / doc / sources := List()
+    Compile / doc / sources := List(),
+    dependencyCheckFormats := Seq("XML", "JSON" ,"HTML")
   )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
@@ -152,8 +153,6 @@ lazy val ReleaseCmd = Command.command("release") {
 val nvdBaseUrl = sys.env.getOrElse("NVD_BASE_URL", "http://localhost:8008")
 dependencyCheckCveUrlModified := Some(new URL(s"$nvdBaseUrl/nvdcve-1.1-modified.json.gz"))
 dependencyCheckCveUrlBase := Some(s"$nvdBaseUrl/nvdcve-%d.json.gz")
-dependencyCheckFormats := Seq("XML", "JSON")
-dependencyCheckFormat := "HTML"
 Global / cancelable := true
 
 // code generation task
