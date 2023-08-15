@@ -24,8 +24,6 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
-      - pwd
-      - ls -la
       - /root/entrypoint.sh
       - sbt --error compile docker:stage
     environment:
@@ -71,9 +69,7 @@ steps:
         from_secret: KEYTOOL_PASSWORD
     when:
       event:
-        - cron
-      cron:
-        - daily
+        - push
     depends_on:
       - build
 
@@ -208,8 +204,6 @@ steps:
       - build
       - e2e-tests
       - unit-test
-
-
 
 services:
   - name: docker
