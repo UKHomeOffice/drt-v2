@@ -8,7 +8,7 @@ import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 import com.sksamuel.scapegoat.sbt.ScapegoatSbtPlugin.autoImport._
 
 scalaVersion := Settings.versions.scala
-ThisBuild / scapegoatVersion  := "2.1.1"
+ThisBuild / scapegoatVersion := "2.1.1"
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
 
@@ -82,7 +82,7 @@ lazy val client: Project = (project in file("client"))
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
     Test / parallelExecution := false,
-    Compile / doc / sources := List()
+    Compile / doc / sources := List(),
   )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -134,7 +134,7 @@ lazy val server = (project in file("server"))
     Assets / LessKeys.compress := true,
     TwirlKeys.templateImports += "buildinfo._",
     Test / parallelExecution := false,
-    Compile / doc / sources := List()
+    Compile / doc / sources := List(),
   )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)

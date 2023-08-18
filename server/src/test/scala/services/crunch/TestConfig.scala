@@ -3,6 +3,7 @@ package services.crunch
 import actors.DrtStaticParameters
 import akka.actor.ActorRef
 import drt.shared._
+import manifests.ManifestLookupLike
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
 import services.{TryCrunchWholePax, TrySimulator}
@@ -39,5 +40,6 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       maybeEgatesProvider: Option[() => Future[PortEgateBanksUpdates]] = None,
                       setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = TestDefaults.setPcpFromSch,
                       addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff),
-                      passengerAdjustments: List[Arrival]=> Future[List[Arrival]] = arrivals => Future.successful(arrivals)
+                      passengerAdjustments: List[Arrival]=> Future[List[Arrival]] = arrivals => Future.successful(arrivals),
+                      historicManifestLookup: Option[ManifestLookupLike] = None,
                      )

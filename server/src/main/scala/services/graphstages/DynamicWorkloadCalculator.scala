@@ -68,6 +68,12 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
         .getOrElse(terminal, Map.empty)
         .getOrElse(PaxTypeAndQueue(paxType, queue), fallbackProcessingTime)
 
-    SplitMinutes(WholePassengerQueueSplits.splits(minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider, paxFeedSourceOrder))
+    val s = SplitMinutes(WholePassengerQueueSplits.splits(minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider, paxFeedSourceOrder))
+    val sTotalPax = s.minutes.values.map(_.paxLoad).sum
+    val fTotalPax = relevantFlights.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
+    if (sTotalPax != fTotalPax) {
+      log.error(s"Got a difference for day: $sTotalPax != $fTotalPax\n\n")
+    }
+    s
   }
 }

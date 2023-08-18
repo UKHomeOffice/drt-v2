@@ -73,7 +73,10 @@ object DynamicRunnablePassengerLoads {
   }
 
   private def updateSplits(splitsSink: ActorRef)
-                          (implicit ec: ExecutionContext, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+                          (implicit
+                           ec: ExecutionContext,
+                           timeout: Timeout,
+                          ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
@@ -90,7 +93,10 @@ object DynamicRunnablePassengerLoads {
       }
 
   private def updateHistoricApiPaxNos(splitsSink: ActorRef)
-                                     (implicit ec: ExecutionContext, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+                                     (implicit
+                                      ec: ExecutionContext,
+                                      timeout: Timeout,
+                                     ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
@@ -145,7 +151,8 @@ object DynamicRunnablePassengerLoads {
       }
   }
 
-  private def queueStatusesProvider(statuses: Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]]): Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
+  private def queueStatusesProvider(statuses: Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]],
+                                   ): Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
     (terminal: Terminal) => (queue: Queue, time: MillisSinceEpoch) => {
       val terminalStatuses = statuses.getOrElse(terminal, {
         log.error(s"terminal $terminal not found")
@@ -196,8 +203,8 @@ object DynamicRunnablePassengerLoads {
             if (flight.apiFlight.hasNoPaxSource) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
-                  val totalPax: Map[FeedSource, Passengers] = flight.apiFlight.PassengerSources.updated(HistoricApiFeedSource, Passengers(manifestPaxLike.pax, None))
-                  val updatedArrival = flight.apiFlight.copy(PassengerSources = totalPax)
+                  val paxSources = flight.apiFlight.PassengerSources.updated(HistoricApiFeedSource, Passengers(manifestPaxLike.pax, None))
+                  val updatedArrival = flight.apiFlight.copy(PassengerSources = paxSources)
                   flight.copy(apiFlight = updatedArrival)
                 case None => flight
               }.recover { case e =>

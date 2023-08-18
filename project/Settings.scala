@@ -70,6 +70,7 @@ object Settings {
     val sprayJsonScalaJs = "1.3.5-7"
     val scalaTestVersion = "3.2.16"
     val twirlApi = "1.5.2"
+
   }
 
   import versions._
@@ -203,7 +204,7 @@ object Settings {
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
     "uk.gov.service.notify" % "notifications-java-client" % "4.1.0-RELEASE",
-    "software.amazon.awssdk" % "s3" % "2.16.96"
+    "software.amazon.awssdk" % "s3" % "2.16.96",
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

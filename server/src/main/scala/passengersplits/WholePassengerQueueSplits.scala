@@ -29,38 +29,56 @@ object WholePassengerQueueSplits {
       .flatMap {
         case (terminal, flights) =>
           val procTimes = processingTime(terminal)
-          flights
+          val x: Iterable[(TQM, List[Double])] = flights
             .flatMap { flight =>
-              flightSplits(minuteMillis, flight, procTimes, queueStatus(flight.apiFlight.Terminal), queueFallbacks, paxFeedSourceOrder)
+              val s = flightSplits(minuteMillis, flight, procTimes, queueStatus(flight.apiFlight.Terminal), queueFallbacks, paxFeedSourceOrder)
                 .flatMap { case (queue, byMinute) =>
                   byMinute.map {
                     case (minute, passengers) =>
                       (TQM(terminal, queue, minute), passengers)
                   }
                 }
+              val sTotal = s.map(_._2.size).sum
+              val fTotal = flight.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)
+              if (sTotal != fTotal) {
+                log.error(s"Got a flight load difference! $sTotal != $fTotal")
+              }
+              s
             }
+          val sTotal = x.map(_._2.size).sum
+          val fTotal = flights.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
+          if (sTotal != fTotal) {
+            log.error(s"Got a $terminal load difference! $sTotal != $fTotal")
+          }
+          x
       }
-      .groupBy(_._1)
+      .groupBy { case (tqm, _) => tqm }
       .map {
         case (tqm, passengers) =>
-          val pax = passengers.flatMap(_._2)
-          (tqm, LoadMinute(tqm.terminal, tqm.queue, pax, pax.sum, tqm.minute))
+          val loadsByPassenger = passengers.flatMap { case (_, paxLoads) => paxLoads}
+          val totalLoad = loadsByPassenger.sum
+          (tqm, LoadMinute(tqm.terminal, tqm.queue, loadsByPassenger, totalLoad, tqm.minute))
       }
 
-  private def flightSplits(minuteMillis: NumericRange[MillisSinceEpoch],
-                           flight: ApiFlightWithSplits,
-                           processingTime: (PaxType, Queue) => Double,
-                           queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-                           queueFallbacks: QueueFallbacks,
-                           paxFeedSourceOrder: List[FeedSource],
-                          ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
+  def flightSplits(minuteMillis: NumericRange[MillisSinceEpoch],
+                   flight: ApiFlightWithSplits,
+                   processingTime: (PaxType, Queue) => Double,
+                   queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
+                   queueFallbacks: QueueFallbacks,
+                   paxFeedSourceOrder: List[FeedSource],
+                  ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
     flight.bestSplits match {
       case Some(splitsToUse) =>
         val pcpPax = flight.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)
         val startMinute = SDate(flight.apiFlight.pcpRange(paxFeedSourceOrder).min)
         val terminalQueueFallbacks = (q: Queue, pt: PaxType) => queueFallbacks.availableFallbacks(flight.apiFlight.Terminal, q, pt).toList
         val wholePaxSplits = wholePassengerSplits(pcpPax, splitsToUse.splits)
-        wholePaxPerQueuePerMinute(minuteMillis, pcpPax, wholePaxSplits, processingTime, queueStatus, terminalQueueFallbacks, startMinute)
+        val x = wholePaxLoadsPerQueuePerMinute(minuteMillis, pcpPax, wholePaxSplits, processingTime, queueStatus, terminalQueueFallbacks, startMinute)
+        val splitPaxTotal = x.values.map(_.values.map(_.size).sum).sum
+        if (splitPaxTotal != pcpPax) {
+          log.error(s"Got a queue load difference! ${flight.apiFlight.Terminal} ${flight.apiFlight.flightCode.toString()} ${startMinute.toISOString} - $splitPaxTotal != $pcpPax\n\nsplits were ${splitsToUse.source} / ${splitsToUse.splitStyle}:\n${wholePaxSplits}")
+        }
+        x
       case None =>
         log.error(s"No splits found for ${flight.apiFlight.flightCode}")
         Map.empty
@@ -80,26 +98,30 @@ object WholePassengerQueueSplits {
         }
     }
 
-  def wholePaxPerQueuePerMinute(processingWindow: NumericRange[MillisSinceEpoch],
-                                totalPax: Int,
-                                wholeSplits: Set[ApiPaxTypeAndQueueCount],
-                                processingTime: (PaxType, Queue) => Double,
-                                queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-                                queueFallbacks: (Queue, PaxType) => List[Queue],
-                                startMinute: SDateLike,
-                               ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] = {
+  def wholePaxLoadsPerQueuePerMinute(processingWindow: NumericRange[MillisSinceEpoch],
+                                     totalPax: Int,
+                                     wholeSplits: Seq[ApiPaxTypeAndQueueCount],
+                                     processingTime: (PaxType, Queue) => Double,
+                                     queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
+                                     queueFallbacks: (Queue, PaxType) => List[Queue],
+                                     startMinute: SDateLike,
+                                    ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] = {
     val windowStart = processingWindow.min
     val windowEnd = processingWindow.max
     wholeSplits
       .toList
       .flatMap { ptqc =>
         val procTime = processingTime(ptqc.passengerType, ptqc.queueType)
-        paxLoadsPerMinute(totalPax, ptqc.paxCount.toInt, 20, procTime)
+        val perMin = paxLoadsPerMinute(totalPax, ptqc.paxCount.toInt, 20, procTime)
+        if (perMin.values.map(_.size).sum != ptqc.paxCount.toInt) {
+          log.error(s"Got a pax load difference! ${perMin.values.map(_.size).sum} != ${ptqc.paxCount.toInt}")
+        }
+        perMin
           .filter { case (minute, _) =>
             val m = startMinute.addMinutes(minute - 1).millisSinceEpoch
             windowStart <= m && m <= windowEnd
           }
-          .map { case (minute, pax) =>
+          .map { case (minute, passengerLoads) =>
             val minuteMillis = startMinute.addMinutes(minute - 1).millisSinceEpoch
             if (queueStatus(ptqc.queueType, minuteMillis) != Open) {
               val fallbacks = queueFallbacks(ptqc.queueType, ptqc.passengerType)
@@ -107,9 +129,9 @@ object WholePassengerQueueSplits {
                 log.error(s"No fallback for closed queue ${ptqc.queueType} at ${SDate(minuteMillis).toISOString}. Resorting to closed queue")
                 ptqc.queueType
               }
-              (redirectedQueue, minuteMillis, pax)
+              (redirectedQueue, minuteMillis, passengerLoads)
             }
-            else (ptqc.queueType, minuteMillis, pax)
+            else (ptqc.queueType, minuteMillis, passengerLoads)
           }
       }
       .groupBy(_._1)
@@ -124,14 +146,14 @@ object WholePassengerQueueSplits {
       }
   }
 
-  def wholePassengerSplits(totalPax: Int, splits: Set[ApiPaxTypeAndQueueCount]): Set[ApiPaxTypeAndQueueCount] = {
+  def wholePassengerSplits(totalPax: Int, splits: Set[ApiPaxTypeAndQueueCount]): Seq[ApiPaxTypeAndQueueCount] = {
     val splitsMinusTransferInOrder = splits.toList
       .sortBy(_.paxCount)
       .filterNot(_.queueType == Transfer)
     val totalSplitsPax = splits.toList.map(_.paxCount).sum
     val totalSplits = splitsMinusTransferInOrder.size
 
-    splitsMinusTransferInOrder.foldLeft(Set[ApiPaxTypeAndQueueCount]()) {
+    splitsMinusTransferInOrder.foldLeft(Seq[ApiPaxTypeAndQueueCount]()) {
       case (actualSplits, nextSplit) =>
         val countSoFar = actualSplits.toList.map(_.paxCount).sum
         val proposedCount = Math.round((nextSplit.paxCount / totalSplitsPax) * totalPax).toInt
@@ -141,7 +163,7 @@ object WholePassengerQueueSplits {
           proposedCount
         else totalPax - countSoFar
 
-        actualSplits + nextSplit.copy(paxCount = actualCount)
+        actualSplits :+ nextSplit.copy(paxCount = actualCount)
     }
   }
 
