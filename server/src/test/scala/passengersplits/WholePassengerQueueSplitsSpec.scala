@@ -7,21 +7,28 @@ import uk.gov.homeoffice.drt.ports.PaxTypes.{B5JPlusNational, EeaBelowEGateAge, 
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Open, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxType}
 
+import scala.collection.immutable.HashMap
+
 class WholePassengerQueueSplitsSpec extends Specification {
   "Given some whole pax splits and some other stuff, I should get pax loads totalling the sum of the whole pax splits" >> {
     val wholePaxSplits = List(
-      ApiPaxTypeAndQueueCount(VisaNational, NonEeaDesk, 19.0, None, None),
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 30.0, None, None),
-      ApiPaxTypeAndQueueCount(NonVisaNational, NonEeaDesk, 66.0, None, None),
-      ApiPaxTypeAndQueueCount(EeaMachineReadable, EGate, 121.0, None, None),
-    )
-    val pcpPax = wholePaxSplits.map(_.paxCount).sum
-    val date = SDate("2023-08-16T12:00")
+      ApiPaxTypeAndQueueCount(B5JPlusNational,EeaDesk,0.0,Some(Map()),Some(Map())),
+      ApiPaxTypeAndQueueCount(B5JPlusNational,EGate,1.0,Some(Map()),Some(Map())),
+      ApiPaxTypeAndQueueCount(VisaNational,NonEeaDesk,1.0,Some(Map()),Some(Map())),
+      ApiPaxTypeAndQueueCount(EeaBelowEGateAge,EeaDesk,1.0,Some(Map()),Some(Map())),
+      ApiPaxTypeAndQueueCount(NonVisaNational,NonEeaDesk,2.0,Some(Map()),Some(Map())),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable,EeaDesk,6.0,Some(HashMap()),Some(HashMap())),
+      ApiPaxTypeAndQueueCount(EeaMachineReadable,EGate,17.0,Some(HashMap()),Some(HashMap())),
+      ApiPaxTypeAndQueueCount(GBRNationalBelowEgateAge,EeaDesk,18.0,Some(Map()),Some(HashMap())),
+      ApiPaxTypeAndQueueCount(GBRNational,EeaDesk,44.0,Some(Map()),Some(HashMap())),
+      ApiPaxTypeAndQueueCount(GBRNational,EGate,84.0,Some(Map()),Some(HashMap())))
+    val pcpPax = 174
+    val date = SDate("2023-08-17T22:53:00Z")
     val dayStart = date.getLocalLastMidnight.millisSinceEpoch
     val dayEnd = date.getLocalNextMidnight.millisSinceEpoch
     val range = dayStart to dayEnd by 60000L
-    val queueLoads = wholePaxLoadsPerQueuePerMinute(range, pcpPax.toInt, wholePaxSplits, processingTime, (_, _) => Open, (_, _) => List(), date)
-    queueLoads.values.map(_.map(_._2.sum).sum).sum === pcpPax
+    val queueLoads = wholePaxLoadsPerQueuePerMinute(range, pcpPax, wholePaxSplits, processingTime, (_, _) => Open, (_, _) => List(), date.addDays(-1))
+    queueLoads.values.map(_.map(_._2.size).sum).sum === pcpPax
   }
   //  "Given some splits and a total number of passengers I should get a set of pax type and queue counts with whole numbers of passengers" >> {
   //    val splits = Set(
@@ -142,5 +149,11 @@ class WholePassengerQueueSplitsSpec extends Specification {
     case (EeaNonMachineReadable, EeaDesk) => 30d
     case (VisaNational, NonEeaDesk) => 30d
     case (NonVisaNational, NonEeaDesk) => 30d
+    case (EeaBelowEGateAge, EeaDesk) => 30d
+    case (B5JPlusNational, EeaDesk) => 30d
+    case (GBRNationalBelowEgateAge, EeaDesk) => 30d
+    case (B5JPlusNational, EGate) => 30d
+    case (GBRNational, EeaDesk) => 30d
+    case (GBRNational, EGate) => 30d
   }
 }

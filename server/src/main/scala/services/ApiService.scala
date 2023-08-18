@@ -18,8 +18,8 @@ import services.graphstages.Crunch
 import services.staffing.StaffTimeSlots
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
-import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration._
@@ -73,29 +73,33 @@ class ApiService(airportConfig: AirportConfig,
     (startOfWeekMidnight, endOfForecast)
   }
 
-  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: Terminal):
-  Future[Option[ForecastPeriodWithHeadlines]] = {
+  def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: Terminal): Future[Option[ForecastPeriodWithHeadlines]] = {
     val numberOfDays = 7
-    val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, numberOfDays)
+    val (startOfForecast, _) = startAndEndForDay(startDay, numberOfDays)
 
-    val portStateFuture = portStateActor.ask(
-      GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
-    )(new Timeout(30 seconds))
-
-    portStateFuture
-      .map {
-        case portState: PortState =>
-          log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
-          val fp = services.exports.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-          val hf = services.exports.Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
-            airportConfig.queuesByTerminal(terminal).toList)
-          Option(ForecastPeriodWithHeadlines(fp, hf))
-      }
-      .recover {
-        case t =>
-          log.error(s"Failed to get PortState", t)
-          None
-      }
+    val eventualHeadlines = (0 until 7).map { day =>
+      val startMillis = startOfForecast.addDays(day).millisSinceEpoch
+      val endMillis = startOfForecast.addDays(day + 1).addMinutes(-1).millisSinceEpoch
+      ctrl.queuesRouterActor.ask(GetStateForTerminalDateRange(startMillis, endMillis, terminal))
+        .mapTo[MinutesContainer[CrunchMinute, TQM]]
+        .map { container =>
+          container.minutes.map(x => x.toMinute)
+            .groupBy(_.queue)
+            .view.mapValues(minutes => (minutes.map(_.paxLoad).sum, minutes.map(_.workLoad).sum)).toMap
+        }
+        .recover {
+          case t =>
+            log.error(s"Failed to get PortState", t)
+            Map[Queues.Queue, (Double, Double)]()
+        }
+        .map(_.map { case (queue, (pax, work)) => QueueHeadline(startMillis, queue, pax.toInt, work.toInt) })
+    }
+    Future.sequence(eventualHeadlines).map { headline =>
+        Option(ForecastPeriodWithHeadlines(
+          ForecastPeriod(Map()),
+          ForecastHeadlineFigures(headline.flatten)
+        ))
+    }
   }
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit =
