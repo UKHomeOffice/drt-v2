@@ -192,7 +192,7 @@ object Settings {
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
 
-    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
+    "org.webjars" % "font-awesome" % "6.4.2" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "io.netty" % "netty-all" % "4.1.94.Final",
