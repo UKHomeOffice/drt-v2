@@ -56,10 +56,19 @@ object FlightComponents {
   }
 
   def paxNumberSources(flight: ApiFlightWithSplits): VdomTagOf[Span] = {
-    val paxSources = flight.apiFlight.PassengerSources.toList.sortBy(_._1.name).map {
-      case (feedSource, pax) =>
-        <.p(s"${feedSource.displayName} - ${pax.actual.map(_.toString).getOrElse("")}")
-    }
+    val paxSources = flight.apiFlight.PassengerSources.toList.sortBy(_._1.name)
+      .map {
+        case (feedSource, pax) =>
+          (pax.actual, pax.transit) match {
+            case (Some(actual), Some(transit)) if transit > 0 =>
+              Option(<.p(s"${feedSource.displayName} - ${pax.getPcpPax.map(_.toString).getOrElse("")} (${actual.toString} - ${transit.toString} transit)"))
+            case (Some(actual), _) =>
+              Option(<.p(s"${feedSource.displayName} - $actual"))
+            case _ =>
+              Option(<.p(s"${feedSource.displayName} - n/a"))
+          }
+      }
+      .collect { case Some(source) => source }
 
     val maxPax = <.p(s"Seats: ${flight.apiFlight.MaxPax.getOrElse("-")}")
     <.span((paxSources :+ maxPax).toVdomArray)
