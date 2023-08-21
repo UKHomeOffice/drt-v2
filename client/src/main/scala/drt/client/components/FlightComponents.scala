@@ -31,7 +31,7 @@ object FlightComponents {
       else if (directRedListFlight.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
       else ""
 
-    val pcpPaxNumber = flightWithSplits.bestPaxSource(paxFeedSourceOrder).getPcpPax.map(_.toString).getOrElse("n/a")
+    val pcpPaxNumber = if (!flightWithSplits.apiFlight.Origin.isDomesticOrCta) flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a") else "-"
 
     <.div(
       ^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",

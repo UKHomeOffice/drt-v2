@@ -1,7 +1,7 @@
 package services.crunch
 
 import controllers.ArrivalGenerator
-import drt.server.feeds.ArrivalsFeedSuccess
+import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
@@ -47,48 +47,43 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
   "Given a flight with terminal average splits" >> {
     "When I inspect the queue passengers" >> {
       "Then they should total the same as the passengers on the flight" >> {
-        val scheduled = "2017-01-01T00:00Z"
+        val scheduled = "2017-01-01T23:58Z"
 
         val arrivalPax = 112
         val arrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(arrivalPax), None)))
 
         val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduled),
-//          historicManifestLookup = Option(MockHistoricManifestProvider),
+          airportConfig = TestDefaults.airportConfig.copy(
+            minutesToCrunch = 1440,
+          )
         ))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
 
         crunch.portStateTestProbe.fishForMessage(5.seconds) {
           case ps: PortState =>
-            val paxInQueues = paxLoadsFromPortState(ps, 10).map {
+            val paxInQueues = paxLoadsFromPortState(ps, 1440 * 2).map {
               case (_, queuesPax) => queuesPax.values.map(_.sum).sum
             }.sum
             paxInQueues == arrivalPax
         }
 
-        MockHistoricManifestProvider.manifest = Option(BestAvailableManifest(VoyageManifestGenerator.manifestForArrival(arrival,
+        val apiManifest = VoyageManifestGenerator.manifestForArrival(arrival,
           List.fill(45)(PassengerInfoGenerator.passengerInfoJson(Nationality("GBR"), DocumentType("P"), Nationality("GBR"))) ++
             List.fill(17)(PassengerInfoGenerator.passengerInfoJson(Nationality("FRA"), DocumentType("P"), Nationality("FRA"))) ++
             List.fill(19)(PassengerInfoGenerator.passengerInfoJson(Nationality("USA"), DocumentType("P"), Nationality("USA"))) ++
             List.fill(7)(PassengerInfoGenerator.passengerInfoJson(Nationality("CHN"), DocumentType("P"), Nationality("CHN"))) ++
             List.fill(12)(PassengerInfoGenerator.passengerInfoJson(Nationality("GER"), DocumentType("P"), Nationality("GER"))) ++
             List.fill(13)(PassengerInfoGenerator.passengerInfoJson(Nationality("IND"), DocumentType("P"), Nationality("IND")))
-        )))
+        )
 
-        val arrivalv2 = arrival.copy(PassengerSources = arrival.PassengerSources + (LiveFeedSource -> Passengers(Option(100), None)))
+        val arrivalv2 = arrival.copy(PassengerSources = arrival.PassengerSources + (LiveFeedSource -> Passengers(Option(110), None)))
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalv2))))
 
-        //        offerAndWait(crunch.manifestsLiveInput, ManifestsFeedSuccess(DqManifests(1L, Seq(VoyageManifestGenerator.manifestForArrival(arrival,
-//        List.fill(45)(PassengerInfoGenerator.passengerInfoJson(Nationality("GBR"), DocumentType("P"), Nationality("GBR"))) ++
-//          List.fill(17)(PassengerInfoGenerator.passengerInfoJson(Nationality("FRA"), DocumentType("P"), Nationality("FRA"))) ++
-//          List.fill(19)(PassengerInfoGenerator.passengerInfoJson(Nationality("USA"), DocumentType("P"), Nationality("USA"))) ++
-//          List.fill(7)(PassengerInfoGenerator.passengerInfoJson(Nationality("CHN"), DocumentType("P"), Nationality("CHN"))) ++
-//          List.fill(12)(PassengerInfoGenerator.passengerInfoJson(Nationality("GER"), DocumentType("P"), Nationality("GER"))) ++
-//          List.fill(13)(PassengerInfoGenerator.passengerInfoJson(Nationality("IND"), DocumentType("P"), Nationality("IND")))
-        //        )))))
+        offerAndWait(crunch.manifestsLiveInput, ManifestsFeedSuccess(DqManifests(1L, Seq(apiManifest))))
 
-        crunch.portStateTestProbe.fishForMessage(1.seconds) {
+        crunch.portStateTestProbe.fishForMessage(10.seconds) {
           case ps: PortState =>
             val passengers = ps.flights.values.headOption.map(_.apiFlight.PassengerSources)
             val feedSources = ps.flights.values.headOption.map(_.apiFlight.FeedSources)
@@ -96,11 +91,32 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
             println(s"feedSources: $feedSources")
             val hasApi = ps.flights.values.headOption.exists(_.apiFlight.PassengerSources.contains(ApiFeedSource))
 
-            val paxInQueues = paxLoadsFromPortState(ps, 10).map {
+            val paxInQueues = paxLoadsFromPortState(ps, 1440 * 2).map {
               case (_, queuesPax) => queuesPax.values.map(_.sum).sum
             }.sum
-            println(s"resultSummary: $paxInQueues, bestPax: ${ps.flights.values.headOption.map(_.apiFlight.bestPcpPaxEstimate(List(ApiFeedSource, LiveFeedSource)))}")
-            hasApi && paxInQueues == 113
+            println(s"resultSummary: $paxInQueues")
+            hasApi && paxInQueues == 110
+        }
+
+        val arrivalv3 = arrivalv2.copy(
+          PcpTime = Option(SDate(scheduled).addMinutes(10).millisSinceEpoch),
+          PassengerSources = arrival.PassengerSources + (LiveFeedSource -> Passengers(Option(111), None)),
+        )
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalv3))))
+
+        crunch.portStateTestProbe.fishForMessage(10.seconds) {
+          case ps: PortState =>
+            val passengers = ps.flights.values.headOption.map(_.apiFlight.PassengerSources)
+            val feedSources = ps.flights.values.headOption.map(_.apiFlight.FeedSources)
+            println(s"passengers: $passengers")
+            println(s"feedSources: $feedSources")
+            val hasApi = ps.flights.values.headOption.exists(_.apiFlight.PassengerSources.contains(ApiFeedSource))
+
+            val paxInQueues = paxLoadsFromPortState(ps, 1440 * 2).map {
+              case (_, queuesPax) => queuesPax.values.map(_.sum).sum
+            }.sum
+            println(s"resultSummary: $paxInQueues")
+            hasApi && paxInQueues == 111
         }
 
         success
