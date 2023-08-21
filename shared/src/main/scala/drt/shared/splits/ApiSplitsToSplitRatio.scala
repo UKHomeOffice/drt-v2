@@ -19,7 +19,7 @@ object ApiSplitsToSplitRatio {
 
   def flightPaxPerQueueUsingSplitsAsRatio(splits: Splits, fws: ApiFlightWithSplits, sourceOrderPreference: List[FeedSource]): Map[Queue, Int] =
     queueTotals(
-      applyPaxSplitsToFlightPax(splits, fws.bestPaxSource(sourceOrderPreference).getPcpPax.getOrElse(0))
+      applyPaxSplitsToFlightPax(splits, fws.apiFlight.bestPcpPaxEstimate(sourceOrderPreference).getOrElse(0))
         .splits
         .map(ptqc => PaxTypeAndQueue(ptqc.passengerType, ptqc.queueType) -> ptqc.paxCount.toInt)
         .toMap
