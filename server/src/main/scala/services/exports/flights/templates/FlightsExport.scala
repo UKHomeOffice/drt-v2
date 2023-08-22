@@ -10,7 +10,7 @@ import org.joda.time.DateTimeZone
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.exports.Exports
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalExportHeadings, FlightsWithSplits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
@@ -50,9 +50,9 @@ trait FlightsExport {
   def splitsForSources(fws: ApiFlightWithSplits): List[String] =
     splitSources.flatMap((ss: SplitSource) => queueSplits(ArrivalExportHeadings.queueNamesInOrder, fws, ss))
 
-  def queueSplits(queueNames: Seq[Queue],
-                  fws: ApiFlightWithSplits,
-                  splitSource: SplitSource): Seq[String] =
+  private def queueSplits(queueNames: Seq[Queue],
+                          fws: ApiFlightWithSplits,
+                          splitSource: SplitSource): Seq[String] =
     queueNames.map(q => s"${queuePaxForFlightUsingSplits(fws, splitSource).getOrElse(q, "")}")
 
   private def queuePaxForFlightUsingSplits(fws: ApiFlightWithSplits, splitSource: SplitSource): Map[Queue, Int] =
@@ -74,23 +74,20 @@ trait FlightsExport {
       }
       .prepend(Source(List(headings + "\n")))
 
-  private def filterAndSort(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed]):
-  Source[(ApiFlightWithSplits, Option[VoyageManifest]), NotUsed] =
+  private def filterAndSort(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed],
+                           ): Source[(ApiFlightWithSplits, Option[VoyageManifest]), NotUsed] =
     flightsStream.mapConcat { case (flights, manifests) =>
       uniqueArrivalsWithCodeShares(flights.flights.values.toSeq)
-        .map(_._1)
         .filter(fws => flightsFilter(fws, terminal))
-        .sortBy { fws =>
-          val arrival = fws.apiFlight
-          (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
-        }
+        .toSeq
+        .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
         .map { fws =>
           val maybeManifest = manifests.manifests.find(_.maybeKey.exists(_ == ArrivalKey(fws.apiFlight)))
           (fws, maybeManifest)
         }
     }
 
-  val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] = CodeShares
-    .uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))
+  val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits] = CodeShares
+    .uniqueArrivals((f: ApiFlightWithSplits) => identity(f.apiFlight), paxFeedSourceOrder)
 
 }

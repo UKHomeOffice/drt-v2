@@ -22,7 +22,7 @@ trait FlightsWithSplitsExport extends FlightsExport {
       fws.apiFlight.ActualChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
       fws.apiFlight.differenceFromScheduled.map(_.toMinutes.toString).getOrElse(""),
       fws.apiFlight.PcpTime.map(millisToLocalDateTimeString(_)).getOrElse(""),
-      fws.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse(""),
+      fws.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse(""),
     )
   }
 

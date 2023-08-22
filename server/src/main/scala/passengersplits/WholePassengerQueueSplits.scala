@@ -95,11 +95,13 @@ object WholePassengerQueueSplits {
       .toList
       .flatMap { ptqc =>
         val procTime = processingTime(ptqc.passengerType, ptqc.queueType)
-        paxLoadsPerMinute(totalPax, ptqc.paxCount.toInt, 20, procTime)
+        val loadsByMinute = paxLoadsPerMinute(totalPax, ptqc.paxCount.toInt, 20, procTime)
+        val loadsByMinuteInWindow = loadsByMinute
           .filter { case (minute, _) =>
             val m = startMinute.addMinutes(minute - 1).millisSinceEpoch
             windowStart <= m && m <= windowEnd
           }
+        loadsByMinuteInWindow
           .map { case (minute, passengerLoads) =>
             val minuteMillis = startMinute.addMinutes(minute - 1).millisSinceEpoch
             if (queueStatus(ptqc.queueType, minuteMillis) != Open) {
@@ -147,13 +149,14 @@ object WholePassengerQueueSplits {
   }
 
   def paxLoadsPerMinute(totalPassengers: Int, queuePassengers: Int, paxOffRate: Int, loadPerPax: Double): Map[Int, List[Double]] = {
-    val minutesOff = totalPassengers.toDouble / paxOffRate
-    val paxPerMinuteDecimal = queuePassengers / minutesOff
+    val minutesOff = (totalPassengers.toDouble / paxOffRate).ceil.toInt
+    val paxPerMinute = queuePassengers.toDouble / minutesOff
 
-    val paxLoadsByMinute = (1 to minutesOff.toInt).foldLeft(Map[Int, List[Double]]()) {
+    val paxLoadsByMinute = (1 to minutesOff).foldLeft(Map[Int, List[Double]]()) {
       case (paxLoadsAcc, minute) =>
-        val roundedDecimalPaxForMinute = paxPerMinuteDecimal * minute
-        val paxThisMinute = Math.round(roundedDecimalPaxForMinute).toInt - paxCountFromLoads(paxLoadsAcc.values)
+        val roundedSummedPaxForMinute = (paxPerMinute * minute).ceil.toInt
+        val paxSoFar = paxCountFromLoads(paxLoadsAcc.values)
+        val paxThisMinute = roundedSummedPaxForMinute - paxSoFar
         val loads = List.fill(paxThisMinute)(loadPerPax)
         paxLoadsAcc.updated(minute, loads)
     }

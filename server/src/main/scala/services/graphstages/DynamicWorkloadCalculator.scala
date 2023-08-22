@@ -27,17 +27,6 @@ trait WorkloadCalculatorLike {
                        )
                        (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes
 
-  def combineCodeShares(flights: Iterable[ApiFlightWithSplits],
-                        paxFeedSourceOrder: List[FeedSource],
-                       ): Iterable[ApiFlightWithSplits] = {
-    val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
-      .toList
-      .sortBy(_.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0))
-      .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
-      .toMap.values
-    uniqueFlights
-  }
-
   val flightHasWorkload: FlightFilter
 
   def flightsWithPcpWorkload(flights: Iterable[ApiFlightWithSplits], redListUpdates: RedListUpdates): Iterable[ApiFlightWithSplits] =
@@ -62,18 +51,13 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
                                  paxFeedSourceOrder: List[FeedSource],
                                 )
                                 (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes = {
-    val relevantFlights = flightsWithPcpWorkload(combineCodeShares(flights.flights.values, paxFeedSourceOrder), redListUpdates)
+    val uniqueFlights = CodeShares.uniqueArrivals[ApiFlightWithSplits](f => f.apiFlight, paxFeedSourceOrder)(flights.flights.values.toSeq)
+    val relevantFlights = flightsWithPcpWorkload(uniqueFlights, redListUpdates)
     val procTimes = (terminal: Terminal) => (paxType: PaxType, queue: Queue) =>
       terminalProcTimes
         .getOrElse(terminal, Map.empty)
         .getOrElse(PaxTypeAndQueue(paxType, queue), fallbackProcessingTime)
 
-    val s = SplitMinutes(WholePassengerQueueSplits.splits(minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider, paxFeedSourceOrder))
-    val sTotalPax = s.minutes.values.map(_.paxLoad).sum
-    val fTotalPax = relevantFlights.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
-    if (sTotalPax != fTotalPax) {
-      log.error(s"Got a difference for day: $sTotalPax != $fTotalPax\n\n")
-    }
-    s
+    SplitMinutes(WholePassengerQueueSplits.splits(minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider, paxFeedSourceOrder))
   }
 }

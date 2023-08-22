@@ -3,22 +3,24 @@ package services
 import controllers.ArrivalGenerator.arrival
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, LiveFeedSource, PortCode}
 
 
 class CodeSharesSpec extends Specification {
 
   import drt.shared.CodeShares._
 
+  val paxFeedSourceOrder = List(LiveFeedSource, ApiFeedSource)
+
   "Given one flight " +
     "When we ask for unique arrivals " +
     "Then we should see that flight with zero code shares " >> {
     val flight: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(100), None)), terminal = T1, origin = PortCode("JFK"))
 
-    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight))
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flight))
 
-    val expected = List((flight, Set()))
+    val expected = List((flight, Seq()))
 
     result === expected
   }
@@ -29,9 +31,9 @@ class CodeSharesSpec extends Specification {
     val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(100), None)), terminal = T1, origin = PortCode("JFK"))
     val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(150), None)), terminal = T1, origin = PortCode("JFK"))
 
-    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2))
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flight1, flight2))
 
-    val expected = List((flight2, Set(flight1)))
+    val expected = List((flight2, Seq(flight1)))
 
     result === expected
   }
@@ -43,9 +45,9 @@ class CodeSharesSpec extends Specification {
     val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(150), None)), terminal = T1, origin = PortCode("JFK"))
     val flight3: Arrival = arrival(iata = "ZZ5566", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(175), None)), terminal = T1, origin = PortCode("JFK"))
 
-    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2, flight3))
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flight1, flight2, flight3))
 
-    val expected = List((flight3, Set(flight1, flight2)))
+    val expected = List((flight3, Seq(flight1, flight2)))
 
     result === expected
   }
@@ -59,12 +61,12 @@ class CodeSharesSpec extends Specification {
     val flightCS2b: Arrival = arrival(iata = "TG8000", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(180), None)), terminal = T1, origin = PortCode("CDG"))
     val flight: Arrival = arrival(iata = "KL1010", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(175), None)), terminal = T2, origin = PortCode("JFK"))
 
-    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flightCS1a, flightCS1b, flightCS2a, flightCS2b, flight)).toSet
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flightCS1a, flightCS1b, flightCS2a, flightCS2b, flight)).toSet
 
     val expected = Set(
-      (flightCS1b, Set(flightCS1a)),
-      (flightCS2b, Set(flightCS2a)),
-      (flight, Set())
+      (flightCS1b, Seq(flightCS1a)),
+      (flightCS2b, Seq(flightCS2a)),
+      (flight, Seq())
     )
 
     result === expected
@@ -76,11 +78,11 @@ class CodeSharesSpec extends Specification {
     val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(100), None)), terminal = T1, origin = PortCode("JFK"))
     val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(150), None)), terminal = T1, origin = PortCode("CDG"))
 
-    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2)).toSet
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flight1, flight2)).toSet
 
     val expected = Set(
-      (flight1, Set()),
-      (flight2, Set())
+      (flight1, Seq()),
+      (flight2, Seq())
     )
 
     result === expected
@@ -92,11 +94,11 @@ class CodeSharesSpec extends Specification {
     val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(100), None)), terminal = T1, origin = PortCode("JFK"))
     val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(150), None)), terminal = T2, origin = PortCode("JFK"))
 
-    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2)).toSet
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flight1, flight2)).toSet
 
     val expected = Set(
-      (flight1, Set()),
-      (flight2, Set())
+      (flight1, Seq()),
+      (flight2, Seq())
     )
 
     result === expected
@@ -108,11 +110,11 @@ class CodeSharesSpec extends Specification {
     val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:30Z", passengerSources = Map(AclFeedSource -> Passengers(Option(100), None)), terminal = T1, origin = PortCode("JFK"))
     val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:25Z", passengerSources = Map(AclFeedSource -> Passengers(Option(150), None)), terminal = T1, origin = PortCode("JFK"))
 
-    val result = uniqueArrivalsWithCodeShares(identity[Arrival])(Seq(flight1, flight2)).toSet
+    val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flight1, flight2)).toSet
 
     val expected = Set(
-      (flight1, Set()),
-      (flight2, Set())
+      (flight1, Seq()),
+      (flight2, Seq())
     )
 
     result === expected

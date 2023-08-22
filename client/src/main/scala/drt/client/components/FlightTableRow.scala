@@ -41,7 +41,7 @@ object FlightTableRow {
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
-                   codeShares: Set[Arrival],
+                   codeShares: Seq[Arrival],
                    idx: Int,
                    originMapper: OriginMapperF = portCode => portCode.toString,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
