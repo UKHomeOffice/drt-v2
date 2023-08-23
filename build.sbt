@@ -6,6 +6,8 @@ import sbt.Keys.{credentials, _}
 import sbt.Project.projectToRef
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 import com.sksamuel.scapegoat.sbt.ScapegoatSbtPlugin.autoImport._
+import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin.autoImport._
+import java.net.URL
 
 scalaVersion := Settings.versions.scala
 ThisBuild / scapegoatVersion := "2.1.1"
@@ -135,6 +137,7 @@ lazy val server = (project in file("server"))
     TwirlKeys.templateImports += "buildinfo._",
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
+    dependencyCheckFormats := Seq("XML", "JSON" ,"HTML")
   )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
@@ -147,7 +150,9 @@ lazy val ReleaseCmd = Command.command("release") {
       "set elideOptions in client := Seq()" ::
       state
 }
-
+val nvdBaseUrl = sys.env.getOrElse("NVD_BASE_URL", "http://localhost:8008")
+dependencyCheckCveUrlModified := Some(new URL(s"$nvdBaseUrl/nvdcve-1.1-modified.json.gz"))
+dependencyCheckCveUrlBase := Some(s"$nvdBaseUrl/nvdcve-%d.json.gz")
 Global / cancelable := true
 
 // code generation task
