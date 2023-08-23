@@ -119,8 +119,8 @@ object WholePassengerQueueSplits {
         val pctSoFar = paxSoFar.toDouble / passengerCount
         val newPaxForGroup: Map[PaxTypeAndQueue, Int] = splitPcts.map { case (split, pct) =>
           val paxForSplit = (pctSoFar * pct * passengerCount).round.toInt
-          val previousPaxForSplit = alreadyDistributed(split)
-          (split, paxForSplit - previousPaxForSplit)
+          val pax = paxForSplit - alreadyDistributed(split)
+          (split, pax)
         }
         acc + (group -> newPaxForGroup)
     }
