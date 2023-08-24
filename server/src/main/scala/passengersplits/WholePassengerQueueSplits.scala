@@ -12,6 +12,7 @@ import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.annotation.tailrec
+import scala.collection.MapView
 import scala.collection.immutable.NumericRange
 
 object WholePassengerQueueSplits {
@@ -92,10 +93,13 @@ object WholePassengerQueueSplits {
                                     ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] = {
     val windowStart = processingWindow.min
     val windowEnd = processingWindow.max
-    val paxDistribution = distributePaxOverSplitsAndMinutes(totalPax, 20, wholeSplits.map(s => (s.paxTypeAndQueue, s.paxCount.toInt)).toMap)
-    val workloadDistribution = paxDistributionToWorkloads(paxDistribution, processingTime, startMinute.millisSinceEpoch, queueStatus, queueFallbacks)
-    val relevantMinutes = workloadDistribution.view.filterKeys(m => windowStart <= m && m <= windowEnd)
-    invertWorkload(relevantMinutes.toMap)
+    val paxDistribution: Map[Int, Map[PaxTypeAndQueue, Int]] = distributePaxOverSplitsAndMinutes(totalPax, 20, wholeSplits.map(s => (s.paxTypeAndQueue, s.paxCount.toInt)).toMap)
+    println(s"paxDistribution: ${paxDistribution.values.map(_.values.sum).sum}")
+    val workloadDistribution: Map[MillisSinceEpoch, Map[Queue, List[Double]]] = paxDistributionToWorkloads(paxDistribution, processingTime, startMinute.millisSinceEpoch, queueStatus, queueFallbacks)
+    println(s"workloadDistribution: ${workloadDistribution.values.map(_.values.map(_.size).sum).sum}")
+    val relevantMinutes: MapView[MillisSinceEpoch, Map[Queue, List[Double]]] = workloadDistribution.view.filterKeys(m => windowStart <= m && m <= windowEnd)
+    println(s"relevantMinutes: ${relevantMinutes.values.map(_.values.map(_.size).sum).sum}")
+    transposeMaps(relevantMinutes.toMap)
   }
 
   def distributePaxOverSplitsAndMinutes(passengerCount: Int,
@@ -117,14 +121,94 @@ object WholePassengerQueueSplits {
         }
         val paxSoFar = if (group == groups) passengerCount else group * passengersPerMinute
         val pctSoFar = paxSoFar.toDouble / passengerCount
-        val newPaxForGroup: Map[PaxTypeAndQueue, Int] = splitPcts.map { case (split, pct) =>
+        val newPaxForGroup = splitPcts.map { case (split, pct) =>
           val paxForSplit = (pctSoFar * pct * passengerCount).round.toInt
-          val pax = paxForSplit - alreadyDistributed(split)
+          val pax = if (paxForSplit >= alreadyDistributed(split)) paxForSplit - alreadyDistributed(split) else 0
           (split, pax)
         }
-        acc + (group -> newPaxForGroup)
+        if (newPaxForGroup.exists(_._2 < 0))
+          println(s"Group $group has negative pax: ${newPaxForGroup.filter(_._2 < 0)}")
+
+        val desiredGroupSize = if (group == groups)
+          passengerCount - alreadyDistributed.values.sum
+        else
+          passengersPerMinute
+
+        val finalGroup = newPaxForGroup.values.sum match {
+          case lowerGroupSize if lowerGroupSize < desiredGroupSize =>
+            increaseToDesiredSize(newPaxForGroup, passengersPerMinute, paxSplits, alreadyDistributed)
+          case lowerGroupSize if lowerGroupSize > desiredGroupSize =>
+            decreaseToDesiredSize(newPaxForGroup, passengersPerMinute, paxSplits, alreadyDistributed)
+          case _ => newPaxForGroup
+        }
+        if (finalGroup.values.sum != desiredGroupSize)
+          println(s"Group $group has ${finalGroup.values.sum} pax, but should have $desiredGroupSize. newPaxForGroup: ${newPaxForGroup.values.sum}")
+        if (finalGroup.exists(_._2 < 0))
+          println(s"Group $group has negative pax: ${finalGroup.filter(_._2 < 0)}")
+
+        println(s"desiredGroupSize: $desiredGroupSize, finalGroup: ${finalGroup.values.sum}")
+
+        acc + (group -> finalGroup)
     }
   }
+
+  def utilisation(splits: Map[PaxTypeAndQueue, Int],
+                  splitsTotal: Map[PaxTypeAndQueue, Int],
+                  splitsSoFar: Map[PaxTypeAndQueue, Int],
+                 ): Seq[(PaxTypeAndQueue, Double)] =
+    splitsTotal.toSeq
+      .map {
+        case (k, v) =>
+          val alreadyDistributed = splits.getOrElse(k, 0) + splitsSoFar.getOrElse(k, 0)
+          k -> alreadyDistributed.toDouble / v.toDouble
+      }
+
+  def increaseToDesiredSize(splitsGroup: Map[PaxTypeAndQueue, Int],
+                            desiredGroupSize: Int,
+                            splitsTotal: Map[PaxTypeAndQueue, Int],
+                            splitsSoFar: Map[PaxTypeAndQueue, Int],
+                           ): Map[PaxTypeAndQueue, Int] = {
+    val groupSize = desiredGroupSize
+    val toAdd = groupSize - splitsGroup.values.sum
+
+    (1 to toAdd).foldLeft(splitsGroup) {
+      case (splits, _) =>
+        val lowestUtilisedSplit = lowestUtilised(splitsTotal, splitsSoFar, splits)
+        splits + (lowestUtilisedSplit -> (splits.getOrElse(lowestUtilisedSplit, 0) + 1))
+    }
+  }
+
+  private def lowestUtilised(splitsTotal: Map[PaxTypeAndQueue, Int],
+                             splitsSoFar: Map[PaxTypeAndQueue, Int],
+                             splits: Map[PaxTypeAndQueue, Int],
+                            ): PaxTypeAndQueue =
+    utilisation(splits, splitsTotal, splitsSoFar)
+      .sortBy(_._2).map(_._1)
+      .headOption.getOrElse(throw new Exception("No splits found"))
+
+  def decreaseToDesiredSize(splitsGroup: Map[PaxTypeAndQueue, Int],
+                            desiredGroupSize: Int,
+                            splitsTotal: Map[PaxTypeAndQueue, Int],
+                            splitsSoFar: Map[PaxTypeAndQueue, Int],
+                           ): Map[PaxTypeAndQueue, Int] = {
+    val groupSize = desiredGroupSize
+    val toRemove = splitsGroup.values.sum - groupSize
+
+    (1 to toRemove).foldLeft(splitsGroup) {
+      case (splits, _) =>
+        val highestUtilisedSplit = highestAlreadyUtilisedNonZero(splitsTotal, splitsSoFar, splits)
+        splits + (highestUtilisedSplit -> (splits.getOrElse(highestUtilisedSplit, 0) - 1))
+    }
+  }
+
+  def highestAlreadyUtilisedNonZero(splitsTotal: Map[PaxTypeAndQueue, Int],
+                                    splitsSoFar: Map[PaxTypeAndQueue, Int],
+                                    splits: Map[PaxTypeAndQueue, Int],
+                                   ): PaxTypeAndQueue =
+    utilisation(splits, splitsTotal, splitsSoFar)
+      .filter { case (s, _) => splits(s) > 0 }
+      .sortBy(_._2).reverse.map(_._1)
+      .headOption.getOrElse(throw new Exception("No splits found"))
 
   def paxDistributionToWorkloads(distribution: Map[Int, Map[PaxTypeAndQueue, Int]],
                                  processingTime: (PaxType, Queue) => Double,
@@ -134,23 +218,24 @@ object WholePassengerQueueSplits {
                                 ): Map[MillisSinceEpoch, Map[Queue, List[Double]]] =
     distribution.map { case (minute, splitCounts) =>
       val millisecondMinute = startMillis + ((minute - 1) * oneMinuteMillis)
-      val workloads = splitCounts.foldLeft(Map[Queue, List[Double]]()) { case (acc, (PaxTypeAndQueue(paxType, queue), count)) =>
-        val finalQueue = if (queueStatus(queue, millisecondMinute) == Open)
-          queue
-        else
-          queueFallbacks(queue, paxType).find(queueStatus(_, millisecondMinute) == Open).getOrElse {
-            log.error(s"No fallback for closed queue ${queue} at ${SDate(millisecondMinute).toISOString}. Resorting to closed queue")
+      val workloads = splitCounts.foldLeft(Map[Queue, List[Double]]()) {
+        case (acc, (PaxTypeAndQueue(paxType, queue), count)) =>
+          val finalQueue = if (queueStatus(queue, millisecondMinute) == Open)
             queue
-          }
-        val time = processingTime(paxType, finalQueue)
-        val existingQueueLoad = acc.getOrElse(finalQueue, List.empty[Double])
-        val newQueueLoad = existingQueueLoad ++ List.fill(count)(time)
-        acc + (finalQueue -> newQueueLoad)
+          else
+            queueFallbacks(queue, paxType).find(queueStatus(_, millisecondMinute) == Open).getOrElse {
+              log.error(s"No fallback for closed queue $queue at ${SDate(millisecondMinute).toISOString}. Resorting to closed queue")
+              queue
+            }
+          val time = processingTime(paxType, finalQueue)
+          val existingQueueLoad = acc.getOrElse(finalQueue, List.empty[Double])
+          val newQueueLoad = existingQueueLoad ++ List.fill(count)(time)
+          acc + (finalQueue -> newQueueLoad)
       }
       (millisecondMinute, workloads)
     }
 
-  def invertWorkload(workload: Map[MillisSinceEpoch, Map[Queue, List[Double]]]): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
+  def transposeMaps(workload: Map[MillisSinceEpoch, Map[Queue, List[Double]]]): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
     workload.foldLeft(Map[Queue, Map[MillisSinceEpoch, List[Double]]]()) { case (acc, (millis, queueWorkloads)) =>
       queueWorkloads.foldLeft(acc) { case (acc, (queue, workloads)) =>
         val existingQueueWorkloads = acc.getOrElse(queue, Map[MillisSinceEpoch, List[Double]]())
@@ -158,51 +243,6 @@ object WholePassengerQueueSplits {
         acc + (queue -> newQueueWorkloads)
       }
     }
-  //  def wholePaxLoadsPerQueuePerMinute_old(processingWindow: NumericRange[MillisSinceEpoch],
-  //                                     totalPax: Int,
-  //                                     wholeSplits: Seq[ApiPaxTypeAndQueueCount],
-  //                                     processingTime: (PaxType, Queue) => Double,
-  //                                     queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-  //                                     queueFallbacks: (Queue, PaxType) => List[Queue],
-  //                                     startMinute: SDateLike,
-  //                                    ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] = {
-  //    val windowStart = processingWindow.min
-  //    val windowEnd = processingWindow.max
-  //    wholeSplits
-  //      .toList
-  //      .flatMap { ptqc =>
-  //        val procTime = processingTime(ptqc.passengerType, ptqc.queueType)
-  //        val loadsByMinute = paxLoadsPerMinute(totalPax, ptqc.paxCount.toInt, 20, procTime)
-  //        val loadsByMinuteInWindow = loadsByMinute
-  //          .filter { case (minute, _) =>
-  //            val m = startMinute.addMinutes(minute - 1).millisSinceEpoch
-  //            windowStart <= m && m <= windowEnd
-  //          }
-  //        loadsByMinuteInWindow
-  //          .map { case (minute, passengerLoads) =>
-  //            val minuteMillis = startMinute.addMinutes(minute - 1).millisSinceEpoch
-  //            if (queueStatus(ptqc.queueType, minuteMillis) != Open) {
-  //              val fallbacks = queueFallbacks(ptqc.queueType, ptqc.passengerType)
-  //              val redirectedQueue = maybeFallbackQueue(queueStatus, fallbacks, minuteMillis).getOrElse {
-  //                log.error(s"No fallback for closed queue ${ptqc.queueType} at ${SDate(minuteMillis).toISOString}. Resorting to closed queue")
-  //                ptqc.queueType
-  //              }
-  //              (redirectedQueue, minuteMillis, passengerLoads)
-  //            }
-  //            else (ptqc.queueType, minuteMillis, passengerLoads)
-  //          }
-  //      }
-  //      .groupBy(_._1)
-  //      .map {
-  //        case (queue, loads) =>
-  //          val loadsByMinute = loads
-  //            .groupBy(_._2)
-  //            .map {
-  //              case (minute, loads) => (minute, loads.flatMap(_._3))
-  //            }
-  //          (queue, loadsByMinute)
-  //      }
-  //  }
 
   def wholePassengerSplits(totalPax: Int, splits: Set[ApiPaxTypeAndQueueCount]): Seq[ApiPaxTypeAndQueueCount] = {
     val splitsMinusTransferInOrder = splits.toList

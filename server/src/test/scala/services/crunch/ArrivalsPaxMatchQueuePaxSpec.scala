@@ -85,16 +85,11 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
 
         crunch.portStateTestProbe.fishForMessage(10.seconds) {
           case ps: PortState =>
-            val passengers = ps.flights.values.headOption.map(_.apiFlight.PassengerSources)
-            val feedSources = ps.flights.values.headOption.map(_.apiFlight.FeedSources)
-            println(s"passengers: $passengers")
-            println(s"feedSources: $feedSources")
             val hasApi = ps.flights.values.headOption.exists(_.apiFlight.PassengerSources.contains(ApiFeedSource))
 
             val paxInQueues = paxLoadsFromPortState(ps, 1440 * 2).map {
               case (_, queuesPax) => queuesPax.values.map(_.sum).sum
             }.sum
-            println(s"resultSummary: $paxInQueues")
             hasApi && paxInQueues == 110
         }
 
@@ -106,16 +101,11 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
 
         crunch.portStateTestProbe.fishForMessage(10.seconds) {
           case ps: PortState =>
-            val passengers = ps.flights.values.headOption.map(_.apiFlight.PassengerSources)
-            val feedSources = ps.flights.values.headOption.map(_.apiFlight.FeedSources)
-            println(s"passengers: $passengers")
-            println(s"feedSources: $feedSources")
             val hasApi = ps.flights.values.headOption.exists(_.apiFlight.PassengerSources.contains(ApiFeedSource))
 
             val paxInQueues = paxLoadsFromPortState(ps, 1440 * 2).map {
               case (_, queuesPax) => queuesPax.values.map(_.sum).sum
             }.sum
-            println(s"resultSummary: $paxInQueues")
             hasApi && paxInQueues == 111
         }
 
