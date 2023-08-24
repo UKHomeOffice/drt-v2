@@ -94,11 +94,8 @@ object WholePassengerQueueSplits {
     val windowStart = processingWindow.min
     val windowEnd = processingWindow.max
     val paxDistribution: Map[Int, Map[PaxTypeAndQueue, Int]] = distributePaxOverSplitsAndMinutes(totalPax, 20, wholeSplits.map(s => (s.paxTypeAndQueue, s.paxCount.toInt)).toMap)
-    println(s"paxDistribution: ${paxDistribution.values.map(_.values.sum).sum}")
     val workloadDistribution: Map[MillisSinceEpoch, Map[Queue, List[Double]]] = paxDistributionToWorkloads(paxDistribution, processingTime, startMinute.millisSinceEpoch, queueStatus, queueFallbacks)
-    println(s"workloadDistribution: ${workloadDistribution.values.map(_.values.map(_.size).sum).sum}")
     val relevantMinutes: MapView[MillisSinceEpoch, Map[Queue, List[Double]]] = workloadDistribution.view.filterKeys(m => windowStart <= m && m <= windowEnd)
-    println(s"relevantMinutes: ${relevantMinutes.values.map(_.values.map(_.size).sum).sum}")
     transposeMaps(relevantMinutes.toMap)
   }
 
@@ -126,8 +123,6 @@ object WholePassengerQueueSplits {
           val pax = if (paxForSplit >= alreadyDistributed(split)) paxForSplit - alreadyDistributed(split) else 0
           (split, pax)
         }
-        if (newPaxForGroup.exists(_._2 < 0))
-          println(s"Group $group has negative pax: ${newPaxForGroup.filter(_._2 < 0)}")
 
         val desiredGroupSize = if (group == groups)
           passengerCount - alreadyDistributed.values.sum
@@ -141,12 +136,6 @@ object WholePassengerQueueSplits {
             decreaseToDesiredSize(newPaxForGroup, passengersPerMinute, paxSplits, alreadyDistributed)
           case _ => newPaxForGroup
         }
-        if (finalGroup.values.sum != desiredGroupSize)
-          println(s"Group $group has ${finalGroup.values.sum} pax, but should have $desiredGroupSize. newPaxForGroup: ${newPaxForGroup.values.sum}")
-        if (finalGroup.exists(_._2 < 0))
-          println(s"Group $group has negative pax: ${finalGroup.filter(_._2 < 0)}")
-
-        println(s"desiredGroupSize: $desiredGroupSize, finalGroup: ${finalGroup.values.sum}")
 
         acc + (group -> finalGroup)
     }
