@@ -4,13 +4,24 @@ import controllers.Application
 import drt.shared.{NegativeFeedback, PositiveFeedback}
 import email.GovNotifyEmail
 import play.api.mvc.{Action, AnyContent}
+import slickdb.SeminarRow
 import upickle.default.read
 
-
-trait WithEmailFeedback {
+trait WithEmailNotification {
   self: Application =>
 
   val emailNotification = new GovNotifyEmail(govNotifyApiKey)
+
+  def sendSeminarRegistrationEmail(email: String, seminars: Seq[SeminarRow]) = {
+    seminars.map { seminar =>
+      val personalisation = emailNotification
+        .seminarRegistrationConfirmation(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), email, seminar)
+      emailNotification.sendRequest(govNotifyReference,
+        email,
+        seminarRegistrationTemplateId,
+        personalisation)
+    }
+  }
 
   def feedBack(feedback: String): Action[AnyContent] = {
     Action { request =>
@@ -38,7 +49,6 @@ trait WithEmailFeedback {
             BadRequest
         }
       }
-
     }
   }
 }

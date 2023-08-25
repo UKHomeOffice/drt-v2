@@ -97,6 +97,7 @@ GET           /data/actor-tree                                                  
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.Application.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.Application.feedBack(feedback: String)
 # Logging
+ +nocsrf
 POST          /logging                                                                controllers.Application.logging
 
 POST          /data/staff                                                             controllers.Application.saveStaff
@@ -110,6 +111,11 @@ POST          /data/feed/red-list-counts                                        
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
 # Training
 GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
+
+GET           /seminars                                                               controllers.Application.seminars()
+
++ nocsrf
+POST          /register-seminar                                                       controllers.Application.registerSeminars()
 
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 

@@ -163,6 +163,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      paxFeedSourceOrder: List[FeedSource] = List(),
                      showNewFeatureGuideOnLogin: Pot[Boolean] = Empty,
                      featureGuideViewedIds: Pot[Seq[String]] = Empty,
+                     seminars: Pot[Seq[Seminar]] = Empty,
                     )
 
 object PollDelay {
@@ -234,6 +235,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FeatureGuidesHandler(zoomRW(_.featureGuides)((m, v) => m.copy(featureGuides = v))),
       new FeatureGuideDialogHandler(zoomRW(_.showNewFeatureGuideOnLogin)((m, v) => m.copy(showNewFeatureGuideOnLogin = v))),
       new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),
+      new SeminarHandler(zoomRW(_.seminars)((m, v) => m.copy(seminars = v))),
     )
     composedHandlers
   }

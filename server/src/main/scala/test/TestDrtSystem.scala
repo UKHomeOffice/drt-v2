@@ -15,7 +15,7 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.{FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
+import slickdb.{FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, SeminarRow, SeminarTableLike, SeminarsRegistrationTableLike, UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
@@ -66,6 +66,23 @@ case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
   override def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String] = Future.successful("")
 
   override def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]] = Future.successful(Seq.empty)
+}
+
+case class MockSeminarsRegistrationTable() extends SeminarsRegistrationTableLike {
+  override def registerSeminars(email: String, ids: Seq[String])(implicit ex: ExecutionContext): Future[Seq[Int]] = ???
+}
+
+case class MockSeminarTable() extends SeminarTableLike {
+
+  override def updatePublishSeminar(seminarId: String, publish: Boolean): Unit = ???
+
+  override def updateSeminar(seminarRow: SeminarRow): Future[Int] = ???
+
+  override def deleteSeminar(seminarId: String): Future[Int] = ???
+  override def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]] = ???
+  override def getSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[String] =  ???
+  override def insertSeminarForm(title: String, description: String, startTime: Timestamp, endTime: Timestamp): Future[Int] = ???
+
 }
 
 case class MockDrtParameters() extends DrtParameters {
@@ -148,6 +165,8 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
   override val userService: UserTableLike = MockUserTable()
   override val featureGuideService: FeatureGuideTableLike = MockFeatureGuideTable()
   override val featureGuideViewService: FeatureGuideViewLike = MockFeatureGuideViewTable()
+  override val seminarService: SeminarTableLike = MockSeminarTable()
+  override val seminarRegistrationService: SeminarsRegistrationTableLike = MockSeminarsRegistrationTable()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder)
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor

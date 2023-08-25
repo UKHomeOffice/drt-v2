@@ -6,7 +6,8 @@ import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{CloseFeatureGuideDialog, GetFeatureGuides, GetViewedFeatureIds}
+import drt.client.services.handlers.{CloseFeatureGuideDialog, GetFeatureGuides, GetSeminars, GetViewedFeatureIds}
+import drt.shared.Seminar
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import io.kinoplan.scalajs.react.material.ui.core.{MuiBadge, MuiSnackbar}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -14,6 +15,7 @@ import japgolly.scalajs.react.extra.router.{BaseUrl, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
 import org.scalajs.dom
+import org.scalajs.dom.window.alert
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -23,7 +25,8 @@ case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]],
                        snackbarMessage: Pot[String],
                        featureGuides: Pot[Seq[FeatureGuide]],
                        showNewFeatureGuideOnLogin: Pot[Boolean],
-                       featureGuideViewIds: Pot[Seq[String]])
+                       featureGuideViewIds: Pot[Seq[String]],
+                       seminars: Pot[Seq[Seminar]])
 
 object Navbar {
   case class Props(
@@ -32,7 +35,7 @@ object Navbar {
                     loggedInUser: LoggedInUser,
                     airportConfig: AirportConfig)
 
-  case class State(showDropDown: Boolean, toggleDialog: Boolean)
+  case class State(showDropDown: Boolean, toggleDialog: Boolean, showSeminar: Boolean)
 
   def handleClose: (ReactEvent, String) => Callback = (_, _) => {
     Callback(SPACircuit.dispatch(SetSnackbarMessage(Empty)))
@@ -40,7 +43,7 @@ object Navbar {
 
   class Backend($: BackendScope[Props, State]) {
     val rcp: ReactConnectProxy[NavbarModel] = SPACircuit
-      .connect(m => NavbarModel(m.feedStatuses, m.snackbarMessage, m.featureGuides, m.showNewFeatureGuideOnLogin, m.featureGuideViewedIds))
+      .connect(m => NavbarModel(m.feedStatuses, m.snackbarMessage, m.featureGuides, m.showNewFeatureGuideOnLogin, m.featureGuideViewedIds, m.seminars))
 
     def handleOpenDialog(e: ReactEvent) = {
       e.preventDefaultCB >>
@@ -53,13 +56,25 @@ object Navbar {
         Callback(SPACircuit.dispatch(CloseFeatureGuideDialog()))
     }
 
+    def handleSeminarOpenDialog(e: ReactEvent) = {
+      e.preventDefaultCB >>
+        $.modState(s => s.copy(showSeminar = true))
+    }
+
+    def handleSeminarDialogClose(e: ReactEvent) = {
+      e.preventDefaultCB >>
+        $.modState(s => s.copy(showSeminar = false))
+    }
+
+
     def calculateBadgeCount(viewedFeatureIds: Seq[String], templateFeatureIds: Seq[String]): Int = {
       templateFeatureIds.count(id => !viewedFeatureIds.contains(id))
     }
 
     def componentDidMount() = {
       Callback(SPACircuit.dispatch(GetViewedFeatureIds())) >>
-        Callback(SPACircuit.dispatch(GetFeatureGuides()))
+        Callback(SPACircuit.dispatch(GetFeatureGuides())) >>
+        Callback(SPACircuit.dispatch(GetSeminars()))
     }
 
     def render(props: Props, state: State) = {
@@ -112,6 +127,12 @@ object Navbar {
                             trainingDataTemplates)
                         }
                       },
+                      <.div(<.a(Icon.calendarO, "", ^.onClick ==> handleSeminarOpenDialog), navbarModel.seminars.renderReady {
+                        seminars =>
+                          if (seminars.nonEmpty) {
+                            SeminarComponent(props.loggedInUser.email,state.showSeminar, handleSeminarDialogClose, seminars)
+                          } else EmptyVdom
+                      }),
                       <.div(^.className := "contact-us-link", props.ctl.link(ContactUsLoc)(Icon.envelope, " ", "Contact Us")),
                       <.div(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
                         ^.onClick --> Callback(GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "Log Out", props.loggedInUser.id))))
@@ -128,7 +149,7 @@ object Navbar {
   val component: Component[Props, State, Backend, CtorType.Props] =
     ScalaComponent
       .builder[Props]("NavBar")
-      .initialState(if (dom.window.innerWidth > 768) State(true, false) else State(false, false))
+      .initialState(if (dom.window.innerWidth > 768) State(true, false, false) else State(false, false, false))
       .renderBackend[Backend]
       .componentDidMount(_.backend.componentDidMount())
       .build

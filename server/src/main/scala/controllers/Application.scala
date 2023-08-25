@@ -20,7 +20,7 @@ import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
-import slickdb.{FeatureGuideTableLike, FeatureGuideViewLike, UserTableLike}
+import slickdb._
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -34,6 +34,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
+import scala.util.Try
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
@@ -92,6 +93,13 @@ trait FeatureGuideProviderLike {
 
 }
 
+trait SeminarProviderLike {
+
+  val seminarService: SeminarTableLike
+
+  val seminarRegistrationService: SeminarsRegistrationTableLike
+}
+
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -139,7 +147,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   with WithManifests
   with WithWalkTimes
   with WithDebug
-  with WithEmailFeedback
+  with WithEmailNotification
   with WithForecastAccuracy {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
@@ -161,6 +169,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   lazy val negativeFeedbackTemplateId = config.get[String]("notifications.negative-feedback-templateId")
 
   lazy val positiveFeedbackTemplateId = config.get[String]("notifications.positive-feedback-templateId")
+
+  lazy val seminarRegistrationTemplateId = config.get[String]("notifications.seminar-registration-templateId")
 
   lazy val govNotifyReference = config.get[String]("notifications.reference")
 
@@ -186,6 +196,41 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
     SDate(date.millisSinceEpoch - oneDayInMillis)
+  }
+
+  def seminars(): Action[AnyContent] = Action.async { _ =>
+    val seminarsJson: Future[String] = ctrl.seminarService.getSeminars(false)
+    seminarsJson.map(Ok(_))
+  }
+
+  def registerSeminars: Action[AnyContent] = authByRole(BorderForceStaff) {
+    Action.async { implicit request =>
+      import spray.json.DefaultJsonProtocol._
+      import spray.json._
+      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      log.info(s"request.body ${request.body}")
+      log.info(s"request.body.asJson ${request.body.asText.map(_.parseJson.convertTo[Seq[String]])}")
+      request.body.asText match {
+        case Some(content) =>
+          log.info(s"Received red list pax data")
+          Future.successful(Try(content.parseJson.convertTo[Seq[String]])
+            .map { ids =>
+              ctrl.seminarRegistrationService.registerSeminars(userEmail, ids).map { _ =>
+                ctrl.seminarService.getSeminars(ids).map {
+                  sendSeminarRegistrationEmail(userEmail, _)
+                }
+              }.recover {
+                case e => log.warning(s"Error while db insert for seminar registration", e)
+                  BadRequest(s"Failed to register seminars for user $userEmail")
+              }
+              Ok("Successfully registered seminars")
+            }.recover {
+            case e => log.warning(s"Error while seminar registration", e)
+              BadRequest(s"Failed to register seminars for user $userEmail")
+          }.getOrElse(BadRequest("Failed to parse json")))
+        case None => Future.successful(BadRequest("No content"))
+      }
+    }
   }
 
   def featureGuides(): Action[AnyContent] = Action.async { _ =>
@@ -214,8 +259,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       ctrl.featureGuideService.getGuideIdForFilename(filename).flatMap {
         case Some(id) =>
           ctrl.featureGuideViewService
-              .insertOrUpdate(id, userEmail)
-              .map(_ => Ok(s"File $filename viewed updated"))
+            .insertOrUpdate(id, userEmail)
+            .map(_ => Ok(s"File $filename viewed updated"))
         case None =>
           Future.successful(Ok(s"File $filename viewed not updated as file not found"))
       }
@@ -290,8 +335,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     )
 
     val feedsToMonitor = ctrl.feedActorsForPort
-                             .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
-                             .values.toList
+      .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
+      .values.toList
 
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
@@ -364,9 +409,9 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token")
-                       .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+      .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
-                            .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+      .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
@@ -381,8 +426,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         val logLevel = postStringValOrElse("level", "ERROR")
 
         val millis = request.body.get("timestamp")
-                            .map(_.head.toLong)
-                            .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+          .map(_.head.toLong)
+          .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
 
         val logMessage = Map(
           "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
