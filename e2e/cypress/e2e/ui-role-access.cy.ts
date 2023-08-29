@@ -47,18 +47,12 @@ describe('UI role access', () => {
 
   describe('MultiDayExport', () => {
 
-    it("should display the arrivals export only if a user does not have permission to view crunch data", () => {
+    it("should not display the arrivals export for a port operator", () => {
       cy
         .asAPortOperator()
         .navigateHome()
         .get('[data-toggle="modal"]')
-        .get('#multi-day-export-modal-dialog')
-        .should((modal) => {
-          expect(modal).to.contain("Arrivals");
-          expect(modal).not.to.contain("Deployments");
-          expect(modal).not.to.contain("Recommendations");
-        });
-
+        .get('#multi-day-export-modal-dialog').should('not.exist');
     });
 
   });
