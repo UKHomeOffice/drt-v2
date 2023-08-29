@@ -22,26 +22,6 @@ class ArrivalSpec extends Specification {
     }
   }
 
-  "When I ask for the minutesOfPaxArrivals" >> {
-    "Given an arrival with 0 pax" >> {
-      "I should get 0" >> {
-        val arrival = ArrivalGenerator.arrival(passengerSources =  Map(AclFeedSource -> Passengers(Option(0),None)))
-        val result = arrival.minutesOfPaxArrivals(paxFeedSourceOrder)
-
-        result === 0
-      }
-    }
-
-    "Given an arrival with -1 pax" >> {
-      "I should get 0" >> {
-        val arrival = ArrivalGenerator.arrival(passengerSources =  Map(AclFeedSource -> Passengers(Option(-1),None)))
-        val result = arrival.minutesOfPaxArrivals(paxFeedSourceOrder)
-
-        result === 0
-      }
-    }
-  }
-
   "Given an arrival arriving at pcp at noon 2019-01-01 with 100 pax " >> {
     val pcpTime = "2019-01-01T12:00"
     val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", passengerSources =  Map(LiveFeedSource -> Passengers(Option(100),None)), pcpDt = "2019-01-01T12:00")

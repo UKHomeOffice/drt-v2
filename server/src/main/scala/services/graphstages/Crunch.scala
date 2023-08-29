@@ -5,7 +5,6 @@ import drt.shared._
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival, WithTimeAccessor}
-import uk.gov.homeoffice.drt.ports.PaxType
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
@@ -13,23 +12,11 @@ import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 import scala.collection.immutable.{Map, SortedMap}
 
 object Crunch {
-  val paxOffPerMinute: Int = 20
-
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  case class SplitMinutes(minutes: Map[TQM, LoadMinute]) {
-    def toLoads: Loads = Loads(SortedMap[TQM, LoadMinute]() ++ minutes)
-  }
+  case class SplitMinutes(minutes: Map[TQM, LoadMinute])
 
   case class Passenger(processingTime: Double)
-
-  case class FlightSplitDiff(flightId: CodeShareKeyOrderedBySchedule,
-                             paxType: PaxType,
-                             terminalName: Terminal,
-                             queueName: Queue,
-                             paxLoad: Double,
-                             workLoad: Double,
-                             minute: MillisSinceEpoch)
 
   trait LoadMinuteLike {
     val terminal: Terminal
@@ -45,8 +32,6 @@ object Crunch {
                         passengers: Iterable[Double],
                         workLoad: Double,
                         minute: MillisSinceEpoch) extends TerminalQueueMinute with LoadMinuteLike {
-    lazy val uniqueId: TQM = TQM(terminal, queue, minute)
-
     lazy val paxLoad: Double = passengers.size
     lazy val maybePassengers: Option[Iterable[Double]] = Some(passengers)
 
@@ -65,22 +50,10 @@ object Crunch {
     }
   }
 
-  case class Loads(loadMinutes: SortedMap[TQM, LoadMinute])
-
-  object Loads {
-    def apply(lms: Seq[LoadMinute]): Loads = Loads(SortedMap[TQM, LoadMinute]() ++ lms.map(cm => (TQM(cm.terminal, cm.queue, cm.minute), cm)))
-
-    def fromCrunchMinutes(cms: SortedMap[TQM, CrunchMinute]): Loads = Loads(cms.values.map(LoadMinute(_)).toSeq)
-  }
-
-  case class RemoveCrunchMinute(terminalName: Terminal, queueName: Queue, minute: MillisSinceEpoch) {
-    lazy val key: TQM = MinuteHelper.key(terminalName, queueName, minute)
-  }
-
   val europeLondonId = "Europe/London"
   val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
 
-  val utcId = "UTC"
+  private val utcId = "UTC"
   val utcTimeZone: DateTimeZone = DateTimeZone.forID(utcId)
 
   def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B],

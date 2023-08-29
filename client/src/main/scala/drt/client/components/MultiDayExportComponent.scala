@@ -20,7 +20,7 @@ import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, BorderForceStaff, DesksAndQueuesView}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
@@ -117,70 +117,72 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
         scope.modState(_.copy(showDialogue = true))
       }
 
-      <.div(
-        ^.className := "export-button-wrapper",
-        MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-          MuiIcons(GetApp)(fontSize = "small"),
-          "Multi Day Export",
-          ^.className := "btn btn-default",
-          VdomAttr("data-toggle") := "modal",
-          VdomAttr("data-target") := "#multi-day-export",
-          ^.href := "#",
-          ^.onClick ==> showDialogue,
-        ),
-        <.div(^.className := "multi-day-export modal " + showClass, ^.id := "#multi-day-export", ^.tabIndex := -1, ^.role := "dialog",
-          <.div(
-            ^.className := "modal-dialog modal-dialog-centered",
-            ^.id := "multi-day-export-modal-dialog",
-            ^.role := "document",
+      if (props.loggedInUser.hasRole(BorderForceStaff))
+        <.div(
+          ^.className := "export-button-wrapper",
+          MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
+            MuiIcons(GetApp)(fontSize = "small"),
+            "Multi Day Export",
+            ^.className := "btn btn-default",
+            VdomAttr("data-toggle") := "modal",
+            VdomAttr("data-target") := "#multi-day-export",
+            ^.href := "#",
+            ^.onClick ==> showDialogue,
+          ),
+          <.div(^.className := "multi-day-export modal " + showClass, ^.id := "#multi-day-export", ^.tabIndex := -1, ^.role := "dialog",
             <.div(
-              ^.className := "modal-content",
+              ^.className := "modal-dialog modal-dialog-centered",
+              ^.id := "multi-day-export-modal-dialog",
+              ^.role := "document",
               <.div(
-                ^.className := "modal-header",
-                <.h5(^.className := "modal-title", "Choose dates to export")
-              ),
-              <.div(
-                ^.className := "modal-body",
-                ^.id := "multi-day-export-modal-body",
-                MuiGrid(container = true)(
-                  MuiGrid(container = true, spacing = 2)(
-                    datePickerWithLabel(setStartDate, "From", state.startDate.date),
-                    datePickerWithLabel(setEndDate, "To", state.endDate.date),
-                    if (state.startDate.date > state.endDate.date)
-                      MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
-                    else
-                      EmptyVdom,
-
-                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
-                      val exports = props.portCode match {
-                        case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(SDate(state.endDate.date)) =>
-                          List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"), ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
-                        case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
-                        case _ => List(ExportArrivals)
-                      }
-                      exportLinksGroup(props, state, gridXs, exports, "Arrivals")
-                    } else EmptyVdom,
-                    if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      exportLinksGroup(props, state, gridXs, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
-                    else EmptyVdom,
-                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
-                      exportLinksGroup(props, state, gridXs, List(ExportLiveArrivalsFeed), "Feeds")
-                    else EmptyVdom
-                  )
+                ^.className := "modal-content",
+                <.div(
+                  ^.className := "modal-header",
+                  <.h5(^.className := "modal-title", "Choose dates to export")
                 ),
                 <.div(
-                  ^.className := "modal-footer",
-                  ^.id := "multi-day-export-modal-footer",
-                  <.button(
-                    ^.className := "btn btn-link",
-                    VdomAttr("data-dismiss") := "modal", "Close",
-                    ^.onClick --> scope.modState(_.copy(showDialogue = false))
+                  ^.className := "modal-body",
+                  ^.id := "multi-day-export-modal-body",
+                  MuiGrid(container = true)(
+                    MuiGrid(container = true, spacing = 2)(
+                      datePickerWithLabel(setStartDate, "From", state.startDate.date),
+                      datePickerWithLabel(setEndDate, "To", state.endDate.date),
+                      if (state.startDate.date > state.endDate.date)
+                        MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
+                      else
+                        EmptyVdom,
+
+                      if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
+                        val exports = props.portCode match {
+                          case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(SDate(state.endDate.date)) =>
+                            List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"), ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
+                          case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
+                          case _ => List(ExportArrivals)
+                        }
+                        exportLinksGroup(props, state, gridXs, exports, "Arrivals")
+                      } else EmptyVdom,
+                      if (props.loggedInUser.hasRole(DesksAndQueuesView))
+                        exportLinksGroup(props, state, gridXs, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
+                      else EmptyVdom,
+                      if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
+                        exportLinksGroup(props, state, gridXs, List(ExportLiveArrivalsFeed), "Feeds")
+                      else EmptyVdom
+                    )
+                  ),
+                  <.div(
+                    ^.className := "modal-footer",
+                    ^.id := "multi-day-export-modal-footer",
+                    <.button(
+                      ^.className := "btn btn-link",
+                      VdomAttr("data-dismiss") := "modal", "Close",
+                      ^.onClick --> scope.modState(_.copy(showDialogue = false))
+                    )
                   )
                 )
               )
-            )
-          ))
-      )
+            ))
+        )
+      else EmptyVdom
     })
     .build
 
