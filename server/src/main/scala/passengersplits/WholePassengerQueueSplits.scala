@@ -11,7 +11,6 @@ import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PaxType
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import scala.annotation.tailrec
 import scala.collection.MapView
 import scala.collection.immutable.NumericRange
 
@@ -67,20 +66,6 @@ object WholePassengerQueueSplits {
       case None =>
         log.error(s"No splits found for ${flight.apiFlight.flightCode}")
         Map.empty
-    }
-
-  @tailrec
-  private def maybeFallbackQueue(queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-                                 queueFallbacks: List[Queue],
-                                 minute: MillisSinceEpoch,
-                                ): Option[Queue] =
-    queueFallbacks match {
-      case Nil => None
-      case queue :: tail =>
-        queueStatus(queue, minute) match {
-          case Open => Option(queue)
-          case _ => maybeFallbackQueue(queueStatus, tail, minute)
-        }
     }
 
   def wholePaxLoadsPerQueuePerMinute(processingWindow: NumericRange[MillisSinceEpoch],
