@@ -16,10 +16,19 @@ trait WithEmailNotification {
     seminars.map { seminar =>
       val personalisation = emailNotification
         .seminarRegistrationConfirmation(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), email, seminar)
+      val hostEmailPersonalisation = emailNotification
+        .seminarRegistrationHost(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), seminarHostEmail, email, seminar)
+
       emailNotification.sendRequest(govNotifyReference,
         email,
         seminarRegistrationTemplateId,
         personalisation)
+
+      emailNotification.sendRequest(govNotifyReference,
+        seminarHostEmail,
+        seminarRegistrationHostTemplateId,
+        hostEmailPersonalisation)
+
     }
   }
 

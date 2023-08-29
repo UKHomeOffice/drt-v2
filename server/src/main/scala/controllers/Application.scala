@@ -172,6 +172,10 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   lazy val seminarRegistrationTemplateId = config.get[String]("notifications.seminar-registration-templateId")
 
+  lazy val seminarRegistrationHostTemplateId = config.get[String]("notifications.seminar-registration-host-templateId")
+
+  lazy val seminarHostEmail = config.get[String]("notifications.seminar-host-email")
+
   lazy val govNotifyReference = config.get[String]("notifications.reference")
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
@@ -199,7 +203,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   }
 
   def seminars(): Action[AnyContent] = Action.async { _ =>
-    val seminarsJson: Future[String] = ctrl.seminarService.getSeminars(false)
+    val seminarsJson: Future[String] = ctrl.seminarService.getPublishedSeminars(false)
     seminarsJson.map(Ok(_))
   }
 

@@ -20,6 +20,19 @@ class GovNotifyEmail(apiKey: String) {
     Try(email.split("\\.").head.toLowerCase.capitalize).getOrElse(email)
   }
 
+  def seminarRegistrationHost(teamEmail: String, hostEmail: String, registeredUserEmail: String, seminar: SeminarRow) = {
+    Map(
+      "teamEmail" -> teamEmail,
+      "registeredUserEmail" -> registeredUserEmail,
+      "hostUsername" -> getFirstName(hostEmail),
+      "title" -> seminar.title,
+      "seminarDate" -> seminar.getDate,
+      "startTime" -> seminar.getStartTime,
+      "endTime" -> seminar.getEndTime,
+      "meetingLink" -> seminar.meetingLink.getOrElse(""),
+    ).asJava
+  }
+
   def seminarRegistrationConfirmation(teamEmail: String, email: String, seminar: SeminarRow): util.Map[String, String] = {
     Map(
       "teamEmail" -> teamEmail,
@@ -28,6 +41,7 @@ class GovNotifyEmail(apiKey: String) {
       "seminarDate" -> seminar.getDate,
       "startTime" -> seminar.getStartTime,
       "endTime" -> seminar.getEndTime,
+      "meetingLink" -> seminar.meetingLink.getOrElse(""),
     ).asJava
   }
 

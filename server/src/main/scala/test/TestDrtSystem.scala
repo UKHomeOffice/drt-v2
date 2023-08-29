@@ -73,15 +73,11 @@ case class MockSeminarsRegistrationTable() extends SeminarsRegistrationTableLike
 }
 
 case class MockSeminarTable() extends SeminarTableLike {
-
   override def updatePublishSeminar(seminarId: String, publish: Boolean): Unit = ???
-
   override def updateSeminar(seminarRow: SeminarRow): Future[Int] = ???
-
   override def deleteSeminar(seminarId: String): Future[Int] = ???
   override def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]] = ???
-  override def getSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[String] =  ???
-  override def insertSeminarForm(title: String, description: String, startTime: Timestamp, endTime: Timestamp): Future[Int] = ???
+  override def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[String] =  ???
 
 }
 

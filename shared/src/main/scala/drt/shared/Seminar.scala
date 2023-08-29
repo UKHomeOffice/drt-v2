@@ -8,6 +8,7 @@ case class Seminar(id: Option[Int],
                    startTime: Long,
                    endTime: Long,
                    published: Boolean,
+                   meetingLink: Option[String],
                    latestUpdateTime: Long)
 
 object Seminar {
