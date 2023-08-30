@@ -176,9 +176,15 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   lazy val seminarHostEmail = config.get[String]("notifications.seminar-host-email")
 
+  lazy val seminarHostName = config.get[String]("notifications.seminar-host-name")
+
   lazy val govNotifyReference = config.get[String]("notifications.reference")
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
+
+  val baseDomain = config.get[String]("drt.domain")
+
+  val isSecure = config.get[Boolean]("drt.use-https")
 
   val log: LoggingAdapter = system.log
 
@@ -207,6 +213,26 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     seminarsJson.map(Ok(_))
   }
 
+  def getICSFile(seminarId: String): Action[AnyContent] = Action.async { _ =>
+    ctrl.seminarService.getSeminars(Seq(seminarId)).map {
+      _.headOption match {
+        case Some(seminar) =>
+          val icsContent = CalendarInvite.invite(seminar.getZonedStartTime,
+            seminar.getZonedEndTime,
+            seminar.title,
+            seminar.description,
+            seminar.meetingLink.getOrElse(""),
+            seminarHostName,
+            seminarHostEmail)
+          Ok(icsContent).as("text/calendar").withHeaders(
+            CONTENT_DISPOSITION -> """attachment; filename="invite.ics""""
+          )
+
+        case None => NotFound
+      }
+    }
+  }
+
   def registerSeminars: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
       import spray.json.DefaultJsonProtocol._
@@ -220,9 +246,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
           Future.successful(Try(content.parseJson.convertTo[Seq[String]])
             .map { ids =>
               ctrl.seminarRegistrationService.registerSeminars(userEmail, ids).map { _ =>
-                ctrl.seminarService.getSeminars(ids).map {
-                  sendSeminarRegistrationEmail(userEmail, _)
-                }
+                ctrl.seminarService.getSeminars(ids).map(sendSeminarRegistrationEmail(userEmail, _))
               }.recover {
                 case e => log.warning(s"Error while db insert for seminar registration", e)
                   BadRequest(s"Failed to register seminars for user $userEmail")
@@ -319,8 +343,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     if (user.hasRole(airportConfig.role)) {
       Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
     } else {
-      val baseDomain = config.get[String]("drt.domain")
-      val isSecure = config.get[Boolean]("drt.use-https")
       val protocol = if (isSecure) "https://" else "http://"
       val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
       val redirectUrl = protocol + baseDomain + fromPort

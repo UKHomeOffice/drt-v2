@@ -2,10 +2,11 @@ package slickdb
 
 import drt.shared.Seminar
 import org.joda.time.DateTime
-import slick.lifted.ProvenShape
 import slick.jdbc.PostgresProfile.api._
+import slick.lifted.ProvenShape
 
 import java.sql.Timestamp
+import java.time.{ZoneId, ZonedDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
 case class SeminarRow(id: Option[Int],
@@ -23,6 +24,12 @@ case class SeminarRow(id: Option[Int],
   def getStartTime: String = new DateTime(startTime).toString("HH:mm")
 
   def getEndTime: String = new DateTime(endTime).toString("HH:mm")
+
+  val zonedDateTime: Timestamp => ZonedDateTime = timestamp => ZonedDateTime.ofInstant(timestamp.toInstant, ZoneId.of("Europe/London"))
+
+  def getZonedStartTime: ZonedDateTime = zonedDateTime(startTime)
+
+  def getZonedEndTime: ZonedDateTime = zonedDateTime(endTime)
 }
 
 class Seminars(tag: Tag) extends Table[SeminarRow](tag, "seminar") {

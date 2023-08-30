@@ -114,6 +114,8 @@ GET           /feature-guide-video/:filename                                    
 
 GET           /seminars                                                               controllers.Application.seminars()
 
+GET           /seminar/calendarInvite/:seminarId                                      controllers.Application.getICSFile(seminarId:String)
+
 + nocsrf
 POST          /register-seminar                                                       controllers.Application.registerSeminars()
 
