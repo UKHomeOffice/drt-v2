@@ -80,4 +80,15 @@ class DateRangeSpec extends Specification {
       }
     }
   }
+
+  "Given start & end LocalDates" >> {
+    "I should get an inclusive range of LocalDates" >> {
+      DateRange(LocalDate(2020, 1, 30), LocalDate(2020, 2, 2)) === Seq(
+        LocalDate(2020, 1, 30),
+        LocalDate(2020, 1, 31),
+        LocalDate(2020, 2, 1),
+        LocalDate(2020, 2, 2),
+      )
+    }
+  }
 }
