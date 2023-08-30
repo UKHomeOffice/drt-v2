@@ -11,7 +11,7 @@ import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MinutesContainer, PassengersMinute}
-import drt.shared.FlightsApi.{Flights, PaxForArrivals, SplitsForArrivals}
+import drt.shared.FlightsApi.{Flights, PaxForArrivals}
 import drt.shared._
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
@@ -24,7 +24,7 @@ import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Passengers, Splits}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
@@ -35,8 +35,8 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.{Map, Seq, SortedMap}
-import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
 class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Actor {

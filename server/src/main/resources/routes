@@ -3,7 +3,7 @@
 # ~~~~
 
 # Home page
- +nocsrf
++ nocsrf
 POST          /report-to                                                              controllers.CSPReportController.report
 GET           /                                                                       controllers.Application.index
 GET           /health-check                                                           controllers.Application.healthCheck
@@ -19,9 +19,9 @@ GET           /airport-info                                                     
 GET           /walk-times                                                             controllers.Application.getWalkTimes
 
 GET           /alerts/:createdAfter                                                   controllers.Application.getAlerts(createdAfter: Long)
- +nocsrf
++ nocsrf
 POST          /alerts                                                                 controllers.Application.addAlert
- +nocsrf
++ nocsrf
 DELETE        /alerts                                                                 controllers.Application.deleteAlerts
 
 GET           /version                                                                controllers.Application.getApplicationVersion
@@ -70,6 +70,7 @@ GET           /export/desk-rec-simulation                                       
 GET           /desk-rec-simulation                                                    controllers.Application.simulation
 
 GET           /forecast-accuracy/:date                                                controllers.Application.getForecastAccuracy(date: String)
+GET           /export/forecast-accuracy/:daysForComparison/:daysAhead                 controllers.Application.forecastAccuracyExport(daysForComparison: Int, daysAhead: Int)
 
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                                     controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
@@ -83,7 +84,7 @@ GET           /data/user                                                        
 
 GET           /data/track-user                                                        controllers.Application.trackUser()
 
- +nocsrf
++ nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin()
 
 GET           /data/userDetails/:email                                               controllers.Application.userDetails(email:String)
@@ -105,6 +106,7 @@ DELETE        /staff-movements/:uuid                                            
 
 # Feed import
 POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()
++ nocsrf
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
 # Training
 GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
@@ -117,14 +119,14 @@ POST          /record-feature-guide-view/:filename                              
 
 GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds()
 # Test related
- +nocsrf
++ nocsrf
 POST          /test/arrival                                                           test.controllers.TestController.addArrival
- +nocsrf
++ nocsrf
 POST          /test/arrivals/:forDate                                                 test.controllers.TestController.addArrivals(forDate)
- +nocsrf
++ nocsrf
 POST          /test/manifest                                                          test.controllers.TestController.addManifest
- +nocsrf
++ nocsrf
 POST          /test/mock-roles                                                        test.controllers.TestController.setMockRoles()
 GET           /test/mock-roles-set                                                    test.controllers.TestController.setMockRolesByQueryString()
- +nocsrf
++ nocsrf
 DELETE        /test/data                                                              test.controllers.TestController.deleteAllData()

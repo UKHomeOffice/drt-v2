@@ -7,7 +7,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
-import drt.shared.FlightsApi.{PaxForArrivals, SplitsForArrivals}
+import drt.shared.FlightsApi.PaxForArrivals
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
@@ -16,7 +16,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.DynamicQueueStatusProvider
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers, SplitsForArrivals}
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -73,12 +73,17 @@ object DynamicRunnablePassengerLoads {
   }
 
   private def updateSplits(splitsSink: ActorRef)
-                          (implicit ec: ExecutionContext, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+                          (implicit
+                           ec: ExecutionContext,
+                           timeout: Timeout,
+                          ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
           splitsSink
-            .ask(SplitsForArrivals(flights.map(fws => (fws.unique, fws.splits)).toMap))
+            .ask(SplitsForArrivals(flights.map { fws =>
+              (fws.unique, fws.splits)
+            }.toMap))
             .map(_ => (crunchRequest, flights))
             .recover {
               case t =>
@@ -88,7 +93,10 @@ object DynamicRunnablePassengerLoads {
       }
 
   private def updateHistoricApiPaxNos(splitsSink: ActorRef)
-                                     (implicit ec: ExecutionContext, timeout: Timeout): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+                                     (implicit
+                                      ec: ExecutionContext,
+                                      timeout: Timeout,
+                                     ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
@@ -143,7 +151,8 @@ object DynamicRunnablePassengerLoads {
       }
   }
 
-  private def queueStatusesProvider(statuses: Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]]): Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
+  private def queueStatusesProvider(statuses: Map[Terminal, Map[Queue, Map[MillisSinceEpoch, QueueStatus]]],
+                                   ): Terminal => (Queue, MillisSinceEpoch) => QueueStatus =
     (terminal: Terminal) => (queue: Queue, time: MillisSinceEpoch) => {
       val terminalStatuses = statuses.getOrElse(terminal, {
         log.error(s"terminal $terminal not found")
@@ -194,8 +203,8 @@ object DynamicRunnablePassengerLoads {
             if (flight.apiFlight.hasNoPaxSource) {
               historicManifestsPaxProvider(flight.apiFlight).map {
                 case Some(manifestPaxLike: ManifestPaxCount) =>
-                  val totalPax: Map[FeedSource, Passengers] = flight.apiFlight.PassengerSources.updated(HistoricApiFeedSource, Passengers(manifestPaxLike.pax, None))
-                  val updatedArrival = flight.apiFlight.copy(PassengerSources = totalPax)
+                  val paxSources = flight.apiFlight.PassengerSources.updated(HistoricApiFeedSource, Passengers(manifestPaxLike.pax, None))
+                  val updatedArrival = flight.apiFlight.copy(PassengerSources = paxSources)
                   flight.copy(apiFlight = updatedArrival)
                 case None => flight
               }.recover { case e =>
@@ -290,6 +299,7 @@ object DynamicRunnablePassengerLoads {
         val maybeNewSplits = manifests
           .get(ArrivalKey(flight.apiFlight))
           .map(splitsForArrival(_, flight.apiFlight))
+
 
         val existingSplits = maybeNewSplits match {
           case Some(splits) if splits.source == ApiSplitsWithHistoricalEGateAndFTPercentages =>

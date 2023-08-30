@@ -279,8 +279,8 @@ object PaxSplitsDisplayTests extends TestSuite {
         val result = ApiSplitsToSplitRatio.paxPerQueueUsingBestSplitsAsRatio(apiFlightWithSplits, paxFeedSourceOrder)
 
         val expected: Option[Map[Queues.Queue, Int]] = Option(Map(
-          Queues.NonEeaDesk -> 15,
-          Queues.FastTrack -> 5
+          Queues.NonEeaDesk -> 75,
+          Queues.FastTrack -> 25
         ))
         assert(result == expected)
       }

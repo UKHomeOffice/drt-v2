@@ -10,9 +10,9 @@ import org.specs2.specification.AfterEach
 import services.PcpArrival
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.arrival.WalkTimeModelAndFeatures
 import uk.gov.homeoffice.drt.time.MilliTimes.oneDayMillis
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

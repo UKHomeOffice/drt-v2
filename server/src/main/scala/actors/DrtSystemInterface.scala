@@ -149,10 +149,20 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   val flightUpdates: ActorRef
 
   val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] = (date: LocalDate, atTime: SDateLike) =>
-    paxForDay(date, Option(atTime))
+    flightValuesForDate(
+      date,
+      Option(atTime),
+      arrival => SDate(arrival.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date,
+      arrivals => arrivals.map(arrival => arrival.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
+    )
 
   val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] = (date: LocalDate) =>
-    paxForDay(date, None)
+    flightValuesForDate(
+      date,
+      None,
+      arrival => SDate(arrival.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date,
+      arrivals => arrivals.map(arrival => arrival.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
+    )
 
   val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
     ScenarioSimulationSource,
@@ -171,7 +181,11 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     AclFeedSource,
   )
 
-  private def paxForDay(date: LocalDate, maybeAtTime: Option[SDateLike]): Future[Map[Terminal, Double]] = {
+  private def flightValuesForDate[T](date: LocalDate,
+                                     maybeAtTime: Option[SDateLike],
+                                     flightIsRelevant: Arrival => Boolean,
+                                     extractValue: Iterable[Arrival] => T,
+                                    ): Future[Map[Terminal, T]] = {
     val start = SDate(date)
     val end = start.addDays(1).addMinutes(-1)
     val rangeRequest = GetStateForDateRange(start.millisSinceEpoch, end.millisSinceEpoch)
@@ -187,19 +201,35 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
           case (_, flights) =>
             flights.flights
               .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
-                SDate(apiFlight.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date
+                val nonCtaOrDom = !apiFlight.Origin.isDomesticOrCta
+                nonCtaOrDom && flightIsRelevant(apiFlight)
               }
               .values
               .groupBy(fws => fws.apiFlight.Terminal)
               .map {
                 case (terminal, flights) =>
-                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
-                  (terminal, paxNos.toDouble)
+                  (terminal, extractValue(flights.map(_.apiFlight)))
               }
         }.runWith(Sink.seq)
       }
       .map(_.toMap)
   }
+
+  val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate, atTime: SDateLike) =>
+    flightValuesForDate(
+      date,
+      Option(atTime),
+      arrival => SDate(arrival.Scheduled).toLocalDate == date,
+      arrivals => arrivals.toSeq
+    )
+
+  val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate) =>
+    flightValuesForDate(
+      date,
+      None,
+      arrival => SDate(arrival.Scheduled).toLocalDate == date,
+      arrivals => arrivals.toSeq
+    )
 
   lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
     LiveFeedSource -> liveArrivalsActor,

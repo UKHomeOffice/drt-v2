@@ -4,11 +4,10 @@ import akka.Done
 import akka.actor.Actor
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import slickdb.ArrivalTableLike
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 
 import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
@@ -38,10 +37,10 @@ class AggregatedArrivalsActor(arrivalTable: ArrivalTableLike) extends Actor {
       .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .runWith(Sink.ignore)
 
-  def handleRemovals(toRemove: Iterable[Arrival]): Future[Done] =
+  def handleRemovals(toRemove: Iterable[UniqueArrival]): Future[Done] =
     Source(toRemove.toList)
       .mapAsync(2)(a =>
-        arrivalTable.removeArrival(a.VoyageNumber.numeric, a.Terminal, new Timestamp(a.Scheduled)))
+        arrivalTable.removeArrival(a.number, a.terminal, new Timestamp(a.scheduled)))
       .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
       .runWith(Sink.ignore)
 }

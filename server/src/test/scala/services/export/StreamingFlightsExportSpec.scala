@@ -31,8 +31,10 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      passengerSources = Map(LiveFeedSource -> Passengers(Option(98), None),
-        ApiFeedSource -> Passengers(Option(100), None))
+      passengerSources = Map(
+        LiveFeedSource -> Passengers(Option(98), None),
+        ApiFeedSource -> Passengers(Option(100), None),
+      )
     ),
     Set(Splits(
       Set(
@@ -68,7 +70,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(ApiFeedSource),
-      passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None))
+      passengerSources = Map(ApiFeedSource -> Passengers(Option(28), None))
     ),
     Set(Splits(
       Set(
@@ -317,7 +319,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     result === expected
   }
 
-  "Given a Flight With Splits and a VoyageManifests with a matching arrival I should get all the data with API nos plus the nationalities breakdown in size then alphabetical order, and age breakdowns in ascending range order" >> {
+  "Given a Flight With Splits and a VoyageManifests with a matching arrival " +
+    "I should get all the data with API nos plus the nationalities breakdown in size then alphabetical order, and age breakdowns in ascending range order" >> {
     val manifests = VoyageManifests(Set(VoyageManifest(DC, PortCode("AAA"), flightWithAllTypesOfAPISplit.apiFlight.Origin, flightWithAllTypesOfAPISplit.apiFlight.VoyageNumber,
       flightWithAllTypesOfAPISplit.apiFlight.CarrierCode, ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("20:00"), List(
         PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(50)), None, InTransit(false), None, Option(Nationality("GBR")), None),

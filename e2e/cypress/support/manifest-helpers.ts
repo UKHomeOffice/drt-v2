@@ -19,7 +19,7 @@ const passengerProfiles = {
         "DocumentIssuingCountryCode": "ITA",
         "PersonType": "P",
         "DocumentLevel": "Primary",
-        "Age": "11",
+        "Age": "9",
         "DisembarkationPortCode": "TST",
         "InTransitFlag": "N",
         "DisembarkationPortCountryCode": "TST",

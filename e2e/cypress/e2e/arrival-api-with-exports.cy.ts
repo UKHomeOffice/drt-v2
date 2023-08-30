@@ -131,8 +131,8 @@ describe('Arrival API with exports', () => {
             })
     });
 
-    it('uses API splits for passenger numbers if they are within 5% of the port feed', () => {
-        const dataWithoutActApi = csvRow("12","50", "25", "12");
+    it('uses live port feed for passenger numbers even if API is within 5% of the port feed', () => {
+        const dataWithoutActApi = csvRow("12","51", "26", "13");
         const actApiData = "18.0,5.0,0.0,0.0,0.0,0.0,0.0,7.0,3.0,0.0,10.0,7.0,0.0,0.0,\"FRA:23,AUS:10,ZWE:10,MRU:7\",\"25-49:50\"";
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 

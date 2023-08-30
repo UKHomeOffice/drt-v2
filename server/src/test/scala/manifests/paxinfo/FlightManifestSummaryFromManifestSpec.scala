@@ -15,21 +15,22 @@ import scala.collection.immutable.List
 
 class FlightManifestSummaryFromManifestSpec extends Specification {
 
+  private val dateAfterEgateAgeEligibilityChange = "2023-07-26"
+
   "When extracting passenger info " >> {
-    "Given a manifest with multiple GB passengers aged 10, 20 and 30 " >> {
+    "Given a manifest with multiple GB passengers aged 9, 20 and 30 " >> {
       "Then I should get a matching PassengerInfoSummary" >> {
 
         val voyageManifest = manifestWithPassengerAgesAndNats(List(
-          (Nationality("GBR"), 10),
+          (Nationality("GBR"), 9),
           (Nationality("GBR"), 20),
-          (Nationality("GBR"), 30))
-        )
+          (Nationality("GBR"), 30)), dateAfterEgateAgeEligibilityChange)
 
         val result = PassengerInfo.manifestToFlightManifestSummary(voyageManifest)
 
         val expected = Option(FlightManifestSummary(
-          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2020-11-09T00:00").millisSinceEpoch),
-          Map(AgeRange(0, Option(11)) -> 1, AgeRange(12, Option(24)) -> 1, AgeRange(25, Option(49)) -> 1),
+          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
+          Map(AgeRange(0, Option(9)) -> 1, AgeRange(10, Option(24)) -> 1, AgeRange(25, Option(49)) -> 1),
           Map(Nationality("GBR") -> 3),
           Map(
             PaxTypes.GBRNational -> 2,
@@ -49,12 +50,12 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
         val voyageManifest = manifestWithPassengerAgesNatsAndIds(List(
           (Nationality("GBR"), 25, Option("1")),
           (Nationality("GBR"), 25, Option("1")),
-        ))
+        ), dateAfterEgateAgeEligibilityChange)
 
         val result = PassengerInfo.manifestToFlightManifestSummary(voyageManifest)
 
         val expected = Option(FlightManifestSummary(
-          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2020-11-09T00:00").millisSinceEpoch),
+          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
           Map(AgeRange(25, Option(49)) -> 1),
           Map(Nationality("GBR") -> 1),
           Map(
@@ -79,13 +80,13 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
             passengerBuilder(inTransit = "Y"),
             passengerBuilder(),
             passengerBuilder(),
-          )
+          ), dateAfterEgateAgeEligibilityChange
         )
 
         val result = PassengerInfo.manifestToFlightManifestSummary(voyageManifest)
 
         val expected = Option(FlightManifestSummary(
-          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate("2020-11-09T00:00").millisSinceEpoch),
+          ArrivalKey(PortCode("JFK"), VoyageNumber(1), SDate(dateAfterEgateAgeEligibilityChange + "T00:00").millisSinceEpoch),
           Map(AgeRange(25, Option(49)) -> 6),
           Map(Nationality("GBR") -> 6),
           Map(
@@ -99,18 +100,27 @@ class FlightManifestSummaryFromManifestSpec extends Specification {
     }
   }
 
-  "When deserializing an unknown age range then I should get back and UnknownAge " >> {
+  "When unknown string age is parsed then the parse function gives UnknownAge " >> {
     val result = PaxAgeRange.parse(UnknownAge.title)
 
     result === UnknownAge
   }
 
+  "Given a AgeRange class" >> {
+    "I should be able to serialise and deserialise it with upickle without loss" >> {
+      val ageRange = AgeRange(25, Option(49))
+      val json = upickle.default.write(ageRange)
+      val ageRangeDeserialised = upickle.default.read[AgeRange](json)
+      ageRangeDeserialised mustEqual ageRange
+    }
+  }
+
   "When deserializing age ranges we should get back the correct age range " >> {
-    val ageRangeStrings = PassengerInfo.ageRanges.map(_.title)
+    val ageRangeStrings = PassengerInfo.ageRangesForDate(Some(SDate(System.currentTimeMillis()))).map(_.title)
 
     val result = ageRangeStrings.map(PaxAgeRange.parse)
 
-    result === PassengerInfo.ageRanges
+    result === PassengerInfo.ageRangesForDate(Some(SDate(System.currentTimeMillis())))
   }
 
 

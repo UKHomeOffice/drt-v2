@@ -182,8 +182,16 @@ class TestDrtActor extends Actor {
         val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
           arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
           liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
-          historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups, mockCacheLookup, mockCacheStore),
-          historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(tc.airportConfig.portCode, historicManifestLookups),
+          historicManifestsProvider = OptimisationProviders.historicManifestsProvider(
+            tc.airportConfig.portCode,
+            tc.historicManifestLookup.getOrElse(historicManifestLookups),
+            mockCacheLookup,
+            mockCacheStore
+          ),
+          historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(
+            tc.airportConfig.portCode,
+            tc.historicManifestLookup.getOrElse(historicManifestLookups),
+          ),
           splitsCalculator = splitsCalculator,
           splitsSink = portStateActor,
           portDesksAndWaitsProvider = portDeskRecs,

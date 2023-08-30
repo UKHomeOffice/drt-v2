@@ -66,7 +66,7 @@ describe('Terminal dashboard', () => {
                 "ICAO": "TS0124",
                 "IATA": "TS0124",
                 "SchDT": todayAtString(14, 10),
-                "ActChoxDT": todayAtString(14, 30),
+                "ActChoxDT": todayAtString(14, 35),
                 "ActPax": 51
             })
             .asABorderForceOfficer()
