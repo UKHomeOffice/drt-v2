@@ -1,11 +1,11 @@
 package slickdb
 
 import drt.shared.Seminar
-import org.joda.time.DateTime
+import org.joda.time.{DateTime}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
-
 import java.sql.Timestamp
+import java.time.format.DateTimeFormatter
 import java.time.{ZoneId, ZonedDateTime}
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -19,13 +19,19 @@ case class SeminarRow(id: Option[Int],
                       latestUpdateTime: Timestamp) {
   def toSeminar: Seminar = Seminar(id, title, description, startTime.getTime, endTime.getTime, published, meetingLink, latestUpdateTime.getTime)
 
-  def getDate: String = new DateTime(startTime).toString("dd/MM/yyyy")
+  def getDate: String = getStringDate(startTime, dateFormatter)
 
-  def getStartTime: String = new DateTime(startTime).toString("HH:mm")
+  def getStartTime: String = getStringDate(startTime, timeFormatter)
 
-  def getEndTime: String = new DateTime(endTime).toString("HH:mm")
+  def getEndTime: String = getStringDate(endTime, timeFormatter)
 
-  val zonedDateTime: Timestamp => ZonedDateTime = timestamp => ZonedDateTime.ofInstant(timestamp.toInstant, ZoneId.of("Europe/London"))
+  val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+
+  val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+  def getStringDate(timestamp: Timestamp, formatter: DateTimeFormatter): String = zonedDateTime(timestamp).format(formatter)
+
+  val zonedDateTime: Timestamp => ZonedDateTime = timestamp => timestamp.toInstant.atZone(ZoneId.of("UTC"))
 
   def getZonedStartTime: ZonedDateTime = zonedDateTime(startTime)
 
