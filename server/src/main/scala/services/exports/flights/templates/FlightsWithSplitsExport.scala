@@ -1,33 +1,13 @@
 package services.exports.flights.templates
 
-import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import services.exports.FlightExports
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
 
 
 trait FlightsWithSplitsExport extends FlightsExport {
-  def flightWithSplitsToCsvFields(fws: ApiFlightWithSplits,
-                                  millisToLocalDateTimeString: MillisSinceEpoch => String): List[String] = {
-    List(
-      fws.apiFlight.flightCodeString,
-      fws.apiFlight.flightCodeString,
-      fws.apiFlight.Origin.toString,
-      fws.apiFlight.Gate.getOrElse("") + "/" + fws.apiFlight.Stand.getOrElse(""),
-      fws.apiFlight.displayStatus.description,
-      millisToLocalDateTimeString(fws.apiFlight.Scheduled),
-      fws.apiFlight.predictedTouchdown.map(p => millisToLocalDateTimeString(p)).getOrElse(""),
-      fws.apiFlight.Estimated.map(millisToLocalDateTimeString(_)).getOrElse(""),
-      fws.apiFlight.Actual.map(millisToLocalDateTimeString(_)).getOrElse(""),
-      fws.apiFlight.EstimatedChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
-      fws.apiFlight.ActualChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
-      fws.apiFlight.differenceFromScheduled.map(_.toMinutes.toString).getOrElse(""),
-      fws.apiFlight.PcpTime.map(millisToLocalDateTimeString(_)).getOrElse(""),
-      fws.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse(""),
-    )
-  }
-
   protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
-    flightWithSplitsToCsvFields(fws, millisToLocalDateTimeStringFn) ++
+    FlightExports.flightWithSplitsToCsvFields(paxFeedSourceOrder)(fws.apiFlight) ++
       List(pcpPax(fws), apiIsInvalid(fws)) ++
       splitsForSources(fws)
   }

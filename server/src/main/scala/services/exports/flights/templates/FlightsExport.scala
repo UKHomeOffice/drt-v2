@@ -42,9 +42,6 @@ trait FlightsExport {
 
   private def flightToCsvRow(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): String = rowValues(fws, maybeManifest).mkString(",")
 
-  def millisToLocalDateTimeStringFn: MillisSinceEpoch => String =
-    (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toLocalDateTimeString
-
   private val splitSources = List(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage)
 
   def splitsForSources(fws: ApiFlightWithSplits): List[String] =

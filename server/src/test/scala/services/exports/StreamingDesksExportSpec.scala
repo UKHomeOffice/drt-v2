@@ -1,4 +1,4 @@
-package services.`export`
+package services.exports
 
 import actors.routing.minutes.MockMinutesLookup
 import akka.NotUsed
@@ -6,7 +6,7 @@ import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, StaffMinute}
 import drt.shared.{TM, TQM}
 import uk.gov.homeoffice.drt.time.SDate
-import services.`export`.CsvTestHelper._
+import services.exports.CsvTestHelper._
 import services.crunch.CrunchTestLike
 import services.exports.StreamingDesksExport
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}

@@ -1,4 +1,4 @@
-package services.`export`
+package services.exports
 
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
