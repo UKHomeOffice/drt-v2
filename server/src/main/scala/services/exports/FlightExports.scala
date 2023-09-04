@@ -23,41 +23,42 @@ object FlightExports {
 
   private val flightsToCsvRows: (PortCode, Terminal, List[FeedSource]) => Seq[ApiFlightWithSplits] => Seq[String] =
     (port, terminal, paxFeedSourceOrder) => {
+      val regionName = PortRegion.fromPort(port).name
       val portName = port.iata
       val terminalName = terminal.toString
       val toRow = flightWithSplitsToCsvFields(paxFeedSourceOrder)
       flights =>
         flights
           .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
-          .map(fws => s"$portName,$terminalName,${toRow(fws.apiFlight).mkString(",")}\n")
+          .map(fws => s"$regionName,$portName,$terminalName,${toRow(fws.apiFlight).mkString(",")}\n")
     }
 
-  def flightsToDailySummaryRows(port: PortCode,
-                                terminal: Terminal,
-                                paxFeedSourceOrder: List[FeedSource],
-                                passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]]
-                               )
-                               (implicit ec: ExecutionContext): (LocalDate, Seq[Arrival]) => Future[Seq[String]] = {
-      val regionName = PortRegion.fromPort(port).name
-      val portName = port.toString
-      val terminalName = terminal.toString
-      (localDate, arrivals) => {
-        passengerLoadsProvider(localDate).map { passengerLoads =>
-          val startMinute = SDate(localDate).millisSinceEpoch
-          val endMinute = SDate(startMinute).addDays(1).addMinutes(-1).millisSinceEpoch
-          val date = localDate.toISOString
-          val totalPax = arrivals.map(arrival => totalPaxForArrivalInWindow(arrival, paxFeedSourceOrder, startMinute, endMinute)).sum
-          val queuePax = queueTotals(passengerLoads)
-          val queueCells = Queues.queueOrder
-            .map(queue => queuePax.getOrElse(queue, 0).toString)
-            .mkString(",")
-          val pcpPax = queuePax.values.sum
-          val transPax = totalPax - pcpPax
+  def flightsToDailySummaryRow(port: PortCode,
+                               terminal: Terminal,
+                               paxFeedSourceOrder: List[FeedSource],
+                               passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]]
+                              )
+                              (implicit ec: ExecutionContext): (LocalDate, Seq[Arrival]) => Future[Seq[String]] = {
+    val regionName = PortRegion.fromPort(port).name
+    val portName = port.toString
+    val terminalName = terminal.toString
+    (localDate, arrivals) => {
+      passengerLoadsProvider(localDate).map { passengerLoads =>
+        val startMinute = SDate(localDate).millisSinceEpoch
+        val endMinute = SDate(startMinute).addDays(1).addMinutes(-1).millisSinceEpoch
+        val date = localDate.toISOString
+        val totalPax = arrivals.map(arrival => totalPaxForArrivalInWindow(arrival, paxFeedSourceOrder, startMinute, endMinute)).sum
+        val queuePax = queueTotals(passengerLoads)
+        val queueCells = Queues.queueOrder
+          .map(queue => queuePax.getOrElse(queue, 0).toString)
+          .mkString(",")
+        val pcpPax = queuePax.values.sum
+        val transPax = if (totalPax >= pcpPax) totalPax - pcpPax else 0
 
-          Seq(s"$date,$regionName,$portName,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n")
-        }
+        Seq(s"$date,$regionName,$portName,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n")
       }
     }
+  }
 
   def totalPaxForArrivalInWindow(arrival: Arrival,
                                  paxFeedSourceOrder: List[FeedSource],
