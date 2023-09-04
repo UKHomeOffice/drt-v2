@@ -2,7 +2,7 @@ package actors
 
 import actors.CrunchManagerActor.AddQueueCrunchSubscriber
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, GetStateForDateRange, PointInTimeQuery}
 import actors.daily.PassengersActor
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
@@ -180,6 +180,16 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     HistoricApiFeedSource,
     AclFeedSource,
   )
+
+  val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, FlightsWithSplits), NotUsed] =
+    (start, end, terminal) => {
+      val startMillis = SDate(start).millisSinceEpoch
+      val endMillis = SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch
+      Source.future(
+        flightsRouterActor.ask(GetFlightsForTerminalDateRange(startMillis, endMillis, terminal))
+          .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
+      ).flatMapConcat(identity)
+    }
 
   private def flightValuesForDate[T](date: LocalDate,
                                      maybeAtTime: Option[SDateLike],

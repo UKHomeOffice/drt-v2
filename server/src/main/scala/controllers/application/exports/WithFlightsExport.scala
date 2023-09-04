@@ -15,6 +15,7 @@ import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.exports.flights.ArrivalFeedExport
 import services.exports.flights.templates._
+import services.exports.{FlightExports, GeneralExport}
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, SuperAdmin}
@@ -69,6 +70,27 @@ trait WithFlightsExport {
                                                                   endLocalDateString: String,
                                                                   terminalName: String): Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     doExportForDateRange(startLocalDateString, endLocalDateString, terminalName, redListDiversionsExportForUser)
+  }
+
+  def exportFlightsWithSplitsForDateRangeCSVv2(startLocalDateString: String,
+                                               endLocalDateString: String,
+                                               terminalName: String): Action[AnyContent] = Action {
+    (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
+      case (Some(start), Some(end)) =>
+        val terminal = Terminal(terminalName)
+        val getFlights = FlightExports.flightsProvider(ctrl.terminalFlightsProvider, ctrl.paxFeedSourceOrder)
+        val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.paxFeedSourceOrder)
+        val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)
+        val fileName = makeFileName("flights", terminal, start, end, airportConfig.portCode)
+        Try(sourceToCsvResponse(csvStream, fileName)) match {
+          case Success(value) => value
+          case Failure(t) =>
+            log.error("Failed to get CSV export", t)
+            BadRequest("Failed to get CSV export")
+        }
+      case _ =>
+        BadRequest("Invalid date format for start or end date")
+    }
   }
 
   private def doExportForDateRange(startLocalDateString: String,

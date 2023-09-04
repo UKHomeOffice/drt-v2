@@ -4,7 +4,7 @@ import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForTerminalDateR
 import akka.pattern._
 import akka.util.{ByteString, Timeout}
 import controllers.Application
-import controllers.application.exports.{CsvFileStreaming, WithDesksExport, WithFlightsExport}
+import controllers.application.exports.{CsvFileStreaming, WithDesksExport, WithFlightsExport, WithSummariesExport}
 import drt.shared.CrunchApi._
 import drt.shared.PortState
 import drt.users.KeyCloakGroups
@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-trait WithExports extends WithDesksExport with WithFlightsExport {
+trait WithExports extends WithDesksExport with WithFlightsExport with WithSummariesExport {
   self: Application =>
 
   def localLastMidnight(pointInTime: String): SDateLike = SDate(pointInTime.toLong).getLocalLastMidnight

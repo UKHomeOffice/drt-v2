@@ -68,13 +68,13 @@ class GeneralExportSpec extends CrunchTestLike {
     }
   }
 
-  "Given a start and end date, a set of ports & terminals, an aggregator function and a flights provider" >> {
+  "toCsv should give a row for each flight relevant to the date range, including the region, port and terminal" >> {
     val start = LocalDate(2020, 1, 1)
     val end = LocalDate(2020, 1, 2)
     val port = PortCode("MAN")
     val terminal = Terminal("T1")
 
-    val utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, FlightsWithSplits), NotUsed] = (_, _, _) => {
+    val utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, FlightsWithSplits), NotUsed] = (_, _, _) =>
       Source(List(
         (UtcDate(2020, 1, 1), FlightsWithSplits(Seq(
           ApiFlightWithSplits(ArrivalGenerator.arrival(
@@ -84,10 +84,17 @@ class GeneralExportSpec extends CrunchTestLike {
           ApiFlightWithSplits(ArrivalGenerator.arrival(
             iata = "BA0002", schDt = "2020-01-02T00:05", pcpDt = "2020-01-02T00:30", passengerSources = passengers(Option(95), None)), Set()),
         ))),
+        (UtcDate(2020, 1, 3), FlightsWithSplits(Seq(
+          ApiFlightWithSplits(ArrivalGenerator.arrival(
+            iata = "BA0003", schDt = "2020-01-03T02:05", pcpDt = "2020-01-02T23:55", passengerSources = passengers(Option(95), None)), Set()),
+        ))),
+        (UtcDate(2020, 1, 4), FlightsWithSplits(Seq(
+          ApiFlightWithSplits(ArrivalGenerator.arrival(
+            iata = "BA0004", schDt = "2020-01-03T02:30", pcpDt = "2020-01-03T01:55", passengerSources = passengers(Option(95), None)), Set()),
+        ))),
       ))
-    }
 
-    "I should get rows for each terminal and aggregation level" >> {
+    "Given a flights provider, and dateAndFlightsToCsvRows as an aggregator" >> {
       val getFlights = FlightExports.flightsProvider(utcFlightsProvider, paxSourceOrder)
       val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder)
       val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)
@@ -96,6 +103,7 @@ class GeneralExportSpec extends CrunchTestLike {
       val expected = List(
         """North,MAN,T1,BA0002,BA0002,JFK,/,Scheduled,2020-01-02 00:05,,,,,,,2020-01-02 00:30,95
           |North,MAN,T1,BA0001,BA0001,JFK,/,Scheduled,2020-01-01 20:00,,,,,,,2020-01-02 01:30,95
+          |North,MAN,T1,BA0003,BA0003,JFK,/,Scheduled,2020-01-03 02:05,,,,,,,2020-01-02 23:55,95
           |""".stripMargin
       )
 
@@ -115,7 +123,7 @@ class GeneralExportSpec extends CrunchTestLike {
 
     "I should get a single row with total pax from flights and breakdowns from the pax minutes" >> {
       val date = LocalDate(2020, 1, 2)
-      val paxMinutesProvider: LocalDate => Future[Seq[PassengersMinute]] = _ =>
+      val paxMinutesProvider: (LocalDate, Terminal) => Future[Seq[PassengersMinute]] = (_, _) =>
         Future.successful(Seq(
           PassengersMinute(T1, EeaDesk, SDate(date).addMinutes(30).millisSinceEpoch, Seq.fill(5)(0d), None),
           PassengersMinute(T1, EeaDesk, SDate(date).addMinutes(31).millisSinceEpoch, Seq.fill(6)(0d), None),
