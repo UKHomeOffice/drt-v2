@@ -217,8 +217,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     ctrl.seminarService.getSeminars(Seq(seminarId)).map {
       _.headOption match {
         case Some(seminar) =>
-          val icsContent = CalendarInvite.invite(seminar.getZonedStartTime,
-            seminar.getZonedEndTime,
+          val icsContent = CalendarInvite.invite(seminar.getUKStartTime,
+            seminar.getUKEndTime,
             seminar.title,
             seminar.description,
             seminar.meetingLink.getOrElse(""),

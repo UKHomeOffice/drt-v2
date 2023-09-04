@@ -19,23 +19,23 @@ case class SeminarRow(id: Option[Int],
                       latestUpdateTime: Timestamp) {
   def toSeminar: Seminar = Seminar(id, title, description, startTime.getTime, endTime.getTime, published, meetingLink, latestUpdateTime.getTime)
 
-  def getDate: String = getStringDate(startTime, dateFormatter)
+  def getDate: String = getUKStringDate(startTime, dateFormatter)
 
-  def getStartTime: String = getStringDate(startTime, timeFormatter)
+  def getStartTime: String = getUKStringDate(startTime, timeFormatter)
 
-  def getEndTime: String = getStringDate(endTime, timeFormatter)
+  def getEndTime: String = getUKStringDate(endTime, timeFormatter)
 
   val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
   val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
-  def getStringDate(timestamp: Timestamp, formatter: DateTimeFormatter): String = zonedDateTime(timestamp).format(formatter)
+  def getUKStringDate(timestamp: Timestamp, formatter: DateTimeFormatter): String = zonedUKDateTime(timestamp).format(formatter)
 
-  val zonedDateTime: Timestamp => ZonedDateTime = timestamp => timestamp.toInstant.atZone(ZoneId.of("UTC"))
+  val zonedUKDateTime: Timestamp => ZonedDateTime = timestamp => timestamp.toInstant.atZone(ZoneId.of("Europe/London"))
 
-  def getZonedStartTime: ZonedDateTime = zonedDateTime(startTime)
+  def getUKStartTime: ZonedDateTime = zonedUKDateTime(startTime)
 
-  def getZonedEndTime: ZonedDateTime = zonedDateTime(endTime)
+  def getUKEndTime: ZonedDateTime = zonedUKDateTime(endTime)
 }
 
 class Seminars(tag: Tag) extends Table[SeminarRow](tag, "seminar") {

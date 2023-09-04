@@ -1,6 +1,6 @@
 package services
 
-import java.time.ZonedDateTime
+import java.time.{ZoneOffset, ZonedDateTime}
 import java.time.format.DateTimeFormatter
 
 object CalendarInvite {
@@ -14,7 +14,7 @@ object CalendarInvite {
                    organiserName: String,
                    organiserEmail: String,
                  ): String = {
-    val dtFormat = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'")
+    val dtFormat = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC)
 
     s"""BEGIN:VCALENDAR
        |VERSION:2.0
