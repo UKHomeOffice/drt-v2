@@ -2,13 +2,14 @@ package services.exports
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
+import drt.shared.CodeShares
 import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode, PortRegion, Queues}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,20 +38,16 @@ object FlightExports {
                                terminal: Terminal,
                                start: LocalDate,
                                end: LocalDate,
-                               paxFeedSourceOrder: List[FeedSource],
                                passengerLoadsProvider: (LocalDate, Terminal) => Future[Iterable[PassengersMinute]]
                               )
-                              (implicit ec: ExecutionContext): (LocalDate, Seq[Arrival]) => Future[Seq[String]] = {
+                              (implicit ec: ExecutionContext): (LocalDate, Int) => Future[Seq[String]] = {
     val regionName = PortRegion.fromPort(port).name
     val portName = port.toString
     val terminalName = terminal.toString
-    (localDate, arrivals) => {
+    (localDate, totalPax) => {
       if (start <= localDate && localDate <= end)
         passengerLoadsProvider(localDate, terminal).map { passengerLoads =>
-          val startMinute = SDate(localDate).millisSinceEpoch
-          val endMinute = SDate(startMinute).addDays(1).addMinutes(-1).millisSinceEpoch
           val date = localDate.toISOString
-          val totalPax = arrivals.map(arrival => totalPaxForArrivalInWindow(arrival, paxFeedSourceOrder, startMinute, endMinute)).sum
           val queuePax = queueTotals(passengerLoads)
           val queueCells = Queues.queueOrder
             .map(queue => queuePax.getOrElse(queue, 0).toString)
@@ -64,23 +61,9 @@ object FlightExports {
     }
   }
 
-  def totalPaxForArrivalInWindow(arrival: Arrival,
-                                 paxFeedSourceOrder: List[FeedSource],
-                                 startMinute: MillisSinceEpoch,
-                                 endMinute: MillisSinceEpoch,
-                                ): Int = {
-    val total = arrival.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0)
-    arrival.pcpRange(paxFeedSourceOrder).zipWithIndex
-      .foldLeft(0) {
-        case (acc, (minuteMillis, idx)) =>
-          if (startMinute <= minuteMillis && minuteMillis <= endMinute)
-            acc + paxForMinute(total, idx + 1)
-          else acc
-      }
-  }
 
   def paxForMinute(total: Int, minute: Int): Int = {
-    val minutesCount = (total.toDouble / 20).round.toInt
+    val minutesCount = (total.toDouble / 20).ceil.toInt
     if (1 <= minute && minute <= minutesCount) {
       val totalForMinutes = minute * 20
       if (totalForMinutes <= total) 20 else 20 - (totalForMinutes - total)
@@ -118,12 +101,58 @@ object FlightExports {
         }
     }
 
-  def arrivalsProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, FlightsWithSplits), NotUsed],
-                       paxFeedSourceOrder: List[FeedSource],
-                      ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Seq[Arrival]), NotUsed] =
-    (start, end, terminal) => flightsProvider(utcFlightsProvider, paxFeedSourceOrder)(start, end, terminal).map {
-      case (localDate, flights) => (localDate, flights.map(_.apiFlight))
+  def totalPassengerCountProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, FlightsWithSplits), NotUsed],
+                                  paxFeedSourceOrder: List[FeedSource],
+                                 ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Int), NotUsed] = {
+    (start, end, terminal) => {
+      val startMinute = SDate(start)
+      val utcStart = startMinute.addDays(-1).toUtcDate
+      val utcEnd = SDate(end).addDays(2).toUtcDate
+      utcFlightsProvider(utcStart, utcEnd, terminal)
+        .sliding(3, 1)
+        .map { days =>
+          val utcDate = days.map(_._1).sorted.drop(1).head
+          val localDate = LocalDate(utcDate.year, utcDate.month, utcDate.day)
+          val windowStart = SDate(localDate)
+          val windowEnd = SDate(localDate).addDays(1).addMinutes(-1)
+          val arrivals = days.flatMap(_._2.flights.values.map(_.apiFlight))
+          val totalPax = relevantPaxDuringWindow(arrivals, windowStart, windowEnd, paxFeedSourceOrder)
+          (localDate, totalPax)
+        }
     }
+  }
+
+  def relevantPaxDuringWindow(flights: Seq[Arrival],
+                              windowStart: SDateLike,
+                              windowEnd: SDateLike,
+                              paxFeedSourceOrder: List[FeedSource],
+                             ): Int = {
+    val arrivals = flights.filter(_.hasPcpDuring(windowStart, windowEnd, paxFeedSourceOrder))
+    val uniqueArrivals = CodeShares.uniqueArrivals[Arrival](identity, paxFeedSourceOrder)(arrivals).toSeq
+
+    uniqueArrivals
+      .sortBy(_.PcpTime.getOrElse(0L))
+      .map(arrival => totalPaxForArrivalInWindow(arrival, paxFeedSourceOrder, windowStart.millisSinceEpoch, windowEnd.millisSinceEpoch))
+      .sum
+  }
+
+  def totalPaxForArrivalInWindow(arrival: Arrival,
+                                 paxFeedSourceOrder: List[FeedSource],
+                                 startMinute: MillisSinceEpoch,
+                                 endMinute: MillisSinceEpoch,
+                                ): Int = {
+    if (!arrival.Origin.isDomesticOrCta && !arrival.isCancelled) {
+      val total = arrival.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0)
+      arrival.pcpRange(paxFeedSourceOrder).zipWithIndex
+        .foldLeft(0) {
+          case (acc, (minuteMillis, idx)) =>
+            if (startMinute <= minuteMillis && minuteMillis <= endMinute) {
+              acc + paxForMinute(total, idx + 1)
+            } else acc
+        }
+    } else 0
+  }
+
 
   def flightWithSplitsToCsvFields(paxFeedSourceOrder: Seq[FeedSource]): Arrival => List[String] =
     arrival => List(

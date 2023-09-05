@@ -33,8 +33,8 @@ trait WithSummariesExport {
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val terminal = Terminal(terminalName)
-        val getArrivals = FlightExports.arrivalsProvider(ctrl.terminalFlightsProvider, ctrl.paxFeedSourceOrder)
-        val toRows = FlightExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, terminal, start, end, ctrl.paxFeedSourceOrder, passengersProvider)
+        val getArrivals = FlightExports.totalPassengerCountProvider(ctrl.terminalFlightsProvider, ctrl.paxFeedSourceOrder)
+        val toRows = FlightExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, terminal, start, end, /*ctrl.paxFeedSourceOrder,*/ passengersProvider)
         val csvStream = GeneralExport.toCsv(start, end, terminal, getArrivals, toRows)
         val fileName = makeFileName("passengers", terminal, start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {

@@ -15,7 +15,14 @@ object GeneralExport {
                dataToCsvRows: (LocalDate, A) => Future[Seq[String]]
               )
               (implicit ec: ExecutionContext): Source[String, NotUsed] =
-    dataStream(start, end, terminal).mapAsync(1) {
-      case (localDate, flights) => dataToCsvRows(localDate, flights).map(_.mkString)
-    }
+    dataStream(start, end, terminal)
+      .mapAsync(1) {
+        case (localDate, flights) => dataToCsvRows(localDate, flights).map {
+          lines =>
+            lines.mkString
+        }
+      }
+      .collect {
+        case line if line.nonEmpty => line
+      }
 }
