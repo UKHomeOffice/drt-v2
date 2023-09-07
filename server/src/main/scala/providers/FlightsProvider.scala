@@ -17,7 +17,7 @@ object FlightsProvider {
       val startMillis = SDate(start).millisSinceEpoch
       val endMillis = SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch
       Source.future(
-        flightsRouterActor.ask(PartitionedPortStateActor.GetFlightsForTerminalDateRange(startMillis, endMillis, terminal))
+        flightsRouterActor.ask(PartitionedPortStateActor.GetFlightsForTerminals(startMillis, endMillis, Seq(terminal)))
           .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       ).flatMapConcat(identity)
     }

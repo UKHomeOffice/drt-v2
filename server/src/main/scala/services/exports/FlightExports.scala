@@ -50,12 +50,13 @@ object FlightExports {
           .map { fws =>
             val flightPart = toRow(fws.apiFlight).mkString(",")
             val invalidApi = apiIsInvalid(fws)
-            val splitsPart = actualAPISplitsForFlightInHeadingOrder(fws, ArrivalExportHeadings.actualApiHeadings.split(",")).map(_.toString).mkString(",")
+            val splitsPart = splitsForSources(fws, paxFeedSourceOrder).mkString(",")
+            val apiPart = actualAPISplitsForFlightInHeadingOrder(fws, ArrivalExportHeadings.actualApiHeadings.split(",")).map(_.toString).mkString(",")
             val maybeManifest = vms.manifests.find(_.maybeKey.exists(_ == ArrivalKey(fws.apiFlight)))
             val maybePaxSummary = maybeManifest.flatMap(PassengerInfo.manifestToFlightManifestSummary)
-            val natsSummary = nationalitiesFromSummary(maybePaxSummary)
-            val agesSummary = ageRangesFromSummary(maybePaxSummary)
-            s"$regionName,$portName,$terminalName,$flightPart,$invalidApi,$splitsPart,$natsSummary,$agesSummary\n"
+            val natsSummary = s""""${nationalitiesFromSummary(maybePaxSummary)}""""
+            val agesSummary = s""""${ageRangesFromSummary(maybePaxSummary)}""""
+            s"$regionName,$portName,$terminalName,$flightPart,$invalidApi,$splitsPart,$apiPart,$natsSummary,$agesSummary\n"
           }
       }
     }
