@@ -3,6 +3,7 @@ package services.exports
 import akka.NotUsed
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Passengers}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -10,7 +11,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{LocalDate, UtcDate}
 
 import scala.collection.immutable.Seq
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
 
 class GeneralExportSpec extends CrunchTestLike {
@@ -48,14 +49,14 @@ class GeneralExportSpec extends CrunchTestLike {
 
     "Given a flights provider, and dateAndFlightsToCsvRows as an aggregator" >> {
       val getFlights = FlightExports.flightsProvider(utcFlightsProvider, paxSourceOrder)
-      val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder)
+      val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder, (_, _) => Future.successful(VoyageManifests.empty))
       val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)
 
       val result = Await.result(csvStream.runWith(Sink.seq), 1.second)
       val expected = List(
-        """North,MAN,T1,BA0002,BA0002,JFK,/,Scheduled,2020-01-02 00:05,,,,,,,2020-01-02 00:30,95
-          |North,MAN,T1,BA0001,BA0001,JFK,/,Scheduled,2020-01-01 20:00,,,,,,,2020-01-02 01:30,95
-          |North,MAN,T1,BA0003,BA0003,JFK,/,Scheduled,2020-01-03 02:05,,,,,,,2020-01-02 23:55,95
+        """North,MAN,T1,BA0002,BA0002,JFK,/,Scheduled,2020-01-02 00:05,,,,,,,2020-01-02 00:30,95,95,,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,,
+          |North,MAN,T1,BA0001,BA0001,JFK,/,Scheduled,2020-01-01 20:00,,,,,,,2020-01-02 01:30,95,95,,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,,
+          |North,MAN,T1,BA0003,BA0003,JFK,/,Scheduled,2020-01-03 02:05,,,,,,,2020-01-02 23:55,95,95,,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,,
           |""".stripMargin
       )
 

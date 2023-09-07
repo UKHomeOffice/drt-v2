@@ -1,6 +1,6 @@
 package controllers.application.exports
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.GetState
 import akka.NotUsed
@@ -79,7 +79,8 @@ trait WithFlightsExport {
       case (Some(start), Some(end)) =>
         val terminal = Terminal(terminalName)
         val getFlights = FlightExports.flightsProvider(ctrl.terminalFlightsProvider, ctrl.paxFeedSourceOrder)
-        val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.paxFeedSourceOrder)
+        val getManifests = FlightExports.manifestsProvider(ctrl.manifestsProvider)
+        val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.paxFeedSourceOrder, getManifests)
         val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)
         val fileName = makeFileName("flights", terminal, start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
@@ -119,11 +120,7 @@ trait WithFlightsExport {
     ctrl.flightsRouterActor.ask(pitRequest).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].map {
       flightsStream =>
         val flightsAndManifestsStream = flightsStream.mapAsync(1) { case (d, fws) =>
-          ctrl.manifestsRouterActor
-            .ask(GetStateForDateRange(SDate(d).millisSinceEpoch, SDate(d).addDays(1).addMinutes(-1).millisSinceEpoch))
-            .mapTo[Source[VoyageManifests, NotUsed]]
-            .flatMap(_.runFold(VoyageManifests.empty)(_ ++ _))
-            .map(manifests => (fws, manifests))
+          ctrl.manifestsProvider(d, d).map(_._2).runFold(VoyageManifests.empty)(_ ++ _).map(m => (fws, m))
         }
         val csvStream = export.csvStream(flightsAndManifestsStream)
         val fileName = makeFileName("flights", export.terminal, export.start.toLocalDate, export.end.toLocalDate, airportConfig.portCode)

@@ -4,8 +4,9 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PassengersMinute
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalStatus, CarrierCode, FlightsWithSplits, Passengers, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, CarrierCode, FlightsWithSplits, Passengers, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
@@ -49,14 +50,14 @@ class FlightExportsSpec extends CrunchTestLike {
 
     "Given a flights provider, and dateAndFlightsToCsvRows as an aggregator" >> {
       val getFlights = FlightExports.flightsProvider(utcFlightsProvider, paxSourceOrder)
-      val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder)
+      val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder, (_, _) => Future.successful(VoyageManifests.empty))
       val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)
 
       val result = Await.result(csvStream.runWith(Sink.seq), 1.second)
       val expected = List(
-        """North,MAN,T1,BA0002,BA0002,JFK,/,Scheduled,2020-06-02 01:05,,,,,,,2020-06-02 01:30,95
-          |North,MAN,T1,BA0001,BA0001,JFK,/,Scheduled,2020-06-01 21:00,,,,,,,2020-06-02 02:30,95
-          |North,MAN,T1,BA0003,BA0003,JFK,/,Scheduled,2020-06-03 01:05,,,,,,,2020-06-02 23:55,95
+        """North,MAN,T1,BA0002,BA0002,JFK,/,Scheduled,2020-06-02 01:05,,,,,,,2020-06-02 01:30,95,95,,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,,
+          |North,MAN,T1,BA0001,BA0001,JFK,/,Scheduled,2020-06-01 21:00,,,,,,,2020-06-02 02:30,95,95,,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,,
+          |North,MAN,T1,BA0003,BA0003,JFK,/,Scheduled,2020-06-03 01:05,,,,,,,2020-06-02 23:55,95,95,,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,,
           |""".stripMargin
       )
 
@@ -91,13 +92,13 @@ class FlightExportsSpec extends CrunchTestLike {
     }
   }
 
-  val arrival = ArrivalGenerator.arrival(
+  val arrival: Arrival = ArrivalGenerator.arrival(
     iata = "BA0001", schDt = "2020-01-01T20:05", pcpDt = "2020-01-02T01:30", passengerSources = passengers(Option(95), None))
-  val ctaArrival = ArrivalGenerator.arrival(
+  val ctaArrival: Arrival = ArrivalGenerator.arrival(
     iata = "BA0002", schDt = "2020-01-01T20:10", pcpDt = "2020-01-02T01:30", passengerSources = passengers(Option(95), None), origin = PortCode("JER"))
-  val domesticArrival = ArrivalGenerator.arrival(
+  val domesticArrival: Arrival = ArrivalGenerator.arrival(
     iata = "BA0003", schDt = "2020-01-01T20:15", pcpDt = "2020-01-02T01:30", passengerSources = passengers(Option(95), None), origin = PortCode("LHR"))
-  val cancelledArrival = ArrivalGenerator.arrival(
+  val cancelledArrival: Arrival = ArrivalGenerator.arrival(
     iata = "BA0004", schDt = "2020-01-01T20:20", pcpDt = "2020-01-02T01:30", passengerSources = passengers(Option(95), None), status = ArrivalStatus("cancelled"))
 
   "totalPaxForArrivalInWindow should" >> {

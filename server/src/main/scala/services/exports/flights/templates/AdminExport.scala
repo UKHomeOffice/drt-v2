@@ -1,6 +1,7 @@
 package services.exports.flights.templates
 
 import services.exports.FlightExports
+import services.exports.FlightExports.{apiIsInvalid, splitsForSources}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
@@ -28,8 +29,8 @@ trait AdminExport extends FlightsWithSplitsWithActualApiExport {
 
   override def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
     FlightExports.flightWithSplitsToCsvFields(paxFeedSourceOrder)(fws.apiFlight) ++
-      List(pcpPax(fws), predictedPcpPax(fws), oldForecastPcpPax(fws), apiIsInvalid(fws)) ++
-      splitsForSources(fws)
+      List(predictedPcpPax(fws), oldForecastPcpPax(fws), apiIsInvalid(fws)) ++
+      splitsForSources(fws, paxFeedSourceOrder)
   }
 }
 

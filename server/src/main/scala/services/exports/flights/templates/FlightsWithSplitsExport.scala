@@ -2,22 +2,15 @@ package services.exports.flights.templates
 
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.exports.FlightExports
+import services.exports.FlightExports.{apiIsInvalid, splitsForSources}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
 
 
 trait FlightsWithSplitsExport extends FlightsExport {
-  protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
+  protected def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] =
     FlightExports.flightWithSplitsToCsvFields(paxFeedSourceOrder)(fws.apiFlight) ++
-      List(pcpPax(fws), apiIsInvalid(fws)) ++
-      splitsForSources(fws)
-  }
-
-  def apiIsInvalid(fws: ApiFlightWithSplits): String =
-    if (fws.hasApi && !fws.hasValidApi) "Y" else ""
-
-  def pcpPax(fws: ApiFlightWithSplits): String =
-    if (fws.apiFlight.Origin.isDomesticOrCta) "-"
-    else fws.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("0")
+      List(apiIsInvalid(fws)) ++
+      splitsForSources(fws, paxFeedSourceOrder)
 
   override val headings: String = ArrivalExportHeadings.arrivalWithSplitsHeadings
 

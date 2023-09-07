@@ -44,7 +44,9 @@ import drt.shared._
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
+import providers.{FlightsProvider, ManifestsProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
 import services._
@@ -181,15 +183,9 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     AclFeedSource,
   )
 
-  val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, FlightsWithSplits), NotUsed] =
-    (start, end, terminal) => {
-      val startMillis = SDate(start).millisSinceEpoch
-      val endMillis = SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch
-      Source.future(
-        flightsRouterActor.ask(GetFlightsForTerminalDateRange(startMillis, endMillis, terminal))
-          .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-      ).flatMapConcat(identity)
-    }
+  val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, FlightsWithSplits), NotUsed] = FlightsProvider(flightsRouterActor)
+
+  val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActor)
 
   private def flightValuesForDate[T](date: LocalDate,
                                      maybeAtTime: Option[SDateLike],
@@ -324,7 +320,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
       val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-        liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
+        liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsProvider),
         historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService, manifestCacheLookup, manifestCacheStore),
         historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
         splitsCalculator = splitsCalculator,
