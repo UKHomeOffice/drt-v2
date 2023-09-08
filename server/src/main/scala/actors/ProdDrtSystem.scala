@@ -190,7 +190,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
         val manifestProcessor = DbManifestProcessor(PostgresTables, airportConfig.portCode, crunchInputs.manifestsLiveResponseSource)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
         log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
-        ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 15.seconds)
+        ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 250.millis)
           .processFilesAfter(processFilesAfter)
           .runWith(Sink.ignore)
 

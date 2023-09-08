@@ -63,6 +63,11 @@ object DynamicRunnablePassengerLoads {
       .via(updateSplits(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
       .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal))
+      .recover {
+        case t =>
+          log.error(s"Failed to process crunch request", t)
+          MinutesContainer.empty[PassengersMinute, TQM]
+      }
 
   def validApiPercentage(flights: Iterable[ApiFlightWithSplits]): Double = {
     val totalLiveSplits = flights.count(_.hasApi)
@@ -200,18 +205,19 @@ object DynamicRunnablePassengerLoads {
         val startTime = SDate.now()
         Source(flights)
           .mapAsync(1) { flight =>
-            if (flight.apiFlight.hasNoPaxSource) {
-              historicManifestsPaxProvider(flight.apiFlight).map {
-                case Some(manifestPaxLike: ManifestPaxCount) =>
-                  val paxSources = flight.apiFlight.PassengerSources.updated(HistoricApiFeedSource, Passengers(manifestPaxLike.pax, None))
-                  val updatedArrival = flight.apiFlight.copy(PassengerSources = paxSources)
-                  flight.copy(apiFlight = updatedArrival)
-                case None => flight
-              }.recover { case e =>
-                log.error(s"DynamicRunnableDeskRecs error while addArrivals ${e.getMessage}")
-                flight
-              }
-            } else Future.successful(flight)
+            Future.successful(flight)
+//            if (flight.apiFlight.hasNoPaxSource) {
+//              historicManifestsPaxProvider(flight.apiFlight).map {
+//                case Some(manifestPaxLike: ManifestPaxCount) =>
+//                  val paxSources = flight.apiFlight.PassengerSources.updated(HistoricApiFeedSource, Passengers(manifestPaxLike.pax, None))
+//                  val updatedArrival = flight.apiFlight.copy(PassengerSources = paxSources)
+//                  flight.copy(apiFlight = updatedArrival)
+//                case None => flight
+//              }.recover { case e =>
+//                log.error(s"DynamicRunnableDeskRecs error while addArrivals ${e.getMessage}")
+//                flight
+//              }
+//            } else Future.successful(flight)
           }
           .runWith(Sink.seq)
           .map { updatedFlights =>
@@ -254,12 +260,13 @@ object DynamicRunnablePassengerLoads {
       .mapAsync(1) { case (crunchRequest, flights) =>
         val startTime = SDate.now()
         val arrivalsToLookup = flights.filter(_.bestSplits.isEmpty).map(_.apiFlight)
-        historicManifestsProvider(arrivalsToLookup)
-          .runWith(Sink.seq)
-          .map { manifests =>
-            log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: addSplits historic took ${SDate.now().millisSinceEpoch - startTime.millisSinceEpoch} ms")
-            (crunchRequest, flights, manifests)
-          }
+//        historicManifestsProvider(arrivalsToLookup)
+//          .runWith(Sink.seq)
+//          .map { manifests =>
+//            log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: addSplits historic took ${SDate.now().millisSinceEpoch - startTime.millisSinceEpoch} ms")
+//            (crunchRequest, flights, manifests)
+//          }
+        Future.successful((crunchRequest, flights, Seq[ManifestLike]()))
       }
       .map { case (crunchRequest, flights, manifests) =>
         val manifestsByKey = arrivalKeysToManifests(manifests)
@@ -299,7 +306,6 @@ object DynamicRunnablePassengerLoads {
         val maybeNewSplits = manifests
           .get(ArrivalKey(flight.apiFlight))
           .map(splitsForArrival(_, flight.apiFlight))
-
 
         val existingSplits = maybeNewSplits match {
           case Some(splits) if splits.source == ApiSplitsWithHistoricalEGateAndFTPercentages =>

@@ -54,7 +54,8 @@ case class ManifestLookup(tables: Tables)
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
                                           scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    historicManifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+//    historicManifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
 
   private def manifestsForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
                                    (implicit mat: Materializer): Future[immutable.Seq[List[ManifestPassengerProfile]]] = {
@@ -287,5 +288,6 @@ case class ManifestLookup(tables: Tables)
   }
 
   override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] =
-    historicManifestSearchForPaxCount(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+    //historicManifestSearchForPaxCount(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
 }
