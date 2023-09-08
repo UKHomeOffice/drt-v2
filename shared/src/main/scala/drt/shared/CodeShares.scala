@@ -9,16 +9,8 @@ object CodeShares {
   def uniqueArrivals[GenFlight](apiFlightFromGenFlight: GenFlight => Arrival,
                                 paxFeedSourceOrder: List[FeedSource],
                                )
-                               (flights: Seq[GenFlight]): Iterable[GenFlight] = {
-    Try(
-      uniqueArrivalsWithCodeShares(apiFlightFromGenFlight, paxFeedSourceOrder)(flights).map(_._1)
-    ) match {
-      case Success(uniqueFlights) => uniqueFlights
-      case Failure(t) =>
-        println(s"\n\nFailed to get unique flights from $flights: $t\n\n")
-        flights
-    }
-  }
+                               (flights: Seq[GenFlight]): Iterable[GenFlight] =
+    uniqueArrivalsWithCodeShares(apiFlightFromGenFlight, paxFeedSourceOrder)(flights).map(_._1)
 
   def uniqueArrivalsWithCodeShares[GenFlight](apiFlightFromGenFlight: GenFlight => Arrival,
                                               paxFeedSourceOrder: List[FeedSource],

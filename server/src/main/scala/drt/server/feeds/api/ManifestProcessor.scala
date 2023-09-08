@@ -89,7 +89,6 @@ case class DbManifestProcessor(tables: Tables,
     tables.run(query).map {
       case pax if pax.isEmpty => None
       case pax =>
-        println(s"\n**SQL Found ${pax.size} passengers for $uniqueArrivalKey")
         Option(VoyageManifest(
           DC,
           uniqueArrivalKey.arrivalPort,

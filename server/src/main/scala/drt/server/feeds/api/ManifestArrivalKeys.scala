@@ -27,17 +27,12 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
   override def nextKeys(since: Long): Future[(Option[MillisSinceEpoch], Iterable[UniqueArrivalKey])] = {
     val ts = SDate(since).toISOString.dropRight(1) + "." + SDate(since).millisSinceEpoch.toString.takeRight(3) + "Z"
 
-//    println(s"**\nSQL Looking for zip files since $ts ($since)")
-
     tables.run(zipQuery(ts))
       .flatMap {
         case Some((zipFileName, processedAt)) =>
-//          println(s"\n**SQL Found zip file $zipFileName with processedAt ${SDate(processedAt).toISOString} ($processedAt)")
           tables.run(jsonQuery(zipFileName))
             .flatMap { jsonFileNames =>
-//              println(s"\n**SQL Found ${jsonFileNames.size} json files")
               tables.run(manifestsQuery(jsonFileNames)).map { result =>
-//                println(s"\n**SQL Found ${result.size} manifests")
                 (Option(processedAt), result)
               }
             }
@@ -79,7 +74,6 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
       .map {
         _.map {
           case (origin, voyageNumber, scheduled) =>
-            println(s"**\nSQL Found manifest for $origin, $voyageNumber, $scheduled")
             UniqueArrivalKey(destinationPortCode, PortCode(origin), VoyageNumber(voyageNumber), SDate(scheduled, DateTimeZone.UTC))
         }
       }
