@@ -217,7 +217,6 @@ object DynamicRunnablePassengerLoads {
                 flight
               }
             } else Future.successful(flight)
-            //            Future.successful(flight)
           }
           .runWith(Sink.seq)
           .map { updatedFlights =>
@@ -266,7 +265,6 @@ object DynamicRunnablePassengerLoads {
             log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: addSplits historic took ${SDate.now().millisSinceEpoch - startTime.millisSinceEpoch} ms")
             (crunchRequest, flights, manifests)
           }
-//        Future.successful((crunchRequest, flights, Seq[ManifestLike]()))
       }
       .map { case (crunchRequest, flights, manifests) =>
         val manifestsByKey = arrivalKeysToManifests(manifests)
