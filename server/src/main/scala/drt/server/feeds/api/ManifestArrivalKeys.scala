@@ -4,10 +4,10 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
 import slickdb.Tables
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,14 +36,21 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
             GROUP BY vm.departure_port_code, vm.voyage_number, vm.scheduled_date, pz.processed_at
             ORDER BY pz.processed_at
             """.stripMargin
-        .as[(String, Int, Long, Long)].map {
-        _.map {
-          case (origin, voyageNumber, scheduled, processedAt) =>
-            val key = UniqueArrivalKey(destinationPortCode, PortCode(origin), VoyageNumber(voyageNumber), SDate(scheduled, DateTimeZone.UTC))
-            (key, SDate(processedAt, DateTimeZone.UTC).millisSinceEpoch)
+        .as[(String, Int, Long, Long)]
+        .map {
+          _.map {
+            case (origin, voyageNumber, scheduled, processedAt) =>
+              val key = UniqueArrivalKey(destinationPortCode, PortCode(origin), VoyageNumber(voyageNumber), SDate(scheduled, DateTimeZone.UTC))
+              (key, SDate(processedAt, DateTimeZone.UTC).millisSinceEpoch)
+          }
         }
-      }
 
-    tables.run(query)
+    tables
+      .run(query)
+      .recover {
+        case t =>
+          log.error(s"Failed to get next keys from DB", t)
+          Iterable()
+      }
   }
 }
