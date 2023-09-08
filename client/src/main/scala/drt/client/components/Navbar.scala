@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.{Empty, Pot}
 import diode.react.ReactConnectProxy
-import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc}
+import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc, TrainingHubLoc}
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
@@ -15,7 +15,6 @@ import japgolly.scalajs.react.extra.router.{BaseUrl, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
 import org.scalajs.dom
-import org.scalajs.dom.window.alert
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -127,12 +126,7 @@ object Navbar {
                             trainingDataTemplates)
                         }
                       },
-                      <.div(<.a(Icon.calendarO, "", ^.onClick ==> handleSeminarOpenDialog), navbarModel.seminars.renderReady {
-                        seminars =>
-                          if (seminars.nonEmpty) {
-                            SeminarComponent(props.loggedInUser.email,state.showSeminar, handleSeminarDialogClose, seminars)
-                          } else EmptyVdom
-                      }),
+                      <.div(^.className := "contact-us-link", props.ctl.link(TrainingHubLoc("seminarBooking"))(Icon.calendarO, " ", "Training Hub")),
                       <.div(^.className := "contact-us-link", props.ctl.link(ContactUsLoc)(Icon.envelope, " ", "Contact Us")),
                       <.div(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
                         ^.onClick --> Callback(GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "Log Out", props.loggedInUser.id))))

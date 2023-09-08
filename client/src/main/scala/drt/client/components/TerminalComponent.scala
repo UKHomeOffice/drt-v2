@@ -3,13 +3,14 @@ package drt.client.components
 import diode.data.Pot
 import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
-import drt.client.SPAMain.TerminalPageModes._
 import drt.client.SPAMain._
 import drt.client.components.TerminalDesksAndQueues.Ideal
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
+import drt.client.spa.TerminalPageMode
+import drt.client.spa.TerminalPageModes._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
 import drt.shared.api.WalkTimes
