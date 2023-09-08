@@ -3,8 +3,6 @@ package drt.shared
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.FeedSource
 
-import scala.util.{Failure, Success, Try}
-
 object CodeShares {
   def uniqueArrivals[GenFlight](apiFlightFromGenFlight: GenFlight => Arrival,
                                 paxFeedSourceOrder: List[FeedSource],
