@@ -63,6 +63,11 @@ object DynamicRunnablePassengerLoads {
       .via(updateSplits(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
       .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal))
+      .recover {
+        case t =>
+          log.error(s"Failed to process crunch request", t)
+          MinutesContainer.empty[PassengersMinute, TQM]
+      }
 
   def validApiPercentage(flights: Iterable[ApiFlightWithSplits]): Double = {
     val totalLiveSplits = flights.count(_.hasApi)
@@ -299,7 +304,6 @@ object DynamicRunnablePassengerLoads {
         val maybeNewSplits = manifests
           .get(ArrivalKey(flight.apiFlight))
           .map(splitsForArrival(_, flight.apiFlight))
-
 
         val existingSplits = maybeNewSplits match {
           case Some(splits) if splits.source == ApiSplitsWithHistoricalEGateAndFTPercentages =>
