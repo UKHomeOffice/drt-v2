@@ -323,7 +323,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
         redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
         DynamicQueueStatusProvider(airportConfig, egatesProvider),
         airportConfig.queuesByTerminal,
-      )(ec, materializer, new Timeout(1.second))
+      )
 
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =
         startOptimisationGraph(passengerLoadsProducer, persistentCrunchQueueActor, crunchQueue, minuteLookups.queueLoadsMinutesActor, "passenger-loads")
