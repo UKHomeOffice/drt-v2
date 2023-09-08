@@ -49,7 +49,6 @@ case class DbManifestProcessor(tables: Tables,
     }
 
   private def manifestForArrivalKey(uniqueArrivalKey: UniqueArrivalKey): Future[Option[VoyageManifest]] = {
-    println(s"\n**SQL Found Looking for manifest for $uniqueArrivalKey")
     val scheduled = SDate(uniqueArrivalKey.scheduled.millisSinceEpoch).toISOString
     val query =
       sql"""SELECT
