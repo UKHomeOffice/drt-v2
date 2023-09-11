@@ -1,9 +1,10 @@
 package slickdb
 
 import drt.shared.Seminar
-import org.joda.time.{DateTime}
+import org.joda.time.DateTime
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
+
 import java.sql.Timestamp
 import java.time.format.DateTimeFormatter
 import java.time.{ZoneId, ZonedDateTime}
@@ -59,7 +60,7 @@ class Seminars(tag: Tag) extends Table[SeminarRow](tag, "seminar") {
 }
 
 trait SeminarTableLike {
-  def updatePublishSeminar(seminarId: String, publish: Boolean)
+  def updatePublishSeminar(seminarId: String, publish: Boolean): Future[Int]
 
   def updateSeminar(seminarRow: SeminarRow): Future[Int]
 
@@ -75,7 +76,7 @@ case class SeminarTable(tables: Tables) extends SeminarTableLike {
 
   private def getCurrentTime = new Timestamp(new DateTime().getMillis)
 
-  def updatePublishSeminar(seminarId: String, publish: Boolean) = {
+  def updatePublishSeminar(seminarId: String, publish: Boolean): Future[Int] = {
     val query = seminarTable.filter(_.id === seminarId.trim.toInt).map(f => (f.published, f.latestUpdateTime))
       .update(publish, getCurrentTime)
     tables.run(query)

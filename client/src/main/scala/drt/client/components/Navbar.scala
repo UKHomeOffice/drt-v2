@@ -55,17 +55,6 @@ object Navbar {
         Callback(SPACircuit.dispatch(CloseFeatureGuideDialog()))
     }
 
-    def handleSeminarOpenDialog(e: ReactEvent) = {
-      e.preventDefaultCB >>
-        $.modState(s => s.copy(showSeminar = true))
-    }
-
-    def handleSeminarDialogClose(e: ReactEvent) = {
-      e.preventDefaultCB >>
-        $.modState(s => s.copy(showSeminar = false))
-    }
-
-
     def calculateBadgeCount(viewedFeatureIds: Seq[String], templateFeatureIds: Seq[String]): Int = {
       templateFeatureIds.count(id => !viewedFeatureIds.contains(id))
     }
@@ -126,7 +115,7 @@ object Navbar {
                             trainingDataTemplates)
                         }
                       },
-                      <.div(^.className := "contact-us-link", props.ctl.link(TrainingHubLoc("seminarBooking"))(Icon.calendarO, " ", "Training Hub")),
+                      <.div(^.className := "training-hub-link", props.ctl.link(TrainingHubLoc("seminarBooking"))(Icon.calendarO, " ", "Training Hub")),
                       <.div(^.className := "contact-us-link", props.ctl.link(ContactUsLoc)(Icon.envelope, " ", "Contact Us")),
                       <.div(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
                         ^.onClick --> Callback(GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "Log Out", props.loggedInUser.id))))

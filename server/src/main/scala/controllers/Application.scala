@@ -238,11 +238,9 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       import spray.json.DefaultJsonProtocol._
       import spray.json._
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-      log.info(s"request.body ${request.body}")
-      log.info(s"request.body.asJson ${request.body.asText.map(_.parseJson.convertTo[Seq[String]])}")
       request.body.asText match {
         case Some(content) =>
-          log.info(s"Received red list pax data")
+          log.info(s"Received seminars booking data")
           Future.successful(Try(content.parseJson.convertTo[Seq[String]])
             .map { ids =>
               ctrl.seminarRegistrationService.registerSeminars(userEmail, ids).map { _ =>

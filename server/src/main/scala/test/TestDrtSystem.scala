@@ -69,15 +69,19 @@ case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
 }
 
 case class MockSeminarsRegistrationTable() extends SeminarsRegistrationTableLike {
-  override def registerSeminars(email: String, ids: Seq[String])(implicit ex: ExecutionContext): Future[Seq[Int]] = ???
+  override def registerSeminars(email: String, ids: Seq[String])(implicit ex: ExecutionContext): Future[Seq[Int]] = Future.successful(Seq.empty)
 }
 
 case class MockSeminarTable() extends SeminarTableLike {
-  override def updatePublishSeminar(seminarId: String, publish: Boolean): Unit = ???
-  override def updateSeminar(seminarRow: SeminarRow): Future[Int] = ???
-  override def deleteSeminar(seminarId: String): Future[Int] = ???
-  override def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]] = ???
-  override def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[String] =  ???
+  override def updatePublishSeminar(seminarId: String, publish: Boolean): Future[Int] = Future.successful(1)
+
+  override def updateSeminar(seminarRow: SeminarRow): Future[Int] = Future.successful(1)
+
+  override def deleteSeminar(seminarId: String): Future[Int] = Future.successful(1)
+
+  override def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]] = Future.successful(Seq.empty)
+
+  override def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[String] = Future.successful("")
 
 }
 

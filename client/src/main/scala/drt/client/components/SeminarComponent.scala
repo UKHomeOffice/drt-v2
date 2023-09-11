@@ -51,7 +51,7 @@ object SeminarComponent extends WithScalaCssImplicits {
             "display" -> "flex",
             "justifyContent" -> "center",
             "alignItems" -> "center",
-            "padding-top" -> "24px",
+            "padding-top" -> "48px",
             "padding-bottom" -> "24px")))("Thanks for signing up for the seminar. You will receive an email about it."),
           MuiGrid(item = true, xs = 12, sx = SxProps(Map(
             "display" -> "flex",
