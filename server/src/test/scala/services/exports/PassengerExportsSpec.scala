@@ -1,16 +1,13 @@
 package services.exports
 
-import akka.NotUsed
-import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PassengersMinute
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.DurationInt
@@ -60,32 +57,32 @@ class PassengerExportsSpec extends CrunchTestLike {
 
   "totalPaxForArrivalInWindow should" >> {
     "give 20 passengers arriving at the pcp between 01:00 and 01:30 when there are 95 total passengers starting to arrive at 01:30" >> {
-      FlightExports.totalPaxForArrivalInWindow(
+      PassengerExports.totalPaxForArrivalInWindow(
         arrival, paxSourceOrder, SDate("2020-01-02T01:00").millisSinceEpoch, SDate("2020-01-02T01:30").millisSinceEpoch) === 20
     }
 
     "give 15 passengers arriving at the pcp between 01:34 and 01:40 when there are 95 total passengers starting to arrive at 01:30" >> {
-      FlightExports.totalPaxForArrivalInWindow(
+      PassengerExports.totalPaxForArrivalInWindow(
         arrival, paxSourceOrder, SDate("2020-01-02T01:34").millisSinceEpoch, SDate("2020-01-02T01:40").millisSinceEpoch) === 15
     }
 
     "give 95 passengers arriving at the pcp between 01:30 and 01:40 when there are 95 total passengers starting to arrive at 01:30" >> {
-      FlightExports.totalPaxForArrivalInWindow(
+      PassengerExports.totalPaxForArrivalInWindow(
         arrival, paxSourceOrder, SDate("2020-01-02T01:34").millisSinceEpoch, SDate("2020-01-02T01:40").millisSinceEpoch) === 15
     }
 
     "give 0 passengers arriving at the pcp when from a CTA origin" >> {
-      FlightExports.totalPaxForArrivalInWindow(
+      PassengerExports.totalPaxForArrivalInWindow(
         ctaArrival, paxSourceOrder, SDate("2020-01-02T01:34").millisSinceEpoch, SDate("2020-01-02T01:40").millisSinceEpoch) === 0
     }
 
     "give 0 passengers arriving at the pcp when from a domestic origin" >> {
-      FlightExports.totalPaxForArrivalInWindow(
+      PassengerExports.totalPaxForArrivalInWindow(
         domesticArrival, paxSourceOrder, SDate("2020-01-02T01:34").millisSinceEpoch, SDate("2020-01-02T01:40").millisSinceEpoch) === 0
     }
 
     "give 0 passengers arriving at the pcp when its status is cancelled" >> {
-      FlightExports.totalPaxForArrivalInWindow(
+      PassengerExports.totalPaxForArrivalInWindow(
         cancelledArrival, paxSourceOrder, SDate("2020-01-02T01:34").millisSinceEpoch, SDate("2020-01-02T01:40").millisSinceEpoch) === 0
     }
   }
@@ -98,7 +95,7 @@ class PassengerExportsSpec extends CrunchTestLike {
       domesticArrival,
       cancelledArrival,
     )
-    FlightExports.relevantPaxDuringWindow(arrivals, SDate("2020-01-02T00:00"), SDate("2020-01-02T23:59"), paxFeedSourceOrder) === 95
+    PassengerExports.relevantPaxDuringWindow(arrivals, SDate("2020-01-02T00:00"), SDate("2020-01-02T23:59"), paxFeedSourceOrder) === 95
   }
 
   "flightsToDailySummaryRow should" >> {
@@ -118,7 +115,7 @@ class PassengerExportsSpec extends CrunchTestLike {
           PassengersMinute(T1, NonEeaDesk, SDate(date).addMinutes(55).millisSinceEpoch, Seq.fill(9)(0d), None),
           PassengersMinute(T1, NonEeaDesk, SDate(date).addMinutes(56).millisSinceEpoch, Seq.fill(10)(0d), None),
         ))
-      val dateAndFlightsToRows: (LocalDate, Int) => Future[Seq[String]] = FlightExports.flightsToDailySummaryRow(port, terminal, date, date, paxMinutesProvider)
+      val dateAndFlightsToRows: (LocalDate, Int) => Future[Seq[String]] = PassengerExports.flightsToDailySummaryRow(port, terminal, date, date, paxMinutesProvider)
       val csv = Await.result(dateAndFlightsToRows(date, totalPax), 1.second).mkString
 
       val pcpPax = 5 + 6 + 7 + 8 + 9 + 10
