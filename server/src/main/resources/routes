@@ -61,10 +61,6 @@ GET           /export/arrivals/snapshot/:localDate/:pointInTime/:terminalName   
 GET           /export/arrivals-with-red-list-diversions/:startLocalDay/:endLocalDay/:terminalName              controllers.Application.exportFlightsWithSplitsForDateRangeCSVWithRedListDiversions(startLocalDay: String, endLocalDay: String, terminalName: String)
 GET           /export/arrivals-with-red-list-diversions/snapshot/:localDate/:pointInTime/:terminalName         controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDate: String, pointInTime: Long, terminalName: String)
 
-# v2 exports
-GET           /arrivals/:startLocalDay/:endLocalDay/:terminalName                     controllers.Application.exportFlightsWithSplitsForDateRangeCSVv2(startLocalDay: String, endLocalDay: String, terminalName: String)
-GET           /passengers/:startLocalDay/:endLocalDay/:terminalName                   controllers.Application.exportDailyPassengersForDateRangeCSVv2(startLocalDay: String, endLocalDay: String, terminalName: String)
-
 GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.Application.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
 GET           /export/planning/:weekStarting/:terminalName                            controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
 GET           /export/headlines/:weekStarting/:terminalName                           controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
@@ -98,6 +94,11 @@ POST          /data/addUserToGroup/:userId/:group                               
 GET           /data/user/has-port-access                                              controllers.Application.getUserHasPortAccess()
 
 GET           /data/actor-tree                                                        controllers.Application.getActorTree()
+
+# v2 exports
+GET           /data/arrivals/:startLocalDay/:endLocalDay/:terminalName                controllers.Application.exportFlightsWithSplitsForDateRangeCSVv2(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /data/passengers/:startLocalDay/:endLocalDay/:terminalName              controllers.Application.exportDailyPassengersForDateRangeCSVv2(startLocalDay: String, endLocalDay: String, terminalName: String)
+
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.Application.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.Application.feedBack(feedback: String)
 # Logging

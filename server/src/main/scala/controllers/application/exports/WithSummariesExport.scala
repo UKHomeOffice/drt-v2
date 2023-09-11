@@ -7,7 +7,7 @@ import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToC
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import drt.shared.TQM
 import play.api.mvc._
-import services.exports.{FlightExports, GeneralExport}
+import services.exports.{FlightExports, GeneralExport, PassengerExports}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
@@ -33,8 +33,8 @@ trait WithSummariesExport {
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val terminal = Terminal(terminalName)
-        val getArrivals = FlightExports.totalPassengerCountProvider(ctrl.terminalFlightsProvider, ctrl.paxFeedSourceOrder)
-        val toRows = FlightExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, terminal, start, end, /*ctrl.paxFeedSourceOrder,*/ passengersProvider)
+        val getArrivals = PassengerExports.totalPassengerCountProvider(ctrl.terminalFlightsProvider, ctrl.paxFeedSourceOrder)
+        val toRows = PassengerExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, terminal, start, end, /*ctrl.paxFeedSourceOrder,*/ passengersProvider)
         val csvStream = GeneralExport.toCsv(start, end, terminal, getArrivals, toRows)
         val fileName = makeFileName("passengers", terminal, start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
