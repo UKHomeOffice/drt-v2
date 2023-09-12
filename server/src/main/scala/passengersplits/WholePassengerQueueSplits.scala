@@ -79,10 +79,10 @@ object WholePassengerQueueSplits {
     val windowStart = processingWindow.min
     val windowEnd = processingWindow.max
     val paxDistribution = distributePaxOverSplitsAndMinutes(
-      totalPax,
-      20,
-      wholeSplits.map(s => (s.paxTypeAndQueue, s.paxCount.toInt)).toMap,
-      startMinute.millisSinceEpoch,
+      passengerCount = totalPax,
+      passengersPerMinute = 20,
+      paxSplits = wholeSplits.map(s => (s.paxTypeAndQueue, s.paxCount.toInt)).toMap,
+      firstMinute = startMinute.millisSinceEpoch,
     )
     val relevantPaxDistribution = paxDistribution.view.filterKeys(m => windowStart <= m && m <= windowEnd).toMap
     val workloadDistribution = paxDistributionToWorkloads(relevantPaxDistribution, processingTime, queueStatus, queueFallbacks)

@@ -72,9 +72,9 @@ trait WithFlightsExport {
     doExportForDateRange(startLocalDateString, endLocalDateString, terminalName, redListDiversionsExportForUser)
   }
 
-  def exportFlightsWithSplitsForDateRangeCSVv2(startLocalDateString: String,
-                                               endLocalDateString: String,
-                                               terminalName: String): Action[AnyContent] = Action {
+  def exportFlightsWithSplitsForDateRangeApi(startLocalDateString: String,
+                                             endLocalDateString: String,
+                                             terminalName: String): Action[AnyContent] = Action {
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val terminal = Terminal(terminalName)

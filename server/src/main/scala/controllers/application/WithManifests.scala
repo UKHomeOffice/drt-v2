@@ -57,7 +57,7 @@ object WithManifests {
                          (implicit mat: Materializer): Future[VoyageManifests] = {
     val distinctArrivalDays = arrivalKeys.map(k => SDate(k.scheduled).toUtcDate).distinct
     Source(distinctArrivalDays)
-      .mapAsync(1)(d => manifestsProvider(d))
+      .mapAsync(1)(manifestsProvider)
       .map { manifests =>
         val relevantManifests = manifests.manifests.filter { m =>
           m.maybeKey.exists(arrivalKeys.contains)

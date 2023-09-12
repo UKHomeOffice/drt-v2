@@ -27,14 +27,14 @@ trait WithSummariesExport {
         .map(_.minutes.map(_.toMinute).toSeq)
     }
 
-  def exportDailyPassengersForDateRangeCSVv2(startLocalDateString: String,
-                                             endLocalDateString: String,
-                                             terminalName: String): Action[AnyContent] = Action {
+  def exportDailyPassengersForDateRangeApi(startLocalDateString: String,
+                                           endLocalDateString: String,
+                                           terminalName: String): Action[AnyContent] = Action {
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val terminal = Terminal(terminalName)
         val getArrivals = PassengerExports.totalPassengerCountProvider(ctrl.terminalFlightsProvider, ctrl.paxFeedSourceOrder)
-        val toRows = PassengerExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, terminal, start, end, /*ctrl.paxFeedSourceOrder,*/ passengersProvider)
+        val toRows = PassengerExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, terminal, start, end, passengersProvider)
         val csvStream = GeneralExport.toCsv(start, end, terminal, getArrivals, toRows)
         val fileName = makeFileName("passengers", terminal, start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
