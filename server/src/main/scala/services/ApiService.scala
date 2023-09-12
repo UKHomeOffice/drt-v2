@@ -18,8 +18,8 @@ import services.graphstages.Crunch
 import services.staffing.StaffTimeSlots
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration._
@@ -43,8 +43,6 @@ trait ApiServiceI extends Api with ShiftPersistence {
   def getShiftsForMonth(month: MillisSinceEpoch, terminal: Terminal): Future[ShiftAssignments]
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
-
-  def getShowAlertModalDialog(): Boolean
 }
 
 class ApiService(airportConfig: AirportConfig,
@@ -118,10 +116,5 @@ class ApiService(airportConfig: AirportConfig,
     }
   }
 
-  def getShowAlertModalDialog(): Boolean = config
-    .getOptional[Boolean]("feature-flags.display-modal-alert")
-    .getOrElse(false)
-
   override def portStateActor: ActorRef = ctrl.portStateActor
-
 }

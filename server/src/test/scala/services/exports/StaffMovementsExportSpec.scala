@@ -1,4 +1,4 @@
-package services.`export`
+package services.exports
 
 import drt.shared.StaffMovement
 import org.specs2.mutable.Specification

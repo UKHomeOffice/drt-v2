@@ -1,4 +1,4 @@
-package services.`export`
+package services.exports
 
 import controllers.application.exports.CsvFileStreaming
 import org.specs2.mutable.Specification

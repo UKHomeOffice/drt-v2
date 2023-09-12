@@ -1,14 +1,12 @@
 package drt.client.services.handlers
 
-import boopickle.CompositePickler
-import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode.data.{Pot, Ready}
 import diode.{Action, ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
+import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.FeedSource
 import upickle.default.{read, write}
 
@@ -24,10 +22,6 @@ case class SetFeedSourceStatuses(statuses: Seq[FeedSourceStatuses]) extends Acti
 case class CheckFeed(feedSource: FeedSource) extends Action
 
 class FeedsHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedSourceStatuses]]]) extends LoggingActionHandler(modelRW) {
-  implicit val pickler: CompositePickler[FeedStatus] = compositePickler[FeedStatus].
-    addConcreteType[FeedStatusSuccess].
-    addConcreteType[FeedStatusFailure]
-
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case CheckFeed(feedSource) =>
       DrtApi.post("feeds/check", write(feedSource))

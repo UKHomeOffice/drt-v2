@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PaxType, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import scala.collection.MapView
 import scala.collection.immutable.NumericRange
@@ -78,20 +78,27 @@ object WholePassengerQueueSplits {
                                     ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] = {
     val windowStart = processingWindow.min
     val windowEnd = processingWindow.max
-    val paxDistribution: Map[Int, Map[PaxTypeAndQueue, Int]] = distributePaxOverSplitsAndMinutes(totalPax, 20, wholeSplits.map(s => (s.paxTypeAndQueue, s.paxCount.toInt)).toMap)
-    val workloadDistribution: Map[MillisSinceEpoch, Map[Queue, List[Double]]] = paxDistributionToWorkloads(paxDistribution, processingTime, startMinute.millisSinceEpoch, queueStatus, queueFallbacks)
-    val relevantMinutes: MapView[MillisSinceEpoch, Map[Queue, List[Double]]] = workloadDistribution.view.filterKeys(m => windowStart <= m && m <= windowEnd)
-    transposeMaps(relevantMinutes.toMap)
+    val paxDistribution = distributePaxOverSplitsAndMinutes(
+      passengerCount = totalPax,
+      passengersPerMinute = 20,
+      paxSplits = wholeSplits.map(s => (s.paxTypeAndQueue, s.paxCount.toInt)).toMap,
+      firstMinute = startMinute.millisSinceEpoch,
+    )
+    val relevantPaxDistribution = paxDistribution.view.filterKeys(m => windowStart <= m && m <= windowEnd).toMap
+    val workloadDistribution = paxDistributionToWorkloads(relevantPaxDistribution, processingTime, queueStatus, queueFallbacks)
+    transposeMaps(workloadDistribution)
   }
 
   def distributePaxOverSplitsAndMinutes(passengerCount: Int,
                                         passengersPerMinute: Int,
                                         paxSplits: Map[PaxTypeAndQueue, Int],
-                                       ): Map[Int, Map[PaxTypeAndQueue, Int]] = {
+                                        firstMinute: MillisSinceEpoch,
+                                       ): Map[MillisSinceEpoch, Map[PaxTypeAndQueue, Int]] = {
     val groups = (passengerCount.toDouble / passengersPerMinute).ceil.toInt
     val splitPcts = paxSplits.view.mapValues(s => s.toDouble / passengerCount).toMap
     val emptySplitCounts: Map[PaxTypeAndQueue, Int] = paxSplits.keys.map(k => k -> 0).toMap
-    val emptyMinutesOfPax: Map[Int, Map[PaxTypeAndQueue, Int]] = (1 to groups).map(g => g -> emptySplitCounts).toMap
+    val groupToMinute: Int => MillisSinceEpoch = g => firstMinute + (g - 1) * MilliTimes.oneMinuteMillis
+    val emptyMinutesOfPax: Map[MillisSinceEpoch, Map[PaxTypeAndQueue, Int]] = (1 to groups).map(g => groupToMinute(g) -> emptySplitCounts).toMap
     (1 to groups).foldLeft(emptyMinutesOfPax) {
       case (acc, group) =>
         val alreadyDistributed = acc.foldLeft(emptySplitCounts) {
@@ -122,7 +129,7 @@ object WholePassengerQueueSplits {
           case _ => newPaxForGroup
         }
 
-        acc + (group -> finalGroup)
+        acc + (groupToMinute(group) -> finalGroup)
     }
   }
 
@@ -184,14 +191,12 @@ object WholePassengerQueueSplits {
       .sortBy(_._2).reverse.map(_._1)
       .headOption.getOrElse(throw new Exception("No splits found"))
 
-  def paxDistributionToWorkloads(distribution: Map[Int, Map[PaxTypeAndQueue, Int]],
+  def paxDistributionToWorkloads(distribution: Map[MillisSinceEpoch, Map[PaxTypeAndQueue, Int]],
                                  processingTime: (PaxType, Queue) => Double,
-                                 startMillis: MillisSinceEpoch,
                                  queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
                                  queueFallbacks: (Queue, PaxType) => List[Queue],
                                 ): Map[MillisSinceEpoch, Map[Queue, List[Double]]] =
-    distribution.map { case (minute, splitCounts) =>
-      val millisecondMinute = startMillis + ((minute - 1) * oneMinuteMillis)
+    distribution.map { case (millisecondMinute, splitCounts) =>
       val workloads = splitCounts.foldLeft(Map[Queue, List[Double]]()) {
         case (acc, (PaxTypeAndQueue(paxType, queue), count)) =>
           val finalQueue = if (queueStatus(queue, millisecondMinute) == Open)

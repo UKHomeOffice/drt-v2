@@ -90,15 +90,15 @@ class WholePassengerQueueSplitsSpec extends Specification {
       PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 3,
       PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 18,
     )
-    val distributed = distributePaxOverSplitsAndMinutes(22, 20, splits)
+    val distributed = distributePaxOverSplitsAndMinutes(22, 20, splits, 0L)
 
     distributed === Map(
-      1 -> Map(
+      0L -> Map(
         PaxTypeAndQueue(PaxTypes.NonVisaNational, NonEeaDesk) -> 1,
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 3,
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 16
       ),
-      2 -> Map(
+      60000L -> Map(
         PaxTypeAndQueue(PaxTypes.NonVisaNational, NonEeaDesk) -> 0,
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EeaDesk) -> 0,
         PaxTypeAndQueue(PaxTypes.EeaMachineReadable, EGate) -> 2
@@ -118,7 +118,7 @@ class WholePassengerQueueSplitsSpec extends Specification {
       PaxTypeAndQueue(PaxTypes.EeaBelowEGateAge, EeaDesk) -> 8,
     )
     val totalPax = splits.values.sum
-    val distributed = distributePaxOverSplitsAndMinutes(totalPax, 20, splits)
+    val distributed = distributePaxOverSplitsAndMinutes(totalPax, 20, splits, 0L)
     val perMinute = distributed.values.map(_.values.sum)
 
     perMinute === Iterable(20, 20, 20, 12)
@@ -288,6 +288,32 @@ class WholePassengerQueueSplitsSpec extends Specification {
       firstMinute,
     )
     result should ===(expected)
+  }
+
+  "Given some passengers arriving inside and outside of the processing window" >> {
+    "I should only see the queue status function being called for minutes inside the processing window" >> {
+      val splits = Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 33.3d, None, None))
+      val totalPax = 100
+
+      val wholeSplits = wholePassengerSplits(totalPax, splits)
+
+      var queueStatusMinutesLookedAt = Set.empty[Long]
+
+      wholePaxLoadsPerQueuePerMinute(
+        0L to 60000L by 60000L,
+        totalPax,
+        wholeSplits,
+        processingTime,
+        (_, millis) => {
+          queueStatusMinutesLookedAt = queueStatusMinutesLookedAt + millis
+          Open
+        },
+        (_, _) => List(),
+        SDate(0L),
+      )
+
+      queueStatusMinutesLookedAt should ===(Set(0L, 60000L))
+    }
   }
 
   private def processingTime(paxType: PaxType, queue: Queue): Double = Map[(PaxType, Queue), Double](

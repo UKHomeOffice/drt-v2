@@ -1,6 +1,6 @@
 package controllers.application.exports
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.GetState
 import akka.NotUsed
@@ -15,6 +15,7 @@ import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
 import services.exports.flights.ArrivalFeedExport
 import services.exports.flights.templates._
+import services.exports.{FlightExports, GeneralExport}
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, SuperAdmin}
@@ -71,6 +72,28 @@ trait WithFlightsExport {
     doExportForDateRange(startLocalDateString, endLocalDateString, terminalName, redListDiversionsExportForUser)
   }
 
+  def exportFlightsWithSplitsForDateRangeApi(startLocalDateString: String,
+                                             endLocalDateString: String,
+                                             terminalName: String): Action[AnyContent] = Action {
+    (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
+      case (Some(start), Some(end)) =>
+        val terminal = Terminal(terminalName)
+        val getFlights = FlightExports.flightsProvider(ctrl.terminalFlightsProvider, ctrl.paxFeedSourceOrder)
+        val getManifests = FlightExports.manifestsProvider(ctrl.manifestsProvider)
+        val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.paxFeedSourceOrder, getManifests)
+        val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)
+        val fileName = makeFileName("flights", terminal, start, end, airportConfig.portCode)
+        Try(sourceToCsvResponse(csvStream, fileName)) match {
+          case Success(value) => value
+          case Failure(t) =>
+            log.error("Failed to get CSV export", t)
+            BadRequest("Failed to get CSV export")
+        }
+      case _ =>
+        BadRequest("Invalid date format for start or end date")
+    }
+  }
+
   private def doExportForDateRange(startLocalDateString: String,
                                    endLocalDateString: String,
                                    terminalName: String,
@@ -97,11 +120,7 @@ trait WithFlightsExport {
     ctrl.flightsRouterActor.ask(pitRequest).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].map {
       flightsStream =>
         val flightsAndManifestsStream = flightsStream.mapAsync(1) { case (d, fws) =>
-          ctrl.manifestsRouterActor
-            .ask(GetStateForDateRange(SDate(d).millisSinceEpoch, SDate(d).addDays(1).addMinutes(-1).millisSinceEpoch))
-            .mapTo[Source[VoyageManifests, NotUsed]]
-            .flatMap(_.runFold(VoyageManifests.empty)(_ ++ _))
-            .map(manifests => (fws, manifests))
+          ctrl.manifestsProvider(d, d).map(_._2).runFold(VoyageManifests.empty)(_ ++ _).map(m => (fws, m))
         }
         val csvStream = export.csvStream(flightsAndManifestsStream)
         val fileName = makeFileName("flights", export.terminal, export.start.toLocalDate, export.end.toLocalDate, airportConfig.portCode)
