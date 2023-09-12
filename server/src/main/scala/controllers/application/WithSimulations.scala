@@ -39,7 +39,7 @@ import scala.util.{Failure, Success, Try}
 trait WithSimulations {
   self: Application =>
 
-  def simulationExport(): Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
+  def simulationExport: Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
     implicit val timeout: Timeout = new Timeout(10 minutes)
 
     Action(parse.defaultBodyParser).async {
@@ -87,7 +87,7 @@ trait WithSimulations {
     }
   }
 
-  def simulation(): Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
+  def simulation: Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
     Action(parse.defaultBodyParser).async {
       request =>
         implicit val timeout: Timeout = new Timeout(10 minutes)

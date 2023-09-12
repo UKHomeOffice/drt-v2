@@ -28,7 +28,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport with WithSummar
 
   def terminal(terminalName: String): Terminal = Terminal(terminalName)
 
-  def exportUsers(): Action[AnyContent] = authByRole(ManageUsers) {
+  def exportUsers: Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>
       val client = keyCloakClient(request.headers)
       client

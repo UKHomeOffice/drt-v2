@@ -39,11 +39,11 @@ GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin        
 GET           /manifest-summaries                                                     controllers.Application.getManifestSummariesForArrivals
 GET           /manifest-summaries/:utcDate/summary                                    controllers.Application.getManifestSummariesForDay(utcDate: String)
 GET           /red-list/ports/:date                                                   controllers.Application.getRedListPorts(date: String)
-POST          /red-list/updates                                                       controllers.Application.updateRedListUpdates()
+POST          /red-list/updates                                                       controllers.Application.updateRedListUpdates
 GET           /red-list/updates                                                       controllers.Application.getRedListUpdates
 DELETE        /red-list/updates/:effectiveFrom                                        controllers.Application.deleteRedListUpdates(effectiveFrom: Long)
 GET           /red-list/updates-legacy                                                controllers.Application.getRedListUpdatesLegacy
-POST          /egate-banks/updates                                                    controllers.Application.updateEgateBanksUpdates()
+POST          /egate-banks/updates                                                    controllers.Application.updateEgateBanksUpdates
 GET           /egate-banks/updates                                                    controllers.Application.getEgateBanksUpdates
 DELETE        /egate-banks/updates/:terminal/:effectiveFrom                           controllers.Application.deleteEgateBanksUpdates(terminal: String, effectiveFrom: Long)
 
@@ -78,26 +78,26 @@ GET           /assets/images/*file                                              
 GET           /assets/*file                                                           controllers.Assets.versioned(path="/public", file: Asset)
 
 # Autowire calls
-POST          /api/*path                                                              controllers.Application.autowireApi(path: String)
+POST          /api-legacy/*path                                                       controllers.Application.autowireApi(path: String)
 
-GET           /data/user                                                              controllers.Application.getLoggedInUser()
+GET           /data/user                                                              controllers.Application.getLoggedInUser
 
-GET           /data/track-user                                                        controllers.Application.trackUser()
+GET           /data/track-user                                                        controllers.Application.trackUser
 
 + nocsrf
-POST          /data/login                                                             controllers.Application.apiLogin()
+POST          /data/login                                                             controllers.Application.apiLogin
 
 GET           /data/userDetails/:email                                               controllers.Application.userDetails(email:String)
 
 POST          /data/addUserToGroup/:userId/:group                                     controllers.Application.addUserToGroup(userId: String, group: String)
 
-GET           /data/user/has-port-access                                              controllers.Application.getUserHasPortAccess()
+GET           /data/user/has-port-access                                              controllers.Application.getUserHasPortAccess
 
-GET           /data/actor-tree                                                        controllers.Application.getActorTree()
+GET           /data/actor-tree                                                        controllers.Application.getActorTree
 
 # v2 exports
-GET           /data/arrivals/:startLocalDay/:endLocalDay/:terminalName                controllers.Application.exportFlightsWithSplitsForDateRangeCSVv2(startLocalDay: String, endLocalDay: String, terminalName: String)
-GET           /data/passengers/:startLocalDay/:endLocalDay/:terminalName              controllers.Application.exportDailyPassengersForDateRangeCSVv2(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /api/arrivals/:startLocalDay/:endLocalDay/:terminalName                 controllers.Application.exportFlightsWithSplitsForDateRangeCSVv2(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /api/passengers/:startLocalDay/:endLocalDay/:terminalName               controllers.Application.exportDailyPassengersForDateRangeCSVv2(startLocalDay: String, endLocalDay: String, terminalName: String)
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.Application.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.Application.feedBack(feedback: String)
@@ -106,23 +106,23 @@ POST          /logging                                                          
 
 POST          /data/staff                                                             controllers.Application.saveStaff
 GET           /staff-movements/:date                                                  controllers.Application.getStaffMovements(date: String)
-POST          /staff-movements                                                        controllers.Application.addStaffMovements()
+POST          /staff-movements                                                        controllers.Application.addStaffMovements
 DELETE        /staff-movements/:uuid                                                  controllers.Application.removeStaffMovements(uuid: String)
 
 # Feed import
-POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts()
+POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts
 + nocsrf
 POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
 # Training
 GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
-GET           /feature-guides                                                         controllers.Application.featureGuides()
+GET           /feature-guides                                                         controllers.Application.featureGuides
 
 GET           /is-new-feature-available-since-last-login                              controllers.Application.isNewFeatureAvailableSinceLastLogin
 
 POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
 
-GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds()
+GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds
 # Test related
 + nocsrf
 POST          /test/arrival                                                           test.controllers.TestController.addArrival
@@ -131,7 +131,7 @@ POST          /test/arrivals/:forDate                                           
 + nocsrf
 POST          /test/manifest                                                          test.controllers.TestController.addManifest
 + nocsrf
-POST          /test/mock-roles                                                        test.controllers.TestController.setMockRoles()
-GET           /test/mock-roles-set                                                    test.controllers.TestController.setMockRolesByQueryString()
+POST          /test/mock-roles                                                        test.controllers.TestController.setMockRoles
+GET           /test/mock-roles-set                                                    test.controllers.TestController.setMockRolesByQueryString
 + nocsrf
-DELETE        /test/data                                                              test.controllers.TestController.deleteAllData()
+DELETE        /test/data                                                              test.controllers.TestController.deleteAllData

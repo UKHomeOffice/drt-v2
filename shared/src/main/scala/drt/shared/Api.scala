@@ -121,8 +121,6 @@ trait Api {
   def forecastWeekSummary(startDay: MillisSinceEpoch, terminal: Terminal): Future[Option[ForecastPeriodWithHeadlines]]
 
   def getLoggedInUser(): LoggedInUser
-
-  def getShowAlertModalDialog(): Boolean
 }
 
 
