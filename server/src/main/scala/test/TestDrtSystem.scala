@@ -10,6 +10,7 @@ import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
+import drt.shared.Seminar
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -69,7 +70,7 @@ case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
 }
 
 case class MockSeminarsRegistrationTable() extends SeminarsRegistrationTableLike {
-  override def registerSeminars(email: String, ids: Seq[String])(implicit ex: ExecutionContext): Future[Seq[Int]] = Future.successful(Seq.empty)
+  override def registerSeminars(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
 }
 
 case class MockSeminarTable() extends SeminarTableLike {
@@ -81,7 +82,7 @@ case class MockSeminarTable() extends SeminarTableLike {
 
   override def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]] = Future.successful(Seq.empty)
 
-  override def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[String] = Future.successful("")
+  override def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[Seq[Seminar]] = Future.successful(Seq.empty)
 
 }
 

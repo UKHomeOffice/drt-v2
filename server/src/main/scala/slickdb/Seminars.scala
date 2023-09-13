@@ -12,13 +12,12 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class SeminarRow(id: Option[Int],
                       title: String,
-                      description: String,
                       startTime: Timestamp,
                       endTime: Timestamp,
                       published: Boolean,
                       meetingLink: Option[String],
                       latestUpdateTime: Timestamp) {
-  def toSeminar: Seminar = Seminar(id, title, description, startTime.getTime, endTime.getTime, published, meetingLink, latestUpdateTime.getTime)
+  def toSeminar: Seminar = Seminar(id, title, startTime.getTime, endTime.getTime, published, meetingLink, latestUpdateTime.getTime)
 
   def getDate: String = getUKStringDate(startTime, dateFormatter)
 
@@ -34,17 +33,12 @@ case class SeminarRow(id: Option[Int],
 
   val zonedUKDateTime: Timestamp => ZonedDateTime = timestamp => timestamp.toInstant.atZone(ZoneId.of("Europe/London"))
 
-  def getUKStartTime: ZonedDateTime = zonedUKDateTime(startTime)
-
-  def getUKEndTime: ZonedDateTime = zonedUKDateTime(endTime)
 }
 
 class Seminars(tag: Tag) extends Table[SeminarRow](tag, "seminar") {
   def id: Rep[Option[Int]] = column[Option[Int]]("id", O.PrimaryKey, O.AutoInc)
 
   def title: Rep[String] = column[String]("title")
-
-  def description: Rep[String] = column[String]("description")
 
   def startTime: Rep[Timestamp] = column[Timestamp]("start_time")
 
@@ -56,7 +50,7 @@ class Seminars(tag: Tag) extends Table[SeminarRow](tag, "seminar") {
 
   def latestUpdateTime: Rep[Timestamp] = column[Timestamp]("latest_update_time")
 
-  def * : ProvenShape[SeminarRow] = (id, title, description, startTime, endTime, published, meetingLink, latestUpdateTime).mapTo[SeminarRow]
+  def * : ProvenShape[SeminarRow] = (id, title, startTime, endTime, published, meetingLink, latestUpdateTime).mapTo[SeminarRow]
 }
 
 trait SeminarTableLike {
@@ -66,7 +60,7 @@ trait SeminarTableLike {
 
   def deleteSeminar(seminarId: String): Future[Int]
 
-  def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[String]
+  def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[Seq[Seminar]]
 
   def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]]
 }
@@ -84,8 +78,8 @@ case class SeminarTable(tables: Tables) extends SeminarTableLike {
 
   def updateSeminar(seminarRow: SeminarRow): Future[Int] = seminarRow.id match {
     case Some(id) =>
-      val query = seminarTable.filter(_.id === id).map(f => (f.title, f.description, f.startTime, f.endTime, f.latestUpdateTime))
-        .update(seminarRow.title, seminarRow.description, seminarRow.startTime, seminarRow.endTime, getCurrentTime)
+      val query = seminarTable.filter(_.id === id).map(f => (f.title, f.startTime, f.endTime, f.latestUpdateTime))
+        .update(seminarRow.title, seminarRow.startTime, seminarRow.endTime, getCurrentTime)
       tables.run(query)
     case None => Future.successful(0)
   }
@@ -95,11 +89,11 @@ case class SeminarTable(tables: Tables) extends SeminarTableLike {
     tables.run(query)
   }
 
-  def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[String] = {
+  def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[Seq[Seminar]] = {
     val query = if (listAll) seminarTable.filter(_.published).sortBy(_.startTime).result
     else seminarTable.filter(r => r.published && r.startTime > new Timestamp(DateTime.now().withTimeAtStartOfDay().minusDays(1).getMillis)).sortBy(_.startTime).result
     val result = tables.run(query)
-    result.map(rows => rows.map(_.toSeminar)).map(Seminar.serializeToJsonString)
+    result.map(rows => rows.map(_.toSeminar))
   }
 
   override def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]] = {

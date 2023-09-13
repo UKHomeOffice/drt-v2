@@ -2,10 +2,9 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import drt.client.components.styles.{DrtTheme, WithScalaCssImplicits}
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{GetSeminars, RegisterSeminars}
+import drt.client.services.handlers.RegisterSeminars
 import drt.shared.Seminar
 import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, _}
@@ -18,25 +17,21 @@ import scala.language.postfixOps
 
 object SeminarComponent extends WithScalaCssImplicits {
 
-  case class State(confirmRegister: Boolean, selectedSeminars: Seq[String])
+  case class State(confirmRegister: Boolean, selectedSeminar: String)
 
   case class Props(email: String, seminars: Seq[Seminar])
 
   class Backend($: BackendScope[Props, State]) {
-
     def handleSeminarSelection(id: String)(e: ReactEventFromInput) = {
-      val selectedSeminars: Seq[String] = $.state.map(s => s.selectedSeminars).runNow()
-      val newSelectedSeminars = if (selectedSeminars.contains(id)) {
-        selectedSeminars.filterNot(_ == id)
-      } else {
-        selectedSeminars :+ id
-      }
-      $.modState(s => s.copy(selectedSeminars = newSelectedSeminars))
+      val currentlySelected = $.state.map(s => s.selectedSeminar).runNow()
+      val newSelected = if (currentlySelected == id) "" else id
+      $.modState(s => s.copy(selectedSeminar = newSelected))
     }
+
 
     def render(props: Props, state: State) = {
       def registerUser(e: ReactEvent) = {
-        Callback(SPACircuit.dispatch(RegisterSeminars(state.selectedSeminars))) >>
+        Callback(SPACircuit.dispatch(RegisterSeminars(state.selectedSeminar))) >>
           $.modState(s => s.copy(confirmRegister = true))
       }
 
@@ -72,7 +67,7 @@ object SeminarComponent extends WithScalaCssImplicits {
                 "color" -> DrtTheme.theme.palette.primary.`700`,
                 "font-size" -> DrtTheme.theme.typography.h3.fontSize,
                 "font-weight" -> DrtTheme.theme.typography.h3.fontWeight
-              )))(<.span(s"Register for a Seminar"))
+              )))(<.span(s"Register for a Drop-in")),
             )),
           MuiGrid(sx = SxProps(Map(
             "backgroundColor" -> "#FFFFFF",
@@ -92,7 +87,6 @@ object SeminarComponent extends WithScalaCssImplicits {
                       MuiTableRow(sx =
                         SxProps(Map("backgroundColor" -> DrtTheme.theme.palette.primary.`50`)))(
                         MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Title"),
-                        MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Description"),
                         MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Start Time"),
                         MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("End Time"),
                         MuiTableCell()(""),
@@ -102,12 +96,11 @@ object SeminarComponent extends WithScalaCssImplicits {
                       props.seminars.zipWithIndex.toVdomArray {
                         case (tableItem, _) => MuiTableRow()(
                           MuiTableCell(component = "th", scope = "row")(tableItem.title),
-                          MuiTableCell()(tableItem.description),
                           MuiTableCell()(SDate(tableItem.startTime).prettyDateTime),
                           MuiTableCell()(SDate(tableItem.endTime).prettyDateTime),
                           MuiTableCell()(
-                            MuiCheckbox()(
-                              ^.checked := tableItem.id.exists(id => state.selectedSeminars.contains(id.toString)),
+                            MuiRadio()(
+                              ^.checked := tableItem.id.exists(id => state.selectedSeminar.contains(id.toString)),
                               ^.onChange ==> handleSeminarSelection(tableItem.id.getOrElse("").toString)
                             )),
                         )
@@ -136,7 +129,7 @@ object SeminarComponent extends WithScalaCssImplicits {
   val component: Component[Props, State, Backend, CtorType.Props] =
     ScalaComponent
       .builder[Props]("NavBar")
-      .initialStateFromProps(_ => State(false, Seq.empty[String]))
+      .initialStateFromProps(_ => State(false, ""))
       .renderBackend[Backend]
       .build
 

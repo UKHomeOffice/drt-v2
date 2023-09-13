@@ -34,7 +34,6 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-import scala.util.Try
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
@@ -143,6 +142,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   with WithPortState
   with WithStaffing
   with WithApplicationInfo
+  with withSeminar
   with WithSimulations
   with WithManifests
   with WithWalkTimes
@@ -169,14 +169,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   lazy val negativeFeedbackTemplateId = config.get[String]("notifications.negative-feedback-templateId")
 
   lazy val positiveFeedbackTemplateId = config.get[String]("notifications.positive-feedback-templateId")
-
-  lazy val seminarRegistrationTemplateId = config.get[String]("notifications.seminar-registration-templateId")
-
-  lazy val seminarRegistrationHostTemplateId = config.get[String]("notifications.seminar-registration-host-templateId")
-
-  lazy val seminarHostEmail = config.get[String]("notifications.seminar-host-email")
-
-  lazy val seminarHostName = config.get[String]("notifications.seminar-host-name")
 
   lazy val govNotifyReference = config.get[String]("notifications.reference")
 
@@ -206,57 +198,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   def previousDay(date: MilliDate): SDateLike = {
     val oneDayInMillis = 60 * 60 * 24 * 1000L
     SDate(date.millisSinceEpoch - oneDayInMillis)
-  }
-
-  def seminars(): Action[AnyContent] = Action.async { _ =>
-    val seminarsJson: Future[String] = ctrl.seminarService.getPublishedSeminars(false)
-    seminarsJson.map(Ok(_))
-  }
-
-  def getICSFile(seminarId: String): Action[AnyContent] = Action.async { _ =>
-    ctrl.seminarService.getSeminars(Seq(seminarId)).map {
-      _.headOption match {
-        case Some(seminar) =>
-          val icsContent = CalendarInvite.invite(seminar.getUKStartTime,
-            seminar.getUKEndTime,
-            seminar.title,
-            seminar.description,
-            seminar.meetingLink.getOrElse(""),
-            seminarHostName,
-            seminarHostEmail)
-          Ok(icsContent).as("text/calendar").withHeaders(
-            CONTENT_DISPOSITION -> """attachment; filename="invite.ics""""
-          )
-
-        case None => NotFound
-      }
-    }
-  }
-
-  def registerSeminars: Action[AnyContent] = authByRole(BorderForceStaff) {
-    Action.async { implicit request =>
-      import spray.json.DefaultJsonProtocol._
-      import spray.json._
-      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-      request.body.asText match {
-        case Some(content) =>
-          log.info(s"Received seminars booking data")
-          Future.successful(Try(content.parseJson.convertTo[Seq[String]])
-            .map { ids =>
-              ctrl.seminarRegistrationService.registerSeminars(userEmail, ids).map { _ =>
-                ctrl.seminarService.getSeminars(ids).map(sendSeminarRegistrationEmail(userEmail, _))
-              }.recover {
-                case e => log.warning(s"Error while db insert for seminar registration", e)
-                  BadRequest(s"Failed to register seminars for user $userEmail")
-              }
-              Ok("Successfully registered seminars")
-            }.recover {
-            case e => log.warning(s"Error while seminar registration", e)
-              BadRequest(s"Failed to register seminars for user $userEmail")
-          }.getOrElse(BadRequest("Failed to parse json")))
-        case None => Future.successful(BadRequest("No content"))
-      }
-    }
   }
 
   def featureGuides(): Action[AnyContent] = Action.async { _ =>

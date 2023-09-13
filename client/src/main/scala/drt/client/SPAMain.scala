@@ -4,7 +4,10 @@ import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles._
-import drt.client.components.{ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage, PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, TrainingHubComponent, UserDashboardPage}
+import drt.client.components.{
+  ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage,
+  PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, TrainingHubComponent, UserDashboardPage
+}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -163,7 +166,7 @@ object SPAMain {
 
   case object ContactUsLoc extends Loc
 
-  case class TrainingHubLoc(modeStr:String="") extends Loc
+  case class TrainingHubLoc(modeStr: String = "seminarBooking") extends Loc
 
   case object PortConfigLoc extends Loc
 

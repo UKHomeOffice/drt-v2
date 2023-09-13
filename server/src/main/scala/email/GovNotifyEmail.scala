@@ -20,7 +20,7 @@ class GovNotifyEmail(apiKey: String) {
     Try(email.split("\\.").head.toLowerCase.capitalize).getOrElse(email)
   }
 
-  def seminarRegistrationHost(icsFileLink: String, teamEmail: String, hostEmail: String, registeredUserEmail: String, seminar: SeminarRow) = {
+  def seminarRegistrationHost(teamEmail: String, hostEmail: String, registeredUserEmail: String, seminar: SeminarRow) = {
     Map(
       "teamEmail" -> teamEmail,
       "registeredUserEmail" -> registeredUserEmail,
@@ -30,11 +30,10 @@ class GovNotifyEmail(apiKey: String) {
       "startTime" -> seminar.getStartTime,
       "endTime" -> seminar.getEndTime,
       "meetingLink" -> seminar.meetingLink.getOrElse(""),
-      "icsFileLink" -> icsFileLink
     ).asJava
   }
 
-  def seminarRegistrationConfirmation(icsFileLink: String, teamEmail: String, email: String, seminar: SeminarRow): util.Map[String, String] = {
+  def seminarRegistrationConfirmation(teamEmail: String, email: String, seminar: SeminarRow): util.Map[String, String] = {
     Map(
       "teamEmail" -> teamEmail,
       "requesterUsername" -> getFirstName(email),
@@ -43,7 +42,6 @@ class GovNotifyEmail(apiKey: String) {
       "startTime" -> seminar.getStartTime,
       "endTime" -> seminar.getEndTime,
       "meetingLink" -> seminar.meetingLink.getOrElse(""),
-      "icsFileLink" -> icsFileLink
     ).asJava
   }
 

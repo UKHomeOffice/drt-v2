@@ -84,7 +84,7 @@ object TrainingHubComponent {
           ))
         }),
       <.li(^.className := tabClass(SeminarBooking),
-        <.a(^.id := "seminarBooking", "Seminar Booking", VdomAttr("data-toggle") := "tab"),
+        <.a(^.id := "seminarBooking", "Drop-In Booking", VdomAttr("data-toggle") := "tab"),
         ^.onClick ==> { e: ReactEventFromInput =>
           e.preventDefault()
           GoogleEventTracker.sendEvent(trainingName, "click", "Seminar Booking")
