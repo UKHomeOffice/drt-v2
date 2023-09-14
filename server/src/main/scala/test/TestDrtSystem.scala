@@ -81,9 +81,7 @@ case class MockSeminarTable() extends SeminarTableLike {
   override def deleteSeminar(seminarId: String): Future[Int] = Future.successful(1)
 
   override def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]] = Future.successful(Seq.empty)
-
-  override def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[Seq[Seminar]] = Future.successful(Seq.empty)
-
+  override def getFuturePublishedSeminars()(implicit ec: ExecutionContext): Future[Seq[Seminar]] = Future.successful(Seq.empty)
 }
 
 case class MockDrtParameters() extends DrtParameters {

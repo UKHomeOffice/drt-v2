@@ -14,10 +14,10 @@ case class SeminarRow(id: Option[Int],
                       title: String,
                       startTime: Timestamp,
                       endTime: Timestamp,
-                      published: Boolean,
+                      isPublished: Boolean,
                       meetingLink: Option[String],
-                      latestUpdateTime: Timestamp) {
-  def toSeminar: Seminar = Seminar(id, title, startTime.getTime, endTime.getTime, published, meetingLink, latestUpdateTime.getTime)
+                      latestUpdatedAt: Timestamp) {
+  def toSeminar: Seminar = Seminar(id, title, startTime.getTime, endTime.getTime, isPublished, meetingLink, latestUpdatedAt.getTime)
 
   def getDate: String = getUKStringDate(startTime, dateFormatter)
 
@@ -44,13 +44,13 @@ class Seminars(tag: Tag) extends Table[SeminarRow](tag, "seminar") {
 
   def endTime: Rep[Timestamp] = column[Timestamp]("end_time")
 
-  def published: Rep[Boolean] = column[Boolean]("published")
+  def isPublished: Rep[Boolean] = column[Boolean]("is_published")
 
   def meetingLink: Rep[Option[String]] = column[Option[String]]("meeting_link")
 
-  def latestUpdateTime: Rep[Timestamp] = column[Timestamp]("latest_update_time")
+  def latestUpdatedAt: Rep[Timestamp] = column[Timestamp]("latest_updated_at")
 
-  def * : ProvenShape[SeminarRow] = (id, title, startTime, endTime, published, meetingLink, latestUpdateTime).mapTo[SeminarRow]
+  def * : ProvenShape[SeminarRow] = (id, title, startTime, endTime, isPublished, meetingLink, latestUpdatedAt).mapTo[SeminarRow]
 }
 
 trait SeminarTableLike {
@@ -60,7 +60,7 @@ trait SeminarTableLike {
 
   def deleteSeminar(seminarId: String): Future[Int]
 
-  def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[Seq[Seminar]]
+  def getFuturePublishedSeminars()(implicit ec: ExecutionContext): Future[Seq[Seminar]]
 
   def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]]
 }
@@ -71,14 +71,14 @@ case class SeminarTable(tables: Tables) extends SeminarTableLike {
   private def getCurrentTime = new Timestamp(new DateTime().getMillis)
 
   def updatePublishSeminar(seminarId: String, publish: Boolean): Future[Int] = {
-    val query = seminarTable.filter(_.id === seminarId.trim.toInt).map(f => (f.published, f.latestUpdateTime))
+    val query = seminarTable.filter(_.id === seminarId.trim.toInt).map(f => (f.isPublished, f.latestUpdatedAt))
       .update(publish, getCurrentTime)
     tables.run(query)
   }
 
   def updateSeminar(seminarRow: SeminarRow): Future[Int] = seminarRow.id match {
     case Some(id) =>
-      val query = seminarTable.filter(_.id === id).map(f => (f.title, f.startTime, f.endTime, f.latestUpdateTime))
+      val query = seminarTable.filter(_.id === id).map(f => (f.title, f.startTime, f.endTime, f.latestUpdatedAt))
         .update(seminarRow.title, seminarRow.startTime, seminarRow.endTime, getCurrentTime)
       tables.run(query)
     case None => Future.successful(0)
@@ -89,9 +89,11 @@ case class SeminarTable(tables: Tables) extends SeminarTableLike {
     tables.run(query)
   }
 
-  def getPublishedSeminars(listAll: Boolean)(implicit ec: ExecutionContext): Future[Seq[Seminar]] = {
-    val query = if (listAll) seminarTable.filter(_.published).sortBy(_.startTime).result
-    else seminarTable.filter(r => r.published && r.startTime > new Timestamp(DateTime.now().withTimeAtStartOfDay().minusDays(1).getMillis)).sortBy(_.startTime).result
+  def getFuturePublishedSeminars()(implicit ec: ExecutionContext): Future[Seq[Seminar]] = {
+    val query = seminarTable
+      .filter(r => r.isPublished && r.startTime > new Timestamp(DateTime.now().withTimeAtStartOfDay().minusDays(1).getMillis))
+      .sortBy(_.startTime)
+      .result
     val result = tables.run(query)
     result.map(rows => rows.map(_.toSeminar))
   }

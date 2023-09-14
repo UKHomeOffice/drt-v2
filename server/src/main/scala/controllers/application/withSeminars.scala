@@ -10,7 +10,7 @@ import upickle.default.write
 import scala.concurrent.Future
 import scala.util.Try
 
-trait withSeminar {
+trait withSeminars {
 
   self: Application =>
 
@@ -22,7 +22,7 @@ trait withSeminar {
 
   import drt.shared.Seminar._
   def seminars(): Action[AnyContent] = Action.async { _ =>
-    val seminarsJson: Future[Seq[Seminar]] = ctrl.seminarService.getPublishedSeminars(false)
+    val seminarsJson: Future[Seq[Seminar]] = ctrl.seminarService.getFuturePublishedSeminars()
     seminarsJson.map(seminars => Ok(write(seminars)))
   }
 

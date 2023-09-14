@@ -6,9 +6,9 @@ case class Seminar(id: Option[Int],
                    title: String,
                    startTime: Long,
                    endTime: Long,
-                   published: Boolean,
+                   isPublished: Boolean,
                    meetingLink: Option[String],
-                   latestUpdateTime: Long)
+                   latestUpdatedAt: Long)
 
 object Seminar {
   implicit val rw: ReadWriter[Seminar] = macroRW
