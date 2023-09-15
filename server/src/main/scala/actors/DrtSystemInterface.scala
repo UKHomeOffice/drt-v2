@@ -2,7 +2,7 @@ package actors
 
 import actors.CrunchManagerActor.AddQueueCrunchSubscriber
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, GetStateForDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors.daily.PassengersActor
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
@@ -29,7 +29,7 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.ChromaLiveFeed
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.common.{ManualUploadArrivalFeed, ProdHttpClient}
-import drt.server.feeds.edi.{EdiClient, EdiFeed}
+import drt.server.feeds.edi.AzinqFeed
 import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.BHXForecastFeedLegacy
@@ -573,7 +573,12 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       case "PIK" | "HUY" | "INV" | "NQY" | "NWI" | "SEN" =>
         Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30 seconds)
       case "EDI" =>
-        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediLiveFeedSource(Feed.actorRefSource), 5.seconds, 1.minute)
+        val url = config.get[String]("feeds.edi.url")
+        val username = config.get[String]("feeds.edi.username")
+        val password = config.get[String]("feeds.edi.password")
+        val token = config.get[String]("feeds.edi.token")
+        val fetchArrivals = AzinqFeed(url, username, password, token, ProdHttpClient().sendRequest)
+        Feed(AzinqFeed.source(Feed.actorRefSource, fetchArrivals), 5.seconds, 1.minute)
       case _ =>
         arrivalsNoOp
     }
@@ -588,8 +593,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
         Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
       case PortCode("BHX") =>
         Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
-      case PortCode("EDI") =>
-        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediForecastFeedSource(Feed.actorRefSource), 5.seconds, 10.minutes)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }

@@ -79,29 +79,24 @@ case class GlaFeed(uri: String,
 
 object GlaFeed {
 
-  case class GlaArrival(
-                         AIBT: Option[String],
-                         AirlineIATA: String,
-                         AirlineICAO: String,
-                         ALDT: Option[String],
-                         AODBProbableDateTime: Option[String],
-                         CarouselCode: Option[String],
-                         CodeShareFlights: Option[String],
-                         CodeShareInd: Option[String],
-                         DepartureArrivalType: String,
-                         EIBT: Option[String],
-                         FlightNumber: String,
-                         FlightStatus: String,
-                         FlightStatusDesc: String,
-                         GateCode: Option[String],
-                         MaxPax: Option[Int],
-                         OriginDestAirportIATA: String,
-                         PaxEstimated: Option[Int],
-                         Runway: Option[String],
-                         ScheduledDateTime: String,
-                         StandCode: Option[String],
-                         TerminalCode: String,
-                         TotalPassengerCount: Option[Int]
+  case class GlaArrival(AIBT: Option[String],
+                        AirlineIATA: String,
+                        AirlineICAO: String,
+                        ALDT: Option[String],
+                        AODBProbableDateTime: Option[String],
+                        CarouselCode: Option[String],
+                        DepartureArrivalType: String,
+                        EIBT: Option[String],
+                        FlightNumber: String,
+                        FlightStatusDesc: String,
+                        GateCode: Option[String],
+                        MaxPax: Option[Int],
+                        OriginDestAirportIATA: String,
+                        Runway: Option[String],
+                        ScheduledDateTime: String,
+                        StandCode: Option[String],
+                        TerminalCode: String,
+                        TotalPassengerCount: Option[Int]
                        )
 
   def toArrival(ga: GlaArrival): Arrival = Arrival(
@@ -129,8 +124,6 @@ object GlaFeed {
   )
 
   object JsonSupport extends SprayJsonSupport with DefaultJsonProtocol {
-
-    implicit val glaArrivalFormat: RootJsonFormat[GlaArrival] = jsonFormat22(GlaArrival)
+    implicit val glaArrivalFormat: RootJsonFormat[GlaArrival] = jsonFormat18(GlaArrival)
   }
-
 }
