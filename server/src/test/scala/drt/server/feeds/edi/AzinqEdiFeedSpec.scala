@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.StatusCodes.OK
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
 import akka.stream.Materializer
+import drt.server.feeds.AzinqFeed
 import org.specs2.mutable.Specification
 import spray.json._
 import uk.gov.homeoffice.drt.arrivals._
@@ -13,8 +14,9 @@ import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
-class AzinqFeedSpec extends Specification with AzinqArrivalEdiJsonFormats {
+class AzinqEdiFeedSpec extends Specification {
   val system: ActorSystem = ActorSystem("azinq-edi")
+  import drt.server.feeds.edi.AzinqEdiArrivalJsonFormats._
 
   "Given some json containing an edi flight" >> {
     "I should be able to parse it to an Arrival" >> {
@@ -30,7 +32,7 @@ class AzinqFeedSpec extends Specification with AzinqArrivalEdiJsonFormats {
 
       implicit val mat: Materializer = Materializer(system)
 
-      val feed = AzinqFeed("", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json))))
+      val feed = AzinqFeed("", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json))))
       val arrivals = Await.result(feed(), 1.second)
 
       arrivals === List(arrival1)

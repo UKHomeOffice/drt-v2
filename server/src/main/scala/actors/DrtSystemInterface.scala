@@ -29,8 +29,8 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.ChromaLiveFeed
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.common.{ManualUploadArrivalFeed, ProdHttpClient}
-import drt.server.feeds.edi.AzinqFeed
-import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
+import drt.server.feeds.edi.EdiFeed
+import drt.server.feeds.gla.GlaFeed
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.BHXForecastFeedLegacy
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LgwForecastFeed}
@@ -565,23 +565,24 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
             })
         }
       case "GLA" =>
-        val liveUrl = params.maybeGlaLiveUrl.getOrElse(throw new Exception("Missing GLA Live Feed Url"))
-        val livePassword = params.maybeGlaLivePassword.getOrElse(throw new Exception("Missing GLA Live Feed Password"))
-        val liveToken = params.maybeGlaLiveToken.getOrElse(throw new Exception("Missing GLA Live Feed Token"))
-        val liveUsername = params.maybeGlaLiveUsername.getOrElse(throw new Exception("Missing GLA Live Feed Username"))
-        Feed(GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).source(Feed.actorRefSource), 5.seconds, 60.seconds)
+        val (url: String, username: String, password: String, token: String) = azinqConfig
+        Feed(GlaFeed(url, username, password, token), 5.seconds, 1.minute)
       case "PIK" | "HUY" | "INV" | "NQY" | "NWI" | "SEN" =>
         Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30 seconds)
       case "EDI" =>
-        val url = config.get[String]("feeds.edi.url")
-        val username = config.get[String]("feeds.edi.username")
-        val password = config.get[String]("feeds.edi.password")
-        val token = config.get[String]("feeds.edi.token")
-        val fetchArrivals = AzinqFeed(url, username, password, token, ProdHttpClient().sendRequest)
-        Feed(AzinqFeed.source(Feed.actorRefSource, fetchArrivals), 5.seconds, 1.minute)
+        val (url: String, username: String, password: String, token: String) = azinqConfig
+        Feed(EdiFeed(url, username, password, token), 5.seconds, 1.minute)
       case _ =>
         arrivalsNoOp
     }
+
+  private def azinqConfig: (String, String, String, String) = {
+    val url = config.get[String]("feeds.azinq.url")
+    val username = config.get[String]("feeds.azinq.username")
+    val password = config.get[String]("feeds.azinq.password")
+    val token = config.get[String]("feeds.azinq.token")
+    (url, username, password, token)
+  }
 
   def forecastArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =
     portCode match {
