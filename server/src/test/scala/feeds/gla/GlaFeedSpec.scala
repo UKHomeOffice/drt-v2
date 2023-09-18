@@ -1,12 +1,12 @@
 package feeds.gla
 
 import actors.acking.AckingReceiver.StreamCompleted
-import akka.actor.ActorSystem
+import akka.actor.typed.ActorRef
 import akka.http.scaladsl.model._
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed}
-import drt.server.feeds.gla.{GlaFeed, GlaFeedRequesterLike, ProdGlaFeedRequester}
+import drt.server.feeds._
+import drt.server.feeds.gla.GlaFeed
 import drt.shared.FlightsApi.Flights
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
@@ -14,52 +14,50 @@ import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
-case class MockFeedRequester(json: String = "[]") extends GlaFeedRequesterLike {
+case class MockFeedRequester(json: String = "[]") {
 
   var mockResponse: HttpResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, json))
 
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-
-  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = Future(mockResponse)
+  def send: HttpRequest => Future[HttpResponse] = _ => Future(mockResponse)
 }
 
-case class MockExceptionThrowingFeedRequester() extends GlaFeedRequesterLike {
-
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-
-  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = {
-
-    Future(throw new Exception("Something Broke"))
-  }
+object MockExceptionThrowingFeedRequester {
+  def send: HttpRequest => Future[HttpResponse] = _ => Future(throw new Exception("Something Broke"))
 }
 
 class GlaFeedSpec extends CrunchTestLike {
+
+  import drt.server.feeds.gla.AzinqGlaArrivalJsonFormats._
+
+  def mockFeedWithResponse(res: String): Source[ArrivalsFeedResponse, ActorRef[Feed.FeedTick]] = AzinqFeed.source(
+    Feed.actorRefSource,
+    AzinqFeed(
+      uri = "http://test.com",
+      token = "",
+      password = "",
+      username = "",
+      httpRequest = MockFeedRequester(res).send
+    )
+  )
+
   "Given a GLA Feed I should be able to connect to it and get arrivals back" >> {
     skipped(s"Exploratory test.")
     val prodFeed = GlaFeed(
-      uri = sys.env.getOrElse("GLA_LIVE_URL", ""),
+      url = sys.env.getOrElse("GLA_LIVE_URL", ""),
       token = sys.env.getOrElse("GLA_LIVE_TOKEN", ""),
       password = sys.env.getOrElse("GLA_LIVE_PASSWORD", ""),
       username = sys.env.getOrElse("GLA_LIVE_USERNAME", ""),
-      feedRequester = ProdGlaFeedRequester
     )
 
-    prodFeed.source(Feed.actorRefSource).runWith(Sink.seq)
+    prodFeed.runWith(Sink.seq)
 
     Thread.sleep(20000)
     true
   }
-
-  def mockFeedWithResponse(res: String): GlaFeed = GlaFeed(
-    uri = "http://test.com",
-    token = "",
-    password = "",
-    username = "",
-    feedRequester = MockFeedRequester(res)
-  )
 
   "Given a mock json response containing a single valid flight " +
     "I should get a stream with that flight in it " >> {
@@ -67,7 +65,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     val probe = TestProbe()
 
-    val actorSource = mockFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
@@ -85,7 +83,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     val probe = TestProbe()
 
-    val actorSource = mockFeed.source(Feed.actorRefSource).to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
@@ -100,22 +98,44 @@ class GlaFeedSpec extends CrunchTestLike {
     "I should get an ArrivalsFeedFailure" >> {
     val mockFeed = mockFeedWithResponse("bad json")
 
-    val result = Await.result(mockFeed.requestArrivals(), 1.second)
+    val probe = TestProbe()
 
-    result must haveClass[ArrivalsFeedFailure]
+    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
+
+    probe.fishForMessage(1.seconds) {
+      case ArrivalsFeedFailure(_, _) => true
+      case o =>
+        println(s"got $o")
+        false
+    }
+
+    success
   }
 
   "Given a feed connection failure then I should get back an ArrivalsFeedFailure." >> {
-    val mockFeed = GlaFeed(
-      uri = "http://test.com",
-      token = "",
-      password = "",
-      username = "",
-      feedRequester = MockExceptionThrowingFeedRequester())
+    val mockFeed = AzinqFeed.source(
+      Feed.actorRefSource,
+      AzinqFeed(
+        uri = "http://test.com",
+        token = "",
+        password = "",
+        username = "",
+        httpRequest = MockExceptionThrowingFeedRequester.send
+      )
+    )
 
-    val result = Await.result(mockFeed.requestArrivals(), 1.second)
+    val probe = TestProbe()
 
-    result must haveClass[ArrivalsFeedFailure]
+    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
+
+    probe.fishForMessage(1.seconds) {
+      case ArrivalsFeedFailure(_, _) => true
+      case _ => false
+    }
+
+    success
   }
 
   "Given some valid GLA Feed Json I should get back a valid Arrival object" >> {
@@ -145,38 +165,17 @@ class GlaFeedSpec extends CrunchTestLike {
       CarrierScheduled = None,
       PassengerSources = Map(LiveFeedSource -> Passengers(Some(20), None))
     )
+    val probe = TestProbe()
+    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
 
-    Await.result(mockFeed.requestArrivals(), 1.second) match {
+    probe.fishForMessage(1.seconds) {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+      case _ => false
     }
-  }
 
-  def firstJsonExample: String =
-    """[{
-      |        "AIBT": "2019-11-13T13:30:00+00:00",
-      |        "AirlineIATA": "TS",
-      |        "AirlineICAO": "TST",
-      |        "ALDT": "2019-11-13T13:31:00+00:00",
-      |        "AODBProbableDateTime": "2019-11-13T13:32:00+00:00",
-      |        "CarouselCode": "2",
-      |        "CodeShareFlights": "",
-      |        "CodeShareInd": "N",
-      |        "DepartureArrivalType": "A",
-      |        "EIBT": "2019-11-13T12:33:00+00:00",
-      |        "FlightNumber": "234",
-      |        "FlightStatus": "S",
-      |        "FlightStatusDesc": "Flight is on schedule",
-      |        "GateCode": "G",
-      |        "MaxPax": 50,
-      |        "OriginDestAirportIATA": "TST",
-      |        "OriginDestAirportICAO": "TSTT",
-      |        "PaxEstimated": null,
-      |        "Runway": "3",
-      |        "ScheduledDateTime": "2019-11-13T12:34:00+00:00",
-      |        "StandCode": "ST",
-      |        "TerminalCode": "T1",
-      |        "TotalPassengerCount": 20
-      |}]""".stripMargin
+    success
+  }
 
   "Given a different arrival with valid GLA Feed Json I should get back a valid Arrival object" >> {
     val mockFeed = mockFeedWithResponse(secondJsonExample)
@@ -206,20 +205,102 @@ class GlaFeedSpec extends CrunchTestLike {
       PassengerSources = Map(LiveFeedSource -> Passengers(Some(55), None))
     )
 
-    Await.result(mockFeed.requestArrivals(), 1.second) match {
+    val probe = TestProbe()
+    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
+
+    probe.fishForMessage(1.seconds) {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+      case _ => false
     }
+
+    success
   }
 
 
   "Given a GLA feed item with 0 for ActPax and MaxPax then we should 0 in the arrival" >> {
     val mockFeed = mockFeedWithResponse(exampleWith0s)
 
-    Await.result(mockFeed.requestArrivals(), 1.second) match {
+    val probe = TestProbe()
+    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
+
+    probe.fishForMessage(1.seconds) {
       case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) =>
         (arrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual), arrival.MaxPax) === ((Some(0), Some(0)))
+      case _ => false
     }
+
+    success
   }
+
+
+  "Given a different arrival with only required JSON fields then I should still get an arrival object with those fields" >> {
+    val mockFeed = mockFeedWithResponse(requiredFieldsOnlyJson)
+
+    val expected = Arrival(
+      Operator = None,
+      Status = ArrivalStatus("Flight is cancelled"),
+      Estimated = None,
+      Predictions = Predictions(0L, Map()),
+      Actual = None,
+      EstimatedChox = None,
+      ActualChox = None,
+      Gate = None,
+      Stand = None,
+      MaxPax = None,
+      RunwayID = None,
+      BaggageReclaimId = None,
+      AirportID = PortCode("GLA"),
+      Terminal = T1,
+      rawICAO = "TTT244",
+      rawIATA = "TT244",
+      Origin = PortCode("TTT"),
+      Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
+      PcpTime = None,
+      FeedSources = Set(LiveFeedSource),
+      CarrierScheduled = None,
+      PassengerSources = Map(LiveFeedSource -> Passengers(None, None))
+    )
+
+    val probe = TestProbe()
+    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
+
+    probe.fishForMessage(1.seconds) {
+      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+      case _ => false
+    }
+
+    success
+  }
+
+  def firstJsonExample: String =
+    """[{
+      |        "AIBT": "2019-11-13T13:30:00+00:00",
+      |        "AirlineIATA": "TS",
+      |        "AirlineICAO": "TST",
+      |        "ALDT": "2019-11-13T13:31:00+00:00",
+      |        "AODBProbableDateTime": "2019-11-13T13:32:00+00:00",
+      |        "CarouselCode": "2",
+      |        "CodeShareFlights": "",
+      |        "CodeShareInd": "N",
+      |        "DepartureArrivalType": "A",
+      |        "EIBT": "2019-11-13T12:33:00+00:00",
+      |        "FlightNumber": "234",
+      |        "FlightStatus": "S",
+      |        "FlightStatusDesc": "Flight is on schedule",
+      |        "GateCode": "G",
+      |        "MaxPax": 50,
+      |        "OriginDestAirportIATA": "TST",
+      |        "OriginDestAirportICAO": "TSTT",
+      |        "PaxEstimated": null,
+      |        "Runway": "3",
+      |        "ScheduledDateTime": "2019-11-13T12:34:00+00:00",
+      |        "StandCode": "ST",
+      |        "TerminalCode": "T1",
+      |        "TotalPassengerCount": 20
+      |}]""".stripMargin
 
   def secondJsonExample: String =
     """[{
@@ -274,40 +355,6 @@ class GlaFeedSpec extends CrunchTestLike {
       |        "TerminalCode": "T1",
       |        "TotalPassengerCount": 0
       |}]""".stripMargin
-
-
-  "Given a different arrival with only required JSON fields then I should still get an arrival object with those fields" >> {
-    val mockFeed = mockFeedWithResponse(requiredFieldsOnlyJson)
-
-    val expected = Arrival(
-      Operator = None,
-      Status = ArrivalStatus("Flight is cancelled"),
-      Estimated = None,
-      Predictions = Predictions(0L, Map()),
-      Actual = None,
-      EstimatedChox = None,
-      ActualChox = None,
-      Gate = None,
-      Stand = None,
-      MaxPax = None,
-      RunwayID = None,
-      BaggageReclaimId = None,
-      AirportID = PortCode("GLA"),
-      Terminal = T1,
-      rawICAO = "TTT244",
-      rawIATA = "TT244",
-      Origin = PortCode("TTT"),
-      Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
-      PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      CarrierScheduled = None,
-      PassengerSources = Map(LiveFeedSource -> Passengers(None, None))
-    )
-
-    Await.result(mockFeed.requestArrivals(), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
-    }
-  }
 
   def requiredFieldsOnlyJson: String =
     """[{
