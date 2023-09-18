@@ -16,8 +16,8 @@ case class SeminarRow(id: Option[Int],
                       endTime: Timestamp,
                       isPublished: Boolean,
                       meetingLink: Option[String],
-                      latestUpdatedAt: Timestamp) {
-  def toSeminar: Seminar = Seminar(id, title, startTime.getTime, endTime.getTime, isPublished, meetingLink, latestUpdatedAt.getTime)
+                      lastUpdatedAt: Timestamp) {
+  def toSeminar: Seminar = Seminar(id, title, startTime.getTime, endTime.getTime, isPublished, meetingLink, lastUpdatedAt.getTime)
 
   def getDate: String = getUKStringDate(startTime, dateFormatter)
 
@@ -48,9 +48,9 @@ class Seminars(tag: Tag) extends Table[SeminarRow](tag, "seminar") {
 
   def meetingLink: Rep[Option[String]] = column[Option[String]]("meeting_link")
 
-  def latestUpdatedAt: Rep[Timestamp] = column[Timestamp]("latest_updated_at")
+  def lastUpdatedAt: Rep[Timestamp] = column[Timestamp]("last_updated_at")
 
-  def * : ProvenShape[SeminarRow] = (id, title, startTime, endTime, isPublished, meetingLink, latestUpdatedAt).mapTo[SeminarRow]
+  def * : ProvenShape[SeminarRow] = (id, title, startTime, endTime, isPublished, meetingLink, lastUpdatedAt).mapTo[SeminarRow]
 }
 
 trait SeminarTableLike {
@@ -71,14 +71,14 @@ case class SeminarTable(tables: Tables) extends SeminarTableLike {
   private def getCurrentTime = new Timestamp(new DateTime().getMillis)
 
   def updatePublishSeminar(seminarId: String, publish: Boolean): Future[Int] = {
-    val query = seminarTable.filter(_.id === seminarId.trim.toInt).map(f => (f.isPublished, f.latestUpdatedAt))
+    val query = seminarTable.filter(_.id === seminarId.trim.toInt).map(f => (f.isPublished, f.lastUpdatedAt))
       .update(publish, getCurrentTime)
     tables.run(query)
   }
 
   def updateSeminar(seminarRow: SeminarRow): Future[Int] = seminarRow.id match {
     case Some(id) =>
-      val query = seminarTable.filter(_.id === id).map(f => (f.title, f.startTime, f.endTime, f.latestUpdatedAt))
+      val query = seminarTable.filter(_.id === id).map(f => (f.title, f.startTime, f.endTime, f.lastUpdatedAt))
         .update(seminarRow.title, seminarRow.startTime, seminarRow.endTime, getCurrentTime)
       tables.run(query)
     case None => Future.successful(0)
