@@ -2,7 +2,7 @@ package actors
 
 import actors.CrunchManagerActor.AddQueueCrunchSubscriber
 import actors.DrtStaticParameters.expireAfterMillis
-import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, GetStateForDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors.daily.PassengersActor
 import actors.persistent._
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
@@ -29,8 +29,8 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.ChromaLiveFeed
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.common.{ManualUploadArrivalFeed, ProdHttpClient}
-import drt.server.feeds.edi.{EdiClient, EdiFeed}
-import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
+import drt.server.feeds.edi.EdiFeed
+import drt.server.feeds.gla.GlaFeed
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.BHXForecastFeedLegacy
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LgwForecastFeed}
@@ -565,18 +565,24 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
             })
         }
       case "GLA" =>
-        val liveUrl = params.maybeGlaLiveUrl.getOrElse(throw new Exception("Missing GLA Live Feed Url"))
-        val livePassword = params.maybeGlaLivePassword.getOrElse(throw new Exception("Missing GLA Live Feed Password"))
-        val liveToken = params.maybeGlaLiveToken.getOrElse(throw new Exception("Missing GLA Live Feed Token"))
-        val liveUsername = params.maybeGlaLiveUsername.getOrElse(throw new Exception("Missing GLA Live Feed Username"))
-        Feed(GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).source(Feed.actorRefSource), 5.seconds, 60.seconds)
+        val (url: String, username: String, password: String, token: String) = azinqConfig
+        Feed(GlaFeed(url, username, password, token), 5.seconds, 1.minute)
       case "PIK" | "HUY" | "INV" | "NQY" | "NWI" | "SEN" =>
         Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30 seconds)
       case "EDI" =>
-        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediLiveFeedSource(Feed.actorRefSource), 5.seconds, 1.minute)
+        val (url: String, username: String, password: String, token: String) = azinqConfig
+        Feed(EdiFeed(url, username, password, token), 5.seconds, 1.minute)
       case _ =>
         arrivalsNoOp
     }
+
+  private def azinqConfig: (String, String, String, String) = {
+    val url = config.get[String]("feeds.azinq.url")
+    val username = config.get[String]("feeds.azinq.username")
+    val password = config.get[String]("feeds.azinq.password")
+    val token = config.get[String]("feeds.azinq.token")
+    (url, username, password, token)
+  }
 
   def forecastArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =
     portCode match {
@@ -588,8 +594,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
         Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
       case PortCode("BHX") =>
         Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
-      case PortCode("EDI") =>
-        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediForecastFeedSource(Feed.actorRefSource), 5.seconds, 10.minutes)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }
