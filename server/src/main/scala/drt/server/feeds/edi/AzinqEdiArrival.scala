@@ -14,6 +14,7 @@ case class AzinqEdiArrival(AIBT: Option[String],
                            ALDT: Option[String],
                            CarouselCode: Option[String],
                            CodeSharePrimaryFlightId: Option[Int],
+                           DepartureArrivalType: String,
                            EstimatedDateTime: Option[String],
                            FlightNumber: String,
                            FlightStatus: String,
@@ -26,7 +27,11 @@ case class AzinqEdiArrival(AIBT: Option[String],
                            TotalPassengerCount: Option[Int],
                           ) extends Arriveable {
 
-  override val isValid: Boolean = TerminalCode != "FRT" && CodeSharePrimaryFlightId.isEmpty
+  private val isArrival: Boolean = DepartureArrivalType.toUpperCase == "A"
+  private val isNotFreight: Boolean = TerminalCode.toUpperCase != "FRT"
+  private val isNotSecondaryCodeShare: Boolean = CodeSharePrimaryFlightId.isEmpty
+
+  override val isValid: Boolean = isArrival && isNotFreight && isNotSecondaryCodeShare
 
   def toArrival: Arrival = {
     val feedSources: Set[FeedSource] = Set(LiveFeedSource)
@@ -75,6 +80,7 @@ object AzinqEdiArrivalJsonFormats extends SprayJsonSupport with DefaultJsonProto
     "ALDT",
     "CarouselCode",
     "CodeSharePrimaryFlightId",
+    "DepartureArrivalType",
     "EstimatedDateTime",
     "FlightNumber",
     "FlightStatus",

@@ -21,7 +21,7 @@ class AzinqEdiFeedSpec extends Specification {
 
   "Given some json containing an edi flight" >> {
     "I should be able to parse it to an Arrival" >> {
-      val arrivals = json("T1").parseJson.convertTo[List[AzinqEdiArrival]].map(_.toArrival)
+      val arrivals = json("T1", "A").parseJson.convertTo[List[AzinqEdiArrival]].map(_.toArrival)
 
       arrivals === List(arrival)
     }
@@ -32,7 +32,7 @@ class AzinqEdiFeedSpec extends Specification {
       import scala.concurrent.ExecutionContext.Implicits.global
       implicit val mat: Materializer = Materializer(system)
 
-      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1")))))
+      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "A")))))
 
       Await.result(feed(), 1.second) === List(arrival)
     }
@@ -40,7 +40,15 @@ class AzinqEdiFeedSpec extends Specification {
       import scala.concurrent.ExecutionContext.Implicits.global
       implicit val mat: Materializer = Materializer(system)
 
-      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("FRT")))))
+      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("FRT", "A")))))
+
+      Await.result(feed(), 1.second) === List()
+    }
+    "The AzinqFeed should ignore the arrival when the departure-arrival type is departure (D)" >> {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      implicit val mat: Materializer = Materializer(system)
+
+      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1", "D")))))
 
       Await.result(feed(), 1.second) === List()
     }
@@ -75,7 +83,7 @@ class AzinqEdiFeedSpec extends Specification {
   )
 
 
-  def json(terminal: String): String =
+  def json(terminal: String, departureArrivalType: String): String =
     s"""[
        |  {
        |    "AIBT": "2023-09-14T07:06:00+01:00",
@@ -97,7 +105,7 @@ class AzinqEdiFeedSpec extends Specification {
        |    "CodeShareFlights": "",
        |    "CodeShareInd": "N",
        |    "CodeSharePrimaryFlightId": null,
-       |    "DepartureArrivalType": "A",
+       |    "DepartureArrivalType": "$departureArrivalType",
        |    "EstimatedDateTime": null,
        |    "FirstBagDateTime": null,
        |    "FlightIsCancelled": 0,
