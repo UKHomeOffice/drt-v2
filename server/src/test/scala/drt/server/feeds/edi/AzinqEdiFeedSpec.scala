@@ -16,30 +16,37 @@ import scala.concurrent.{Await, Future}
 
 class AzinqEdiFeedSpec extends Specification {
   val system: ActorSystem = ActorSystem("azinq-edi")
+
   import drt.server.feeds.edi.AzinqEdiArrivalJsonFormats._
 
   "Given some json containing an edi flight" >> {
     "I should be able to parse it to an Arrival" >> {
-      val arrivals = json.parseJson.convertTo[List[AzinqEdiArrival]].map(_.toArrival)
+      val arrivals = json("T1").parseJson.convertTo[List[AzinqEdiArrival]].map(_.toArrival)
 
-      arrivals === List(arrival1)
+      arrivals === List(arrival)
     }
   }
 
   "Given a mock http response containing an edi flight json string" >> {
-    "The AzinqFeed should parse the response to a list containing the arrival" >> {
+    "The AzinqFeed should parse the response to a list containing the arrival when the terminal is t1" >> {
       import scala.concurrent.ExecutionContext.Implicits.global
-
       implicit val mat: Materializer = Materializer(system)
 
-      val feed = AzinqFeed("", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json))))
-      val arrivals = Await.result(feed(), 1.second)
+      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("T1")))))
 
-      arrivals === List(arrival1)
+      Await.result(feed(), 1.second) === List(arrival)
+    }
+    "The AzinqFeed should ignore the arrival when the terminal is frt" >> {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      implicit val mat: Materializer = Materializer(system)
+
+      val feed = AzinqFeed("fake-uri", "", "", "", _ => Future.successful(HttpResponse(OK, Seq(), HttpEntity(ContentTypes.`application/json`, json("FRT")))))
+
+      Await.result(feed(), 1.second) === List()
     }
   }
 
-  private def arrival1: Arrival = Arrival(
+  private def arrival: Arrival = Arrival(
     Operator = None,
     CarrierCode = CarrierCode("ZT"),
     VoyageNumber = VoyageNumber(6566),
@@ -68,49 +75,49 @@ class AzinqEdiFeedSpec extends Specification {
   )
 
 
-  def json: String =
-    """[
-      |  {
-      |    "AIBT": "2023-09-14T07:06:00+01:00",
-      |    "AircraftTypeDesc": "BOEING 767-200 FREIGHTER",
-      |    "AircraftTypeIATA": "76X",
-      |    "AircraftTypeICAO": "B762",
-      |    "AirlineIATA": "ZT",
-      |    "AirlineICAO": "AWC",
-      |    "AirlineTicketed": "AWC",
-      |    "ALDT": "2023-09-14T06:24:00+01:00",
-      |    "AOBT": null,
-      |    "AODBLinkedFlightId": 3071080,
-      |    "ATOT": null,
-      |    "BoardingCompleteDateTime": null,
-      |    "BoardingStartDateTime": null,
-      |    "CarouselCode": "",
-      |    "CheckInFrom": "",
-      |    "CheckInTo": "",
-      |    "CodeShareFlights": "",
-      |    "CodeShareInd": "N",
-      |    "CodeSharePrimaryFlightId": null,
-      |    "DepartureArrivalType": "A",
-      |    "EstimatedDateTime": null,
-      |    "FirstBagDateTime": null,
-      |    "FlightIsCancelled": 0,
-      |    "FlightNumber": "6566",
-      |    "FlightStatus": "A",
-      |    "GateActionCode": "",
-      |    "GateChangeIndicator": null,
-      |    "GateCode": "",
-      |    "InternationalStatus": "D",
-      |    "MaxPax": 0,
-      |    "OriginDestAirportIATA": "EMA",
-      |    "PublishedFlightId": 2967689,
-      |    "Registration": "OYSRH",
-      |    "Runway": "24",
-      |    "ScheduledDateTime": "2023-09-14T06:30:00+01:00",
-      |    "ServiceType": "F",
-      |    "TerminalCode": "FRT",
-      |    "TotalPassengerCount": null,
-      |    "ZoneDateTime": "2023-09-14T06:14:00+01:00"
-      |  }
-      |]
-      |""".stripMargin
+  def json(terminal: String): String =
+    s"""[
+       |  {
+       |    "AIBT": "2023-09-14T07:06:00+01:00",
+       |    "AircraftTypeDesc": "BOEING 767-200 FREIGHTER",
+       |    "AircraftTypeIATA": "76X",
+       |    "AircraftTypeICAO": "B762",
+       |    "AirlineIATA": "ZT",
+       |    "AirlineICAO": "AWC",
+       |    "AirlineTicketed": "AWC",
+       |    "ALDT": "2023-09-14T06:24:00+01:00",
+       |    "AOBT": null,
+       |    "AODBLinkedFlightId": 3071080,
+       |    "ATOT": null,
+       |    "BoardingCompleteDateTime": null,
+       |    "BoardingStartDateTime": null,
+       |    "CarouselCode": "",
+       |    "CheckInFrom": "",
+       |    "CheckInTo": "",
+       |    "CodeShareFlights": "",
+       |    "CodeShareInd": "N",
+       |    "CodeSharePrimaryFlightId": null,
+       |    "DepartureArrivalType": "A",
+       |    "EstimatedDateTime": null,
+       |    "FirstBagDateTime": null,
+       |    "FlightIsCancelled": 0,
+       |    "FlightNumber": "6566",
+       |    "FlightStatus": "A",
+       |    "GateActionCode": "",
+       |    "GateChangeIndicator": null,
+       |    "GateCode": "",
+       |    "InternationalStatus": "D",
+       |    "MaxPax": 0,
+       |    "OriginDestAirportIATA": "EMA",
+       |    "PublishedFlightId": 2967689,
+       |    "Registration": "OYSRH",
+       |    "Runway": "24",
+       |    "ScheduledDateTime": "2023-09-14T06:30:00+01:00",
+       |    "ServiceType": "F",
+       |    "TerminalCode": "$terminal",
+       |    "TotalPassengerCount": null,
+       |    "ZoneDateTime": "2023-09-14T06:14:00+01:00"
+       |  }
+       |]
+       |""".stripMargin
 }
