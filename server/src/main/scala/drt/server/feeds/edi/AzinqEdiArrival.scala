@@ -28,7 +28,7 @@ case class AzinqEdiArrival(AIBT: Option[String],
                           ) extends Arriveable {
 
   private val isArrival: Boolean = DepartureArrivalType.toUpperCase == "A"
-  private val isNotFreight: Boolean = TerminalCode.toUpperCase != "FRT"
+  private val isNotFreight: Boolean = TerminalCode.toUpperCase == "T1"
   private val isNotSecondaryCodeShare: Boolean = CodeSharePrimaryFlightId.isEmpty
 
   override val isValid: Boolean = isArrival && isNotFreight && isNotSecondaryCodeShare
