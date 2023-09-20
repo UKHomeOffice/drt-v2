@@ -10,13 +10,13 @@ import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
-import drt.shared.Seminar
+import drt.shared.DropIn
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.{FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, SeminarRow, SeminarTableLike, SeminarsRegistrationTableLike, UserRow, UserTableLike}
+import slickdb.{FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, DropInRow, DropInTableLike, DropInsRegistrationTableLike, UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
@@ -69,19 +69,19 @@ case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
   override def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]] = Future.successful(Seq.empty)
 }
 
-case class MockSeminarsRegistrationTable() extends SeminarsRegistrationTableLike {
-  override def registerSeminars(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
+case class MockDropInsRegistrationTable() extends DropInsRegistrationTableLike {
+  override def registerDropIns(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
 }
 
-case class MockSeminarTable() extends SeminarTableLike {
-  override def updatePublishSeminar(seminarId: String, publish: Boolean): Future[Int] = Future.successful(1)
+case class MockDropInTable() extends DropInTableLike {
+  override def updatePublishDropIn(dropInId: String, publish: Boolean): Future[Int] = Future.successful(1)
 
-  override def updateSeminar(seminarRow: SeminarRow): Future[Int] = Future.successful(1)
+  override def updateDropIn(dropInRow: DropInRow): Future[Int] = Future.successful(1)
 
-  override def deleteSeminar(seminarId: String): Future[Int] = Future.successful(1)
+  override def deleteDropIn(dropInId: String): Future[Int] = Future.successful(1)
 
-  override def getSeminars(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[SeminarRow]] = Future.successful(Seq.empty)
-  override def getFuturePublishedSeminars()(implicit ec: ExecutionContext): Future[Seq[Seminar]] = Future.successful(Seq.empty)
+  override def getDropIns(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[DropInRow]] = Future.successful(Seq.empty)
+  override def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] = Future.successful(Seq.empty)
 }
 
 case class MockDrtParameters() extends DrtParameters {
@@ -164,8 +164,8 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
   override val userService: UserTableLike = MockUserTable()
   override val featureGuideService: FeatureGuideTableLike = MockFeatureGuideTable()
   override val featureGuideViewService: FeatureGuideViewLike = MockFeatureGuideViewTable()
-  override val seminarService: SeminarTableLike = MockSeminarTable()
-  override val seminarRegistrationService: SeminarsRegistrationTableLike = MockSeminarsRegistrationTable()
+  override val dropInService: DropInTableLike = MockDropInTable()
+  override val dropInRegistrationService: DropInsRegistrationTableLike = MockDropInsRegistrationTable()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder)
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor

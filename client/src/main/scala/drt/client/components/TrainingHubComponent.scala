@@ -7,8 +7,8 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.client.spa.TrainingHubPageMode
-import drt.client.spa.TrainingHubPageModes.{SeminarBooking, TrainingMaterial}
-import drt.shared.Seminar
+import drt.client.spa.TrainingHubPageModes.{DropInBooking, TrainingMaterial}
+import drt.shared.DropIn
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -27,7 +27,7 @@ object TrainingHubComponent {
 
   private case class TrainingModel(airportConfig: Pot[AirportConfig],
                                    loggedInUserPot: Pot[LoggedInUser],
-                                   seminars: Pot[Seq[Seminar]]
+                                   dropIns: Pot[Seq[DropIn]]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -37,7 +37,7 @@ object TrainingHubComponent {
       val modelRCP = SPACircuit.connect(model => TrainingModel(
         airportConfig = model.airportConfig,
         loggedInUserPot = model.loggedInUserPot,
-        seminars = model.seminars
+        dropIns = model.dropIns
       ))
 
       <.div(
@@ -53,9 +53,9 @@ object TrainingHubComponent {
                 props.trainingHubLoc.modeStr match {
                   case "trainingMaterial" =>
                     TrainingMaterialComponent()
-                  case "seminarBooking" =>
-                    <.div(model.seminars.render(seminars => {
-                      SeminarComponent(loggedInUser.email, seminars)
+                  case "dropInBooking" =>
+                    <.div(model.dropIns.render(dropIns => {
+                      DropInComponent(loggedInUser.email, dropIns)
                     }))
 
                 }
@@ -83,13 +83,13 @@ object TrainingHubComponent {
             modeStr = TrainingMaterial.asString
           ))
         }),
-      <.li(^.className := tabClass(SeminarBooking),
-        <.a(^.id := "seminarBooking", "Drop-In Booking", VdomAttr("data-toggle") := "tab"),
+      <.li(^.className := tabClass(DropInBooking),
+        <.a(^.id := "dropInBooking", "Drop-In Booking", VdomAttr("data-toggle") := "tab"),
         ^.onClick ==> { e: ReactEventFromInput =>
           e.preventDefault()
-          GoogleEventTracker.sendEvent(trainingName, "click", "Seminar Booking")
+          GoogleEventTracker.sendEvent(trainingName, "click", "Drop-In Booking")
           props.router.set(props.trainingHubLoc.copy(
-            modeStr = SeminarBooking.asString
+            modeStr = DropInBooking.asString
           ))
         }
       )

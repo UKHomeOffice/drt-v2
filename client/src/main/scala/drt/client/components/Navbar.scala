@@ -6,8 +6,8 @@ import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc, TrainingHubLoc
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{CloseFeatureGuideDialog, GetFeatureGuides, GetSeminars, GetViewedFeatureIds}
-import drt.shared.Seminar
+import drt.client.services.handlers.{CloseFeatureGuideDialog, GetFeatureGuides, GetDropIns, GetViewedFeatureIds}
+import drt.shared.DropIn
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import io.kinoplan.scalajs.react.material.ui.core.{MuiBadge, MuiSnackbar}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -25,7 +25,7 @@ case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]],
                        featureGuides: Pot[Seq[FeatureGuide]],
                        showNewFeatureGuideOnLogin: Pot[Boolean],
                        featureGuideViewIds: Pot[Seq[String]],
-                       seminars: Pot[Seq[Seminar]])
+                       dropIns: Pot[Seq[DropIn]])
 
 object Navbar {
   case class Props(
@@ -34,7 +34,7 @@ object Navbar {
                     loggedInUser: LoggedInUser,
                     airportConfig: AirportConfig)
 
-  case class State(showDropDown: Boolean, toggleDialog: Boolean, showSeminar: Boolean)
+  case class State(showDropDown: Boolean, toggleDialog: Boolean, showDropIn: Boolean)
 
   def handleClose: (ReactEvent, String) => Callback = (_, _) => {
     Callback(SPACircuit.dispatch(SetSnackbarMessage(Empty)))
@@ -42,7 +42,7 @@ object Navbar {
 
   class Backend($: BackendScope[Props, State]) {
     val rcp: ReactConnectProxy[NavbarModel] = SPACircuit
-      .connect(m => NavbarModel(m.feedStatuses, m.snackbarMessage, m.featureGuides, m.showNewFeatureGuideOnLogin, m.featureGuideViewedIds, m.seminars))
+      .connect(m => NavbarModel(m.feedStatuses, m.snackbarMessage, m.featureGuides, m.showNewFeatureGuideOnLogin, m.featureGuideViewedIds, m.dropIns))
 
     def handleOpenDialog(e: ReactEvent) = {
       e.preventDefaultCB >>
@@ -62,7 +62,7 @@ object Navbar {
     def componentDidMount() = {
       Callback(SPACircuit.dispatch(GetViewedFeatureIds())) >>
         Callback(SPACircuit.dispatch(GetFeatureGuides())) >>
-        Callback(SPACircuit.dispatch(GetSeminars()))
+        Callback(SPACircuit.dispatch(GetDropIns()))
     }
 
     def render(props: Props, state: State) = {

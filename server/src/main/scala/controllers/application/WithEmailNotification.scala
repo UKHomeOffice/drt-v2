@@ -4,7 +4,7 @@ import controllers.Application
 import drt.shared.{NegativeFeedback, PositiveFeedback}
 import email.GovNotifyEmail
 import play.api.mvc.{Action, AnyContent}
-import slickdb.SeminarRow
+import slickdb.DropInRow
 import upickle.default.read
 
 trait WithEmailNotification {

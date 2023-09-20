@@ -166,7 +166,7 @@ object SPAMain {
 
   case object ContactUsLoc extends Loc
 
-  case class TrainingHubLoc(modeStr: String = "seminarBooking") extends Loc
+  case class TrainingHubLoc(modeStr: String = "dropInBooking") extends Loc
 
   case object PortConfigLoc extends Loc
 

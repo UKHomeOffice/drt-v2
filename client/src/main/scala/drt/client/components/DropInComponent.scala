@@ -4,34 +4,34 @@ import diode.AnyAction.aType
 import drt.client.components.styles.{DrtTheme, WithScalaCssImplicits}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.RegisterSeminars
-import drt.shared.Seminar
+import drt.client.services.handlers.RegisterDropIns
+import drt.shared.DropIn
 import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, _}
+import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ReactEventFromInput, ScalaComponent}
 
 import scala.language.postfixOps
 
 
-object SeminarComponent extends WithScalaCssImplicits {
+object DropInComponent extends WithScalaCssImplicits {
 
-  case class State(confirmRegister: Boolean, selectedSeminar: String)
+  case class State(confirmRegister: Boolean, selectedDropIn: String)
 
-  case class Props(email: String, seminars: Seq[Seminar])
+  case class Props(email: String, dropIns: Seq[DropIn])
 
   class Backend($: BackendScope[Props, State]) {
-    def handleSeminarSelection(id: String)(e: ReactEventFromInput) = {
-      val currentlySelected = $.state.map(s => s.selectedSeminar).runNow()
+    def handleDropInSelection(id: String)(e: ReactEventFromInput) = {
+      val currentlySelected = $.state.map(s => s.selectedDropIn).runNow()
       val newSelected = if (currentlySelected == id) "" else id
-      $.modState(s => s.copy(selectedSeminar = newSelected))
+      $.modState(s => s.copy(selectedDropIn = newSelected))
     }
 
 
     def render(props: Props, state: State) = {
       def registerUser(e: ReactEvent) = {
-        Callback(SPACircuit.dispatch(RegisterSeminars(state.selectedSeminar))) >>
+        Callback(SPACircuit.dispatch(RegisterDropIns(state.selectedDropIn))) >>
           $.modState(s => s.copy(confirmRegister = true))
       }
 
@@ -39,7 +39,7 @@ object SeminarComponent extends WithScalaCssImplicits {
         $.modState(s => s.copy(confirmRegister = false))
       }
 
-      val confirmSeminar = <.div(
+      val confirmDropIn = <.div(
         MuiGrid(container = true, spacing = 2)(
           MuiGrid(item = true, xs = 12, sx = SxProps(Map(
             "backgroundColor" -> "#FFFFFF",
@@ -47,7 +47,7 @@ object SeminarComponent extends WithScalaCssImplicits {
             "justifyContent" -> "center",
             "alignItems" -> "center",
             "padding-top" -> "48px",
-            "padding-bottom" -> "24px")))("Thanks for signing up for the seminar. You will receive an email about it."),
+            "padding-bottom" -> "24px")))("Thanks for signing up for the drop-in. You will receive an email about it."),
           MuiGrid(item = true, xs = 12, sx = SxProps(Map(
             "display" -> "flex",
             "justifyContent" -> "center",
@@ -56,7 +56,7 @@ object SeminarComponent extends WithScalaCssImplicits {
             "padding-bottom" -> "24px")))(MuiButton(variant = "outlined")("Back", ^.onClick ==> back))))
 
 
-      val showSeminars =
+      val showDropIns =
         ThemeProvider(DrtTheme.theme)(
           <.div(
             MuiGrid(container = true, spacing = 2, sx = SxProps(Map(
@@ -93,15 +93,15 @@ object SeminarComponent extends WithScalaCssImplicits {
                       )
                     ),
                     MuiTableBody()(
-                      props.seminars.zipWithIndex.toVdomArray {
+                      props.dropIns.zipWithIndex.toVdomArray {
                         case (tableItem, _) => MuiTableRow()(
                           MuiTableCell(component = "th", scope = "row")(tableItem.title),
                           MuiTableCell()(SDate(tableItem.startTime).prettyDateTime),
                           MuiTableCell()(SDate(tableItem.endTime).prettyDateTime),
                           MuiTableCell()(
                             MuiRadio()(
-                              ^.checked := tableItem.id.exists(id => state.selectedSeminar.contains(id.toString)),
-                              ^.onChange ==> handleSeminarSelection(tableItem.id.getOrElse("").toString)
+                              ^.checked := tableItem.id.exists(id => state.selectedDropIn.contains(id.toString)),
+                              ^.onChange ==> handleDropInSelection(tableItem.id.getOrElse("").toString)
                             )),
                         )
                       }
@@ -122,7 +122,7 @@ object SeminarComponent extends WithScalaCssImplicits {
               )))(MuiButton(variant = "outlined")("Register", ^.onClick ==> registerUser))
             ))
         )
-      if (state.confirmRegister) confirmSeminar else showSeminars
+      if (state.confirmRegister) confirmDropIn else showDropIns
     }
   }
 
@@ -134,7 +134,7 @@ object SeminarComponent extends WithScalaCssImplicits {
       .build
 
   def apply(email: String,
-            seminars: Seq[Seminar]): VdomElement =
-    component(Props(email, seminars))
+            dropIns: Seq[DropIn]): VdomElement =
+    component(Props(email, dropIns))
 
 }

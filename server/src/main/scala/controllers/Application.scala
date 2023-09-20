@@ -92,11 +92,11 @@ trait FeatureGuideProviderLike {
 
 }
 
-trait SeminarProviderLike {
+trait DropInProviderLike {
 
-  val seminarService: SeminarTableLike
+  val dropInService: DropInTableLike
 
-  val seminarRegistrationService: SeminarsRegistrationTableLike
+  val dropInRegistrationService: DropInsRegistrationTableLike
 }
 
 trait UserRoleProviderLike {
@@ -142,7 +142,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   with WithPortState
   with WithStaffing
   with WithApplicationInfo
-  with withSeminars
+  with withDropIns
   with WithSimulations
   with WithManifests
   with WithWalkTimes

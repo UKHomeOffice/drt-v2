@@ -2,7 +2,7 @@ package email
 
 import drt.shared.{NegativeFeedback, PositiveFeedback}
 import org.slf4j.{Logger, LoggerFactory}
-import slickdb.SeminarRow
+import slickdb.DropInRow
 import uk.gov.service.notify.NotificationClient
 
 import java.util
@@ -20,28 +20,28 @@ class GovNotifyEmail(apiKey: String) {
     Try(email.split("\\.").head.toLowerCase.capitalize).getOrElse(email)
   }
 
-  def seminarRegistrationHost(teamEmail: String, hostEmail: String, registeredUserEmail: String, seminar: SeminarRow) = {
+  def dropInRegistrationHost(teamEmail: String, hostEmail: String, registeredUserEmail: String, dropIn: DropInRow) = {
     Map(
       "teamEmail" -> teamEmail,
       "registeredUserEmail" -> registeredUserEmail,
       "hostUsername" -> getFirstName(hostEmail),
-      "title" -> seminar.title,
-      "seminarDate" -> seminar.getDate,
-      "startTime" -> seminar.getStartTime,
-      "endTime" -> seminar.getEndTime,
-      "meetingLink" -> seminar.meetingLink.getOrElse(""),
+      "title" -> dropIn.title,
+      "dropInDate" -> dropIn.getDate,
+      "startTime" -> dropIn.getStartTime,
+      "endTime" -> dropIn.getEndTime,
+      "meetingLink" -> dropIn.meetingLink.getOrElse(""),
     ).asJava
   }
 
-  def seminarRegistrationConfirmation(teamEmail: String, email: String, seminar: SeminarRow): util.Map[String, String] = {
+  def dropInRegistrationConfirmation(teamEmail: String, email: String, dropIn: DropInRow): util.Map[String, String] = {
     Map(
       "teamEmail" -> teamEmail,
       "requesterUsername" -> getFirstName(email),
-      "title" -> seminar.title,
-      "seminarDate" -> seminar.getDate,
-      "startTime" -> seminar.getStartTime,
-      "endTime" -> seminar.getEndTime,
-      "meetingLink" -> seminar.meetingLink.getOrElse(""),
+      "title" -> dropIn.title,
+      "dropInDate" -> dropIn.getDate,
+      "startTime" -> dropIn.getStartTime,
+      "endTime" -> dropIn.getEndTime,
+      "meetingLink" -> dropIn.meetingLink.getOrElse(""),
     ).asJava
   }
 

@@ -7,7 +7,7 @@ package drt.client.spa
   object TrainingHubPageModes {
     def fromString(modeStr: String): TrainingHubPageMode = modeStr.toLowerCase match {
       case "trainingMaterial" => TrainingMaterial
-      case "seminarBooking" => SeminarBooking
+      case "dropInBooking" => DropInBooking
       case unknown =>
         throw new Exception(s"Unknown training hub page mode '$unknown'")
     }
@@ -16,8 +16,8 @@ package drt.client.spa
       override val asString: String = "trainingMaterial"
     }
 
-    case object SeminarBooking extends TrainingHubPageMode {
-      override val asString: String = "seminarBooking"
+    case object DropInBooking extends TrainingHubPageMode {
+      override val asString: String = "dropInBooking"
     }
 
   }
