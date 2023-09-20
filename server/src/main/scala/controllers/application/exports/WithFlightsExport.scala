@@ -78,7 +78,7 @@ trait WithFlightsExport {
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val terminal = Terminal(terminalName)
-        val getFlights = FlightExports.flightsProvider(ctrl.terminalFlightsProvider, ctrl.paxFeedSourceOrder)
+        val getFlights = FlightExports.flightsProvider(ctrl.terminalFlightsProvider)
         val getManifests = FlightExports.manifestsProvider(ctrl.manifestsProvider)
         val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.paxFeedSourceOrder, getManifests)
         val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)

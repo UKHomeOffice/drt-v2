@@ -4,7 +4,8 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CodeShares
 import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplits}
+import services.LocalDateStream
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode, PortRegion, Queues}
@@ -54,40 +55,27 @@ object PassengerExports {
       .groupBy(_._1)
       .view.mapValues(x => x.map(_._2).sum).toMap
 
-  def totalPassengerCountProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, FlightsWithSplits), NotUsed],
+  def totalPassengerCountProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                                   paxFeedSourceOrder: List[FeedSource],
                                  ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Int), NotUsed] = {
-    (start, end, terminal) => {
-      val startMinute = SDate(start)
-      val utcStart = startMinute.addDays(-1).toUtcDate
-      val utcEnd = SDate(end).addDays(2).toUtcDate
-      utcFlightsProvider(utcStart, utcEnd, terminal)
-        .sliding(3, 1)
-        .map { days =>
-          val utcDate = days.map(_._1).sorted.drop(1).head
-          val localDate = LocalDate(utcDate.year, utcDate.month, utcDate.day)
-          val windowStart = SDate(localDate)
-          val windowEnd = SDate(localDate).addDays(1).addMinutes(-1)
-          val arrivals = days.flatMap(_._2.flights.values.map(_.apiFlight))
-          val totalPax = relevantPaxDuringWindow(arrivals, windowStart, windowEnd, paxFeedSourceOrder)
-          (localDate, totalPax)
-        }
+    val transformer = relevantPaxDuringWindow(paxFeedSourceOrder)
+    LocalDateStream.apply(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
+  }
+
+  def relevantPaxDuringWindow(paxFeedSourceOrder: List[FeedSource]): (LocalDate, Seq[ApiFlightWithSplits]) => Int =
+    (current, flights) => {
+      val windowStart = SDate(current)
+      val windowEnd = SDate(current).addDays(1).addMinutes(-1)
+      val arrivals = flights.collect {
+        case fws if fws.apiFlight.hasPcpDuring(windowStart, windowEnd, paxFeedSourceOrder) => fws.apiFlight
+      }
+      val uniqueArrivals = CodeShares.uniqueArrivals[Arrival](identity, paxFeedSourceOrder)(arrivals).toSeq
+
+      uniqueArrivals
+        .sortBy(_.PcpTime.getOrElse(0L))
+        .map(arrival => totalPaxForArrivalInWindow(arrival, paxFeedSourceOrder, windowStart.millisSinceEpoch, windowEnd.millisSinceEpoch))
+        .sum
     }
-  }
-
-  def relevantPaxDuringWindow(flights: Seq[Arrival],
-                              windowStart: SDateLike,
-                              windowEnd: SDateLike,
-                              paxFeedSourceOrder: List[FeedSource],
-                             ): Int = {
-    val arrivals = flights.filter(_.hasPcpDuring(windowStart, windowEnd, paxFeedSourceOrder))
-    val uniqueArrivals = CodeShares.uniqueArrivals[Arrival](identity, paxFeedSourceOrder)(arrivals).toSeq
-
-    uniqueArrivals
-      .sortBy(_.PcpTime.getOrElse(0L))
-      .map(arrival => totalPaxForArrivalInWindow(arrival, paxFeedSourceOrder, windowStart.millisSinceEpoch, windowEnd.millisSinceEpoch))
-      .sum
-  }
 
   def totalPaxForArrivalInWindow(arrival: Arrival,
                                  paxFeedSourceOrder: List[FeedSource],

@@ -8,8 +8,9 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.{AgeRange, FlightManifestSummary, UnknownAge}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import services.LocalDateStream
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalExportHeadings, FlightsWithSplits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
@@ -62,30 +63,16 @@ object FlightExports {
     }
   }
 
-  def flightsProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, FlightsWithSplits), NotUsed],
-                      paxFeedSourceOrder: List[FeedSource],
+  private val relevantFlight: (LocalDate, Seq[ApiFlightWithSplits]) => Seq[ApiFlightWithSplits] =
+    (localDate, flights) =>
+      flights.filter { fws =>
+        val pcpStart = SDate(fws.apiFlight.PcpTime.getOrElse(0L))
+        pcpStart.toLocalDate == localDate
+      }
+
+  def flightsProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                      ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Seq[ApiFlightWithSplits]), NotUsed] =
-    (start, end, terminal) => {
-      val startMinute = SDate(start)
-      val endMinute = SDate(end).addDays(1).addMinutes(-1)
-      val utcStart = startMinute.addDays(-1).toUtcDate
-      val utcEnd = SDate(end).addDays(2).toUtcDate
-      utcFlightsProvider(utcStart, utcEnd, terminal)
-        .sliding(3, 1)
-        .map { days =>
-          val utcDate = days.map(_._1).sorted.drop(1).head
-          val localDate = LocalDate(utcDate.year, utcDate.month, utcDate.day)
-          val flights = days.flatMap {
-            case (_, fws) => fws.flights.values.filter { f =>
-              val pcpStart = SDate(f.apiFlight.PcpTime.getOrElse(0L))
-              val pcpMatches = pcpStart.toLocalDate == localDate
-              lazy val isInRange = f.apiFlight.isRelevantToPeriod(startMinute, endMinute, paxFeedSourceOrder)
-              pcpMatches && isInRange
-            }
-          }
-          (localDate, flights)
-        }
-    }
+    LocalDateStream(utcFlightsProvider, startBufferDays = 1, endBufferDays = 2, transformData = relevantFlight)
 
   def manifestsProvider(utcProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
                        (implicit ec: ExecutionContext, mat: Materializer): (LocalDate, LocalDate) => Future[VoyageManifests] =
