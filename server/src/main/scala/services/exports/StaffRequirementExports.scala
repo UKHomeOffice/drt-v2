@@ -8,8 +8,6 @@ import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
-import scala.concurrent.Future
-
 object StaffRequirementExport {
   private val relevantMinute: (LocalDate, Seq[CrunchMinute]) => Seq[CrunchMinute] =
     (current, minutes) => minutes.filter { m => SDate(m.minute).toLocalDate == current }

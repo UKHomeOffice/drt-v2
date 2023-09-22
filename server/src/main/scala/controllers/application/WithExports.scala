@@ -37,7 +37,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport with WithSummar
         .map(csvContent => Result(
           ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=users-with-groups.csv")),
           HttpEntity.Strict(ByteString(csvContent), Option("application/csv"))
-          ))
+        ))
     }
   }
 
@@ -46,26 +46,26 @@ trait WithExports extends WithDesksExport with WithFlightsExport with WithSummar
   def exportForecastWeekToCSV(startDay: String, terminalName: String): Action[AnyContent] = authByRole(ForecastView) {
     val terminal = Terminal(terminalName)
     Action.async {
-      timedEndPoint(s"Export planning", Option(s"$terminal")) {
-        val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, sixMonthsDays)
+      val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, sixMonthsDays)
 
-        val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
+      val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
 
-        val portCode = airportConfig.portCode
-        val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear}-${startOfForecast.getMonth}%02d-${startOfForecast.getDate}%02d"
+      val portCode = airportConfig.portCode
+      val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear}-${startOfForecast.getMonth}%02d-${startOfForecast.getDate}%02d"
 
-        portStateFuture
-          .map { portState =>
-            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-            val csvData = CSVData.forecastPeriodToCsv(fp)
-            CsvFileStreaming.csvFileResult(fileName, csvData)
-          }
-          .recover {
-            case t =>
-              log.error("Failed to get PortState to produce csv", t)
-              ServiceUnavailable
-          }
-      }
+      portStateFuture
+        .map { portState =>
+          val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+          val csvData = CSVData.forecastPeriodToCsv(fp)
+          CsvFileStreaming.csvFileResult(fileName, csvData)
+        }
+        .recover {
+          case t =>
+            log.error("Failed to get PortState to produce csv", t)
+            ServiceUnavailable
+        }
+
+//      val getMinutes =
     }
   }
 

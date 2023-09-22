@@ -1,5 +1,6 @@
 package actors.routing.minutes
 
+import actors.DateRange
 import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest}
 import actors.persistent.QueueLikeActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
@@ -49,7 +50,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
 
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis)) =>
-      sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), Option(pit))
+      sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), Option(pit))
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       val replyTo = sender()
@@ -64,7 +65,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
       handleAllTerminalLookupsStream(startMillis, endMillis, None).foreach(replyTo ! _)
 
     case GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis) =>
-      sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), None)
+      sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), None)
 
     case request: DateRangeLike with TerminalRequest =>
       val replyTo = sender()
@@ -109,8 +110,20 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
           log.debug(s"No minutes found for for $day")
           MinutesContainer.empty[A, B]
       }
-      .fold(MinutesContainer[A, B](Seq())) {
-        case (soFarContainer, dayContainer) => soFarContainer ++ dayContainer
+
+  def retrieveTerminalMinutesDateRangeAsStream(terminal: Terminal,
+                                               start: UtcDate,
+                                               end: UtcDate,
+                                               maybePointInTime: Option[MillisSinceEpoch]
+                                              ): Source[(UtcDate, MinutesContainer[A, B]), NotUsed] =
+    Source(DateRange(start, end))
+      .mapAsync(1) { day =>
+        handleLookup(lookup((terminal, day), maybePointInTime)).map(r => (day, r))
+      }
+      .collect {
+        case (date, maybeContainer) =>
+          val container = maybeContainer.getOrElse(MinutesContainer.empty[A, B])
+          (date, container)
       }
 
   def handleLookup(eventualMaybeResult: Future[Option[MinutesContainer[A, B]]]): Future[Option[MinutesContainer[A, B]]] =

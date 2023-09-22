@@ -1,0 +1,30 @@
+package providers
+
+import actors.PartitionedPortStateActor
+import akka.NotUsed
+import akka.actor.ActorRef
+import akka.pattern.ask
+import akka.stream.scaladsl.Source
+import akka.util.Timeout
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+
+object CrunchMinutesProvider {
+  def apply(crunchMinutesRouterActor: ActorRef)
+           (implicit timeout: Timeout): (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+    (start, end, terminal) => {
+      val startMillis = SDate(start).millisSinceEpoch
+      val endMillis = SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch
+      Source
+        .future(
+          crunchMinutesRouterActor.ask(actors.routing.minutes.GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis))
+            .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
+        )
+        .flatMapConcat(identity)
+        .map {
+          case (date, flights) => (date, flights.flights.values.toSeq)
+        }
+    }
+
+}
