@@ -1,7 +1,7 @@
 package actors.routing.minutes
 
 import actors.DateRange
-import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest}
+import actors.PartitionedPortStateActor.{DateRangeMillisLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest, UtcDateRangeLike}
 import actors.persistent.QueueLikeActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
@@ -21,7 +21,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 import scala.collection.immutable
 import scala.concurrent.Future
 
-case class GetStreamingDesksForTerminalDateRange(terminal: Terminal, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
+case class GetStreamingDesksForTerminalDateRange(terminal: Terminal, start: UtcDate, end: UtcDate) extends UtcDateRangeLike
 
 object MinutesActorLike {
   type MinutesLookup[A, B <: WithTimeAccessor] = ((Terminals.Terminal, UtcDate), Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
@@ -49,14 +49,14 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
   val sequentialUpdatesActor: ActorRef = context.actorOf(Props(new SequentialAccessActor(updateMinutes, splitByResource)))
 
   override def receiveQueries: Receive = {
-    case PointInTimeQuery(pit, GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis)) =>
-      sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), Option(pit))
+    case PointInTimeQuery(pit, GetStreamingDesksForTerminalDateRange(terminal, start, end)) =>
+      sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, start, end, Option(pit))
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).foreach(replyTo ! _)
 
-    case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
+    case PointInTimeQuery(pit, request: DateRangeMillisLike with TerminalRequest) =>
       val replyTo = sender()
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).foreach(replyTo ! _)
 
@@ -64,10 +64,10 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, None).foreach(replyTo ! _)
 
-    case GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis) =>
-      sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), None)
+    case GetStreamingDesksForTerminalDateRange(terminal, start, end) =>
+      sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, start, end, None)
 
-    case request: DateRangeLike with TerminalRequest =>
+    case request: DateRangeMillisLike with TerminalRequest =>
       val replyTo = sender()
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).foreach(replyTo ! _)
   }
@@ -180,7 +180,7 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).foreach(replyTo ! _)
 
-    case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
+    case PointInTimeQuery(pit, request: DateRangeMillisLike with TerminalRequest) =>
       val replyTo = sender()
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).foreach(replyTo ! _)
 
@@ -191,7 +191,7 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
     case GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis) =>
       sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), None)
 
-    case request: DateRangeLike with TerminalRequest =>
+    case request: DateRangeMillisLike with TerminalRequest =>
       val replyTo = sender()
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).foreach(replyTo ! _)
   }

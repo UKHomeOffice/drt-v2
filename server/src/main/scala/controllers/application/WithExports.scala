@@ -1,6 +1,6 @@
 package controllers.application
 
-import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForTerminalDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{DateRangeMillisLike, GetStateForTerminalDateRange, PointInTimeQuery}
 import akka.pattern._
 import akka.util.{ByteString, Timeout}
 import controllers.Application

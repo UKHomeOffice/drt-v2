@@ -93,7 +93,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
     case PointInTimeQuery(pit, GetFlights(startMillis, endMillis)) =>
       self.forward(PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)))
 
-    case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
+    case PointInTimeQuery(pit, request: DateRangeMillisLike with TerminalRequest) =>
       sender() ! flightsLookupService(SDate(request.from), SDate(request.to), Seq(request.terminal), Option(pit), paxFeedSourceOrder)
 
     case GetFlightsForTerminals(startMillis, endMillis, terminals) =>
@@ -105,7 +105,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
     case GetFlights(startMillis, endMillis) =>
       self.forward(GetStateForDateRange(startMillis, endMillis))
 
-    case request: DateRangeLike with TerminalRequest =>
+    case request: DateRangeMillisLike with TerminalRequest =>
       sender() ! flightsLookupService(SDate(request.from), SDate(request.to), Seq(request.terminal), None, paxFeedSourceOrder)
   }
 

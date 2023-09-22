@@ -133,22 +133,27 @@ object PartitionedPortStateActor {
     }
   }
 
-  trait DateRangeLike {
+  trait DateRangeMillisLike {
     val from: MillisSinceEpoch
     val to: MillisSinceEpoch
   }
 
-  trait PortStateRequest extends DateRangeLike
+  trait UtcDateRangeLike {
+    val start: UtcDate
+    val end: UtcDate
+  }
 
-  trait FlightsRequest extends DateRangeLike
+  trait PortStateRequest extends DateRangeMillisLike
 
-  trait TerminalRequest extends DateRangeLike {
+  trait FlightsRequest extends DateRangeMillisLike
+
+  trait TerminalRequest extends DateRangeMillisLike {
     val terminal: Terminal
   }
 
   case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest
 
-  case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeLike) extends PortStateRequest {
+  case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeMillisLike) extends PortStateRequest {
     override val from: MillisSinceEpoch = query.from
     override val to: MillisSinceEpoch = query.to
   }
