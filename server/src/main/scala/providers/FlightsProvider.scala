@@ -26,5 +26,4 @@ object FlightsProvider {
           case (date, flights) => (date, flights.flights.values.toSeq)
         }
     }
-
 }

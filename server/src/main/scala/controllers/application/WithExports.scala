@@ -1,7 +1,8 @@
 package controllers.application
 
-import actors.PartitionedPortStateActor.{DateRangeMillisLike, GetStateForTerminalDateRange, PointInTimeQuery}
+import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import akka.pattern._
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.{ByteString, Timeout}
 import controllers.Application
 import controllers.application.exports.{CsvFileStreaming, WithDesksExport, WithFlightsExport, WithSummariesExport}
@@ -11,8 +12,9 @@ import drt.users.KeyCloakGroups
 import play.api.http.HttpEntity
 import play.api.mvc._
 import services.CSVData
-import services.exports.Forecast
+import services.exports.{Forecast, StaffRequirementExport}
 import uk.gov.homeoffice.drt.auth.Roles.{ForecastView, ManageUsers}
+import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -64,8 +66,6 @@ trait WithExports extends WithDesksExport with WithFlightsExport with WithSummar
             log.error("Failed to get PortState to produce csv", t)
             ServiceUnavailable
         }
-
-//      val getMinutes =
     }
   }
 
@@ -74,31 +74,23 @@ trait WithExports extends WithDesksExport with WithFlightsExport with WithSummar
     val terminal = Terminal(terminalName)
     Action.async {
       timedEndPoint(s"Export planning headlines", Option(s"$terminal")) {
-        val startOfWeekMidnight = SDate(startDay.toLong).getLocalLastMidnight
-        val endOfForecast = startOfWeekMidnight.addDays(sixMonthsDays)
-        val now = SDate.now()
+        val start = SDate(startDay.toLong)
+        val end = start.addDays(sixMonthsDays)
+        val queues = ctrl.airportConfig.queuesByTerminal(Terminal(terminalName))
+        val queueNames = Queues.inOrder(queues).map(Queues.displayName)
+        val rowHeaders = Seq("Date", "Total pax") ++ queueNames ++ Seq("Total workload")
 
-        val startOfForecast = if (startOfWeekMidnight.millisSinceEpoch < now.millisSinceEpoch) {
-          log.info(s"${startOfWeekMidnight.toLocalDateTimeString} < ${now.toLocalDateTimeString}, going to use ${now.getLocalNextMidnight} instead")
-          now.getLocalNextMidnight
-        } else startOfWeekMidnight
-
-        val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
-        val fileName = f"${airportConfig.portCode}-" +
-          f"$terminal-forecast-export-headlines-${startOfForecast.getFullYear}-" +
-          f"${startOfForecast.getMonth}%02d-${startOfForecast.getDate}%02d"
-
-        portStateFuture
-          .map { portState =>
-            val hf: ForecastHeadlineFigures =
-              Forecast.headlineFigures(startOfForecast, sixMonthsDays, terminal, portState, airportConfig.queuesByTerminal(terminal).toList)
-            val csvData = CSVData.forecastHeadlineToCSV(hf, airportConfig.forecastExportQueueOrder)
-            CsvFileStreaming.csvFileResult(fileName, csvData)
+        StaffRequirementExport
+          .queuesProvider(ctrl.crunchMinutesProvider)(start.toLocalDate, end.toLocalDate, terminal)
+          .map {
+            case (date, minutes) =>
+              val headlines = StaffRequirementExport.toDailyHeadlines(queues)(date, minutes)
+              headlines
           }
-          .recover {
-            case t =>
-              log.error("Failed to get PortState to produce csv", t)
-              ServiceUnavailable
+          .prepend(Source(List(rowHeaders))).runWith(Sink.seq).map(r => r.transpose.map(_.mkString(",")).mkString("\n"))
+          .map { csvData =>
+            val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
+            CsvFileStreaming.csvFileResult(fileName, csvData)
           }
       }
     }

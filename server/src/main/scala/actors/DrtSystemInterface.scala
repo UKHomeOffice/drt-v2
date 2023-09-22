@@ -38,7 +38,7 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import manifests.ManifestLookupLike
@@ -46,7 +46,7 @@ import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
-import providers.{FlightsProvider, ManifestsProvider}
+import providers.{CrunchMinutesProvider, FlightsProvider, ManifestsProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
 import services._
@@ -184,6 +184,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   )
 
   lazy val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = FlightsProvider(flightsRouterActor)
+  lazy val crunchMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] = CrunchMinutesProvider(queuesRouterActor)
 
   lazy val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActor)
 
