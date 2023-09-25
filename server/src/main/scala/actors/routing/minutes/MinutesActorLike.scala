@@ -21,7 +21,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 import scala.collection.immutable
 import scala.concurrent.Future
 
-case class GetStreamingDesksForTerminalDateRange(terminal: Terminal, start: UtcDate, end: UtcDate) extends UtcDateRangeLike
+case class GetStreamingMinutesForTerminalDateRange(terminal: Terminal, start: UtcDate, end: UtcDate) extends UtcDateRangeLike
 
 object MinutesActorLike {
   type MinutesLookup[A, B <: WithTimeAccessor] = ((Terminals.Terminal, UtcDate), Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
@@ -49,9 +49,6 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
   val sequentialUpdatesActor: ActorRef = context.actorOf(Props(new SequentialAccessActor(updateMinutes, splitByResource)))
 
   override def receiveQueries: Receive = {
-//    case PointInTimeQuery(pit, GetStreamingDesksForTerminalDateRange(terminal, start, end)) =>
-//      sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, start, end, Option(pit))
-
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).foreach(replyTo ! _)
@@ -64,7 +61,7 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, None).foreach(replyTo ! _)
 
-    case GetStreamingDesksForTerminalDateRange(terminal, start, end) =>
+    case GetStreamingMinutesForTerminalDateRange(terminal, start, end) =>
       sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, start, end, None)
 
     case request: DateRangeMillisLike with TerminalRequest =>
@@ -173,9 +170,6 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
   }))
 
   override def receiveQueries: Receive = {
-//    case PointInTimeQuery(pit, GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis)) =>
-//      sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), Option(pit))
-
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).foreach(replyTo ! _)
@@ -188,7 +182,7 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, None).foreach(replyTo ! _)
 
-    case GetStreamingDesksForTerminalDateRange(terminal, start, end) =>
+    case GetStreamingMinutesForTerminalDateRange(terminal, start, end) =>
       sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, start, end, None)
 
     case request: DateRangeMillisLike with TerminalRequest =>

@@ -47,8 +47,8 @@ class FlightExportsSpec extends CrunchTestLike {
       ))
 
     "Given a flights provider, and dateAndFlightsToCsvRows as an aggregator, when the range is a single day" >> {
-      val getFlights = FlightExports.flightsProvider(utcFlightsProvider)
-      val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder, (_, _) => Future.successful(VoyageManifests.empty))
+      val getFlights = FlightExports.flightsForLocalDateRangeProvider(utcFlightsProvider)
+      val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder, _ => Future.successful(VoyageManifests.empty))
       val csvStream = GeneralExport.toCsv(end, end, terminal, getFlights, toRows)
 
       val result = Await.result(csvStream.runWith(Sink.seq), 1.second)
@@ -63,8 +63,8 @@ class FlightExportsSpec extends CrunchTestLike {
     }
 
     "Given a flights provider, and dateAndFlightsToCsvRows as an aggregator" >> {
-      val getFlights = FlightExports.flightsProvider(utcFlightsProvider)
-      val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder, (_, _) => Future.successful(VoyageManifests.empty))
+      val getFlights = FlightExports.flightsForLocalDateRangeProvider(utcFlightsProvider)
+      val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder, _ => Future.successful(VoyageManifests.empty))
       val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)
 
       val result = Await.result(csvStream.runWith(Sink.seq), 1.second)

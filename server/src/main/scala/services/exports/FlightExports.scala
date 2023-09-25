@@ -27,7 +27,7 @@ object FlightExports {
   def dateAndFlightsToCsvRows(port: PortCode,
                               terminal: Terminal,
                               paxFeedSourceOrder: List[FeedSource],
-                              manifestsProvider: (LocalDate, LocalDate) => Future[VoyageManifests],
+                              manifestsProvider: LocalDate => Future[VoyageManifests],
                              )
                              (implicit ec: ExecutionContext): (LocalDate, Seq[ApiFlightWithSplits]) => Future[Seq[String]] = {
     val toCsv = FlightExports.flightsToCsvRows(port, terminal, paxFeedSourceOrder, manifestsProvider)
@@ -37,7 +37,7 @@ object FlightExports {
   private def flightsToCsvRows(port: PortCode,
                                terminal: Terminal,
                                paxFeedSourceOrder: List[FeedSource],
-                               manifestsProvider: (LocalDate, LocalDate) => Future[VoyageManifests],
+                               manifestsProvider: LocalDate => Future[VoyageManifests],
                               )
                               (implicit ec: ExecutionContext): (LocalDate, Seq[ApiFlightWithSplits]) => Future[Seq[String]] = {
     val regionName = PortRegion.fromPort(port).name
@@ -45,7 +45,7 @@ object FlightExports {
     val terminalName = terminal.toString
     val toRow = flightWithSplitsToCsvFields(paxFeedSourceOrder)
     (localDate, flights) => {
-      manifestsProvider(localDate, localDate).map { vms =>
+      manifestsProvider(localDate).map { vms =>
         flights
           .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
           .map { fws =>
@@ -70,21 +70,20 @@ object FlightExports {
         pcpStart.toLocalDate == localDate
       }
 
-  def flightsProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                     ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Seq[ApiFlightWithSplits]), NotUsed] =
+  def flightsForLocalDateRangeProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                      ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Seq[ApiFlightWithSplits]), NotUsed] =
     LocalDateStream(utcFlightsProvider, startBufferDays = 1, endBufferDays = 2, transformData = relevantFlight)
 
-  def manifestsProvider(utcProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
-                       (implicit ec: ExecutionContext, mat: Materializer): (LocalDate, LocalDate) => Future[VoyageManifests] =
-    (start, end) => {
-      val startUtc = SDate(start).toUtcDate
-      val endUtc = SDate(end).addDays(1).addMinutes(-1).toUtcDate
+  def manifestsForLocalDateProvider(utcProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
+                                   (implicit ec: ExecutionContext, mat: Materializer): LocalDate => Future[VoyageManifests] =
+    date => {
+      val startUtc = SDate(date).toUtcDate
+      val endUtc = SDate(date).addDays(1).addMinutes(-1).toUtcDate
       utcProvider(startUtc, endUtc)
         .runWith(Sink.seq)
         .map { seq =>
           val manifests = seq.flatMap(_._2.manifests.filter(vm => {
-            val scheduledLocal = vm.scheduled.toLocalDate
-            start <= scheduledLocal && scheduledLocal <= end
+            vm.scheduled.toLocalDate == date
           }))
           VoyageManifests(manifests)
         }
