@@ -4,30 +4,31 @@ import drt.shared.{ArrivalGenerator, ArrivalKey}
 import org.specs2.mutable.SpecificationLike
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
-import uk.gov.homeoffice.drt.arrivals.Passengers
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
 class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
-  def mockProvider(manifests: Map[Long, VoyageManifests]): (Long, Long) => Future[VoyageManifests] =
-    (start, _) => manifests.get(start)
-      .map(Future.successful)
-      .getOrElse(Future.successful(VoyageManifests.empty))
+  def mockProvider(manifests: Map[UtcDate, VoyageManifests]): UtcDate => Future[VoyageManifests] =
+    date =>
+      manifests.get(date)
+        .map(Future.successful)
+        .getOrElse(Future.successful(VoyageManifests.empty))
 
-  val scheduledDay1 = SDate(UtcDate(2023, 4, 26))
-  val scheduled1 = scheduledDay1.addHours(6)
-  val arrival1 = ArrivalGenerator.arrival(sch = scheduled1.millisSinceEpoch, origin = PortCode("JFK"), passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
+  val scheduledDay1: SDateLike = SDate(UtcDate(2023, 4, 26))
+  val scheduled1: SDateLike = scheduledDay1.addHours(6)
+  val arrival1: Arrival = ArrivalGenerator.arrival(sch = scheduled1.millisSinceEpoch, origin = PortCode("JFK"), passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
 
-  val scheduledDay2 = SDate(UtcDate(2023, 4, 27))
-  val scheduled2 = scheduledDay2.addHours(12)
-  val arrival2 = ArrivalGenerator.arrival(sch = scheduled2.millisSinceEpoch, origin = PortCode("BHX"), passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
+  val scheduledDay2: SDateLike = SDate(UtcDate(2023, 4, 27))
+  val scheduled2: SDateLike = scheduledDay2.addHours(12)
+  val arrival2: Arrival = ArrivalGenerator.arrival(sch = scheduled2.millisSinceEpoch, origin = PortCode("BHX"), passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
 
-  val manifests = Map(
-    scheduledDay1.millisSinceEpoch -> VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival1, List()))),
-    scheduledDay2.millisSinceEpoch -> VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival2, List()))),
+  val manifests: Map[UtcDate, VoyageManifests] = Map(
+    scheduledDay1.toUtcDate -> VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival1, List()))),
+    scheduledDay2.toUtcDate -> VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival2, List()))),
   )
 
   "Given an arrival key" >> {
@@ -35,7 +36,7 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
       "I should get a manifest summary" >> {
         val result = Await.result(WithManifests.manifestsForFlights(mockProvider(manifests))(List(ArrivalKey(arrival1))), 1.second)
 
-        result === manifests(scheduledDay1.millisSinceEpoch)
+        result === manifests(scheduledDay1.toUtcDate)
       }
     }
   }
@@ -45,7 +46,7 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
       "I should get the manifest summaries" >> {
         val result = Await.result(WithManifests.manifestsForFlights(mockProvider(manifests))(List(ArrivalKey(arrival1), ArrivalKey(arrival2))), 1.second)
 
-        result === VoyageManifests(manifests(scheduledDay1.millisSinceEpoch).manifests ++ manifests(scheduledDay2.millisSinceEpoch).manifests)
+        result === VoyageManifests(manifests(scheduledDay1.toUtcDate).manifests ++ manifests(scheduledDay2.toUtcDate).manifests)
       }
     }
   }
@@ -54,7 +55,7 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
     "When multiple manifests exist on the scheduled date" >> {
       "I should only get the manifest summary for the one arrival" >> {
         val multiManifests = Map(
-          scheduledDay1.millisSinceEpoch -> VoyageManifests(Set(
+          scheduledDay1.toUtcDate -> VoyageManifests(Set(
             VoyageManifestGenerator.voyageManifest(),
             VoyageManifestGenerator.manifestForArrival(arrival1, List()),
             VoyageManifestGenerator.voyageManifest(),

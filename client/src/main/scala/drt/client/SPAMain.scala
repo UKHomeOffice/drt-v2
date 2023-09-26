@@ -186,7 +186,6 @@ object SPAMain {
       GetAlerts(0L),
       GetRedListUpdates,
       GetPortEgateBanksUpdates,
-      GetShowAlertModalDialog,
       GetOohStatus,
       GetFeatureFlags,
       GetGateStandWalktime,

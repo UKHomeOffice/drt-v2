@@ -1,22 +1,38 @@
 package drt.shared
 
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
+import uk.gov.homeoffice.drt.ports.FeedSource
 
 object CodeShares {
-  def uniqueArrivalsWithCodeShares[GenFlight](apiFlightFromGenFlight: (GenFlight) => Arrival)
-                                             (flights: Seq[GenFlight]): List[(GenFlight, Set[Arrival])] = {
-    val grouped: Map[(Long, Terminals.Terminal, PortCode), Seq[GenFlight]] = flights.groupBy(f =>
-      (apiFlightFromGenFlight(f).Scheduled, apiFlightFromGenFlight(f).Terminal, apiFlightFromGenFlight(f).Origin)
-    )
-    grouped.values.map(flights => {
-      val mainFlight: GenFlight = flights.sortBy(f => apiFlightFromGenFlight(f).PassengerSources.values.map(_.actual)).reverse.head
-      val shares: Set[Arrival] = flights
-        .filter(_ != mainFlight)
-        .toSet
-        .map(apiFlightFromGenFlight)
+  def uniqueArrivals[GenFlight](apiFlightFromGenFlight: GenFlight => Arrival,
+                                paxFeedSourceOrder: List[FeedSource],
+                               )
+                               (flights: Seq[GenFlight]): Iterable[GenFlight] =
+    uniqueArrivalsWithCodeShares(apiFlightFromGenFlight, paxFeedSourceOrder)(flights).map(_._1)
 
-      (mainFlight, shares)
-    }).toList
+  def uniqueArrivalsWithCodeShares[GenFlight](apiFlightFromGenFlight: GenFlight => Arrival,
+                                              paxFeedSourceOrder: List[FeedSource],
+                                             )
+                                             (flights: Seq[GenFlight]): Seq[(GenFlight, Seq[Arrival])] = {
+    flights
+      .groupBy(f =>
+        (apiFlightFromGenFlight(f).Scheduled, apiFlightFromGenFlight(f).Terminal, apiFlightFromGenFlight(f).Origin)
+      )
+      .values
+      .map { flights =>
+        val mainFlight = flights
+          .sortBy(f => apiFlightFromGenFlight(f).bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0))
+          .reverse.head
+        val shares = flights
+          .filter(_ != mainFlight)
+          .map(apiFlightFromGenFlight)
+        (mainFlight, shares)
+      }
+      .toSeq
+      .sortBy {
+        case (mainFlight, _) =>
+          val pcpTime = apiFlightFromGenFlight(mainFlight).PcpTime.getOrElse(0L)
+          (pcpTime, apiFlightFromGenFlight(mainFlight).VoyageNumber.numeric)
+      }
   }
 }

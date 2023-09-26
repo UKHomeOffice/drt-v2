@@ -1,4 +1,4 @@
-package services.`export`
+package services.exports
 
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
@@ -31,8 +31,10 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      passengerSources = Map(LiveFeedSource -> Passengers(Option(98), None),
-        ApiFeedSource -> Passengers(Option(100), None))
+      passengerSources = Map(
+        LiveFeedSource -> Passengers(Option(98), None),
+        ApiFeedSource -> Passengers(Option(100), None),
+      )
     ),
     Set(Splits(
       Set(
@@ -68,7 +70,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(ApiFeedSource),
-      passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None))
+      passengerSources = Map(ApiFeedSource -> Passengers(Option(28), None))
     ),
     Set(Splits(
       Set(
@@ -243,9 +245,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings
-          |SA0326,SA0326,JHD,/,Scheduled,2017-01-01 20:00,,,,,,,2017-01-01 20:00,,0,,,,,,,,,,,,,
-          |SA0327,SA0327,JHD,/,Scheduled,2017-01-01 21:00,,,,,,,2017-01-01 21:00,,0,,,,,,,,,,,,,
-          |SA0328,SA0328,JHD,/,Scheduled,2017-01-01 22:00,,,,,,,2017-01-01 22:00,,0,,,,,,,,,,,,,
+          |SA0326,SA0326,JHD,/,Scheduled,2017-01-01 20:00,,,,,,,2017-01-01 20:00,,,,,,,,,,,,,,,
+          |SA0327,SA0327,JHD,/,Scheduled,2017-01-01 21:00,,,,,,,2017-01-01 21:00,,,,,,,,,,,,,,,
+          |SA0328,SA0328,JHD,/,Scheduled,2017-01-01 22:00,,,,,,,2017-01-01 22:00,,,,,,,,,,,,,,,
           |""".stripMargin
 
     result === expected
@@ -287,7 +289,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       val exporter = withActualApiExport
 
       val result = flights.map { flight =>
-        exporter.actualAPISplitsForFlightInHeadingOrder(flight, ArrivalExportHeadings.actualApiHeadings.split(","))
+        FlightExports.actualAPISplitsForFlightInHeadingOrder(flight, ArrivalExportHeadings.actualApiHeadings.split(","))
       }
 
       val expected = List(
@@ -373,26 +375,25 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     result === expected
   }
 
-  "Given a flight with API pax count within the 5% threshold of the feed pax count, and no live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(feedSources = Set(AclFeedSource), passengerSources = Map(AclFeedSource -> Passengers(Option(100), None),
-      ApiFeedSource -> Passengers(Option(98), None))) === ""
+  "Given a flight with API pax count, and no live feed, then the 'Invalid API' column should be blank" >> {
+    invalidApiFieldValue(feedSources = Set(AclFeedSource), passengerSources = Map(
+      AclFeedSource -> Passengers(Option(100), None),
+      ApiFeedSource -> Passengers(Option(98), None))
+    ) === ""
   }
 
   "Given a flight with API pax count within the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be blank" >> {
     invalidApiFieldValue(feedSources = Set(LiveFeedSource, ApiFeedSource),
       passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None),
-        ApiFeedSource -> Passengers(Option(98), None))) === ""
-  }
-
-  "Given a flight with API pax count outside the 5% threshold of the feed pax count, but with no live feed, then the 'Invalid API' column should be blank" >> {
-    invalidApiFieldValue(feedSources = Set(AclFeedSource),
-      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))) === ""
+        ApiFeedSource -> Passengers(Option(98), None))
+    ) === ""
   }
 
   "Given a flight with API pax count outside the 5% threshold of the feed pax count, with a live feed, then the 'Invalid API' column should be 'Y'" >> {
     invalidApiFieldValue(feedSources = Set(LiveFeedSource, ApiFeedSource),
       passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None),
-        ApiFeedSource -> Passengers(Option(75), None))) === "Y"
+        ApiFeedSource -> Passengers(Option(75), None))
+    ) === "Y"
   }
 
   private def invalidApiFieldValue(feedSources: Set[FeedSource], passengerSources: Map[FeedSource, Passengers]): String = {

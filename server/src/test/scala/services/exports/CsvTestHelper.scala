@@ -1,4 +1,4 @@
-package services.`export`
+package services.exports
 
 import akka.NotUsed
 import akka.stream.Materializer

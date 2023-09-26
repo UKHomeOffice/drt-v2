@@ -11,7 +11,6 @@ import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist._
-import drt.shared.splits.ApiSplitsToSplitRatio
 import io.kinoplan.scalajs.react.material.ui.core.MuiChip
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.component.Scala.Component
@@ -27,6 +26,7 @@ import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.splits.ApiSplitsToSplitRatio
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -41,7 +41,7 @@ object FlightTableRow {
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
-                   codeShares: Set[Arrival],
+                   codeShares: Seq[Arrival],
                    idx: Int,
                    originMapper: OriginMapperF = portCode => portCode.toString,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
@@ -176,7 +176,7 @@ object FlightTableRow {
       )
       val lastCells = List[TagMod](
         <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.bestPaxSource(props.paxFeedSourceOrder))}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
+        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder))}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
       )
 
       val flightFields = firstCells ++ lastCells

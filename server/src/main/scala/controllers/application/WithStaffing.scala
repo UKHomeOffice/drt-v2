@@ -56,7 +56,7 @@ trait WithStaffing {
     }
   }
 
-  def saveFixedPoints(): Action[AnyContent] = authByRole(FixedPointsEdit) {
+  def saveFixedPoints: Action[AnyContent] = authByRole(FixedPointsEdit) {
     Action { request =>
 
       request.body.asText match {
@@ -70,7 +70,7 @@ trait WithStaffing {
     }
   }
 
-  def saveStaff(): Action[AnyContent] = authByRole(StaffEdit) {
+  def saveStaff: Action[AnyContent] = authByRole(StaffEdit) {
     Action {
       implicit request =>
         val maybeShifts: Option[ShiftAssignments] = request.body.asJson.flatMap(ImportStaff.staffJsonToShifts)
@@ -86,7 +86,7 @@ trait WithStaffing {
     }
   }
 
-  def addStaffMovements(): Action[AnyContent] = authByRole(StaffMovementsEdit) {
+  def addStaffMovements: Action[AnyContent] = authByRole(StaffMovementsEdit) {
     Action {
       request =>
         request.body.asText match {

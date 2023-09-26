@@ -20,7 +20,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStateLike, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
+import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
@@ -43,18 +43,13 @@ object ManifestRouterActor {
 
   private def manifestsByDaySource(manifestsByDayLookup: ManifestLookup)
                                   (start: SDateLike,
-                           end: SDateLike,
-                           maybePit: Option[MillisSinceEpoch]): Source[VoyageManifests, NotUsed] =
+                                   end: SDateLike,
+                                   maybePit: Option[MillisSinceEpoch],
+                                  )
+                                  (implicit ec: ExecutionContext): Source[(UtcDate, VoyageManifests), NotUsed] =
     DateRange
       .utcDateRangeSource(start, end)
-      .mapAsync(1)(manifestsByDayLookup(_, maybePit))
-
-  def runAndCombine(source: Future[Source[VoyageManifests, NotUsed]])
-                   (implicit mat: Materializer, ec: ExecutionContext): Future[VoyageManifests] = source
-    .flatMap(source => source
-      .log(getClass.getName)
-      .runWith(Sink.reduce[VoyageManifests](_ ++ _))
-    )
+      .mapAsync(1)(d => manifestsByDayLookup(d, maybePit).map(m => (d, m)))
 }
 
 case class ApiFeedState(lastProcessedMarker: MillisSinceEpoch, maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
@@ -146,7 +141,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       val replyTo = sender()
       ManifestRouterActor
         .manifestsByDaySource(manifestLookup)(scheduled, scheduled, None)
-        .map(manifests => manifests.manifests.find {
+        .map(manifests => manifests._2.manifests.find {
           _.maybeKey.exists(_ == arrival)
         }.toList)
         .runWith(Sink.seq)

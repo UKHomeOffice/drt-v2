@@ -21,7 +21,7 @@ trait WithEgateBanks {
       ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates].map(r => Ok(write(r)))
     }
 
-  def updateEgateBanksUpdates(): Action[AnyContent] = authByRole(EgateBanksEdit) {
+  def updateEgateBanksUpdates: Action[AnyContent] = authByRole(EgateBanksEdit) {
     Action.async {
       implicit request =>
         request.body.asText match {

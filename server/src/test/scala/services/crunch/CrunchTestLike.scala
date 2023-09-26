@@ -254,8 +254,8 @@ class CrunchTestLike
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   val oneMinuteMillis = 60000
-  val uniquifyArrivals: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
-    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight)
+  val uniquifyArrivals: Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[Arrival])] =
+    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => f.apiFlight, paxFeedSourceOrder)
 
   val defaultAirportConfig: AirportConfig = TestDefaults.airportConfig
 

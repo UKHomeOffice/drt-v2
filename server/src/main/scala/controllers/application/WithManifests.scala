@@ -1,8 +1,5 @@
 package controllers.application
 
-import actors.PartitionedPortStateActor.GetStateForDateRange
-import akka.NotUsed
-import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import controllers.Application
@@ -14,22 +11,16 @@ import uk.gov.homeoffice.drt.auth.Roles.EnhancedApiView
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 import upickle.default._
 
-import java.util.Base64
 import scala.concurrent.Future
 
 
 trait WithManifests {
   self: Application =>
 
-  private val manifestsProvider: (Long, Long) => Future[VoyageManifests] =
-    (startMillis: Long, endMillis: Long) =>
-      ctrl.manifestsRouterActor
-        .ask(GetStateForDateRange(startMillis, endMillis))
-        .mapTo[Source[VoyageManifests, NotUsed]]
-        .flatMap(_.runFold(VoyageManifests.empty)(_ ++ _))
+  private val manifestsForDay: UtcDate => Future[VoyageManifests] =
+    (date: UtcDate) => ctrl.manifestsProvider(date, date).map(_._2).runFold(VoyageManifests.empty)(_ ++ _)
 
-  private val manifestsForDay: UtcDate => Future[VoyageManifests] = WithManifests.manifestsForDay(manifestsProvider)
-  private val manifestsForFlights: List[ArrivalKey] => Future[VoyageManifests] = WithManifests.manifestsForFlights(manifestsProvider)
+  private val manifestsForFlights: List[ArrivalKey] => Future[VoyageManifests] = WithManifests.manifestsForFlights(manifestsForDay)
 
   def getManifestSummariesForDay(utcDateString: String): Action[AnyContent] =
     authByRole(EnhancedApiView) {
@@ -61,22 +52,12 @@ trait WithManifests {
 }
 
 object WithManifests {
-  def manifestsForDay(manifestsProvider: (Long, Long) => Future[VoyageManifests])
-                     (utcDate: UtcDate): Future[VoyageManifests] = {
-    val date = SDate(utcDate)
-    val midnightMillis = date.millisSinceEpoch
-    val endOfTheDayMillis = date.addDays(1).addMinutes(-1).millisSinceEpoch
-
-    manifestsProvider(midnightMillis, endOfTheDayMillis)
-  }
-
-  def manifestsForFlights(manifestsProvider: (Long, Long) => Future[VoyageManifests])
+  def manifestsForFlights(manifestsProvider: UtcDate => Future[VoyageManifests])
                          (arrivalKeys: List[ArrivalKey])
                          (implicit mat: Materializer): Future[VoyageManifests] = {
     val distinctArrivalDays = arrivalKeys.map(k => SDate(k.scheduled).toUtcDate).distinct
-    val getManifests = manifestsForDay(manifestsProvider) _
     Source(distinctArrivalDays)
-      .mapAsync(1)(getManifests)
+      .mapAsync(1)(manifestsProvider)
       .map { manifests =>
         val relevantManifests = manifests.manifests.filter { m =>
           m.maybeKey.exists(arrivalKeys.contains)

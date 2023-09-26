@@ -28,7 +28,7 @@ import scala.util.Try
 trait WithImports {
   self: Application =>
 
-  def feedImportRedListCounts(): Action[AnyContent] = authByRole(NeboUpload) {
+  def feedImportRedListCounts: Action[AnyContent] = authByRole(NeboUpload) {
     Action.async { request =>
       log.info(s"Received a request to import red list counts")
       request.body.asJson match {

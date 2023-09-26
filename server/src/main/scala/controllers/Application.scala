@@ -200,7 +200,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
-  def featureGuides(): Action[AnyContent] = Action.async { _ =>
+  def featureGuides: Action[AnyContent] = Action.async { _ =>
     val featureGuidesJson: Future[String] = ctrl.featureGuideService.getAll()
     featureGuidesJson.map(Ok(_))
   }
@@ -234,7 +234,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
-  def viewedFeatureGuideIds(): Action[AnyContent] = authByRole(BorderForceStaff) {
+  def viewedFeatureGuideIds: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
       import spray.json.DefaultJsonProtocol.{StringJsonFormat, immSeqFormat}
       import spray.json._
@@ -318,7 +318,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
-  def apiLogin(): Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
+  def apiLogin: Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
 
     def postStringValOrElse(key: String): Option[String] = {
       request.body.get(key).map(_.head)

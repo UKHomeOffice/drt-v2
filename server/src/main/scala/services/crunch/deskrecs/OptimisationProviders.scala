@@ -84,12 +84,11 @@ object OptimisationProviders {
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       .map(_.map(_._2.flights.values.toList))
 
-  def liveManifestsProvider(manifestsActor: ActorRef)
-                           (crunchRequest: ProcessingRequest)
-                           (implicit timeout: Timeout): Future[Source[VoyageManifests, NotUsed]] =
-    manifestsActor
-      .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
-      .mapTo[Source[VoyageManifests, NotUsed]]
+  def liveManifestsProvider(manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
+                           (crunchRequest: ProcessingRequest): Future[Source[VoyageManifests, NotUsed]] =
+    Future.successful(
+      manifestsProvider(crunchRequest.start.toUtcDate, crunchRequest.end.toUtcDate).map(_._2)
+    )
 
   def passengersProvider(passengersActor: ActorRef)
                         (crunchRequest: ProcessingRequest)

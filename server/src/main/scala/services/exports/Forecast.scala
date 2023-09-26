@@ -14,7 +14,6 @@ object Forecast {
                       terminal: Terminal,
                       portState: PortState,
                       queues: List[Queue]): ForecastHeadlineFigures = {
-    val dayMillis = 60 * 60 * 24 * 1000
     val crunchSummaryDaily = portState.dailyCrunchSummary(startOfForecast, numberOfDays, terminal, queues)
 
     val figures = for {

@@ -19,7 +19,7 @@ import scala.concurrent.Future
 trait WithAuth {
   self: Application =>
 
-  def getLoggedInUser(): Action[AnyContent] = Action { request =>
+  def getLoggedInUser: Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     implicit val userWrites: Writes[LoggedInUser] = new Writes[LoggedInUser] {
       def writes(user: LoggedInUser): JsObject = Json.obj(
@@ -33,7 +33,7 @@ trait WithAuth {
     Ok(Json.toJson(user))
   }
 
-  def trackUser() = Action.async { request =>
+  def trackUser = Action.async { request =>
     val loggedInUser  = ctrl.getLoggedInUser(config, request.headers, request.session)
         ctrl.userService.insertOrUpdateUser(loggedInUser, None, None)
         Future.successful(Ok(s"User-tracked"))
@@ -81,7 +81,7 @@ trait WithAuth {
   }
 
 
-  def getUserHasPortAccess(): Action[AnyContent] = auth {
+  def getUserHasPortAccess: Action[AnyContent] = auth {
     Action {
       Ok("{userHasAccess: true}")
     }

@@ -39,7 +39,7 @@ import scala.util.{Failure, Success, Try}
 trait WithSimulations {
   self: Application =>
 
-  def simulationExport(): Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
+  def simulationExport: Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
     implicit val timeout: Timeout = new Timeout(10 minutes)
 
     Action(parse.defaultBodyParser).async {
@@ -68,7 +68,7 @@ trait WithSimulations {
                 simulationConfig,
                 SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
                 OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-                OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
+                OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
                 OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
                 OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
                 ctrl.flightsRouterActor,
@@ -87,7 +87,7 @@ trait WithSimulations {
     }
   }
 
-  def simulation(): Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
+  def simulation: Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
     Action(parse.defaultBodyParser).async {
       request =>
         implicit val timeout: Timeout = new Timeout(10 minutes)
@@ -116,7 +116,7 @@ trait WithSimulations {
                 simulationAirportConfig = simulationConfig,
                 splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsRouterActor),
+                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
                 historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
                 historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
                 flightsActor = ctrl.flightsRouterActor,

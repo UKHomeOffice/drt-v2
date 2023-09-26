@@ -45,7 +45,7 @@ trait WithRedLists {
       ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(write(r)))
     }
 
-  def updateRedListUpdates(): Action[AnyContent] = authByRole(RedListsEdit) {
+  def updateRedListUpdates: Action[AnyContent] = authByRole(RedListsEdit) {
     Action.async {
       implicit request =>
         request.body.asText match {
