@@ -43,29 +43,11 @@ trait WithExports extends WithDesksExport with WithFlightsExport with WithSummar
   def exportForecastWeekToCSV(startDay: String, terminalName: String): Action[AnyContent] = authByRole(ForecastView) {
     val terminal = Terminal(terminalName)
     Action.async {
-      //      val (startOfForecast, endOfForecast) = startAndEndForDay(startDay.toLong, sixMonthsDays)
-      //
-      //      val portStateFuture = portStateForTerminal(terminal, endOfForecast, startOfForecast)
-      //
-      //      val portCode = airportConfig.portCode
-      //      val fileName = f"$portCode-$terminal-forecast-export-${startOfForecast.getFullYear}-${startOfForecast.getMonth}%02d-${startOfForecast.getDate}%02d"
-      //
-      //      portStateFuture
-      //        .map { portState =>
-      //          val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
-      //          val csvData = CSVData.forecastPeriodToCsv(fp)
-      //          CsvFileStreaming.csvFileResult(fileName, csvData)
-      //        }
-      //        .recover {
-      //          case t =>
-      //            log.error("Failed to get PortState to produce csv", t)
-      //            ServiceUnavailable
-      //        }
       val start = SDate(startDay.toLong, europeLondonTimeZone)
       val end = start.addDays(sixMonthsDays)
       val rowHeaders = Seq("") ++ (0 until 96).map(qh => start.addMinutes(qh * 15).toHoursAndMinutes)
       val staffingProvider = StaffRequirementExports.staffingForLocalDateProvider(terminal, ctrl.staffMinutesProvider)
-      val makeHourlyStaffing = StaffRequirementExports.toHourlyStaffing(staffingProvider)
+      val makeHourlyStaffing = StaffRequirementExports.toHourlyStaffing(staffingProvider, 15)
 
       StaffRequirementExports
         .queuesProvider(ctrl.crunchMinutesProvider)(start.toLocalDate, end.toLocalDate, terminal)
