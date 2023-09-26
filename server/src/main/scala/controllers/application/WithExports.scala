@@ -13,6 +13,7 @@ import services.graphstages.Crunch.europeLondonTimeZone
 import uk.gov.homeoffice.drt.auth.Roles.{ForecastView, ManageUsers}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.MilliTimes.minutesInADay
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.language.postfixOps
@@ -20,10 +21,6 @@ import scala.language.postfixOps
 
 trait WithExports extends WithDesksExport with WithFlightsExport with WithSummariesExport {
   self: Application =>
-
-//  def localLastMidnight(pointInTime: String): SDateLike = SDate(pointInTime.toLong).getLocalLastMidnight
-
-//  def terminal(terminalName: String): Terminal = Terminal(terminalName)
 
   def exportUsers: Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>
@@ -45,9 +42,11 @@ trait WithExports extends WithDesksExport with WithFlightsExport with WithSummar
     Action.async {
       val start = SDate(startDay.toLong, europeLondonTimeZone)
       val end = start.addDays(sixMonthsDays)
-      val rowHeaders = Seq("") ++ (0 until 96).map(qh => start.addMinutes(qh * 15).toHoursAndMinutes)
+      val minutesInSlot = 15
+      val numberOfSlots = minutesInADay / minutesInSlot
+      val rowHeaders = Seq("") ++ (0 until numberOfSlots).map(qh => start.addMinutes(qh * minutesInSlot).toHoursAndMinutes)
       val staffingProvider = StaffRequirementExports.staffingForLocalDateProvider(terminal, ctrl.staffMinutesProvider)
-      val makeHourlyStaffing = StaffRequirementExports.toHourlyStaffing(staffingProvider, 15)
+      val makeHourlyStaffing = StaffRequirementExports.toHourlyStaffing(staffingProvider, minutesInSlot)
 
       StaffRequirementExports
         .queuesProvider(ctrl.crunchMinutesProvider)(start.toLocalDate, end.toLocalDate, terminal)
@@ -94,18 +93,6 @@ trait WithExports extends WithDesksExport with WithFlightsExport with WithSummar
       }
     }
   }
-
-//  private def portStateForTerminal(terminal: Terminal,
-//                                   endOfForecast: SDateLike,
-//                                   startOfForecast: SDateLike): Future[PortState] =
-//    ctrl.portStateActor
-//      .ask(GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal))(new Timeout(30 seconds))
-//      .mapTo[PortState]
-//      .recover {
-//        case t =>
-//          log.error("Failed to get PortState", t)
-//          PortState.empty
-//      }
 
   def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
     val startOfWeekMidnight = SDate(startDay).getLocalLastMidnight
