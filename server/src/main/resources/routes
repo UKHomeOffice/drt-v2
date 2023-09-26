@@ -102,6 +102,7 @@ GET           /api/passengers/:startLocalDay/:endLocalDay/:terminalName         
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.Application.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.Application.feedBack(feedback: String)
 # Logging
++ nocsrf
 POST          /logging                                                                controllers.Application.logging
 
 POST          /data/staff                                                             controllers.Application.saveStaff
@@ -117,6 +118,13 @@ POST          /data/feed/:feedType/:portCode                                    
 GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
 GET           /feature-guides                                                         controllers.Application.featureGuides
+GET           /drop-ins                                                               controllers.Application.dropIns()
++ nocsrf
+POST          /drop-in-registrations                                                  controllers.Application.createDropInRegistration()
+
+GET           /drop-in-registrations                                                  controllers.Application.getDropInRegistrations
+
+GET           /feature-guides                                                         controllers.Application.featureGuides()
 
 GET           /is-new-feature-available-since-last-login                              controllers.Application.isNewFeatureAvailableSinceLastLogin
 

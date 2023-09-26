@@ -17,7 +17,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{FeatureGuideProviderLike, UserRoleProviderLike}
+import controllers.{FeatureGuideProviderLike, DropInProviderLike, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -83,7 +83,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
 
-trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderLike {
+trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderLike with DropInProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem

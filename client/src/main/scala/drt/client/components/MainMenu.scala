@@ -2,17 +2,18 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain
-import drt.client.SPAMain.TerminalPageModes.Dashboard
+import drt.client.SPAMain
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
+import drt.client.spa.TerminalPageModes.Dashboard
 import drt.shared.CrunchApi.MillisSinceEpoch
 import japgolly.scalajs.react.component.Js
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react._
 import org.scalajs.dom.html.{Div, LI}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles._

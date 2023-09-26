@@ -24,7 +24,7 @@ import services.crunch.CrunchSystem
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
-import slickdb.{ArrivalTable, FeatureGuideTable, FeatureGuideTableLike, FeatureGuideViewLike, FeatureGuideViewTable, Tables, UserTable, UserTableLike}
+import slickdb.{ArrivalTable, FeatureGuideTable, FeatureGuideTableLike, FeatureGuideViewLike, FeatureGuideViewTable, DropInTable, DropInTableLike, DropInsRegistrationTable, DropInsRegistrationTableLike, Tables, UserTable, UserTableLike}
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
@@ -78,6 +78,10 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
   override val featureGuideService: FeatureGuideTableLike = FeatureGuideTable(PostgresTables)
 
   override val featureGuideViewService: FeatureGuideViewLike = FeatureGuideViewTable(PostgresTables)
+
+  override val dropInService: DropInTableLike = DropInTable(PostgresTables)
+
+  override val dropInRegistrationService: DropInsRegistrationTableLike =  DropInsRegistrationTable(PostgresTables)
 
   override val minuteLookups: MinuteLookups = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
