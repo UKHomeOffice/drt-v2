@@ -33,6 +33,8 @@ class DropInsRegistration(tag: Tag) extends Table[DropInsRegistrationRow](tag, "
 
 trait DropInsRegistrationTableLike {
   def registerDropIns(email: String, id: String)(implicit ex: ExecutionContext): Future[Int]
+
+  def getRegisteredDropIns(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]]
 }
 
 case class DropInsRegistrationTable(tables: Tables) extends DropInsRegistrationTableLike {
@@ -46,5 +48,10 @@ case class DropInsRegistrationTable(tables: Tables) extends DropInsRegistrationT
       tables.run(insertAction)
   }
 
+  def getRegisteredDropIns(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] = {
+    val query = dropInsRegistrationTable.filter(_.email === email).sortBy(_.registeredAt.desc).result
+    val result = tables.run(query)
+    result
+  }
 
 }

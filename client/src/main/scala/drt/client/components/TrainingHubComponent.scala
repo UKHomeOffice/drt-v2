@@ -8,7 +8,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.client.spa.TrainingHubPageMode
 import drt.client.spa.TrainingHubPageModes.{DropInBooking, TrainingMaterial}
-import drt.shared.DropIn
+import drt.shared.{DropIn, DropInRegistration}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -27,7 +27,8 @@ object TrainingHubComponent {
 
   private case class TrainingModel(airportConfig: Pot[AirportConfig],
                                    loggedInUserPot: Pot[LoggedInUser],
-                                   dropIns: Pot[Seq[DropIn]]
+                                   dropIns: Pot[Seq[DropIn]],
+                                   dropInRegistrations : Pot[Seq[DropInRegistration]]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -37,7 +38,8 @@ object TrainingHubComponent {
       val modelRCP = SPACircuit.connect(model => TrainingModel(
         airportConfig = model.airportConfig,
         loggedInUserPot = model.loggedInUserPot,
-        dropIns = model.dropIns
+        dropIns = model.dropIns,
+        dropInRegistrations = model.dropInRegistrations
       ))
 
       <.div(
@@ -74,6 +76,16 @@ object TrainingHubComponent {
     def tabClass(mode: TrainingHubPageMode): String = if (props.trainingHubLoc.modeStr == mode.asString) activeClass else ""
 
     <.ul(^.className := "nav nav-tabs",
+      <.li(^.className := tabClass(DropInBooking),
+        <.a(^.id := "dropInBooking", "Book a Drop-in Session", VdomAttr("data-toggle") := "tab"),
+        ^.onClick ==> { e: ReactEventFromInput =>
+          e.preventDefault()
+          GoogleEventTracker.sendEvent(trainingName, "click", "Book a Drop-in Session")
+          props.router.set(props.trainingHubLoc.copy(
+            modeStr = DropInBooking.asString
+          ))
+        }
+      ),
       <.li(^.className := tabClass(TrainingMaterial),
         <.a(^.id := "trainingMaterial", "Training Material", VdomAttr("data-toggle") := "tab"),
         ^.onClick ==> { e: ReactEventFromInput =>
@@ -82,17 +94,7 @@ object TrainingHubComponent {
           props.router.set(props.trainingHubLoc.copy(
             modeStr = TrainingMaterial.asString
           ))
-        }),
-      <.li(^.className := tabClass(DropInBooking),
-        <.a(^.id := "dropInBooking", "Drop-In Booking", VdomAttr("data-toggle") := "tab"),
-        ^.onClick ==> { e: ReactEventFromInput =>
-          e.preventDefault()
-          GoogleEventTracker.sendEvent(trainingName, "click", "Drop-In Booking")
-          props.router.set(props.trainingHubLoc.copy(
-            modeStr = DropInBooking.asString
-          ))
-        }
-      )
+        })
     )
   }
 

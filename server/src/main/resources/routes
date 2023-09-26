@@ -116,6 +116,8 @@ GET           /drop-ins                                                         
 + nocsrf
 POST          /register-drop-in                                                       controllers.Application.registerDropIns()
 
+GET           /register-drop-in/:email                                                controllers.Application.getRegisterDropIns(email: String)
+
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 
 GET           /is-new-feature-available-since-last-login                              controllers.Application.isNewFeatureAvailableSinceLastLogin

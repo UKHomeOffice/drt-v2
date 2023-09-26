@@ -12,8 +12,6 @@ import upickle.default.{read, write}
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-case class RegisterDropIns(id: String) extends Action
-
 case class GetDropIns() extends Action
 
 case class SetDropIns(dropIns: Seq[DropIn]) extends Action
@@ -36,14 +34,5 @@ class DropInHandler[M](modelRW: ModelRW[M, Pot[Seq[DropIn]]]) extends LoggingAct
 
       effectOnly(apiCallEffect)
 
-    case RegisterDropIns(id: String) =>
-      val apiCallEffect = Effect(DrtApi.post(s"register-drop-in", write(id))
-        .recoverWith {
-          case _ =>
-            log.error(s"Failed to register drop-ins. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(RegisterDropIns(id), PollDelay.recoveryDelay))
-        })
-
-      effectOnly(apiCallEffect)
   }
 }

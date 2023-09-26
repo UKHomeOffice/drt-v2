@@ -1,9 +1,9 @@
 package controllers.application
 
 import controllers.Application
-import drt.shared.DropIn
+import drt.shared.{DropIn, DropInRegistration}
 import play.api.mvc.{Action, AnyContent}
-import slickdb.DropInRow
+import slickdb.{DropInRow}
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import upickle.default.write
 
@@ -21,9 +21,18 @@ trait withDropIns {
   lazy val dropInHostEmail = config.get[String]("notifications.dropIn-host-email")
 
   import drt.shared.DropIn._
+  import drt.shared.DropInRegistration._
+
   def dropIns(): Action[AnyContent] = Action.async { _ =>
     val dropInsJson: Future[Seq[DropIn]] = ctrl.dropInService.getFuturePublishedDropIns()
     dropInsJson.map(dropIns => Ok(write(dropIns)))
+  }
+
+  def getRegisterDropIns(email: String): Action[AnyContent] = Action.async { _ =>
+    val dropInsRegistrationJson: Future[Seq[DropInRegistration]] = ctrl.dropInRegistrationService
+      .getRegisteredDropIns(email.trim)
+      .map(_.map(_.toDropInRegistration))
+    dropInsRegistrationJson.map(registered => Ok(write(registered)))
   }
 
   def registerDropIns: Action[AnyContent] = authByRole(BorderForceStaff) {

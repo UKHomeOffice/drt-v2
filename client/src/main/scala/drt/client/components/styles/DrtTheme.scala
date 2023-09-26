@@ -41,6 +41,7 @@ object DrtTheme extends StyleSheet.Inline with ScalaCssReactImplicits {
           grey = ColorPartial(
             `100` = "#F3F5F9",
             `300` = "#B4B5BE",
+            `400` = "#547A00",
             `500` = "#777A86",
             `700` = "#404252",
             `900` = "#111224",

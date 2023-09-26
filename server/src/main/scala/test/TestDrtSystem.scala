@@ -16,7 +16,7 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.{FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, DropInRow, DropInTableLike, DropInsRegistrationTableLike, UserRow, UserTableLike}
+import slickdb.{DropInRow, DropInTableLike, DropInsRegistrationRow, DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
@@ -71,6 +71,8 @@ case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
 
 case class MockDropInsRegistrationTable() extends DropInsRegistrationTableLike {
   override def registerDropIns(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def getRegisteredDropIns(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] = Future.successful(Seq.empty)
 }
 
 case class MockDropInTable() extends DropInTableLike {
