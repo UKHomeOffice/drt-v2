@@ -62,7 +62,7 @@ trait WithExports extends WithDesksExport with WithFlightsExport with WithSummar
           rowHeaders.zip(rows).map { case (header, data) => s"$header,$data" }.mkString("\n")
         }
         .map { csvData =>
-          val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-headlines-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
+          val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
           CsvFileStreaming.csvFileResult(fileName, csvData)
         }
 
