@@ -54,8 +54,6 @@ class DropIns(tag: Tag) extends Table[DropInRow](tag, "drop_in") {
 }
 
 trait DropInTableLike {
-  def updatePublishDropIn(dropInId: String, publish: Boolean): Future[Int]
-
   def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]]
 
   def getDropIns(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[DropInRow]]
@@ -63,14 +61,6 @@ trait DropInTableLike {
 
 case class DropInTable(tables: Tables) extends DropInTableLike {
   val dropInTable = TableQuery[DropIns]
-
-  private def getCurrentTime = new Timestamp(new DateTime().getMillis)
-
-  def updatePublishDropIn(dropInId: String, publish: Boolean): Future[Int] = {
-    val query = dropInTable.filter(_.id === dropInId.trim.toInt).map(f => (f.isPublished, f.lastUpdatedAt))
-      .update(publish, getCurrentTime)
-    tables.run(query)
-  }
 
   def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] = {
     val query = dropInTable

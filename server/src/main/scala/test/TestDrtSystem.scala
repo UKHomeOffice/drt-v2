@@ -76,7 +76,6 @@ case class MockDropInsRegistrationTable() extends DropInsRegistrationTableLike {
 }
 
 case class MockDropInTable() extends DropInTableLike {
-  override def updatePublishDropIn(dropInId: String, publish: Boolean): Future[Int] = Future.successful(1)
   override def getDropIns(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[DropInRow]] = Future.successful(Seq.empty)
   override def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] = Future.successful(Seq.empty)
 }
