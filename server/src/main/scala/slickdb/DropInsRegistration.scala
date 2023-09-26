@@ -32,9 +32,9 @@ class DropInsRegistration(tag: Tag) extends Table[DropInsRegistrationRow](tag, "
 }
 
 trait DropInsRegistrationTableLike {
-  def registerDropIns(email: String, id: String)(implicit ex: ExecutionContext): Future[Int]
+  def createDropInRegistration(email: String, id: String)(implicit ex: ExecutionContext): Future[Int]
 
-  def getRegisteredDropIns(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]]
+  def getDropInRegistrations(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]]
 }
 
 case class DropInsRegistrationTable(tables: Tables) extends DropInsRegistrationTableLike {
@@ -43,12 +43,12 @@ case class DropInsRegistrationTable(tables: Tables) extends DropInsRegistrationT
   private def getCurrentTime = new Timestamp(new DateTime().getMillis)
 
 
-  def registerDropIns(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = {
+  def createDropInRegistration(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = {
       val insertAction = dropInsRegistrationTable += DropInsRegistrationRow(email, id.toInt, getCurrentTime, Some(getCurrentTime))
       tables.run(insertAction)
   }
 
-  def getRegisteredDropIns(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] = {
+  def getDropInRegistrations(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] = {
     val query = dropInsRegistrationTable.filter(_.email === email).sortBy(_.registeredAt.desc).result
     val result = tables.run(query)
     result

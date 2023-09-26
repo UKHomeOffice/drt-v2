@@ -7,9 +7,9 @@ import diode.react.ReactConnectProxy
 import drt.client.components.styles.{DrtTheme, WithScalaCssImplicits}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{GetRegisteredDropIns, RegisterDropIns}
+import drt.client.services.handlers.{GetDropInRegistrations, CreateDropInRegistration}
 import drt.shared.{DropIn, DropInRegistration}
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, _}
+import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
@@ -23,7 +23,7 @@ object DropInComponent extends WithScalaCssImplicits {
 
   case class State(dropIn: Option[DropIn], confirmRegister: Boolean, showDialog: Boolean)
 
-  case class Props(email: String, dropIns: Seq[DropIn])
+  case class Props(dropIns: Seq[DropIn])
 
   class Backend($: BackendScope[Props, State]) {
 
@@ -50,12 +50,12 @@ object DropInComponent extends WithScalaCssImplicits {
       if (duration <= 1) f" $duration%.2f hour" else f" $duration%.2f hours"
     }
 
-    def componentDidMount(email: String) = Callback {
-      SPACircuit.dispatch(GetRegisteredDropIns(email))
+    def componentDidMount() = Callback {
+      SPACircuit.dispatch(GetDropInRegistrations())
     }
 
     def handleConfirmedClose(e: ReactEvent) = {
-      Callback(SPACircuit.dispatch(GetRegisteredDropIns($.props.runNow().email))) >>
+      Callback(SPACircuit.dispatch(GetDropInRegistrations())) >>
         $.modState(s => s.copy(confirmRegister = false))
     }
 
@@ -71,8 +71,8 @@ object DropInComponent extends WithScalaCssImplicits {
     }
 
     def handConfirmDialog(e: ReactEvent) = {
-      Callback($.state.runNow().dropIn.map(dropIn => SPACircuit.dispatch(RegisterDropIns(dropIn.id.map(_.toString).getOrElse(""))))) >>
-        Callback(SPACircuit.dispatch(GetRegisteredDropIns($.props.runNow().email))) >>
+      Callback($.state.runNow().dropIn.map(dropIn => SPACircuit.dispatch(CreateDropInRegistration(dropIn.id.map(_.toString).getOrElse(""))))) >>
+        Callback(SPACircuit.dispatch(GetDropInRegistrations())) >>
         $.modState(s => s.copy(showDialog = false)) >>
         $.modState(s => s.copy(confirmRegister = true))
     }
@@ -175,11 +175,10 @@ object DropInComponent extends WithScalaCssImplicits {
       .builder[Props]("DropInComponent")
       .initialState(State(None, false, false))
       .renderBackend[Backend]
-      .componentDidMount(scope => scope.backend.componentDidMount(scope.props.email))
+      .componentDidMount(scope => scope.backend.componentDidMount())
       .build
 
-  def apply(email: String,
-            dropIns: Seq[DropIn]): VdomElement =
-    component(Props(email, dropIns))
+  def apply(dropIns: Seq[DropIn]): VdomElement =
+    component(Props(dropIns))
 
 }

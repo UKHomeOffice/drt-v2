@@ -3,14 +3,14 @@ package controllers.application
 import controllers.Application
 import drt.shared.{DropIn, DropInRegistration}
 import play.api.mvc.{Action, AnyContent}
-import slickdb.{DropInRow}
+import slickdb.DropInRow
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import upickle.default.write
 
 import scala.concurrent.Future
 import scala.util.Try
 
-trait withDropIns {
+trait WithDropIns {
 
   self: Application =>
 
@@ -28,14 +28,15 @@ trait withDropIns {
     dropInsJson.map(dropIns => Ok(write(dropIns)))
   }
 
-  def getRegisterDropIns(email: String): Action[AnyContent] = Action.async { _ =>
+  def getDropInRegistrations: Action[AnyContent] = Action.async { implicit request =>
+    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
     val dropInsRegistrationJson: Future[Seq[DropInRegistration]] = ctrl.dropInRegistrationService
-      .getRegisteredDropIns(email.trim)
+      .getDropInRegistrations(userEmail)
       .map(_.map(_.toDropInRegistration))
     dropInsRegistrationJson.map(registered => Ok(write(registered)))
   }
 
-  def registerDropIns: Action[AnyContent] = authByRole(BorderForceStaff) {
+  def createDropInRegistration: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action { implicit request =>
       import spray.json.DefaultJsonProtocol._
       import spray.json._
@@ -45,8 +46,8 @@ trait withDropIns {
           log.info(s"Received drop-ins booking data")
           Try(content.parseJson.convertTo[String])
             .map { id =>
-              ctrl.dropInRegistrationService.registerDropIns(userEmail, id).map { _ =>
-                ctrl.dropInService.getDropIns(Seq(id)).map(sendDropInRegistrationEmail(userEmail, _))
+              ctrl.dropInRegistrationService.createDropInRegistration(userEmail, id).map { _ =>
+                ctrl.dropInService.getDropIns(Seq(id)).map(sendDropInRegistrationEmails(userEmail, _))
               }.recover {
                 case e => log.warning(s"Error while db insert for drop-in registration", e)
                   BadRequest(s"Failed to register drop-ins for user $userEmail")
@@ -61,7 +62,7 @@ trait withDropIns {
     }
   }
 
-  def sendDropInRegistrationEmail(email: String, dropIns: Seq[DropInRow]) = {
+  def sendDropInRegistrationEmails(email: String, dropIns: Seq[DropInRow]) = {
 
     dropIns.map { dropIn =>
       val personalisation = emailNotification

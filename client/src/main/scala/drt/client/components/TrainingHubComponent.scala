@@ -45,10 +45,6 @@ object TrainingHubComponent {
       <.div(
         modelRCP(modelMP => {
           val model: TrainingModel = modelMP()
-          for {
-            airportConfig <- model.airportConfig
-            loggedInUser <- model.loggedInUserPot
-          } yield {
             <.div(
               <.div(^.className := "terminal-nav-wrapper", trainingTabs(props)),
               <.div(^.className := "tab-content",
@@ -57,14 +53,13 @@ object TrainingHubComponent {
                     TrainingMaterialComponent()
                   case "dropInBooking" =>
                     <.div(model.dropIns.render(dropIns => {
-                      DropInComponent(loggedInUser.email, dropIns)
+                      DropInComponent(dropIns)
                     }))
 
                 }
               )
             )
-          }
-        }.getOrElse(LoadingOverlay())
+        }
         ))
     }
     .configure(Reusability.shouldComponentUpdate)

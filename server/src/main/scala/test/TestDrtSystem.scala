@@ -70,18 +70,13 @@ case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
 }
 
 case class MockDropInsRegistrationTable() extends DropInsRegistrationTableLike {
-  override def registerDropIns(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
+  override def createDropInRegistration(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def getRegisteredDropIns(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] = Future.successful(Seq.empty)
+  override def getDropInRegistrations(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] = Future.successful(Seq.empty)
 }
 
 case class MockDropInTable() extends DropInTableLike {
   override def updatePublishDropIn(dropInId: String, publish: Boolean): Future[Int] = Future.successful(1)
-
-  override def updateDropIn(dropInRow: DropInRow): Future[Int] = Future.successful(1)
-
-  override def deleteDropIn(dropInId: String): Future[Int] = Future.successful(1)
-
   override def getDropIns(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[DropInRow]] = Future.successful(Seq.empty)
   override def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] = Future.successful(Seq.empty)
 }
