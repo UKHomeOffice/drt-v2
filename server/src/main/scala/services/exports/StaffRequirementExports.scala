@@ -60,7 +60,7 @@ object StaffRequirementExports {
         val availableAndRequired: Seq[(String, String, String)] = (0 until numberOfSlots).map { slotNumber =>
           val slotCrunch = crunchMinutesBySlot.getOrElse(slotNumber, Seq())
           val slotStaff = staffMinutesBySlot.getOrElse(slotNumber, Seq())
-          val available = if (slotStaff.nonEmpty) slotStaff.map(_.available).max else 0
+          val available = if (slotStaff.nonEmpty) slotStaff.map(_.shifts).max else 0
           val required = maxRequired(slotCrunch, slotStaff)
           val diff = available - required
           (available.toString, required.toString, diff.toString)
