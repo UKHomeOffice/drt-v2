@@ -29,7 +29,7 @@ object TrainingMaterialDetailComponent {
     .render_P { _ =>
       val comingSoon = List(
         <.p(s"Coming soon...") ,
-        <.p(s"Meanwhile, drop-ins are being conducted. You can book a drop-in by clicking on the 'Drop-In Booking' tab.")
+        <.p(s"Meanwhile, drop-ins are being conducted. You can book a drop-in by clicking on the 'Book a Drop-in Session' tab.")
       ).toTagMod
 
       <.div(comingSoon)
