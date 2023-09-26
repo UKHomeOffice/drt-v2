@@ -1,5 +1,6 @@
 package services
 
+import actors.DateRange
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -12,17 +13,29 @@ object LocalDateStream {
                   transformData: (LocalDate, Seq[A]) => B,
                  ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, B), NotUsed] =
     (start, end, terminal) => {
-      val localStartMinute = SDate(start)
-      val utcStartDate = localStartMinute.addDays(-1 * startBufferDays).toUtcDate
-      val utcEndDate = SDate(end).addDays(endBufferDays).toUtcDate
+      val (utcStartDate: UtcDate, utcEndDate: UtcDate) = utcStartAndEnd(startBufferDays, endBufferDays, start, end)
       utcDateRangeTerminalStream(utcStartDate, utcEndDate, terminal)
         .sliding(3, 1)
+        .filter(_.nonEmpty)
         .map { days =>
-          val utcDate = days.map(_._1).sorted.drop(1).head
+          val sortedDates = days.map(_._1).sorted
+          val utcDate =
+            if (days.size > 2) sortedDates.drop(1).head
+            else sortedDates.head
+
           val localDate = LocalDate(utcDate.year, utcDate.month, utcDate.day)
-          (localDate, days.flatMap(_._2))
+          val value: Seq[A] = days.flatMap(_._2)
+
+          (localDate, value)
         }
         .filter { case (localDate, _) => start <= localDate && localDate <= end }
         .map { case (localDate, data) => (localDate, transformData(localDate, data)) }
     }
+
+  def utcStartAndEnd(startBufferDays: Int, endBufferDays: Int, start: LocalDate, end: LocalDate): (UtcDate, UtcDate) = {
+    val localStartMinute = SDate(start)
+    val utcStartDate = localStartMinute.addDays(-1 * startBufferDays).toUtcDate
+    val utcEndDate = SDate(end).addDays(1 + endBufferDays).addMinutes(-1).toUtcDate
+    (utcStartDate, utcEndDate)
+  }
 }

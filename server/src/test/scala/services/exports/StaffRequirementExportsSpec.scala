@@ -1,6 +1,5 @@
 package services.exports
 
-import akka.persistence.jdbc.util.BlockingOps.BlockingFutureImplicits
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
@@ -9,7 +8,8 @@ import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
-import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 class StaffRequirementExportsSpec extends Specification {
   "groupByXMinutes" should {
@@ -69,7 +69,7 @@ class StaffRequirementExportsSpec extends Specification {
       )
       import scala.concurrent.ExecutionContext.Implicits.global
       val getColumns = StaffRequirementExports.toHourlyStaffing(_ => Future.successful(staff), 720)
-      getColumns(LocalDate(2023, 9, 26), crunch).futureValue === List(
+      Await.result(getColumns(LocalDate(2023, 9, 26), crunch), 1.second) === List(
         ("26/09 - available", "26/09 - required", "26/09 - difference"),
         ("16", "14", "2"),
         ("11", "17", "-6"),
