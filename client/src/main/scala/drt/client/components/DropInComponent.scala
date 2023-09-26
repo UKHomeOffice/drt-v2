@@ -31,10 +31,23 @@ object DropInComponent extends WithScalaCssImplicits {
       dropInRegistrations = model.dropInRegistrations
     ))
 
-    def differenceInHours(startTime: Long, endTime: Long): String = {
+    private def roundToNearestHalfHour(hours: Double): Double = {
+      val wholeHours = hours.toInt
+      val fractionalHours = hours - wholeHours
+
+      val roundedFraction = fractionalHours match {
+        case x if x < 0.25 => 0.0
+        case x if x < 0.75 => 0.5
+        case _ => 1.0
+      }
+
+      wholeHours + roundedFraction
+    }
+
+    private def differenceInHours(startTime: Long, endTime: Long): String = {
       val differenceInMillis = Math.abs(startTime - endTime)
-      val hours = (differenceInMillis.toInt / (1000 * 60 * 60))
-      if (hours < 2) s" $hours hour" else s" $hours hours"
+      val duration = roundToNearestHalfHour(differenceInMillis.toDouble / (1000 * 60 * 60))
+      if (duration <= 1) f" $duration%.2f hour" else f" $duration%.2f hours"
     }
 
     def componentDidMount(email: String) = Callback {
