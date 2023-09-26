@@ -114,7 +114,7 @@ GET           /feature-guide-video/:filename                                    
 
 GET           /drop-ins                                                               controllers.Application.dropIns()
 + nocsrf
-POST          /drop-in-registrations                                                  controllers.Application.registerDropIns()
+POST          /drop-in-registrations                                                  controllers.Application.createDropInRegistration()
 
 GET           /drop-in-registrations                                                  controllers.Application.getDropInRegistrations
 

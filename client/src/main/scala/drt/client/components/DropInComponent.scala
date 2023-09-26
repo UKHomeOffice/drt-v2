@@ -47,7 +47,7 @@ object DropInComponent extends WithScalaCssImplicits {
     private def differenceInHours(startTime: Long, endTime: Long): String = {
       val differenceInMillis = Math.abs(startTime - endTime)
       val duration = roundToNearestHalfHour(differenceInMillis.toDouble / (1000 * 60 * 60))
-      if (duration <= 1) f" $duration%.2f hour" else f" $duration%.2f hours"
+      if (duration != 1) f" $duration%.2f hours" else f" $duration%.2f hour"
     }
 
     def componentDidMount() = Callback {
@@ -83,66 +83,71 @@ object DropInComponent extends WithScalaCssImplicits {
           val model: DropInRegistrationModel = modelMP()
 
           val showDropIns = {
-            ThemeProvider(DrtTheme.theme)(
-              <.div(
-                MuiGrid(container = true, spacing = 2, sx = SxProps(Map(
-                  "backgroundColor" -> "#FFFFFF",
-                )))(
+            props.dropIns.nonEmpty match {
+              case true =>
+                ThemeProvider(DrtTheme.theme)(
+                  <.div(
+                    MuiGrid(container = true, spacing = 2, sx = SxProps(Map(
+                      "backgroundColor" -> "#FFFFFF",
+                    )))(
+                      MuiGrid(sx = SxProps(Map(
+                        "padding-top" -> "24px",
+                        "font-size" -> DrtTheme.theme.typography.h3.fontSize,
+                        "font-weight" -> DrtTheme.theme.typography.h3.fontWeight
+                      )))(<.span(s"Book a Drop-in Session")),
+                    )),
                   MuiGrid(sx = SxProps(Map(
-                    "padding-top" -> "24px",
-                    "color" -> DrtTheme.theme.palette.primary.`700`,
-                    "font-size" -> DrtTheme.theme.typography.h3.fontSize,
-                    "font-weight" -> DrtTheme.theme.typography.h3.fontWeight
-                  )))(<.span(s"Book a Drop-in Session")),
-                )),
-              MuiGrid(sx = SxProps(Map(
-                "backgroundColor" -> "#FFFFFF",
-                "padding-top" -> "24px",
-                "padding-left" -> "12px",
-                "padding-right" -> "12px",
-                "overflow" -> "hidden"
-              )))(
-                MuiGrid(container = true, spacing = 2)(
-                  MuiGrid(item = true, xs = 12, sx = SxProps(Map(
                     "backgroundColor" -> "#FFFFFF",
-                    "border" -> "8px solid #C0C7DE"
-                  )))(
-                    MuiPaper()(
-                      MuiTable()(
-                        MuiTableHead()(
-                          MuiTableRow(sx =
-                            SxProps(Map("backgroundColor" -> DrtTheme.theme.palette.primary.`50`)))(
-                            MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Date"),
-                            MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Time"),
-                            MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Duration"),
-                            MuiTableCell()(""),
+                    "padding-top" -> "24px",
+                    "padding-left" -> "12px",
+                    "padding-right" -> "12px",
+                    "overflow" -> "hidden"
+                  )))(<.span(s"To book a drop-in session, please click the 'Book' button on the row that is most convenient for you."),
+                    MuiGrid(container = true, spacing = 2, sx = SxProps(Map("width" -> "60%")))(
+                      MuiGrid(item = true, xs = 12, sx = SxProps(Map(
+                        "backgroundColor" -> "#FFFFFF",
+                      )))(
+                        model.dropInRegistrations.renderReady(dropInRegistrations => {
+                          MuiTable()(
+                            MuiTableHead()(
+                              MuiTableRow()(
+                                MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Date"),
+                                MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Time"),
+                                MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Duration"),
+                                MuiTableCell()(""),
+                              )
+                            ),
+                            MuiTableBody()(
+                              props.dropIns.zipWithIndex.toVdomArray {
+                                case (tableItem, _) =>
+                                  val button: VdomNode =
+                                    dropInRegistrations.exists(_.dropInId == tableItem.id.getOrElse(0)) match {
+                                      case true =>
+                                        MuiButton(variant = "outlined", disableRipple = true, color = "success")("Booked")
+                                      case false =>
+                                        MuiButton(variant = "outlined", color = "primary")("Book", ^.onClick ==> openDialog(tableItem))
+                                    }
+                                  MuiTableRow()(
+                                    MuiTableCell()(SDate(tableItem.startTime).toISODateOnly),
+                                    MuiTableCell()(SDate(tableItem.startTime).prettyTime),
+                                    MuiTableCell()(differenceInHours(tableItem.startTime, tableItem.endTime)),
+                                    MuiTableCell()(button),
+                                  )
+                              })
                           )
-                        ),
-                        MuiTableBody()(
-                          model.dropInRegistrations.renderReady(dropInRegistrations => {
-                            props.dropIns.zipWithIndex.toVdomArray {
-                              case (tableItem, _) =>
-                                val button: VdomNode =
-                                  dropInRegistrations.exists(_.dropInId == tableItem.id.getOrElse(0)) match {
-                                    case true =>
-                                      MuiButton(variant = "outlined", disableRipple = true, color = "success")("Booked")
-                                    case false =>
-                                      MuiButton(variant = "outlined", color = "primary")("Book", ^.onClick ==> openDialog(tableItem))
-                                  }
-                                MuiTableRow()(
-                                  MuiTableCell()(SDate(tableItem.startTime).toISODateOnly),
-                                  MuiTableCell()(SDate(tableItem.startTime).prettyTime),
-                                  MuiTableCell()(differenceInHours(tableItem.startTime, tableItem.endTime)),
-                                  MuiTableCell()(button),
-                                )
-                            }
-                          }),
-                        )
-                      )
-                    )
-                  ))
-              )
-            )
+                        })
+                      ))
+                  )
+                )
+              case false =>
+                MuiTypography(variant = "h6", sx = SxProps(
+                  Map("padding-top" -> "24px",
+                    "padding-bottom" -> "24px",
+                    "display" -> "flex",
+                    "justifyContent" -> "center",
+                    "alignItems" -> "center")
+                ))("No drop-in sessions available. Please check back later.")
+            }
           }
           <.div(
             showDropIns,

@@ -7,10 +7,8 @@ import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
-
 import scala.language.postfixOps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiDialog, MuiDialogContent, MuiDialogTitle}
-
 
 object DropInDialog extends WithScalaCssImplicits {
 
