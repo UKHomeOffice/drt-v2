@@ -81,7 +81,7 @@ object TerminalPlanningComponent {
               <.span(^.className := "planning-export",
                 MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
                   MuiIcons(GetApp)(fontSize = "small"),
-                  "Export Week",
+                  "Export Staff Requirements",
                   ^.className := "btn btn-link muiButton",
                   ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
                   ^.target := "_blank"

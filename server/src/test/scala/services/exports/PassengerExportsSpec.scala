@@ -94,8 +94,8 @@ class PassengerExportsSpec extends CrunchTestLike {
       ctaArrival,
       domesticArrival,
       cancelledArrival,
-    )
-    PassengerExports.relevantPaxDuringWindow(arrivals, SDate("2020-01-02T00:00"), SDate("2020-01-02T23:59"), paxFeedSourceOrder) === 95
+    ).map(a => ApiFlightWithSplits(a, Set()))
+    PassengerExports.relevantPaxDuringWindow(paxFeedSourceOrder)(LocalDate(2020, 1, 2), arrivals) === 95
   }
 
   "flightsToDailySummaryRow should" >> {
