@@ -20,7 +20,7 @@ import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import services.metrics.Metrics
-import slickdb.{FeatureGuideTableLike, FeatureGuideViewLike, UserTableLike}
+import slickdb._
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -92,6 +92,13 @@ trait FeatureGuideProviderLike {
 
 }
 
+trait DropInProviderLike {
+
+  val dropInService: DropInTableLike
+
+  val dropInRegistrationService: DropInsRegistrationTableLike
+}
+
 trait UserRoleProviderLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -135,11 +142,12 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   with WithPortState
   with WithStaffing
   with WithApplicationInfo
+  with WithDropIns
   with WithSimulations
   with WithManifests
   with WithWalkTimes
   with WithDebug
-  with WithEmailFeedback
+  with WithEmailNotification
   with WithForecastAccuracy {
 
   implicit val system: ActorSystem = DrtActorSystem.actorSystem
@@ -165,6 +173,10 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   lazy val govNotifyReference = config.get[String]("notifications.reference")
 
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
+
+  val baseDomain = config.get[String]("drt.domain")
+
+  val isSecure = config.get[Boolean]("drt.use-https")
 
   val log: LoggingAdapter = system.log
 
@@ -214,8 +226,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       ctrl.featureGuideService.getGuideIdForFilename(filename).flatMap {
         case Some(id) =>
           ctrl.featureGuideViewService
-              .insertOrUpdate(id, userEmail)
-              .map(_ => Ok(s"File $filename viewed updated"))
+            .insertOrUpdate(id, userEmail)
+            .map(_ => Ok(s"File $filename viewed updated"))
         case None =>
           Future.successful(Ok(s"File $filename viewed not updated as file not found"))
       }
@@ -270,8 +282,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     if (user.hasRole(airportConfig.role)) {
       Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
     } else {
-      val baseDomain = config.get[String]("drt.domain")
-      val isSecure = config.get[Boolean]("drt.use-https")
       val protocol = if (isSecure) "https://" else "http://"
       val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
       val redirectUrl = protocol + baseDomain + fromPort
@@ -290,8 +300,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     )
 
     val feedsToMonitor = ctrl.feedActorsForPort
-                             .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
-                             .values.toList
+      .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
+      .values.toList
 
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
@@ -364,9 +374,9 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token")
-                       .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+      .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
-                            .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+      .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
@@ -381,8 +391,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         val logLevel = postStringValOrElse("level", "ERROR")
 
         val millis = request.body.get("timestamp")
-                            .map(_.head.toLong)
-                            .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+          .map(_.head.toLong)
+          .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
 
         val logMessage = Map(
           "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),
