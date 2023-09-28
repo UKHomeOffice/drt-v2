@@ -68,7 +68,7 @@ object TerminalPlanningComponent {
         (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
       )
 
-      def downloadBlob(content: String, filename: String): Unit = {
+      def downloadContent(content: String, filename: String): Unit = {
         val a = document.createElement("a").asInstanceOf[HTMLAnchorElement];
         a.setAttribute("href", URL.createObjectURL(new Blob(js.Array(content))))
         a.setAttribute("download", filename)
@@ -89,7 +89,7 @@ object TerminalPlanningComponent {
               DrtApi.get(url)
                 .map { r =>
                   val fileName = r.getResponseHeader("Content-Disposition").split("filename=")(1)
-                  downloadBlob(r.responseText, fileName)
+                  downloadContent(r.responseText, fileName)
                   direct.modState(s => updateState(s, false))
                 }
                 .recover {
