@@ -22,7 +22,7 @@ object FlightChartComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FlightChart")
     .initialState(State(false))
-    .renderPS((scope, props, state) => {
+    .renderPS { (scope, props, state) =>
       val nationalitiesCount = if (state.showAllNationalities) props.manifestSummary.nationalities.size else 10
 
       val sortedNats = summariseNationalities(props.manifestSummary.nationalities, nationalitiesCount)
@@ -58,7 +58,7 @@ object FlightChartComponent {
       else
         200 + widthFactor * props.manifestSummary.nationalities.size
 
-      val isBeforeAgeEligibilityChangeDate : Long => Boolean = scheduled => scheduled < SDate("2023-07-25T00:00").millisSinceEpoch
+      val isBeforeAgeEligibilityChangeDate: Long => Boolean = scheduled => scheduled < SDate("2023-07-25T00:00").millisSinceEpoch
 
       val paxTypeData: ChartJsData = ChartJsData(
         labels = sortedPaxTypes.map {
@@ -99,7 +99,7 @@ object FlightChartComponent {
                 EmptyVdom,
             )
         ))
-    }).build
+    }.build
 
   private def chart(title: String, data: ChartJsData, maxY: Int, width: Int, height: Int): UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]] =
     ChartJSComponent(
