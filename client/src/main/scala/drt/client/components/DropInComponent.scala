@@ -33,11 +33,13 @@ object DropInComponent extends WithScalaCssImplicits {
 
     def formatDuration(minutes: Int): String = {
       val roundedMinutes = (math.round(minutes.toFloat / 15) * 15).toInt
+      val displayMinutes = if (roundedMinutes % 60 < 1) "" else s"${roundedMinutes % 60} minutes"
 
-      val displayMinutes = if (roundedMinutes % 60 < 1) "" else s"${roundedMinutes % 60}m"
+      val hours = {roundedMinutes / 60}
+      val displayHours = if(hours != 1) s"$hours hours" else s"$hours hour"
 
-      if (roundedMinutes < 60) s"${roundedMinutes}m"
-      else s"${roundedMinutes / 60}h $displayMinutes"
+      if (roundedMinutes < 60) s"${roundedMinutes} minutes"
+      else s"$displayHours $displayMinutes"
     }
 
     private def differenceInHours(startTime: Long, endTime: Long): String = {
@@ -123,8 +125,8 @@ object DropInComponent extends WithScalaCssImplicits {
                                         MuiButton(variant = "outlined", color = "primary")("Book", ^.onClick ==> openDialog(tableItem))
                                     }
                                   MuiTableRow()(
-                                    MuiTableCell()(SDate(tableItem.startTime).`DD-MM-YYYY-String`),
-                                    MuiTableCell()(SDate(tableItem.startTime).prettyTime),
+                                    MuiTableCell()(SDate(tableItem.startTime).`DD-MONTHString-YYYY`),
+                                    MuiTableCell()(SDate(tableItem.startTime).prettyTimeWithMeridian),
                                     MuiTableCell()(differenceInHours(tableItem.startTime, tableItem.endTime)),
                                     MuiTableCell()(button),
                                   )
@@ -146,8 +148,8 @@ object DropInComponent extends WithScalaCssImplicits {
           }
           <.div(
             showDropIns,
-            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).toISODateOnly).getOrElse(""),
-              state.dropIn.map(dropIn => SDate(dropIn.startTime).prettyTime).getOrElse(""),
+            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-MONTHString-YYYY`).getOrElse(""),
+              state.dropIn.map(dropIn => SDate(dropIn.startTime).prettyTimeWithMeridian).getOrElse(""),
               state.dropIn.map(dropIn => differenceInHours(dropIn.startTime, dropIn.endTime)).getOrElse(""),
               state.showDialog,
               handCloseDialog,
@@ -155,8 +157,8 @@ object DropInComponent extends WithScalaCssImplicits {
               "Confirm your booking",
               "You are about to book a drop-in session for the date and time shown above. Please confirm this is correct.",
               "Confirm booking"),
-            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).toISODateOnly).getOrElse(""),
-              state.dropIn.map(dropIn => SDate(dropIn.startTime).prettyTime).getOrElse(""),
+            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-MONTHString-YYYY`).getOrElse(""),
+              state.dropIn.map(dropIn => SDate(dropIn.startTime).prettyTimeWithMeridian).getOrElse(""),
               state.dropIn.map(dropIn => differenceInHours(dropIn.startTime, dropIn.endTime)).getOrElse(""),
               state.confirmRegister,
               handleConfirmedClose,
