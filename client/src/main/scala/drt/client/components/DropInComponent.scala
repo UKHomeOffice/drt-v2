@@ -31,23 +31,18 @@ object DropInComponent extends WithScalaCssImplicits {
       dropInRegistrations = model.dropInRegistrations
     ))
 
-    private def roundToNearestHalfHour(hours: Double): Double = {
-      val wholeHours = hours.toInt
-      val fractionalHours = hours - wholeHours
+    def formatDuration(minutes: Int): String = {
+      val roundedMinutes = (math.round(minutes.toFloat / 15) * 15).toInt
 
-      val roundedFraction = fractionalHours match {
-        case x if x < 0.25 => 0.0
-        case x if x < 0.75 => 0.5
-        case _ => 1.0
-      }
+      val displayMinutes = if (roundedMinutes % 60 < 1) "" else s"${roundedMinutes % 60}m"
 
-      wholeHours + roundedFraction
+      if (roundedMinutes < 60) s"${roundedMinutes}m"
+      else s"${roundedMinutes / 60}h $displayMinutes"
     }
 
     private def differenceInHours(startTime: Long, endTime: Long): String = {
       val differenceInMillis = Math.abs(startTime - endTime)
-      val duration = roundToNearestHalfHour(differenceInMillis.toDouble / (1000 * 60 * 60))
-      if (duration != 1) f" $duration%.2f hours" else f" $duration%.2f hour"
+      formatDuration(differenceInMillis.toInt / (1000 * 60))
     }
 
     def componentDidMount() = Callback {
@@ -128,7 +123,7 @@ object DropInComponent extends WithScalaCssImplicits {
                                         MuiButton(variant = "outlined", color = "primary")("Book", ^.onClick ==> openDialog(tableItem))
                                     }
                                   MuiTableRow()(
-                                    MuiTableCell()(SDate(tableItem.startTime).toISODateOnly),
+                                    MuiTableCell()(SDate(tableItem.startTime).`DD-MM-YYYY-String`),
                                     MuiTableCell()(SDate(tableItem.startTime).prettyTime),
                                     MuiTableCell()(differenceInHours(tableItem.startTime, tableItem.endTime)),
                                     MuiTableCell()(button),
