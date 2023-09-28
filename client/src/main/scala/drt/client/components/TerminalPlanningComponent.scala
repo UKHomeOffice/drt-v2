@@ -8,23 +8,23 @@ import drt.client.services.DrtApi
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.{Forecast, MilliDate}
-import io.kinoplan.scalajs.react.bridge.{WithProps, WithPropsAndTagsMods}
+import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiCircularProgress, MuiDivider}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.callback.CallbackTo
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.all.onClick.Event
+import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
 
 object TerminalPlanningComponent {
@@ -48,7 +48,7 @@ object TerminalPlanningComponent {
   case class State(downloadingHeadlines: Boolean, downloadingStaff: Boolean)
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
-    .initialState(State(false, false))
+    .initialState(State(downloadingHeadlines = false, downloadingStaff = false))
     .renderPS { (scope, props, state) =>
       val sortedDays = props.forecastPeriod.forecast.days.toList.sortBy(_._1)
       val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] = Forecast.periodByTimeSlotAcrossDays(props.forecastPeriod.forecast)
@@ -69,7 +69,7 @@ object TerminalPlanningComponent {
       )
 
       def downloadContent(content: String, filename: String): Unit = {
-        val a = document.createElement("a").asInstanceOf[HTMLAnchorElement];
+        val a = document.createElement("a").asInstanceOf[HTMLAnchorElement]
         a.setAttribute("href", URL.createObjectURL(new Blob(js.Array(content))))
         a.setAttribute("download", filename)
         a.click()
@@ -81,7 +81,6 @@ object TerminalPlanningComponent {
       def createDownload(updateState: (State, Boolean) => State): String => Event => CallbackTo[Unit] = url => {
         event =>
           event.preventDefault()
-          import scala.concurrent.ExecutionContext.Implicits.global
           scope.modState(s => updateState(s, true)) >>
             Callback {
               val direct = scope.withEffectsImpure
