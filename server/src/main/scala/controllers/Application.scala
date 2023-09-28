@@ -160,7 +160,15 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   val ctrl: DrtSystemInterface = DrtActorSystem.drtSystem
 
-  ctrl.run()
+  val log: LoggingAdapter = system.log
+
+  val systemStartGracePeriod: FiniteDuration = config.get[Int]("start-up-grace-period-seconds").seconds
+
+  log.info(s"Scheduling crunch system to start in ${systemStartGracePeriod.toString()}")
+  system.scheduler.scheduleOnce(systemStartGracePeriod) {
+    log.info("Starting crunch system")
+    ctrl.run()
+  }
 
   val now: () => SDateLike = () => SDate.now()
 
@@ -178,7 +186,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
 
   val isSecure = config.get[Boolean]("drt.use-https")
 
-  val log: LoggingAdapter = system.log
 
   log.info(s"Starting DRTv2 build ${BuildInfo.version}")
 
