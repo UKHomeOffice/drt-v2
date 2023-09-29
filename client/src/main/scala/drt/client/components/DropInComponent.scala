@@ -17,9 +17,30 @@ import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, Reu
 
 import scala.language.postfixOps
 
+trait DropInTimeDisplay {
+  def formatDuration(minutes: Int): String = {
+    val roundedMinutes = (math.round(minutes.toFloat / 15) * 15).toInt
+    val displayMinutes = if (roundedMinutes % 60 < 1) "" else s"${roundedMinutes % 60} minutes"
+
+    val hours = {
+      roundedMinutes / 60
+    }
+    val displayHours = if (hours != 1) s"$hours hours" else s"$hours hour"
+
+    if (roundedMinutes < 60) s"$roundedMinutes minutes"
+    else s"$displayHours $displayMinutes".trim
+  }
+
+  def differenceInHours(startTime: Long, endTime: Long): String = {
+    val differenceInMillis = Math.abs(startTime - endTime)
+    formatDuration(differenceInMillis.toInt / (1000 * 60))
+  }
+
+}
+
 case class DropInRegistrationModel(dropInRegistrations: Pot[Seq[DropInRegistration]]) extends UseValueEq
 
-object DropInComponent extends WithScalaCssImplicits {
+object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
 
   case class State(dropIn: Option[DropIn], confirmRegister: Boolean, showDialog: Boolean)
 
@@ -31,21 +52,6 @@ object DropInComponent extends WithScalaCssImplicits {
       dropInRegistrations = model.dropInRegistrations
     ))
 
-    def formatDuration(minutes: Int): String = {
-      val roundedMinutes = (math.round(minutes.toFloat / 15) * 15).toInt
-      val displayMinutes = if (roundedMinutes % 60 < 1) "" else s"${roundedMinutes % 60} minutes"
-
-      val hours = {roundedMinutes / 60}
-      val displayHours = if(hours != 1) s"$hours hours" else s"$hours hour"
-
-      if (roundedMinutes < 60) s"${roundedMinutes} minutes"
-      else s"$displayHours $displayMinutes"
-    }
-
-    private def differenceInHours(startTime: Long, endTime: Long): String = {
-      val differenceInMillis = Math.abs(startTime - endTime)
-      formatDuration(differenceInMillis.toInt / (1000 * 60))
-    }
 
     def componentDidMount() = Callback {
       SPACircuit.dispatch(GetDropInRegistrations())
@@ -125,7 +131,7 @@ object DropInComponent extends WithScalaCssImplicits {
                                         MuiButton(variant = "outlined", color = "primary")("Book", ^.onClick ==> openDialog(tableItem))
                                     }
                                   MuiTableRow()(
-                                    MuiTableCell()(SDate(tableItem.startTime).`DD-MONTHString-YYYY`),
+                                    MuiTableCell()(SDate(tableItem.startTime).`DD-Month-YYYY`),
                                     MuiTableCell()(SDate(tableItem.startTime).prettyTimeWithMeridian),
                                     MuiTableCell()(differenceInHours(tableItem.startTime, tableItem.endTime)),
                                     MuiTableCell()(button),
@@ -148,7 +154,7 @@ object DropInComponent extends WithScalaCssImplicits {
           }
           <.div(
             showDropIns,
-            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-MONTHString-YYYY`).getOrElse(""),
+            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-Month-YYYY`).getOrElse(""),
               state.dropIn.map(dropIn => SDate(dropIn.startTime).prettyTimeWithMeridian).getOrElse(""),
               state.dropIn.map(dropIn => differenceInHours(dropIn.startTime, dropIn.endTime)).getOrElse(""),
               state.showDialog,
@@ -157,7 +163,7 @@ object DropInComponent extends WithScalaCssImplicits {
               "Confirm your booking",
               "You are about to book a drop-in session for the date and time shown above. Please confirm this is correct.",
               "Confirm booking"),
-            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-MONTHString-YYYY`).getOrElse(""),
+            DropInDialog(state.dropIn.map(dropIn => SDate(dropIn.startTime).`DD-Month-YYYY`).getOrElse(""),
               state.dropIn.map(dropIn => SDate(dropIn.startTime).prettyTimeWithMeridian).getOrElse(""),
               state.dropIn.map(dropIn => differenceInHours(dropIn.startTime, dropIn.endTime)).getOrElse(""),
               state.confirmRegister,
