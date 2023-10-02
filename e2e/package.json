@@ -10,7 +10,7 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "@types/node": "^18.16.0",
-    "@typescript-eslint/eslint-plugin": "^5.60.1",
+    "@typescript-eslint/eslint-plugin": "^6.7.4",
     "@typescript-eslint/parser": "^5.62.0",
     "cypress": "^12.17.4",
     "eslint": "^8.41.0",
