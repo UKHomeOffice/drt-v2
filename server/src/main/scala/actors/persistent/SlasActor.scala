@@ -2,7 +2,7 @@ package actors.persistent
 
 import actors.AddUpdatesSubscriber
 import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.EgateBanksUpdatesActor.{ReceivedSubscriberAck, SendToSubscriber}
+import actors.persistent.SlasActor.{ReceivedSubscriberAck, SendToSubscriber}
 import actors.persistent.staffing.GetState
 import actors.serializers.EgateBanksUpdatesMessageConversion
 import akka.actor.ActorRef
@@ -11,41 +11,43 @@ import akka.persistence._
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.util.Timeout
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.egates._
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.config.slas.SlaUpdates
 import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
+import scala.collection.immutable.SortedMap
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
+case class SetSlasUpdate(effectiveFrom: Long, item: Map[Queue, Int])
 
-object EgateBanksUpdatesActor {
+object SlasActor {
   case object SendToSubscriber
 
   case object ReceivedSubscriberAck
 
-  def terminalEgatesProvider(egateBanksUpdatesActor: ActorRef)
-                            (implicit timeout: Timeout, ec: ExecutionContext): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) =>
+  def slasProvider(egateBanksUpdatesActor: ActorRef)
+                  (implicit timeout: Timeout, ec: ExecutionContext): MillisSinceEpoch => Future[Map[Queue, Int]] = (at: MillisSinceEpoch) =>
     egateBanksUpdatesActor
     .ask(GetState)
-    .mapTo[PortEgateBanksUpdates]
-    .map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
+    .mapTo[SlaUpdates]
+    .map(_.updatesForDate(at).getOrElse(throw new Exception(s"No slas found for date $at")))
 }
 
-class EgateBanksUpdatesActor(val now: () => SDateLike,
-                             defaults: Map[Terminal, EgateBanksUpdates],
-                             offsetMinutes: Int,
-                             durationMinutes: Int,
-                             maxForecastDays: Int) extends RecoveryActorLike with PersistentDrtActor[PortEgateBanksUpdates] {
+class SlasActor(val now: () => SDateLike,
+                crunchRequest: MillisSinceEpoch => CrunchRequest,
+                maxForecastDays: Int) extends RecoveryActorLike with PersistentDrtActor[SlaUpdates] {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def persistenceId: String = "egate-banks-updates"
+  override def persistenceId: String = "slas"
 
   override val maybeSnapshotInterval: Option[Int] = None
 
@@ -69,7 +71,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
   override def stateToMessage: GeneratedMessage =
     EgateBanksUpdatesMessageConversion.portUpdatesToMessage(state)
 
-  var state: PortEgateBanksUpdates = initialState
+  var state: SlaUpdates = SlaUpdates(SortedMap())
 
   var maybeSubscriber: Option[SourceQueueWithComplete[List[EgateBanksUpdateCommand]]] = None
   var subscriberMessageQueue: List[EgateBanksUpdateCommand] = List()
@@ -81,7 +83,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val timeout: Timeout = new Timeout(60.seconds)
 
-  override def initialState: PortEgateBanksUpdates = PortEgateBanksUpdates(defaults)
+  override def initialState: SlaUpdates = SlaUpdates(SortedMap())
 
   override def receiveCommand: Receive = {
     case AddUpdatesSubscriber(crunchRequestQueue) =>

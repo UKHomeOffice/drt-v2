@@ -14,7 +14,7 @@ import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: List[Queue], cruncher: TryCrunchWholePax) {
+case class TerminalDesksAndWaitsProvider(sla: Queue => Future[Int], queuePriority: List[Queue], cruncher: TryCrunchWholePax) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def workToDeskRecs(terminal: Terminal,
@@ -56,8 +56,11 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
     val queues = Source(queuePriority.filter(queuesToProcess.contains))
 
     queues
+      .mapAsync(1) { queue =>
+        sla(queue).map(sla => (queue, sla))
+      }
       .runFoldAsync(Map[Queue, (Iterable[Int], Iterable[Int], Iterable[Double])]()) {
-        case (queueRecsSoFar, queue) =>
+        case (queueRecsSoFar, (queue, sla)) =>
           log.debug(s"Optimising $queue")
           val queuePassengers = passengersByQueue(queue)
           val queueDeskAllocations = queueRecsSoFar.view.mapValues { case (desks, _, _) => desks.toList }.toMap
@@ -74,7 +77,7 @@ case class TerminalDesksAndWaitsProvider(slas: Map[Queue, Int], queuePriority: L
                 val maxDesks = processorsProvider.maxProcessors(someWork.size)
                 val nonZeroMaxDesksPct = maxDesks.count(_ > 0).toDouble / maxDesks.size
                 val optimisedDesks = if (nonZeroMaxDesksPct > 0.5) {
-                  cruncher(someWork, minDesks.toSeq, maxDesks, OptimiserConfig(slas(queue), processorsProvider)) match {
+                  cruncher(someWork, minDesks.toSeq, maxDesks, OptimiserConfig(sla, processorsProvider)) match {
                     case Success(OptimizerCrunchResult(desks, waits, paxInQueue)) =>
                       queueRecsSoFar + (queue -> ((desks.toList, waits.toList, paxInQueue)))
                     case Failure(t) =>
