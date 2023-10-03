@@ -1,12 +1,9 @@
 package actors
 
-import actors.acking.Acking
-import actors.acking.Acking.AckingAsker
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.daily._
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
-import akka.pattern.{ask, pipe}
+import akka.pattern.{StatusReply, ask, pipe}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
@@ -14,6 +11,9 @@ import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.actor.acking.Acking
+import uk.gov.homeoffice.drt.actor.acking.Acking.AckingAsker
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -209,7 +209,7 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
     mins.minutes.headOption.exists(_.toMinute.isInstanceOf[StaffMinute])
 
   def processMessage: Receive = {
-    case StreamInitialized => sender() ! Ack
+    case StreamInitialized => sender() ! StatusReply.Ack
 
     case StreamCompleted => log.info(s"Stream completed")
 
@@ -220,7 +220,7 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
       askThenAck(flightsRouterActor, updates, replyTo)
 
     case noUpdates: PortStateMinutes[_, _] if noUpdates.isEmpty =>
-      sender() ! Ack
+      sender() ! StatusReply.Ack
 
     case someQueueUpdates: MinutesContainer[CrunchMinute, TQM] if containsQueueTypeMinutes(someQueueUpdates) =>
       val replyTo = sender()

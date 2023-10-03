@@ -1,31 +1,26 @@
 package services.crunch.deskrecs
 
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.ActorRef
+import akka.pattern.StatusReply
 import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
 import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
 import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch.europeLondonTimeZone
-import services.{StreamSupervision, TimeLogger}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
-
-import scala.collection.immutable.NumericRange
+import services.StreamSupervision
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
+import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 
 object RunnableOptimisation {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  val timeLogger: TimeLogger = TimeLogger("Optimisation", 1000, log)
 
   def createGraph[A](crunchRequestSource: SortedActorRefSource,
                      minutesSinkActor: ActorRef,
                      crunchRequestsToQueueMinutes: Flow[ProcessingRequest, A, NotUsed],
                      graphName: String,
                     ): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
-    val deskRecsSink = Sink.actorRefWithAck(minutesSinkActor, StreamInitialized, Ack, StreamCompleted, StreamFailure)
+    val deskRecsSink = Sink.actorRefWithAck(minutesSinkActor, StreamInitialized, StatusReply.Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[A]
 
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {

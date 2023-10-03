@@ -2,21 +2,21 @@ package actors
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.PartitionedPortStateTestActor.{UpdateStateCrunchMinutes, UpdateStateFlights, UpdateStateStaffMinutes}
-import actors.acking.Acking.AckingAsker
-import actors.acking.AckingReceiver.{Ack, StreamFailure}
 import actors.routing.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.ActorRef
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.PaxForArrivals
 import drt.shared._
-import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, FlightsWithSplitsDiff, SplitsForArrivals, UniqueArrival}
+import uk.gov.homeoffice.drt.actor.acking.Acking.AckingAsker
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamFailure
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 object PartitionedPortStateTestActor {
   case class UpdateStateFlights(fws: FlightsWithSplits, removals: Iterable[UniqueArrival])
@@ -110,7 +110,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
           }
         case _ => sendStateToProbe()
       }
-      replyTo ! Ack
+      replyTo ! StatusReply.Ack
     }
   }
 

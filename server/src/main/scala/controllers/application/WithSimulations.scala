@@ -66,6 +66,7 @@ trait WithSimulations {
               simulationResult(
                 simulationParams,
                 simulationConfig,
+                ctrl.slaProvider,
                 SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
                 OptimisationProviders.flightsWithSplitsProvider(portStateActor),
                 OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
@@ -81,7 +82,7 @@ trait WithSimulations {
 
             simulationResultAsCsv(simulationParams, simulationParams.terminal, futureDeskRecs)
           case Failure(e) =>
-            log.error("Invalid Simulation attempt", e)
+            log.error(s"Invalid Simulation attempt: ${e.getMessage}")
             Future(BadRequest("Unable to parse parameters: " + e.getMessage))
         }
     }
@@ -114,6 +115,7 @@ trait WithSimulations {
               simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
+                ctrl.slaProvider,
                 splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
                 liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
@@ -132,7 +134,7 @@ trait WithSimulations {
               Ok(write(SimulationResult(simulationParams, summary(res, simulationParams.terminal))))
             })
           case Failure(e) =>
-            log.error("Invalid Simulation attempt", e)
+            log.error(s"Invalid Simulation attempt: ${e.getMessage}")
             Future(BadRequest("Unable to parse parameters: " + e.getMessage))
         }
     }
@@ -188,7 +190,7 @@ trait WithSimulations {
       val result: Result = Try(sourceToCsvResponse(stream, fileName)) match {
         case Success(value) => value
         case Failure(t) =>
-          log.error("Failed to get CSV export", t)
+          log.error(s"Failed to get CSV export: ${t.getMessage}")
           BadRequest("Failed to get CSV export")
       }
 

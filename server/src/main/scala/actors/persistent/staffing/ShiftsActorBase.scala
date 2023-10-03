@@ -1,16 +1,15 @@
 package actors.persistent.staffing
 
 import actors.ExpiryActorLike
-import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.PersistentDrtActor
 import akka.actor.{ActorRef, Scheduler}
 import akka.persistence._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.actor.RecoveryActorLike
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}

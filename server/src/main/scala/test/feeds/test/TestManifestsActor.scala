@@ -1,8 +1,8 @@
 package test.feeds.test
 
 import actors.SubscribeResponseQueue
-import actors.acking.AckingReceiver.Ack
 import akka.actor.{Actor, ActorLogging, Scheduler}
+import akka.pattern.StatusReply
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
@@ -11,8 +11,6 @@ import test.TestActors.ResetData
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
-case object GetManifests
 
 class TestManifestsActor extends Actor with ActorLogging {
 
@@ -28,17 +26,17 @@ class TestManifestsActor extends Actor with ActorLogging {
 
       maybeSubscriber match {
         case Some(subscriber) =>
-          val onCompletionSendAck = Option(() => replyTo ! Ack)
+          val onCompletionSendAck = Option(() => replyTo ! StatusReply.Ack)
           OfferHandler.offerWithRetries(subscriber, ManifestsFeedSuccess(DqManifests(0L, manifests)), 5, onCompletionSendAck)
           maybeManifests = None
         case None =>
           maybeManifests = Option(manifests)
-          replyTo ! Ack
+          replyTo ! StatusReply.Ack
       }
 
     case ResetData =>
       maybeManifests = None
-      sender() ! Ack
+      sender() ! StatusReply.Ack
 
     case SubscribeResponseQueue(manifestsResponse) =>
       maybeSubscriber = Option(manifestsResponse)

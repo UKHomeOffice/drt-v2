@@ -1,11 +1,10 @@
 package actors
 
-import actors.acking.AckingReceiver
-import actors.acking.AckingReceiver.Ack
 import actors.persistent.staffing.GetState
 import actors.serializers.ManifestMessageConversion
+import akka.Done
 import akka.actor.{ActorSystem, PoisonPill, Props}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.persistence.SaveSnapshotSuccess
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -31,7 +30,7 @@ object RouteHistoricManifestActor {
         RouteHistoricManifestActor.forUniqueArrival(key, now, None)(system, timeout, ec)
       }
 
-  val manifestCacheStore: (PortCode, () => SDateLike, ActorSystem, Timeout, ExecutionContext) => (Arrival, ManifestLike) => Future[AckingReceiver.Ack.type] =
+  val manifestCacheStore: (PortCode, () => SDateLike, ActorSystem, Timeout, ExecutionContext) => (Arrival, ManifestLike) => Future[StatusReply[Done]] =
     (destination: PortCode, now: () => SDateLike, system: ActorSystem, timeout: Timeout, ec: ExecutionContext) =>
       (arrival: Arrival, manifest: ManifestLike) => {
         val key = UniqueArrivalKey(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
@@ -56,16 +55,16 @@ object RouteHistoricManifestActor {
   }
 
   private def updateForUniqueArrival(uniqueArrivalKey: UniqueArrivalKey, manifestLike: ManifestLike, now: () => SDateLike)
-                                    (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Future[AckingReceiver.Ack.type] = {
+                                    (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): Future[StatusReply[Done]] = {
     val actor = system.actorOf(props(uniqueArrivalKey, now, None))
 
     actor
       .ask(manifestLike)
-      .mapTo[Ack.type]
+      .mapTo[StatusReply[Done]]
       .recover { case t =>
         actor ! PoisonPill
         log.error(s"Historic manifest cache storage request for $uniqueArrivalKey failed to respond", t)
-        Ack
+        StatusReply.Ack
       }
   }
 
@@ -131,6 +130,6 @@ class RouteHistoricManifestActor(origin: String,
   def updateAndPersist(vms: ManifestLike): Unit = {
     state = Option(vms)
 
-    persistAndMaybeSnapshotWithAck(ManifestMessageConversion.manifestLikeToMessage(vms), List((sender(), Ack)))
+    persistAndMaybeSnapshotWithAck(ManifestMessageConversion.manifestLikeToMessage(vms), List((sender(), StatusReply.Ack)))
   }
 }

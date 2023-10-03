@@ -2,8 +2,8 @@ package actors.serializers
 
 import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages, maybeCrunchRequestFromMessage, removeCrunchRequestMessage}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.actor.commands.CrunchRequest
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.RemoveCrunchRequestMessage
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import uk.gov.homeoffice.drt.time.LocalDate
 
 class CrunchRequestMessageConversionSpec extends Specification {

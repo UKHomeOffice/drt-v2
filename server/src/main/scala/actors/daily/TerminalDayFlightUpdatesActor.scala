@@ -1,9 +1,9 @@
 package actors.daily
 
 import actors.StreamingJournalLike
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.actor.PoisonPill
+import akka.pattern.StatusReply.Ack
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 import akka.stream.scaladsl.{Keep, Sink}
@@ -12,6 +12,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, SplitsForArrivalsMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage

@@ -1,7 +1,5 @@
 package actors.persistent
 
-import actors.AddUpdatesSubscriber
-import actors.acking.AckingReceiver.StreamCompleted
 import actors.persistent.EgateBanksUpdatesActor.{ReceivedSubscriberAck, SendToSubscriber}
 import actors.persistent.staffing.GetState
 import actors.serializers.EgateBanksUpdatesMessageConversion
@@ -13,8 +11,10 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
-import uk.gov.homeoffice.drt.actor.RecoveryActorLike
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
+import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
+import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
+import uk.gov.homeoffice.drt.actor.commands.CrunchRequest
 import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
@@ -76,7 +76,6 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
   var awaitingSubscriberAck = false
 
   var maybeCrunchRequestQueueActor: Option[ActorRef] = None
-  var readyToEmit: Boolean = false
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val timeout: Timeout = new Timeout(60.seconds)

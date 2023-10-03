@@ -1,9 +1,8 @@
 package actors.daily
 
-import actors.acking.AckingReceiver.Ack
 import actors.persistent.staffing.GetState
 import akka.actor.{ActorRef, Props}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.persistence.PersistentActor
 import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
 import scalapb.GeneratedMessage
@@ -31,7 +30,7 @@ class PersistMessageForIdActor(idToPersist: String) extends PersistentActor {
       val replyTo = sender()
       persist(message)(message => {
         context.system.eventStream.publish(message)
-        replyTo ! Ack
+        replyTo ! StatusReply.Ack
       })
 
   }

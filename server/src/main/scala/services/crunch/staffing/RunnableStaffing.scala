@@ -1,14 +1,12 @@
 package services.crunch.staffing
 
 import akka.NotUsed
-import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
-import akka.util.Timeout
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute, StaffMinutes}
 import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovements, TM}
 import org.slf4j.{Logger, LoggerFactory}
-import services.crunch.deskrecs.RunnableOptimisation.{ProcessingRequest, TerminalUpdateRequest}
 import services.graphstages.{Crunch, Staffing}
+import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -23,7 +21,7 @@ object RunnableStaffing {
                        movementsProvider: ProcessingRequest => Future[StaffMovements],
                        now: () => SDateLike,
                       )
-                      (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): Flow[ProcessingRequest, MinutesContainer[StaffMinute, TM], NotUsed] =
+                      (implicit ec: ExecutionContext): Flow[ProcessingRequest, MinutesContainer[StaffMinute, TM], NotUsed] =
     Flow[ProcessingRequest]
       .wireTap(processingRequest => log.info(s"${processingRequest.localDate} staffing crunch request started"))
       .mapAsync(1)(cr => shiftsProvider(cr).map(sa => (cr, sa)))
@@ -31,7 +29,7 @@ object RunnableStaffing {
       .mapAsync(1) { case (cr, sa, fp) => movementsProvider(cr).map(sm => (cr, sa, fp, sm)) }
       .via(toStaffMinutes(now))
 
-  def toStaffMinutes(now: () => SDateLike): Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements), MinutesContainer[StaffMinute, TM], NotUsed] =
+  private def toStaffMinutes(now: () => SDateLike): Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements), MinutesContainer[StaffMinute, TM], NotUsed] =
     Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements)]
       .collect { case (processingRequest: TerminalUpdateRequest, sa, fp, sm) =>
         val staff = Staffing.staffAvailableByTerminalAndQueue(processingRequest.start.millisSinceEpoch, sa, fp, Option(sm.movements))

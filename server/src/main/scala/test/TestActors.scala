@@ -1,7 +1,6 @@
 package test
 
 import actors._
-import actors.acking.AckingReceiver.Ack
 import actors.daily._
 import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
@@ -10,6 +9,7 @@ import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
 import akka.actor.{Actor, ActorRef, Props}
+import akka.pattern.StatusReply.Ack
 import akka.pattern.{ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi._

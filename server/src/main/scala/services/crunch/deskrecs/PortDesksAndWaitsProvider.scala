@@ -14,6 +14,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
@@ -23,7 +24,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      divertedQueues: Map[Queue, Queue],
                                      desksByTerminal: Map[Terminal, Int],
                                      flexedQueuesPriority: List[Queue],
-                                     sla: Queue => Future[Int],
+                                     sla: (LocalDate, Queue) => Future[Int],
                                      terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
@@ -115,9 +116,8 @@ object PortDesksAndWaitsProvider {
             tryCrunch: TryCrunchWholePax,
             flightFilter: FlightFilter,
             paxFeedSourceOrder: List[FeedSource],
-            sla: Queue => Future[Int],
-           )
-           (implicit ec: ExecutionContext): PortDesksAndWaitsProvider = {
+            sla: (LocalDate, Queue) => Future[Int],
+           ): PortDesksAndWaitsProvider = {
 
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,

@@ -1,6 +1,5 @@
 package feeds.gla
 
-import actors.acking.AckingReceiver.StreamCompleted
 import akka.actor.typed.ActorRef
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.{Sink, Source}
@@ -9,6 +8,7 @@ import drt.server.feeds._
 import drt.server.feeds.gla.GlaFeed
 import drt.shared.FlightsApi.Flights
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}

@@ -21,10 +21,10 @@ import manifests.ManifestLookup
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import services.crunch.CrunchSystem
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
-import slickdb.{ArrivalTable, FeatureGuideTable, FeatureGuideTableLike, FeatureGuideViewLike, FeatureGuideViewTable, DropInTable, DropInTableLike, DropInsRegistrationTable, DropInsRegistrationTableLike, Tables, UserTable, UserTableLike}
+import slickdb._
+import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
@@ -237,5 +237,3 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     }
   }
 }
-
-case class AddUpdatesSubscriber(source: ActorRef)

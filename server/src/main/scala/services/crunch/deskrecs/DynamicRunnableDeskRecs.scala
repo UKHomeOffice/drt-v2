@@ -8,7 +8,7 @@ import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.DynamicRunnableDeployments.PassengersToQueueMinutes
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
+import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 

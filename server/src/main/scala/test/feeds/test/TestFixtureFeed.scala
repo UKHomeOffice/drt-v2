@@ -1,17 +1,16 @@
 package test.feeds.test
 
-import actors.acking.AckingReceiver.Ack
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, typed}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
 import test.TestActors.ResetData
 import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -58,7 +57,7 @@ class TestArrivalsActor extends Actor with ActorLogging {
         case Some(existing) => Option(existing :+ a)
       }
 
-      sender() ! Ack
+      sender() ! StatusReply.Ack
 
     case GetArrivals =>
       val toSend = Arrivals(testArrivals.getOrElse(List()))
@@ -68,6 +67,6 @@ class TestArrivalsActor extends Actor with ActorLogging {
 
     case ResetData =>
       testArrivals = None
-      sender() ! Ack
+      sender() ! StatusReply.Ack
   }
 }

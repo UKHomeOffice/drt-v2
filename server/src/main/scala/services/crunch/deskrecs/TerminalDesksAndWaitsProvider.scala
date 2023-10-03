@@ -8,13 +8,13 @@ import services._
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-case class TerminalDesksAndWaitsProvider(sla: Queue => Future[Int], queuePriority: List[Queue], cruncher: TryCrunchWholePax) {
+case class TerminalDesksAndWaitsProvider(sla: (LocalDate, Queue) => Future[Int], queuePriority: List[Queue], cruncher: TryCrunchWholePax) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def workToDeskRecs(terminal: Terminal,
@@ -55,9 +55,11 @@ case class TerminalDesksAndWaitsProvider(sla: Queue => Future[Int], queuePriorit
 
     val queues = Source(queuePriority.filter(queuesToProcess.contains))
 
+    val localDate = SDate(minuteMillis.min).toLocalDate
+
     queues
       .mapAsync(1) { queue =>
-        sla(queue).map(sla => (queue, sla))
+        sla(localDate, queue).map(sla => (queue, sla))
       }
       .runFoldAsync(Map[Queue, (Iterable[Int], Iterable[Int], Iterable[Double])]()) {
         case (queueRecsSoFar, (queue, sla)) =>

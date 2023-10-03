@@ -1,14 +1,14 @@
 package actors.persistent
 
+import actors.DateRange
 import actors.PartitionedPortStateActor._
-import actors.acking.AckingReceiver.Ack
 import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.{GetFeedStatuses, GetState}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
-import actors.{AddUpdatesSubscriber, DateRange}
 import akka.NotUsed
 import akka.actor.ActorRef
+import akka.pattern.StatusReply
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -19,6 +19,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
+import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
@@ -131,7 +132,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
       persistFeedStatus(newStatus)
-      sender() ! Ack
+      sender() ! StatusReply.Ack
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
@@ -153,7 +154,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
               case None => replyTo ! ManifestNotFound
             }
           case Failure(throwable) =>
-            log.error(s"Failed to look up manifest for $arrival", throwable.getMessage)
+            log.error(s"Failed to look up manifest for $arrival: ${throwable.getMessage}")
             replyTo ! ManifestNotFound
         }
 
@@ -197,7 +198,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       .map(updatedMillis => maybeUpdatesSubscriber.foreach(_ ! updatedMillis))
       .onComplete { _ =>
         processingRequest = false
-        replyTo ! Ack
+        replyTo ! StatusReply.Ack
         self ! ProcessNextUpdateRequest
       }
     eventualEffects

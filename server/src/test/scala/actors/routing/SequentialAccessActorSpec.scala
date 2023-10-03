@@ -1,15 +1,14 @@
 package actors.routing
 
-import actors.AddUpdatesSubscriber
-import actors.acking.AckingReceiver.Ack
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, Props}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi._
 import drt.shared.TQM
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.DataUpdates.Combinable
+import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -83,7 +82,7 @@ class SequentialAccessActorSpec extends CrunchTestLike {
     actor ! AddUpdatesSubscriber(probeA.ref)
     actor ! AddUpdatesSubscriber(probeB.ref)
 
-    val ackReceived = Await.result(actor.ask("A1,A2,B1"), 1.second) === Ack
+    val ackReceived = Await.result(actor.ask("A1,A2,B1"), 1.second) === StatusReply.Ack
 
     probeA.expectMsg(Strings(List("A <- 1", "A <- 2", "B <- 1")))
     probeB.expectMsg(Strings(List("A <- 1", "A <- 2", "B <- 1")))
@@ -125,7 +124,7 @@ class SequentialAccessActorSpec extends CrunchTestLike {
       PassengersMinute(Terminal("T2"), EeaDesk, SDate("2022-09-02T08:00").millisSinceEpoch, Seq(4, 5, 6), None),
       PassengersMinute(Terminal("T1"), EeaDesk, SDate("2022-09-03T08:00").millisSinceEpoch, Seq(7, 8, 9), None),
       PassengersMinute(Terminal("T2"), EeaDesk, SDate("2022-09-04T08:00").millisSinceEpoch, Seq(10, 11, 12), None),
-    ))), 1.second) === Ack
+    ))), 1.second) === StatusReply.Ack
 
     probeA.expectMsg(UpdatedMillis(Set(0, 1)))
     probeB.expectMsg(UpdatedMillis(Set(0, 1)))
@@ -166,12 +165,12 @@ class SequentialAccessActorSpec extends CrunchTestLike {
     val crunchMinute = CrunchMinute(Terminal("T1"), EeaDesk, SDate("2022-09-01T08:00").millisSinceEpoch, 1, 1, 1, 1, None)
     val deskRecMinute = DeskRecMinute(Terminal("T1"), EeaDesk, SDate("2022-09-01T08:00").millisSinceEpoch, 1, 1, 1, 1, None)
 
-    val ack1Received = Await.result(actor.ask(MinutesContainer(Seq(crunchMinute))), 1.second) === Ack
+    val ack1Received = Await.result(actor.ask(MinutesContainer(Seq(crunchMinute))), 1.second) === StatusReply.Ack
 
     probeA.expectNoMessage(250.millis)
     probeB.expectNoMessage(250.millis)
 
-    val ack2Received = Await.result(actor.ask(MinutesContainer(Seq(deskRecMinute))), 1.second) === Ack
+    val ack2Received = Await.result(actor.ask(MinutesContainer(Seq(deskRecMinute))), 1.second) === StatusReply.Ack
 
     probeA.expectMsg(UpdatedMillis(Set(0, 1)))
     probeB.expectMsg(UpdatedMillis(Set(0, 1)))

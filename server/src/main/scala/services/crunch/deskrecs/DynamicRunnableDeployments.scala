@@ -7,7 +7,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
+import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
