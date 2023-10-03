@@ -72,7 +72,7 @@ import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.ports.config.slas.SlasUpdate
+import uk.gov.homeoffice.drt.ports.config.slas.{SlaUpdates, SlasUpdate}
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -278,11 +278,10 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     millis => CrunchRequest(SDate(millis).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
   private val slasActor: ActorRef = system.actorOf(Props(new SlasActor(now, crunchRequestProvider, maxDaysToConsider)))
-  println(s"Checking SLAs for ${airportConfig.portCode}")
-  slasActor.ask(GetState).mapTo[SlasUpdate].foreach { slasUpdate =>
-    println(s"SLAs found for ${airportConfig.portCode}")
-    if (slasUpdate.item.isEmpty) {
-      log.warn(s"No SLAs found for ${airportConfig.portCode}. Adding defaults from airport config")
+
+  slasActor.ask(GetState).mapTo[SlaUpdates].foreach { slasUpdate =>
+    if (slasUpdate.updates.isEmpty) {
+      log.info(s"No SLAs. Adding defaults from airport config")
       slasActor ! SlasActor.SetSlasUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue), None)
     }
   }
