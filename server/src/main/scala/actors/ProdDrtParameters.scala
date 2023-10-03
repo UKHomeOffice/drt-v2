@@ -1,5 +1,6 @@
 package actors
 
+import com.google.inject.Inject
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 
@@ -58,7 +59,7 @@ trait DrtParameters {
   val usePassengerPredictions: Boolean
 }
 
-case class ProdDrtParameters(config: Configuration) extends DrtParameters {
+case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParameters {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val gateWalkTimesFilePath: Option[String] =

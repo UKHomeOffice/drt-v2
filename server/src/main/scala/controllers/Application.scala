@@ -142,7 +142,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
   with WithPortState
   with WithStaffing
   with WithApplicationInfo
-  with WithDropIns
   with WithSimulations
   with WithManifests
   with WithWalkTimes

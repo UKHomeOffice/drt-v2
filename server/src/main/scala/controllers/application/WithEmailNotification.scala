@@ -4,13 +4,12 @@ import controllers.Application
 import drt.shared.{NegativeFeedback, PositiveFeedback}
 import email.GovNotifyEmail
 import play.api.mvc.{Action, AnyContent}
-import slickdb.DropInRow
 import upickle.default.read
 
 trait WithEmailNotification {
   self: Application =>
 
-  val emailNotification = new GovNotifyEmail(govNotifyApiKey)
+  val emailNotification: GovNotifyEmail = new GovNotifyEmail(govNotifyApiKey)
 
   def feedBack(feedback: String): Action[AnyContent] = {
     Action { request =>

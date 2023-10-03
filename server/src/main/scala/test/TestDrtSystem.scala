@@ -8,6 +8,7 @@ import akka.pattern.ask
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
+import com.google.inject.Inject
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
 import drt.shared.DropIn
@@ -76,11 +77,21 @@ case class MockDropInsRegistrationTable() extends DropInsRegistrationTableLike {
 }
 
 case class MockDropInTable() extends DropInTableLike {
-  override def getDropIns(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[DropInRow]] = Future.successful(Seq.empty)
-  override def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] = Future.successful(Seq.empty)
+  override def getDropIns(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[DropInRow]] =
+    Future.successful(Seq.empty)
+
+  override def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] =
+    Future.successful(Seq(DropIn(id = Some(1),
+      title = "test",
+      startTime = 1696687258000L,
+      endTime = 1696692658000L,
+      isPublished = true,
+      meetingLink = None,
+      lastUpdatedAt = 1695910303210L)))
+
 }
 
-case class MockDrtParameters() extends DrtParameters {
+case class MockDrtParameters @Inject()() extends DrtParameters {
   override val gateWalkTimesFilePath: Option[String] = None
   override val standWalkTimesFilePath: Option[String] = None
   override val forecastMaxDays: Int = 3
@@ -119,11 +130,11 @@ case class MockDrtParameters() extends DrtParameters {
   override val usePassengerPredictions: Boolean = true
 }
 
-case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
-                        (implicit val materializer: Materializer,
-                         val ec: ExecutionContext,
-                         val system: ActorSystem,
-                         val timeout: Timeout) extends DrtSystemInterface {
+case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
+                                  (implicit val materializer: Materializer,
+                                   val ec: ExecutionContext,
+                                   val system: ActorSystem,
+                                   val timeout: Timeout) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 

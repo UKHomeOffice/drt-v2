@@ -1,5 +1,6 @@
 package email
 
+import com.google.inject.Inject
 import drt.shared.{NegativeFeedback, PositiveFeedback}
 import org.slf4j.{Logger, LoggerFactory}
 import slickdb.DropInRow
@@ -10,7 +11,7 @@ import scala.collection.JavaConverters.mapAsJavaMapConverter
 import scala.util.Try
 
 
-class GovNotifyEmail(apiKey: String) {
+class GovNotifyEmail @Inject()(apiKey: String) {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 

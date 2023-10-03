@@ -12,6 +12,7 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, SourceQueueWithComplete}
 import akka.util.Timeout
+import com.google.inject.Inject
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.server.feeds.{Feed, ManifestsFeedResponse}
@@ -24,7 +25,8 @@ import services.crunch.CrunchSystem
 import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
-import slickdb.{ArrivalTable, FeatureGuideTable, FeatureGuideTableLike, FeatureGuideViewLike, FeatureGuideViewTable, DropInTable, DropInTableLike, DropInsRegistrationTable, DropInsRegistrationTableLike, Tables, UserTable, UserTableLike}
+import slickdb.{ArrivalTable, DropInTable, DropInTableLike, DropInsRegistrationTable,
+  DropInsRegistrationTableLike, FeatureGuideTable, FeatureGuideTableLike, FeatureGuideViewLike, FeatureGuideViewTable, Tables, UserTable, UserTableLike}
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
@@ -49,7 +51,7 @@ object PostgresTables extends Tables {
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
-case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
+case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem,

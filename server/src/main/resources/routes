@@ -118,11 +118,11 @@ POST          /data/feed/:feedType/:portCode                                    
 GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
 GET           /feature-guides                                                         controllers.Application.featureGuides
-GET           /drop-ins                                                               controllers.Application.dropIns()
+GET           /drop-ins                                                               controllers.DropInsController.dropIns()
 + nocsrf
-POST          /drop-in-registrations                                                  controllers.Application.createDropInRegistration()
+POST          /drop-in-registrations                                                  controllers.DropInsController.createDropInRegistration()
 
-GET           /drop-in-registrations                                                  controllers.Application.getDropInRegistrations
+GET           /drop-in-registrations                                                  controllers.DropInsController.getDropInRegistrations
 
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 
