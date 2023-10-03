@@ -8,6 +8,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -16,8 +17,6 @@ import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import scala.util.Try
 
-
-case object GetState
 
 case object ClearState
 

@@ -2,7 +2,7 @@ package controllers.application
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
 import actors.RouteHistoricManifestActor
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.NotUsed

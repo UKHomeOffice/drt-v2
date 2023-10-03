@@ -1,6 +1,6 @@
 package actors.persistent
 
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.{PoisonPill, Props}
 import akka.pattern.ask
 import uk.gov.homeoffice.drt.time.SDate

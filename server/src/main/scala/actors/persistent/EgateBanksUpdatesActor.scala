@@ -1,7 +1,7 @@
 package actors.persistent
 
 import actors.persistent.EgateBanksUpdatesActor.{ReceivedSubscriberAck, SendToSubscriber}
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.EgateBanksUpdatesMessageConversion
 import akka.actor.ActorRef
 import akka.pattern.ask

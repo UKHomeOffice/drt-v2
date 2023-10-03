@@ -4,7 +4,7 @@ import actors.DateRange
 import actors.PartitionedPortStateActor._
 import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.persistent.staffing.{GetFeedStatuses, GetState}
+import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
 import akka.actor.ActorRef
@@ -19,7 +19,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
-import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
+import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}

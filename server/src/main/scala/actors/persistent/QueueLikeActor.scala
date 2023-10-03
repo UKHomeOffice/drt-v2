@@ -1,6 +1,6 @@
 package actors.persistent
 
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages}
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch

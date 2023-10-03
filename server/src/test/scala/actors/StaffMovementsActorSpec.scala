@@ -6,6 +6,7 @@ import akka.actor.{PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.{StaffMovement, StaffMovements}
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}

@@ -1,6 +1,6 @@
 package controllers.application
 
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.pattern.ask
 import controllers.Application
 import drt.shared.CrunchApi.MillisSinceEpoch

@@ -1,6 +1,6 @@
 package actors
 
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.persistent.{AlertsActor, DeleteAlerts}
 import akka.actor.{ActorRef, Props}
 import akka.pattern._

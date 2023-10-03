@@ -1,6 +1,6 @@
 package actors.persistent.arrivals
 
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.FeedSourceArrival

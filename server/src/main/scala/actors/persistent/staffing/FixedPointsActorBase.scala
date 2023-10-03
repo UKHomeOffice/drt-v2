@@ -6,6 +6,7 @@ import drt.shared.{FixedPointAssignments, StaffAssignment, StaffAssignmentLike}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

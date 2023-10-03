@@ -24,6 +24,7 @@ import services.crunch.CrunchSystem
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
 import slickdb._
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}

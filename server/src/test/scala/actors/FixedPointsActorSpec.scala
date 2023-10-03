@@ -5,6 +5,7 @@ import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.testkit.ImplicitSender
 import drt.shared._
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 

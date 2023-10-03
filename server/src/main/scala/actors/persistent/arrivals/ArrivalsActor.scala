@@ -1,12 +1,13 @@
 package actors.persistent.arrivals
 
-import actors.persistent.staffing.{GetFeedStatuses, GetState}
+import actors.persistent.staffing.GetFeedStatuses
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.shared.FlightsApi.Flights
 import scalapb.GeneratedMessage
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike, Sizes}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, ArrivalsRestorer, UniqueArrival}

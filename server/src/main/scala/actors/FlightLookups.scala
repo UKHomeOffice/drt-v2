@@ -2,7 +2,6 @@ package actors
 
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.persistent.staffing.GetState
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -10,6 +9,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue

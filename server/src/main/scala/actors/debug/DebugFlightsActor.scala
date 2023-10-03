@@ -1,6 +1,6 @@
 package actors.debug
 
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}

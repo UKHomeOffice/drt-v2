@@ -1,7 +1,7 @@
 package services.imports
 
 import actors.PartitionedPortStateActor.GetFlights
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.{Actor, ActorLogging, PoisonPill}
 import akka.pattern.{StatusReply, pipe}
 import akka.stream.scaladsl.Source

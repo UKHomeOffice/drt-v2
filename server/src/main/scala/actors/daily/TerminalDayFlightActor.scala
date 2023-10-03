@@ -1,7 +1,6 @@
 package actors.daily
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.persistent.staffing.GetState
 import akka.actor.Props
 import akka.persistence.SaveSnapshotSuccess
 import controllers.model.RedListCounts
@@ -11,13 +10,14 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, SplitsForArrivalsMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
-import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffToMessage, flightMessageToApiFlight, flightWithSplitsDiffToMessage, flightWithSplitsFromMessage, splitsForArrivalsFromMessage, splitsForArrivalsToMessage, uniqueArrivalsFromMessages}
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration

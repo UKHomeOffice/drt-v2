@@ -1,7 +1,7 @@
 package actors.persistent
 
 import actors.persistent.RedListUpdatesActor.{AddSubscriber, ReceivedSubscriberAck, SendToSubscriber}
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.RedListUpdatesMessageConversion
 import akka.persistence._
 import akka.stream.QueueOfferResult.Enqueued

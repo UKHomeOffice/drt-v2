@@ -1,6 +1,6 @@
 package actors
 
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.Actor
 import akka.pattern.StatusReply
 import drt.shared.PortState
