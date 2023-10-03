@@ -2,6 +2,7 @@ package actors
 
 import actors.StoppableActor.StopYourself
 import actors.supervised.RestartOnStop
+import akka.Done
 import akka.actor.{Actor, ActorSystem, Props}
 import akka.pattern.StatusReply
 import akka.testkit.{ImplicitSender, TestKit}
@@ -53,7 +54,7 @@ class RestartOnStopSpec()
       watch(actor)
 
       actor ! "some message"
-      expectMsgType[StatusReply.type]
+      expectMsgType[StatusReply[Done]]
 
       actor ! StopYourself
 
@@ -61,10 +62,10 @@ class RestartOnStopSpec()
       Thread.sleep(backoffTimePlusBuffer.toMillis)
 
       actor ! "some message"
-      expectMsgType[StatusReply.type]
+      expectMsgType[StatusReply[Done]]
 
       actor ! "some message"
-      expectMsgType[StatusReply.type]
+      expectMsgType[StatusReply[Done]]
 
       success
     }
