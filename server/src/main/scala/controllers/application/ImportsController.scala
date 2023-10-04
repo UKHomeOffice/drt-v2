@@ -1,10 +1,11 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import actors.persistent.nebo.NeboArrivalActor
 import akka.actor.ActorRef
 import akka.pattern.ask
 import api.ApiResponseBody
-import controllers.Application
+import com.google.inject.Inject
 import controllers.model.RedListCounts
 import controllers.model.RedListCountsJsonFormats._
 import drt.server.feeds.StoreFeedImportArrivals
@@ -25,8 +26,7 @@ import scala.concurrent.Future
 import scala.util.Try
 
 
-trait WithImports {
-  self: Application =>
+class ImportsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl)  {
 
   def feedImportRedListCounts: Action[AnyContent] = authByRole(NeboUpload) {
     Action.async { request =>
@@ -54,10 +54,10 @@ trait WithImports {
   def updateAndGetAllNeboPax(redListCounts: RedListCounts): Future[Iterable[RedListPassengers]] = Future.sequence {
     redListCounts.passengers
       .map { redListPassenger =>
-        val actor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassenger, now))
+        val actor: ActorRef = actorSystem.actorOf(NeboArrivalActor.props(redListPassenger, ctrl.now))
         val stateF: Future[NeboArrivals] = actor.ask(redListPassenger).mapTo[NeboArrivals]
         stateF.map { state =>
-          system.stop(actor)
+          actorSystem.stop(actor)
           redListPassenger.copy(urns = state.urns.toList)
         }
       }

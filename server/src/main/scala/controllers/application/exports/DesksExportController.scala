@@ -1,12 +1,14 @@
 package controllers.application.exports
 
+import actors.DrtSystemInterface
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import controllers.Application
+import com.google.inject.Inject
+import controllers.application.AuthController
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.ErrorResponse
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.time.SDate
 import services.exports.StreamingDesksExport
 import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
@@ -17,8 +19,7 @@ import upickle.default.write
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-trait WithDesksExport {
-  self: Application =>
+class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def exportDesksAndQueuesRecsAtPointInTimeCSV(
                                                 localDate: String,
@@ -113,13 +114,13 @@ trait WithDesksExport {
     }
 
   private def exportStreamingDesksAndQueuesBetweenTimestampsCSV(
-                                                         start: SDateLike,
-                                                         end: SDateLike,
-                                                         terminalName: String,
-                                                         exportSourceFn: (SDateLike, SDateLike, Terminal) =>
-                                                           Source[String, NotUsed],
-                                                         filePrefix: String
-                                                       ): Action[AnyContent] = Action.async {
+                                                                 start: SDateLike,
+                                                                 end: SDateLike,
+                                                                 terminalName: String,
+                                                                 exportSourceFn: (SDateLike, SDateLike, Terminal) =>
+                                                                   Source[String, NotUsed],
+                                                                 filePrefix: String
+                                                               ): Action[AnyContent] = Action.async {
     val exportSource: Source[String, NotUsed] = exportSourceFn(start, end, Terminal(terminalName))
     log.info(s"Exporting between $start and $end")
 

@@ -1,15 +1,15 @@
 package controllers.application
 
-import controllers.Application
+import actors.DrtSystemInterface
+import com.google.inject.Inject
 import drt.shared._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import services.graphstages.Crunch
 import services.{BankHolidayApiClient, OOHChecker}
 import uk.gov.homeoffice.drt.time.SDate
 
 
-trait WithContactDetails {
-  self: Application =>
+class ContactDetailsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getContactDetails: Action[AnyContent] = Action { _ =>
     import upickle.default._

@@ -4,6 +4,7 @@ import actors.DrtSystemInterface
 import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.model.HttpResponse
+import akka.util.Timeout
 import drt.http.ProdSendAndReceive
 import drt.shared.ErrorResponse
 import drt.users.KeyCloakClient
@@ -11,26 +12,28 @@ import play.api.Configuration
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.JsResult.Exception
 import play.api.libs.json.{JsError, JsObject, Json, Writes}
-import play.api.mvc.{AbstractController, Action, AnyContent, BaseController, ControllerComponents, Headers, Result}
+import play.api.mvc._
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ManageUsers, Role}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import upickle.default.write
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 
 abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AbstractController(cc) {
 
-  def config: Configuration
+  val log: LoggingAdapter = ctrl.system.log
 
-  implicit def ec: ExecutionContext
+  implicit val ec = ctrl.ec
 
-  def log: LoggingAdapter
+  implicit val config: Configuration = ctrl.config
 
-  implicit def actorSystem: ActorSystem
+  implicit val actorSystem: ActorSystem = ctrl.system
 
-  def airportConfig: AirportConfig
+  val airportConfig: AirportConfig = ctrl.airportConfig
+
+  implicit val timeout: Timeout = ctrl.timeout
 
   def getLoggedInUser: Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)

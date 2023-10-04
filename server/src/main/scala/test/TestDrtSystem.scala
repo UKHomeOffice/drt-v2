@@ -73,7 +73,12 @@ case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
 case class MockDropInsRegistrationTable() extends DropInsRegistrationTableLike {
   override def createDropInRegistration(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def getDropInRegistrations(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] = Future.successful(Seq.empty)
+  override def getDropInRegistrations(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] =
+    Future.successful(Seq(
+        DropInsRegistrationRow(email = "someone@test.com",
+          dropInId = 1,
+          registeredAt = new Timestamp(1695910303210L),
+          emailSentAt = Some(new Timestamp(1695910303210L)))))
 }
 
 case class MockDropInTable() extends DropInTableLike {

@@ -1,10 +1,11 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import actors.persistent.staffing.GetState
 import akka.pattern.ask
-import controllers.Application
+import com.google.inject.Inject
 import drt.shared.CrunchApi.MillisSinceEpoch
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.auth.Roles.EgateBanksEdit
 import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -13,8 +14,7 @@ import upickle.default._
 import scala.concurrent.Future
 
 
-trait WithEgateBanks {
-  self: Application =>
+class EgateBanksController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getEgateBanksUpdates: Action[AnyContent] =
     Action.async { _ =>

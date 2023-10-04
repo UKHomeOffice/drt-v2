@@ -1,26 +1,48 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
-import controllers.Application
-import controllers.application.exports.{CsvFileStreaming, WithDesksExport, WithFlightsExport, WithSummariesExport}
+import com.google.inject.Inject
+import controllers.application.exports.CsvFileStreaming
+import drt.http.ProdSendAndReceive
 import drt.shared.CrunchApi._
-import drt.users.KeyCloakGroups
+import drt.users.{KeyCloakClient, KeyCloakGroups}
 import play.api.http.HttpEntity
 import play.api.mvc._
 import services.exports.StaffRequirementExports
 import services.graphstages.Crunch.europeLondonTimeZone
+import services.metrics.Metrics
 import uk.gov.homeoffice.drt.auth.Roles.{ForecastView, ManageUsers}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.minutesInADay
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
+import scala.concurrent.Future
 import scala.language.postfixOps
 
 
-trait WithExports extends WithDesksExport with WithFlightsExport with WithSummariesExport {
-  self: Application =>
+class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) { //} with WithDesksExport with WithFlightsExport with WithSummariesExport {
+
+  def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
+    val token = headers.get("X-Auth-Token")
+      .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+    val keyCloakUrl = config.getOptional[String]("key-cloak.url")
+      .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
+    new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
+  }
+
+  def timedEndPoint[A](name: String, maybeParams: Option[String] = None)(eventualThing: Future[A]): Future[A] = {
+    val startMillis = SDate.now().millisSinceEpoch
+    eventualThing.foreach { _ =>
+      val endMillis = SDate.now().millisSinceEpoch
+      val millisTaken = endMillis - startMillis
+      Metrics.timer(s"$name", millisTaken)
+      log.info(s"$name${maybeParams.map(p => s" - $p").getOrElse("")} took ${millisTaken}ms")
+    }
+    eventualThing
+  }
 
   def exportUsers: Action[AnyContent] = authByRole(ManageUsers) {
     Action.async { request =>

@@ -1,21 +1,22 @@
 package controllers.application.exports
 
+import actors.DrtSystemInterface
 import actors.PartitionedPortStateActor.GetMinutesForTerminalDateRange
 import akka.pattern.ask
-import controllers.Application
+import com.google.inject.Inject
+import controllers.application.AuthController
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import drt.shared.TQM
 import play.api.mvc._
-import services.exports.{FlightExports, GeneralExport, PassengerExports}
+import services.exports.{GeneralExport, PassengerExports}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-trait WithSummariesExport {
-  self: Application =>
+class SummariesExportController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   val passengersProvider: (LocalDate, Terminal) => Future[Seq[PassengersMinute]] =
     (date, terminal) => {

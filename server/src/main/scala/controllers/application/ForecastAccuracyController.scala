@@ -1,9 +1,10 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import akka.stream.scaladsl.Source
-import controllers.Application
+import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import services.accuracy.ForecastAccuracyCalculator
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.write
@@ -11,8 +12,7 @@ import upickle.default.write
 import scala.concurrent.Future
 
 
-trait WithForecastAccuracy {
-  self: Application =>
+class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getForecastAccuracy(dateStr: String): Action[AnyContent] = auth {
     val daysToCalculate = List(1, 3, 7, 14, 30)

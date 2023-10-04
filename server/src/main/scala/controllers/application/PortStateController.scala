@@ -1,13 +1,14 @@
 package controllers.application
 
 import actors.CrunchManagerActor.RecalculateArrivals
+import actors.DrtSystemInterface
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince, PointInTimeQuery}
 import akka.pattern.ask
 import akka.util.Timeout
-import controllers.Application
+import com.google.inject.Inject
 import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.crunch.CrunchManager.{queueDaysToReCrunch, queueDaysToReCrunchWithUpdatedSplits}
 import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
 import upickle.default.write
@@ -16,8 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 
 
-trait WithPortState {
-  self: Application =>
+class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getCrunch: Action[AnyContent] = authByRole(DesksAndQueuesView) {
     Action.async { request: Request[AnyContent] =>

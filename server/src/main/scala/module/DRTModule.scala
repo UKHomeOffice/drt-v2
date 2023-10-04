@@ -7,8 +7,10 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
-import controllers.DropInsController
+import controllers.Application
 import controllers.DrtActorSystem.airportConfig
+import controllers.application.exports.DesksExportController
+import controllers.application.{AirportInfoController, ApplicationInfoController, ConfigController, DebugController, DropInsController, EgateBanksController, EmailNotificationController, ExportsController, FeatureFlagsController, FeedsController, ForecastAccuracyController, ImportsController, ManifestsController, PortStateController, RedListsController, StaffingController, WalkTimeController}
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import test.{MockDrtParameters, TestDrtSystem}
@@ -28,7 +30,25 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
 
   override def configure(): Unit = {
-
+    bind(classOf[Application]).asEagerSingleton()
+    bind(classOf[DesksExportController]).asEagerSingleton()
+    bind(classOf[ExportsController]).asEagerSingleton()
+    bind(classOf[WalkTimeController]).asEagerSingleton()
+    bind(classOf[PortStateController]).asEagerSingleton()
+    bind(classOf[ManifestsController]).asEagerSingleton()
+    bind(classOf[ImportsController]).asEagerSingleton()
+    bind(classOf[FeedsController]).asEagerSingleton()
+    bind(classOf[ForecastAccuracyController]).asEagerSingleton()
+    bind(classOf[EmailNotificationController]).asEagerSingleton()
+    bind(classOf[EgateBanksController]).asEagerSingleton()
+    bind(classOf[FeatureFlagsController]).asEagerSingleton()
+    bind(classOf[ConfigController]).asEagerSingleton()
+    bind(classOf[DebugController]).asEagerSingleton()
+    bind(classOf[RedListsController]).asEagerSingleton()
+    bind(classOf[ApplicationInfoController]).asEagerSingleton()
+    bind(classOf[StaffingController]).asEagerSingleton()
+    bind(classOf[AirportInfoController]).asEagerSingleton()
+    bind(classOf[WalkTimeController]).asEagerSingleton()
     bind(classOf[DropInsController]).asEagerSingleton()
   }
 
