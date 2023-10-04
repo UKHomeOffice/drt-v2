@@ -2,7 +2,7 @@ package test.controllers
 
 import akka.pattern.ask
 import akka.util.Timeout
-import controllers.{AirportConfProvider, DrtActorSystem}
+import controllers.DrtActorSystem
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.FeedPoller.AdhocCheck
@@ -31,7 +31,7 @@ import scala.language.postfixOps
 import scala.util.Success
 
 @Singleton
-class TestController @Inject()(val config: Configuration) extends InjectedController {//with AirportConfProvider {
+class TestController @Inject()(val config: Configuration) extends InjectedController {
   implicit val timeout: Timeout = Timeout(5 second)
 
   implicit val ec: ExecutionContextExecutor = DrtActorSystem.ec
@@ -84,7 +84,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             Origin = PortCode(flight.Origin),
             PcpTime = Option(pcpTime),
             FeedSources = Set(LiveFeedSource),
-            PassengerSources = Map(LiveFeedSource -> Passengers(actPax,if (actPax.isEmpty) None else Option(flight.TranPax))),
+            PassengerSources = Map(LiveFeedSource -> Passengers(actPax, if (actPax.isEmpty) None else Option(flight.TranPax))),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
           )
           saveArrival(arrival).map(_ => Created)

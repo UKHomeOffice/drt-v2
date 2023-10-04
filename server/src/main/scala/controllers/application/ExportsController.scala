@@ -23,7 +23,7 @@ import scala.concurrent.Future
 import scala.language.postfixOps
 
 
-class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) { //} with WithDesksExport with WithFlightsExport with WithSummariesExport {
+class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token")
