@@ -6,6 +6,7 @@ import drt.shared.{DropIn, DropInRegistration}
 import email.GovNotifyEmail
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import slickdb.DropInRow
+import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -38,7 +39,7 @@ class DropInsController @Inject()(cc: ControllerComponents,
     dropInsRegistrationJson.map(registered => Ok(write(registered)))
   }
 
-  def createDropInRegistration: Action[AnyContent] =
+  def createDropInRegistration: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action { implicit request =>
       import spray.json.DefaultJsonProtocol._
       import spray.json._
@@ -61,6 +62,7 @@ class DropInsController @Inject()(cc: ControllerComponents,
         case None => BadRequest("No content")
       }
     }
+  }
 
 
   private def sendDropInRegistrationEmails(email: String, dropIns: Seq[DropInRow]) = {
@@ -71,7 +73,7 @@ class DropInsController @Inject()(cc: ControllerComponents,
         .dropInRegistrationConfirmation(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), email, dropIn)
       val hostEmailPersonalisation = emailNotification
         .dropInRegistrationHost(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), dropInHostEmail, email, dropIn)
-      lazy val govNotifyReference = config.get[String]("notifications.reference")
+      val govNotifyReference = config.get[String]("notifications.reference")
 
       emailNotification.sendRequest(govNotifyReference,
         email,

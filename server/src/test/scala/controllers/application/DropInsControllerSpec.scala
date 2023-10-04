@@ -67,7 +67,7 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar {
       val controller = new DropInsController(Helpers.stubControllerComponents(), drtSystemInterface, govNotify)
 
       val result = controller.createDropInRegistration().apply(FakeRequest().withTextBody(""""1"""")
-        .withHeaders("X-Auth-Email" -> "someone@test.com", "X-Auth-Roles" -> "TEST"))
+        .withHeaders("X-Auth-Email" -> "someone@test.com", "X-Auth-Roles" -> "border-force-staff,TEST"))
 
       status(result) mustBe OK
 
