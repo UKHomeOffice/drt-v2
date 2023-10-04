@@ -26,7 +26,7 @@ object DrtActorSystem extends AirportConfProvider {
   implicit val mat: Materializer = Materializer.createMaterializer(actorSystem)
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(5.seconds)
-  val drtSystem: DrtSystemInterface =
+  lazy val drtSystem: DrtSystemInterface =
     if (isTestEnvironment) {
       drtTestSystem
     } else {

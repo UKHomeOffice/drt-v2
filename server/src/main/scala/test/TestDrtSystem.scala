@@ -75,10 +75,10 @@ case class MockDropInsRegistrationTable() extends DropInsRegistrationTableLike {
 
   override def getDropInRegistrations(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] =
     Future.successful(Seq(
-        DropInsRegistrationRow(email = "someone@test.com",
-          dropInId = 1,
-          registeredAt = new Timestamp(1695910303210L),
-          emailSentAt = Some(new Timestamp(1695910303210L)))))
+      DropInsRegistrationRow(email = "someone@test.com",
+        dropInId = 1,
+        registeredAt = new Timestamp(1695910303210L),
+        emailSentAt = Some(new Timestamp(1695910303210L)))))
 }
 
 case class MockDropInTable() extends DropInTableLike {
@@ -135,11 +135,18 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val usePassengerPredictions: Boolean = true
 }
 
+trait TestDrtSystemInterface extends DrtSystemInterface {
+  val testManifestsActor: ActorRef
+  val testArrivalActor: ActorRef
+  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]]
+  val restartActor: ActorRef
+}
+
 case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
                                   (implicit val materializer: Materializer,
                                    val ec: ExecutionContext,
                                    val system: ActorSystem,
-                                   val timeout: Timeout) extends DrtSystemInterface {
+                                   val timeout: Timeout) extends TestDrtSystemInterface {
 
   import DrtStaticParameters._
 

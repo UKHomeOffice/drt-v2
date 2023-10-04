@@ -13,7 +13,8 @@ import controllers.application.exports.DesksExportController
 import controllers.application.{AirportInfoController, ApplicationInfoController, ConfigController, DebugController, DropInsController, EgateBanksController, EmailNotificationController, ExportsController, FeatureFlagsController, FeedsController, ForecastAccuracyController, ImportsController, ManifestsController, PortStateController, RedListsController, StaffingController, WalkTimeController}
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
-import test.{MockDrtParameters, TestDrtSystem}
+import test.controllers.TestController
+import test.{MockDrtParameters, TestDrtSystem, TestDrtSystemInterface}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -30,6 +31,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
 
   override def configure(): Unit = {
+    bind(classOf[TestController]).asEagerSingleton()
     bind(classOf[Application]).asEagerSingleton()
     bind(classOf[DesksExportController]).asEagerSingleton()
     bind(classOf[ExportsController]).asEagerSingleton()
@@ -58,6 +60,9 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   } else {
     ActorSystem("DRT-Module")
   }
+
+  @Provides
+  def provideTestDrtSystemInterface: TestDrtSystemInterface = drtTestSystem
 
   @Provides
   def provideDrtSystemInterface: DrtSystemInterface =
