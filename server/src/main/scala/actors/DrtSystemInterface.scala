@@ -65,14 +65,14 @@ import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
-import uk.gov.homeoffice.drt.actor.{PredictionModelActor, SlasActor, WalkTimeProvider}
+import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.ports.config.slas.{SlaUpdates, SlasUpdate}
+import uk.gov.homeoffice.drt.ports.config.slas.{Slas, SlasUpdate}
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -277,15 +277,26 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   val crunchRequestProvider: MillisSinceEpoch => CrunchRequest =
     millis => CrunchRequest(SDate(millis).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
-  private val slasActor: ActorRef = system.actorOf(Props(new SlasActor(now, crunchRequestProvider, maxDaysToConsider)))
+  private val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], Slas]("slas", now, crunchRequestProvider, maxDaysToConsider)))
 
-  slasActor.ask(GetState).mapTo[SlaUpdates].foreach { slasUpdate =>
+  slasActor.ask(GetState).mapTo[Slas].foreach { slasUpdate =>
     if (slasUpdate.updates.isEmpty) {
       log.info(s"No SLAs. Adding defaults from airport config")
-      slasActor ! SlasActor.SetSlasUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue), None)
+      slasActor ! ConfigActor.SetUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue), None)
+    } else {
+      log.info("SLAs: " + slasUpdate)
     }
   }
-  val slaProvider: (LocalDate, Queue) => Future[Int] = SlasActor.slasProvider(slasActor)
+  val slaProvider: (LocalDate, Queue) => Future[Int] =
+      (date, queue) =>
+        slasActor
+          .ask(GetState)
+          .mapTo[Slas]
+          .map {
+            _.updatesForDate(SDate(date).millisSinceEpoch)
+              .getOrElse(throw new Exception(s"No slas found for $date"))
+              .getOrElse(queue, throw new Exception("No slas found for queue"))
+          }
 
   val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, slaProvider)
 
