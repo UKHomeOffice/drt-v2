@@ -138,20 +138,20 @@ lazy val server = (project in file("server"))
     TwirlKeys.templateImports += "buildinfo._",
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
-    dependencyCheckFormats := Seq("XML", "JSON" ,"HTML"),
+    dependencyCheckFormats := Seq("XML", "JSON", "HTML"),
   )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
 
 Test / test := {
-    val ignoreFailures = sys.props.get("ignoreTestFailures").isDefined
-    try {
-        (Test / test).value
-    } catch {
-        case e: Exception if ignoreFailures =>
-            println("Some tests failed, but we're ignoring it for coverage report.")
-        case e: Exception => throw e
-    }
+  val ignoreFailures = sys.props.get("ignoreTestFailures").isDefined
+  try {
+    (Test / test).value
+  } catch {
+    case e: Exception if ignoreFailures =>
+      println("Some tests failed, but we're ignoring it for coverage report.")
+    case e: Exception => throw e
+  }
 }
 
 // Command for building a release
