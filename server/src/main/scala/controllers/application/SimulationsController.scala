@@ -1,16 +1,16 @@
 package controllers.application
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
-import actors.RouteHistoricManifestActor
 import actors.persistent.staffing.GetState
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
+import actors.{DrtSystemInterface, RouteHistoricManifestActor}
 import akka.NotUsed
 import akka.actor.Props
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import controllers.Application
+import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
 import drt.shared.CrunchApi._
@@ -36,8 +36,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
-trait WithSimulations {
-  self: Application =>
+class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def simulationExport: Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
     implicit val timeout: Timeout = new Timeout(10 minutes)
@@ -57,12 +56,12 @@ trait WithSimulations {
               simulationParams.terminal
             )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-            val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
+            val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, ctrl.now, actorSystem, timeout, ec)
 
-            val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
+            val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, ctrl.now, actorSystem, timeout, ec)
 
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
-              val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
+              val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
               simulationResult(
                 simulationParams,
                 simulationConfig,
@@ -105,12 +104,12 @@ trait WithSimulations {
               simulationParams.terminal
             )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-            val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
+            val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, ctrl.now, actorSystem, timeout, ec)
 
-            val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
+            val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, ctrl.now, actorSystem, timeout, ec)
 
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws => {
-              val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
+              val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
               simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,

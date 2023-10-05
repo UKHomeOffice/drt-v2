@@ -8,69 +8,69 @@ POST          /report-to                                                        
 GET           /                                                                       controllers.Application.index
 GET           /health-check                                                           controllers.Application.healthCheck
 
-GET           /airport-config                                                         controllers.Application.getAirportConfig
-GET           /pax-feed-source-order                                                  controllers.Application.getPaxFeedSourceOrder
-GET           /contact-details                                                        controllers.Application.getContactDetails
+GET           /airport-config                                                         controllers.application.ConfigController.getAirportConfig
+GET           /pax-feed-source-order                                                  controllers.application.ConfigController.getPaxFeedSourceOrder
+GET           /contact-details                                                        controllers.application.ContactDetailsController.getContactDetails
 
-GET           /ooh-status                                                             controllers.Application.getOOHStatus
-GET           /feature-flags                                                          controllers.Application.getFeatureFlags
+GET           /ooh-status                                                             controllers.application.ContactDetailsController.getOOHStatus
+GET           /feature-flags                                                          controllers.application.FeatureFlagsController.getFeatureFlags
 
-GET           /airport-info                                                           controllers.Application.getAirportInfo
-GET           /walk-times                                                             controllers.Application.getWalkTimes
+GET           /airport-info                                                           controllers.application.AirportInfoController.getAirportInfo
+GET           /walk-times                                                             controllers.application.WalkTimeController.getWalkTimes
 
-GET           /alerts/:createdAfter                                                   controllers.Application.getAlerts(createdAfter: Long)
+GET           /alerts/:createdAfter                                                   controllers.application.AlertsController.getAlerts(createdAfter: Long)
 + nocsrf
-POST          /alerts                                                                 controllers.Application.addAlert
+POST          /alerts                                                                 controllers.application.AlertsController.addAlert
 + nocsrf
-DELETE        /alerts                                                                 controllers.Application.deleteAlerts
+DELETE        /alerts                                                                 controllers.application.AlertsController.deleteAlerts
 
-GET           /version                                                                controllers.Application.getApplicationVersion
+GET           /version                                                                controllers.application.ApplicationInfoController.getApplicationVersion
 
-GET           /crunch                                                                 controllers.Application.getCrunch
-POST          /control/crunch/recalculate                                             controllers.Application.reCrunch
-POST          /control/arrivals/recalculate                                           controllers.Application.reCalculateArrivals
-GET           /crunch-snapshot/:pit                                                   controllers.Application.getCrunchSnapshot(pit: Long)
+GET           /crunch                                                                 controllers.application.PortStateController.getCrunch
+POST          /control/crunch/recalculate                                             controllers.application.PortStateController.reCrunch
+POST          /control/arrivals/recalculate                                           controllers.application.PortStateController.reCalculateArrivals
+GET           /crunch-snapshot/:pit                                                   controllers.application.PortStateController.getCrunchSnapshot(pit: Long)
 
-GET           /feed-statuses                                                          controllers.Application.getFeedStatuses
-GET           /feeds/statuses                                                         controllers.Application.getFeedStatuses
-POST          /feeds/check                                                            controllers.Application.checkFeed
-GET           /arrival/:number/:terminal/:scheduled/:origin                           controllers.Application.getArrival(number: Int, terminal: String, scheduled: Long, origin: String)
-GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin              controllers.Application.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long, origin: String)
-GET           /manifest-summaries                                                     controllers.Application.getManifestSummariesForArrivals
-GET           /manifest-summaries/:utcDate/summary                                    controllers.Application.getManifestSummariesForDay(utcDate: String)
-GET           /red-list/ports/:date                                                   controllers.Application.getRedListPorts(date: String)
-POST          /red-list/updates                                                       controllers.Application.updateRedListUpdates
-GET           /red-list/updates                                                       controllers.Application.getRedListUpdates
-DELETE        /red-list/updates/:effectiveFrom                                        controllers.Application.deleteRedListUpdates(effectiveFrom: Long)
-GET           /red-list/updates-legacy                                                controllers.Application.getRedListUpdatesLegacy
-POST          /egate-banks/updates                                                    controllers.Application.updateEgateBanksUpdates
-GET           /egate-banks/updates                                                    controllers.Application.getEgateBanksUpdates
-DELETE        /egate-banks/updates/:terminal/:effectiveFrom                           controllers.Application.deleteEgateBanksUpdates(terminal: String, effectiveFrom: Long)
+GET           /feed-statuses                                                          controllers.application.FeedsController.getFeedStatuses
+GET           /feeds/statuses                                                         controllers.application.FeedsController.getFeedStatuses
+POST          /feeds/check                                                            controllers.application.FeedsController.checkFeed
+GET           /arrival/:number/:terminal/:scheduled/:origin                           controllers.application.FeedsController.getArrival(number: Int, terminal: String, scheduled: Long, origin: String)
+GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin              controllers.application.FeedsController.getArrivalAtPointInTime(pointInTime: Long, number: Int, terminal: String, scheduled: Long, origin: String)
+GET           /manifest-summaries                                                     controllers.application.ManifestsController.getManifestSummariesForArrivals
+GET           /manifest-summaries/:utcDate/summary                                    controllers.application.ManifestsController.getManifestSummariesForDay(utcDate: String)
+GET           /red-list/ports/:date                                                   controllers.application.RedListsController.getRedListPorts(date: String)
+POST          /red-list/updates                                                       controllers.application.RedListsController.updateRedListUpdates
+GET           /red-list/updates                                                       controllers.application.RedListsController.getRedListUpdates
+DELETE        /red-list/updates/:effectiveFrom                                        controllers.application.RedListsController.deleteRedListUpdates(effectiveFrom: Long)
+GET           /red-list/updates-legacy                                                controllers.application.RedListsController.getRedListUpdatesLegacy
+POST          /egate-banks/updates                                                    controllers.application.EgateBanksController.updateEgateBanksUpdates
+GET           /egate-banks/updates                                                    controllers.application.EgateBanksController.getEgateBanksUpdates
+DELETE        /egate-banks/updates/:terminal/:effectiveFrom                           controllers.application.EgateBanksController.deleteEgateBanksUpdates(terminal: String, effectiveFrom: Long)
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 
-GET           /fixed-points                                                           controllers.Application.getFixedPoints
-POST          /fixed-points                                                           controllers.Application.saveFixedPoints
+GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
+POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 
-GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.Application.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
-GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.Application.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)
-GET           /export/desk-deps/:startLocalDate/:endLocalDate/:terminalName           controllers.Application.exportDesksAndQueuesDepsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
-GET           /export/desk-deps/snapshot/:localDate/:pointInTime/:terminalName        controllers.Application.exportDesksAndQueuesDepsAtPointInTimeCSV(localDate, pointInTime, terminalName)
-GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName              controllers.Application.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
-GET           /export/arrivals/snapshot/:localDate/:pointInTime/:terminalName         controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long, terminalName: String)
-GET           /export/arrivals-with-red-list-diversions/:startLocalDay/:endLocalDay/:terminalName              controllers.Application.exportFlightsWithSplitsForDateRangeCSVWithRedListDiversions(startLocalDay: String, endLocalDay: String, terminalName: String)
-GET           /export/arrivals-with-red-list-diversions/snapshot/:localDate/:pointInTime/:terminalName         controllers.Application.exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDate: String, pointInTime: Long, terminalName: String)
+GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
+GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)
+GET           /export/desk-deps/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesDepsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
+GET           /export/desk-deps/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesDepsAtPointInTimeCSV(localDate, pointInTime, terminalName)
+GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName              controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /export/arrivals/snapshot/:localDate/:pointInTime/:terminalName         controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long, terminalName: String)
+GET           /export/arrivals-with-red-list-diversions/:startLocalDay/:endLocalDay/:terminalName              controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeCSVWithRedListDiversions(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /export/arrivals-with-red-list-diversions/snapshot/:localDate/:pointInTime/:terminalName         controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDate: String, pointInTime: Long, terminalName: String)
 
-GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.Application.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
-GET           /export/planning/:weekStarting/:terminalName                            controllers.Application.exportForecastWeekToCSV(weekStarting, terminalName)
-GET           /export/headlines/:weekStarting/:terminalName                           controllers.Application.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
-GET           /export/users                                                           controllers.Application.exportUsers
-GET           /export/staff-movements/:date/:terminal                                 controllers.Application.exportStaffMovements(terminal: String, date: String)
-GET           /export/desk-rec-simulation                                             controllers.Application.simulationExport
-GET           /desk-rec-simulation                                                    controllers.Application.simulation
+GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.application.exports.FlightsExportController.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
+GET           /export/planning/:weekStarting/:terminalName                            controllers.application.ExportsController.exportForecastWeekToCSV(weekStarting, terminalName)
+GET           /export/headlines/:weekStarting/:terminalName                           controllers.application.ExportsController.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
+GET           /export/users                                                           controllers.application.ExportsController.exportUsers
+GET           /export/staff-movements/:date/:terminal                                 controllers.application.StaffingController.exportStaffMovements(terminal: String, date: String)
+GET           /export/desk-rec-simulation                                             controllers.application.SimulationsController.simulationExport
+GET           /desk-rec-simulation                                                    controllers.application.SimulationsController.simulation
 
-GET           /forecast-accuracy/:date                                                controllers.Application.getForecastAccuracy(date: String)
-GET           /export/forecast-accuracy/:daysForComparison/:daysAhead                 controllers.Application.forecastAccuracyExport(daysForComparison: Int, daysAhead: Int)
+GET           /forecast-accuracy/:date                                                controllers.application.ForecastAccuracyController.getForecastAccuracy(date: String)
+GET           /export/forecast-accuracy/:daysForComparison/:daysAhead                 controllers.application.ForecastAccuracyController.forecastAccuracyExport(daysForComparison: Int, daysAhead: Int)
 
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                                     controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
@@ -93,36 +93,36 @@ POST          /data/addUserToGroup/:userId/:group                               
 
 GET           /data/user/has-port-access                                              controllers.Application.getUserHasPortAccess
 
-GET           /data/actor-tree                                                        controllers.Application.getActorTree
+GET           /data/actor-tree                                                        controllers.application.DebugController.getActorTree
 
 # v2 exports
-GET           /api/arrivals/:startLocalDay/:endLocalDay/:terminalName                 controllers.Application.exportFlightsWithSplitsForDateRangeApi(startLocalDay: String, endLocalDay: String, terminalName: String)
-GET           /api/passengers/:startLocalDay/:endLocalDay/:terminalName               controllers.Application.exportDailyPassengersForDateRangeApi(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /api/arrivals/:startLocalDay/:endLocalDay/:terminalName                 controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeApi(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /api/passengers/:startLocalDay/:endLocalDay/:terminalName               controllers.application.exports.SummariesExportController.exportDailyPassengersForDateRangeApi(startLocalDay: String, endLocalDay: String, terminalName: String)
 
-GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.Application.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
-POST          /email/feedback/:feedback                                               controllers.Application.feedBack(feedback: String)
+GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
+POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)
 # Logging
 + nocsrf
 POST          /logging                                                                controllers.Application.logging
 
-POST          /data/staff                                                             controllers.Application.saveStaff
-GET           /staff-movements/:date                                                  controllers.Application.getStaffMovements(date: String)
-POST          /staff-movements                                                        controllers.Application.addStaffMovements
-DELETE        /staff-movements/:uuid                                                  controllers.Application.removeStaffMovements(uuid: String)
+POST          /data/staff                                                             controllers.application.StaffingController.saveStaff
+GET           /staff-movements/:date                                                  controllers.application.StaffingController.getStaffMovements(date: String)
+POST          /staff-movements                                                        controllers.application.StaffingController.addStaffMovements
+DELETE        /staff-movements/:uuid                                                  controllers.application.StaffingController.removeStaffMovements(uuid: String)
 
 # Feed import
-POST          /data/feed/red-list-counts                                              controllers.Application.feedImportRedListCounts
+POST          /data/feed/red-list-counts                                              controllers.application.ImportsController.feedImportRedListCounts
 + nocsrf
-POST          /data/feed/:feedType/:portCode                                          controllers.Application.feedImport(feedType: String, portCode: String)
+POST          /data/feed/:feedType/:portCode                                          controllers.application.ImportsController.feedImport(feedType: String, portCode: String)
 # Training
 GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
 GET           /feature-guides                                                         controllers.Application.featureGuides
-GET           /drop-ins                                                               controllers.Application.dropIns()
+GET           /drop-ins                                                               controllers.application.DropInsController.dropIns()
 + nocsrf
-POST          /drop-in-registrations                                                  controllers.Application.createDropInRegistration()
+POST          /drop-in-registrations                                                  controllers.application.DropInsController.createDropInRegistration()
 
-GET           /drop-in-registrations                                                  controllers.Application.getDropInRegistrations
+GET           /drop-in-registrations                                                  controllers.application.DropInsController.getDropInRegistrations
 
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 

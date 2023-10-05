@@ -17,7 +17,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{FeatureGuideProviderLike, DropInProviderLike, UserRoleProviderLike}
+import controllers.{DropInProviderLike, FeatureGuideProviderLike, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}

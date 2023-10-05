@@ -128,6 +128,7 @@ lazy val server = (project in file("server"))
     resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+    resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases/",
     Compile / packageBin / publishArtifact := false,
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := false,

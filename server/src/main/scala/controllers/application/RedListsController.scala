@@ -1,11 +1,12 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import actors.persistent.staffing.GetState
 import akka.pattern.ask
-import controllers.Application
+import com.google.inject.Inject
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import services.AirportToCountry
 import services.graphstages.Crunch
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
@@ -18,8 +19,7 @@ import upickle.default._
 import scala.concurrent.Future
 
 
-trait WithRedLists {
-  self: Application =>
+class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getRedListPorts(dateString: String): Action[AnyContent] =
     Action.async { _ =>

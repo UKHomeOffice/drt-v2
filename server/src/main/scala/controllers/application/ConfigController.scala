@@ -1,11 +1,11 @@
 package controllers.application
 
-import controllers.Application
-import play.api.mvc.{Action, AnyContent}
+import actors.DrtSystemInterface
+import com.google.inject.Inject
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 
 
-trait WithConfig {
-  self: Application =>
+class ConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getAirportConfig: Action[AnyContent] = auth {
     Action { _ =>

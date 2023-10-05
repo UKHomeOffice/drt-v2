@@ -1,15 +1,16 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import actors.persistent.staffing._
 import akka.NotUsed
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern._
 import akka.stream.scaladsl.Source
-import controllers.Application
+import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
 import drt.shared._
 import drt.staff.ImportStaff
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -20,8 +21,8 @@ import java.util.UUID
 import scala.concurrent.Future
 
 
-trait WithStaffing {
-  self: Application =>
+class StaffingController @Inject()(cc: ControllerComponents,
+                                   ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 
@@ -39,7 +40,7 @@ trait WithStaffing {
           val date = SDate(millis)
 
           val actorName = "fixed-points-read-actor-" + UUID.randomUUID().toString
-          val fixedPointsReadActor: ActorRef = system.actorOf(Props(classOf[FixedPointsReadActor], date, self.now), actorName)
+          val fixedPointsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[FixedPointsReadActor], date, ctrl.now), actorName)
 
           fixedPointsReadActor.ask(GetState)
             .map { case sa: FixedPointAssignments =>
@@ -138,7 +139,7 @@ trait WithStaffing {
             terminal,
             localDate,
             localDate,
-            portCode
+            airportConfig.portCode
           ))
       }
     }
@@ -147,7 +148,7 @@ trait WithStaffing {
     val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
     val pointInTime = SDate(date).addDays(1)
     val expireBefore = () => SDate(date).addDays(-1)
-    val staffMovementsReadActor: ActorRef = system.actorOf(Props(classOf[StaffMovementsReadActor], pointInTime, expireBefore), actorName)
+    val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(classOf[StaffMovementsReadActor], pointInTime, expireBefore), actorName)
 
     staffMovementsReadActor.ask(GetState)
       .map {

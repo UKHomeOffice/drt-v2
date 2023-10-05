@@ -1,12 +1,14 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import com.google.inject.Inject
 import controllers.Application
 import drt.shared.{ArrivalKey, ErrorResponse}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.homeoffice.drt.auth.Roles.EnhancedApiView
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 import upickle.default._
@@ -14,19 +16,18 @@ import upickle.default._
 import scala.concurrent.Future
 
 
-trait WithManifests {
-  self: Application =>
+class ManifestsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   private val manifestsForDay: UtcDate => Future[VoyageManifests] =
     (date: UtcDate) => ctrl.manifestsProvider(date, date).map(_._2).runFold(VoyageManifests.empty)(_ ++ _)
 
-  private val manifestsForFlights: List[ArrivalKey] => Future[VoyageManifests] = WithManifests.manifestsForFlights(manifestsForDay)
+  private val manifestsForFlights: List[ArrivalKey] => Future[VoyageManifests] = ManifestsController.manifestsForFlights(manifestsForDay)
 
   def getManifestSummariesForDay(utcDateString: String): Action[AnyContent] =
     authByRole(EnhancedApiView) {
       Action.async {
         UtcDate.parse(utcDateString) match {
-          case Some(utcDate) => manifestsForDay(utcDate).map(manifests => Ok(WithManifests.manifestSummaries(manifests)))
+          case Some(utcDate) => manifestsForDay(utcDate).map(manifests => Ok(ManifestsController.manifestSummaries(manifests)))
           case _ => Future(BadRequest(write(ErrorResponse("Invalid scheduled date"))))
         }
       }
@@ -41,7 +42,7 @@ trait WithManifests {
             .getOrElse(Set())
 
           manifestsForFlights(arrivalKeys.toList)
-            .map(manifests => Ok(WithManifests.manifestSummaries(manifests))
+            .map(manifests => Ok(ManifestsController.manifestSummaries(manifests))
           )
 
         case _ =>
@@ -51,7 +52,7 @@ trait WithManifests {
   }
 }
 
-object WithManifests {
+object ManifestsController {
   def manifestsForFlights(manifestsProvider: UtcDate => Future[VoyageManifests])
                          (arrivalKeys: List[ArrivalKey])
                          (implicit mat: Materializer): Future[VoyageManifests] = {
