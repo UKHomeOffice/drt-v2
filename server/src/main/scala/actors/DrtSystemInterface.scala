@@ -61,6 +61,7 @@ import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.FlightFilter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
+import test.feeds.test.TestFixtureFeed
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
@@ -81,8 +82,6 @@ import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
-
-
 trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderLike with DropInProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
@@ -188,6 +187,12 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   lazy val staffMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] = MinutesProvider(staffRouterActor)
 
   lazy val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActor)
+
+  val testManifestsActor: ActorRef = system.actorOf(Props(new NoopActor), s"TestActor-APIManifests")
+  val testArrivalActor: ActorRef = system.actorOf(Props(new NoopActor), s"TestActor-LiveArrivals")
+  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 12.hours)
+
+  val restartActor: ActorRef = system.actorOf(Props(new NoopActor), "restart-actor")
 
   private def flightValuesForDate[T](date: LocalDate,
                                      maybeAtTime: Option[SDateLike],

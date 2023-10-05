@@ -1,5 +1,6 @@
 package test.controllers
 
+import actors.DrtSystemInterface
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -14,7 +15,6 @@ import play.api.http.HeaderNames
 import play.api.mvc._
 import spray.json._
 import test.TestActors.ResetData
-import test.TestDrtSystemInterface
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
@@ -22,13 +22,14 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInterface) extends AbstractController(cc) {
+class TestController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AbstractController(cc) {
   lazy implicit val timeout: Timeout = Timeout(5 second)
 
   lazy implicit val ec: ExecutionContext = ctrl.ec
