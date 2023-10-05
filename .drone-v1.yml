@@ -60,6 +60,7 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt -ivy ./.ivy2 dependencyCheck
+      - sbt -ivy ./.ivy2 -mem 4096 -J-XX:+UseG1GC clean coverage test coverageReport
       - sbt scalastyle | true
       - sbt scapegoat | true
     environment:
