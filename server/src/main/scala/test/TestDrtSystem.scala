@@ -33,6 +33,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.Success
+import javax.inject.Singleton
 
 case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Materializer) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
@@ -135,6 +136,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val usePassengerPredictions: Boolean = true
 }
 
+@Singleton
 case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
                                   (implicit val materializer: Materializer,
                                    val ec: ExecutionContext,

@@ -40,7 +40,7 @@ import scala.collection.immutable.SortedMap
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-
+import javax.inject.Singleton
 
 object PostgresTables extends Tables {
   override val profile = slick.jdbc.PostgresProfile
@@ -51,6 +51,7 @@ object PostgresTables extends Tables {
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
+@Singleton
 case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
@@ -69,7 +70,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
-  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
+  override val aggregatedArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
 
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
