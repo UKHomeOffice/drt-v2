@@ -1,11 +1,13 @@
 package drt.client.components.scenarios
 
+import drt.client.services.JSDateConversions.SDate
 import drt.shared.SimulationParams
 import drt.shared.SimulationParams.fullDay
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, Queues}
-import uk.gov.homeoffice.drt.time.LocalDate
+import uk.gov.homeoffice.drt.time.{LocalDate}
 
 case class SimulationFormFields(terminal: Terminal,
                                 date: LocalDate,
@@ -63,7 +65,7 @@ case class SimulationFormFields(terminal: Terminal,
 }
 
 object SimulationFormFields {
-  def apply(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig): SimulationFormFields = {
+  def apply(terminal: Terminal, date: LocalDate, airportConfig: AirportConfig, slaConfigs: SlaConfigs): SimulationFormFields = {
     val processingTimes: Map[PaxTypeAndQueue, Option[Int]] = airportConfig.terminalProcessingTimes(terminal)
       .filterNot {
         case (paxTypeAndQueue: PaxTypeAndQueue, _) =>
@@ -77,7 +79,10 @@ object SimulationFormFields {
       case (q, (_, max)) => q -> Option(max.max)
     }
     val egateBankSizes: IndexedSeq[Option[Int]] = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq.map(Option(_))
-    val slas: Map[Queue, Option[Int]] = airportConfig.slaByQueue.view.mapValues(Option(_)).toMap
+    val slas: Map[Queue, Option[Int]] = slaConfigs.configForDate(SDate(date).millisSinceEpoch)
+      .getOrElse(airportConfig.slaByQueue)
+      .view.mapValues(Option(_)).toMap
+
     val egateOpeningHours: Seq[Int] = fullDay
 
     SimulationFormFields(

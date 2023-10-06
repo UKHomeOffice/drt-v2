@@ -19,6 +19,7 @@ import uk.gov.homeoffice.drt.auth.Roles.StaffMovementsEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 
 object TerminalDesksAndQueuesRow {
 
@@ -37,6 +38,7 @@ object TerminalDesksAndQueuesRow {
                    staffMinute: StaffMinute,
                    maxPaxInQueues: Map[Queue, Int],
                    airportConfig: AirportConfig,
+                   slaConfigs: SlaConfigs,
                    terminal: Terminal,
                    showActuals: Boolean,
                    viewType: DeskType,
@@ -49,6 +51,7 @@ object TerminalDesksAndQueuesRow {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalDesksAndQueuesRow")
     .render_P(props => {
+      val slas = props.slaConfigs.configForDate(props.viewMode.millis).getOrElse(props.airportConfig.slaByQueue)
       val crunchMinutesByQueue = props.queueMinutes.filter(qm => props.airportConfig.queuesByTerminal(props.terminal).contains(qm.queue)).map(
         qm => Tuple2(qm.queue, qm)).toMap
 
@@ -72,7 +75,7 @@ object TerminalDesksAndQueuesRow {
 
           val queueCells = props.viewType match {
             case Deployments =>
-              val ragClass = slaRagStatus(cm.deployedWait.getOrElse(0).toDouble, props.airportConfig.slaByQueue(queue))
+              val ragClass = slaRagStatus(cm.deployedWait.getOrElse(0).toDouble, slas(queue))
               if (props.showWaitColumn)
                 List(
                   paxLoadTd,
@@ -88,7 +91,7 @@ object TerminalDesksAndQueuesRow {
               else
                 List(paxLoadTd, deployRecsDeskTd)
             case Ideal =>
-              val ragClass: String = slaRagStatus(cm.waitTime.toDouble, props.airportConfig.slaByQueue(queue))
+              val ragClass: String = slaRagStatus(cm.waitTime.toDouble, slas(queue))
               if (props.showWaitColumn)
                 List(
                   paxLoadTd,

@@ -1,9 +1,10 @@
 package drt.client.services.handlers
 
 import diode.AnyAction.aType
+import diode.Implicits.runAfterImpl
 import diode.data.{Pending, Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{RemoveSlasUpdate, DoNothing, GetSlaConfigs, RetryActionAfter, SaveSlasUpdate, UpdateSlaConfigs}
+import drt.client.actions.Actions.{DoNothing, GetSlaConfigs, RemoveSlasUpdate, RetryActionAfter, SaveSlasUpdate, UpdateSlaConfigs}
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
@@ -15,7 +16,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class SlaConfigsHandler[M](modelRW: ModelRW[M, Pot[SlaConfigs]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetSlaConfigs =>
-      updated(Pending(), Effect(DrtApi.get("sla-configs")
+      effectOnly(Effect(DrtApi.get("sla-configs")
         .map(r => UpdateSlaConfigs(read[SlaConfigs](r.responseText))).recoverWith {
           case _ =>
             log.error(s"SlaConfigs request failed. Re-requesting after ${PollDelay.recoveryDelay}")
@@ -23,7 +24,15 @@ class SlaConfigsHandler[M](modelRW: ModelRW[M, Pot[SlaConfigs]]) extends Logging
         }))
 
     case UpdateSlaConfigs(slaConfigs) =>
-      updated(Ready(slaConfigs))
+      val poll = Effect(Future(GetSlaConfigs)).after(PollDelay.updatesDelay)
+      value match {
+        case Ready(configs) if configs == slaConfigs =>
+          effectOnly(poll)
+        case _ =>
+          log.info(s"New configs: $slaConfigs")
+          log.info(s"Old configs: $value")
+          updated(Ready(slaConfigs), poll)
+      }
 
     case SaveSlasUpdate(update) =>
       val eventualUpdate = DrtApi.post("sla-configs", write(update))

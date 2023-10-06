@@ -16,6 +16,7 @@ import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Div
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, PaxTypes, Queues}
 import uk.gov.homeoffice.drt.time.LocalDate
 
@@ -39,11 +40,11 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
     def closeEgatesAllDay: State = copy(simulationFormFields = simulationFormFields.closeEgatesAllDay)
   }
 
-  case class Props(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig) extends UseValueEq
+  case class Props(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig, slaConfigs: SlaConfigs) extends UseValueEq
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SimulationFormComponent")
     .initialStateFromProps(p =>
-      State(SimulationFormFields(p.terminal, p.date, p.airportConfig), Map())
+      State(SimulationFormFields(p.terminal, p.date, p.airportConfig, p.slaConfigs), Map())
     )
     .renderS {
 
@@ -312,8 +313,8 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
     )(onClick --> callback, "Update")
   }
 
-  def apply(date: LocalDate, terminal: Terminal, airportConfg: AirportConfig): VdomElement =
-    component(Props(date, terminal, airportConfg))
+  def apply(date: LocalDate, terminal: Terminal, airportConfg: AirportConfig, slaConfigs: SlaConfigs): VdomElement =
+    component(Props(date, terminal, airportConfg, slaConfigs))
 }
 
 

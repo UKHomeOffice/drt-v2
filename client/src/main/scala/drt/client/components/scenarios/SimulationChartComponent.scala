@@ -17,6 +17,7 @@ import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, displayName}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 
 import scala.collection.immutable
 import scala.scalajs.js.JSConverters.JSRichIterableOnce
@@ -27,6 +28,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
   case class Props(
                     simulationParams: SimulationFormFields,
                     airportConfig: AirportConfig,
+                    slaConfigs: SlaConfigs,
                     terminal: Terminal
                   ) extends UseValueEq {
     def queueOrder: List[Queue] = airportConfig.desksExportQueueOrder
@@ -92,7 +94,8 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
 
   def resultToQueueCharts(props: Props,
                           simulationResult: SimulationResult
-                         ): Map[Queue, UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]]] =
+                         ): Map[Queue, UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]]] = {
+    val slas = props.slaConfigs.configForDate(SDate(props.simulationParams.date).millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
     simulationResult.queueToCrunchMinutes.map {
       case (q, simulationCrunchMinutes) =>
         val labels: immutable.Seq[String] = simulationCrunchMinutes.map(m => SDate(m.minute).toHoursAndMinutes)
@@ -120,7 +123,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
           ),
           ChartJsDataSet.line(
             label = "Queue SLA",
-            data = simulationCrunchMinutes.map(m => props.airportConfig.slaByQueue(q).toDouble),
+            data = simulationCrunchMinutes.map(m => props.simulationParams.slaByQueue(q).getOrElse(slas(q)).toDouble),
             colour = RGBA.green1,
             pointRadius = Option(0)
           ),
@@ -135,6 +138,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
           )
         )
     }
+  }
 
   def minutesToQueueDataSets(cms: List[CrunchApi.CrunchMinute]): Seq[ChartJsDataSet] = {
     val paxPerSlot = cms.map(m => Math.round(m.paxLoad).toDouble)
@@ -177,7 +181,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
 
   def apply(simulationParams: SimulationFormFields,
             airportConfig: AirportConfig,
-            terminal: Terminal): VdomElement = component(Props(simulationParams, airportConfig, terminal))
-
-
+            terminal: Terminal,
+            slaConfigs: SlaConfigs,
+           ): VdomElement = component(Props(simulationParams, airportConfig, slaConfigs, terminal))
 }

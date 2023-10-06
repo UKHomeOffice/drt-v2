@@ -171,7 +171,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
 object PollDelay {
   val recoveryDelay: FiniteDuration = 10 seconds
   val loginCheckDelay: FiniteDuration = 30 seconds
-  val minuteUpdateDelay: FiniteDuration = 10 seconds
+  val updatesDelay: FiniteDuration = 10 seconds
   val oohSupportUpdateDelay: FiniteDuration = 1 minute
   val checkFeatureFlagsDelay: FiniteDuration = 10 minutes
 }

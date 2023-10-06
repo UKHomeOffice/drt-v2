@@ -13,7 +13,7 @@ class MinuteTickerHandler[M](modelRW: ModelRW[M, Int]) extends LoggingActionHand
     case UpdateMinuteTicker =>
       val currentMinutes = SDate.now().getMinutes
 
-      val pollEffect = Effect(Future(RetryActionAfter(UpdateMinuteTicker, PollDelay.minuteUpdateDelay)))
+      val pollEffect = Effect(Future(RetryActionAfter(UpdateMinuteTicker, PollDelay.updatesDelay)))
       if (currentMinutes != value)
         updated(currentMinutes, pollEffect)
       else

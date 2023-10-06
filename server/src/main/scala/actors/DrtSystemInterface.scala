@@ -694,6 +694,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
     staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+    slasActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
   }
-
 }
