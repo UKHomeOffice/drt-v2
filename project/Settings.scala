@@ -69,7 +69,7 @@ object Settings {
     val scalaJsReactMaterialUi = "0.1.15"
     val sprayJsonScalaJs = "1.3.5-7"
     val scalaTestVersion = "3.2.16"
-    val twirlApi = "1.5.2"
+    val twirlApi = "1.6.1"
     val mockitoVersion = "4.6.1"
 
   }
