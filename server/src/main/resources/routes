@@ -46,6 +46,9 @@ GET           /red-list/updates-legacy                                          
 POST          /egate-banks/updates                                                    controllers.Application.updateEgateBanksUpdates
 GET           /egate-banks/updates                                                    controllers.Application.getEgateBanksUpdates
 DELETE        /egate-banks/updates/:terminal/:effectiveFrom                           controllers.Application.deleteEgateBanksUpdates(terminal: String, effectiveFrom: Long)
+POST          /sla-configs                                                            controllers.Application.updateSlaConfig
+GET           /sla-configs                                                            controllers.Application.getSlaConfigs
+DELETE        /sla-configs/:effectiveFrom                                             controllers.Application.removeSlaConfig(effectiveFrom: Long)
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 

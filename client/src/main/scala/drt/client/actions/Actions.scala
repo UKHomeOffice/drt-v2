@@ -13,6 +13,7 @@ import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
@@ -64,9 +65,14 @@ object Actions {
 
   case object GetAirportConfig extends Action
 
+  case object GetSlaConfigs extends Action
+
   case object GetPaxFeedSourceOrder extends Action
 
   case class UpdateAirportConfig(airportConfig: AirportConfig) extends Action
+
+  case class UpdateSlaConfigs(configs: SlaConfigs) extends Action
+
   case class UpdateGetPaxFeedSourceOrder(sources: List[FeedSource]) extends Action
 
   case object GetOohStatus extends Action
@@ -178,6 +184,12 @@ object Actions {
   case class DeleteEgateBanksUpdate(terminal: Terminal, effectiveFrom: MillisSinceEpoch) extends Action
 
   case class SetEgateBanksUpdates(updates: PortEgateBanksUpdates) extends Action
+
+  case class SaveSlasUpdate(setSlasUpdate: SlasUpdate) extends Action
+
+  case class RemoveSlasUpdate(effectiveFrom: MillisSinceEpoch) extends Action
+
+  //  case class SetSlasUpdates(updates: PortSlassUpdates) extends Action
 
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 

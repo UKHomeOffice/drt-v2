@@ -72,7 +72,7 @@ import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.ports.config.slas.{Slas, SlasUpdate}
+import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -268,21 +268,21 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   val aggregatedArrivalsActor: ActorRef
 
-  val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
+  private val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
 
   val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val crunchRequestProvider: MillisSinceEpoch => CrunchRequest =
+  private val crunchRequestProvider: MillisSinceEpoch => CrunchRequest =
     millis => CrunchRequest(SDate(millis).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
-  private val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], Slas]("slas", now, crunchRequestProvider, maxDaysToConsider)))
+  val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestProvider, maxDaysToConsider)))
 
-  slasActor.ask(GetState).mapTo[Slas].foreach { slasUpdate =>
-    if (slasUpdate.updates.isEmpty) {
+  slasActor.ask(GetState).mapTo[SlaConfigs].foreach { slasUpdate =>
+    if (slasUpdate.configs.isEmpty) {
       log.info(s"No SLAs. Adding defaults from airport config")
-      slasActor ! ConfigActor.SetUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue), None)
+      slasActor ! ConfigActor.SetUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue, None))
     } else {
       log.info("SLAs: " + slasUpdate)
     }
@@ -291,14 +291,15 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       (date, queue) =>
         slasActor
           .ask(GetState)
-          .mapTo[Slas]
+          .mapTo[SlaConfigs]
           .map {
-            _.updatesForDate(SDate(date).millisSinceEpoch)
+            _.configForDate(SDate(date).millisSinceEpoch)
               .getOrElse(throw new Exception(s"No slas found for $date"))
               .getOrElse(queue, throw new Exception("No slas found for queue"))
           }
 
-  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, slaProvider)
+  val portDeskRecs: PortDesksAndWaitsProviderLike =
+    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, slaProvider)
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
 
@@ -329,7 +330,8 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff =>
     Future.successful {
-      val updates = SortedMap[UniqueArrival, Arrival]() ++ diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpArrivalTimeCalculator(arrival).millisSinceEpoch)))
+      val updates = SortedMap[UniqueArrival, Arrival]() ++
+        diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpArrivalTimeCalculator(arrival).millisSinceEpoch)))
       diff.copy(toUpdate = updates)
     }
 

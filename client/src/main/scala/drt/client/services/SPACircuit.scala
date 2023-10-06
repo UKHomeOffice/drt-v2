@@ -14,6 +14,7 @@ import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
@@ -164,6 +165,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureGuideViewedIds: Pot[Seq[String]] = Empty,
                      dropIns: Pot[Seq[DropIn]] = Empty,
                      dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
+                     slaConfigs: Pot[SlaConfigs] = Empty,
                     )
 
 object PollDelay {
@@ -236,6 +238,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),
       new DropInHandler(zoomRW(_.dropIns)((m, v) => m.copy(dropIns = v))),
       new DropInRegistrationsHandler(zoomRW(_.dropInRegistrations)((m, v) => m.copy(dropInRegistrations = v))),
+      new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
     )
     composedHandlers
   }
