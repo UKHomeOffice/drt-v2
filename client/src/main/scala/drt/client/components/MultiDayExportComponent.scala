@@ -11,6 +11,7 @@ import drt.client.util.DateUtil.isNotValidDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.redlist.LhrRedListDatesImpl
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormLabel, MuiGrid, MuiTextField}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
@@ -24,6 +25,8 @@ import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, B
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+
+import scala.scalajs.js
 
 object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
@@ -58,35 +61,15 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {
         val key = label.replace("[^0-9a-zA-Z]+", "-")
         MuiGrid(container = true, spacing = 2)(
-          MuiGrid(item = true, xs = 1)(
-            ^.key := s"date-picker-label-$key",
-            DefaultFormFieldsStyle.datePickerLabel,
-            MuiFormLabel()(label),
-          ),
           MuiGrid(item = true, xs = 4)(
             ^.key := s"date-picker-date-$key",
-            MuiTextField()(
-              DefaultFormFieldsStyle.datePicker,
+            MuiTextField(label = label.toVdom)(
               ^.`type` := "date",
               ^.defaultValue := SDate(currentDate).toISODateOnly,
               ^.onChange ==> setDate
             )
           ),
-          MuiGrid(item = true, xs = 6)(
-            ^.key := s"date-picker-type-$key",
-            if (label == "From")
-              validDateIndicator(state.startDate.isNotValid)
-            else
-              validDateIndicator(state.endDate.isNotValid)
-          )
         )
-      }
-
-      def validDateIndicator(isNotValid: Boolean): TagMod = isNotValid match {
-        case true =>
-          <.div(^.id := "snapshot-error", <.div("Please enter valid date"))
-        case false =>
-          <.div(^.id := "snapshot-done", Icon.checkCircleO)
       }
 
       val setStartDate: ReactEventFromInput => CallbackTo[Unit] = e => {
@@ -109,8 +92,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             scope.modState(_.setEnd(e.target.value, false))
         }
       }
-
-      val gridXs = 4
 
       def showDialogue(event: Event): Callback = {
         event.preventDefault()
@@ -144,11 +125,13 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                   ^.className := "modal-body",
                   ^.id := "multi-day-export-modal-body",
                   MuiGrid(container = true)(
-                    MuiGrid(container = true, spacing = 2)(
-                      datePickerWithLabel(setStartDate, "From", state.startDate.date),
-                      datePickerWithLabel(setEndDate, "To", state.endDate.date),
+                    <.div(^.style := js.Dictionary("display" -> "flex", "flex-direction" -> "column", "gap" -> 8),
+                      <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> 8),
+                        datePickerWithLabel(setStartDate, "From", state.startDate.date),
+                        datePickerWithLabel(setEndDate, "To", state.endDate.date),
+                      ),
                       if (state.startDate.date > state.endDate.date)
-                        MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
+                        <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
                       else
                         EmptyVdom,
 
@@ -159,13 +142,13 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                           case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
                           case _ => List(ExportArrivals)
                         }
-                        exportLinksGroup(props, state, gridXs, exports, "Arrivals")
+                        exportLinksGroup(props, state, exports, "Arrivals")
                       } else EmptyVdom,
                       if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                        exportLinksGroup(props, state, gridXs, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
+                        exportLinksGroup(props, state, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
                       else EmptyVdom,
                       if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
-                        exportLinksGroup(props, state, gridXs, List(ExportLiveArrivalsFeed), "Feeds")
+                        exportLinksGroup(props, state, List(ExportLiveArrivalsFeed), "Feeds")
                       else EmptyVdom
                     )
                   ),
@@ -187,20 +170,19 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
     .build
 
 
-  private def exportLinksGroup(props: Props, state: State, gridXs: Int, exports: List[ExportType], title: String): VdomElement =
-    MuiGrid(container = true, item = true, spacing = 2)(
-      MuiGrid(item = true, xs = 12)(title, ^.key := "export-group-title"),
-      exports.map(export =>
-        MuiGrid(item = true, xs = gridXs)(
-          ^.key := export.toString,
+  private def exportLinksGroup(props: Props, state: State, exports: List[ExportType], title: String): VdomElement =
+    <.div(^.style := js.Dictionary("display" -> "flex", "flex-direction" -> "column", "gap" -> 8),
+      title,
+      <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> 8),
+        exports.map(export =>
           exportLink(
             props.selectedDate,
             props.terminal.toString,
             export,
             SPAMain.exportDatesUrl(export, state.startDate.date, state.endDate.date, props.terminal)
           )
-        )
-      ).toVdomArray
+        ).toVdomArray
+      )
     )
 
   def apply(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(portCode, terminal, viewMode, selectedDate, loggedInUser: LoggedInUser))

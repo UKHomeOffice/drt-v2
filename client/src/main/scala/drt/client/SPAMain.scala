@@ -1,16 +1,19 @@
 package drt.client
 
 import diode.Action
-import drt.client.SPAMain.TerminalPageModes.{Current, Planning, Staffing}
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles._
-import drt.client.components.{ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage,
-  PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, UserDashboardPage}
+import drt.client.components.{
+  ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage,
+  PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, TrainingHubComponent, UserDashboardPage
+}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.{GetFeedSourceStatuses}
+import drt.client.services.handlers.GetFeedSourceStatuses
+import drt.client.spa.{TerminalPageMode, TerminalPageModes}
+import drt.client.spa.TerminalPageModes.{Current, Planning, Staffing}
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
@@ -78,41 +81,6 @@ object SPAMain {
 
   case class PortConfigPageLoc()
 
-  sealed trait TerminalPageMode {
-    val asString: String
-  }
-
-  object TerminalPageModes {
-    def fromString(modeStr: String): TerminalPageMode = modeStr.toLowerCase match {
-      case "dashboard" => Dashboard
-      case "current" => Current
-      case "snapshot" => Snapshot
-      case "planning" => Planning
-      case "staffing" => Staffing
-      case unknown =>
-        throw new Exception(s"Unknown terminal page mode '$unknown'")
-    }
-
-    case object Dashboard extends TerminalPageMode {
-      override val asString: String = "dashboard"
-    }
-
-    case object Current extends TerminalPageMode {
-      override val asString: String = "current"
-    }
-
-    case object Snapshot extends TerminalPageMode {
-      override val asString: String = "snapshot"
-    }
-
-    case object Planning extends TerminalPageMode {
-      override val asString: String = "planning"
-    }
-
-    case object Staffing extends TerminalPageMode {
-      override val asString: String = "staffing"
-    }
-  }
 
   object TerminalPageTabLoc {
     def apply(terminalName: String,
@@ -198,6 +166,8 @@ object SPAMain {
 
   case object ContactUsLoc extends Loc
 
+  case class TrainingHubLoc(modeStr: String = "dropInBooking") extends Loc
+
   case object PortConfigLoc extends Loc
 
   case object ForecastFileUploadLoc extends Loc
@@ -235,6 +205,7 @@ object SPAMain {
         terminalRoute(dsl) |
         statusRoute(dsl) |
         contactRoute(dsl) |
+        trainingHubRoute(dsl) |
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
 
@@ -261,11 +232,6 @@ object SPAMain {
     staticRoute(root, UserDashboardLoc) ~> renderR((router: RouterCtl[Loc]) => UserDashboardPage(router))
   }
 
-  def contactUsRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute(root, ContactUsLoc) ~> renderR(_ => ContactPage())
-  }
 
   def statusRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
@@ -298,6 +264,17 @@ object SPAMain {
       dynRenderR((page: PortDashboardLoc, router) => {
         PortDashboardPage(router, page)
       })
+  }
+
+  def trainingHubRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+    import dsl._
+
+    dynamicRouteCT(
+      ("#trainingHub" / string("[a-zA-Z0-9]*")).caseClass[TrainingHubLoc]) ~>
+      dynRenderR { (page: TrainingHubLoc, router) =>
+        val props = TrainingHubComponent.Props(trainingHubLoc = page, router)
+        ThemeProvider(DrtTheme.theme)(TrainingHubComponent(props))
+      }
   }
 
   def terminalRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {

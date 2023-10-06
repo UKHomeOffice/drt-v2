@@ -1,6 +1,7 @@
 package actors.routing.minutes
 
-import actors.PartitionedPortStateActor.{DateRangeLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest}
+import actors.DateRange
+import actors.PartitionedPortStateActor.{DateRangeMillisLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest, UtcDateRangeLike}
 import actors.persistent.QueueLikeActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
@@ -20,7 +21,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 import scala.collection.immutable
 import scala.concurrent.Future
 
-case class GetStreamingDesksForTerminalDateRange(terminal: Terminal, from: MillisSinceEpoch, to: MillisSinceEpoch) extends DateRangeLike
+case class GetStreamingMinutesForTerminalDateRange(terminal: Terminal, start: UtcDate, end: UtcDate) extends UtcDateRangeLike
 
 object MinutesActorLike {
   type MinutesLookup[A, B <: WithTimeAccessor] = ((Terminals.Terminal, UtcDate), Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
@@ -48,14 +49,11 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
   val sequentialUpdatesActor: ActorRef = context.actorOf(Props(new SequentialAccessActor(updateMinutes, splitByResource)))
 
   override def receiveQueries: Receive = {
-    case PointInTimeQuery(pit, GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis)) =>
-      sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), Option(pit))
-
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).foreach(replyTo ! _)
 
-    case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
+    case PointInTimeQuery(pit, request: DateRangeMillisLike with TerminalRequest) =>
       val replyTo = sender()
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).foreach(replyTo ! _)
 
@@ -63,10 +61,10 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, None).foreach(replyTo ! _)
 
-    case GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis) =>
-      sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), None)
+    case GetStreamingMinutesForTerminalDateRange(terminal, start, end) =>
+      sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, start, end, None)
 
-    case request: DateRangeLike with TerminalRequest =>
+    case request: DateRangeMillisLike with TerminalRequest =>
       val replyTo = sender()
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).foreach(replyTo ! _)
   }
@@ -109,8 +107,20 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
           log.debug(s"No minutes found for for $day")
           MinutesContainer.empty[A, B]
       }
-      .fold(MinutesContainer[A, B](Seq())) {
-        case (soFarContainer, dayContainer) => soFarContainer ++ dayContainer
+
+  def retrieveTerminalMinutesDateRangeAsStream(terminal: Terminal,
+                                               start: UtcDate,
+                                               end: UtcDate,
+                                               maybePointInTime: Option[MillisSinceEpoch]
+                                              ): Source[(UtcDate, MinutesContainer[A, B]), NotUsed] =
+    Source(DateRange(start, end))
+      .mapAsync(1) { day =>
+        handleLookup(lookup((terminal, day), maybePointInTime)).map(r => (day, r))
+      }
+      .collect {
+        case (date, maybeContainer) =>
+          val container = maybeContainer.getOrElse(MinutesContainer.empty[A, B])
+          (date, container)
       }
 
   def handleLookup(eventualMaybeResult: Future[Option[MinutesContainer[A, B]]]): Future[Option[MinutesContainer[A, B]]] =
@@ -160,14 +170,11 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
   }))
 
   override def receiveQueries: Receive = {
-    case PointInTimeQuery(pit, GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis)) =>
-      sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), Option(pit))
-
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, Option(pit)).foreach(replyTo ! _)
 
-    case PointInTimeQuery(pit, request: DateRangeLike with TerminalRequest) =>
+    case PointInTimeQuery(pit, request: DateRangeMillisLike with TerminalRequest) =>
       val replyTo = sender()
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), Option(pit)).foreach(replyTo ! _)
 
@@ -175,10 +182,10 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
       val replyTo = sender()
       handleAllTerminalLookupsStream(startMillis, endMillis, None).foreach(replyTo ! _)
 
-    case GetStreamingDesksForTerminalDateRange(terminal, startMillis, endMillis) =>
-      sender() ! retrieveTerminalMinutesWithinRangeAsStream(terminal, SDate(startMillis), SDate(endMillis), None)
+    case GetStreamingMinutesForTerminalDateRange(terminal, start, end) =>
+      sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, start, end, None)
 
-    case request: DateRangeLike with TerminalRequest =>
+    case request: DateRangeMillisLike with TerminalRequest =>
       val replyTo = sender()
       handleLookups(request.terminal, SDate(request.from), SDate(request.to), None).foreach(replyTo ! _)
   }
@@ -223,6 +230,21 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
       }
       .fold(MinutesContainer[A, B](Seq())) {
         case (soFarContainer, dayContainer) => soFarContainer ++ dayContainer
+      }
+
+  def retrieveTerminalMinutesDateRangeAsStream(terminal: Terminal,
+                                               start: UtcDate,
+                                               end: UtcDate,
+                                               maybePointInTime: Option[MillisSinceEpoch]
+                                              ): Source[(UtcDate, MinutesContainer[A, B]), NotUsed] =
+    Source(DateRange(start, end))
+      .mapAsync(1) { day =>
+        handleLookup(lookup((terminal, day), maybePointInTime)).map(r => (day, r))
+      }
+      .collect {
+        case (date, maybeContainer) =>
+          val container = maybeContainer.getOrElse(MinutesContainer.empty[A, B])
+          (date, container)
       }
 
   def handleLookup(eventualMaybeResult: Future[Option[MinutesContainer[A, B]]]): Future[Option[MinutesContainer[A, B]]] =

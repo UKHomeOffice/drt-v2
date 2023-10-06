@@ -8,14 +8,16 @@ import akka.pattern.ask
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
+import com.google.inject.Inject
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
+import drt.shared.DropIn
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.{FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
+import slickdb.{DropInRow, DropInTableLike, DropInsRegistrationRow, DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
@@ -68,7 +70,33 @@ case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
   override def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]] = Future.successful(Seq.empty)
 }
 
-case class MockDrtParameters() extends DrtParameters {
+case class MockDropInsRegistrationTable() extends DropInsRegistrationTableLike {
+  override def createDropInRegistration(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def getDropInRegistrations(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] =
+    Future.successful(Seq(
+      DropInsRegistrationRow(email = "someone@test.com",
+        dropInId = 1,
+        registeredAt = new Timestamp(1695910303210L),
+        emailSentAt = Some(new Timestamp(1695910303210L)))))
+}
+
+case class MockDropInTable() extends DropInTableLike {
+  override def getDropIns(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[DropInRow]] =
+    Future.successful(Seq.empty)
+
+  override def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] =
+    Future.successful(Seq(DropIn(id = Some(1),
+      title = "test",
+      startTime = 1696687258000L,
+      endTime = 1696692658000L,
+      isPublished = true,
+      meetingLink = None,
+      lastUpdatedAt = 1695910303210L)))
+
+}
+
+case class MockDrtParameters @Inject()() extends DrtParameters {
   override val gateWalkTimesFilePath: Option[String] = None
   override val standWalkTimesFilePath: Option[String] = None
   override val forecastMaxDays: Int = 3
@@ -107,11 +135,18 @@ case class MockDrtParameters() extends DrtParameters {
   override val usePassengerPredictions: Boolean = true
 }
 
-case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
-                        (implicit val materializer: Materializer,
-                         val ec: ExecutionContext,
-                         val system: ActorSystem,
-                         val timeout: Timeout) extends DrtSystemInterface {
+trait TestDrtSystemInterface extends DrtSystemInterface {
+  val testManifestsActor: ActorRef
+  val testArrivalActor: ActorRef
+  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]]
+  val restartActor: ActorRef
+}
+
+case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
+                                  (implicit val materializer: Materializer,
+                                   val ec: ExecutionContext,
+                                   val system: ActorSystem,
+                                   val timeout: Timeout) extends TestDrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -148,6 +183,8 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
   override val userService: UserTableLike = MockUserTable()
   override val featureGuideService: FeatureGuideTableLike = MockFeatureGuideTable()
   override val featureGuideViewService: FeatureGuideViewLike = MockFeatureGuideViewTable()
+  override val dropInService: DropInTableLike = MockDropInTable()
+  override val dropInRegistrationService: DropInsRegistrationTableLike = MockDropInsRegistrationTable()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder)
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor

@@ -2,7 +2,7 @@ package test.controllers
 
 import akka.pattern.ask
 import akka.util.Timeout
-import controllers.{AirportConfProvider, DrtActorSystem}
+import com.google.inject.Inject
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.FeedPoller.AdhocCheck
@@ -10,12 +10,11 @@ import drt.server.feeds.Implicits._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import play.api.Configuration
 import play.api.http.HeaderNames
-import play.api.mvc.{Action, AnyContent, InjectedController, Session}
+import play.api.mvc._
 import spray.json._
 import test.TestActors.ResetData
-import test.TestDrtSystem
+import test.TestDrtSystemInterface
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
@@ -23,22 +22,18 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
-
-import javax.inject.{Inject, Singleton}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
-@Singleton
-class TestController @Inject()(val config: Configuration) extends InjectedController with AirportConfProvider {
-  implicit val timeout: Timeout = Timeout(5 second)
+class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInterface) extends AbstractController(cc) {
+  lazy implicit val timeout: Timeout = Timeout(5 second)
 
-  implicit val ec: ExecutionContextExecutor = DrtActorSystem.ec
+  lazy implicit val ec: ExecutionContext = ctrl.ec
 
   val log: Logger = LoggerFactory.getLogger(getClass)
-
-  def ctrl: TestDrtSystem = DrtActorSystem.drtTestSystem
 
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
@@ -84,7 +79,7 @@ class TestController @Inject()(val config: Configuration) extends InjectedContro
             Origin = PortCode(flight.Origin),
             PcpTime = Option(pcpTime),
             FeedSources = Set(LiveFeedSource),
-            PassengerSources = Map(LiveFeedSource -> Passengers(actPax,if (actPax.isEmpty) None else Option(flight.TranPax))),
+            PassengerSources = Map(LiveFeedSource -> Passengers(actPax, if (actPax.isEmpty) None else Option(flight.TranPax))),
             Scheduled = SDate(flight.SchDT).millisSinceEpoch
           )
           saveArrival(arrival).map(_ => Created)

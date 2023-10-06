@@ -20,6 +20,10 @@ object CrunchApi {
     implicit val rw: ReadWriter[PortStateError] = macroRW
   }
 
+  trait WithMinute {
+    val minute: MillisSinceEpoch
+  }
+
   trait MinuteLike[A, B] {
     val minute: MillisSinceEpoch
     val lastUpdated: Option[MillisSinceEpoch]
@@ -50,7 +54,9 @@ object CrunchApi {
                          shifts: Int,
                          fixedPoints: Int,
                          movements: Int,
-                         lastUpdated: Option[MillisSinceEpoch] = None) extends MinuteLike[StaffMinute, TM] with TerminalMinute with WithLastUpdated with MinuteComparison[StaffMinute] {
+                         lastUpdated: Option[MillisSinceEpoch] = None)
+    extends MinuteLike[StaffMinute, TM]
+      with WithMinute with TerminalMinute with WithLastUpdated with MinuteComparison[StaffMinute] {
     def equals(candidate: StaffMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
@@ -110,7 +116,9 @@ object CrunchApi {
                           maybeDeployedPaxInQueue: Option[Int] = None,
                           actDesks: Option[Int] = None,
                           actWait: Option[Int] = None,
-                          lastUpdated: Option[MillisSinceEpoch] = None) extends MinuteLike[CrunchMinute, TQM] with WithLastUpdated {
+                          lastUpdated: Option[MillisSinceEpoch] = None)
+    extends MinuteLike[CrunchMinute, TQM]
+      with WithMinute with WithLastUpdated {
     def equals(candidate: CrunchMinute): Boolean = this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
@@ -217,7 +225,7 @@ object CrunchApi {
     override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
 
     override def toMinute: CrunchMinute = CrunchMinute(
-        terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
+      terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
   }
 
   case class DeskRecMinutes(minutes: Iterable[DeskRecMinute]) extends PortStateQueueMinutes {

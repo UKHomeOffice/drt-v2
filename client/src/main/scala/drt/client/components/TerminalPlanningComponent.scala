@@ -4,20 +4,28 @@ import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.modules.GoogleEventTracker
+import drt.client.services.DrtApi
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.{Forecast, MilliDate}
+import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiDivider}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiCircularProgress, MuiDivider}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
+import japgolly.scalajs.react.callback.CallbackTo
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.vdom.html_<^.{<, _}
+import japgolly.scalajs.react.vdom.all.onClick.Event
+import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.Select
+import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.time.SDateLike
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.scalajs.js
 
 object TerminalPlanningComponent {
 
@@ -37,8 +45,11 @@ object TerminalPlanningComponent {
 
   private val forecastWeeks: Seq[SDateLike] = (-4 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
-  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
-    .renderP { (_, props) =>
+  case class State(downloadingHeadlines: Boolean, downloadingStaff: Boolean)
+
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
+    .initialState(State(downloadingHeadlines = false, downloadingStaff = false))
+    .renderPS { (scope, props, state) =>
       val sortedDays = props.forecastPeriod.forecast.days.toList.sortBy(_._1)
       val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] = Forecast.periodByTimeSlotAcrossDays(props.forecastPeriod.forecast)
 
@@ -56,6 +67,36 @@ object TerminalPlanningComponent {
         props.forecastPeriod.forecast,
         (millis: MillisSinceEpoch) => SDate(millis).toHoursAndMinutes
       )
+
+      def downloadContent(content: String, filename: String): Unit = {
+        val a = document.createElement("a").asInstanceOf[HTMLAnchorElement]
+        a.setAttribute("href", URL.createObjectURL(new Blob(js.Array(content))))
+        a.setAttribute("download", filename)
+        a.click()
+      }
+
+      val headlineFiguresExportUrl = s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
+      val staffRecommendationsExportUrl = s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
+
+      def createDownload(updateState: (State, Boolean) => State): String => Event => CallbackTo[Unit] = url => {
+        event =>
+          event.preventDefault()
+          scope.modState(s => updateState(s, true)) >>
+            Callback {
+              val direct = scope.withEffectsImpure
+
+              DrtApi.get(url)
+                .map { r =>
+                  val fileName = r.getResponseHeader("Content-Disposition").split("filename=")(1)
+                  downloadContent(r.responseText, fileName)
+                  direct.modState(s => updateState(s, false))
+                }
+                .recover {
+                  case _ => direct.modState(s => updateState(s, false))
+                }
+            }
+      }
+
       <.div(
         <.div(^.className := "terminal-content-header",
           <.div(^.className := "staffing-controls-wrapper",
@@ -70,22 +111,16 @@ object TerminalPlanningComponent {
             ),
             MuiDivider()(),
             <.div(^.className := "staffing-controls-row",
-              <.span(
-                MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-                  MuiIcons(GetApp)(fontSize = "small"),
-                  "Export Headlines",
-                  ^.className := "btn btn-link muiButton",
-                  ^.href := SPAMain.absoluteUrl(s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
-                  ^.target := "_blank"
-                )),
-              <.span(^.className := "planning-export",
-                MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-                  MuiIcons(GetApp)(fontSize = "small"),
-                  "Export Week",
-                  ^.className := "btn btn-link muiButton",
-                  ^.href := SPAMain.absoluteUrl(s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"),
-                  ^.target := "_blank"
-                ))
+              buttonWithProgress(headlineFiguresExportUrl,
+                buttonContent(state.downloadingHeadlines, "Export Headlines"),
+                createDownload((s: State, b: Boolean) => s.copy(downloadingHeadlines = b)),
+                state.downloadingHeadlines,
+              ),
+              buttonWithProgress(staffRecommendationsExportUrl,
+                buttonContent(state.downloadingStaff, "Export Staff Requirements"),
+                createDownload((s: State, b: Boolean) => s.copy(downloadingStaff = b)),
+                state.downloadingStaff
+              ),
             )
           ),
         ),
@@ -145,6 +180,26 @@ object TerminalPlanningComponent {
       GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
     })
     .build
+
+  private def buttonContent(isPreparing: Boolean, labelText: String): Seq[VdomNode] =
+    if (isPreparing)
+      Seq(MuiCircularProgress(size = "28px")(), "Preparing... please wait")
+    else
+      Seq(MuiIcons(GetApp)(fontSize = "small"), labelText)
+
+  private def buttonWithProgress(url: String,
+                                 label: Seq[TagMod],
+                                 createDownload: String => Event => CallbackTo[Unit],
+                                 disabled: Boolean,
+                                ): WithPropsAndTagsMods =
+    MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
+      ^.disabled := disabled,
+      <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "15px"), label.toTagMod),
+      ^.className := "btn btn-link muiButton",
+      ^.href := SPAMain.absoluteUrl(url),
+      ^.target := "_blank",
+      ^.onClick ==> createDownload(url)
+    )
 
   def defaultStartDate(date: SDateLike): SDateLike = getLastSunday(date)
 

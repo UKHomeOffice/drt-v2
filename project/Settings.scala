@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v612"
+    val drtLib = "v617"
 
     val scala = "2.13.10"
     val scalaDom = "2.0.0"
@@ -70,6 +70,7 @@ object Settings {
     val sprayJsonScalaJs = "1.3.5-7"
     val scalaTestVersion = "3.2.16"
     val twirlApi = "1.5.2"
+    val mockitoVersion = "4.6.1"
 
   }
 
@@ -192,7 +193,9 @@ object Settings {
     "org.specs2" %% "specs2-core" % specs2 % Test,
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
-
+    "org.mockito" % "mockito-core" % mockitoVersion % Test,
+    "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test,
+    "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
