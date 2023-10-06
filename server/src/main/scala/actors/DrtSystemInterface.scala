@@ -17,7 +17,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{FeatureGuideProviderLike, UserRoleProviderLike}
+import controllers.{DropInProviderLike, FeatureGuideProviderLike, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -29,8 +29,8 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.ChromaLiveFeed
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.common.{ManualUploadArrivalFeed, ProdHttpClient}
-import drt.server.feeds.edi.{EdiClient, EdiFeed}
-import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
+import drt.server.feeds.edi.EdiFeed
+import drt.server.feeds.gla.GlaFeed
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.BHXForecastFeedLegacy
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LgwForecastFeed}
@@ -38,13 +38,15 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
+import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
 import services._
@@ -81,7 +83,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
 
-trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderLike {
+trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderLike with DropInProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
@@ -180,6 +182,12 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     HistoricApiFeedSource,
     AclFeedSource,
   )
+
+  lazy val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = FlightsProvider(flightsRouterActor)
+  lazy val crunchMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] = MinutesProvider(queuesRouterActor)
+  lazy val staffMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] = MinutesProvider(staffRouterActor)
+
+  lazy val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActor)
 
   private def flightValuesForDate[T](date: LocalDate,
                                      maybeAtTime: Option[SDateLike],
@@ -314,7 +322,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
       val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-        liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
+        liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsProvider),
         historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService, manifestCacheLookup, manifestCacheStore),
         historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
         splitsCalculator = splitsCalculator,
@@ -559,18 +567,24 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
             })
         }
       case "GLA" =>
-        val liveUrl = params.maybeGlaLiveUrl.getOrElse(throw new Exception("Missing GLA Live Feed Url"))
-        val livePassword = params.maybeGlaLivePassword.getOrElse(throw new Exception("Missing GLA Live Feed Password"))
-        val liveToken = params.maybeGlaLiveToken.getOrElse(throw new Exception("Missing GLA Live Feed Token"))
-        val liveUsername = params.maybeGlaLiveUsername.getOrElse(throw new Exception("Missing GLA Live Feed Username"))
-        Feed(GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).source(Feed.actorRefSource), 5.seconds, 60.seconds)
+        val (url: String, username: String, password: String, token: String) = azinqConfig
+        Feed(GlaFeed(url, username, password, token), 5.seconds, 1.minute)
       case "PIK" | "HUY" | "INV" | "NQY" | "NWI" | "SEN" =>
         Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30 seconds)
       case "EDI" =>
-        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediLiveFeedSource(Feed.actorRefSource), 5.seconds, 1.minute)
+        val (url: String, username: String, password: String, token: String) = azinqConfig
+        Feed(EdiFeed(url, username, password, token), 5.seconds, 1.minute)
       case _ =>
         arrivalsNoOp
     }
+
+  private def azinqConfig: (String, String, String, String) = {
+    val url = config.get[String]("feeds.azinq.url")
+    val username = config.get[String]("feeds.azinq.username")
+    val password = config.get[String]("feeds.azinq.password")
+    val token = config.get[String]("feeds.azinq.token")
+    (url, username, password, token)
+  }
 
   def forecastArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =
     portCode match {
@@ -582,8 +596,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
         Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
       case PortCode("BHX") =>
         Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
-      case PortCode("EDI") =>
-        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediForecastFeedSource(Feed.actorRefSource), 5.seconds, 10.minutes)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }

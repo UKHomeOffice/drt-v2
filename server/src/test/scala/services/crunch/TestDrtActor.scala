@@ -20,6 +20,7 @@ import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCou
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
+import providers.ManifestsProvider
 import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
@@ -181,9 +182,17 @@ class TestDrtActor extends Actor {
         val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(Ack)
         val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
           arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-          liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
-          historicManifestsProvider = OptimisationProviders.historicManifestsProvider(tc.airportConfig.portCode, historicManifestLookups, mockCacheLookup, mockCacheStore),
-          historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(tc.airportConfig.portCode, historicManifestLookups),
+          liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ManifestsProvider(manifestsRouterActor)),
+          historicManifestsProvider = OptimisationProviders.historicManifestsProvider(
+            tc.airportConfig.portCode,
+            tc.historicManifestLookup.getOrElse(historicManifestLookups),
+            mockCacheLookup,
+            mockCacheStore
+          ),
+          historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(
+            tc.airportConfig.portCode,
+            tc.historicManifestLookup.getOrElse(historicManifestLookups),
+          ),
           splitsCalculator = splitsCalculator,
           splitsSink = portStateActor,
           portDesksAndWaitsProvider = portDeskRecs,

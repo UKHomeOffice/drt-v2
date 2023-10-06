@@ -43,7 +43,7 @@ object FlightTableComponents {
   def pcpTimeRange(fws: ApiFlightWithSplits, firstPaxOffMillis: MillisSinceEpoch, walkTimes: WalkTimes, paxFeedSourceOrder: List[FeedSource]): VdomElement =
     fws.apiFlight.PcpTime.map { pcpTime: MillisSinceEpoch =>
       val sdateFrom = SDate(MilliDate(pcpTime))
-      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.bestPaxSource(paxFeedSourceOrder).getPcpPax.getOrElse(0))))
+      val sdateTo = SDate(MilliDate(pcpTime + millisToDisembark(fws.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0))))
       val predictedWalkTime = fws.apiFlight.Predictions.predictions.get(WalkTimeModelAndFeatures.targetName).map(c => s"${c / 60}m").getOrElse("-")
       val gateOrStandWalkTime = if (fws.apiFlight.Gate.isDefined || fws.apiFlight.Stand.isDefined) {
         val wtMillis = walkTimes.walkTimeMillisForArrival(0L)(fws.apiFlight.Gate, fws.apiFlight.Stand, fws.apiFlight.Terminal)
@@ -70,6 +70,6 @@ object FlightTableComponents {
       <.div()
     }
 
-  val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => List[(ApiFlightWithSplits, Set[Arrival])] =
-    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight))
+  def uniqueArrivalsWithCodeShares(paxFeedSourceOrder: List[FeedSource]): Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[Arrival])] =
+    CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight), paxFeedSourceOrder)
 }

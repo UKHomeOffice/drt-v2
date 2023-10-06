@@ -43,8 +43,6 @@ trait ApiServiceI extends Api with ShiftPersistence {
   def getShiftsForMonth(month: MillisSinceEpoch, terminal: Terminal): Future[ShiftAssignments]
 
   def updateShifts(shiftsToUpdate: Seq[StaffAssignment]): Unit
-
-  def getShowAlertModalDialog(): Boolean
 }
 
 class ApiService(airportConfig: AirportConfig,
@@ -118,10 +116,5 @@ class ApiService(airportConfig: AirportConfig,
     }
   }
 
-  def getShowAlertModalDialog(): Boolean = config
-    .getOptional[Boolean]("feature-flags.display-modal-alert")
-    .getOrElse(false)
-
   override def portStateActor: ActorRef = ctrl.portStateActor
-
 }

@@ -10,7 +10,7 @@ import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin.autoImport._
 import java.net.URL
 
 scalaVersion := Settings.versions.scala
-ThisBuild / scapegoatVersion  := "2.1.1"
+ThisBuild / scapegoatVersion := "2.1.1"
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
 
@@ -84,7 +84,7 @@ lazy val client: Project = (project in file("client"))
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
     Test / parallelExecution := false,
-    Compile / doc / sources := List()
+    Compile / doc / sources := List(),
   )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -128,6 +128,7 @@ lazy val server = (project in file("server"))
     resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+    resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases/",
     Compile / packageBin / publishArtifact := false,
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := false,

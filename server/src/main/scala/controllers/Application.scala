@@ -1,26 +1,23 @@
 package controllers
 
 import actors._
-import akka.actor._
-import akka.event.{Logging, LoggingAdapter}
-import akka.stream._
-import akka.util.Timeout
+import akka.event.Logging
 import api._
 import boopickle.Default._
 import buildinfo.BuildInfo
+import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import drt.http.ProdSendAndReceive
 import drt.shared._
-import drt.users.KeyCloakClient
 import org.joda.time.chrono.ISOChronology
 import org.slf4j.{Logger, LoggerFactory}
-import play.api.mvc._
 import play.api.{Configuration, Environment}
+import play.api.mvc._
 import services._
 import services.graphstages.Crunch
-import services.metrics.Metrics
-import slickdb.{FeatureGuideTableLike, FeatureGuideViewLike, UserTableLike}
+import slickdb._
+import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -30,7 +27,6 @@ import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
-import javax.inject.{Inject, Singleton}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
@@ -65,23 +61,6 @@ trait AirportConfProvider extends AirportConfiguration {
   def aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)
 
   def idealStaffAsDefault: Boolean = config.getOptional[Boolean]("feature-flags.use-ideal-staff-default").getOrElse(false)
-
-  private def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
-
-  lazy val airportConfig: AirportConfig = {
-    val configForPort = getPortConfFromEnvVar.copy(
-      contactEmail = contactEmail,
-      outOfHoursContactPhone = oohPhone,
-      useTimePredictions = useTimePredictions,
-      noLivePortFeed = noLivePortFeed,
-      aclDisabled = aclDisabled,
-      idealStaffAsDefault = idealStaffAsDefault
-    )
-
-    configForPort.assertValid()
-
-    configForPort
-  }
 }
 
 trait FeatureGuideProviderLike {
@@ -90,6 +69,13 @@ trait FeatureGuideProviderLike {
 
   val featureGuideViewService: FeatureGuideViewLike
 
+}
+
+trait DropInProviderLike {
+
+  val dropInService: DropInTableLike
+
+  val dropInRegistrationService: DropInsRegistrationTableLike
 }
 
 trait UserRoleProviderLike {
@@ -117,56 +103,28 @@ trait UserRoleProviderLike {
   }
 }
 
-@Singleton
-class Application @Inject()(implicit val config: Configuration, env: Environment)
-  extends InjectedController
-  with AirportConfProvider
-  with WithConfig
-  with WithAirportInfo
-  with WithRedLists
-  with WithEgateBanks
-  with WithAlerts
-  with WithAuth
-  with WithContactDetails
-  with WithFeatureFlags
-  with WithExports
-  with WithFeeds
-  with WithImports
-  with WithPortState
-  with WithStaffing
-  with WithApplicationInfo
-  with WithSimulations
-  with WithManifests
-  with WithWalkTimes
-  with WithDebug
-  with WithEmailFeedback
-  with WithForecastAccuracy {
+class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)
+  extends AuthController(cc, ctrl) {
 
-  implicit val system: ActorSystem = DrtActorSystem.actorSystem
-  implicit val mat: Materializer = DrtActorSystem.mat
-  implicit val ec: ExecutionContext = DrtActorSystem.ec
-
-  implicit val timeout: Timeout = new Timeout(30 seconds)
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
-  val ctrl: DrtSystemInterface = DrtActorSystem.drtSystem
+  val systemStartGracePeriod: FiniteDuration = config.get[Int]("start-up-grace-period-seconds").seconds
 
-  ctrl.run()
+  log.info(s"Scheduling crunch system to start in ${systemStartGracePeriod.toString()}")
+  actorSystem.scheduler.scheduleOnce(systemStartGracePeriod) {
+    log.info("Starting crunch system")
+    ctrl.run()
+  }
 
   val now: () => SDateLike = () => SDate.now()
 
-  lazy val govNotifyApiKey = config.get[String]("notifications.gov-notify-api-key")
-
-  lazy val negativeFeedbackTemplateId = config.get[String]("notifications.negative-feedback-templateId")
-
-  lazy val positiveFeedbackTemplateId = config.get[String]("notifications.positive-feedback-templateId")
-
-  lazy val govNotifyReference = config.get[String]("notifications.reference")
-
   val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
-  val log: LoggingAdapter = system.log
+  val baseDomain = config.get[String]("drt.domain")
+
+  val isSecure = config.get[Boolean]("drt.use-https")
+
 
   log.info(s"Starting DRTv2 build ${BuildInfo.version}")
 
@@ -188,7 +146,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     SDate(date.millisSinceEpoch - oneDayInMillis)
   }
 
-  def featureGuides(): Action[AnyContent] = Action.async { _ =>
+  def featureGuides: Action[AnyContent] = Action.async { _ =>
     val featureGuidesJson: Future[String] = ctrl.featureGuideService.getAll()
     featureGuidesJson.map(Ok(_))
   }
@@ -214,18 +172,17 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
       ctrl.featureGuideService.getGuideIdForFilename(filename).flatMap {
         case Some(id) =>
           ctrl.featureGuideViewService
-              .insertOrUpdate(id, userEmail)
-              .map(_ => Ok(s"File $filename viewed updated"))
+            .insertOrUpdate(id, userEmail)
+            .map(_ => Ok(s"File $filename viewed updated"))
         case None =>
           Future.successful(Ok(s"File $filename viewed not updated as file not found"))
       }
     }
   }
 
-  def viewedFeatureGuideIds(): Action[AnyContent] = authByRole(BorderForceStaff) {
+  def viewedFeatureGuideIds: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
       import spray.json.DefaultJsonProtocol.{StringJsonFormat, immSeqFormat}
-      import spray.json._
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
       ctrl.featureGuideViewService.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
     }
@@ -254,24 +211,11 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
-  def timedEndPoint[A](name: String, maybeParams: Option[String] = None)(eventualThing: Future[A]): Future[A] = {
-    val startMillis = SDate.now().millisSinceEpoch
-    eventualThing.foreach { _ =>
-      val endMillis = SDate.now().millisSinceEpoch
-      val millisTaken = endMillis - startMillis
-      Metrics.timer(s"$name", millisTaken)
-      log.info(s"$name${maybeParams.map(p => s" - $p").getOrElse("")} took ${millisTaken}ms")
-    }
-    eventualThing
-  }
-
   def index: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     if (user.hasRole(airportConfig.role)) {
-      Ok(views.html.index("DRT - BorderForce", portCode.toString, googleTrackingCode, user.id))
+      Ok(views.html.index("DRT - BorderForce", airportConfig.portCode.toString, googleTrackingCode, user.id))
     } else {
-      val baseDomain = config.get[String]("drt.domain")
-      val isSecure = config.get[Boolean]("drt.use-https")
       val protocol = if (isSecure) "https://" else "http://"
       val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
       val redirectUrl = protocol + baseDomain + fromPort
@@ -290,8 +234,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     )
 
     val feedsToMonitor = ctrl.feedActorsForPort
-                             .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
-                             .values.toList
+      .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
+      .values.toList
 
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
@@ -308,7 +252,7 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
-  def apiLogin(): Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
+  def apiLogin: Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
 
     def postStringValOrElse(key: String): Option[String] = {
       request.body.get(key).map(_.head)
@@ -362,13 +306,6 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
     }
   }
 
-  def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
-    val token = headers.get("X-Auth-Token")
-                       .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
-    val keyCloakUrl = config.getOptional[String]("key-cloak.url")
-                            .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
-    new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
-  }
 
   def logging: Action[Map[String, Seq[String]]] = auth {
     Action(parse.tolerantFormUrlEncoded) {
@@ -381,8 +318,8 @@ class Application @Inject()(implicit val config: Configuration, env: Environment
         val logLevel = postStringValOrElse("level", "ERROR")
 
         val millis = request.body.get("timestamp")
-                            .map(_.head.toLong)
-                            .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+          .map(_.head.toLong)
+          .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
 
         val logMessage = Map(
           "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),

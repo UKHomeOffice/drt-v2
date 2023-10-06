@@ -144,7 +144,6 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      feedStatuses: Pot[Seq[FeedSourceStatuses]] = Empty,
                      alerts: Pot[List[Alert]] = Empty,
                      maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None,
-                     displayAlertDialog: Pot[Boolean] = Empty,
                      oohStatus: Pot[OutOfHoursStatus] = Empty,
                      featureFlags: Pot[FeatureFlags] = Empty,
                      fileUploadState: Pot[FileUploadState] = Empty,
@@ -163,6 +162,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      paxFeedSourceOrder: List[FeedSource] = List(),
                      showNewFeatureGuideOnLogin: Pot[Boolean] = Empty,
                      featureGuideViewedIds: Pot[Seq[String]] = Empty,
+                     dropIns: Pot[Seq[DropIn]] = Empty,
+                     dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
                     )
 
 object PollDelay {
@@ -210,7 +211,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
-      new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
       new RetryHandler(zoomRW(identity)((m, _) => m)),
       new LoggedInStatusHandler(zoomRW(identity)((m, _) => m)),
       new NoopHandler(zoomRW(identity)((m, _) => m)),
@@ -234,6 +234,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new FeatureGuidesHandler(zoomRW(_.featureGuides)((m, v) => m.copy(featureGuides = v))),
       new FeatureGuideDialogHandler(zoomRW(_.showNewFeatureGuideOnLogin)((m, v) => m.copy(showNewFeatureGuideOnLogin = v))),
       new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),
+      new DropInHandler(zoomRW(_.dropIns)((m, v) => m.copy(dropIns = v))),
+      new DropInRegistrationsHandler(zoomRW(_.dropInRegistrations)((m, v) => m.copy(dropInRegistrations = v))),
     )
     composedHandlers
   }

@@ -1,8 +1,10 @@
 package services.exports.flights.templates
 
+import services.exports.FlightExports
+import services.exports.FlightExports.{apiIsInvalid, splitsForSources}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, ForecastFeedSource, HistoricApiFeedSource, MlFeedSource}
 import uk.gov.homeoffice.drt.ports.Terminals._
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.SDateLike
 
 
@@ -26,9 +28,9 @@ trait AdminExport extends FlightsWithSplitsWithActualApiExport {
     else fws.apiFlight.bestPcpPaxEstimate(oldForecastFeedOrder).map(_.toString).getOrElse("0")
 
   override def flightWithSplitsToCsvRow(fws: ApiFlightWithSplits): List[String] = {
-    flightWithSplitsToCsvFields(fws, millisToLocalDateTimeStringFn) ++
-      List(pcpPax(fws), predictedPcpPax(fws), oldForecastPcpPax(fws), apiIsInvalid(fws)) ++
-      splitsForSources(fws)
+    FlightExports.flightWithSplitsToCsvFields(paxFeedSourceOrder)(fws.apiFlight) ++
+      List(predictedPcpPax(fws), oldForecastPcpPax(fws), apiIsInvalid(fws)) ++
+      splitsForSources(fws, paxFeedSourceOrder)
   }
 }
 
