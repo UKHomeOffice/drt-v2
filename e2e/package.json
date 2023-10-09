@@ -15,7 +15,7 @@
     "cypress": "^12.17.4",
     "eslint": "^8.41.0",
     "eslint-plugin-cypress": "^2.13.3",
-    "ts-loader": "^9.4.3",
+    "ts-loader": "^9.5.0",
     "typescript": "^5.0.4"
   },
   "dependencies": {
