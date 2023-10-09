@@ -20,6 +20,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 
 import scala.scalajs.js
+import scala.util.{Failure, Success, Try}
 
 object SlaConfigEditor {
   case class Props(initialUpdates: SlaConfigs) extends UseValueEq
@@ -28,12 +29,12 @@ object SlaConfigEditor {
     def setEffectiveFrom(newMillis: MillisSinceEpoch): Editing = copy(update = update.copy(effectiveFrom = newMillis))
   }
 
-  case class State(configs: SlaConfigs, editing: Option[Editing], confirm: Option[ConfirmParams]) extends UseValueEq
+  case class State(configs: SlaConfigs, editing: Option[Editing], confirm: Option[ConfirmParams], errors: Set[Queue]) extends UseValueEq
 
   def apply(slaConfigs: SlaConfigs, newUpdatesTemplate: Map[Queue, Int]): Unmounted[Props, State, Unit] = {
     val comp = ScalaComponent
       .builder[Props]("SlaConfigEditor")
-      .initialStateFromProps(p => State(p.initialUpdates, None, None))
+      .initialStateFromProps(p => State(p.initialUpdates, None, None, Set.empty))
       .renderS { (scope, s) =>
         val setDate: ReactEventFromInput => CallbackTo[Unit] = e => {
           e.persist()
@@ -45,11 +46,17 @@ object SlaConfigEditor {
         val setSla: Queue => ReactEventFromInput => CallbackTo[Unit] = queue => e => {
           e.persist()
           scope.modState { currentState =>
-            val maybeUpdatedEditing = currentState.editing.map { editing =>
-              val updatedSlas = editing.update.configItem.updated(queue, e.target.value.toInt)
-              editing.copy(update = editing.update.copy(configItem = updatedSlas))
+            val newSla = Try(e.target.value.toInt)
+            newSla match {
+              case Success(newSla) =>
+                val maybeUpdatedEditing = currentState.editing.map { editing =>
+                  val updatedSlas = editing.update.configItem.updated(queue, newSla)
+                  editing.copy(update = editing.update.copy(configItem = updatedSlas))
+                }
+                currentState.copy(editing = maybeUpdatedEditing, errors = currentState.errors - queue)
+              case Failure(_) =>
+                currentState.copy(errors = currentState.errors + queue)
             }
-            currentState.copy(editing = maybeUpdatedEditing)
           }
         }
 
@@ -101,6 +108,7 @@ object SlaConfigEditor {
                         MuiTextField(
                           label = VdomNode(Queues.displayName(queue) + " minutes"),
                           fullWidth = true,
+                          error = s.errors.contains(queue),
                         )(
                           ^.defaultValue := sla,
                           ^.onChange ==> setSla(queue)
@@ -110,7 +118,7 @@ object SlaConfigEditor {
                   ),
                   MuiDialogActions()(
                     MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Cancel", ^.onClick --> cancelEdit),
-                    MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Save", ^.onClick --> saveEdit),
+                    MuiButton(color = Color.primary, variant = "outlined", size = "medium")("Save", ^.onClick --> saveEdit, ^.disabled := s.errors.nonEmpty),
                   )
                 )
               case None => EmptyVdom

@@ -274,8 +274,8 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  private val crunchRequestProvider: MillisSinceEpoch => CrunchRequest =
-    millis => CrunchRequest(SDate(millis).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+  private val crunchRequestProvider: LocalDate => CrunchRequest =
+    date => CrunchRequest(date, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
   val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestProvider, maxDaysToConsider)))
 
@@ -694,6 +694,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
     staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
-    slasActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
+    slasActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
   }
 }

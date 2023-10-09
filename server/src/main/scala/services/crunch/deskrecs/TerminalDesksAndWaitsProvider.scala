@@ -63,7 +63,7 @@ case class TerminalDesksAndWaitsProvider(sla: (LocalDate, Queue) => Future[Int],
       }
       .runFoldAsync(Map[Queue, (Iterable[Int], Iterable[Int], Iterable[Double])]()) {
         case (queueRecsSoFar, (queue, sla)) =>
-          log.debug(s"Optimising $queue")
+          log.info(s"Optimising $queue with sla $sla minutes")
           val queuePassengers = passengersByQueue(queue)
           val queueDeskAllocations = queueRecsSoFar.view.mapValues { case (desks, _, _) => desks.toList }.toMap
 
