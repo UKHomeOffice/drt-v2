@@ -1,6 +1,6 @@
 package module
 
-import actors.{DrtSystemInterface, ProdDrtParameters, ProdDrtSystem}
+import actors.{DrtSystemInterface, ProdDrtParameters, ProdDrtSystem, TestDrtSystemInterface}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.stream.Materializer
@@ -9,8 +9,8 @@ import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
 import controllers.Application
 import controllers.DrtActorSystem.airportConfig
+import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController, SummariesExportController}
-import controllers.application.{AirportInfoController, AlertsController, ApplicationInfoController, ConfigController, ContactDetailsController, DebugController, DropInsController, EgateBanksController, EmailNotificationController, ExportsController, FeatureFlagsController, FeedsController, ForecastAccuracyController, ImportsController, ManifestsController, PortStateController, RedListsController, SimulationsController, StaffingController, WalkTimeController}
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import test.controllers.TestController
@@ -31,7 +31,9 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
 
   override def configure(): Unit = {
-    bind(classOf[TestController]).asEagerSingleton()
+    if(isTestEnvironment) {
+      bind(classOf[TestController]).asEagerSingleton()
+    }
     bind(classOf[AirportInfoController]).asEagerSingleton()
     bind(classOf[AlertsController]).asEagerSingleton()
     bind(classOf[Application]).asEagerSingleton()
@@ -57,6 +59,9 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
     bind(classOf[SimulationsController]).asEagerSingleton()
     bind(classOf[WalkTimeController]).asEagerSingleton()
   }
+
+    @Provides
+    def provideTestDrtSystemInterface: TestDrtSystemInterface = drtTestSystem
 
   @Provides
   implicit val provideActorSystem: ActorSystem = if (isTestEnvironment) {

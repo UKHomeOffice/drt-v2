@@ -188,12 +188,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   lazy val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActor)
 
-  val testManifestsActor: ActorRef = system.actorOf(Props(new NoopActor), s"Noop-APIManifests")
-  val testArrivalActor: ActorRef = system.actorOf(Props(new NoopActor), s"Noop-LiveArrivals")
-  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 12.hours)
-
-  val restartActor: ActorRef = system.actorOf(Props(new NoopActor), "restart-actor-noop")
-
   private def flightValuesForDate[T](date: LocalDate,
                                      maybeAtTime: Option[SDateLike],
                                      flightIsRelevant: Arrival => Boolean,

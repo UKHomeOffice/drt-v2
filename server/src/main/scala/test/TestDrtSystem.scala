@@ -17,7 +17,8 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.{DropInRow, DropInTableLike, DropInsRegistrationRow, DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
+import slickdb.{DropInRow, DropInTableLike, DropInsRegistrationRow,
+  DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
@@ -141,7 +142,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                   (implicit val materializer: Materializer,
                                    val ec: ExecutionContext,
                                    val system: ActorSystem,
-                                   val timeout: Timeout) extends DrtSystemInterface {
+                                   val timeout: Timeout) extends TestDrtSystemInterface {
 
   import DrtStaticParameters._
 
