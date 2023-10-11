@@ -5,7 +5,7 @@ import actors.RouteHistoricManifestActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
-import actors.{DrtSystemInterface}
+import actors.DrtSystemInterface
 import akka.NotUsed
 import akka.actor.Props
 import akka.pattern.ask
@@ -26,10 +26,11 @@ import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.services.Slas
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, UtcDate}
 import upickle.default.write
 
 import scala.collection.immutable.SortedMap
@@ -67,7 +68,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
               simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
-                sla = Slas.slaProvider(ctrl.slasActor),
+                sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
                 splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
                 liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
@@ -116,7 +117,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
               simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
-                sla = Slas.slaProvider(ctrl.slasActor),
+                sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
                 splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
                 liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),

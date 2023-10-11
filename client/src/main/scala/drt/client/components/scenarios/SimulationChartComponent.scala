@@ -25,11 +25,10 @@ import scala.scalajs.js.JSConverters.JSRichIterableOnce
 
 object SimulationChartComponent extends ScalaCssReactImplicits {
 
-  case class Props(
-                    simulationParams: SimulationFormFields,
-                    airportConfig: AirportConfig,
-                    slaConfigs: SlaConfigs,
-                    terminal: Terminal
+  case class Props(simulationParams: SimulationFormFields,
+                   airportConfig: AirportConfig,
+                   slaConfigs: SlaConfigs,
+                   terminal: Terminal
                   ) extends UseValueEq {
     def queueOrder: List[Queue] = airportConfig.desksExportQueueOrder
   }

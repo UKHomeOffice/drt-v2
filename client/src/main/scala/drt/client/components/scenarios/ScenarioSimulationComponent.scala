@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.time.LocalDate
 
 object ScenarioSimulationComponent extends ScalaCssReactImplicits {
 
-  val steps = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
+  val steps: Seq[String] = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
 
   case class State(simulationParams: SimulationFormFields, panelStatus: Map[String, Boolean]) {
     def isOpen(panel: String): Boolean = panelStatus.getOrElse(panel, false)
@@ -31,24 +31,21 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
     .initialStateFromProps(p =>
       State(SimulationFormFields(p.terminal, p.date, p.airportConfig, p.slaConfigs), Map())
     )
-    .render_PS {
-
-      (props, state) =>
-
-        <.div(
-          <.h2("Arrival Scenario Simulation"),
-          MuiPaper()(
-            DefaultFormFieldsStyle.simulation,
-            MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 2)(
-              MuiGrid(item = true, xs = 2)(
-                ScenarioSimulationFormComponent(props.date, props.terminal, props.airportConfig, props.slaConfigs)
-              ),
-              MuiGrid(item = true, xs = 10)(
-                SimulationChartComponent(state.simulationParams, props.airportConfig, props.terminal, props.slaConfigs)
-              )
+    .render_PS { (props, state) =>
+      <.div(
+        <.h2("Arrival Scenario Simulation"),
+        MuiPaper()(
+          DefaultFormFieldsStyle.simulation,
+          MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 2)(
+            MuiGrid(item = true, xs = 2)(
+              ScenarioSimulationFormComponent(props.date, props.terminal, props.airportConfig, props.slaConfigs)
+            ),
+            MuiGrid(item = true, xs = 10)(
+              SimulationChartComponent(state.simulationParams, props.airportConfig, props.terminal, props.slaConfigs)
             )
           )
         )
+      )
     }
     .componentDidMount(_ => Callback {
       GoogleEventTracker.sendPageView(s"Arrival Simulations Page")

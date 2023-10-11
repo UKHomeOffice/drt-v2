@@ -15,16 +15,19 @@ import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Div
 import scalacss.ScalaCssReactImplicits
+import uk.gov.homeoffice.drt.ports.Queues.EGate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, PaxTypes, Queues}
 import uk.gov.homeoffice.drt.time.LocalDate
 
+import scala.scalajs.js
 import scala.util.Try
 
+//http://127.0.0.1:9000/export/desk-rec-simulation?terminal=T1&date=2023-10-11&passengerWeighting=5&eGateBankSizes=10,10,10&crunchOffsetMinutes=0&eGateOpenHours=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23&NonVisaNational_NonEeaDesk=75&EeaMachineReadable_EGate=45&B5JPlusNational_EeaDesk=50&GBRNational_EeaDesk=26&EeaBelowEGateAge_EeaDesk=33&B5JPlusNational_EGate=45&B5JPlusNationalBelowEGateAge_EeaDesk=50&EeaNonMachineReadable_EeaDesk=33&GBRNational_EGate=45&GBRNationalBelowEgateAge_EeaDesk=26&VisaNational_NonEeaDesk=89&EeaMachineReadable_EeaDesk=600&EGate_min=1&EeaDesk_min=1&NonEeaDesk_min=1&EGate_max=3&EeaDesk_max=13&NonEeaDesk_max=8&EeaDesk_sla=3&EGate_sla=5&NonEeaDesk_sla=45
 object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
-  val steps = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
+  val steps: Seq[String] = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
 
   case class State(simulationFormFields: SimulationFormFields, panelStatus: Map[String, Boolean]) {
     def isOpen(panel: String): Boolean = panelStatus.getOrElse(panel, false)
@@ -124,31 +127,27 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
         }
 
         def processingTimesFields = {
-          <.div(
+          <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
             state.simulationFormFields.processingTimes.toList.sortBy {
               case (paxTypeAndQueue: PaxTypeAndQueue, _) => paxTypeAndQueue.passengerType.name
             }.map {
               case (ptq, maybeProcTime) =>
                 val queueDisplayName = Queues.displayName(ptq.queueType)
-                <.div(^.className := "form-check", ^.key := ptq.key,
-                  MuiTextField(
-                    label = s"${PaxTypes.displayNameShort(ptq.passengerType, false)} to $queueDisplayName".toVdom,
-                    helperText = MuiTypography(variant = MuiTypography.Variant.caption)(
-                      s"Seconds to process ${PaxTypes.displayName(ptq.passengerType)} at $queueDisplayName"
-                    )
-                  )(
-                    `type` := "number",
-                    id := s"${ptq.passengerType}_${ptq.queueType}",
-                    value := maybeProcTime.map(_.toString).getOrElse(""),
-                    onChange ==> changeProcessingTimes(ptq)
-                  )
+                MuiTextField(
+                  label = s"Seconds to process ${PaxTypes.displayNameShort(ptq.passengerType, isBeforeAgeEligibilityChangeDate = false)} to $queueDisplayName".toVdom,
+                )(
+                  ^.key := ptq.key,
+                  `type` := "number",
+                  id := s"${ptq.passengerType}_${ptq.queueType}",
+                  value := maybeProcTime.map(_.toString).getOrElse(""),
+                  onChange ==> changeProcessingTimes(ptq)
                 )
             }.toTagMod
           )
         }
 
         def slaFields = {
-          <.div(
+          <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
             state.simulationFormFields.slaByQueue.map {
               case (q, maybeSla) =>
                 <.div(^.className := "form-check", ^.key := q.toString,
@@ -166,44 +165,50 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
         }
 
         def minMaxDesksFields: VdomTagOf[Div] = {
-          <.div(
+          <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
             state.simulationFormFields.minDesks.keys.map { q =>
-              <.div(
-                ^.className := "form-check", ^.key := q.toString,
+              <.div(^.key := q.toString,
                 MuiFormLabel()(
                   s"${Queues.displayName(q)}"
                 ),
-                MuiTextField(
-                  label = s"Min".toVdom,
-                )(
-                  `type` := "number",
-                  id := s"${q}_min",
-                  value := state.simulationFormFields.minDesks(q).map(_.toString).getOrElse(""),
-                  onChange ==> changeMinDesks(q)
-                ),
-                MuiTextField(
-                  label = s"Max".toVdom,
-                )(
-                  `type` := "number",
-                  id := s"${q}_max",
-                  value := state.simulationFormFields.maxDesks(q).map(_.toString).getOrElse(""),
-                  onChange ==> changeMaxDesks(q)
-                ),
+                <.div(
+                  ^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
+                  MuiTextField(
+                    label = s"Min".toVdom,
+                  )(
+                    `type` := "number",
+                    id := s"${q}_min",
+                    value := state.simulationFormFields.minDesks(q).map(_.toString).getOrElse(""),
+                    onChange ==> changeMinDesks(q)
+                  ),
+                  MuiTextField(
+                    label = s"Max".toVdom,
+                  )(
+                    `type` := "number",
+                    id := s"${q}_max",
+                    value := state.simulationFormFields.maxDesks(q).map(_.toString).getOrElse(""),
+                    onChange ==> changeMaxDesks(q)
+                  ),
+                )
               )
             }.toTagMod,
             <.div(
-              state.simulationFormFields.eGateBanksSizes.zipWithIndex.map { case (bankSize, idx) =>
-                <.div(^.key := s"bank-size-$idx",
+              MuiFormLabel()(
+                s"${Queues.displayName(EGate)}"
+              ),
+              <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
+                state.simulationFormFields.eGateBanksSizes.zipWithIndex.map { case (bankSize, idx) =>
                   MuiTextField(
                     label = s"e-Gates in bank ${idx + 1}".toVdom,
                   )(
+                    ^.key := s"bank-size-$idx",
                     `type` := "number",
                     id := s"egate-bank-size-$idx",
                     value := bankSize.map(_.toString).getOrElse(""),
                     onChange ==> changeBankSize(idx)
                   )
-                )
-              }.toTagMod
+                }.toTagMod
+              )
             ),
           )
         }
@@ -229,7 +234,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
         val showCharts: Callback = Callback(SPACircuit.dispatch(GetSimulation(state.simulationFormFields)))
 
-        <.div(
+        <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
           MuiAccordion(expanded = isOpen("passengerWeighting"))(
             onChange --> togglePanel("passengerWeighting"),
             MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
@@ -281,7 +286,7 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             MuiAccordionDetails()(eGatesOpen)
           ),
           MuiDivider(variant = MuiDivider.Variant.middle)(),
-          <.div(
+          <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
             submitButton(showCharts, state.simulationFormFields),
             MuiButton(
               variant = MuiButton.Variant.contained,
