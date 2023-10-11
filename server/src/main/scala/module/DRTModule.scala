@@ -31,7 +31,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
 
   override def configure(): Unit = {
-    if(isTestEnvironment) {
+    if (isTestEnvironment) {
       bind(classOf[TestController]).asEagerSingleton()
     }
     bind(classOf[AirportInfoController]).asEagerSingleton()
@@ -60,8 +60,8 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
     bind(classOf[WalkTimeController]).asEagerSingleton()
   }
 
-    @Provides
-    def provideTestDrtSystemInterface: TestDrtSystemInterface = drtTestSystem
+  @Provides
+  def provideTestDrtSystemInterface: TestDrtSystemInterface = drtTestSystem
 
   @Provides
   implicit val provideActorSystem: ActorSystem = if (isTestEnvironment) {

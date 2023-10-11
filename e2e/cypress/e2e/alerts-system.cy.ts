@@ -18,7 +18,7 @@ describe('Alerts system', () => {
     it("Should be possible to add an alert via the API, view it and the delete it.", () => {
       cy
         .asADrtSuperUser()
-        .deleteData()
+        .deleteData('nocheck')
         .deleteAlerts()
         .request({
             method: "POST",

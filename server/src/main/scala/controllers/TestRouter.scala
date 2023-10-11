@@ -12,8 +12,6 @@ class TestRouter @Inject()(cc: ControllerComponents, testController: TestControl
 
   val router: Router = Router.from {
 
-    case GET(p"/test/hello") => testController.hello
-
     case POST(p"/test/arrival") => testController.addArrival
 
     case POST(p"/test/arrivals/$forDate") => testController.addArrivals(forDate)
