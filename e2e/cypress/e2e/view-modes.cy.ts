@@ -16,26 +16,26 @@ describe('View Modes', () => {
         .get('#tomorrow').click({force: true})
         .reload()
         .get('input:hidden[name="csrfToken"]').should('exist').invoke('val').then((csrfToken) => {
-        cy.addFlight({
-          "ICAO": "TS0123",
-          "IATA": "TS0123",
-          "SchDT": inDaysAtTimeUtcString(1, 0, 55),
-          "ActChoxDT": inDaysAtTimeUtcString(1, 0, 55)
-        }, csrfToken.toString())
-          .addFlight({
-            "ICAO": "TS0234",
-            "IATA": "TS0234",
-            "SchDT": todayAtUtcString(4, 45),
-            "ActChoxDT": todayAtUtcString(4, 45)
+          cy.addFlight({
+            "ICAO": "TS0123",
+            "IATA": "TS0123",
+            "SchDT": inDaysAtTimeUtcString(1, 0, 55),
+            "ActChoxDT": inDaysAtTimeUtcString(1, 0, 55)
           }, csrfToken.toString())
-          .addFlight({
-            "ICAO": "TS0235",
-            "IATA": "TS0235",
-            "SchDT": todayAtUtcString(5, 45),
-            "ActChoxDT": todayAtUtcString(5, 45)
-          }, csrfToken.toString())
-          .get("#arrivals")
-          .contains("TS0123")
+            .addFlight({
+              "ICAO": "TS0234",
+              "IATA": "TS0234",
+              "SchDT": todayAtUtcString(4, 45),
+              "ActChoxDT": todayAtUtcString(4, 45)
+            }, csrfToken.toString())
+            .addFlight({
+              "ICAO": "TS0235",
+              "IATA": "TS0235",
+              "SchDT": todayAtUtcString(5, 45),
+              "ActChoxDT": todayAtUtcString(5, 45)
+            }, csrfToken.toString())
+            .get("#arrivals")
+            .contains("TS0123")
       })
 
     });
@@ -49,13 +49,13 @@ describe('View Modes', () => {
         .chooseArrivalsTab()
         .choose24Hours()
         .get('input:hidden[name="csrfToken"]').should('exist').invoke('val').then((csrfToken) => {
-        cy.addFlight({
-          "ICAO": "TS0123",
-          "IATA": "TS0123",
-          "SchDT": todayAtUtcString(0, 55),
-          "ActChoxDT": todayAtUtcString(0, 55)
-        }, csrfToken.toString())
-      })
+          cy.addFlight({
+            "ICAO": "TS0123",
+            "IATA": "TS0123",
+            "SchDT": todayAtUtcString(0, 55),
+            "ActChoxDT": todayAtUtcString(0, 55)
+          }, csrfToken.toString())
+        })
         .get("#arrivals")
         .contains("TS0123")
     });
@@ -65,13 +65,13 @@ describe('View Modes', () => {
         .visit('#terminal/T1/current/arrivals/?date=' + inDaysAtTimeUtcString(1, 22, 59))
         .choose24Hours()
         .get('input:hidden[name="csrfToken"]').should('exist').invoke('val').then((csrfToken) => {
-        cy.addFlight({
-          "ICAO": "TS0123",
-          "IATA": "TS0123",
-          "SchDT": inDaysAtTimeUtcString(1, 0, 55),
-          "ActChoxDT": inDaysAtTimeUtcString(1, 0, 55)
-        }, csrfToken.toString())
-      })
+          cy.addFlight({
+            "ICAO": "TS0123",
+            "IATA": "TS0123",
+            "SchDT": inDaysAtTimeUtcString(1, 0, 55),
+            "ActChoxDT": inDaysAtTimeUtcString(1, 0, 55)
+          }, csrfToken.toString())
+        })
         .get("#arrivals")
         .contains("TS0123")
     });
@@ -90,20 +90,20 @@ describe('View Modes', () => {
         .wait(100)
         .choose24Hours()
         .get('input:hidden[name="csrfToken"]').should('exist').invoke('val').then((csrfToken) => {
-        cy.addFlight({
-          "ICAO": "TS0123",
-          "IATA": "TS0123",
-          "SchDT": todayAtUtcString(1, 30),
-          "ActChoxDT": todayAtUtcString(1, 30)
-        }, csrfToken.toString())
-          .get('#arrivals')
-          .contains("TS0123")
-          .addFlight({
-            "ICAO": "TS0234",
-            "IATA": "TS0234",
-            "SchDT": todayAtUtcString(4, 45),
-            "ActChoxDT": todayAtUtcString(4, 45)
+          cy.addFlight({
+            "ICAO": "TS0123",
+            "IATA": "TS0123",
+            "SchDT": todayAtUtcString(1, 30),
+            "ActChoxDT": todayAtUtcString(1, 30)
           }, csrfToken.toString())
+            .get('#arrivals')
+            .contains("TS0123")
+            .addFlight({
+              "ICAO": "TS0234",
+              "IATA": "TS0234",
+              "SchDT": todayAtUtcString(4, 45),
+              "ActChoxDT": todayAtUtcString(4, 45)
+            }, csrfToken.toString())
       })
 
         .get('#arrivals')

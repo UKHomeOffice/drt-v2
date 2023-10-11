@@ -64,8 +64,7 @@ describe('Arrivals page', () => {
     const totalPaxSelector = '.arrivals__table__flight__pcp-pax';
 
     it('Displays a flight after it has been ingested via the live feed', () => {
-        cy
-        .addFlight(
+        cy.addFlight(
           {
               "SchDT": todayAtUtcString(0, 55),
               "EstDT": todayAtUtcString(1, 5),
@@ -118,8 +117,7 @@ describe('Arrivals page', () => {
 
     it('Handles manifests where the doctype is specified incorectly or left off', () => {
 
-        cy
-        .addFlight({
+        cy.addFlight({
             "SchDT": todayAtUtcString(0, 55),
             "ActChoxDT": todayAtUtcString(0, 55),
             "ActPax": 2,
@@ -140,8 +138,7 @@ describe('Arrivals page', () => {
     });
 
     it('Uses passenger numbers calculated from API data if no live pax number exists', () => {
-        cy
-        .addFlight({
+        cy.addFlight({
             "ICAO": "TS0123",
             "IATA": "TS0123",
             "SchDT": todayAtUtcString(0, 55),
@@ -185,8 +182,7 @@ describe('Arrivals page', () => {
 
     it('only counts each passenger once if API data contains multiple entries for each passenger', () => {
 
-        cy
-        .addFlight({
+        cy.addFlight({
             "SchDT": todayAtUtcString(0, 55),
             "ActPax": 0,
             "MaxPax": 0,
@@ -210,8 +206,7 @@ describe('Arrivals page', () => {
     });
 
     it('does not add transit passengers to the total pax when using API pax', () => {
-        cy
-        .addFlight({
+        cy.addFlight({
             "SchDT": todayAtUtcString(0, 55),
             "ActPax": 0,
             "MaxPax": 0,
@@ -235,8 +230,7 @@ describe('Arrivals page', () => {
     });
 
     it('does have green bar (pax-api) when API pax count within 5% threshold of Live source splits passenger count', () => {
-        cy
-        .addFlight({
+        cy.addFlight({
             "SchDT": todayAtUtcString(0, 55),
             "ActPax": 2,
             "MaxPax": 0,

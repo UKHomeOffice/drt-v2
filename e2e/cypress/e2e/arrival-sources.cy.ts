@@ -27,8 +27,7 @@ describe('Arrival sources', () => {
     });
 
     it('As an officer with the arrival-source role, clicking the flight code displays a popup displaying the sources', () => {
-        cy
-        .addFlight(
+        cy.addFlight(
           {
               "SchDT": todayAtUtcString(0, 55),
               "EstDT": todayAtUtcString(1, 5),

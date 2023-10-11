@@ -20,8 +20,7 @@ describe('Simulation export', () => {
     const manifest = (pl): object => manifestForDateTime(scheduledDateTime, pl)
 
     function sumColumn(csvData, index: number): number {
-        return csvData.slice(2)
-        .reduce((acc: number, row): number => {
+        return csvData.slice(2).reduce((acc: number, row): number => {
             const eeaPax = parseInt(row[index]);
             if (eeaPax > 0)
                 return acc + eeaPax;
@@ -31,8 +30,7 @@ describe('Simulation export', () => {
     }
 
     function maxColumn(csvData, index: number): number {
-        return csvData.slice(2)
-        .reduce((current: number, row): number => {
+        return csvData.slice(2).reduce((current: number, row): number => {
             const cellValue = parseInt(row[index]);
             if (cellValue > current)
                 return cellValue;
@@ -42,8 +40,7 @@ describe('Simulation export', () => {
     }
 
     it('Allows you to adjust the simulation values and export the results as a CSV', () => {
-        cy
-        .addFlight(
+        cy.addFlight(
           {
               "ActChoxDT": scheduledDateTime,
               "SchDT": todayAtUtcString(0, 55),

@@ -148,11 +148,10 @@ Cypress.Commands.add('navigateHome', () => {
 });
 
 Cypress.Commands.add('navigateToMenuItem', (itemName) => {
-  cy
-  .get('.main-menu-content > :nth-child(1)')
-  .children()
-  .contains(itemName)
-  .click(5, 5, {force: true})
+  cy.get('.main-menu-content > :nth-child(1)')
+    .children()
+    .contains(itemName)
+    .click(5, 5, {force: true})
 });
 
 Cypress.Commands.add('selectCurrentTab', () => {
@@ -165,8 +164,8 @@ Cypress.Commands.add('findAndClick', (toFind) => {
 
 Cypress.Commands.add('choose24Hours', () => {
   cy.get('.time-view-selector-container')
-  .contains('24 hours')
-  .click({force: true})
+    .contains('24 hours')
+    .click({force: true})
 });
 
 Cypress.Commands.add('chooseDesksAndQueuesTab', () => {
@@ -189,14 +188,14 @@ Cypress.Commands.add('addManifest', (manifest, csrfToken) => {
 });
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
-  return cy
-  .navigateHome()
-  .navigateToMenuItem('T1')
-  .selectCurrentTab()
-  .get("#currentTab").click({force: true})
-  .get("#arrivalsTab").click({force: true})
-  .choose24Hours()
-  .get("#arrivals")
-  .contains(flightCode)
-  .get('input:hidden[name="csrfToken"]').should('exist').invoke('val')
+  return
+  cy.navigateHome()
+    .navigateToMenuItem('T1')
+    .selectCurrentTab()
+    .get("#currentTab").click({force: true})
+    .get("#arrivalsTab").click({force: true})
+    .choose24Hours()
+    .get("#arrivals")
+    .contains(flightCode)
+    .get('input:hidden[name="csrfToken"]').should('exist').invoke('val')
 })

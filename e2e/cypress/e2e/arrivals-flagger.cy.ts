@@ -50,8 +50,7 @@ describe('Arrivals page filter', () => {
             }
         ]
 
-        cy
-        .addFlight(
+        cy.addFlight(
           {
               "ActPax": 11,
               "SchDT": scheduledTime.format()
@@ -66,20 +65,16 @@ describe('Arrivals page filter', () => {
         .wait(100)
         .get('.egate-queue-pax')
 
-        cy
-        .contains("Flag flights")
+        cy.contains("Flag flights")
         .click()
 
-        cy
-        .contains("Nationality or ICAO code")
+        cy.contains("Nationality or ICAO code")
         .click({force: true})
         .type("ITA{downArrow}{enter}")
 
-        cy
-        .contains("ITA (1)")
+        cy.contains("ITA (1)")
 
-        cy
-        .contains("Italy (ITA)")
+        cy.contains("Italy (ITA)")
     })
 
 });

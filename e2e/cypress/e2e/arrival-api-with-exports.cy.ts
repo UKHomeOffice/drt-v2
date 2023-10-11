@@ -72,8 +72,7 @@ describe('Arrival API with exports', () => {
 
         const csvWithNoApiSplits = headersWithoutActApi + "\n" + dataWithoutActApi + "\n";
 
-        cy
-        .addFlight(
+        cy.addFlight(
           {
               "SchDT": todayAtUtcString(0, 55),
               "EstDT": todayAtUtcString(1, 5),
@@ -106,8 +105,7 @@ describe('Arrival API with exports', () => {
         const dataWithActApi = dataWithoutActApi + "," + actApiData;
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
-        cy
-        .addFlight(
+        cy.addFlight(
           {
               "SchDT": todayAtUtcString(0, 55),
               "EstDT": todayAtUtcString(1, 5),
@@ -142,8 +140,7 @@ describe('Arrival API with exports', () => {
 
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
 
-        cy
-        .addFlight(
+        cy.addFlight(
           {
               "SchDT": todayAtUtcString(0, 55),
               "EstDT": todayAtUtcString(1, 5),
