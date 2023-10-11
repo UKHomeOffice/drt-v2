@@ -27,6 +27,7 @@ import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, UtcDate}
 import upickle.default.write
 
@@ -64,19 +65,19 @@ trait WithSimulations {
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
               val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
               simulationResult(
-                simulationParams,
-                simulationConfig,
-                ctrl.slaProvider,
-                SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
-                OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-                OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
-                OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
-                OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
-                ctrl.flightsRouterActor,
-                portStateActor,
-                () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-                () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
-                ctrl.paxFeedSourceOrder,
+                simulationParams = simulationParams,
+                simulationAirportConfig = simulationConfig,
+                sla = Slas.slaProvider(ctrl.slasActor),
+                splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
+                flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
+                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
+                historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
+                historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
+                flightsActor = ctrl.flightsRouterActor,
+                portStateActor = portStateActor,
+                redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+                egateBanksProvider = () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
+                paxFeedSourceOrder = ctrl.paxFeedSourceOrder,
               )
             }.flatten
 
@@ -115,7 +116,7 @@ trait WithSimulations {
               simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
-                ctrl.slaProvider,
+                sla = Slas.slaProvider(ctrl.slasActor),
                 splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
                 liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
@@ -125,7 +126,7 @@ trait WithSimulations {
                 portStateActor = portStateActor,
                 redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
                 egateBanksProvider = () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
-                ctrl.paxFeedSourceOrder,
+                paxFeedSourceOrder = ctrl.paxFeedSourceOrder,
               )
             }
             }.flatten
