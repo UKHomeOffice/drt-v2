@@ -188,8 +188,7 @@ Cypress.Commands.add('addManifest', (manifest, csrfToken) => {
 });
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
-  return
-  cy.navigateHome()
+  return cy.navigateHome()
     .navigateToMenuItem('T1')
     .selectCurrentTab()
     .get("#currentTab").click({force: true})
