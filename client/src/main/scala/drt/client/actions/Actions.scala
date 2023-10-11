@@ -189,8 +189,6 @@ object Actions {
 
   case class RemoveSlasUpdate(effectiveFrom: MillisSinceEpoch) extends Action
 
-  //  case class SetSlasUpdates(updates: PortSlassUpdates) extends Action
-
   case class UpdateStaffAdjustmentDialogueState(maybeNewState: Option[StaffAdjustmentDialogueState]) extends Action
 
   case class FileUploadStatus(fileUploadState: FileUploadState) extends Action

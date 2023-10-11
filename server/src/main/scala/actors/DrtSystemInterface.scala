@@ -76,6 +76,7 @@ import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
 import uk.gov.homeoffice.drt.time.{MilliDate => _, _}
 
@@ -279,27 +280,10 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestProvider, maxDaysToConsider)))
 
-  slasActor.ask(GetState).mapTo[SlaConfigs].foreach { slasUpdate =>
-    if (slasUpdate.configs.isEmpty) {
-      log.info(s"No SLAs. Adding defaults from airport config")
-      slasActor ! ConfigActor.SetUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue, None))
-    } else {
-      log.info("SLAs: " + slasUpdate)
-    }
-  }
-  val slaProvider: (LocalDate, Queue) => Future[Int] =
-      (date, queue) =>
-        slasActor
-          .ask(GetState)
-          .mapTo[SlaConfigs]
-          .map {
-            _.configForDate(SDate(date).millisSinceEpoch)
-              .getOrElse(throw new Exception(s"No slas found for $date"))
-              .getOrElse(queue, throw new Exception("No slas found for queue"))
-          }
+  ensureDefaultSlaConfig()
 
   val portDeskRecs: PortDesksAndWaitsProviderLike =
-    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, slaProvider)
+    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, Slas.slaProvider(slasActor))
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
 
@@ -410,6 +394,16 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
         queueDaysToReCrunch(crunchRequestQueueActor, portDeskRecs.crunchOffsetMinutes, params.forecastMaxDays, now)
 
       (crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+    }
+
+  private def ensureDefaultSlaConfig(): Unit =
+    slasActor.ask(GetState).mapTo[SlaConfigs].foreach { slasUpdate =>
+      if (slasUpdate.configs.isEmpty) {
+        log.info(s"No SLAs. Adding defaults from airport config")
+        slasActor ! ConfigActor.SetUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue, None))
+      } else {
+        log.info("SLAs: " + slasUpdate)
+      }
     }
 
   private def startOptimisationGraph[A, B <: WithTimeAccessor](minutesProducer: Flow[ProcessingRequest, MinutesContainer[A, B], NotUsed],
@@ -688,7 +682,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     .withAttributes(StreamSupervision.resumeStrategyWithLog("getFeedStatus"))
     .runWith(Sink.seq)
 
-  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]]): Unit = {
+  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
     flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
