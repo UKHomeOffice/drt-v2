@@ -17,24 +17,6 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 object DrtActorSystem extends AirportConfProvider {
   val config: Configuration = new Configuration(ConfigFactory.load)
-  val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
-  implicit val actorSystem: ActorSystem = if (isTestEnvironment) {
-    ActorSystem("DRT", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load()))
-  } else {
-    ActorSystem("DRT")
-  }
-  implicit val mat: Materializer = Materializer.createMaterializer(actorSystem)
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val timeout: Timeout = new Timeout(5.seconds)
-  lazy val drtSystem: DrtSystemInterface =
-    if (isTestEnvironment) {
-      drtTestSystem
-    } else {
-      drtProdSystem
-    }
-
-  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, MockDrtParameters())
-  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config))
 
   private def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
 

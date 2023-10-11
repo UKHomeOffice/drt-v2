@@ -17,7 +17,8 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.{DropInRow, DropInTableLike, DropInsRegistrationRow, DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
+import slickdb.{DropInRow, DropInTableLike, DropInsRegistrationRow,
+  DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
@@ -33,6 +34,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.Success
+import javax.inject.Singleton
 
 case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Materializer) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
@@ -135,13 +137,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val usePassengerPredictions: Boolean = true
 }
 
-trait TestDrtSystemInterface extends DrtSystemInterface {
-  val testManifestsActor: ActorRef
-  val testArrivalActor: ActorRef
-  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]]
-  val restartActor: ActorRef
-}
-
+@Singleton
 case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
                                   (implicit val materializer: Materializer,
                                    val ec: ExecutionContext,
@@ -229,9 +225,10 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     )
   )
 
-  val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
-  val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
-  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 2.seconds)
+  override val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
+  override val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
+  override val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 2.seconds)
+
 
   val testActors = List(
     forecastBaseArrivalsActor,
@@ -252,7 +249,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     persistentStaffingUpdateQueueActor,
   )
 
-  val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
+  override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)

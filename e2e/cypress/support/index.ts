@@ -3,9 +3,9 @@ export {};
 declare global {
   namespace Cypress {
     interface Chainable {
-      addFlight(flight: object): Chainable<Element>;
+      addFlight(flight: object, csrfToken: string): Chainable<Element>;
 
-      addManifest(manifest: object): Chainable<Element>;
+      addManifest(manifest: object, csrfToken: string): Chainable<Element>;
 
       addShiftForToday(csrfParam: string): Chainable<Element>;
 
@@ -17,7 +17,7 @@ declare global {
 
       asABorderForceReadOnlyOfficer(): Chainable<Element>;
 
-      asABorderForceOfficerWithRoles(roles: string[]): Chainable<Element>;
+      asABorderForceOfficerWithRoles(roles: string[], csrfToken: String): Chainable<Element>;
 
       asABorderForcePlanningOfficer(): Chainable<Element>;
 
@@ -53,7 +53,7 @@ declare global {
 
       deleteAlerts(): Chainable<Element>;
 
-      deleteData(): Chainable<Element>;
+      deleteData(csrfToken: string): Chainable<Element>;
 
       downloadCsv(type: string, year: number, month: number, day: number): Chainable<Response<any>>;
 

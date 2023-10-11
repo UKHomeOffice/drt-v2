@@ -74,12 +74,19 @@ Cypress.Commands.add('asAPortOperator', () => {
   cy.request("POST", '/test/mock-roles', {"roles": portOperatorRoles.concat(portRole)});
 });
 
-Cypress.Commands.add('asABorderForceOfficerWithRoles', (roles = []) => {
+Cypress.Commands.add('asABorderForceOfficerWithRoles', (roles = [], csrfToken) => {
   const withRoles = roles.concat(bfRoles).concat(portRole);
-  cy.request("POST", '/test/mock-roles', {"roles": withRoles})
+  cy.request({
+    method: "POST",
+    url: "/test/mock-roles",
+    body: {"roles": withRoles},
+    headers: {
+      'Csrf-Token': csrfToken,
+    }
+  })
 });
 
-Cypress.Commands.add('addFlight', (params) => {
+Cypress.Commands.add('addFlight', (params, csrfToken = 'nocheck') => {
   const defaults = {
     "Operator": "TestAir",
     "Status": "On Chox",
@@ -105,11 +112,24 @@ Cypress.Commands.add('addFlight', (params) => {
 
   const flightPayload = Object.assign({}, defaults, params);
 
-  cy.request('POST', '/test/arrival', flightPayload);
+  cy.request({
+    method: "POST",
+    url: "/test/arrival",
+    body: flightPayload,
+    headers: {
+      'Csrf-Token': csrfToken,
+    }
+  })
 });
 
-Cypress.Commands.add('deleteData', () => {
-  cy.request("DELETE", '/test/data')
+Cypress.Commands.add('deleteData', (csrfToken) => {
+  cy.request({
+    method: "DELETE",
+    url: "/test/data",
+    headers: {
+      'Csrf-Token': csrfToken,
+    }
+  })
 });
 
 Cypress.Commands.add('saveShifts', (shiftsJson, csrfToken) => {
@@ -128,8 +148,7 @@ Cypress.Commands.add('navigateHome', () => {
 });
 
 Cypress.Commands.add('navigateToMenuItem', (itemName) => {
-  cy
-    .get('.main-menu-content > :nth-child(1)')
+  cy.get('.main-menu-content > :nth-child(1)')
     .children()
     .contains(itemName)
     .click(5, 5, {force: true})
@@ -157,18 +176,25 @@ Cypress.Commands.add('chooseArrivalsTab', () => {
   cy.get("#arrivalsTab").click({force: true})
 });
 
-Cypress.Commands.add('addManifest', (manifest) => {
-  cy.request('POST', '/test/manifest', manifest)
+Cypress.Commands.add('addManifest', (manifest, csrfToken) => {
+  cy.request({
+    method: "POST",
+    url: "/test/manifest",
+    body: manifest,
+    headers: {
+      'Csrf-Token': csrfToken,
+    }
+  })
 });
 
 Cypress.Commands.add('waitForFlightToAppear', (flightCode) => {
-  cy
-    .navigateHome()
+  return cy.navigateHome()
     .navigateToMenuItem('T1')
     .selectCurrentTab()
     .get("#currentTab").click({force: true})
     .get("#arrivalsTab").click({force: true})
     .choose24Hours()
     .get("#arrivals")
-    .contains(flightCode);
+    .contains(flightCode)
+    .get('input:hidden[name="csrfToken"]').should('exist').invoke('val')
 })

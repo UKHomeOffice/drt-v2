@@ -15,10 +15,13 @@ describe('Alerts system', () => {
 
   describe('The alert endpoint', () => {
 
+    beforeEach(() => {
+      cy.deleteData('nocheck');
+    });
+
     it("Should be possible to add an alert via the API, view it and the delete it.", () => {
       cy
         .asADrtSuperUser()
-        .deleteData()
         .deleteAlerts()
         .request({
             method: "POST",

@@ -199,7 +199,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
           new ApiService(airportConfig,
             ctrl.shiftsActor,
             request.headers,
-            request.session))
+            request.session, ctrl))
 
         router(
           autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))

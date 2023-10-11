@@ -82,7 +82,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
-
 trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderLike with DropInProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
