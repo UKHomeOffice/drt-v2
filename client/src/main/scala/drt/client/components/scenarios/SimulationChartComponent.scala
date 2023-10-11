@@ -63,7 +63,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
             MuiLinearProgress(variant = MuiLinearProgress.Variant.indeterminate)
           ),
           simulationPot.render(simulationResult => {
-            val qToChart = resultToQueueCharts(props, simulationResult)
+            val qToChart = resultToQueueCharts(simulationResult)
             <.div(
               DefaultFormFieldsStyle.simulationCharts,
               <.ul(^.className := "nav nav-tabs",
@@ -91,13 +91,12 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
     }
     .build
 
-  def resultToQueueCharts(props: Props,
-                          simulationResult: SimulationResult
+  def resultToQueueCharts(simulationResult: SimulationResult,
                          ): Map[Queue, UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]]] = {
-    val slas = props.slaConfigs.configForDate(SDate(props.simulationParams.date).millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
     simulationResult.queueToCrunchMinutes.map {
       case (q, simulationCrunchMinutes) =>
         val labels: immutable.Seq[String] = simulationCrunchMinutes.map(m => SDate(m.minute).toHoursAndMinutes)
+        val sla = simulationResult.params.slaByQueue(q)
 
         val dataSets: Seq[ChartJsDataSet] = List(
           ChartJsDataSet.bar(
@@ -122,7 +121,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
           ),
           ChartJsDataSet.line(
             label = "Queue SLA",
-            data = simulationCrunchMinutes.map(m => props.simulationParams.slaByQueue(q).getOrElse(slas(q)).toDouble),
+            data = simulationCrunchMinutes.map(_ => sla.toDouble),
             colour = RGBA.green1,
             pointRadius = Option(0)
           ),

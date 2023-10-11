@@ -95,7 +95,6 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       request =>
         implicit val timeout: Timeout = new Timeout(10 minutes)
 
-
         SimulationParams
           .fromQueryStringParams(request.queryString) match {
           case Success(simulationParams) =>
