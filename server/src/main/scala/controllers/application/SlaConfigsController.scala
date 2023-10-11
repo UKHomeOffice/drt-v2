@@ -1,9 +1,10 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import akka.pattern.ask
-import controllers.Application
+import com.google.inject.Inject
 import drt.shared.CrunchApi.MillisSinceEpoch
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.actor.ConfigActor.{RemoveConfig, SetUpdate}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.auth.Roles.SlaConfigsEdit
@@ -11,9 +12,7 @@ import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 import upickle.default._
 
 
-trait WithSlaConfigs {
-  self: Application =>
-
+class SlaConfigsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getSlaConfigs: Action[AnyContent] = auth {
     Action.async { _ =>

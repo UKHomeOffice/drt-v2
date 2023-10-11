@@ -1,8 +1,10 @@
 package controllers.application
 
-import controllers.Application
+import actors.DrtSystemInterface
+import com.google.inject.Inject
 import drt.shared.{DropIn, DropInRegistration}
-import play.api.mvc.{Action, AnyContent}
+import email.GovNotifyEmail
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import slickdb.DropInRow
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import upickle.default.write
@@ -10,13 +12,14 @@ import upickle.default.write
 import scala.concurrent.Future
 import scala.util.Try
 
-trait WithDropIns {
 
-  self: Application =>
+class DropInsController @Inject()(cc: ControllerComponents,
+                                  ctrl: DrtSystemInterface,
+                                  emailNotification: GovNotifyEmail) extends AuthController(cc, ctrl) {
 
-  lazy val dropInRegistrationTemplateId = config.get[String]("notifications.dropIn-registration-templateId")
+  lazy val dropInRegistrationTemplateId = ctrl.config.get[String]("notifications.dropIn-registration-templateId")
 
-  lazy val dropInRegistrationHostTemplateId = config.get[String]("notifications.dropIn-registration-host-templateId")
+  lazy val dropInRegistrationHostTemplateId = ctrl.config.get[String]("notifications.dropIn-registration-host-templateId")
 
   lazy val dropInHostEmail = config.get[String]("notifications.dropIn-host-email")
 
@@ -43,7 +46,6 @@ trait WithDropIns {
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
       request.body.asText match {
         case Some(content) =>
-          log.info(s"Received drop-ins booking data")
           Try(content.parseJson.convertTo[String])
             .map { id =>
               ctrl.dropInRegistrationService.createDropInRegistration(userEmail, id).map { _ =>
@@ -62,13 +64,16 @@ trait WithDropIns {
     }
   }
 
-  def sendDropInRegistrationEmails(email: String, dropIns: Seq[DropInRow]) = {
+
+  private def sendDropInRegistrationEmails(email: String, dropIns: Seq[DropInRow]) = {
+    def contactEmail: Option[String] = config.getOptional[String]("contact-email")
 
     dropIns.map { dropIn =>
       val personalisation = emailNotification
         .dropInRegistrationConfirmation(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), email, dropIn)
       val hostEmailPersonalisation = emailNotification
         .dropInRegistrationHost(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), dropInHostEmail, email, dropIn)
+      val govNotifyReference = config.get[String]("notifications.reference")
 
       emailNotification.sendRequest(govNotifyReference,
         email,

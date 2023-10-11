@@ -1,22 +1,22 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import akka.actor.Props
 import akka.pattern.ask
-import controllers.Application
-import play.api.mvc.{Action, AnyContent}
+import com.google.inject.Inject
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import services.ActorTree
 import uk.gov.homeoffice.drt.auth.Roles.Debug
 import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import uk.gov.homeoffice.drt.time.SDate
+
 import scala.collection.SortedMap
 
 
-trait WithDebug {
-
-  self: Application =>
+class DebugController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getActorTree: Action[AnyContent] = authByRole(Debug) {
     Action { _ =>
@@ -40,7 +40,7 @@ trait WithDebug {
 
       if (persistenceIds.keys.exists(_ == persistenceId)) throw new Exception("Invalid actor")
 
-      val actor = system.actorOf(Props(new DebugFlightsActor(persistenceId, Option(pit.millisSinceEpoch))))
+      val actor = actorSystem.actorOf(Props(new DebugFlightsActor(persistenceId, Option(pit.millisSinceEpoch))))
 
       val actorSelection = persistenceIds.map {
         case (feed, id) =>
@@ -106,7 +106,7 @@ trait WithDebug {
                       "<td>" + a.getFlight.status.getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.gate.getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.stand.getOrElse("-") + "</td>" +
-                      "<td>" + s"${if(a.getFlight.totalPax.isEmpty) "-" else a.getFlight.totalPax.map(_.passengers.map(_.actual + ",").getOrElse(""))}" + "</td>" +
+                      "<td>" + s"${if (a.getFlight.totalPax.isEmpty) "-" else a.getFlight.totalPax.map(_.passengers.map(_.actual + ",").getOrElse(""))}" + "</td>" +
                       "<td>" + a.getFlight.totalPax.find(_.feedSource == Option(ApiFeedSource)).flatMap(_.passengers.map(_.actual)).getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.maxPax.getOrElse("-") + "</td>" +
                       "<td>" + a.getFlight.totalPax.find(_.feedSource == Option(ApiFeedSource)).flatMap(_.passengers.map(_.transit)).getOrElse("-") + "</td>" +

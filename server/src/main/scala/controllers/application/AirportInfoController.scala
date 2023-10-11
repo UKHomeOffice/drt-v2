@@ -1,15 +1,15 @@
 package controllers.application
 
-import controllers.Application
+import actors.DrtSystemInterface
+import com.google.inject.Inject
 import drt.shared._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import services.AirportToCountry
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import uk.gov.homeoffice.drt.ports.PortCode
 
 
-trait WithAirportInfo {
-  self: Application =>
+class AirportInfoController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getAirportInfo: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action { request =>

@@ -1,15 +1,17 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import actors.persistent.arrivals._
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.{ActorRef, PoisonPill}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Sink, Source}
+import com.google.inject.Inject
 import controllers.Application
 import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
@@ -21,8 +23,7 @@ import upickle.default.{read, write}
 import java.util.UUID
 
 
-trait WithFeeds {
-  self: Application =>
+class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getFeedStatuses: Action[AnyContent] = auth {
     Action.async { _ =>
@@ -120,7 +121,7 @@ trait WithFeeds {
     arrivalActorPersistenceIds.map {
       case (id, source) =>
         (ua: UniqueArrival) =>
-          system.actorOf(
+          actorSystem.actorOf(
             ArrivalLookupActor.props(airportConfig.portCode, SDate(pit), ua, id, source),
             name = s"arrival-read-$id-${UUID.randomUUID()}"
           )

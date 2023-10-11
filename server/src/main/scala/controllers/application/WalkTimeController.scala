@@ -1,14 +1,13 @@
 package controllers.application
 
-import controllers.Application
+import actors.DrtSystemInterface
+import com.google.inject.Inject
 import drt.shared.api.{WalkTime, WalkTimes}
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.actor.WalkTimeProvider
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 
-
-trait WithWalkTimes {
-  self: Application =>
+class WalkTimeController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getWalkTimes: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action { _ =>

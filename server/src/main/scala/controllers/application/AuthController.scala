@@ -1,23 +1,39 @@
 package controllers.application
 
+import actors.DrtSystemInterface
+import akka.actor.ActorSystem
+import akka.event.LoggingAdapter
 import akka.http.scaladsl.model.HttpResponse
-import controllers.Application
+import akka.util.Timeout
 import drt.http.ProdSendAndReceive
 import drt.shared.ErrorResponse
 import drt.users.KeyCloakClient
+import play.api.Configuration
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.JsResult.Exception
 import play.api.libs.json.{JsError, JsObject, Json, Writes}
-import play.api.mvc.{Action, AnyContent, Headers, Result}
+import play.api.mvc._
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ManageUsers, Role}
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import upickle.default.write
 
 import scala.concurrent.Future
 
 
-trait WithAuth {
-  self: Application =>
+abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AbstractController(cc) {
+
+  val log: LoggingAdapter = ctrl.system.log
+
+  implicit val ec = ctrl.ec
+
+  implicit val config: Configuration = ctrl.config
+
+  implicit val actorSystem: ActorSystem = ctrl.system
+
+  val airportConfig: AirportConfig = ctrl.airportConfig
+
+  implicit val timeout: Timeout = ctrl.timeout
 
   def getLoggedInUser: Action[AnyContent] = Action { request =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -34,9 +50,9 @@ trait WithAuth {
   }
 
   def trackUser = Action.async { request =>
-    val loggedInUser  = ctrl.getLoggedInUser(config, request.headers, request.session)
-        ctrl.userService.insertOrUpdateUser(loggedInUser, None, None)
-        Future.successful(Ok(s"User-tracked"))
+    val loggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
+    ctrl.userService.insertOrUpdateUser(loggedInUser, None, None)
+    Future.successful(Ok(s"User-tracked"))
   }
 
   def keyCloakClientWithHeader(headers: Headers): KeyCloakClient with ProdSendAndReceive = {

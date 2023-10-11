@@ -1,14 +1,16 @@
 package controllers.application
 
+import actors.DrtSystemInterface
 import actors.persistent.DeleteAlerts
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.pattern._
 import akka.util.Timeout
+import com.google.inject.Inject
 import controllers.Application
 import drt.shared.Alert
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTime
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.auth.Roles.CreateAlerts
 import upickle.default.{read, write}
 
@@ -16,8 +18,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-trait WithAlerts {
-  self: Application =>
+class AlertsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getAlerts(createdAfter: MillisSinceEpoch): Action[AnyContent] = Action.async { _ =>
     val eventualAlerts: Future[Seq[Alert]] = for {

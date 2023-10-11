@@ -1,16 +1,26 @@
 package controllers.application
 
-import controllers.Application
+import actors.DrtSystemInterface
+import com.google.inject.Inject
 import drt.shared.{NegativeFeedback, PositiveFeedback}
 import email.GovNotifyEmail
-import play.api.mvc.{Action, AnyContent}
-import slickdb.DropInRow
+import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import upickle.default.read
 
-trait WithEmailNotification {
-  self: Application =>
+class EmailNotificationController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
-  val emailNotification = new GovNotifyEmail(govNotifyApiKey)
+  lazy val contactEmail: Option[String] = config.getOptional[String]("contact-email")
+
+  lazy val govNotifyApiKey = config.get[String]("notifications.gov-notify-api-key")
+
+  lazy val negativeFeedbackTemplateId = config.get[String]("notifications.negative-feedback-templateId")
+
+  lazy val positiveFeedbackTemplateId = config.get[String]("notifications.positive-feedback-templateId")
+
+  lazy val govNotifyReference = config.get[String]("notifications.reference")
+
+
+  val emailNotification: GovNotifyEmail = new GovNotifyEmail(govNotifyApiKey)
 
   def feedBack(feedback: String): Action[AnyContent] = {
     Action { request =>

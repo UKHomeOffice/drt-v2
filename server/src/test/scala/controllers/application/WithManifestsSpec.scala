@@ -34,7 +34,7 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
   "Given an arrival key" >> {
     "When a manifest exists for that arrival" >> {
       "I should get a manifest summary" >> {
-        val result = Await.result(WithManifests.manifestsForFlights(mockProvider(manifests))(List(ArrivalKey(arrival1))), 1.second)
+        val result = Await.result(ManifestsController.manifestsForFlights(mockProvider(manifests))(List(ArrivalKey(arrival1))), 1.second)
 
         result === manifests(scheduledDay1.toUtcDate)
       }
@@ -44,7 +44,7 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
   "Given arrival keys for 2 different scheduled days" >> {
     "When manifests exist for them" >> {
       "I should get the manifest summaries" >> {
-        val result = Await.result(WithManifests.manifestsForFlights(mockProvider(manifests))(List(ArrivalKey(arrival1), ArrivalKey(arrival2))), 1.second)
+        val result = Await.result(ManifestsController.manifestsForFlights(mockProvider(manifests))(List(ArrivalKey(arrival1), ArrivalKey(arrival2))), 1.second)
 
         result === VoyageManifests(manifests(scheduledDay1.toUtcDate).manifests ++ manifests(scheduledDay2.toUtcDate).manifests)
       }
@@ -60,7 +60,7 @@ class WithManifestsSpec extends CrunchTestLike with SpecificationLike {
             VoyageManifestGenerator.manifestForArrival(arrival1, List()),
             VoyageManifestGenerator.voyageManifest(),
         )))
-        val result = Await.result(WithManifests.manifestsForFlights(mockProvider(multiManifests))(List(ArrivalKey(arrival1))), 1.second)
+        val result = Await.result(ManifestsController.manifestsForFlights(mockProvider(multiManifests))(List(ArrivalKey(arrival1))), 1.second)
 
         result === VoyageManifests(Set(VoyageManifestGenerator.manifestForArrival(arrival1, List())))
       }

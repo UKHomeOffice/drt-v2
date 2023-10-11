@@ -1,5 +1,6 @@
 package controllers.application.exports
 
+import actors.DrtSystemInterface
 import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
@@ -7,7 +8,9 @@ import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import com.google.inject.Inject
 import controllers.Application
+import controllers.application.AuthController
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
@@ -27,8 +30,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-trait WithFlightsExport {
-  self: Application =>
+class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString: String,
                                                     pointInTime: MillisSinceEpoch,
@@ -107,7 +109,7 @@ trait WithFlightsExport {
             val startDate = SDate(start)
             val endDate = SDate(end).addDays(1).addMinutes(-1)
             ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
-              flightsRequestToCsv(now().millisSinceEpoch, export(user, airportConfig.portCode, redListUpdates)(startDate, endDate, Terminal(terminalName)))
+              flightsRequestToCsv(ctrl.now().millisSinceEpoch, export(user, airportConfig.portCode, redListUpdates)(startDate, endDate, Terminal(terminalName)))
             }
           case _ =>
             Future(BadRequest("Invalid date format for start or end date"))
