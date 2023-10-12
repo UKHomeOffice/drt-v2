@@ -12,23 +12,29 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{EgateBanksEdit, RedListsEdit}
+import uk.gov.homeoffice.drt.auth.Roles.EgateBanksEdit
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-
-import scala.collection.immutable.Map
 
 object PortConfigPage {
 
-  case class Props(redListUpdates: Pot[RedListUpdates], portEgateBanksUpdates: Pot[PortEgateBanksUpdates], user: Pot[LoggedInUser], airportConfig: Pot[AirportConfig], gateStandWalktime: Pot[WalkTimes]) extends UseValueEq
+  case class Props(redListUpdates: Pot[RedListUpdates],
+                   portEgateBanksUpdates: Pot[PortEgateBanksUpdates],
+                   slaConfigs: Pot[SlaConfigs],
+                   user: Pot[LoggedInUser],
+                   airportConfig: Pot[AirportConfig],
+                   gateStandWalktime: Pot[WalkTimes],
+                  ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ConfigPage")
     .render_P { props =>
       val mp = for {
         portEgateBanksUpdates <- props.portEgateBanksUpdates
+        slaConfigs <- props.slaConfigs
         user <- props.user
         airportConfig <- props.airportConfig
         gateStandWalktime <- props.gateStandWalktime
@@ -37,12 +43,14 @@ object PortConfigPage {
           <.h3("Port Config"),
           if (user.hasRole(EgateBanksEdit)) {
             <.div(
-              <.h2("E-gates"),
+              <.h2("E-gates schedule"),
               airportConfig.eGateBankSizes.map {
                 case (terminal, banks) =>
                   val updates = portEgateBanksUpdates.updatesByTerminal.getOrElse(terminal, EgateBanksUpdates.empty)
                   EgatesScheduleEditor(terminal, updates, EgateBank.fromAirportConfig(banks))
-              }.toTagMod
+              }.toTagMod,
+              <.h2("Queue SLAs"),
+              SlaConfigEditor(slaConfigs, airportConfig.slaByQueue)
             )
           } else EmptyVdom,
           props.portEgateBanksUpdates.renderReady { updates =>
@@ -200,16 +208,16 @@ object PortConfigDetails {
           .sortBy {
             case (pt, _) => pt.cleanName
           }.flatMap {
-          case (pt, list) =>
-            list.map {
-              case (qt, ratio) =>
-                <.tr(
-                  <.td(^.scope := "row", PaxTypes.displayName(pt)),
-                  <.td(^.scope := "row", Queues.displayName(qt)),
-                  <.td(^.className := "text-right", s"${Math.round(ratio * 100)}%")
-                )
-            }
-        }.toTagMod
+            case (pt, list) =>
+              list.map {
+                case (qt, ratio) =>
+                  <.tr(
+                    <.td(^.scope := "row", PaxTypes.displayName(pt)),
+                    <.td(^.scope := "row", Queues.displayName(qt)),
+                    <.td(^.className := "text-right", s"${Math.round(ratio * 100)}%")
+                  )
+              }
+          }.toTagMod
       )
     )
   )

@@ -1,7 +1,7 @@
 package controllers.application
 
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.DrtSystemInterface
-import actors.persistent.staffing.GetState
 import akka.pattern.ask
 import com.google.inject.Inject
 import drt.shared.CrunchApi.MillisSinceEpoch

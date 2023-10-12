@@ -1,8 +1,7 @@
 package actors.persistent.nebo
 
-import actors.persistent.PersistentDrtActor
 import actors.persistent.nebo.NeboArrivalActor.getRedListPassengerFlightKey
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.NeboArrivalMessageConversion._
 import akka.actor.Props
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
@@ -10,7 +9,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{NeboArrivals, RedListPassengers}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.actor.RecoveryActorLike
+import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
 import uk.gov.homeoffice.drt.protobuf.messages.NeboPassengersMessage.{NeboArrivalMessage, NeboArrivalSnapshotMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 

@@ -4,12 +4,12 @@ import akka.actor.ActorSystem
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import org.specs2.mutable.Specification
-import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.config.Lhr
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class StaffMinutesCheckerSpec extends Specification {
   "Given a StaffMinutesChecker with LHR's config and max-forecast-days of 2" >> {

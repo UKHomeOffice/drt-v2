@@ -1,7 +1,7 @@
 package services.exports.flights
 
 import actors.persistent.arrivals.ArrivalsReadActor
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask

@@ -1,14 +1,14 @@
 package actors.persistent
 
-import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.AlertMessageConversion
 import akka.persistence._
 import drt.shared.Alert
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.actor.RecoveryActorLike
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
+import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
 import uk.gov.homeoffice.drt.protobuf.messages.Alert.{AlertSnapshotMessage, Alert => ProtobufAlert}
 import uk.gov.homeoffice.drt.time.SDateLike
 

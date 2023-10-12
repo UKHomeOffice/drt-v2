@@ -1,8 +1,8 @@
 package actors.daily
 
 import actors.StreamingJournalLike
-import actors.acking.AckingReceiver.Ack
 import actors.serializers.PortStateMessageConversion
+import akka.pattern.StatusReply
 import akka.persistence.query.EventEnvelope
 import akka.persistence.{SnapshotMetadata, SnapshotOffer}
 import drt.shared.CrunchApi.CrunchMinute
@@ -28,7 +28,7 @@ class TerminalDayQueuesUpdatesActor(year: Int,
   def myReceiveCommand: Receive = {
     case EventEnvelope(_, _, _, CrunchMinutesMessage(minuteMessages)) =>
       updateState(minuteMessages)
-      sender() ! Ack
+      sender() ! StatusReply.Ack
   }
 
   override def receiveRecover: Receive = myReceiveRecover orElse streamingUpdatesReceiveRecover

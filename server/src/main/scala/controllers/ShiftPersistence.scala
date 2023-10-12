@@ -1,16 +1,17 @@
 package controllers
 
-import java.util.UUID
 import actors.DrtStaticParameters
-import actors.persistent.staffing.{GetState, ShiftsReadActor}
+import actors.persistent.staffing.ShiftsReadActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern._
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.ShiftAssignments
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.time.SDate
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._

@@ -1,6 +1,6 @@
 package actors.persistent.nebo
 
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.NeboArrivalMessageConversion
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern.ask

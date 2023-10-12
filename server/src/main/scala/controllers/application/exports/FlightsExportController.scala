@@ -3,7 +3,7 @@ package controllers.application.exports
 import actors.DrtSystemInterface
 import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source

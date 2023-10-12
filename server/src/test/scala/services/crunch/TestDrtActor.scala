@@ -2,13 +2,12 @@ package services.crunch
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
-import actors.acking.AckingReceiver.Ack
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
@@ -23,18 +22,21 @@ import org.slf4j.{Logger, LoggerFactory}
 import providers.ManifestsProvider
 import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
+import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.graphstages.{Crunch, FlightFilter}
 import test.TestActors.MockAggregatedArrivalsActor
+import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
+import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDateLike}
 
 import scala.collection.SortedSet
 import scala.concurrent.duration._
@@ -150,7 +152,7 @@ class TestDrtActor extends Actor {
           (terminal: Terminal) => provider().map(p => p.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for $terminal")))
       }
 
-      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), portEgatesProvider, paxFeedSourceOrder)
+      val portDeskRecs = PortDesksAndWaitsProvider(tc.airportConfig, tc.cruncher, FlightFilter.forPortConfig(tc.airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(tc.airportConfig.slaByQueue(q)))
 
       val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (tc.flexDesks)
         PortDeskLimits.flexed(tc.airportConfig, terminalEgatesProvider)
@@ -179,7 +181,7 @@ class TestDrtActor extends Actor {
         val historicManifestLookups: ManifestLookupLike = MockManifestLookupService()
 
         val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
-        val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(Ack)
+        val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(StatusReply.Ack)
         val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
           arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
           liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ManifestsProvider(manifestsRouterActor)),

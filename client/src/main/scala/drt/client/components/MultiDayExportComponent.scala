@@ -125,7 +125,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                   ^.className := "modal-body",
                   ^.id := "multi-day-export-modal-body",
                   MuiGrid(container = true)(
-                    <.div(^.style := js.Dictionary("display" -> "flex", "flex-direction" -> "column", "gap" -> 8),
+                    <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> 8),
                       <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> 8),
                         datePickerWithLabel(setStartDate, "From", state.startDate.date),
                         datePickerWithLabel(setEndDate, "To", state.endDate.date),
@@ -171,7 +171,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
 
   private def exportLinksGroup(props: Props, state: State, exports: List[ExportType], title: String): VdomElement =
-    <.div(^.style := js.Dictionary("display" -> "flex", "flex-direction" -> "column", "gap" -> 8),
+    <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "8px"),
       title,
       <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> 8),
         exports.map(export =>

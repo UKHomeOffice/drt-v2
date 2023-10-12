@@ -1,10 +1,11 @@
 package controllers.application
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
-import actors.persistent.staffing.GetState
+import actors.RouteHistoricManifestActor
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
-import actors.{DrtSystemInterface, RouteHistoricManifestActor}
+import actors.DrtSystemInterface
 import akka.NotUsed
 import akka.actor.Props
 import akka.pattern.ask
@@ -25,9 +26,11 @@ import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, UtcDate}
+import uk.gov.homeoffice.drt.services.Slas
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, UtcDate}
 import upickle.default.write
 
 import scala.collection.immutable.SortedMap
@@ -63,24 +66,25 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
               val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
               simulationResult(
-                simulationParams,
-                simulationConfig,
-                SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
-                OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-                OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
-                OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
-                OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
-                ctrl.flightsRouterActor,
-                portStateActor,
-                () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-                () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
-                ctrl.paxFeedSourceOrder,
+                simulationParams = simulationParams,
+                simulationAirportConfig = simulationConfig,
+                sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
+                splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
+                flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
+                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
+                historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
+                historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
+                flightsActor = ctrl.flightsRouterActor,
+                portStateActor = portStateActor,
+                redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+                egateBanksProvider = () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
+                paxFeedSourceOrder = ctrl.paxFeedSourceOrder,
               )
             }.flatten
 
             simulationResultAsCsv(simulationParams, simulationParams.terminal, futureDeskRecs)
           case Failure(e) =>
-            log.error("Invalid Simulation attempt", e)
+            log.error(s"Invalid Simulation attempt: ${e.getMessage}")
             Future(BadRequest("Unable to parse parameters: " + e.getMessage))
         }
     }
@@ -90,7 +94,6 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     Action(parse.defaultBodyParser).async {
       request =>
         implicit val timeout: Timeout = new Timeout(10 minutes)
-
 
         SimulationParams
           .fromQueryStringParams(request.queryString) match {
@@ -113,6 +116,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
               simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
+                sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
                 splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
                 liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
@@ -122,7 +126,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
                 portStateActor = portStateActor,
                 redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
                 egateBanksProvider = () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
-                ctrl.paxFeedSourceOrder,
+                paxFeedSourceOrder = ctrl.paxFeedSourceOrder,
               )
             }
             }.flatten
@@ -131,7 +135,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
               Ok(write(SimulationResult(simulationParams, summary(res, simulationParams.terminal))))
             })
           case Failure(e) =>
-            log.error("Invalid Simulation attempt", e)
+            log.error(s"Invalid Simulation attempt: ${e.getMessage}")
             Future(BadRequest("Unable to parse parameters: " + e.getMessage))
         }
     }
@@ -187,7 +191,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       val result: Result = Try(sourceToCsvResponse(stream, fileName)) match {
         case Success(value) => value
         case Failure(t) =>
-          log.error("Failed to get CSV export", t)
+          log.error(s"Failed to get CSV export: ${t.getMessage}")
           BadRequest("Failed to get CSV export")
       }
 

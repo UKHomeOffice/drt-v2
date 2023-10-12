@@ -1,7 +1,7 @@
 package services.crunch
 
-import actors.acking.AckingReceiver._
 import akka.actor.ActorRef
+import akka.pattern.StatusReply.Ack
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import drt.chroma.ArrivalsDiffingStage
@@ -12,6 +12,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import services.graphstages._
 import services.metrics.Metrics
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 

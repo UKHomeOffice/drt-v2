@@ -14,7 +14,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, LiveFeedSource, PaxTypeAndQueue, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
 import scala.concurrent.duration.DurationInt
@@ -144,7 +144,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     val divertedQueues = Map[Queue, Queue]()
     val terminalDesks = Map[Terminal, Int](T1 -> 10)
     val flexedQueuesPriority = List(EeaDesk, EGate, NonEeaDesk)
-    val slas = Map[Queue, Int](EeaDesk -> 25, EGate -> 20, NonEeaDesk -> 45)
+    val slas = (_: LocalDate, queue: Queue) => Future.successful(Map[Queue, Int](EeaDesk -> 25, EGate -> 20, NonEeaDesk -> 45)(queue))
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(
       PaxTypeAndQueue(GBRNational, EeaDesk) -> 18d,
       PaxTypeAndQueue(GBRNational, EGate) -> 20d,

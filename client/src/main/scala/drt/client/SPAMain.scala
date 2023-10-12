@@ -191,6 +191,7 @@ object SPAMain {
       GetGateStandWalktime,
       GetManifestSummariesForDate(SDate.now().toUtcDate),
       GetManifestSummariesForDate(SDate.now().addDays(-1).toUtcDate),
+      GetSlaConfigs,
     )
 
     initActions.foreach(SPACircuit.dispatch(_))
@@ -253,7 +254,9 @@ object SPAMain {
 
   def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
-    val proxy = SPACircuit.connect(m => PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime))
+    val proxy = SPACircuit.connect(m =>
+      PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.slaConfigs, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime)
+    )
     staticRoute("#config", PortConfigLoc) ~> render(proxy(x => PortConfigPage(x())))
   }
 

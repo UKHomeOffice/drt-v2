@@ -2,7 +2,7 @@ package controllers.application
 
 import actors.DrtSystemInterface
 import actors.persistent.DeleteAlerts
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.pattern._
 import akka.util.Timeout
 import com.google.inject.Inject

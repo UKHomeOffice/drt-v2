@@ -1,12 +1,12 @@
 package services.imports
 
 import actors.PartitionedPortStateActor.GetFlights
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.{Actor, ActorLogging, PoisonPill}
-import akka.pattern.pipe
+import akka.pattern.{StatusReply, pipe}
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.DeskRecMinutes
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -35,7 +35,7 @@ class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with Ac
       promisedResult.complete(Try(m))
 
     case StreamInitialized =>
-      sender() ! Ack
+      sender() ! StatusReply.Ack
 
     case StreamCompleted =>
       self ! PoisonPill

@@ -54,7 +54,6 @@ import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchManager.queueDaysToReCrunch
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
@@ -64,15 +63,20 @@ import services.staffing.StaffMinutesChecker
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
-import uk.gov.homeoffice.drt.actor.{PredictionModelActor, WalkTimeProvider}
+import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
 import uk.gov.homeoffice.drt.time.{MilliDate => _, _}
 
@@ -264,16 +268,23 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   val aggregatedArrivalsActor: ActorRef
 
-  val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
+  private val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
 
   val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), egatesProvider, paxFeedSourceOrder)
+  private val crunchRequestProvider: LocalDate => CrunchRequest =
+    date => CrunchRequest(date, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
-  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] =
-    terminal => egatesProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
+  val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestProvider, maxDaysToConsider)))
+
+  ensureDefaultSlaConfig()
+
+  val portDeskRecs: PortDesksAndWaitsProviderLike =
+    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, Slas.slaProvider(slasActor))
+
+  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
 
   val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks")) {
     PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
@@ -302,7 +313,8 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff =>
     Future.successful {
-      val updates = SortedMap[UniqueArrival, Arrival]() ++ diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpArrivalTimeCalculator(arrival).millisSinceEpoch)))
+      val updates = SortedMap[UniqueArrival, Arrival]() ++
+        diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpArrivalTimeCalculator(arrival).millisSinceEpoch)))
       diff.copy(toUpdate = updates)
     }
 
@@ -381,6 +393,16 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
         queueDaysToReCrunch(crunchRequestQueueActor, portDeskRecs.crunchOffsetMinutes, params.forecastMaxDays, now)
 
       (crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+    }
+
+  private def ensureDefaultSlaConfig(): Unit =
+    slasActor.ask(GetState).mapTo[SlaConfigs].foreach { slasUpdate =>
+      if (slasUpdate.configs.isEmpty) {
+        log.info(s"No SLAs. Adding defaults from airport config")
+        slasActor ! ConfigActor.SetUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue, None))
+      } else {
+        log.info("SLAs: " + slasUpdate)
+      }
     }
 
   private def startOptimisationGraph[A, B <: WithTimeAccessor](minutesProducer: Flow[ProcessingRequest, MinutesContainer[A, B], NotUsed],
@@ -659,12 +681,12 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     .withAttributes(StreamSupervision.resumeStrategyWithLog("getFeedStatus"))
     .runWith(Sink.seq)
 
-  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]]): Unit = {
+  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
     flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
     staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+    slasActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
   }
-
 }

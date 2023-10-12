@@ -1,8 +1,7 @@
 package actors.daily
 
-import actors.acking.AckingReceiver.Ack
 import akka.actor.{Actor, ActorRef, PoisonPill, Terminated}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -21,7 +20,7 @@ class RequestAndTerminateActor(implicit timeout: Timeout) extends Actor {
   override def receive: Receive = {
     case Terminate(actor) =>
       val replyTo = sender()
-      self ! ActorReplyToResponse(actor, replyTo, Ack)
+      self ! ActorReplyToResponse(actor, replyTo, StatusReply.Ack)
 
     case RequestAndTerminate(actor, request) =>
       val replyTo = sender()

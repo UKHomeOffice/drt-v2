@@ -2,9 +2,8 @@
 package test
 
 import actors._
-import actors.acking.AckingReceiver.Ack
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
@@ -17,8 +16,7 @@ import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.{DropInRow, DropInTableLike, DropInsRegistrationRow,
-  DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
+import slickdb._
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
@@ -29,12 +27,12 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.sql.Timestamp
+import javax.inject.Singleton
 import scala.collection.SortedSet
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.Success
-import javax.inject.Singleton
 
 case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Materializer) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
@@ -327,7 +325,7 @@ class RestartActor(startSystem: () => List[KillSwitch],
         log.info(s"Shutdown triggered")
         resetInMemoryData()
         startTestSystem()
-        replyTo ! Ack
+        replyTo ! StatusReply.Ack
       }
 
     case Status.Success(_) =>

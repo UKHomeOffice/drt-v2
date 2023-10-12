@@ -1,8 +1,10 @@
 package actors
 
-import actors.StoppableActor.{Ack, StopYourself}
+import actors.StoppableActor.StopYourself
 import actors.supervised.RestartOnStop
+import akka.Done
 import akka.actor.{Actor, ActorSystem, Props}
+import akka.pattern.StatusReply
 import akka.testkit.{ImplicitSender, TestKit}
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.SpecificationLike
@@ -14,8 +16,6 @@ import scala.concurrent.duration.DurationInt
 
 object StoppableActor {
   case object StopYourself
-
-  case object Ack
 }
 
 class StoppableActor extends Actor {
@@ -29,7 +29,7 @@ class StoppableActor extends Actor {
 
     case other =>
       log.info(s"Received a message: $other")
-      sender() ! Ack
+      sender() ! StatusReply.Ack
   }
 }
 
@@ -54,7 +54,7 @@ class RestartOnStopSpec()
       watch(actor)
 
       actor ! "some message"
-      expectMsgType[Ack.type]
+      expectMsgType[StatusReply[Done]]
 
       actor ! StopYourself
 
@@ -62,10 +62,10 @@ class RestartOnStopSpec()
       Thread.sleep(backoffTimePlusBuffer.toMillis)
 
       actor ! "some message"
-      expectMsgType[Ack.type]
+      expectMsgType[StatusReply[Done]]
 
       actor ! "some message"
-      expectMsgType[Ack.type]
+      expectMsgType[StatusReply[Done]]
 
       success
     }

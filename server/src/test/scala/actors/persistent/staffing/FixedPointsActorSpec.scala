@@ -4,7 +4,7 @@ import akka.actor.Props
 import akka.testkit.TestProbe
 import drt.shared.StaffAssignment
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate
 

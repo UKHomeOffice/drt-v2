@@ -3,7 +3,7 @@ package actors.routing.minutes
 import actors.ManifestLookupsLike
 import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.persistent.staffing.{GetFeedStatuses, GetState}
+import actors.persistent.staffing.GetFeedStatuses
 import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
 import akka.NotUsed
@@ -17,6 +17,7 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxAge, PortCode}

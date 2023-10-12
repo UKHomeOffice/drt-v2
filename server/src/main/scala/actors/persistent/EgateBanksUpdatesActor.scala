@@ -1,9 +1,7 @@
 package actors.persistent
 
-import actors.AddUpdatesSubscriber
-import actors.acking.AckingReceiver.StreamCompleted
-import actors.persistent.EgateBanksUpdatesActor.{AddSubscriber, ReceivedSubscriberAck, SendToSubscriber}
-import actors.persistent.staffing.GetState
+import actors.persistent.EgateBanksUpdatesActor.{ReceivedSubscriberAck, SendToSubscriber}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.EgateBanksUpdatesMessageConversion
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -13,8 +11,10 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import akka.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
-import uk.gov.homeoffice.drt.actor.RecoveryActorLike
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
+import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
+import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
+import uk.gov.homeoffice.drt.actor.commands.CrunchRequest
 import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
@@ -26,8 +26,6 @@ import scala.util.{Failure, Success}
 
 
 object EgateBanksUpdatesActor {
-  case class AddSubscriber(subscriber: SourceQueueWithComplete[List[EgateBanksUpdateCommand]])
-
   case object SendToSubscriber
 
   case object ReceivedSubscriberAck
@@ -78,7 +76,6 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
   var awaitingSubscriberAck = false
 
   var maybeCrunchRequestQueueActor: Option[ActorRef] = None
-  var readyToEmit: Boolean = false
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val timeout: Timeout = new Timeout(60.seconds)
@@ -89,10 +86,6 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
     case AddUpdatesSubscriber(crunchRequestQueue) =>
       log.info("Received crunch request actor")
       maybeCrunchRequestQueueActor = Option(crunchRequestQueue)
-
-    case AddSubscriber(subscriber) =>
-      log.info(s"Received subscriber")
-      maybeSubscriber = Option(subscriber)
 
     case SendToSubscriber =>
       maybeSubscriber.foreach { sub =>

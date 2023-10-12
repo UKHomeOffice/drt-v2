@@ -17,6 +17,7 @@ import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, displayName}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 
 import scala.collection.immutable
 import scala.scalajs.js.JSConverters.JSRichIterableOnce
@@ -24,10 +25,10 @@ import scala.scalajs.js.JSConverters.JSRichIterableOnce
 
 object SimulationChartComponent extends ScalaCssReactImplicits {
 
-  case class Props(
-                    simulationParams: SimulationFormFields,
-                    airportConfig: AirportConfig,
-                    terminal: Terminal
+  case class Props(simulationParams: SimulationFormFields,
+                   airportConfig: AirportConfig,
+                   slaConfigs: SlaConfigs,
+                   terminal: Terminal
                   ) extends UseValueEq {
     def queueOrder: List[Queue] = airportConfig.desksExportQueueOrder
   }
@@ -62,7 +63,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
             MuiLinearProgress(variant = MuiLinearProgress.Variant.indeterminate)
           ),
           simulationPot.render(simulationResult => {
-            val qToChart = resultToQueueCharts(props, simulationResult)
+            val qToChart = resultToQueueCharts(simulationResult)
             <.div(
               DefaultFormFieldsStyle.simulationCharts,
               <.ul(^.className := "nav nav-tabs",
@@ -90,12 +91,12 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
     }
     .build
 
-  def resultToQueueCharts(props: Props,
-                          simulationResult: SimulationResult
-                         ): Map[Queue, UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]]] =
+  def resultToQueueCharts(simulationResult: SimulationResult,
+                         ): Map[Queue, UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]]] = {
     simulationResult.queueToCrunchMinutes.map {
       case (q, simulationCrunchMinutes) =>
         val labels: immutable.Seq[String] = simulationCrunchMinutes.map(m => SDate(m.minute).toHoursAndMinutes)
+        val sla = simulationResult.params.slaByQueue(q)
 
         val dataSets: Seq[ChartJsDataSet] = List(
           ChartJsDataSet.bar(
@@ -120,7 +121,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
           ),
           ChartJsDataSet.line(
             label = "Queue SLA",
-            data = simulationCrunchMinutes.map(m => props.airportConfig.slaByQueue(q).toDouble),
+            data = simulationCrunchMinutes.map(_ => sla.toDouble),
             colour = RGBA.green1,
             pointRadius = Option(0)
           ),
@@ -135,6 +136,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
           )
         )
     }
+  }
 
   def minutesToQueueDataSets(cms: List[CrunchApi.CrunchMinute]): Seq[ChartJsDataSet] = {
     val paxPerSlot = cms.map(m => Math.round(m.paxLoad).toDouble)
@@ -177,7 +179,7 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
 
   def apply(simulationParams: SimulationFormFields,
             airportConfig: AirportConfig,
-            terminal: Terminal): VdomElement = component(Props(simulationParams, airportConfig, terminal))
-
-
+            terminal: Terminal,
+            slaConfigs: SlaConfigs,
+           ): VdomElement = component(Props(simulationParams, airportConfig, slaConfigs, terminal))
 }

@@ -3,7 +3,7 @@ package services
 
 import actors.DrtSystemInterface
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
-import actors.persistent.staffing.{GetState, UpdateShifts}
+import actors.persistent.staffing.UpdateShifts
 import akka.actor._
 import akka.pattern._
 import akka.stream._
@@ -16,6 +16,7 @@ import play.api.Configuration
 import play.api.mvc._
 import services.graphstages.Crunch
 import services.staffing.StaffTimeSlots
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig

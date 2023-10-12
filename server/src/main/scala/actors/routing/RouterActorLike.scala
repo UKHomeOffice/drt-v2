@@ -1,16 +1,16 @@
 package actors.routing
 
-import actors.AddUpdatesSubscriber
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef}
-import akka.pattern.{ask, pipe}
+import akka.pattern.{StatusReply, ask, pipe}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import uk.gov.homeoffice.drt.DataUpdates.Updates
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
+import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -64,7 +64,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
     eventualEffects
       .onComplete { _ =>
         processingRequest = false
-        replyTo ! Ack
+        replyTo ! StatusReply.Ack
         self ! ProcessNextUpdateRequest
       }
     eventualEffects
@@ -98,7 +98,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
 
   def receiveUtil: Receive = {
 
-    case StreamInitialized => sender() ! Ack
+    case StreamInitialized => sender() ! StatusReply.Ack
 
     case StreamCompleted => log.info(s"Stream completed")
 
@@ -155,7 +155,7 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
 
   def receiveUtil: Receive = {
 
-    case StreamInitialized => sender() ! Ack
+    case StreamInitialized => sender() ! StatusReply.Ack
 
     case StreamCompleted => log.info(s"Stream completed")
 

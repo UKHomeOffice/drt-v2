@@ -2,7 +2,6 @@ package actors
 
 import actors.daily._
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.persistent.staffing.GetState
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesRouterActor, StaffMinutesRouterActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -10,6 +9,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.{TM, TQM}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

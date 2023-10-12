@@ -1,6 +1,6 @@
 package manifests
 
-import actors.acking.AckingReceiver.Ack
+import akka.pattern.StatusReply
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
@@ -36,7 +36,7 @@ class ManifestProviderSpec extends CrunchTestLike {
 
   val mockLookupService: MockManifestLookupService = MockManifestLookupService(manifestForArrival, manifestHistoricForArrival)
   val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
-  val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(Ack)
+  val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(StatusReply.Ack)
   val probe: TestProbe = TestProbe("manifests")
 
   "Given a mock lookup returning a BestAvailableManifest" >> {

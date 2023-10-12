@@ -1,12 +1,12 @@
 package feeds.lgw
 
-import actors.acking.AckingReceiver.StreamCompleted
 import akka.stream.scaladsl.Sink
 import akka.testkit.TestProbe
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed}
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed}
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.N
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}

@@ -8,11 +8,11 @@ import services.{OptimiserConfig, OptimizerCrunchResult}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable.NumericRange
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 import scala.util.{Success, Try}
 
 class DeskFlexingSpec extends CrunchTestLike {
@@ -86,7 +86,7 @@ class DeskFlexingSpec extends CrunchTestLike {
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks, Set(EeaDesk, NonEeaDesk), minDesks, maxDesks.view.mapValues(d => DeskCapacityProvider(d)).toMap)
 
         val eventualDesksAndWaits = deskrecs
-          .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs)
+          .TerminalDesksAndWaitsProvider((_: LocalDate, q: Queue) => Future.successful(ac.slaByQueue(q)), queuePriority, observer.mockDeskRecs)
           .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         Await.result(eventualDesksAndWaits, 1.second)
@@ -114,7 +114,7 @@ class DeskFlexingSpec extends CrunchTestLike {
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.view.mapValues(d => DeskCapacityProvider(d)).toMap)
 
         val eventualDesksAndWaits = deskrecs
-          .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs)
+          .TerminalDesksAndWaitsProvider((_: LocalDate, q: Queue) => Future.successful(ac.slaByQueue(q)), queuePriority, observer.mockDeskRecs)
           .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         Await.result(eventualDesksAndWaits, 1.second)
@@ -146,7 +146,7 @@ class DeskFlexingSpec extends CrunchTestLike {
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.view.mapValues(d => DeskCapacityProvider(d)).toMap)
 
         val eventualDesksAndWaits = deskrecs
-          .TerminalDesksAndWaitsProvider(ac.slaByQueue, queuePriority, observer.mockDeskRecs)
+          .TerminalDesksAndWaitsProvider((_: LocalDate, q: Queue) => Future.successful(ac.slaByQueue(q)), queuePriority, observer.mockDeskRecs)
           .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         Await.result(eventualDesksAndWaits, 1.second)

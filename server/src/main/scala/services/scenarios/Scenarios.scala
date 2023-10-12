@@ -1,7 +1,7 @@
 package services.scenarios
 
 import actors.persistent.SortedActorRefSource
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -16,25 +16,24 @@ import queueus.DynamicQueueStatusProvider
 import services.OptimiserWithFlexibleProcessors
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
-import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
 import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWaitsProvider, RunnableOptimisation}
 import services.graphstages.FlightFilter
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.SortedSet
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object Scenarios {
-
-
-
   def simulationResult(simulationParams: SimulationParams,
                        simulationAirportConfig: AirportConfig,
+                       sla: (LocalDate, Queue) => Future[Int],
                        splitsCalculator: SplitsCalculator,
                        flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                        liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
@@ -56,8 +55,8 @@ object Scenarios {
         simulationAirportConfig,
         OptimiserWithFlexibleProcessors.crunchWholePax,
         FlightFilter.forPortConfig(simulationAirportConfig),
-        egateBanksProvider,
         paxFeedSourceOrder,
+        sla,
       )
 
     val terminalEgatesProvider = (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))

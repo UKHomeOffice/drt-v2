@@ -1,14 +1,14 @@
 package actors.persistent
 
-import actors.persistent.staffing.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages}
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.DataUpdates.Combinable
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
