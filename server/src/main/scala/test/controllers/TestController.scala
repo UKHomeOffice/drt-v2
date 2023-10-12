@@ -1,5 +1,6 @@
 package test.controllers
 
+import actors.TestDrtSystemInterface
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -7,6 +8,7 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.server.feeds.Implicits._
+import module.NoCSRFAction
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
@@ -14,7 +16,6 @@ import play.api.http.HeaderNames
 import play.api.mvc._
 import spray.json._
 import test.TestActors.ResetData
-import test.TestDrtSystemInterface
 import test.feeds.test.CSVFixtures
 import test.roles.MockRoles
 import test.roles.MockRoles.MockRolesProtocol._
@@ -22,13 +23,13 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
+
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInterface) extends AbstractController(cc) {
+class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInterface, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
   lazy implicit val timeout: Timeout = Timeout(5 second)
 
   lazy implicit val ec: ExecutionContext = ctrl.ec
@@ -52,7 +53,11 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInte
     ctrl.restartActor.ask(ResetData)
   }
 
-  def addArrival: Action[AnyContent] = Action.async {
+  def hello = Action {
+    Ok("Hello")
+  }
+
+  def addArrival: Action[AnyContent] = noCSRFAction.async {
     request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
         case Some(flight) =>
@@ -88,7 +93,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInte
       }
   }
 
-  def addArrivals(forDate: String): Action[AnyContent] = Action.async {
+  def addArrivals(forDate: String): Action[AnyContent] = noCSRFAction.async {
     _.body.asMultipartFormData.flatMap(_.files.find(_.key == "data")) match {
       case Some(f) =>
         val path = f.ref.path.toString
@@ -106,7 +111,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInte
     }
   }
 
-  def addManifest: Action[AnyContent] = Action.async {
+  def addManifest: Action[AnyContent] = noCSRFAction.async {
     request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[VoyageManifest]) match {
         case Some(vm) =>
@@ -117,7 +122,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInte
       }
   }
 
-  def setMockRoles: Action[AnyContent] = Action {
+  def setMockRoles: Action[AnyContent] = noCSRFAction.async {
     implicit request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[MockRoles]) match {
         case Some(roles) =>
@@ -126,23 +131,23 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInte
           log.info(s"Replacing these mock roles: ${request.session.data}")
           log.info(s"mock headers: ${request.headers}")
 
-          Created.withSession(Session(Map("mock-roles" -> roles.roles.map(_.name).mkString(","))))
+          Future.successful(Created.withSession(Session(Map("mock-roles" -> roles.roles.map(_.name).mkString(",")))))
         case None =>
-          BadRequest(s"Unable to parse JSON: ${request.body.asText}")
+          Future.successful(BadRequest(s"Unable to parse JSON: ${request.body.asText}"))
       }
   }
 
-  def setMockRolesByQueryString: Action[AnyContent] = Action {
+  def setMockRolesByQueryString: Action[AnyContent] = noCSRFAction.async {
     implicit request =>
       request.queryString.get("roles") match {
         case Some(rs) =>
-          Redirect("/").withSession(Session(Map("mock-roles" -> rs.mkString(","))))
+          Future.successful(Redirect("/").withSession(Session(Map("mock-roles" -> rs.mkString(",")))))
         case roles =>
-          BadRequest(s"""Unable to parse roles: $roles from query string ${request.queryString}""")
+          Future.successful(BadRequest(s"""Unable to parse roles: $roles from query string ${request.queryString}"""))
       }
   }
 
-  def deleteAllData: Action[AnyContent] = Action.async { _ =>
+  def deleteAllData: Action[AnyContent] = noCSRFAction.async { _ =>
     resetData.map(_ => Accepted)
   }
 }

@@ -1,6 +1,6 @@
 package module
 
-import actors.{DrtSystemInterface, ProdDrtParameters, ProdDrtSystem}
+import actors.{DrtSystemInterface, ProdDrtParameters, ProdDrtSystem, TestDrtSystemInterface}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.stream.Materializer
@@ -9,12 +9,12 @@ import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
 import controllers.Application
 import controllers.DrtActorSystem.airportConfig
-import controllers.application.exports.DesksExportController
-import controllers.application.{AirportInfoController, ApplicationInfoController, ConfigController, DebugController, DropInsController, EgateBanksController, EmailNotificationController, ExportsController, FeatureFlagsController, FeedsController, ForecastAccuracyController, ImportsController, ManifestsController, PortStateController, RedListsController, StaffingController, WalkTimeController}
+import controllers.application._
+import controllers.application.exports.{DesksExportController, FlightsExportController, SummariesExportController}
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import test.controllers.TestController
-import test.{MockDrtParameters, TestDrtSystem, TestDrtSystemInterface}
+import test.{MockDrtParameters, TestDrtSystem}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -31,28 +31,37 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
 
   override def configure(): Unit = {
-    bind(classOf[TestController]).asEagerSingleton()
+    if (isTestEnvironment) {
+      bind(classOf[TestController]).asEagerSingleton()
+    }
+    bind(classOf[AirportInfoController]).asEagerSingleton()
+    bind(classOf[AlertsController]).asEagerSingleton()
     bind(classOf[Application]).asEagerSingleton()
+    bind(classOf[ApplicationInfoController]).asEagerSingleton()
+    bind(classOf[ConfigController]).asEagerSingleton()
+    bind(classOf[ContactDetailsController]).asEagerSingleton()
+    bind(classOf[DebugController]).asEagerSingleton()
     bind(classOf[DesksExportController]).asEagerSingleton()
+    bind(classOf[DropInsController]).asEagerSingleton()
     bind(classOf[ExportsController]).asEagerSingleton()
-    bind(classOf[WalkTimeController]).asEagerSingleton()
-    bind(classOf[PortStateController]).asEagerSingleton()
-    bind(classOf[ManifestsController]).asEagerSingleton()
-    bind(classOf[ImportsController]).asEagerSingleton()
-    bind(classOf[FeedsController]).asEagerSingleton()
-    bind(classOf[ForecastAccuracyController]).asEagerSingleton()
     bind(classOf[EmailNotificationController]).asEagerSingleton()
     bind(classOf[EgateBanksController]).asEagerSingleton()
+    bind(classOf[FeedsController]).asEagerSingleton()
     bind(classOf[FeatureFlagsController]).asEagerSingleton()
-    bind(classOf[ConfigController]).asEagerSingleton()
-    bind(classOf[DebugController]).asEagerSingleton()
+    bind(classOf[FlightsExportController]).asEagerSingleton()
+    bind(classOf[ForecastAccuracyController]).asEagerSingleton()
+    bind(classOf[ImportsController]).asEagerSingleton()
+    bind(classOf[ManifestsController]).asEagerSingleton()
+    bind(classOf[PortStateController]).asEagerSingleton()
     bind(classOf[RedListsController]).asEagerSingleton()
-    bind(classOf[ApplicationInfoController]).asEagerSingleton()
     bind(classOf[StaffingController]).asEagerSingleton()
-    bind(classOf[AirportInfoController]).asEagerSingleton()
+    bind(classOf[SummariesExportController]).asEagerSingleton()
+    bind(classOf[SimulationsController]).asEagerSingleton()
     bind(classOf[WalkTimeController]).asEagerSingleton()
-    bind(classOf[DropInsController]).asEagerSingleton()
   }
+
+  @Provides
+  def provideTestDrtSystemInterface: TestDrtSystemInterface = drtTestSystem
 
   @Provides
   implicit val provideActorSystem: ActorSystem = if (isTestEnvironment) {
@@ -60,9 +69,6 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   } else {
     ActorSystem("DRT-Module")
   }
-
-  @Provides
-  def provideTestDrtSystemInterface: TestDrtSystemInterface = drtTestSystem
 
   @Provides
   def provideDrtSystemInterface: DrtSystemInterface =

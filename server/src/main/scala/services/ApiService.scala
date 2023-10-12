@@ -49,17 +49,17 @@ trait ApiServiceI extends Api with ShiftPersistence {
 class ApiService(airportConfig: AirportConfig,
                  shiftsActorRef: ActorRef,
                  headers: Headers,
-                 session: Session) extends ApiServiceI {
+                 session: Session,
+                 ctrl: DrtSystemInterface) extends ApiServiceI {
 
-  implicit val system: ActorSystem = DrtActorSystem.actorSystem
-  implicit val mat: Materializer = DrtActorSystem.mat
-  implicit val ec: ExecutionContext = DrtActorSystem.ec
-  val ctrl: DrtSystemInterface = DrtActorSystem.drtSystem
+  implicit val system: ActorSystem = ctrl.system
+  implicit val mat: Materializer = ctrl.materializer
+  implicit val ec: ExecutionContext = ctrl.ec
   val config: Configuration = DrtActorSystem.config
 
   override def shiftsActor: ActorRef = shiftsActorRef
 
-  override def actorSystem: ActorSystem = DrtActorSystem.actorSystem
+  override def actorSystem: ActorSystem = ctrl.system
 
   def getLoggedInUser(): LoggedInUser =
     ctrl.getLoggedInUser(config, headers, session)

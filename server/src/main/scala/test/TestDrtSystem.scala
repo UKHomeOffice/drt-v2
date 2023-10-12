@@ -27,6 +27,7 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.sql.Timestamp
+import javax.inject.Singleton
 import scala.collection.SortedSet
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -134,13 +135,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val usePassengerPredictions: Boolean = true
 }
 
-trait TestDrtSystemInterface extends DrtSystemInterface {
-  val testManifestsActor: ActorRef
-  val testArrivalActor: ActorRef
-  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]]
-  val restartActor: ActorRef
-}
-
+@Singleton
 case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
                                   (implicit val materializer: Materializer,
                                    val ec: ExecutionContext,
@@ -228,9 +223,10 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     )
   )
 
-  val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
-  val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
-  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 2.seconds)
+  override val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
+  override val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
+  override val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 2.seconds)
+
 
   val testActors = List(
     forecastBaseArrivalsActor,
@@ -251,7 +247,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     persistentStaffingUpdateQueueActor,
   )
 
-  val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
+  override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)

@@ -134,15 +134,3 @@ GET           /is-new-feature-available-since-last-login                        
 POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
 
 GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds
-# Test related
-+ nocsrf
-POST          /test/arrival                                                           test.controllers.TestController.addArrival
-+ nocsrf
-POST          /test/arrivals/:forDate                                                 test.controllers.TestController.addArrivals(forDate)
-+ nocsrf
-POST          /test/manifest                                                          test.controllers.TestController.addManifest
-+ nocsrf
-POST          /test/mock-roles                                                        test.controllers.TestController.setMockRoles
-GET           /test/mock-roles-set                                                    test.controllers.TestController.setMockRolesByQueryString
-+ nocsrf
-DELETE        /test/data                                                              test.controllers.TestController.deleteAllData
