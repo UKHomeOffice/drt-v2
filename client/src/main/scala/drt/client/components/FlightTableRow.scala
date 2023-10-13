@@ -41,7 +41,7 @@ object FlightTableRow {
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
-                   codeShares: Seq[Arrival],
+                   codeShareFlightCodes: Seq[String],
                    idx: Int,
                    originMapper: OriginMapperF = portCode => portCode.toString,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
@@ -71,10 +71,9 @@ object FlightTableRow {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
     .render_P { props =>
       val isMobile = dom.window.innerWidth < 800
-      val codeShares = props.codeShares
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
-      val allCodes = flight.flightCodeString :: codeShares.map(_.flightCodeString).toList
+      val allCodes = flight.flightCodeString :: props.codeShareFlightCodes.toList
 
       val timeIndicatorClass = if (flight.PcpTime.getOrElse(0L) < SDate.now().millisSinceEpoch) "before-now" else "from-now"
 
