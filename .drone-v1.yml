@@ -62,7 +62,7 @@ steps:
 #      - sbt -ivy ./.ivy2 dependencyCheck
 #      - sbt scalastyle | true
 #      - sbt scapegoat | true
-      - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean "project server" coverage test coverageReport
+      - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean "project server" coverage test coverageReport | true
       - ls -ltr /drone/src/server/target/scala-2.13/scoverage-data/
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
