@@ -60,7 +60,7 @@ steps:
     commands:
       - /root/entrypoint.sh
 #      - sbt -ivy ./.ivy2 dependencyCheck
-      - sbt -ivy ./.ivy2 -mem 4096 -J-XX:+UseG1GC clean "project server" coverage test coverageReport
+      - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean "project server" coverage test coverageReport
       - sbt scalastyle | true
       - sbt scapegoat | true
       - ls -ltr /drone/src/server/target/scala-2.13/scoverage-data/
