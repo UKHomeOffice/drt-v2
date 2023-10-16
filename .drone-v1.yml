@@ -20,39 +20,39 @@ steps:
       DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
         from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
 
-  - name: build
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-    commands:
-      - /root/entrypoint.sh
-      - sbt --error compile docker:stage
-    environment:
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
-      ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
-    when:
-      event:
-        - push
-    depends_on:
-      - drone_s3_cache_pull
+#  - name: build
+#    pull: if-not-exists
+#    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+#    commands:
+#      - /root/entrypoint.sh
+#      - sbt --error compile docker:stage
+#    environment:
+#      ARTIFACTORY_PASSWORD:
+#        from_secret: ARTIFACTORY_PASSWORD
+#      ARTIFACTORY_USERNAME: drt-artifactory-robot
+#      ENV_LOG_LEVEL: ERROR
+#      KEYTOOL_PASSWORD:
+#        from_secret: KEYTOOL_PASSWORD
+#    when:
+#      event:
+#        - push
+#    depends_on:
+#      - drone_s3_cache_pull
 
-  - name: drone_s3_cache_push
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-    settings:
-      drone_s3_cache_folders: .ivy2
-      drone_s3_cache_mode: push
-    environment:
-      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
-      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-    depends_on:
-      - build
+#  - name: drone_s3_cache_push
+#    pull: if-not-exists
+#    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+#    settings:
+#      drone_s3_cache_folders: .ivy2
+#      drone_s3_cache_mode: push
+#    environment:
+#      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
+#      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
+#        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+#      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
+#        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+#    depends_on:
+#      - build
 
   - name: analysis
     pull: if-not-exists
