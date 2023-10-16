@@ -63,7 +63,7 @@ steps:
 #      - sbt scalastyle | true
 #      - sbt scapegoat | true
       - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean coverage test || true
-      - sbt "project server" coverageReport
+      - sbt coverageReport
       - ls -ltr /drone/src/server/target/scala-2.13/scoverage-report/
       - ls -ltr /drone/src/
 
