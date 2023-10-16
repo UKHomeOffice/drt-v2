@@ -106,7 +106,10 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
       status = ArrivalStatus("UNK"),
       estDt = "2017-01-01T20:00:00Z",
       feedSources = Set(LiveFeedSource),
-      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))
+      passengerSources = Map(
+        LiveFeedSource -> Passengers(Option(100), None),
+        ApiFeedSource -> Passengers(Option(100), None),
+      )
     ),
     Set(Splits(
       Set(
@@ -186,7 +189,10 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         status = ArrivalStatus("UNK"),
         estDt = "2017-01-01T20:00:00Z",
         feedSources = Set(LiveFeedSource),
-        passengerSources = Map(LiveFeedSource -> Passengers(Option(105), None))
+        passengerSources = Map(
+          LiveFeedSource -> Passengers(Option(105), None),
+          ApiFeedSource -> Passengers(Option(105), None),
+        )
       ),
       Set(Splits(
         Set(

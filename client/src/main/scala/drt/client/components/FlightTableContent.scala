@@ -69,8 +69,8 @@ object FlightTableContent {
       val flights = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder).flights.values.toList
       val flightsForTerminal =
         flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
-      val flightsWithCodeShares =
-        FlightTableComponents.uniqueArrivalsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
+      val flightsWithCodeShares = FlightTableComponents
+        .uniqueArrivalsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
 
       if (sortedFlights.nonEmpty) {
@@ -87,7 +87,7 @@ object FlightTableContent {
                   val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,
-                    codeShares = codeShares,
+                    codeShareFlightCodes = codeShares,
                     idx = idx,
                     originMapper = originMapper,
                     splitsGraphComponent = splitsGraphComponent,
