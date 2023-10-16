@@ -2,11 +2,7 @@ package services
 
 import controllers.ArrivalGenerator.arrival
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Passengers, Splits}
-import uk.gov.homeoffice.drt.ports.PaxTypes.GBRNational
-import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports._
 
@@ -41,7 +37,7 @@ class CodeSharesSpec extends Specification {
 
     val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flight1, flight2))
 
-    val expected = List((flight2, Seq(flight1)))
+    val expected = List((flight2, Seq(flight1.flightCodeString)))
 
     result === expected
   }
@@ -55,7 +51,7 @@ class CodeSharesSpec extends Specification {
 
     val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flight1, flight2, flight3))
 
-    val expected = List((flight3, Seq(flight1, flight2)))
+    val expected = List((flight3, Seq(flight1.flightCodeString, flight2.flightCodeString)))
 
     result === expected
   }
@@ -70,7 +66,7 @@ class CodeSharesSpec extends Specification {
     val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flightCS1a, flightCS1b, flight)).toSet
 
     val expected = Set(
-      (flightCS1b, Seq(flightCS1a)),
+      (flightCS1b, Seq(flightCS1a.flightCodeString)),
       (flight, Seq())
     )
 
@@ -125,12 +121,19 @@ class CodeSharesSpec extends Specification {
     result === expected
   }
 
-  "retainSplits" should {
-    "Combine the splits from a codeshare when they are absent on the main flight" in {
-      val mainFlight = ApiFlightWithSplits(arrival(iata = "BA0001"), Set(), None)
-      val codeShare = ApiFlightWithSplits(arrival(iata = "EZY4455"), Set(Splits(Set(ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, 10, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)), None)
+  "Given two codeshare flights where one has a higher number of passengers but no live API data, and the other does has live API data" should {
+    "The main flight should be the one with the live API data" in {
+      val apiPaxSource = Map(ApiFeedSource -> Passengers(Option(100), None))
+      val flight1: Arrival = arrival(iata = "BA0001", schDt = "2016-01-01T10:30Z", passengerSources = aclPassengers(100) ++ apiPaxSource, terminal = T1, origin = PortCode("JFK"))
+      val flight2: Arrival = arrival(iata = "AA8778", schDt = "2016-01-01T10:30Z", passengerSources = aclPassengers(150), terminal = T1, origin = PortCode("JFK"))
 
-      retainSplits(Seq((mainFlight, Seq(codeShare)))).headOption.map(_.splits) === Option(codeShare.splits)
+      val result = uniqueArrivalsWithCodeShares(identity[Arrival], paxFeedSourceOrder)(Seq(flight1, flight2)).toSet
+
+      val expected = Set(
+        (flight1, Seq("AA8778")),
+      )
+
+      result === expected
     }
   }
 }
