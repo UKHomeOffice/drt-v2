@@ -20,53 +20,50 @@ steps:
       DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
         from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
 
-#  - name: build
-#    pull: if-not-exists
-#    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-#    commands:
-#      - /root/entrypoint.sh
-#      - sbt --error compile docker:stage
-#    environment:
-#      ARTIFACTORY_PASSWORD:
-#        from_secret: ARTIFACTORY_PASSWORD
-#      ARTIFACTORY_USERNAME: drt-artifactory-robot
-#      ENV_LOG_LEVEL: ERROR
-#      KEYTOOL_PASSWORD:
-#        from_secret: KEYTOOL_PASSWORD
-#    when:
-#      event:
-#        - push
-#    depends_on:
-#      - drone_s3_cache_pull
+  - name: build
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error compile docker:stage
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+    depends_on:
+      - drone_s3_cache_pull
 
-#  - name: drone_s3_cache_push
-#    pull: if-not-exists
-#    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-#    settings:
-#      drone_s3_cache_folders: .ivy2
-#      drone_s3_cache_mode: push
-#    environment:
-#      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
-#      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-#        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-#      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-#        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-#    depends_on:
-#      - build
+  - name: drone_s3_cache_push
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
+    settings:
+      drone_s3_cache_folders: .ivy2
+      drone_s3_cache_mode: push
+    environment:
+      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
+      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
+        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
+      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
+        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
+    depends_on:
+      - build
 
   - name: analysis
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
-#      - sbt -ivy ./.ivy2 dependencyCheck
-#      - sbt scalastyle | true
-#      - sbt scapegoat | true
+      - sbt -ivy ./.ivy2 dependencyCheck
+      - sbt scalastyle | true
+      - sbt scapegoat | true
       - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean coverage test || true
       - sbt coverageReport
-      - ls -ltr /drone/src/server/target/scala-2.13/scoverage-report/
-      - ls -ltr /drone/src/
-
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
       ARTIFACTORY_PASSWORD:
@@ -114,104 +111,104 @@ steps:
       event:
         - push
 
-#  - name: publish-cypress
-#    image: plugins/ecr
-#    environment:
-#      AWS_REGION: eu-west-2
-#    settings:
-#      access_key: AKIAU6OMSVAPQAIHYUVJ
-#      secret_key:
-#        from_secret: aws_secret_access_key
-#      repo: drt/drt-v2
-#      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
-#      dockerfile: cy-drt-dockfile
-#      tags:
-#        - cypress-${DRONE_BUILD_NUMBER}
-#    when:
-#      event:
-#        - push
-#    depends_on:
-#      - ecr-login-drt-v2
+  - name: publish-cypress
+    image: plugins/ecr
+    environment:
+      AWS_REGION: eu-west-2
+    settings:
+      access_key: AKIAU6OMSVAPQAIHYUVJ
+      secret_key:
+        from_secret: aws_secret_access_key
+      repo: drt/drt-v2
+      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+      dockerfile: cy-drt-dockfile
+      tags:
+        - cypress-${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+    depends_on:
+      - ecr-login-drt-v2
 
-#  - name: unit-test
-#    pull: if-not-exists
-#    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-#    commands:
-#      - /root/entrypoint.sh
-#      - sbt --error test
-#    environment:
-#      ARTIFACTORY_PASSWORD:
-#        from_secret: ARTIFACTORY_PASSWORD
-#      ARTIFACTORY_USERNAME: drt-artifactory-robot
-#      ENV_LOG_LEVEL: ERROR
-#      KEYTOOL_PASSWORD:
-#        from_secret: KEYTOOL_PASSWORD
-#    when:
-#      event:
-#        - push
-#    depends_on:
-#      - build
+  - name: unit-test
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error test
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+    depends_on:
+      - build
 
-#  - name: publish-drt
-#    image: plugins/ecr
-#    environment:
-#      AWS_REGION: eu-west-2
-#    settings:
-#      access_key: AKIAU6OMSVAPQAIHYUVJ
-#      secret_key:
-#        from_secret: aws_secret_access_key
-#      repo: drt/drt-v2
-#      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
-#      tags:
-#        - B${DRONE_BUILD_NUMBER}
-#    when:
-#      event:
-#        - push
-#    depends_on:
-#      - build
+  - name: publish-drt
+    image: plugins/ecr
+    environment:
+      AWS_REGION: eu-west-2
+    settings:
+      access_key: AKIAU6OMSVAPQAIHYUVJ
+      secret_key:
+        from_secret: aws_secret_access_key
+      repo: drt/drt-v2
+      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+      tags:
+        - B${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+    depends_on:
+      - build
 
-#  - name: e2e-tests
-#    pull: if-not-exists
-#    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
-#    environment:
-#      AWS_REGION: eu-west-2
-#      PLAY:
-#        from_secret: play
-#      PLAY_HTTP_SECRET_KEY:
-#        from_secret: PLAY_HTTP_SECRET_KEY
-#    commands:
-#      - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e S3_AWS_ACCESS_KEY_ID="some-aws-access-id" -e S3_AWS_SECRET_ACCESS_KEY="some-aws-secret-access-id" -e PLAY_HTTP_SECRET_KEY=$${PLAY_HTTP_SECRET_KEY} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e DISPLAY_RED_LIST_INFO=false -e BASE_DOMAIN=drt-test.homeoffice.gov.uk 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:B${DRONE_BUILD_NUMBER} $${PLAY}
-#      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:cypress-${DRONE_BUILD_NUMBER} /bin/bash -c "/app/node_modules/.bin/cypress run"
-#    volumes:
-#      - name: dockerclientconfig
-#        path: /root/.docker
-#    when:
-#      event:
-#        - push
-#    depends_on:
-#      - publish-drt
-#      - publish-cypress
+  - name: e2e-tests
+    pull: if-not-exists
+    image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
+    environment:
+      AWS_REGION: eu-west-2
+      PLAY:
+        from_secret: play
+      PLAY_HTTP_SECRET_KEY:
+        from_secret: PLAY_HTTP_SECRET_KEY
+    commands:
+      - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e S3_AWS_ACCESS_KEY_ID="some-aws-access-id" -e S3_AWS_SECRET_ACCESS_KEY="some-aws-secret-access-id" -e PLAY_HTTP_SECRET_KEY=$${PLAY_HTTP_SECRET_KEY} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e DISPLAY_RED_LIST_INFO=false -e BASE_DOMAIN=drt-test.homeoffice.gov.uk 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:B${DRONE_BUILD_NUMBER} $${PLAY}
+      - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:cypress-${DRONE_BUILD_NUMBER} /bin/bash -c "/app/node_modules/.bin/cypress run"
+    volumes:
+      - name: dockerclientconfig
+        path: /root/.docker
+    when:
+      event:
+        - push
+    depends_on:
+      - publish-drt
+      - publish-cypress
 
-#  - name: slack_notification
-#    pull: if-not-exists
-#    image: plugins/slack
-#    settings:
-#      channel: devs
-#      template: "*{{repo.name}}: _{{build.status}}_*\nCompleted build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*\n{{build.link}}\n"
-#      username: drone
-#    environment:
-#      SLACK_WEBHOOK:
-#        from_secret: slack_webhook
-#    when:
-#      status:
-#        - success
-#        - failure
-#      event:
-#        - push
-#    depends_on:
-#      - build
-#      - e2e-tests
-#      - unit-test
+  - name: slack_notification
+    pull: if-not-exists
+    image: plugins/slack
+    settings:
+      channel: devs
+      template: "*{{repo.name}}: _{{build.status}}_*\nCompleted build *{{build.number}}* after *{{since build.started}}* on *{{build.branch}}*\n{{build.link}}\n"
+      username: drone
+    environment:
+      SLACK_WEBHOOK:
+        from_secret: slack_webhook
+    when:
+      status:
+        - success
+        - failure
+      event:
+        - push
+    depends_on:
+      - build
+      - e2e-tests
+      - unit-test
 
 services:
   - name: docker
