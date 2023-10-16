@@ -23,8 +23,9 @@ object CodeShares {
       .map { flights =>
         val mainFlight = flights
           .sortBy { f =>
-            if (apiFlightFromGenFlight(f).PassengerSources.contains(ApiFeedSource)) 10000
-            else apiFlightFromGenFlight(f).bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0)
+            val apiScore = if (apiFlightFromGenFlight(f).PassengerSources.contains(ApiFeedSource)) 10000 else 0
+            val paxScore = apiFlightFromGenFlight(f).bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0)
+            apiScore + paxScore
           }
           .reverse.head
         val shares = flights.filter(_ != mainFlight).map(f => apiFlightFromGenFlight(f).flightCodeString)
