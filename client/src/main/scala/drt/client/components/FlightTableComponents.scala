@@ -70,6 +70,6 @@ object FlightTableComponents {
       <.div()
     }
 
-  def uniqueArrivalsWithCodeShares(paxFeedSourceOrder: List[FeedSource]): Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[Arrival])] =
+  def uniqueArrivalsWithCodeShares(paxFeedSourceOrder: List[FeedSource]): Seq[ApiFlightWithSplits] => Seq[(ApiFlightWithSplits, Seq[String])] =
     CodeShares.uniqueArrivalsWithCodeShares((f: ApiFlightWithSplits) => identity(f.apiFlight), paxFeedSourceOrder)
 }
