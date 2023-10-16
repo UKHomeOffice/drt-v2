@@ -65,7 +65,6 @@ steps:
       - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean coverage test | true
       - sbt coverageReport
       - ls -ltr /drone/src/server/target/scala-2.13/scoverage-report/
-
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
       ARTIFACTORY_PASSWORD:
@@ -88,8 +87,8 @@ steps:
     environment:
       DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
     when:
-      branch:
-        - ${DRONE_BRANCH}
+#      branch:
+#        - ${DRONE_BRANCH}
       event:
         - push
     depends_on:
