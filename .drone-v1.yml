@@ -93,6 +93,7 @@ steps:
         - push
     depends_on:
       - analysis
+      - build
 
   - name: ecr-login-drt-v2
     pull: if-not-exists
@@ -149,6 +150,7 @@ steps:
         - push
     depends_on:
       - build
+      - sonar-scanner
 
   - name: publish-drt
     image: plugins/ecr
