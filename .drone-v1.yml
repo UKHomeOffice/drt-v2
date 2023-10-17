@@ -87,8 +87,6 @@ steps:
     environment:
       DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
     when:
-#      branch:
-#        - ${DRONE_BRANCH}
       event:
         - push
     depends_on:
