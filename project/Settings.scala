@@ -70,7 +70,7 @@ object Settings {
     val sprayJsonScalaJs = "1.3.5-7"
     val scalaTestVersion = "3.2.16"
     val twirlApi = "1.5.2"
-    val mockitoVersion = "4.6.1"
+    val mockitoVersion = "4.11.0"
 
   }
 
