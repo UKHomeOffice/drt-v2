@@ -5,6 +5,7 @@ import diode.UseValueEq
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
+import drt.client.logger.LoggerFactory
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
@@ -25,6 +26,8 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.immutable.HashSet
 
 object FlightTableContent {
+  private val log = LoggerFactory.getLogger(getClass.getName)
+  
   case class Props(portState: PortState,
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    queueOrder: Seq[Queue],
@@ -67,6 +70,16 @@ object FlightTableContent {
       }
 
       val flights = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder).flights.values.toList
+
+      flights
+        .groupBy(f =>
+          (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
+        )
+        .foreach { case (_, flights) =>
+          if (flights.size > 1) {
+            flights.foreach(f => log.info(s"Codeshare flight: ${f.apiFlight.flightCodeString} - ${f.apiFlight.PassengerSources.map(ps => s"${ps._1.name}: ${ps._2.actual}").mkString(", ")}"))
+          }
+        }
       val flightsForTerminal =
         flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
       val flightsWithCodeShares = FlightTableComponents
