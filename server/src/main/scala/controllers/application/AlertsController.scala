@@ -2,15 +2,14 @@ package controllers.application
 
 import actors.DrtSystemInterface
 import actors.persistent.DeleteAlerts
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.pattern._
 import akka.util.Timeout
 import com.google.inject.Inject
-import controllers.Application
 import drt.shared.Alert
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTime
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.auth.Roles.CreateAlerts
 import upickle.default.{read, write}
 
@@ -29,21 +28,20 @@ class AlertsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
   }
 
   def addAlert: Action[AnyContent] = authByRole(CreateAlerts) {
-    Action.async {
-      implicit request =>
-        log.info(s"Adding an Alert!")
-        request.body.asText match {
-          case Some(text) =>
-            val alert: Alert = read[Alert](text)
-            (ctrl.alertsActor ? Alert(alert.title, alert.message, alert.alertClass, alert.expires, createdAt = DateTime.now.getMillis))
-              .mapTo[Alert]
-              .map { alert =>
-                Ok(s"$alert added!")
-              }
-            Future(Accepted)
-          case None =>
-            Future(BadRequest)
-        }
+    Action.async { request =>
+      log.info(s"Adding an Alert!")
+      request.body.asText match {
+        case Some(text) =>
+          val alert: Alert = read[Alert](text)
+          (ctrl.alertsActor ? Alert(alert.title, alert.message, alert.alertClass, alert.expires, createdAt = DateTime.now.getMillis))
+            .mapTo[Alert]
+            .map { alert =>
+              Ok(s"$alert added!")
+            }
+          Future(Accepted)
+        case None =>
+          Future(BadRequest)
+      }
     }
   }
 

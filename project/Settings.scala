@@ -132,7 +132,7 @@ object Settings {
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "uk.gov.homeoffice" %%% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
-    "io.suzaku" %%% "boopickle" % booPickle
+    "io.suzaku" %%% "boopickle" % booPickle,
   ))
 
   /** Dependencies only used by the JVM project */
