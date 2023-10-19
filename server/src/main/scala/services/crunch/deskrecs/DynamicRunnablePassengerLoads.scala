@@ -261,7 +261,7 @@ object DynamicRunnablePassengerLoads {
                 val flightCode = f.apiFlight.flightCodeString
                 val paxSources = f.apiFlight.PassengerSources.map(ps => s"${ps._1.name}: ${ps._2.actual}").mkString(", ")
                 val splitSources = f.splits.map(s => s"${s.source.toString}: ${s.totalPax}").mkString(", ")
-                log.info(s"Codeshare flight: $flightCode :: $paxSources :: $splitSources")
+                log.info(s"Codeshare flight ${SDate(f.apiFlight.Scheduled).prettyDateTime} $flightCode :: $paxSources :: $splitSources")
               }
             }
           }
