@@ -21,6 +21,7 @@ import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaCom
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -33,6 +34,7 @@ import scala.util.Try
 object TerminalDashboardComponent {
   case class Props(terminalPageTabLoc: TerminalPageTabLoc,
                    airportConfig: AirportConfig,
+                   slaConfigs: SlaConfigs,
                    router: RouterCtl[Loc],
                    featureFlags: Pot[FeatureFlags],
                    loggedInUser: LoggedInUser,
@@ -63,6 +65,7 @@ object TerminalDashboardComponent {
       val urlNextTime = URIUtils.encodeURI(end.toISOString)
 
       val terminal = props.terminalPageTabLoc.terminal
+      def slas: Map[Queue, Int] = props.slaConfigs.configForDate(startPoint.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
 
       val flightTableComponent = FlightTable.apply(
         shortLabel = true,
@@ -144,7 +147,7 @@ object TerminalDashboardComponent {
                   }
 
                   <.dl(^.aria.label := s"Passenger joining queue ${Queues.displayName(q)}",
-                    ^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, props.airportConfig.slaByQueue(q))}",
+                    ^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, slas(q))}",
                     <.dt(^.className := "queue-name", s"${Queues.displayName(q)}"),
                     <.dd(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
                     <.dd(^.className := "queue-box-text", Icon.clockO, s"${MinuteAsAdjective(qWait).display} wait"),
@@ -201,6 +204,7 @@ object TerminalDashboardComponent {
 
   def apply(terminalPageTabLoc: TerminalPageTabLoc,
             airportConfig: AirportConfig,
+            slaConfigs: SlaConfigs,
             router: RouterCtl[Loc],
             featureFlags: Pot[FeatureFlags],
             loggedInUser: LoggedInUser,
@@ -212,6 +216,7 @@ object TerminalDashboardComponent {
     component(Props(
       terminalPageTabLoc,
       airportConfig,
+      slaConfigs,
       router,
       featureFlags,
       loggedInUser,

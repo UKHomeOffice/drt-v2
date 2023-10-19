@@ -1,19 +1,22 @@
 package actors.daily
 
 import actors.StreamingJournalLike
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamInitialized}
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.actor.PoisonPill
+import akka.pattern.StatusReply.Ack
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
-import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotMetadata, SnapshotOffer}
+import akka.persistence.{PersistentActor, RecoveryCompleted}
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage}
-import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{flightWithSplitsDiffFromMessage, flightWithSplitsFromMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, SplitsForArrivalsMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{arrivalsDiffFromMessage, splitsForArrivalsFromMessage}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 
@@ -50,7 +53,8 @@ class TerminalDayFlightUpdatesActor(year: Int,
       self ! PoisonPill
 
     case GetAllUpdatesSince(sinceMillis) =>
-      sender() ! updatesAndRemovals.updatesSince(sinceMillis)
+      val updatesToSend = updatesAndRemovals.updatesSince(sinceMillis)
+      sender() ! updatesToSend
 
     case StopUpdates =>
       stopUpdatesStream()
@@ -80,25 +84,41 @@ class TerminalDayFlightUpdatesActor(year: Int,
   override def receiveCommand: Receive = myReceiveCommand orElse streamingUpdatesReceiveCommand
 
   def myReceiveCommand: Receive = {
-    case EventEnvelope(_, _, _, diffMessage: FlightsWithSplitsDiffMessage) =>
-      val diff = flightWithSplitsDiffFromMessage(diffMessage)
-
-      updatesAndRemovals = updatesAndRemovals
-        .apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
-        .purgeOldUpdates(expireBeforeMillis)
-
+    case EventEnvelope(_, _, _, diffMessage: FlightsDiffMessage) =>
+      applyFlightsUpdate(diffMessage)
+      sender() ! Ack
+    case EventEnvelope(_, _, _, diffMessage: SplitsForArrivalsMessage) =>
+      applySplitsUpdate(diffMessage)
+      sender() ! Ack
+    case _:EventEnvelope =>
       sender() ! Ack
   }
 
   override def receiveRecover: Receive = myReceiveRecover orElse streamingUpdatesReceiveRecover
 
   def myReceiveRecover: Receive = {
-    case SnapshotOffer(SnapshotMetadata(_, _, _), m: FlightsWithSplitsMessage) =>
-      val flights = m.flightWithSplits.map(flightWithSplitsFromMessage)
-      updatesAndRemovals = updatesAndRemovals ++ flights
+    case FlightsWithSplitsDiffMessage =>
+      ()
+    case diffMessage: FlightsDiffMessage =>
+      applyFlightsUpdate(diffMessage)
 
-    case diffMessage: FlightsWithSplitsDiffMessage =>
-      val diff = flightWithSplitsDiffFromMessage(diffMessage)
-      updatesAndRemovals = updatesAndRemovals.apply(diff, diffMessage.createdAt.getOrElse(Long.MaxValue))
+    case diffMessage: SplitsForArrivalsMessage =>
+      applySplitsUpdate(diffMessage)
+  }
+
+  private def applyFlightsUpdate(diffMessage: FlightsDiffMessage): Unit = {
+    val diff = arrivalsDiffFromMessage(diffMessage)
+
+    updatesAndRemovals = updatesAndRemovals
+      .add(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
+      .purgeOldUpdates(expireBeforeMillis)
+  }
+
+  private def applySplitsUpdate(diffMessage: SplitsForArrivalsMessage): Unit = {
+    val diff = splitsForArrivalsFromMessage(diffMessage)
+
+    updatesAndRemovals = updatesAndRemovals
+      .add(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
+      .purgeOldUpdates(expireBeforeMillis)
   }
 }

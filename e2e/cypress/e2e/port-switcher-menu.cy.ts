@@ -1,4 +1,3 @@
-
 describe('Port switcher menu', () => {
 
   it("should not be visible when a user has access to one port only", () => {
@@ -12,7 +11,7 @@ describe('Port switcher menu', () => {
 
   it("should be visible as a single link if the user has access to 2 ports", () => {
     cy
-      .asABorderForceOfficerWithRoles(["LHR"])
+      .asABorderForceOfficerWithRoles(["LHR"], 'nocheck')
       .navigateHome()
       .get(".main-menu-content > :nth-child(1)")
       .children()
@@ -23,10 +22,10 @@ describe('Port switcher menu', () => {
 
   it("should be a drop down menu for users with access to more than 2 ports in the same region, including the current port", () => {
     cy
-      .asABorderForceOfficerWithRoles(["LTN", "STN", "LCY"])
+      .asABorderForceOfficerWithRoles(["LTN", "STN", "LCY"], 'nocheck')
       .navigateHome()
       .get('.dropdown > a')
-      .click({ force: true })
+      .click({force: true})
 
     cy.get(".dropdown-menu")
       .should('have.class', 'show')
@@ -37,17 +36,17 @@ describe('Port switcher menu', () => {
       .get(".dropdown-menu")
       .contains("LCY")
       .get('.dropdown')
-      .click( { force: true } )
+      .click({force: true})
       .get(".dropdown-menu")
       .should('not.have.class', 'show')
   });
 
   it("should be a drop down menu for users with access to more than 1 region ports, showing each region and its ports", () => {
     cy
-      .asABorderForceOfficerWithRoles(["LHR", "STN", "LGW"])
+      .asABorderForceOfficerWithRoles(["LHR", "STN", "LGW"], 'noCheck')
       .navigateHome()
       .get('.dropdown > a')
-      .click({ force: true })
+      .click({force: true})
 
     cy.get(".dropdown-menu")
       .should('have.class', 'show')
@@ -64,7 +63,7 @@ describe('Port switcher menu', () => {
       .get(".dropdown-menu")
       .contains("South")
       .get('.dropdown')
-      .click( { force: true } )
+      .click({force: true})
       .get(".dropdown-menu")
       .should('not.have.class', 'show')
   });

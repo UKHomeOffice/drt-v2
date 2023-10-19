@@ -14,9 +14,11 @@ import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.training.FeatureGuide
 
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
@@ -143,7 +145,6 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      feedStatuses: Pot[Seq[FeedSourceStatuses]] = Empty,
                      alerts: Pot[List[Alert]] = Empty,
                      maybeStaffDeploymentAdjustmentPopoverState: Option[StaffAdjustmentDialogueState] = None,
-                     displayAlertDialog: Pot[Boolean] = Empty,
                      oohStatus: Pot[OutOfHoursStatus] = Empty,
                      featureFlags: Pot[FeatureFlags] = Empty,
                      fileUploadState: Pot[FileUploadState] = Empty,
@@ -155,16 +156,22 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      egateBanksUpdates: Pot[PortEgateBanksUpdates] = Empty,
                      gateStandWalkTime: Pot[WalkTimes] = Empty,
                      passengerForecastAccuracy: Pot[ForecastAccuracy] = Empty,
+                     featureGuides: Pot[Seq[FeatureGuide]] = Empty,
                      maybeTimeMachineDate: Option[SDateLike] = None,
                      flaggedNationalities: Set[Country] = Set(),
                      flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary] = Map(),
                      paxFeedSourceOrder: List[FeedSource] = List(),
+                     showNewFeatureGuideOnLogin: Pot[Boolean] = Empty,
+                     featureGuideViewedIds: Pot[Seq[String]] = Empty,
+                     dropIns: Pot[Seq[DropIn]] = Empty,
+                     dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
+                     slaConfigs: Pot[SlaConfigs] = Empty,
                     )
 
 object PollDelay {
   val recoveryDelay: FiniteDuration = 10 seconds
   val loginCheckDelay: FiniteDuration = 30 seconds
-  val minuteUpdateDelay: FiniteDuration = 10 seconds
+  val updatesDelay: FiniteDuration = 10 seconds
   val oohSupportUpdateDelay: FiniteDuration = 1 minute
   val checkFeatureFlagsDelay: FiniteDuration = 10 minutes
 }
@@ -187,6 +194,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
         currentViewMode,
         zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2)),
         zoom(_.flightManifestSummaries),
+        zoom(_.paxFeedSourceOrder),
       ),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
       new AirportCountryHandler(zoomRW(_.airportInfos)((m, v) => m.copy(airportInfos = v))),
@@ -205,7 +213,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
-      new ShowAlertModalDialogHandler(zoomRW(_.displayAlertDialog)((m, v) => m.copy(displayAlertDialog = v))),
       new RetryHandler(zoomRW(identity)((m, _) => m)),
       new LoggedInStatusHandler(zoomRW(identity)((m, _) => m)),
       new NoopHandler(zoomRW(identity)((m, _) => m)),
@@ -226,8 +233,13 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AppControlHandler(zoomRW(identity)((m, _) => m)),
       new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
       new FlaggedNationalitiesHandler(zoomRW(_.flaggedNationalities)((m, v) => m.copy(flaggedNationalities = v))),
+      new FeatureGuidesHandler(zoomRW(_.featureGuides)((m, v) => m.copy(featureGuides = v))),
+      new FeatureGuideDialogHandler(zoomRW(_.showNewFeatureGuideOnLogin)((m, v) => m.copy(showNewFeatureGuideOnLogin = v))),
+      new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),
+      new DropInHandler(zoomRW(_.dropIns)((m, v) => m.copy(dropIns = v))),
+      new DropInRegistrationsHandler(zoomRW(_.dropInRegistrations)((m, v) => m.copy(dropInRegistrations = v))),
+      new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
     )
-
     composedHandlers
   }
 }

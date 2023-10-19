@@ -1,4 +1,4 @@
-import {manifestForDateTime, passengerProfiles, ukAdultWithId} from '../support/manifest-helpers'
+import {manifestForDateTime, passengerList, passengerProfiles, ukAdultWithId} from '../support/manifest-helpers'
 import {todayAtUtc} from '../support/time-helpers'
 import {paxRagGreenSelector} from "../support/commands";
 
@@ -6,7 +6,7 @@ import {paxRagGreenSelector} from "../support/commands";
 describe('API splits', () => {
 
   beforeEach(() => {
-    cy.deleteData();
+    cy.deleteData('nocheck');
   });
 
   const scheduledTime = todayAtUtc(14, 55);
@@ -31,7 +31,9 @@ describe('API splits', () => {
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(apiManifest)
+      .then((csrfToken) => {
+        cy.addManifest(apiManifest, csrfToken.toString())
+      })
       .get('.egate-queue-pax')
       .contains("8")
       .get('.eeadesk-queue-pax')
@@ -50,7 +52,9 @@ describe('API splits', () => {
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(apiManifest)
+      .then((csrfToken) => {
+        cy.addManifest(apiManifest, csrfToken.toString())
+      })
       .get('.notApiData', {timeout: 5000})
       .contains("10")
       .get(".arrivals__table__flight-code__info > .tooltip-trigger")
@@ -86,7 +90,9 @@ describe('API splits', () => {
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(apiManifest)
+      .then((csrfToken) => {
+        cy.addManifest(apiManifest, csrfToken.toString())
+      })
       .get(paxRagGreenSelector)
       .request({
         method: 'GET',
@@ -112,8 +118,8 @@ describe('API splits', () => {
         },
 
         "ageRanges": [
-          ["25-49", 10],
-          ["0-11", 1]
+          ["0-9", 1],
+          ["25-49", 10]
         ],
 
         "nationalities": [
@@ -137,7 +143,9 @@ describe('API splits', () => {
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .addManifest(apiManifest)
+      .then((csrfToken) => {
+        cy.addManifest(apiManifest, csrfToken.toString())
+      })
       .get(paxRagGreenSelector, {timeout: 5000})
       .wait(100)
       .get('.egate-queue-pax')

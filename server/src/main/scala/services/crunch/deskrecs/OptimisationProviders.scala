@@ -13,8 +13,8 @@ import manifests.passengers.ManifestLike
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.Metrics
+import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -23,7 +23,7 @@ import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, UtcDate}
 import scala.concurrent.{ExecutionContext, Future}
 
 object OptimisationProviders {
-  val log: Logger = LoggerFactory.getLogger(getClass)
+  private val log: Logger = LoggerFactory.getLogger(getClass)
 
   def historicManifestsProvider(destination: PortCode,
                                 manifestLookupService: ManifestLookupLike,
@@ -50,7 +50,7 @@ object OptimisationProviders {
               }
               .recover {
                 case t =>
-                  log.warn(s"Failed to get historic manifest for ${arrival.unique}", t.getMessage)
+                  log.warn(s"Failed to get historic manifest for ${arrival.unique}: ${t.getMessage}")
                   None
               }
         }
@@ -64,7 +64,7 @@ object OptimisationProviders {
       .map { case (_, maybeManifest) => maybeManifest }
       .recover {
         case t =>
-          log.warn(s"Failed to get historic manifest for ${arrival.unique}", t.getMessage)
+          log.warn(s"Failed to get historic manifest for ${arrival.unique}: ${t.getMessage}")
           None
       }
 
@@ -84,12 +84,11 @@ object OptimisationProviders {
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       .map(_.map(_._2.flights.values.toList))
 
-  def liveManifestsProvider(manifestsActor: ActorRef)
-                           (crunchRequest: ProcessingRequest)
-                           (implicit timeout: Timeout): Future[Source[VoyageManifests, NotUsed]] =
-    manifestsActor
-      .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
-      .mapTo[Source[VoyageManifests, NotUsed]]
+  def liveManifestsProvider(manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
+                           (crunchRequest: ProcessingRequest): Future[Source[VoyageManifests, NotUsed]] =
+    Future.successful(
+      manifestsProvider(crunchRequest.start.toUtcDate, crunchRequest.end.toUtcDate).map(_._2)
+    )
 
   def passengersProvider(passengersActor: ActorRef)
                         (crunchRequest: ProcessingRequest)

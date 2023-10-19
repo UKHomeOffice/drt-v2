@@ -2,20 +2,21 @@
 package test
 
 import actors._
-import actors.acking.AckingReceiver.Ack
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
+import com.google.inject.Inject
 import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.Enable
+import drt.shared.DropIn
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.{UserRow, UserTableLike}
+import slickdb._
 import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
@@ -26,6 +27,7 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.sql.Timestamp
+import javax.inject.Singleton
 import scala.collection.SortedSet
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
@@ -48,12 +50,53 @@ case class MockUserTable()(implicit ec: ExecutionContext) extends UserTableLike 
   override def insertOrUpdateUser(user: LoggedInUser, inactive_email_sent: Option[Timestamp],
                                   revoked_access: Option[Timestamp])(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def selectAll: Future[Seq[UserRow]] = Future.successful(Seq.empty)
-
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(None)
 }
 
-case class MockDrtParameters() extends DrtParameters {
+case class MockFeatureGuideTable() extends FeatureGuideTableLike {
+  override def getAll()(implicit ec: ExecutionContext): Future[String] =
+    Future.successful("""[{"id":[1],"uploadTime":1686066599088,"fileName":["test1"],"title":["Test1"],"markdownContent":"Here is markdown example","published":true}]""")
+
+  override def selectAll(implicit ec: ExecutionContext): Future[Seq[FeatureGuideRow]] = Future.successful(Seq.empty)
+
+  override def getGuideIdForFilename(filename: String)(implicit ec: ExecutionContext): Future[Option[Int]] = Future.successful(None)
+}
+
+case class MockFeatureGuideViewTable() extends FeatureGuideViewLike {
+  override def insertOrUpdate(fileId: Int, email: String)(implicit ec: ExecutionContext): Future[String] = Future.successful("")
+
+  override def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]] = Future.successful(Seq.empty)
+}
+
+case class MockDropInsRegistrationTable() extends DropInsRegistrationTableLike {
+  override def createDropInRegistration(email: String, id: String)(implicit ex: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def getDropInRegistrations(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]] =
+    Future.successful(Seq(
+      DropInsRegistrationRow(email = "someone@test.com",
+        dropInId = 1,
+        registeredAt = new Timestamp(1695910303210L),
+        emailSentAt = Some(new Timestamp(1695910303210L)))))
+}
+
+case class MockDropInTable() extends DropInTableLike {
+  override def getDropIns(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[DropInRow]] =
+    Future.successful(Seq.empty)
+
+  override def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] =
+    Future.successful(Seq(DropIn(id = Some(1),
+      title = "test",
+      startTime = 1696687258000L,
+      endTime = 1696692658000L,
+      isPublished = true,
+      meetingLink = None,
+      lastUpdatedAt = 1695910303210L)))
+
+}
+
+case class MockDrtParameters @Inject()() extends DrtParameters {
   override val gateWalkTimesFilePath: Option[String] = None
   override val standWalkTimesFilePath: Option[String] = None
   override val forecastMaxDays: Int = 3
@@ -92,11 +135,12 @@ case class MockDrtParameters() extends DrtParameters {
   override val usePassengerPredictions: Boolean = true
 }
 
-case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
-                        (implicit val materializer: Materializer,
-                         val ec: ExecutionContext,
-                         val system: ActorSystem,
-                         val timeout: Timeout) extends DrtSystemInterface {
+@Singleton
+case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
+                                  (implicit val materializer: Materializer,
+                                   val ec: ExecutionContext,
+                                   val system: ActorSystem,
+                                   val timeout: Timeout) extends TestDrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -131,6 +175,10 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val userService: UserTableLike = MockUserTable()
+  override val featureGuideService: FeatureGuideTableLike = MockFeatureGuideTable()
+  override val featureGuideViewService: FeatureGuideViewLike = MockFeatureGuideViewTable()
+  override val dropInService: DropInTableLike = MockDropInTable()
+  override val dropInRegistrationService: DropInsRegistrationTableLike = MockDropInsRegistrationTable()
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   val flightLookups: TestFlightLookups = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder)
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
@@ -175,9 +223,10 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     )
   )
 
-  val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
-  val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
-  val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 2.seconds)
+  override val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
+  override val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
+  override val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 2.seconds)
+
 
   val testActors = List(
     forecastBaseArrivalsActor,
@@ -198,7 +247,7 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     persistentStaffingUpdateQueueActor,
   )
 
-  val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
+  override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -206,7 +255,8 @@ case class TestDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     system.scheduler.schedule(1 second, 1 day)({
       val startDay = SDate.now()
       DateRange.utcDateRange(startDay, startDay.addDays(30)).map(day => {
-        val arrivals = CSVFixtures.csvPathToArrivalsOnDate(day.toISOString, file)
+        val arrivals = CSVFixtures
+          .csvPathToArrivalsOnDate(day.toISOString, file)
           .collect {
             case Success(arrival) => arrival
           }
@@ -275,7 +325,7 @@ class RestartActor(startSystem: () => List[KillSwitch],
         log.info(s"Shutdown triggered")
         resetInMemoryData()
         startTestSystem()
-        replyTo ! Ack
+        replyTo ! StatusReply.Ack
       }
 
     case Status.Success(_) =>

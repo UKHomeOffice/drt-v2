@@ -1,5 +1,5 @@
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
-import sbt.*
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
+import sbt._
 
 /**
  * Application settings. Configure the build for your application here.
@@ -25,9 +25,9 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v549"
+    val drtLib = "v636"
 
-    val scala = "2.13.11"
+    val scala = "2.13.10"
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
@@ -36,7 +36,7 @@ object Settings {
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
-    val h2 = "2.1.214"
+    val h2 = "2.2.220"
 
     val akka = "2.7.0"
 
@@ -61,7 +61,7 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
-    val uPickle = "2.0.0"
+    val uPickle = "3.1.0"
     val akkaHttp = "10.5.2"
     val slick = "3.4.1"
     val censorinus = "2.1.16"
@@ -70,9 +70,11 @@ object Settings {
     val sprayJsonScalaJs = "1.3.5-7"
     val scalaTestVersion = "3.2.16"
     val twirlApi = "1.5.2"
+    val mockitoVersion = "4.6.1"
+
   }
 
-  import versions.*
+  import versions._
 
   val clientNpmDependencies = Seq(
     "react" -> react,
@@ -89,7 +91,9 @@ object Settings {
     "@mui/system" -> "5.11.16",
     "@mui/material" -> "5.11.16",
     "@mui/icons-material" -> "5.11.16",
-    "@mui/lab" -> "5.0.0-alpha.119"
+    "@mui/lab" -> "5.0.0-alpha.119",
+    "flickity" -> "2.3.0",
+    "react-flickity-component" -> "4.0.6",
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -99,12 +103,10 @@ object Settings {
     "com.github.japgolly.scalajs-react" %%% "test" % scalajsReact % Test,
     "uk.gov.homeoffice" %%% "drt-lib" % drtLib,
     "com.github.japgolly.scalacss" %%% "ext-react" % scalaCSS,
-
     "io.suzaku" %%% "diode" % diode,
     "io.suzaku" %%% "diode-react" % diode,
     "org.scala-js" %%% "scalajs-dom" % scalaDom,
     "org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0",
-
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "com.lihaoyi" %% "pprint" % pprint,
@@ -113,7 +115,6 @@ object Settings {
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
-
     "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
     "com.dedipresta" %%% "scala-crypto" % "1.0.0",
     "io.lemonlabs" %%% "scala-uri" % "4.0.3",
@@ -182,7 +183,7 @@ object Settings {
     "org.codehaus.janino" % "janino" % janinoVersion,
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
-    "org.apache.poi" % "poi" % poi, // exclude("org.slf4j"),
+    "org.apache.poi" % "poi" % poi,
     "org.apache.poi" % "poi-ooxml" % poi,
     "org.codehaus.janino" % "janino" % "3.0.16",
     "org.postgresql" % "postgresql" % postgres,
@@ -192,7 +193,9 @@ object Settings {
     "org.specs2" %% "specs2-core" % specs2 % Test,
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
-
+    "org.mockito" % "mockito-core" % mockitoVersion % Test,
+    "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test,
+    "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
@@ -203,7 +206,8 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "3.19.2-RELEASE"
+    "uk.gov.service.notify" % "notifications-java-client" % "4.1.0-RELEASE",
+    "software.amazon.awssdk" % "s3" % "2.16.96",
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

@@ -1,8 +1,8 @@
 package scenarios
 
-import actors.acking.AckingReceiver.Ack
 import akka.NotUsed
 import akka.actor.{Actor, Props}
+import akka.pattern.StatusReply
 import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared._
@@ -12,9 +12,9 @@ import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.{B5JPlusTypeAllocator, ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
+import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
@@ -69,6 +69,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     val futureResult: Future[CrunchApi.DeskRecMinutes] = Scenarios.simulationResult(
       simulationParams = simulationParams,
       simulationAirportConfig = simulationParams.applyToAirportConfig(defaultAirportConfig),
+      (_: LocalDate, q: Queue) => Future.successful(defaultAirportConfig.slaByQueue(q)),
       splitsCalculator = splitsCalculator,
       flightsProvider = flightsProvider,
       liveManifestsProvider = manifestsProvider,
@@ -117,6 +118,6 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
 
 class AkkingActor extends Actor {
   override def receive: Receive = {
-    case _ => sender() ! Ack
+    case _ => sender() ! StatusReply.Ack
   }
 }

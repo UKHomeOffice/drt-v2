@@ -3,7 +3,7 @@ package services.staffing
 import akka.actor.ActorRef
 import akka.util.Timeout
 import org.slf4j.LoggerFactory
-import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike

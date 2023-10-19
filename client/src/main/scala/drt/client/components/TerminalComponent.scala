@@ -3,13 +3,14 @@ package drt.client.components
 import diode.data.Pot
 import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
-import drt.client.SPAMain.TerminalPageModes._
 import drt.client.SPAMain._
 import drt.client.components.TerminalDesksAndQueues.Ideal
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
+import drt.client.spa.TerminalPageMode
+import drt.client.spa.TerminalPageModes._
 import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
 import drt.shared.api.WalkTimes
@@ -20,6 +21,7 @@ import japgolly.scalajs.react.{CtorType, ReactEventFromInput, Reusability, Scala
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
@@ -39,6 +41,7 @@ object TerminalComponent {
                                    potFixedPoints: Pot[FixedPointAssignments],
                                    potStaffMovements: Pot[StaffMovements],
                                    airportConfig: Pot[AirportConfig],
+                                   slaConfigs: Pot[SlaConfigs],
                                    loadingState: LoadingState,
                                    showActuals: Boolean,
                                    loggedInUserPot: Pot[LoggedInUser],
@@ -63,6 +66,7 @@ object TerminalComponent {
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         airportConfig = model.airportConfig,
+        slaConfigs = model.slaConfigs,
         loadingState = model.loadingState,
         showActuals = model.showActualIfAvailable,
         loggedInUserPot = model.loggedInUserPot,
@@ -86,6 +90,7 @@ object TerminalComponent {
             airportConfig <- model.airportConfig
             loggedInUser <- model.loggedInUserPot
             redListUpdates <- model.redListUpdates
+            slaConfigs <- model.slaConfigs
           } yield {
             val timeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
 
@@ -94,6 +99,7 @@ object TerminalComponent {
               potFixedPoints = model.potFixedPoints,
               potStaffMovements = model.potStaffMovements,
               airportConfig = airportConfig,
+              slaConfigs = slaConfigs,
               terminalPageTab = props.terminalPageTab,
               defaultTimeRangeHours = timeRangeHours,
               router = props.router,
@@ -130,6 +136,7 @@ object TerminalComponent {
                     TerminalDashboardComponent(
                       terminalPageTabLoc = props.terminalPageTab,
                       airportConfig = terminalContentProps.airportConfig,
+                      slaConfigs = terminalContentProps.slaConfigs,
                       router = props.router,
                       featureFlags = model.featureFlags,
                       loggedInUser = loggedInUser,

@@ -1,12 +1,12 @@
 package drt.shared
 
 import uk.gov.homeoffice.drt.DataUpdates.{Combinable, MinuteUpdates}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival, WithLastUpdated, WithTimeAccessor}
+import uk.gov.homeoffice.drt.arrivals.{WithLastUpdated, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
-import upickle.default.{macroRW, _}
+import upickle.default._
 
 import scala.collection.immutable.{Map => IMap}
 import scala.util.Try
@@ -18,6 +18,10 @@ object CrunchApi {
 
   object PortStateError {
     implicit val rw: ReadWriter[PortStateError] = macroRW
+  }
+
+  trait WithMinute {
+    val minute: MillisSinceEpoch
   }
 
   trait MinuteLike[A, B] {
@@ -50,7 +54,9 @@ object CrunchApi {
                          shifts: Int,
                          fixedPoints: Int,
                          movements: Int,
-                         lastUpdated: Option[MillisSinceEpoch] = None) extends MinuteLike[StaffMinute, TM] with TerminalMinute with WithLastUpdated with MinuteComparison[StaffMinute] {
+                         lastUpdated: Option[MillisSinceEpoch] = None)
+    extends MinuteLike[StaffMinute, TM]
+      with WithMinute with TerminalMinute with WithLastUpdated with MinuteComparison[StaffMinute] {
     def equals(candidate: StaffMinute): Boolean =
       this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
@@ -110,7 +116,9 @@ object CrunchApi {
                           maybeDeployedPaxInQueue: Option[Int] = None,
                           actDesks: Option[Int] = None,
                           actWait: Option[Int] = None,
-                          lastUpdated: Option[MillisSinceEpoch] = None) extends MinuteLike[CrunchMinute, TQM] with WithLastUpdated {
+                          lastUpdated: Option[MillisSinceEpoch] = None)
+    extends MinuteLike[CrunchMinute, TQM]
+      with WithMinute with WithLastUpdated {
     def equals(candidate: CrunchMinute): Boolean = this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
 
     override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
@@ -217,7 +225,7 @@ object CrunchApi {
     override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = toMinute.copy(lastUpdated = Option(now))
 
     override def toMinute: CrunchMinute = CrunchMinute(
-        terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
+      terminal, queue, minute, paxLoad, workLoad, deskRec, waitTime, maybePaxInQueue, lastUpdated = None)
   }
 
   case class DeskRecMinutes(minutes: Iterable[DeskRecMinute]) extends PortStateQueueMinutes {
@@ -338,8 +346,7 @@ object CrunchApi {
   case class CrunchMinutes(minutes: Iterable[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
 
   case class PortStateUpdates(latest: MillisSinceEpoch,
-                              flights: Iterable[ApiFlightWithSplits],
-                              flightRemovals: Iterable[UniqueArrival],
+                              updatesAndRemovals: FlightUpdatesAndRemovals,
                               queueMinutes: Iterable[CrunchMinute],
                               staffMinutes: Iterable[StaffMinute])
 

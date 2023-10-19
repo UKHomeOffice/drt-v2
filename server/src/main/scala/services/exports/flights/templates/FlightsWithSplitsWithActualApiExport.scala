@@ -4,6 +4,7 @@ import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDa
 import drt.shared.api.{AgeRange, FlightManifestSummary, UnknownAge}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
+import services.exports.FlightExports.{actualAPISplitsForFlightInHeadingOrder, ageRangesFromSummary, nationalitiesFromSummary}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals._
@@ -22,33 +23,6 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
       actualAPISplitsForFlightInHeadingOrder(fws, ArrivalExportHeadings.actualApiHeadings.split(",")).toList).map(s => s"$s") :::
       List(s""""${nationalitiesFromSummary(maybePaxSummary)}"""", s""""${ageRangesFromSummary(maybePaxSummary)}"""")
   }
-
-  def nationalitiesFromSummary(maybeSummary: Option[FlightManifestSummary]): String =
-    maybeSummary.map {
-      _.nationalities
-        .toList
-        .sortBy { case (nat, paxCount) =>
-          f"${paxCount}%03d-${nat.code.getBytes.map(265 - _).mkString("-")}"
-        }
-        .reverseMap {
-          case (nat, pax) => s"${nat.toString()}:${pax}"
-        }
-        .mkString(",")
-    }.getOrElse("")
-
-  def ageRangesFromSummary(maybeSummary: Option[FlightManifestSummary]): String =
-    maybeSummary.map {
-      _.ageRanges
-        .toList
-        .sortBy {
-          case (AgeRange(bottom, _), _) => bottom
-          case (UnknownAge, _) => 1000
-        }
-        .map {
-          case (ageRange, pax) => s"${ageRange.title}:$pax"
-        }
-        .mkString(",")
-    }.getOrElse("")
 
 }
 

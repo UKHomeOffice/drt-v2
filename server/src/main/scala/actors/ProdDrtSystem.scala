@@ -12,6 +12,7 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, SourceQueueWithComplete}
 import akka.util.Timeout
+import com.google.inject.Inject
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.server.feeds.{Feed, ManifestsFeedResponse}
@@ -21,10 +22,11 @@ import manifests.ManifestLookup
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import services.crunch.CrunchSystem
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.metrics.ApiValidityReporter
 import slick.dbio.{DBIOAction, NoStream}
-import slickdb.{ArrivalTable, Tables, UserTable, UserTableLike}
+import slickdb._
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
@@ -38,7 +40,7 @@ import scala.collection.immutable.SortedMap
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-
+import javax.inject.Singleton
 
 object PostgresTables extends Tables {
   override val profile = slick.jdbc.PostgresProfile
@@ -49,7 +51,8 @@ object PostgresTables extends Tables {
 
 case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
-case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
+@Singleton
+case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
                         (implicit val materializer: Materializer,
                          val ec: ExecutionContext,
                          val system: ActorSystem,
@@ -67,13 +70,21 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
-  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
+  override val aggregatedArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
 
   override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookup = ManifestLookup(PostgresTables)
 
   override val userService: UserTableLike = UserTable(PostgresTables)
+
+  override val featureGuideService: FeatureGuideTableLike = FeatureGuideTable(PostgresTables)
+
+  override val featureGuideViewService: FeatureGuideViewLike = FeatureGuideViewTable(PostgresTables)
+
+  override val dropInService: DropInTableLike = DropInTable(PostgresTables)
+
+  override val dropInRegistrationService: DropInsRegistrationTableLike =  DropInsRegistrationTable(PostgresTables)
 
   override val minuteLookups: MinuteLookups = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
@@ -186,7 +197,7 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
         val manifestProcessor = DbManifestProcessor(PostgresTables, airportConfig.portCode, crunchInputs.manifestsLiveResponseSource)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
         log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
-        ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 15.seconds)
+        ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 1.second)
           .processFilesAfter(processFilesAfter)
           .runWith(Sink.ignore)
 
@@ -229,5 +240,3 @@ case class ProdDrtSystem(airportConfig: AirportConfig, params: DrtParameters)
     }
   }
 }
-
-case class AddUpdatesSubscriber(source: ActorRef)

@@ -54,10 +54,10 @@ case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
   private def markerAndNextArrivalKeys(since: MillisSinceEpoch): Future[(MillisSinceEpoch, Iterable[(UniqueArrivalKey, MillisSinceEpoch)])] =
     arrivalKeyProvider
       .nextKeys(since)
-      .map { keys =>
-        val keysToProcess = if (since > 0) keys.filterNot(_._2 == since) else keys
-        val nextFetch = keysToProcess.map(_._2).toList.sorted.reverse.headOption.getOrElse(since)
-        (nextFetch, keysToProcess)
+      .map {
+        case (maybeProcessedAt, keysToProcess) =>
+        val nextFetch = maybeProcessedAt.getOrElse(since)
+        (nextFetch, keysToProcess.map(k => (k, nextFetch)))
       }
       .recover {
         case t =>

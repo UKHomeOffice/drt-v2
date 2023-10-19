@@ -154,7 +154,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-06-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(11)), false, None)
+        ManifestPassengerProfile(Nationality("USA"), Option(DocumentType.Passport), Option(PaxAge(9)), false, None)
       ),
       None
     )
@@ -166,7 +166,7 @@ class QueueAllocationSpec extends Specification {
           Queues.EeaDesk,
           1,
           Option(Map(Nationality("USA") -> 1)),
-          Option(Map(PaxAge(11) -> 1))
+          Option(Map(PaxAge(9) -> 1))
         )
       ),
       Historical,
@@ -182,7 +182,7 @@ class QueueAllocationSpec extends Specification {
     result === expected
   }
 
-  "Given a BestAvailableManifest with an under 12 EU National we should get 1 passenger to EEADesk" >> {
+  "Given a BestAvailableManifest with an under 10 EU National we should get 1 passenger to EEADesk" >> {
     val bestManifest = BestAvailableManifest(
       Historical,
       PortCode("LHR"),
@@ -191,7 +191,7 @@ class QueueAllocationSpec extends Specification {
       CarrierCode("SA"),
       SDate("2019-06-22T06:24:00Z"),
       List(
-        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), false, None)
+        ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(9)), false, None)
       ),
       None
     )
@@ -203,7 +203,7 @@ class QueueAllocationSpec extends Specification {
           Queues.EeaDesk,
           1,
           Option(Map(Nationality("GBR") -> 1)),
-          Option(Map(PaxAge(11) -> 1))
+          Option(Map(PaxAge(9) -> 1))
         )
       ),
       Historical,
@@ -229,8 +229,8 @@ class QueueAllocationSpec extends Specification {
         CarrierCode("SA"),
         SDate("2019-01-22T06:24:00Z"),
         List(
-          ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), false, None),
-          ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(11)), true, None)
+          ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(9)), false, None),
+          ManifestPassengerProfile(Nationality("GBR"), Option(DocumentType.Passport), Option(PaxAge(9)), true, None)
         ),
         None
       )
@@ -242,14 +242,14 @@ class QueueAllocationSpec extends Specification {
             Queues.EeaDesk,
             1,
             Option(Map(Nationality("GBR") -> 1)),
-            Option(Map(PaxAge(11) -> 1))
+            Option(Map(PaxAge(9) -> 1))
           ),
           ApiPaxTypeAndQueueCount(
             PaxTypes.Transit,
             Queues.Transfer,
             1,
             Option(Map(Nationality("GBR") -> 1)),
-            Option(Map(PaxAge(11) -> 1))
+            Option(Map(PaxAge(9) -> 1))
           )
         ),
         Historical,

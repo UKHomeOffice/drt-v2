@@ -1,6 +1,6 @@
 package services
 
-import actors.persistent.staffing.{GetState, UpdateShifts}
+import actors.persistent.staffing.UpdateShifts
 import akka.actor.Actor
 import akka.pattern.after
 import controllers.ArrivalGenerator
@@ -9,6 +9,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Passengers, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}

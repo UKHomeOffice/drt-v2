@@ -30,6 +30,7 @@ import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
@@ -41,6 +42,7 @@ object TerminalContentComponent {
                    potFixedPoints: Pot[FixedPointAssignments],
                    potStaffMovements: Pot[StaffMovements],
                    airportConfig: AirportConfig,
+                   slaConfigs: SlaConfigs,
                    terminalPageTab: TerminalPageTabLoc,
                    defaultTimeRangeHours: TimeRangeHours,
                    router: RouterCtl[Loc],
@@ -99,9 +101,9 @@ object TerminalContentComponent {
       val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeRangeHours)
       val terminalName = terminal.toString
       val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
-      val movementsExportMillis = props.viewMode match {
-        case ViewLive => SDate.now().millisSinceEpoch
-        case ViewDay(localDate, _) => SDate(localDate).getLocalNextMidnight.millisSinceEpoch
+      val movementsExportDate: LocalDate = props.viewMode match {
+        case ViewLive => SDate.now().toLocalDate
+        case ViewDay(localDate, _) => localDate
       }
 
       <.div(^.className := "queues-and-arrivals",
@@ -156,7 +158,7 @@ object TerminalContentComponent {
                   terminalName,
                   ExportStaffMovements,
                   SPAMain.absoluteUrl(
-                    s"export/staff-movements/$movementsExportMillis/$terminal"
+                    s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"
                   )
                 ),
                 StaffMovementsExport,
@@ -173,6 +175,7 @@ object TerminalContentComponent {
                       viewStart = viewStart,
                       hoursToView = timeRangeHours.end - timeRangeHours.start,
                       airportConfig = props.airportConfig,
+                      slaConfigs = props.slaConfigs,
                       terminalPageTab = props.terminalPageTab,
                       showActuals = props.showActuals,
                       viewMode = props.viewMode,
@@ -223,6 +226,7 @@ object TerminalContentComponent {
                     props.viewMode.dayStart.toLocalDate,
                     props.terminalPageTab.terminal,
                     props.airportConfig,
+                    props.slaConfigs,
                   )
                 } else "not rendering"
               }),
@@ -293,7 +297,6 @@ object TerminalContentComponent {
       }
     )
     .configure(Reusability.shouldComponentUpdate)
-//    .configure(ReusabilityOverlay.install)
     .build
 
   def apply(props: Props): VdomElement = component(props)

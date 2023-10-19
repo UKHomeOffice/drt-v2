@@ -27,17 +27,6 @@ trait WorkloadCalculatorLike {
                        )
                        (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes
 
-  def combineCodeShares(flights: Iterable[ApiFlightWithSplits],
-                        paxFeedSourceOrder: List[FeedSource],
-                       ): Iterable[ApiFlightWithSplits] = {
-    val uniqueFlights: Iterable[ApiFlightWithSplits] = flights
-      .toList
-      .sortBy(_.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0))
-      .map { fws => (CodeShareKeyOrderedBySchedule(fws), fws) }
-      .toMap.values
-    uniqueFlights
-  }
-
   val flightHasWorkload: FlightFilter
 
   def flightsWithPcpWorkload(flights: Iterable[ApiFlightWithSplits], redListUpdates: RedListUpdates): Iterable[ApiFlightWithSplits] =
@@ -62,7 +51,8 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
                                  paxFeedSourceOrder: List[FeedSource],
                                 )
                                 (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes = {
-    val relevantFlights = flightsWithPcpWorkload(combineCodeShares(flights.flights.values, paxFeedSourceOrder), redListUpdates)
+    val uniqueWithCodeShares = CodeShares.uniqueArrivals[ApiFlightWithSplits](f => f.apiFlight, paxFeedSourceOrder)(flights.flights.values.toSeq)
+    val relevantFlights = flightsWithPcpWorkload(uniqueWithCodeShares, redListUpdates)
     val procTimes = (terminal: Terminal) => (paxType: PaxType, queue: Queue) =>
       terminalProcTimes
         .getOrElse(terminal, Map.empty)

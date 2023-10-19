@@ -2,7 +2,6 @@ package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.splits.ApiSplitsToSplitRatio
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Passengers}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxTypeAndQueue, PaxTypes, Queues}
@@ -115,32 +114,6 @@ object DashboardComponentTests extends TestSuite {
         val expected = SDate("2017-11-30T13:00")
 
         assert(result.millisSinceEpoch == expected.millisSinceEpoch)
-      }
-    }
-
-    "when displaying pax per queue in period" - {
-      "Given a map of PaxTypeAndQueue to total pax then I should get back a map of queue to total pax" - {
-        val aggSplits = Map(
-          PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 100,
-          PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk) -> 100
-        )
-
-        val expected = Map(Queues.EeaDesk -> 200)
-        val result = ApiSplitsToSplitRatio.queueTotals(aggSplits)
-
-        assert(result == expected)
-      }
-      "Given a map of PaxTypeAndQueue to total pax then I should get back a map of queue to total pax" - {
-        val aggSplits = Map(
-          PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EeaDesk) -> 100,
-          PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.EGate) -> 100,
-          PaxTypeAndQueue(PaxTypes.EeaNonMachineReadable, Queues.EeaDesk) -> 100
-        )
-
-        val expected = Map(Queues.EeaDesk -> 200, Queues.EGate -> 100)
-        val result = ApiSplitsToSplitRatio.queueTotals(aggSplits)
-
-        assert(result == expected)
       }
     }
 

@@ -11,6 +11,7 @@ import drt.client.util.DateUtil.isNotValidDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.redlist.LhrRedListDatesImpl
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormLabel, MuiGrid, MuiTextField}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
@@ -20,10 +21,12 @@ import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CallbackTo, CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, DesksAndQueuesView}
+import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSource, ArrivalsAndSplitsView, BorderForceStaff, DesksAndQueuesView}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+
+import scala.scalajs.js
 
 object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
@@ -58,35 +61,15 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {
         val key = label.replace("[^0-9a-zA-Z]+", "-")
         MuiGrid(container = true, spacing = 2)(
-          MuiGrid(item = true, xs = 1)(
-            ^.key := s"date-picker-label-$key",
-            DefaultFormFieldsStyle.datePickerLabel,
-            MuiFormLabel()(label),
-          ),
           MuiGrid(item = true, xs = 4)(
             ^.key := s"date-picker-date-$key",
-            MuiTextField()(
-              DefaultFormFieldsStyle.datePicker,
+            MuiTextField(label = label.toVdom)(
               ^.`type` := "date",
               ^.defaultValue := SDate(currentDate).toISODateOnly,
               ^.onChange ==> setDate
             )
           ),
-          MuiGrid(item = true, xs = 6)(
-            ^.key := s"date-picker-type-$key",
-            if (label == "From")
-              validDateIndicator(state.startDate.isNotValid)
-            else
-              validDateIndicator(state.endDate.isNotValid)
-          )
         )
-      }
-
-      def validDateIndicator(isNotValid: Boolean): TagMod = isNotValid match {
-        case true =>
-          <.div(^.id := "snapshot-error", <.div("Please enter valid date"))
-        case false =>
-          <.div(^.id := "snapshot-done", Icon.checkCircleO)
       }
 
       val setStartDate: ReactEventFromInput => CallbackTo[Unit] = e => {
@@ -110,95 +93,96 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
         }
       }
 
-      val gridXs = 4
-
       def showDialogue(event: Event): Callback = {
         event.preventDefault()
         scope.modState(_.copy(showDialogue = true))
       }
 
-      <.div(
-        ^.className := "export-button-wrapper",
-        MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-          MuiIcons(GetApp)(fontSize = "small"),
-          "Multi Day Export",
-          ^.className := "btn btn-default",
-          VdomAttr("data-toggle") := "modal",
-          VdomAttr("data-target") := "#multi-day-export",
-          ^.href := "#",
-          ^.onClick ==> showDialogue,
-        ),
-        <.div(^.className := "multi-day-export modal " + showClass, ^.id := "#multi-day-export", ^.tabIndex := -1, ^.role := "dialog",
-          <.div(
-            ^.className := "modal-dialog modal-dialog-centered",
-            ^.id := "multi-day-export-modal-dialog",
-            ^.role := "document",
+      if (props.loggedInUser.hasRole(BorderForceStaff))
+        <.div(
+          ^.className := "export-button-wrapper",
+          MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
+            MuiIcons(GetApp)(fontSize = "small"),
+            "Multi Day Export",
+            ^.className := "btn btn-default",
+            VdomAttr("data-toggle") := "modal",
+            VdomAttr("data-target") := "#multi-day-export",
+            ^.href := "#",
+            ^.onClick ==> showDialogue,
+          ),
+          <.div(^.className := "multi-day-export modal " + showClass, ^.id := "#multi-day-export", ^.tabIndex := -1, ^.role := "dialog",
             <.div(
-              ^.className := "modal-content",
+              ^.className := "modal-dialog modal-dialog-centered",
+              ^.id := "multi-day-export-modal-dialog",
+              ^.role := "document",
               <.div(
-                ^.className := "modal-header",
-                <.h5(^.className := "modal-title", "Choose dates to export")
-              ),
-              <.div(
-                ^.className := "modal-body",
-                ^.id := "multi-day-export-modal-body",
-                MuiGrid(container = true)(
-                  MuiGrid(container = true, spacing = 2)(
-                    datePickerWithLabel(setStartDate, "From", state.startDate.date),
-                    datePickerWithLabel(setEndDate, "To", state.endDate.date),
-                    if (state.startDate.date > state.endDate.date)
-                      MuiGrid(item = true, xs = 12)(<.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date."))
-                    else
-                      EmptyVdom,
-
-                    if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
-                      val exports = props.portCode match {
-                        case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(SDate(state.endDate.date)) =>
-                          List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"), ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
-                        case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
-                        case _ => List(ExportArrivals)
-                      }
-                      exportLinksGroup(props, state, gridXs, exports, "Arrivals")
-                    } else EmptyVdom,
-                    if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                      exportLinksGroup(props, state, gridXs, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
-                    else EmptyVdom,
-                    if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
-                      exportLinksGroup(props, state, gridXs, List(ExportLiveArrivalsFeed), "Feeds")
-                    else EmptyVdom
-                  )
+                ^.className := "modal-content",
+                <.div(
+                  ^.className := "modal-header",
+                  <.h5(^.className := "modal-title", "Choose dates to export")
                 ),
                 <.div(
-                  ^.className := "modal-footer",
-                  ^.id := "multi-day-export-modal-footer",
-                  <.button(
-                    ^.className := "btn btn-link",
-                    VdomAttr("data-dismiss") := "modal", "Close",
-                    ^.onClick --> scope.modState(_.copy(showDialogue = false))
+                  ^.className := "modal-body",
+                  ^.id := "multi-day-export-modal-body",
+                  MuiGrid(container = true)(
+                    <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> 8),
+                      <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> 8),
+                        datePickerWithLabel(setStartDate, "From", state.startDate.date),
+                        datePickerWithLabel(setEndDate, "To", state.endDate.date),
+                      ),
+                      if (state.startDate.date > state.endDate.date)
+                        <.div(^.className := "multi-day-export__error", "Please select an end date that is after the start date.")
+                      else
+                        EmptyVdom,
+
+                      if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
+                        val exports = props.portCode match {
+                          case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(SDate(state.endDate.date)) =>
+                            List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"), ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
+                          case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
+                          case _ => List(ExportArrivals)
+                        }
+                        exportLinksGroup(props, state, exports, "Arrivals")
+                      } else EmptyVdom,
+                      if (props.loggedInUser.hasRole(DesksAndQueuesView))
+                        exportLinksGroup(props, state, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
+                      else EmptyVdom,
+                      if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
+                        exportLinksGroup(props, state, List(ExportLiveArrivalsFeed), "Feeds")
+                      else EmptyVdom
+                    )
+                  ),
+                  <.div(
+                    ^.className := "modal-footer",
+                    ^.id := "multi-day-export-modal-footer",
+                    <.button(
+                      ^.className := "btn btn-link",
+                      VdomAttr("data-dismiss") := "modal", "Close",
+                      ^.onClick --> scope.modState(_.copy(showDialogue = false))
+                    )
                   )
                 )
               )
-            )
-          ))
-      )
+            ))
+        )
+      else EmptyVdom
     })
     .build
 
 
-  private def exportLinksGroup(props: Props, state: State, gridXs: Int, exports: List[ExportType], title: String): VdomElement =
-    MuiGrid(container = true, item = true, spacing = 2)(
-      MuiGrid(item = true, xs = 12)(title, ^.key := "export-group-title"),
-      exports.map(export =>
-        MuiGrid(item = true, xs = gridXs)(
-          ^.key := export.toString,
+  private def exportLinksGroup(props: Props, state: State, exports: List[ExportType], title: String): VdomElement =
+    <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "8px"),
+      title,
+      <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> 8),
+        exports.map(export =>
           exportLink(
             props.selectedDate,
             props.terminal.toString,
             export,
             SPAMain.exportDatesUrl(export, state.startDate.date, state.endDate.date, props.terminal)
           )
-        )
-      ).toVdomArray
+        ).toVdomArray
+      )
     )
 
   def apply(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(portCode, terminal, viewMode, selectedDate, loggedInUser: LoggedInUser))

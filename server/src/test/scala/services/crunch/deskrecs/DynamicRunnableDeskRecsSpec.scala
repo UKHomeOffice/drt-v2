@@ -1,9 +1,9 @@
 package services.crunch.deskrecs
 
-import actors.acking.AckingReceiver.{Ack, StreamInitialized}
 import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
+import akka.pattern.StatusReply
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
@@ -21,9 +21,10 @@ import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, vi
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.DynamicRunnablePassengerLoads.addManifests
 import services.crunch.deskrecs.OptimiserMocks._
-import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest}
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamInitialized
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
@@ -33,7 +34,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.collection.{SortedSet, immutable}
 import scala.concurrent.duration._
@@ -50,10 +51,10 @@ object OptimiserMocks {
   class MockSinkActor(probe: ActorRef) extends Actor {
     override def receive: Receive = {
       case StreamInitialized =>
-        sender() ! Ack
+        sender() ! StatusReply.Ack
       case somethingToReturn =>
         probe ! somethingToReturn
-        sender() ! Ack
+        sender() ! StatusReply.Ack
     }
   }
 
@@ -98,7 +99,7 @@ object OptimiserMocks {
     val portCode = PortCode("STN")
 
     val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
-    val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(Ack)
+    val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(StatusReply.Ack)
 
     OptimisationProviders.historicManifestsProvider(
       portCode,
@@ -145,7 +146,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
   val splitsCalculator: SplitsCalculator = manifests.queues.SplitsCalculator(ptqa, airportConfig.terminalPaxSplits, AdjustmentsNoop)
 
-  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig), paxFeedSourceOrder)
+  val desksAndWaitsProvider: PortDesksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(airportConfig.slaByQueue(q)))
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   def setupGraphAndCheckQueuePax(arrival: Arrival,

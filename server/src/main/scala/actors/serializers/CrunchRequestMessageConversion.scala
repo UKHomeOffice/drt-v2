@@ -1,7 +1,7 @@
 package actors.serializers
 
 import org.slf4j.{Logger, LoggerFactory}
-import services.crunch.deskrecs.RunnableOptimisation.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestMessage, RemoveCrunchRequestMessage}
 import uk.gov.homeoffice.drt.time.LocalDate
@@ -16,7 +16,7 @@ object CrunchRequestMessageConversion {
 
   def crunchRequestToMessage(cr: ProcessingRequest): CrunchRequestMessage = {
     val maybeTerminalName = cr match {
-      case cr: CrunchRequest => None
+      case _: CrunchRequest => None
       case tur: TerminalUpdateRequest => Option(tur.terminal.toString)
     }
     CrunchRequestMessage(

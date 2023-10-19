@@ -2,7 +2,7 @@ package actors.persistent.arrivals
 
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.feeds.FeedStatusSuccess
 import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
@@ -36,7 +36,7 @@ class AclForecastArrivalsActor(val now: () => SDateLike,
 
     state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ incomingArrivalsWithKeys, maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
-    if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(removals, updates)
+    if (removals.nonEmpty || updates.nonEmpty) persistArrivalUpdates(ArrivalsDiff(updates, removals))
     persistFeedStatus(FeedStatusSuccess(createdAt.millisSinceEpoch, updates.size))
   }
 }

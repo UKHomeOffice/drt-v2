@@ -4,16 +4,15 @@ import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaForecastFlight, ChromaLiveFlight}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.Implicits._
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.FlightsApi.Flights
-import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Operator, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -53,11 +52,11 @@ object StreamingChromaFlow {
         Actual = if (act == 0) None else Option(act),
         EstimatedChox = if (estChox == 0) None else Option(estChox),
         ActualChox = if (actChox == 0) None else Option(actChox),
-        Gate = if (StringUtils.isBlank(flight.Gate)) None else Option(flight.Gate),
-        Stand = if (StringUtils.isBlank(flight.Stand)) None else Option(flight.Stand),
+        Gate = if (flight.Gate.isBlank) None else Option(flight.Gate),
+        Stand = if (flight.Stand.isBlank) None else Option(flight.Stand),
         MaxPax = if (flight.MaxPax == 0) None else Option(flight.MaxPax),
-        RunwayID = if (StringUtils.isBlank(flight.RunwayID)) None else Option(flight.RunwayID),
-        BaggageReclaimId = if (StringUtils.isBlank(flight.BaggageReclaimId)) None else Option(flight.BaggageReclaimId),
+        RunwayID = if (flight.RunwayID.isBlank) None else Option(flight.RunwayID),
+        BaggageReclaimId = if (flight.BaggageReclaimId.isBlank) None else Option(flight.BaggageReclaimId),
         AirportID = flight.AirportID,
         Terminal = Terminal(flight.Terminal),
         rawICAO = flight.ICAO,

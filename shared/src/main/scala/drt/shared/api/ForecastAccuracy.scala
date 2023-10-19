@@ -21,7 +21,7 @@ object ForecastAccuracy {
           }
           (t, dateStringsWithAccuracies)
         }
-      ujson.Obj(mutable.LinkedHashMap(
+      ujson.Obj.from(Seq(
         "localDate" -> writeJs(fa.localDate),
         "pax" -> writeJs(terminalDaysAccuracy)))
     },

@@ -1,13 +1,13 @@
 package actors
 
-import actors.persistent.staffing.{GetState, ShiftsActor, ShiftsReadActor, UpdateShifts, UpdateShiftsAck}
+import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor, UpdateShifts, UpdateShiftsAck}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.testkit.ImplicitSender
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import drt.shared._
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration._
 

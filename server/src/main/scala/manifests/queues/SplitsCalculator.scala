@@ -16,13 +16,13 @@ object SplitsCalculator {
 }
 
 case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
-                            terminalDefaultSplitRatios: Map[Terminal, SplitRatios],
+                            terminalSplitRatios: Map[Terminal, SplitRatios],
                             adjustments: QueueAdjustments = AdjustmentsNoop) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def terminalDefaultSplits(terminalName: Terminal): Splits = {
     val emptySplits = SplitRatios(InvalidSource, List())
-    val portDefault = terminalDefaultSplitRatios.getOrElse(terminalName, emptySplits).splits.collect {
+    val portDefault = terminalSplitRatios.getOrElse(terminalName, emptySplits).splits.collect {
       case SplitRatio(PaxTypeAndQueue(paxType, queue), ratio) if ratio > 0 =>
         ApiPaxTypeAndQueueCount(paxType, queue, ratio * 100, None, None)
     }

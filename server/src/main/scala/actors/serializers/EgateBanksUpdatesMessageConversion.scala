@@ -63,11 +63,6 @@ object EgateBanksUpdatesMessageConversion {
     } yield DeleteEgateBanksUpdates(Terminal(terminal), originalDate)
   }
 
-  def egateBanksUpdatesFromMessage(msg: EgateBanksUpdatesMessage): EgateBanksUpdates =
-    EgateBanksUpdates(msg.updates.map(u => egateBanksUpdateFromMessage(u)).collect {
-      case Some(update) => update
-    }.toList)
-
   def portUpdatesFromMessage(msg: PortEgateBanksUpdatesMessage): PortEgateBanksUpdates =
     PortEgateBanksUpdates(
       msg.updates

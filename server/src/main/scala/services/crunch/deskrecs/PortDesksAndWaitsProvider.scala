@@ -9,12 +9,12 @@ import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
-import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
@@ -24,7 +24,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                      divertedQueues: Map[Queue, Queue],
                                      desksByTerminal: Map[Terminal, Int],
                                      flexedQueuesPriority: List[Queue],
-                                     slas: Map[Queue, Int],
+                                     sla: (LocalDate, Queue) => Future[Int],
                                      terminalProcessingTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]],
                                      minutesToCrunch: Int,
                                      crunchOffsetMinutes: Int,
@@ -49,7 +49,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }.toMap
 
   private def terminalDescRecs(terminal: Terminal): TerminalDesksAndWaitsProvider =
-    deskrecs.TerminalDesksAndWaitsProvider(slas, flexedQueuesPriority, tryCrunch)
+    deskrecs.TerminalDesksAndWaitsProvider(sla, flexedQueuesPriority, tryCrunch)
 
   override def flightsToLoads(minuteMillis: NumericRange[MillisSinceEpoch],
                               flights: FlightsWithSplits,
@@ -115,10 +115,9 @@ object PortDesksAndWaitsProvider {
   def apply(airportConfig: AirportConfig,
             tryCrunch: TryCrunchWholePax,
             flightFilter: FlightFilter,
-            egatesProvider: () => Future[PortEgateBanksUpdates],
             paxFeedSourceOrder: List[FeedSource],
-           )
-           (implicit ec: ExecutionContext): PortDesksAndWaitsProvider = {
+            sla: (LocalDate, Queue) => Future[Int],
+           ): PortDesksAndWaitsProvider = {
 
     val calculator = DynamicWorkloadCalculator(
       airportConfig.terminalProcessingTimes,
@@ -133,7 +132,7 @@ object PortDesksAndWaitsProvider {
       divertedQueues = airportConfig.divertedQueues,
       desksByTerminal = airportConfig.desksByTerminal,
       flexedQueuesPriority = airportConfig.queuePriority,
-      slas = airportConfig.slaByQueue,
+      sla = sla,
       terminalProcessingTimes = airportConfig.terminalProcessingTimes,
       minutesToCrunch = airportConfig.minutesToCrunch,
       crunchOffsetMinutes = airportConfig.crunchOffsetMinutes,

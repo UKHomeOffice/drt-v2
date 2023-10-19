@@ -1,42 +1,45 @@
 package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetFlights
-import actors.acking.AckingReceiver.{Ack, StreamCompleted, StreamFailure, StreamInitialized}
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.SortedActorRefSource
 import akka.actor.{Actor, ActorRef, Props}
+import akka.pattern.StatusReply
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MinutesContainer, PassengersMinute}
-import drt.shared.FlightsApi.{Flights, PaxForArrivals, SplitsForArrivals}
+import drt.shared.FlightsApi.{Flights, PaxForArrivals}
 import drt.shared._
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import services.TryCrunchWholePax
+import services.crunch.TestDefaults.airportConfig
 import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.OptimiserMocks._
-import services.crunch.deskrecs.RunnableOptimisation.CrunchRequest
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
+import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
+import uk.gov.homeoffice.drt.actor.commands.CrunchRequest
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Passengers, Splits}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.{EeaMachineReadable, VisaNational}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.{Map, Seq, SortedMap}
-import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
 class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Actor {
@@ -45,7 +48,7 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Ac
 
   override def receive: Receive = {
     case StreamInitialized =>
-      sender() ! Ack
+      sender() ! StatusReply.Ack
 
     case StreamCompleted =>
       log.info(s"Completed")
@@ -64,18 +67,18 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Ac
       }
 
     case drm: DeskRecMinutes =>
-      sender() ! Ack
+      sender() ! StatusReply.Ack
       probe.ref ! drm
 
     case SetFlights(flightsToSet) => flightsToReturn = flightsToSet
 
     case minutes: MinutesContainer[_, _] =>
-      sender() ! Ack
+      sender() ! StatusReply.Ack
       probe.ref ! minutes
 
     case message =>
       log.warn(s"Hmm got a $message")
-      sender() ! Ack
+      sender() ! StatusReply.Ack
       probe.ref ! message
   }
 }
@@ -108,7 +111,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
 
     val splitsCalc = SplitsCalculator(paxAllocation, airportConfig.terminalPaxSplits, AdjustmentsNoop)
-    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), MockEgatesProvider.portProvider(airportConfig), paxFeedSourceOrder)
+    val desksAndWaitsProvider = PortDesksAndWaitsProvider(airportConfig, mockCrunch, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, (_: LocalDate, q: Queue) => Future.successful(airportConfig.slaByQueue(q)))
 
     implicit val timeout: Timeout = new Timeout(50.milliseconds)
     val deskRecsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(

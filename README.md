@@ -95,4 +95,9 @@ This gets the values back in sync and resolves the duplicate key insertion error
 #Updating the akka version and akka persistent jdbc 
 With upgrade for akka version (2.6.17) and akka persistent jdbc (5.0.4) there is change in schema for journal and snapshot . At moment there are no tools to migration from legacy to new schema.
 But there is option provided to continue using legacy schema with some configure update for dao which is document by lightbend  https://doc.akka.io/docs/akka-persistence-jdbc/current/migration.html.
-At some point once the migration tool is available we can migrate to new schema which is beneficial. 
+At some point once the migration tool is available we can migrate to new schema which is beneficial.
+
+### Running NVD mirror locally
+ Need docker installed and running locally. 
+ Following command will pull the docker image and run it locally on port 8008
+ ```docker run -d --name nvdmirror-instance -p 8008:80 sspringett/nvdmirror```

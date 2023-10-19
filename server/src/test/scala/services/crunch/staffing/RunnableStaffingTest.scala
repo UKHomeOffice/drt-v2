@@ -5,13 +5,12 @@ import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared._
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.RunnableOptimisation.{ProcessingRequest, TerminalUpdateRequest}
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.concurrent.Future
 

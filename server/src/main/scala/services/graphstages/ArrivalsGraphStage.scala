@@ -2,12 +2,11 @@ package services.graphstages
 
 import akka.stream._
 import akka.stream.stage.{GraphStage, GraphStageLogic, InHandler, OutHandler}
-import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
 import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, ArrivalsDiff, Passengers, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -96,7 +95,7 @@ class ArrivalsGraphStage(name: String = "",
       case adjustments =>
         val adjusted = adjustments(initialMergedArrivals.values)
         val additions = terminalAdditions(adjusted, initialMergedArrivals.values)
-        val removals = terminalRemovals(adjusted, initialMergedArrivals.values)
+        val removals = terminalRemovals(adjusted, initialMergedArrivals.values).map(_.unique)
 
         if (removals.nonEmpty || additions.nonEmpty) {
           log.info(s"Removing ${removals.size} initial arrivals with terminal changes")
@@ -150,8 +149,8 @@ class ArrivalsGraphStage(name: String = "",
       } match {
         case toRemove if toRemove.nonEmpty =>
           toPush match {
-            case Some(existingDiff) => Option(existingDiff.copy(toRemove = existingDiff.toRemove ++ toRemove))
-            case None => Option(ArrivalsDiff(Seq(), toRemove))
+            case Some(existingDiff) => Option(existingDiff.copy(toRemove = existingDiff.toRemove ++ toRemove.map(_.unique)))
+            case None => Option(ArrivalsDiff(Seq(), toRemove.map(_.unique)))
           }
         case _ => toPush
       }
@@ -226,7 +225,7 @@ class ArrivalsGraphStage(name: String = "",
       val maybeNewDiff = sourceType match {
         case LiveArrivals =>
           val updateFilteredArrivals = updateFilteredIncomingWithTotalPaxSource(filteredIncoming, LiveFeedSource)
-          val terminalRemovals = ArrivalsGraphStage.terminalRemovals(updateFilteredArrivals.values, liveArrivals.values)
+          val terminalRemovals = ArrivalsGraphStage.terminalRemovals(updateFilteredArrivals.values, liveArrivals.values).map(_.unique)
           val keysWithUpdates = changedArrivals(liveArrivals, updateFilteredArrivals)
           val existingMergedForKeys = keysWithUpdates.map(key => (key, mergeArrivalWithMaybeBase(key, forecastBaseArrivals.get(key)))).toMap
           liveArrivals = liveArrivals ++ updateFilteredArrivals
@@ -260,8 +259,9 @@ class ArrivalsGraphStage(name: String = "",
         case _ =>
           maybeNewDiff.foreach { newDiff =>
             val adjustedUpdates = arrivalsAdjustments(newDiff.toUpdate.values)
-            val adjustedRemovals = arrivalsAdjustments(newDiff.toRemove)
-            val oldTerminalRemovals = terminalRemovals(adjustedUpdates, newDiff.toUpdate.values)
+            val arrivalsToRemove = newDiff.toRemove.map(ua => forecastBaseArrivals.get(ua)).collect{ case Some(a) => a }
+            val adjustedRemovals = arrivalsAdjustments(arrivalsToRemove).map(_.unique)
+            val oldTerminalRemovals = terminalRemovals(adjustedUpdates, newDiff.toUpdate.values).map(_.unique)
             val diffWithAdjustments = ArrivalsDiff(adjustedUpdates, adjustedRemovals ++ oldTerminalRemovals)
             toPush = updateMaybeDiff(diffWithAdjustments, toPush)
           }
@@ -315,7 +315,7 @@ class ArrivalsGraphStage(name: String = "",
         .filter(_.scheduled >= pastCutOffTime)
         .map(removalKey => mergeArrivalWithMaybeBase(removalKey, forecastBaseArrivals.get(removalKey)))
         .collect {
-          case Some(arrivalToRemove) => arrivalToRemove
+          case Some(arrivalToRemove) => arrivalToRemove.unique
         }
 
       if (arrivalsWithUpdates.nonEmpty || removedArrivalsInFuture.nonEmpty)

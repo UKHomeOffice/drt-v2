@@ -5,6 +5,7 @@ import diode.UseValueEq
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
+import drt.client.logger.LoggerFactory
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
@@ -15,7 +16,6 @@ import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
 import org.scalajs.dom.html.{Span, TableCell, TableSection}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -26,6 +26,8 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.immutable.HashSet
 
 object FlightTableContent {
+  private val log = LoggerFactory.getLogger(getClass.getName)
+  
   case class Props(portState: PortState,
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    queueOrder: Seq[Queue],
@@ -68,10 +70,21 @@ object FlightTableContent {
       }
 
       val flights = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder).flights.values.toList
+
+      flights
+        .groupBy(f =>
+          (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
+        )
+        .foreach { case (_, flights) =>
+          if (flights.size > 1) {
+            flights.foreach(f => log.info(s"Codeshare flight: ${f.apiFlight.flightCodeString} - ${f.apiFlight.PassengerSources.map(ps => s"${ps._1.name}: ${ps._2.actual}").mkString(", ")}"))
+          }
+        }
       val flightsForTerminal =
         flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
-      val flightsWithCodeShares: Seq[(ApiFlightWithSplits, Set[Arrival])] = FlightTableComponents.uniqueArrivalsWithCodeShares(flightsForTerminal.toSeq)
-      val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime)
+      val flightsWithCodeShares = FlightTableComponents
+        .uniqueArrivalsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
+      val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
 
       if (sortedFlights.nonEmpty) {
         val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
@@ -87,7 +100,7 @@ object FlightTableContent {
                   val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,
-                    codeShares = codeShares,
+                    codeShareFlightCodes = codeShares,
                     idx = idx,
                     originMapper = originMapper,
                     splitsGraphComponent = splitsGraphComponent,

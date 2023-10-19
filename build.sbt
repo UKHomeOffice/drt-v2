@@ -6,9 +6,11 @@ import sbt.Keys.{credentials, _}
 import sbt.Project.projectToRef
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 import com.sksamuel.scapegoat.sbt.ScapegoatSbtPlugin.autoImport._
+import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin.autoImport._
+import java.net.URL
 
 scalaVersion := Settings.versions.scala
-ThisBuild / scapegoatVersion  := "2.1.2"
+ThisBuild / scapegoatVersion := "2.1.1"
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
 
@@ -82,7 +84,7 @@ lazy val client: Project = (project in file("client"))
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
     Test / parallelExecution := false,
-    Compile / doc / sources := List()
+    Compile / doc / sources := List(),
   )
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
@@ -126,6 +128,7 @@ lazy val server = (project in file("server"))
     resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+    resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases/",
     Compile / packageBin / publishArtifact := false,
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := false,
@@ -134,7 +137,8 @@ lazy val server = (project in file("server"))
     Assets / LessKeys.compress := true,
     TwirlKeys.templateImports += "buildinfo._",
     Test / parallelExecution := false,
-    Compile / doc / sources := List()
+    Compile / doc / sources := List(),
+    dependencyCheckFormats := Seq("XML", "JSON" ,"HTML")
   )
   .aggregate(clients.map(projectToRef): _*)
   .dependsOn(sharedJVM)
@@ -147,7 +151,9 @@ lazy val ReleaseCmd = Command.command("release") {
       "set elideOptions in client := Seq()" ::
       state
 }
-
+val nvdBaseUrl = sys.env.getOrElse("NVD_BASE_URL", "http://localhost:8008")
+dependencyCheckCveUrlModified := Some(new URL(s"$nvdBaseUrl/nvdcve-1.1-modified.json.gz"))
+dependencyCheckCveUrlBase := Some(s"$nvdBaseUrl/nvdcve-%d.json.gz")
 Global / cancelable := true
 
 // code generation task

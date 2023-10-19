@@ -5,11 +5,11 @@ import actors.persistent.staffing._
 import akka.actor.{PoisonPill, Props}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.{StaffMovement, StaffMovements}
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import services.crunch.deskrecs.RunnableOptimisation.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import java.util.UUID
 import scala.concurrent.duration._

@@ -3,7 +3,7 @@ package actors.routing.minutes
 import actors.ManifestLookupsLike
 import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.persistent.staffing.{GetFeedStatuses, GetState}
+import actors.persistent.staffing.GetFeedStatuses
 import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
 import akka.NotUsed
@@ -17,6 +17,7 @@ import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxAge, PortCode}
@@ -149,7 +150,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
       val result = Await.result(manifestRouterActor.ask(
         GetStateForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
-      ).mapTo[Source[VoyageManifests, NotUsed]], 1.second)
+      ).mapTo[Source[(UtcDate, VoyageManifests), NotUsed]], 1.second)
 
       result.runWith(Sink.seq)
 
@@ -171,7 +172,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
           GetStateForDateRange(SDate("2020-11-01T00:00Z").millisSinceEpoch, SDate("2020-11-02T23:59Z").millisSinceEpoch)
         )
 
-      ).mapTo[Source[VoyageManifests, NotUsed]], 1.second)
+      ).mapTo[Source[(UtcDate, VoyageManifests), NotUsed]], 1.second)
 
       result.runWith(Sink.seq)
 
@@ -195,16 +196,19 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
         Props(new ManifestRouterActor(manifestsLookup.lookup(testManifests), noopUpdates))
       )
 
-      val resultSource: Future[Source[VoyageManifests, NotUsed]] = manifestRouterActor.ask(
+      val resultSource: Future[Source[(UtcDate, VoyageManifests), NotUsed]] = manifestRouterActor.ask(
         GetStateForDateRange(
           SDate("2020-11-01T00:00Z").millisSinceEpoch,
           SDate("2020-11-02T23:59Z").millisSinceEpoch
         )
-      ).mapTo[Source[VoyageManifests, NotUsed]]
+      ).mapTo[Source[(UtcDate, VoyageManifests), NotUsed]]
 
-      val result = Await.result(ManifestRouterActor.runAndCombine(resultSource), 1.second)
+      val result = Await.result(resultSource.flatMap(_.runWith(Sink.seq)), 1.second)
 
-      val expected = VoyageManifests(Set(manifest1, manifest2))
+      val expected = Seq(
+        (UtcDate(2020, 11, 1), VoyageManifests(Set(manifest1))),
+        (UtcDate(2020, 11, 2), VoyageManifests(Set(manifest2))),
+      )
 
       result === expected
     }

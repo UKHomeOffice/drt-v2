@@ -1,9 +1,9 @@
 package drt.client.components
 
 import diode.UseValueEq
-import drt.client.SPAMain.TerminalPageModes.Staffing
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.spa.TerminalPageModes.Staffing
 import drt.shared.CrunchApi.StaffMinute
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl

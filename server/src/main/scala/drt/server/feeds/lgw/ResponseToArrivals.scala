@@ -2,9 +2,8 @@ package drt.server.feeds.lgw
 
 import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import org.apache.commons.lang3.StringUtils
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, CarrierCode, Operator, Passengers, Predictions, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
 import uk.gov.homeoffice.drt.time.SDate
@@ -40,11 +39,11 @@ case class ResponseToArrivals(data: String) {
       Actual = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
       EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST"),
       ActualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),
-      Gate = (n \\ "PassengerGate").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
-      Stand = (n \\ "ArrivalStand").headOption.map(n => n text).filter(StringUtils.isNotBlank(_)),
+      Gate = (n \\ "PassengerGate").headOption.map(n => n text).filterNot(_.isBlank),
+      Stand = (n \\ "ArrivalStand").headOption.map(n => n text).filterNot(_.isBlank),
       MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt),
-      RunwayID = parseRunwayId(n).filter(StringUtils.isNotBlank(_)),
-      BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filter(StringUtils.isNotBlank(_)),
+      RunwayID = parseRunwayId(n).filterNot(_.isBlank),
+      BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filterNot(_.isBlank),
       AirportID = "LGW",
       Terminal = parseTerminal(n),
       CarrierCode = CarrierCode(n \\ "AirlineIATA" text),

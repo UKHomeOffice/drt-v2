@@ -17,7 +17,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.UserRoleProviderLike
+import controllers.{DropInProviderLike, FeatureGuideProviderLike, UserRoleProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -29,8 +29,8 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.ChromaLiveFeed
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.common.{ManualUploadArrivalFeed, ProdHttpClient}
-import drt.server.feeds.edi.{EdiClient, EdiFeed}
-import drt.server.feeds.gla.{GlaFeed, ProdGlaFeedRequester}
+import drt.server.feeds.edi.EdiFeed
+import drt.server.feeds.gla.GlaFeed
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
 import drt.server.feeds.legacy.bhx.BHXForecastFeedLegacy
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, LgwForecastFeed}
@@ -38,13 +38,15 @@ import drt.server.feeds.lhr.LHRFlightFeed
 import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
+import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
+import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
 import services._
@@ -52,7 +54,6 @@ import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
 import services.crunch.CrunchManager.queueDaysToReCrunch
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
-import services.crunch.deskrecs.RunnableOptimisation.ProcessingRequest
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
@@ -62,15 +63,20 @@ import services.staffing.StaffMinutesChecker
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
-import uk.gov.homeoffice.drt.actor.{PredictionModelActor, WalkTimeProvider}
+import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
+import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
 import uk.gov.homeoffice.drt.time.{MilliDate => _, _}
 
@@ -80,8 +86,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.language.postfixOps
 
-
-trait DrtSystemInterface extends UserRoleProviderLike {
+trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderLike with DropInProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
@@ -149,10 +154,20 @@ trait DrtSystemInterface extends UserRoleProviderLike {
   val flightUpdates: ActorRef
 
   val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] = (date: LocalDate, atTime: SDateLike) =>
-    paxForDay(date, Option(atTime))
+    flightValuesForDate(
+      date,
+      Option(atTime),
+      arrival => SDate(arrival.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date,
+      arrivals => arrivals.map(arrival => arrival.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
+    )
 
   val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] = (date: LocalDate) =>
-    paxForDay(date, None)
+    flightValuesForDate(
+      date,
+      None,
+      arrival => SDate(arrival.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date,
+      arrivals => arrivals.map(arrival => arrival.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
+    )
 
   val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
     ScenarioSimulationSource,
@@ -171,7 +186,17 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     AclFeedSource,
   )
 
-  private def paxForDay(date: LocalDate, maybeAtTime: Option[SDateLike]): Future[Map[Terminal, Double]] = {
+  lazy val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = FlightsProvider(flightsRouterActor)
+  lazy val crunchMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] = MinutesProvider(queuesRouterActor)
+  lazy val staffMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] = MinutesProvider(staffRouterActor)
+
+  lazy val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActor)
+
+  private def flightValuesForDate[T](date: LocalDate,
+                                     maybeAtTime: Option[SDateLike],
+                                     flightIsRelevant: Arrival => Boolean,
+                                     extractValue: Iterable[Arrival] => T,
+                                    ): Future[Map[Terminal, T]] = {
     val start = SDate(date)
     val end = start.addDays(1).addMinutes(-1)
     val rangeRequest = GetStateForDateRange(start.millisSinceEpoch, end.millisSinceEpoch)
@@ -187,19 +212,35 @@ trait DrtSystemInterface extends UserRoleProviderLike {
           case (_, flights) =>
             flights.flights
               .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
-                SDate(apiFlight.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date
+                val nonCtaOrDom = !apiFlight.Origin.isDomesticOrCta
+                nonCtaOrDom && flightIsRelevant(apiFlight)
               }
               .values
               .groupBy(fws => fws.apiFlight.Terminal)
               .map {
                 case (terminal, flights) =>
-                  val paxNos = flights.map(fws => fws.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
-                  (terminal, paxNos.toDouble)
+                  (terminal, extractValue(flights.map(_.apiFlight)))
               }
         }.runWith(Sink.seq)
       }
       .map(_.toMap)
   }
+
+  val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate, atTime: SDateLike) =>
+    flightValuesForDate(
+      date,
+      Option(atTime),
+      arrival => SDate(arrival.Scheduled).toLocalDate == date,
+      arrivals => arrivals.toSeq
+    )
+
+  val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate) =>
+    flightValuesForDate(
+      date,
+      None,
+      arrival => SDate(arrival.Scheduled).toLocalDate == date,
+      arrivals => arrivals.toSeq
+    )
 
   lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
     LiveFeedSource -> liveArrivalsActor,
@@ -227,16 +268,23 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val aggregatedArrivalsActor: ActorRef
 
-  val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
+  private val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
 
   val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val portDeskRecs: PortDesksAndWaitsProviderLike = PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), egatesProvider, paxFeedSourceOrder)
+  private val crunchRequestProvider: LocalDate => CrunchRequest =
+    date => CrunchRequest(date, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
-  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] =
-    terminal => egatesProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
+  val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestProvider, maxDaysToConsider)))
+
+  ensureDefaultSlaConfig()
+
+  val portDeskRecs: PortDesksAndWaitsProviderLike =
+    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), paxFeedSourceOrder, Slas.slaProvider(slasActor))
+
+  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
 
   val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks")) {
     PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
@@ -265,7 +313,8 @@ trait DrtSystemInterface extends UserRoleProviderLike {
 
   val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff =>
     Future.successful {
-      val updates = SortedMap[UniqueArrival, Arrival]() ++ diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpArrivalTimeCalculator(arrival).millisSinceEpoch)))
+      val updates = SortedMap[UniqueArrival, Arrival]() ++
+        diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpArrivalTimeCalculator(arrival).millisSinceEpoch)))
       diff.copy(toUpdate = updates)
     }
 
@@ -284,7 +333,7 @@ trait DrtSystemInterface extends UserRoleProviderLike {
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
       val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-        liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsRouterActor),
+        liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsProvider),
         historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService, manifestCacheLookup, manifestCacheStore),
         historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
         splitsCalculator = splitsCalculator,
@@ -344,6 +393,16 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         queueDaysToReCrunch(crunchRequestQueueActor, portDeskRecs.crunchOffsetMinutes, params.forecastMaxDays, now)
 
       (crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+    }
+
+  private def ensureDefaultSlaConfig(): Unit =
+    slasActor.ask(GetState).mapTo[SlaConfigs].foreach { slasUpdate =>
+      if (slasUpdate.configs.isEmpty) {
+        log.info(s"No SLAs. Adding defaults from airport config")
+        slasActor ! ConfigActor.SetUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue, None))
+      } else {
+        log.info("SLAs: " + slasUpdate)
+      }
     }
 
   private def startOptimisationGraph[A, B <: WithTimeAccessor](minutesProducer: Flow[ProcessingRequest, MinutesContainer[A, B], NotUsed],
@@ -529,18 +588,24 @@ trait DrtSystemInterface extends UserRoleProviderLike {
             })
         }
       case "GLA" =>
-        val liveUrl = params.maybeGlaLiveUrl.getOrElse(throw new Exception("Missing GLA Live Feed Url"))
-        val livePassword = params.maybeGlaLivePassword.getOrElse(throw new Exception("Missing GLA Live Feed Password"))
-        val liveToken = params.maybeGlaLiveToken.getOrElse(throw new Exception("Missing GLA Live Feed Token"))
-        val liveUsername = params.maybeGlaLiveUsername.getOrElse(throw new Exception("Missing GLA Live Feed Username"))
-        Feed(GlaFeed(liveUrl, liveToken, livePassword, liveUsername, ProdGlaFeedRequester).source(Feed.actorRefSource), 5.seconds, 60.seconds)
+        val (url: String, username: String, password: String, token: String) = azinqConfig
+        Feed(GlaFeed(url, username, password, token), 5.seconds, 1.minute)
       case "PIK" | "HUY" | "INV" | "NQY" | "NWI" | "SEN" =>
         Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30 seconds)
       case "EDI" =>
-        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediLiveFeedSource(Feed.actorRefSource), 5.seconds, 1.minute)
+        val (url: String, username: String, password: String, token: String) = azinqConfig
+        Feed(EdiFeed(url, username, password, token), 5.seconds, 1.minute)
       case _ =>
         arrivalsNoOp
     }
+
+  private def azinqConfig: (String, String, String, String) = {
+    val url = config.get[String]("feeds.azinq.url")
+    val username = config.get[String]("feeds.azinq.username")
+    val password = config.get[String]("feeds.azinq.password")
+    val token = config.get[String]("feeds.azinq.token")
+    (url, username, password, token)
+  }
 
   def forecastArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[FeedTick]] =
     portCode match {
@@ -552,8 +617,6 @@ trait DrtSystemInterface extends UserRoleProviderLike {
         Feed(createArrivalFeed(Feed.actorRefSource), 5.seconds, 5.seconds)
       case PortCode("BHX") =>
         Feed(BHXForecastFeedLegacy(params.maybeBhxSoapEndPointUrl.getOrElse(throw new Exception("Missing BHX feed URL")), Feed.actorRefSource), 5.seconds, 30.seconds)
-      case PortCode("EDI") =>
-        Feed(EdiFeed(EdiClient(config.get[String]("feeds.edi.endPointUrl"), config.get[String]("feeds.edi.subscriberId"), ProdHttpClient())).ediForecastFeedSource(Feed.actorRefSource), 5.seconds, 10.minutes)
       case _ => system.log.info(s"No Forecast Feed defined.")
         arrivalsNoOp
     }
@@ -618,12 +681,12 @@ trait DrtSystemInterface extends UserRoleProviderLike {
     .withAttributes(StreamSupervision.resumeStrategyWithLog("getFeedStatus"))
     .runWith(Sink.seq)
 
-  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]]): Unit = {
+  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
     flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
     staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
+    slasActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
   }
-
 }
