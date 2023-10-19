@@ -5,6 +5,8 @@ import diode.UseValueEq
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
+import drt.client.logger.LoggerFactory
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
@@ -25,6 +27,8 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.immutable.HashSet
 
 object FlightTableContent {
+  private val log = LoggerFactory.getLogger(getClass.getName)
+
   case class Props(portState: PortState,
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    queueOrder: Seq[Queue],
@@ -62,11 +66,27 @@ object FlightTableContent {
            ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTableContent")
     .render_PS { (props, _) =>
       val flightDisplayFilter = props.airportConfig.portCode match {
-        case PortCode("LHR") => LhrFlightDisplayFilter(props.redListUpdates, (portCode, _, _) => props.redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
+        case PortCode("LHR") => LhrFlightDisplayFilter(props.redListUpdates, (portCode, _, _) =>
+          props.redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
         case _ => DefaultFlightDisplayFilter
       }
 
       val flights = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder).flights.values.toList
+
+      flights
+        .groupBy(f =>
+          (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
+        )
+        .foreach { case (_, flights) =>
+          if (flights.size > 1) {
+            flights.foreach { f =>
+              val flightCode = f.apiFlight.flightCodeString
+              val paxSources = f.apiFlight.PassengerSources.map(ps => s"${ps._1.name}: ${ps._2.actual}").mkString(", ")
+              val splitSources = f.splits.map(s => s"${s.source.toString}: ${s.totalPax}").mkString(", ")
+              log.info(s"Codeshare flight ${SDate(f.apiFlight.Scheduled).prettyDateTime} $flightCode :: $paxSources :: $splitSources")
+            }
+          }
+        }
       val flightsForTerminal =
         flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
       val flightsWithCodeShares = FlightTableComponents
