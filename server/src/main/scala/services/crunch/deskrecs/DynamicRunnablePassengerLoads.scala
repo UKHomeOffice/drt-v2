@@ -232,12 +232,8 @@ object DynamicRunnablePassengerLoads {
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flightsSource) =>
-          val startTime = SDate.now()
           liveManifestsProvider(crunchRequest)
-            .map { manifestsStream =>
-              log.info(s"DynamicRunnableDeskRecs ${crunchRequest.localDate}: addSplits live took ${SDate.now().millisSinceEpoch - startTime.millisSinceEpoch} ms")
-              Option((crunchRequest, flightsSource, manifestsStream))
-            }
+            .map(manifestsStream => Option((crunchRequest, flightsSource, manifestsStream)))
             .recover {
               case t =>
                 log.error(s"Failed to fetch live manifests", t)
@@ -254,7 +250,23 @@ object DynamicRunnablePassengerLoads {
       }
       .map { case (crunchRequest, arrivals, manifests) =>
         val manifestsByKey = arrivalKeysToManifests(manifests.manifests)
-        (crunchRequest, addManifests(arrivals, manifestsByKey, splitsCalculator.splitsForArrival))
+        val withLiveSplits = addManifests(arrivals, manifestsByKey, splitsCalculator.splitsForArrival)
+        withLiveSplits
+          .groupBy(f =>
+            (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
+          )
+          .foreach { case (_, flights) =>
+            if (flights.size > 1) {
+              flights.foreach { f =>
+                val flightCode = f.apiFlight.flightCodeString
+                val paxSources = f.apiFlight.PassengerSources.map(ps => s"${ps._1.name}: ${ps._2.actual}").mkString(", ")
+                val splitSources = f.splits.map(s => s"${s.source.toString}: ${s.totalPax}").mkString(", ")
+                log.info(s"Codeshare flight: $flightCode :: $paxSources :: $splitSources")
+              }
+            }
+          }
+
+        (crunchRequest, withLiveSplits)
       }
       .mapAsync(1) { case (crunchRequest, flights) =>
         val startTime = SDate.now()

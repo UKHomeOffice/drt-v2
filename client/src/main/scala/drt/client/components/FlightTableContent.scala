@@ -77,7 +77,12 @@ object FlightTableContent {
         )
         .foreach { case (_, flights) =>
           if (flights.size > 1) {
-            flights.foreach(f => log.info(s"Codeshare flight: ${f.apiFlight.flightCodeString} - ${f.apiFlight.PassengerSources.map(ps => s"${ps._1.name}: ${ps._2.actual}").mkString(", ")}"))
+            flights.foreach { f =>
+              val flightCode = f.apiFlight.flightCodeString
+              val paxSources = f.apiFlight.PassengerSources.map(ps => s"${ps._1.name}: ${ps._2.actual}").mkString(", ")
+              val splitSources = f.splits.map(s => s"${s.source.toString}: ${s.totalPax}").mkString(", ")
+              log.info(s"Codeshare flight: $flightCode :: $paxSources :: $splitSources")
+            }
           }
         }
       val flightsForTerminal =
