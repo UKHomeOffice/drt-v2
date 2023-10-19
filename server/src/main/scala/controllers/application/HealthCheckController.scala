@@ -33,11 +33,15 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             start.millisSinceEpoch <= arrivalTime && arrivalTime <= end.millisSinceEpoch
           }
       }
+      .collect {
+        case flights if flights.nonEmpty => flights
+      }
       .map { flights =>
         val totalFlightsInWindow = flights.size
         val missingCount = flights.count { f =>
           !f.splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)
         }
+        println(s"\n\n** Missing $missingCount of $totalFlightsInWindow flights in window **\n\n")
         missingCount.toDouble / totalFlightsInWindow
       }
       .runWith(Sink.seq)
