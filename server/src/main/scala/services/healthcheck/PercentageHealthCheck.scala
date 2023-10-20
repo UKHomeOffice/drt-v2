@@ -16,9 +16,7 @@ trait PercentageHealthCheck {
 
   val healthyCount: Seq[ApiFlightWithSplits] => Int
 
-  val minimumToConsider: Int
-
-  def healthy(start: SDateLike, end: SDateLike): Future[Option[Double]] =
+  def healthy(start: SDateLike, end: SDateLike, minimumToConsider: Int): Future[Option[Double]] =
     flights(start.toUtcDate, end.toUtcDate)
       .map { case (_, flights) =>
         flights

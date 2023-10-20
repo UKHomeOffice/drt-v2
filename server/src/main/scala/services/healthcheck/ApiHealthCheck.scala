@@ -10,8 +10,7 @@ import uk.gov.homeoffice.drt.time.UtcDate
 import scala.concurrent.ExecutionContext
 
 
-case class ApiHealthCheck(flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                          minimumToConsider: Int)
+case class ApiHealthCheck(flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed])
                          (implicit val ec: ExecutionContext, val mat: Materializer) extends PercentageHealthCheck {
   override val healthyCount: Seq[ApiFlightWithSplits] => Int = _.count { f =>
     f.splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)
