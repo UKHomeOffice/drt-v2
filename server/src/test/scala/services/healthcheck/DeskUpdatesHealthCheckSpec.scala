@@ -6,7 +6,9 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.CrunchMinute
 import org.specs2.matcher.MatchResult
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.Await
@@ -29,6 +31,10 @@ class DeskUpdatesHealthCheckSpec extends CrunchTestLike {
       ))
   }
 
+  private def crunchMinute(terminal: Terminal, lastUpdated: Long) = {
+    CrunchMinute(terminal, EeaDesk, myNow.millisSinceEpoch, 1, 1, 1, 1, None, None, None, None, None, None, Option(lastUpdated))
+  }
+
   private def check(flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                     minutes: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed],
                     expected: Option[Boolean],
@@ -38,41 +44,67 @@ class DeskUpdatesHealthCheckSpec extends CrunchTestLike {
     result === expected
   }
 
+  "Given no flights and no crunch minutes" >> {
+    "desk updates should be None" >> {
+      val flights = flightsStream(Seq())
+      val minutes = crunchMinutesStream(Seq())
+      check(flights, minutes, None)
+    }
+  }
 
-  "Given one flight due to land in the next 30 minutes and it has been updated in the past 30 minutes" >> {
-    "the missing percentage for the next 30 minutes should be 0" >> {
+  private val t1Arrival: Arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1)
+
+  "Given one T1 flight and no crunch minutes" >> {
+    "desk updates should be None" >> {
       val flights = flightsStream(Seq(
-        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:25"), Set(), Option(myNow.addMinutes(-10).millisSinceEpoch))
+        ApiFlightWithSplits(t1Arrival, Set(), Option(myNow.addMinutes(-10).millisSinceEpoch))
       ))
       val minutes = crunchMinutesStream(Seq())
       check(flights, minutes, None)
     }
   }
 
-//  "Given two flights due to land in the next 30 minutes and only one has been updated in the past 30 minutes" >> {
-//    "the missing percentage for the next 30 minutes should be 0.5" >> {
-//      val flights = flightsStream(Seq(
-//        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:15"), Set(), Option(myNow.addMinutes(-40).millisSinceEpoch)),
-//        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", schDt = "2023-10-20T12:25"), Set(), Option(myNow.addMinutes(-10).millisSinceEpoch))
-//      ))
-//      check(flights, Option(0.5))
-//    }
-//  }
-//
-//  "Given two flights due to land in the next 30 minutes and neither has been updated in the past 30 minutes" >> {
-//    "the missing percentage for the next 30 minutes should be 1" >> {
-//      val flights = flightsStream(Seq(
-//        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:15"), Set(), Option(myNow.addMinutes(-40).millisSinceEpoch)),
-//        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", schDt = "2023-10-20T12:25"), Set(), Option(myNow.addMinutes(-40).millisSinceEpoch)),
-//      ))
-//      check(flights, Option(0))
-//    }
-//  }
-//
-//  "Given no flights landed in the last 30 minutes" >> {
-//    "the missing percentage for the last 30 minutes should be None" >> {
-//      val flights = flightsStream(Seq())
-//      check(flights, None)
-//    }
-//  }
+  "Given one T1 flight last updated less than 10 minutes ago, and some crunch minutes" >> {
+    "desk updates should be None" >> {
+      val flights = flightsStream(Seq(
+        ApiFlightWithSplits(t1Arrival, Set(), Option(myNow.addMinutes(-10).millisSinceEpoch))
+      ))
+      val minutes = crunchMinutesStream(Seq(
+        crunchMinute(T1, myNow.millisSinceEpoch),
+      ))
+      check(flights, minutes, None)
+    }
+  }
+
+  "Given one T1 flight last updated more than 10 minutes ago, and a T1 crunch minute updated more than 10 minutes ago" >> {
+    "desk updates should be Option(true)" >> {
+      val flights = flightsStream(Seq(
+        ApiFlightWithSplits(t1Arrival, Set(), Option(myNow.addMinutes(-11).millisSinceEpoch))
+      ))
+      val minutes = crunchMinutesStream(Seq(
+        crunchMinute(T1, myNow.addMinutes(-11).millisSinceEpoch),
+      ))
+      check(flights, minutes, Option(false))
+    }
+  }
+
+  "Given one T1 flight last updated more than 10 minutes ago, and a T1 crunch minute updated less than 10 minutes ago" >> {
+    "desk updates should be Option(true)" >> {
+      val flights = flightsStream(Seq(
+        ApiFlightWithSplits(t1Arrival, Set(), Option(myNow.addMinutes(-11).millisSinceEpoch))
+      ))
+      val minutes = crunchMinutesStream(Seq(crunchMinute(T1, myNow.millisSinceEpoch)))
+      check(flights, minutes, Option(true))
+    }
+  }
+
+  "Given one T1 flight last updated more than 10 minutes ago, and a T2 crunch minute updated less than 10 minutes ago" >> {
+    "desk updates should be Option(false)" >> {
+      val flights = flightsStream(Seq(
+        ApiFlightWithSplits(t1Arrival, Set(), Option(myNow.addMinutes(-11).millisSinceEpoch))
+      ))
+      val minutes = crunchMinutesStream(Seq(crunchMinute(T2, myNow.millisSinceEpoch)))
+      check(flights, minutes, Option(false))
+    }
+  }
 }

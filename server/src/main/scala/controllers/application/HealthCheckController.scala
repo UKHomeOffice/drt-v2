@@ -3,7 +3,8 @@ package controllers.application
 import actors.DrtSystemInterface
 import com.google.inject.Inject
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import services.healthcheck.{ApiHealthCheck, ArrivalUpdatesHealthCheck, LandingTimesHealthCheck}
+import providers.MinutesProvider
+import services.healthcheck.{ApiHealthCheck, ArrivalUpdatesHealthCheck, DeskUpdatesHealthCheck, LandingTimesHealthCheck}
 import spray.json.DefaultJsonProtocol._
 import spray.json.enrichAny
 
@@ -13,6 +14,11 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   private val apiHealthCheck: ApiHealthCheck = ApiHealthCheck(ctrl.flightsProvider.allTerminals)
   private val landingTimesHealthCheck: LandingTimesHealthCheck = LandingTimesHealthCheck(ctrl.flightsProvider.allTerminals)
   private val arrivalUpdatesHealthCheck: ArrivalUpdatesHealthCheck = ArrivalUpdatesHealthCheck(ctrl.flightsProvider.allTerminals, 30, ctrl.now)
+  private val deskUpdatesHealthCheck: DeskUpdatesHealthCheck = DeskUpdatesHealthCheck(
+    ctrl.now,
+    ctrl.flightsProvider.allTerminals,
+    MinutesProvider.allTerminals(ctrl.queuesRouterActor)
+  )
 
   def receivedLiveApiData(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
     val end = ctrl.now()
@@ -32,8 +38,7 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     arrivalUpdatesHealthCheck.healthy(end, start, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
-  def deskUpdates() = {
-
-  }
-}
+  def deskUpdates() = Action.async { _ =>
+    deskUpdatesHealthCheck.healthy().map(p => Ok(p.toJson.compactPrint))
+  }}
 

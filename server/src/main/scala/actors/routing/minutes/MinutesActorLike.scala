@@ -22,6 +22,7 @@ import scala.collection.immutable
 import scala.concurrent.Future
 
 case class GetStreamingMinutesForTerminalDateRange(terminal: Terminal, start: UtcDate, end: UtcDate) extends UtcDateRangeLike
+case class GetStreamingMinutesForDateRange(start: UtcDate, end: UtcDate) extends UtcDateRangeLike
 
 object MinutesActorLike {
   type MinutesLookup[A, B <: WithTimeAccessor] = ((Terminals.Terminal, UtcDate), Option[MillisSinceEpoch]) => Future[Option[MinutesContainer[A, B]]]
@@ -63,6 +64,9 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
 
     case GetStreamingMinutesForTerminalDateRange(terminal, start, end) =>
       sender() ! retrieveTerminalMinutesDateRangeAsStream(terminal, start, end, None)
+
+    case GetStreamingMinutesForDateRange(start, end) =>
+      sender() ! retrieveMinutesDateRangeAsStream(terminals, start, end, None)
 
     case request: DateRangeMillisLike with TerminalRequest =>
       val replyTo = sender()
@@ -121,6 +125,22 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
         case (date, maybeContainer) =>
           val container = maybeContainer.getOrElse(MinutesContainer.empty[A, B])
           (date, container)
+      }
+
+  def retrieveMinutesDateRangeAsStream(terminals: Iterable[Terminal],
+                                       start: UtcDate,
+                                       end: UtcDate,
+                                       maybePointInTime: Option[MillisSinceEpoch]
+                                      ): Source[(UtcDate, MinutesContainer[A, B]), NotUsed] =
+    Source(DateRange(start, end))
+      .mapAsync(1) { day =>
+        val terminalContainers = terminals.map(terminal => handleLookup(lookup((terminal, day), maybePointInTime)))
+        Future.sequence(terminalContainers).map { terminalContainers =>
+          val combined = terminalContainers.foldLeft[MinutesContainer[A, B]](MinutesContainer.empty[A, B]) {
+            case (a, b) => a ++ b.getOrElse(MinutesContainer.empty[A, B])
+          }
+          (day, combined)
+        }
       }
 
   def handleLookup(eventualMaybeResult: Future[Option[MinutesContainer[A, B]]]): Future[Option[MinutesContainer[A, B]]] =

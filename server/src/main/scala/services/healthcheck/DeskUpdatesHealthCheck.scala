@@ -5,8 +5,10 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.CrunchMinute
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
+import scala.collection.MapView
 import scala.concurrent.{ExecutionContext, Future}
 
 case class DeskUpdatesHealthCheck(now: () => SDateLike,
@@ -23,21 +25,25 @@ case class DeskUpdatesHealthCheck(now: () => SDateLike,
           val tenMinutesAgo = now().addMinutes(-10)
           val relevantFlights = flights.filterNot(_.apiFlight.Origin.isDomesticOrCta)
 
-          val lastUpdatedValues = relevantFlights
+          val terminalLastUpdated = relevantFlights
             .filter(_.lastUpdated.exists(_ < tenMinutesAgo.millisSinceEpoch))
-            .map(_.lastUpdated)
-          if (lastUpdatedValues.nonEmpty)
-            lastUpdatedValues.maxBy(_.getOrElse(0L))
-              .map { update =>
-                crunchMinutes(date, date).map {
-                  case (_, cms) => cms.exists(_.lastUpdated.exists(_ > update))
+            .groupBy(_.apiFlight.Terminal)
+            .view
+            .mapValues(_.map(_.lastUpdated.getOrElse(0L)).max)
+            .toSeq
+
+          if (terminalLastUpdated.nonEmpty) {
+            val desksHaveBeenUpdated = crunchMinutes(date, date).map {
+              case (_, cms) =>
+                terminalLastUpdated.exists { case (terminal, updated) =>
+                  cms.filter(_.terminal == terminal)
+                    .exists(_.lastUpdated.exists(_ > updated))
                 }
-              }
-          else None
+            }
+            Option(desksHaveBeenUpdated)
+          } else None
       }
-      .collect {
-        case Some(deskUpdatesSinceFlightUpdates) => deskUpdatesSinceFlightUpdates
-      }
+      .collect { case Some(g) => g}
       .flatMapConcat(identity)
       .runWith(Sink.seq)
       .map(_.headOption)
