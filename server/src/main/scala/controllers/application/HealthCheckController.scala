@@ -31,5 +31,9 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     val end = start.addMinutes(windowMinutes)
     arrivalUpdatesHealthCheck.healthy(end, start, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
+
+  def deskUpdates() = {
+
+  }
 }
 

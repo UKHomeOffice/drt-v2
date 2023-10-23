@@ -10,6 +10,7 @@ GET           /health-check                                                     
 GET           /health-check/received-api/:windowMinutes/:minimumToConsider            controllers.application.HealthCheckController.receivedLiveApiData(windowMinutes: Int, minimumToConsider: Int)
 GET           /health-check/received-landing-times/:windowMinutes/:minimumToConsider  controllers.application.HealthCheckController.receivedLandingTimes(windowMinutes: Int, minimumToConsider: Int)
 GET           /health-check/received-updates/:windowMinutes/:minimumToConsider        controllers.application.HealthCheckController.receivedUpdates(windowMinutes: Int, minimumToConsider: Int)
+#GET           /health-check/desk-updates                                              controllers.application.HealthCheckController.deskUpdates()
 
 GET           /airport-config                                                         controllers.application.ConfigController.getAirportConfig
 GET           /pax-feed-source-order                                                  controllers.application.ConfigController.getPaxFeedSourceOrder
