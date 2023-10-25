@@ -56,7 +56,7 @@ object Settings {
     val jodaTime = "2.12.5"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
-    val typesafeConfig = "1.4.2"
+    val typesafeConfig = "1.4.3"
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
