@@ -1,12 +1,8 @@
 package slickdb
 
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 
-import java.sql.Timestamp
-import java.util.Date
 import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 case class UserRow(
                     id: String,
@@ -14,7 +10,10 @@ case class UserRow(
                     email: String,
                     latest_login: java.sql.Timestamp,
                     inactive_email_sent: Option[java.sql.Timestamp],
-                    revoked_access: Option[java.sql.Timestamp])
+                    revoked_access: Option[java.sql.Timestamp],
+                    drop_in_notification_at: Option[java.sql.Timestamp],
+                    created_at: Option[java.sql.Timestamp]
+                  )
 
 trait UserTableLike {
 
@@ -22,16 +21,14 @@ trait UserTableLike {
 
   def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int]
 
-  def insertOrUpdateUser(user: LoggedInUser,
-                         inactive_email_sent: Option[java.sql.Timestamp],
-                         revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int]
+  def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int]
 }
 
 case class UserTable(tables: Tables) extends UserTableLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  import tables.profile.api._
   import tables.User
+  import tables.profile.api._
 
   val userTableQuery = TableQuery[User]
 
@@ -41,23 +38,38 @@ case class UserTable(tables: Tables) extends UserTableLike {
 
   def removeUser(id: String)(implicit ec: ExecutionContext): Future[Int] = {
     tables.run(userTableQuery.filter(matchId(id)).delete)
-          .recover {
-            case throwable =>
-              log.error(s"delete failed", throwable)
-              0
-          }
+      .recover {
+        case throwable =>
+          log.error(s"delete failed", throwable)
+          0
+      }
   }
 
-  def insertOrUpdateUser(user: LoggedInUser,
-                         inactive_email_sent: Option[java.sql.Timestamp],
-                         revoked_access: Option[java.sql.Timestamp])(implicit ec: ExecutionContext): Future[Int] = {
-    tables.run(userTableQuery.insertOrUpdate(
-      UserRow(user.id, user.userName, user.email, new Timestamp(new Date().getTime), inactive_email_sent, revoked_access)))
-          .recover {
-            case throwable =>
-              log.error(s"insertOrUpdate failed", throwable)
-              0
-          }
+  def upsertUser(user: UserRow)(implicit ec: ExecutionContext): Future[Int] = {
+    for {
+      updateCount <- updateUser(user)
+      result <- if (updateCount > 0) Future.successful(updateCount) else insertOrUpdateUser(user)
+    } yield result
+  }.recover {
+    case throwable =>
+      log.error("Upsert failed", throwable)
+      0
+  }
+
+  private def insertOrUpdateUser(user: UserRow)(implicit ec: ExecutionContext): Future[Int] = {
+    tables.run(userTableQuery.insertOrUpdate(user))
+      .recover {
+        case throwable =>
+          log.error(s"insertOrUpdate failed", throwable)
+          0
+      }
+  }
+
+  private def updateUser(user: UserRow): Future[Int] = {
+    val query = userTableQuery.filter(_.email === user.email)
+      .map(f => (f.latest_login, f.inactive_email_sent, f.revoked_access))
+      .update(user.latest_login, user.inactive_email_sent, user.revoked_access)
+    tables.run(query)
   }
 
   def matchId(id: String): tables.User => Rep[Boolean] = (userTracking: User) =>
