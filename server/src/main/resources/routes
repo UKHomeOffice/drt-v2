@@ -7,6 +7,10 @@
 POST          /report-to                                                              controllers.CSPReportController.report
 GET           /                                                                       controllers.Application.index
 GET           /health-check                                                           controllers.Application.healthCheck
+GET           /health-check/received-api/:windowMinutes/:minimumToConsider            controllers.application.HealthCheckController.receivedLiveApiData(windowMinutes: Int, minimumToConsider: Int)
+GET           /health-check/received-landing-times/:windowMinutes/:minimumToConsider  controllers.application.HealthCheckController.receivedLandingTimes(windowMinutes: Int, minimumToConsider: Int)
+GET           /health-check/received-arrival-updates/:windowMinutes/:minimumToConsider  controllers.application.HealthCheckController.receivedUpdates(windowMinutes: Int, minimumToConsider: Int)
+GET           /health-check/calculated-desk-updates                                   controllers.application.HealthCheckController.deskUpdates()
 
 GET           /airport-config                                                         controllers.application.ConfigController.getAirportConfig
 GET           /pax-feed-source-order                                                  controllers.application.ConfigController.getPaxFeedSourceOrder
@@ -90,7 +94,7 @@ GET           /data/track-user                                                  
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
 
-GET           /data/userDetails/:email                                               controllers.Application.userDetails(email:String)
+GET           /data/userDetails/:email                                                controllers.Application.userDetails(email:String)
 
 POST          /data/addUserToGroup/:userId/:group                                     controllers.Application.addUserToGroup(userId: String, group: String)
 
