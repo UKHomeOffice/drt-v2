@@ -44,13 +44,13 @@ object ContactDetailsComponent {
                 val oohMesssage = List(
                   <.p(<.strong("After 5pm Monday to Friday, all day Saturday, Sunday and Bank Holidays")),
                   <.p(s" For urgent issues contact our out of hours support team on ", <.strong(oohPhone), ". Say that you're calling about Dynamic Response Tool."),
-                  <.p("For anything else, please email us at ", <.strong(email), " and we'll respond on the next business day.")
+                  <.p("For anything else, please email us at ", <.a(^.href := s"mailto:$email", <.strong(email)), " and we'll respond on the next business day.")
                 ).toTagMod
 
 
                 val inHoursMessage = List(
                   <.p(<.strong("9am to 5pm Monday to Friday")),
-                  <.p(s"Contact the Dynamic Response Tool service team by email at ", <.strong(email), ".")
+                  <.p(s"Contact the Dynamic Response Tool service team by email at ", <.a(^.href := s"mailto:$email",<.strong(email)), ".")
                 ).toTagMod
 
                 <.div(if (oohStatus.isOoh) oohMesssage else inHoursMessage)

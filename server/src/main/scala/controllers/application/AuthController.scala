@@ -13,6 +13,7 @@ import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.JsResult.Exception
 import play.api.libs.json.{JsError, JsObject, Json, Writes}
 import play.api.mvc._
+import slickdb.UserRow
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ManageUsers, Role}
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -51,7 +52,15 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
 
   def trackUser = Action.async { request =>
     val loggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
-    ctrl.userService.insertOrUpdateUser(loggedInUser, None, None)
+    ctrl.userService.upsertUser(
+      UserRow(id = loggedInUser.id,
+        username = loggedInUser.userName,
+        email = loggedInUser.email,
+        latest_login = new java.sql.Timestamp(ctrl.now().millisSinceEpoch),
+        inactive_email_sent = None,
+        revoked_access = None,
+        drop_in_notification_at = None,
+        created_at = Some(new java.sql.Timestamp(ctrl.now().millisSinceEpoch))))
     Future.successful(Ok(s"User-tracked"))
   }
 
