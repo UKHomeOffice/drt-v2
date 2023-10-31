@@ -56,11 +56,11 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
       UserRow(id = loggedInUser.id,
         username = loggedInUser.userName,
         email = loggedInUser.email,
-        latest_login = new java.sql.Timestamp(new java.util.Date().getTime),
+        latest_login = new java.sql.Timestamp(ctrl.now().millisSinceEpoch),
         inactive_email_sent = None,
         revoked_access = None,
         drop_in_notification_at = None,
-        created_at = Some(new java.sql.Timestamp(new java.util.Date().getTime))))
+        created_at = Some(new java.sql.Timestamp(ctrl.now().millisSinceEpoch))))
     Future.successful(Ok(s"User-tracked"))
   }
 
