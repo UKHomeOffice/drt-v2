@@ -25,7 +25,7 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
                             defaultLastCheckThreshold: FiniteDuration,
                             feedLastCheckThresholds: Map[FeedSource, FiniteDuration],
                             now: () => SDateLike,
-                            gracePeriodMinutes: FiniteDuration)
+                            gracePeriod: FiniteDuration)
                            (implicit timeout: Timeout, mat: Materializer, ec: ExecutionContext) extends HealthCheck {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -33,7 +33,7 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
 
   def gracePeriodHasPassed: Boolean = {
     val timePassed = (now().millisSinceEpoch - startTime).millis
-    timePassed >= gracePeriodMinutes
+    timePassed >= gracePeriod
   }
 
   override def isPassing: Future[Boolean] =
