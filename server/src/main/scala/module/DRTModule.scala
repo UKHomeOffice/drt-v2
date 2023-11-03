@@ -7,7 +7,7 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
-import controllers.Application
+import controllers.{Application, DrtActorSystem}
 import controllers.DrtActorSystem.airportConfig
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController, SummariesExportController}
@@ -22,7 +22,9 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 class DRTModule extends AbstractModule with AkkaGuiceSupport {
   implicit lazy val config: Configuration = new Configuration(ConfigFactory.load)
   lazy val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
-  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, MockDrtParameters())
+  lazy val mockDrtParameters = MockDrtParameters()
+  lazy val airportConfig = DrtActorSystem.airportConfig
+  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, mockDrtParameters)
   lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config))
 
   implicit lazy val mat: Materializer = Materializer.createMaterializer(provideActorSystem)
