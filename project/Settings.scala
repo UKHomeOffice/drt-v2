@@ -194,7 +194,7 @@ object Settings {
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
     "org.mockito" % "mockito-core" % mockitoVersion % Test,
-    "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test,
+    "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.0" % Test,
     "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
