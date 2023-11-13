@@ -17,8 +17,6 @@ class DropInsController @Inject()(cc: ControllerComponents,
                                   ctrl: DrtSystemInterface,
                                   govNotifyEmail: GovNotifyEmail) extends AuthController(cc, ctrl) {
 
-  lazy val govNotifyApiKey = config.get[String]("notifications.gov-notify-api-key")
-
   lazy val dropInRegistrationTemplateId = ctrl.config.get[String]("notifications.dropIn-registration-templateId")
 
   lazy val dropInRegistrationHostTemplateId = ctrl.config.get[String]("notifications.dropIn-registration-host-templateId")
