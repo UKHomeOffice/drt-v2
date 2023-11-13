@@ -15,7 +15,7 @@ import scala.util.Try
 
 class DropInsController @Inject()(cc: ControllerComponents,
                                   ctrl: DrtSystemInterface,
-                                  emailNotification: GovNotifyEmail) extends AuthController(cc, ctrl) {
+                                  govNotifyEmail: GovNotifyEmail) extends AuthController(cc, ctrl) {
 
   lazy val dropInRegistrationTemplateId = ctrl.config.get[String]("notifications.dropIn-registration-templateId")
 
@@ -69,20 +69,20 @@ class DropInsController @Inject()(cc: ControllerComponents,
     def contactEmail: Option[String] = config.getOptional[String]("contact-email")
 
     dropIns.map { dropIn =>
-      val personalisation = emailNotification
+      val personalisation = govNotifyEmail
         .dropInRegistrationConfirmation(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), email, dropIn)
-      val hostEmailPersonalisation = emailNotification
+      val hostEmailPersonalisation = govNotifyEmail
         .dropInRegistrationHost(contactEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk"), dropInHostEmail, email, dropIn)
       val govNotifyReference = config.get[String]("notifications.reference")
 
-      emailNotification.sendRequest(govNotifyReference,
+      govNotifyEmail.sendRequest(govNotifyReference,
         email,
         dropInRegistrationTemplateId,
         personalisation).recover {
         case e => log.error(s"Error sending drop-in registration email to user $email", e)
       }
 
-      emailNotification.sendRequest(govNotifyReference,
+      govNotifyEmail.sendRequest(govNotifyReference,
         dropInHostEmail,
         dropInRegistrationHostTemplateId,
         hostEmailPersonalisation).recover {
