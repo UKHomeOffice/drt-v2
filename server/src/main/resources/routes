@@ -43,9 +43,7 @@ GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin        
 GET           /manifest-summaries                                                     controllers.application.ManifestsController.getManifestSummariesForArrivals
 GET           /manifest-summaries/:utcDate/summary                                    controllers.application.ManifestsController.getManifestSummariesForDay(utcDate: String)
 GET           /red-list/ports/:date                                                   controllers.application.RedListsController.getRedListPorts(date: String)
-POST          /red-list/updates                                                       controllers.application.RedListsController.updateRedListUpdates
 GET           /red-list/updates                                                       controllers.application.RedListsController.getRedListUpdates
-DELETE        /red-list/updates/:effectiveFrom                                        controllers.application.RedListsController.deleteRedListUpdates(effectiveFrom: Long)
 GET           /red-list/updates-legacy                                                controllers.application.RedListsController.getRedListUpdatesLegacy
 POST          /egate-banks/updates                                                    controllers.application.EgateBanksController.updateEgateBanksUpdates
 GET           /egate-banks/updates                                                    controllers.application.EgateBanksController.getEgateBanksUpdates

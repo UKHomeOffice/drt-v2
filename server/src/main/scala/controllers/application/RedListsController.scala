@@ -1,22 +1,18 @@
 package controllers.application
 
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.DrtSystemInterface
 import akka.pattern.ask
 import com.google.inject.Inject
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import services.AirportToCountry
 import services.graphstages.Crunch
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
-import uk.gov.homeoffice.drt.auth.Roles.RedListsEdit
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.redlist.{DeleteRedListUpdates, RedListUpdate, RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
-
-import scala.concurrent.Future
 
 
 class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
@@ -44,29 +40,6 @@ class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
     Action.async { _ =>
       ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(write(r)))
     }
-
-  def updateRedListUpdates: Action[AnyContent] = authByRole(RedListsEdit) {
-    Action.async {
-      implicit request =>
-        request.body.asText match {
-          case Some(text) =>
-            import RedListJsonFormats.setRedListUpdatesJsonFormat
-            import spray.json._
-
-            val setUpdate = text.parseJson.convertTo[SetRedListUpdate]
-
-            ctrl.redListUpdatesActor.ask(setUpdate).map(_ => Accepted)
-          case None =>
-            Future(BadRequest)
-        }
-    }
-  }
-
-  def deleteRedListUpdates(effectiveFrom: MillisSinceEpoch): Action[AnyContent] = authByRole(RedListsEdit) {
-    Action.async {
-      ctrl.redListUpdatesActor.ask(DeleteRedListUpdates(effectiveFrom)).map(_ => Accepted)
-    }
-  }
 }
 
 
