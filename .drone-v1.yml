@@ -148,7 +148,6 @@ steps:
         - push
     depends_on:
       - build
-      - sonar-scanner
 
   - name: publish-drt
     image: plugins/ecr
