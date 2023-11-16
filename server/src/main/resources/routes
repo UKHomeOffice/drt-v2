@@ -7,6 +7,10 @@
 POST          /report-to                                                              controllers.CSPReportController.report
 GET           /                                                                       controllers.Application.index
 GET           /health-check                                                           controllers.Application.healthCheck
+GET           /health-check/received-api/:windowMinutes/:minimumToConsider            controllers.application.HealthCheckController.receivedLiveApiData(windowMinutes: Int, minimumToConsider: Int)
+GET           /health-check/received-landing-times/:windowMinutes/:minimumToConsider  controllers.application.HealthCheckController.receivedLandingTimes(windowMinutes: Int, minimumToConsider: Int)
+GET           /health-check/received-arrival-updates/:windowMinutes/:minimumToConsider  controllers.application.HealthCheckController.receivedUpdates(windowMinutes: Int, minimumToConsider: Int)
+GET           /health-check/calculated-desk-updates                                   controllers.application.HealthCheckController.deskUpdates()
 
 GET           /airport-config                                                         controllers.application.ConfigController.getAirportConfig
 GET           /pax-feed-source-order                                                  controllers.application.ConfigController.getPaxFeedSourceOrder
@@ -39,9 +43,7 @@ GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin        
 GET           /manifest-summaries                                                     controllers.application.ManifestsController.getManifestSummariesForArrivals
 GET           /manifest-summaries/:utcDate/summary                                    controllers.application.ManifestsController.getManifestSummariesForDay(utcDate: String)
 GET           /red-list/ports/:date                                                   controllers.application.RedListsController.getRedListPorts(date: String)
-POST          /red-list/updates                                                       controllers.application.RedListsController.updateRedListUpdates
 GET           /red-list/updates                                                       controllers.application.RedListsController.getRedListUpdates
-DELETE        /red-list/updates/:effectiveFrom                                        controllers.application.RedListsController.deleteRedListUpdates(effectiveFrom: Long)
 GET           /red-list/updates-legacy                                                controllers.application.RedListsController.getRedListUpdatesLegacy
 POST          /egate-banks/updates                                                    controllers.application.EgateBanksController.updateEgateBanksUpdates
 GET           /egate-banks/updates                                                    controllers.application.EgateBanksController.getEgateBanksUpdates
@@ -90,7 +92,7 @@ GET           /data/track-user                                                  
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
 
-GET           /data/userDetails/:email                                               controllers.Application.userDetails(email:String)
+GET           /data/userDetails/:email                                                controllers.Application.userDetails(email:String)
 
 POST          /data/addUserToGroup/:userId/:group                                     controllers.Application.addUserToGroup(userId: String, group: String)
 

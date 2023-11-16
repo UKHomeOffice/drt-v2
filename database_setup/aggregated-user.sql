@@ -1,11 +1,13 @@
 CREATE TABLE public.user
 (
-    id text NOT NULL,
-    username text NOT NULL,
-    email text NOT NULL,
-    latest_login timestamp NOT NULL,
-    inactive_email_sent timestamp,
-    revoked_access timestamp,
+    id                      text      NOT NULL,
+    username                text      NOT NULL,
+    email                   text      NOT NULL,
+    latest_login            timestamp NOT NULL,
+    inactive_email_sent     timestamp,
+    revoked_access          timestamp,
+    drop_in_notification_at timestamp,
+    created_at              timestamp,
     PRIMARY KEY (id)
 );
 

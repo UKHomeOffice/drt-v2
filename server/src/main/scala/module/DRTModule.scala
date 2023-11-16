@@ -11,6 +11,7 @@ import controllers.Application
 import controllers.DrtActorSystem.airportConfig
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController, SummariesExportController}
+import email.GovNotifyEmail
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import test.controllers.TestController
@@ -77,5 +78,8 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
     } else {
       drtProdSystem
     }
+
+  @Provides
+  def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(config.get[String]("notifications.gov-notify-api-key"))
 
 }
