@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v636"
+    val drtLib = "v643"
 
     val scala = "2.13.10"
     val scalaDom = "2.0.0"
@@ -38,7 +38,7 @@ object Settings {
     val uTest = "0.7.4"
     val h2 = "2.2.220"
 
-    val akka = "2.7.0"
+    val akka = "2.8.5"
 
     val specs2 = "4.20.0"
     val react = "18.2.0"
@@ -71,7 +71,6 @@ object Settings {
     val scalaTestVersion = "3.2.16"
     val twirlApi = "1.5.2"
     val mockitoVersion = "4.6.1"
-
   }
 
   import versions._
@@ -132,7 +131,7 @@ object Settings {
     "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "uk.gov.homeoffice" %%% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
-    "io.suzaku" %%% "boopickle" % booPickle
+    "io.suzaku" %%% "boopickle" % booPickle,
   ))
 
   /** Dependencies only used by the JVM project */

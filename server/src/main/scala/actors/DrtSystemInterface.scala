@@ -186,9 +186,11 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     AclFeedSource,
   )
 
-  lazy val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = FlightsProvider(flightsRouterActor)
-  lazy val crunchMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] = MinutesProvider(queuesRouterActor)
-  lazy val staffMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] = MinutesProvider(staffRouterActor)
+  lazy val flightsProvider = FlightsProvider(flightsRouterActor)
+
+  lazy val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = flightsProvider.singleTerminal
+  lazy val crunchMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] = MinutesProvider.singleTerminal(queuesRouterActor)
+  lazy val staffMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] = MinutesProvider.singleTerminal(staffRouterActor)
 
   lazy val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActor)
 

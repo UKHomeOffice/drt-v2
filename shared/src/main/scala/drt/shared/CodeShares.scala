@@ -1,10 +1,10 @@
 package drt.shared
 
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 
 object CodeShares {
+
   def uniqueArrivals[GenFlight](apiFlightFromGenFlight: GenFlight => Arrival,
                                 paxFeedSourceOrder: List[FeedSource],
                                )
