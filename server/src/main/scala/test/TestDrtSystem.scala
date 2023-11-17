@@ -146,22 +146,23 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   log.warn("Using test System")
 
-  override val forecastBaseArrivalsActor: ActorRef =
-    restartOnStop.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef =
-    restartOnStop.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef =
-    restartOnStop.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
+  override lazy val forecastBaseArrivalsActor: ActorRef =
+    system.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+
+  override lazy val forecastArrivalsActor: ActorRef =
+    system.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override lazy val liveArrivalsActor: ActorRef =
+    system.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
-  override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
-  override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new TestFixedPointsActor(now, airportConfig.minutesToCrunch)), "staff-fixed-points")
+  override val shiftsActor: ActorRef = system.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
+  override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now, airportConfig.minutesToCrunch)), "staff-fixed-points")
   override val staffMovementsActor: ActorRef =
-    restartOnStop.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "TestActor-StaffMovements")
+    system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "TestActor-StaffMovements")
   override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
   override val manifestsRouterActor: ActorRef =
-    restartOnStop.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
+    system.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
       name = "voyage-manifests-router-actor")
 
   override val persistentCrunchQueueActor: ActorRef =

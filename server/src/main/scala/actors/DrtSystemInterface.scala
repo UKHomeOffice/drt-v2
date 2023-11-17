@@ -5,10 +5,9 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors.daily.PassengersActor
 import actors.persistent._
-import actors.persistent.arrivals.CirriumLiveArrivalsActor
+import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing._
 import actors.routing.FlightsRouterActor
-import actors.supervised.RestartOnStop
 import akka.NotUsed
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
 import akka.actor.{ActorRef, ActorSystem, Props, Scheduler, typed}
@@ -105,23 +104,18 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   private val walkTimeProvider: (Terminal, String, String) => Option[Int] = WalkTimeProvider(params.gateWalkTimesFilePath, params.standWalkTimesFilePath)
 
-  private val minBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.minimum-seconds")
-  private val maxBackoffSeconds = config.get[Int]("persistence.on-stop-backoff.maximum-seconds")
-  val restartOnStop: RestartOnStop = RestartOnStop(minBackoffSeconds seconds, maxBackoffSeconds seconds)
-
   private val defaultEgates: Map[Terminal, EgateBanksUpdates] = airportConfig.eGateBankSizes.view.mapValues { banks =>
     val effectiveFrom = SDate("2020-01-01T00:00").millisSinceEpoch
     EgateBanksUpdates(List(EgateBanksUpdate(effectiveFrom, EgateBank.fromAirportConfig(banks))))
   }.toMap
 
-  val alertsActor: ActorRef = restartOnStop.actorOf(Props(new AlertsActor(now)), "alerts-actor")
-  val redListUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new RedListUpdatesActor(now)), "red-list-updates-actor")
-  val egateBanksUpdatesActor: ActorRef = restartOnStop.actorOf(Props(new EgateBanksUpdatesActor(now,
+  val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)), "alerts-actor")
+  val redListUpdatesActor: ActorRef = system.actorOf(Props(new RedListUpdatesActor(now)), "red-list-updates-actor")
+  val egateBanksUpdatesActor: ActorRef = system.actorOf(Props(new EgateBanksUpdatesActor(now,
     defaultEgates,
     airportConfig.crunchOffsetMinutes,
     airportConfig.minutesToCrunch,
     params.forecastMaxDays)), "egate-banks-updates-actor")
-  val liveBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new CirriumLiveArrivalsActor(now, expireAfterMillis)), name = "live-base-arrivals-actor")
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
   val persistentCrunchQueueActor: ActorRef
   val persistentDeskRecsQueueActor: ActorRef
@@ -140,9 +134,26 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   val shiftsActor: ActorRef
   val fixedPointsActor: ActorRef
   val staffMovementsActor: ActorRef
-  val forecastBaseArrivalsActor: ActorRef
-  val forecastArrivalsActor: ActorRef
-  val liveArrivalsActor: ActorRef
+
+  def forecastBaseArrivalsActor: ActorRef
+
+  def forecastArrivalsActor: ActorRef
+
+  def liveArrivalsActor: ActorRef
+
+  val liveBaseArrivalsActor: ActorRef =
+    system.actorOf(Props(new CirriumLiveArrivalsActor(now, expireAfterMillis)), name = "live-base-arrivals-actor")
+  private val liveArrivalsFeedStatusActor: ActorRef =
+    system.actorOf(PortLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-arrivals-feed-status")
+  private val liveBaseArrivalsFeedStatusActor: ActorRef =
+    system.actorOf(CirriumLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-base-arrivals-feed-status")
+  private val forecastArrivalsFeedStatusActor: ActorRef =
+    system.actorOf(PortForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-arrivals-feed-status")
+  private val forecastBaseArrivalsFeedStatusActor: ActorRef =
+    system.actorOf(AclForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-base-arrivals-feed-status")
+  private val manifestsFeedStatusActor: ActorRef =
+    system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
+
   val manifestsRouterActor: ActorRef
 
   val flightsRouterActor: ActorRef
@@ -186,11 +197,14 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     AclFeedSource,
   )
 
-  lazy val flightsProvider = FlightsProvider(flightsRouterActor)
+  lazy val flightsProvider: FlightsProvider = FlightsProvider(flightsRouterActor)
 
-  lazy val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = flightsProvider.singleTerminal
-  lazy val crunchMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] = MinutesProvider.singleTerminal(queuesRouterActor)
-  lazy val staffMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] = MinutesProvider.singleTerminal(staffRouterActor)
+  lazy val terminalFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+    flightsProvider.singleTerminal
+  lazy val crunchMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] =
+    MinutesProvider.singleTerminal(queuesRouterActor)
+  lazy val staffMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
+    MinutesProvider.singleTerminal(staffRouterActor)
 
   lazy val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActor)
 
@@ -245,11 +259,11 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     )
 
   lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
-    LiveFeedSource -> liveArrivalsActor,
-    LiveBaseFeedSource -> liveBaseArrivalsActor,
-    ForecastFeedSource -> forecastArrivalsActor,
-    AclFeedSource -> forecastBaseArrivalsActor,
-    ApiFeedSource -> manifestsRouterActor
+    LiveFeedSource -> liveArrivalsFeedStatusActor,
+    LiveBaseFeedSource -> liveBaseArrivalsFeedStatusActor,
+    ForecastFeedSource -> forecastArrivalsFeedStatusActor,
+    AclFeedSource -> forecastBaseArrivalsFeedStatusActor,
+    ApiFeedSource -> manifestsFeedStatusActor,
   )
 
   lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedActors.filter {
@@ -640,7 +654,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     val to = from.addDays(forecastMaxDays)
     val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
     FlightsRouterActor.runAndCombine(actor
-      .ask(request)(new Timeout(15 seconds)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
+        .ask(request)(new Timeout(15 seconds)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
       .map { fws =>
         Option(PortState(fws.flights.values, Iterable(), Iterable()))
       }

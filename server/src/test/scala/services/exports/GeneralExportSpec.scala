@@ -2,17 +2,13 @@ package services.exports
 
 import akka.NotUsed
 import akka.stream.scaladsl.{Sink, Source}
-import controllers.ArrivalGenerator
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Passengers}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 class GeneralExportSpec extends CrunchTestLike {
   "toCsv should give a row for each element returned in the data stream" >> {

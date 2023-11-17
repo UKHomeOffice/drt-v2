@@ -12,7 +12,7 @@ object Settings {
   /** The version of your application */
   val version: String = sys.env.getOrElse("DRONE_BUILD_NUMBER", sys.env.getOrElse("BUILD_ID", "dev"))
   /** Options for the scala compiler */
-  val scalacOptions = Seq(
+  val scalacOptions: Seq[String] = Seq(
     "-Xlint",
     "-unchecked",
     "-deprecation",
@@ -27,7 +27,7 @@ object Settings {
   object versions {
     val drtLib = "v643"
 
-    val scala = "2.13.10"
+    val scala = "2.13.12"
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"

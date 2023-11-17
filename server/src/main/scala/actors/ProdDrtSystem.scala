@@ -64,15 +64,15 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
-  override val forecastBaseArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new PortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
+  override lazy val forecastBaseArrivalsActor: ActorRef = system.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  override lazy val forecastArrivalsActor: ActorRef = system.actorOf(Props(new PortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  override lazy val liveArrivalsActor: ActorRef = system.actorOf(Props(new PortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
-  override val aggregatedArrivalsActor: ActorRef = restartOnStop.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
+  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(airportConfig.portCode, PostgresTables, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
 
-  override val manifestsRouterActor: ActorRef = restartOnStop.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
+  override val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
   override val manifestLookupService: ManifestLookup = ManifestLookup(PostgresTables)
 
@@ -120,9 +120,9 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     queues = airportConfig.queuesByTerminal,
     journalType = journalType)))
 
-  override val shiftsActor: ActorRef = restartOnStop.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
-  override val fixedPointsActor: ActorRef = restartOnStop.actorOf(Props(new FixedPointsActor(now, airportConfig.minutesToCrunch, params.forecastMaxDays)), "staff-fixed-points")
-  override val staffMovementsActor: ActorRef = restartOnStop.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "staff-movements")
+  override val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
+  override val fixedPointsActor: ActorRef = system.actorOf(Props(new FixedPointsActor(now, airportConfig.minutesToCrunch, params.forecastMaxDays)), "staff-fixed-points")
+  override val staffMovementsActor: ActorRef = system.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "staff-movements")
 
   private val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] = if (refetchApiData) None else initialState[ApiFeedState](manifestsRouterActor).map(_.lastProcessedMarker)
   system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
