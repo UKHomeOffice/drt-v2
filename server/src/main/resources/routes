@@ -129,6 +129,8 @@ POST          /drop-in-registrations                                            
 
 GET           /drop-in-registrations                                                  controllers.application.DropInsController.getDropInRegistrations
 
+GET          /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
+
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 
 GET           /is-new-feature-available-since-last-login                              controllers.Application.isNewFeatureAvailableSinceLastLogin

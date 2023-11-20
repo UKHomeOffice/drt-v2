@@ -165,6 +165,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureGuideViewedIds: Pot[Seq[String]] = Empty,
                      dropIns: Pot[Seq[DropIn]] = Empty,
                      dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
+//                     userFeedbackRow: Pot[Seq[UserFeedbackRow]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                     )
 
@@ -238,6 +239,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),
       new DropInHandler(zoomRW(_.dropIns)((m, v) => m.copy(dropIns = v))),
       new DropInRegistrationsHandler(zoomRW(_.dropInRegistrations)((m, v) => m.copy(dropInRegistrations = v))),
+      new UserFeedbackHandler(zoomRW(_.dropInRegistrations)((m, v) => m.copy(dropInRegistrations = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
     )
     composedHandlers

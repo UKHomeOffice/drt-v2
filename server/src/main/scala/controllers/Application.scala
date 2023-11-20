@@ -30,7 +30,7 @@ import java.util.{Calendar, TimeZone}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
-
+import uk.gov.homeoffice.drt.db.IUserFeedbackDao
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
   import scala.language.experimental.macros
@@ -76,6 +76,11 @@ trait DropInProviderLike {
   val dropInService: DropInTableLike
 
   val dropInRegistrationService: DropInsRegistrationTableLike
+}
+
+trait UserFeedBackProviderLike {
+
+  val userFeedbackService: IUserFeedbackDao
 }
 
 trait UserRoleProviderLike {

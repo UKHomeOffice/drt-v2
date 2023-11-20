@@ -239,4 +239,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
         System.exit(1)
     }
   }
+
+  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(PostgresTables, airportConfig.portCode)
 }
