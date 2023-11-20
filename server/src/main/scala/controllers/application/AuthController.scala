@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.model.HttpResponse

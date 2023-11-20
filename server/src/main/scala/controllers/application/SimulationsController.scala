@@ -5,7 +5,6 @@ import actors.RouteHistoricManifestActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
-import actors.DrtSystemInterface
 import akka.NotUsed
 import akka.actor.Props
 import akka.pattern.ask

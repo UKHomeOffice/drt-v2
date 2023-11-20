@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import actors.persistent.staffing._
 import akka.NotUsed
 import akka.actor.{ActorRef, PoisonPill, Props}

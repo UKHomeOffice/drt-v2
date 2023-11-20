@@ -22,7 +22,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import providers.ManifestsProvider
 import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
-import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
@@ -118,7 +117,7 @@ class TestDrtActor extends Actor {
       val portStateProbe = testProbe("portstate")
       val forecastBaseArrivalsProbe = testProbe("forecast-base-arrivals")
       val forecastArrivalsProbe = testProbe("forecast-arrivals")
-      val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
+//      val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
       val liveArrivalsProbe = testProbe("live-arrivals")
 
       val shiftsActor: ActorRef = system.actorOf(Props(new ShiftsActor(tc.now, DrtStaticParameters.timeBeforeThisMonth(tc.now))))
@@ -216,7 +215,7 @@ class TestDrtActor extends Actor {
 
         val deskRecsGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet(), "desk-recs")
 
-        val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
+        val (deskRecsRequestQueueActor, _) =
           RunnableOptimisation.createGraph(deskRecsGraphSource, portStateActor, deskRecsProducer, "desk-recs").run()
 
         val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
@@ -226,7 +225,11 @@ class TestDrtActor extends Actor {
           portDeskRecs.loadsToSimulations
         )
 
-        val deploymentGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet(), "deployments")
+        val deploymentGraphSource = new SortedActorRefSource(
+          TestProbe().ref,
+          tc.airportConfig.crunchOffsetMinutes,
+          tc.airportConfig.minutesToCrunch,
+          SortedSet(), "deployments")
         val (deploymentRequestActor, deploymentsKillSwitch) =
           RunnableOptimisation.createGraph(deploymentGraphSource, portStateActor, deploymentsProducer, "deployments").run()
 
@@ -273,16 +276,6 @@ class TestDrtActor extends Actor {
         flightsActor = flightsActor,
         maxDaysToCrunch = tc.maxDaysToCrunch,
         expireAfterMillis = tc.expireAfterMillis,
-        actors = Map[String, ActorRef](
-          "shifts" -> shiftsActor,
-          "fixed-points" -> fixedPointsActor,
-          "staff-movements" -> staffMovementsActor,
-          "forecast-base-arrivals" -> forecastBaseArrivalsProbe.ref,
-          "forecast-arrivals" -> forecastArrivalsProbe.ref,
-          "live-base-arrivals" -> liveBaseArrivalsProbe.ref,
-          "live-arrivals" -> liveArrivalsProbe.ref,
-          "aggregated-arrivals" -> aggregatedArrivalsActor,
-        ),
         useNationalityBasedProcessingTimes = false,
         now = tc.now,
         manifestsLiveSource = manifestsSource,
@@ -297,9 +290,6 @@ class TestDrtActor extends Actor {
         arrivalsLiveBaseFeed = Feed(liveBaseArrivals, 1.second, 1.second),
         arrivalsLiveFeed = Feed(liveArrivals, 1.second, 500.millis),
         passengerAdjustments = tc.passengerAdjustments,
-        initialShifts = tc.initialShifts,
-        initialFixedPoints = tc.initialFixedPoints,
-        initialStaffMovements = tc.initialStaffMovements,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
         optimiser = tc.cruncher,
         startDeskRecs = startDeskRecs,

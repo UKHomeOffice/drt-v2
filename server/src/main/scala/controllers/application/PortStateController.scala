@@ -1,7 +1,6 @@
 package controllers.application
 
 import actors.CrunchManagerActor.RecalculateArrivals
-import actors.DrtSystemInterface
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince, PointInTimeQuery}
 import akka.pattern.ask
 import akka.util.Timeout

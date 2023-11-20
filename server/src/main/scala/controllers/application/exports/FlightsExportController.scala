@@ -1,6 +1,5 @@
 package controllers.application.exports
 
-import actors.DrtSystemInterface
 import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState

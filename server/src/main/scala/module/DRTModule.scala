@@ -1,6 +1,6 @@
 package module
 
-import actors.{DrtSystemInterface, ProdDrtParameters, ProdDrtSystem, TestDrtSystemInterface}
+import actors.{ProdDrtParameters, TestDrtSystemInterface}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.stream.Materializer

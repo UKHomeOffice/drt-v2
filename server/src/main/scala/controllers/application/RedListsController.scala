@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import akka.pattern.ask
 import com.google.inject.Inject
 import drt.shared._

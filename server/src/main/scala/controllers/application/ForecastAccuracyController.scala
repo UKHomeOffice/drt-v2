@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse

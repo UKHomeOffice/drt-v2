@@ -1,6 +1,5 @@
 package controllers.application.exports
 
-import actors.DrtSystemInterface
 import actors.PartitionedPortStateActor.GetMinutesForTerminalDateRange
 import akka.pattern.ask
 import com.google.inject.Inject

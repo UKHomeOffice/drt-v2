@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import actors.persistent.arrivals._
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.{ActorRef, PoisonPill}

@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import actors.persistent.nebo.NeboArrivalActor
 import akka.actor.ActorRef
 import akka.pattern.ask

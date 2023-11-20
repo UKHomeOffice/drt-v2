@@ -1,6 +1,5 @@
 package controllers.application.exports
 
-import actors.DrtSystemInterface
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject

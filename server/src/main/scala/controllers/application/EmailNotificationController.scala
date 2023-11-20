@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import com.google.inject.Inject
 import drt.shared.{NegativeFeedback, PositiveFeedback}
 import email.GovNotifyEmail

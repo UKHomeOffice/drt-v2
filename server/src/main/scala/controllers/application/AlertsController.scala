@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import actors.persistent.DeleteAlerts
 import akka.pattern._
 import akka.util.Timeout

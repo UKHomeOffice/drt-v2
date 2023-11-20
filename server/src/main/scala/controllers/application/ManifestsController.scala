@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject

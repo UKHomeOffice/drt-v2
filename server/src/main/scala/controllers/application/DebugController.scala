@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import akka.actor.Props

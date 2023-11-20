@@ -1,7 +1,7 @@
 
 package controllers
 
-import actors.{DrtSystemInterface, ProdDrtParameters, ProdDrtSystem}
+import actors.ProdDrtParameters
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.stream.Materializer

@@ -41,7 +41,6 @@ case class CrunchProps[FT](logLabel: String = "",
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Int,
                            crunchOffsetMillis: MillisSinceEpoch = 0,
-                           actors: Map[String, ActorRef],
                            useNationalityBasedProcessingTimes: Boolean,
                            now: () => SDateLike = () => SDate.now(),
                            initialFlightsWithSplits: Option[FlightsWithSplitsDiff] = None,
@@ -57,9 +56,6 @@ case class CrunchProps[FT](logLabel: String = "",
                            arrivalsLiveBaseFeed: Feed[FT],
                            arrivalsLiveFeed: Feed[FT],
                            flushArrivalsSource: Source[Boolean, SourceQueueWithComplete[Boolean]],
-                           initialShifts: ShiftAssignments = ShiftAssignments(Seq()),
-                           initialFixedPoints: FixedPointAssignments = FixedPointAssignments(Seq()),
-                           initialStaffMovements: Seq[StaffMovement] = Seq(),
                            flushArrivalsOnStart: Boolean,
                            refreshArrivalsOnStart: Boolean,
                            optimiser: TryCrunchWholePax,
@@ -152,7 +148,7 @@ object CrunchSystem {
     )
   }
 
-  def paxTypeQueueAllocator[FR](config: AirportConfig): PaxTypeQueueAllocation = if (config.hasTransfer)
+  def paxTypeQueueAllocator(config: AirportConfig): PaxTypeQueueAllocation = if (config.hasTransfer)
     PaxTypeQueueAllocation(
       B5JPlusWithTransitTypeAllocator,
       TerminalQueueAllocator(config.terminalPaxTypeQueueAllocation))
