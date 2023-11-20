@@ -1,6 +1,5 @@
 package controllers
 
-import actors._
 import akka.event.Logging
 import api._
 import boopickle.Default._
@@ -11,15 +10,14 @@ import controllers.application._
 import drt.http.ProdSendAndReceive
 import drt.shared._
 import org.joda.time.chrono.ISOChronology
-import org.slf4j.{Logger, LoggerFactory}
-import play.api.{Configuration, Environment}
 import play.api.mvc._
+import play.api.{Configuration, Environment}
 import services._
 import services.graphstages.Crunch
 import slickdb._
 import spray.json.enrichAny
-import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, Role}
-import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
@@ -27,8 +25,8 @@ import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
+import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
@@ -37,7 +35,7 @@ object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
 
   override def read[R: Pickler](p: ByteBuffer): R = Unpickle[R].fromBytes(p)
 
-  def myroute[Trait](target: Trait): Router = macro MyMacros.routeMacro[Trait, ByteBuffer]
+//  def myroute[Trait](target: Trait): Router = macro MyMacros.routeMacro[Trait, ByteBuffer]
 
   override def write[R: Pickler](r: R): ByteBuffer = Pickle.intoBytes(r)
 }
@@ -78,38 +76,13 @@ trait DropInProviderLike {
   val dropInRegistrationService: DropInsRegistrationTableLike
 }
 
-trait UserRoleProviderLike {
-  val log: Logger = LoggerFactory.getLogger(getClass)
-
-  val userService: UserTableLike
-
-  def userRolesFromHeader(headers: Headers): Set[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toSet).getOrElse(Set.empty[Role])
-
-  def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
-
-  def getLoggedInUser(config: Configuration, headers: Headers, session: Session)(implicit ec: ExecutionContext): LoggedInUser = {
-    val baseRoles = Set()
-    val roles: Set[Role] =
-      getRoles(config, headers, session) ++ baseRoles
-    val email = headers.get("X-Auth-Email").getOrElse("Unknown")
-    val loggedInUser: LoggedInUser = LoggedInUser(
-      email = email,
-      userName = headers.get("X-Auth-Username").getOrElse(email),
-      id = headers.get("X-Auth-Userid").getOrElse(email),
-      roles = roles)
-
-
-    loggedInUser
-  }
-}
-
 class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)
   extends AuthController(cc, ctrl) {
 
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
-  val systemStartGracePeriod: FiniteDuration = config.get[Int]("start-up-grace-period-seconds").seconds
+  private val systemStartGracePeriod: FiniteDuration = config.get[Int]("start-up-grace-period-seconds").seconds
 
   log.info(s"Scheduling crunch system to start in ${systemStartGracePeriod.toString()}")
   actorSystem.scheduler.scheduleOnce(systemStartGracePeriod) {
@@ -119,20 +92,20 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   val now: () => SDateLike = () => SDate.now()
 
-  val virusScannerUrl: String = config.get[String]("virus-scanner-url")
+//  val virusScannerUrl: String = config.get[String]("virus-scanner-url")
 
-  val baseDomain = config.get[String]("drt.domain")
+  private val baseDomain: String = config.get[String]("drt.domain")
 
-  val isSecure = config.get[Boolean]("drt.use-https")
+  private val isSecure: Boolean = config.get[Boolean]("drt.use-https")
 
 
   log.info(s"Starting DRTv2 build ${BuildInfo.version}")
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
 
-  def defaultTimeZone: String = TimeZone.getDefault.getID
+  private def defaultTimeZone: String = TimeZone.getDefault.getID
 
-  def systemTimeZone: String = System.getProperty("user.timezone")
+  private def systemTimeZone: String = System.getProperty("user.timezone")
 
   log.info(s"System.getProperty(user.timezone): $systemTimeZone")
   log.info(s"TimeZone.getDefault: $defaultTimeZone")
@@ -141,17 +114,17 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
 
-  def previousDay(date: MilliDate): SDateLike = {
-    val oneDayInMillis = 60 * 60 * 24 * 1000L
-    SDate(date.millisSinceEpoch - oneDayInMillis)
-  }
+//  def previousDay(date: MilliDate): SDateLike = {
+//    val oneDayInMillis = 60 * 60 * 24 * 1000L
+//    SDate(date.millisSinceEpoch - oneDayInMillis)
+//  }
 
   def featureGuides: Action[AnyContent] = Action.async { _ =>
     val featureGuidesJson: Future[String] = ctrl.featureGuideService.getAll()
     featureGuidesJson.map(Ok(_))
   }
 
-  def isNewFeatureAvailableSinceLastLogin = Action.async { implicit request =>
+  def isNewFeatureAvailableSinceLastLogin: Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
     val latestFeatureDateF: Future[Option[Timestamp]] = ctrl.featureGuideService.selectAll.map(_.headOption.map(_.uploadTime))
     val latestLoginDateF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.map(_.latest_login))
@@ -224,7 +197,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     }
   }
 
-  lazy val healthChecker: HealthChecker = if (!config.get[Boolean]("health-check.disable-feed-monitoring")) {
+  private lazy val healthChecker: HealthChecker = if (!config.get[Boolean]("health-check.disable-feed-monitoring")) {
     val healthyResponseTimeSeconds = config.get[Int]("health-check.max-response-time-seconds")
     val defaultLastCheckThreshold = config.get[Int]("health-check.max-last-feed-check-minutes").minutes
     val feedsHealthCheckGracePeriod = config.get[Int]("health-check.feeds-grace-period-minutes").minutes
@@ -234,7 +207,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     )
 
     val feedsToMonitor = ctrl.feedActorsForPort
-      .filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
+      .view.filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
       .values.toList
 
     HealthChecker(Seq(

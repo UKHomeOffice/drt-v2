@@ -1,10 +1,12 @@
+package uk.gov.homeoffice.drt.crunchsystem
+
 import actors.CrunchManagerActor.AddQueueCrunchSubscriber
 import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors._
 import actors.daily.PassengersActor
 import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing._
+import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
@@ -14,7 +16,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{DropInProviderLike, FeatureGuideProviderLike, UserRoleProviderLike}
+import controllers.{DropInProviderLike, FeatureGuideProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -41,7 +43,7 @@ import drt.shared._
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.joda.time.DateTimeZone
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
+import passengersplits.parsing.VoyageManifestParser
 import play.api.Configuration
 import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
@@ -73,15 +75,15 @@ import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
-import uk.gov.homeoffice.drt.time.{MilliDate => _, _}
+import uk.gov.homeoffice.drt.time.{MilliDate, _}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
-import scala.concurrent.duration._
+import scala.concurrent.duration.{DurationDouble, DurationInt, DurationLong}
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.language.postfixOps
 
 trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderLike with DropInProviderLike {
   implicit val materializer: Materializer
@@ -137,7 +139,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   private val manifestsFeedStatusActor: ActorRef =
     system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
 
-  val manifestsRouterActor: ActorRef
   val flightsRouterActor: ActorRef
   val queueLoadsRouterActor: ActorRef
   val queuesRouterActor: ActorRef
@@ -187,8 +188,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     MinutesProvider.singleTerminal(queuesRouterActor)
   lazy val staffMinutesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
     MinutesProvider.singleTerminal(staffRouterActor)
-
-  lazy val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActor)
 
   private def flightValuesForDate[T](date: LocalDate,
                                      maybeAtTime: Option[SDateLike],
@@ -316,15 +315,26 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
-  val startDeskRecs: (ProdCrunchActors, SortedSet[ProcessingRequest], SortedSet[ProcessingRequest], SortedSet[ProcessingRequest], SortedSet[ProcessingRequest]) =>
-    () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) =
+  val manifestLookups: ManifestLookups = ManifestLookups(system)
+
+  val manifestsRouterActorReadOnly: ActorRef =
+    system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor-read-only")
+
+  val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActorReadOnly)
+
+  val startDeskRecs: (
+    PersistentStateActors,
+      SortedSet[ProcessingRequest],
+      SortedSet[ProcessingRequest],
+      SortedSet[ProcessingRequest],
+      SortedSet[ProcessingRequest]
+    ) => () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) =
     (actors, crunchQueue, deskRecsQueue, deploymentQueue, staffQueue) => () => {
       val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
       implicit val timeout: Timeout = new Timeout(10.seconds)
 
       val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
-
       val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
       val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
@@ -421,7 +431,8 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     PaxCapModelAndFeatures.targetName,
   )
 
-  def startCrunchSystem(initialPortState: Option[PortState],
+  def startCrunchSystem(actors: PersistentStateActors,
+                        initialPortState: Option[PortState],
                         initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
@@ -463,7 +474,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       expireAfterMillis = DrtStaticParameters.expireAfterMillis,
       useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       manifestsLiveSource = voyageManifestsLiveSource,
-      voyageManifestsActor = manifestsRouterActor,
+      crunchActors = actors,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
       initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),
@@ -548,11 +559,11 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
           case None => DateTimeZone.UTC
         }
         val requester = LtnFeedRequester(url, token, username, password)
-        Feed(LtnLiveFeed(requester, timeZone).source(Feed.actorRefSource), 5.seconds, 30 seconds)
+        Feed(LtnLiveFeed(requester, timeZone).source(Feed.actorRefSource), 5.seconds, 30.seconds)
       case "MAN" | "STN" | "EMA" =>
         if (config.get[Boolean]("feeds.mag.use-legacy")) {
           log.info(s"Using legacy MAG live feed")
-          Feed(createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(Feed.actorRefSource), 5.seconds, 30 seconds)
+          Feed(createLiveChromaFlightFeed(ChromaLive).chromaVanillaFlights(Feed.actorRefSource), 5.seconds, 30.seconds)
         } else {
           log.info(s"Using new MAG live feed")
           val maybeFeed = for {
@@ -574,7 +585,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
         val (url: String, username: String, password: String, token: String) = azinqConfig
         Feed(GlaFeed(url, username, password, token), 5.seconds, 1.minute)
       case "PIK" | "HUY" | "INV" | "NQY" | "NWI" | "SEN" =>
-        Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30 seconds)
+        Feed(CiriumFeed(config.get[String]("feeds.cirium.host"), portCode).source(Feed.actorRefSource), 5.seconds, 30.seconds)
       case "EDI" =>
         val (url: String, username: String, password: String, token: String) = azinqConfig
         Feed(EdiFeed(url, username, password, token), 5.seconds, 1.minute)
@@ -609,19 +620,19 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   }
 
   private def createArrivalFeed(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
-    implicit val timeout: Timeout = new Timeout(10 seconds)
+    implicit val timeout: Timeout = new Timeout(10.seconds)
     val arrivalFeed = ManualUploadArrivalFeed(arrivalsImportActor)
     source.mapAsync(1)(_ => arrivalFeed.requestFeed)
   }
 
-  def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2 minutes)
+  def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2.minutes)
 
   def initialFlightsPortState(actor: ActorRef, forecastMaxDays: Int): Future[Option[PortState]] = {
     val from = now().getLocalLastMidnight.addDays(-1)
     val to = from.addDays(forecastMaxDays)
     val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
     FlightsRouterActor.runAndCombine(actor
-        .ask(request)(new Timeout(15 seconds)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
+        .ask(request)(new Timeout(15.seconds)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
       .map { fws =>
         Option(PortState(fws.flights.values, Iterable(), Iterable()))
       }
@@ -646,14 +657,14 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   }
 
   private def queryActorWithRetry[A](actor: ActorRef, toAsk: Any): Future[Option[A]] = {
-    val future = actor.ask(toAsk)(new Timeout(2 minutes)).map {
+    val future = actor.ask(toAsk)(new Timeout(2.minutes)).map {
       case Some(state: A) if state.isInstanceOf[A] => Option(state)
       case state: A if !state.isInstanceOf[Option[A]] => Option(state)
       case _ => None
     }
 
     implicit val scheduler: Scheduler = system.scheduler
-    Retry.retry(future, RetryDelays.fibonacci, 3, 5 seconds)
+    Retry.retry(future, RetryDelays.fibonacci, 3, 5.seconds)
   }
 
   def getFeedStatus: Future[Seq[FeedSourceStatuses]] = Source(feedActorsForPort)
@@ -664,7 +675,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     .withAttributes(StreamSupervision.resumeStrategyWithLog("getFeedStatus"))
     .runWith(Sink.seq)
 
-  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
+  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]], manifestsRouterActor: ActorRef): Unit = {
     flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
     queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)

@@ -13,10 +13,10 @@ import org.specs2.specification.BeforeEach
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
-import test.feeds.test.GetArrivals
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.testsystem.feeds.test.GetArrivals
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq}

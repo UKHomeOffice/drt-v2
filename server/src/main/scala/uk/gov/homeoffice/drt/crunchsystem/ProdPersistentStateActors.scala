@@ -1,42 +1,51 @@
+package uk.gov.homeoffice.drt.crunchsystem
+
 import actors.DrtStaticParameters.{expireAfterMillis, time48HoursAgo, timeBeforeThisMonth}
-import actors.ManifestLookups
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent._
+import actors.{AggregatedArrivalsActor, ManifestLookups, PostgresTables}
 import akka.actor.{ActorRef, ActorSystem, Props}
+import slickdb.ArrivalTable
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-case class TestCrunchActors(system: ActorSystem,
-                            now: () => SDateLike,
-                            minutesToCrunch: Int,
-                            offsetMinutes: Int,
-                            maxForecastDays: Int,
-                            manifestLookups: ManifestLookups,
-                           ) extends CrunchActors {
-  val shiftsActor: ActorRef =
+case class ProdPersistentStateActors(system: ActorSystem,
+                                     now: () => SDateLike,
+                                     minutesToCrunch: Int,
+                                     offsetMinutes: Int,
+                                     maxForecastDays: Int,
+                                     manifestLookups: ManifestLookups,
+                                     portCode: PortCode,
+                                     paxFeedSourceOrder: List[FeedSource],
+                                    ) extends PersistentStateActors {
+  override val shiftsActor: ActorRef =
     system.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
-  val fixedPointsActor: ActorRef =
+  override val fixedPointsActor: ActorRef =
     system.actorOf(Props(new FixedPointsActor(now, minutesToCrunch, maxForecastDays)), "staff-fixed-points")
-  val staffMovementsActor: ActorRef =
+  override val staffMovementsActor: ActorRef =
     system.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now), minutesToCrunch)), "staff-movements")
 
-  val forecastBaseArrivalsActor: ActorRef =
+  override val forecastBaseArrivalsActor: ActorRef =
     system.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-  val forecastArrivalsActor: ActorRef =
+  override val forecastArrivalsActor: ActorRef =
     system.actorOf(Props(new PortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  val liveArrivalsActor: ActorRef =
+  override val liveArrivalsActor: ActorRef =
     system.actorOf(Props(new PortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
-  val liveBaseArrivalsActor: ActorRef =
+  override val liveBaseArrivalsActor: ActorRef =
     system.actorOf(Props(new CirriumLiveArrivalsActor(now, expireAfterMillis)), name = "live-base-arrivals-actor")
-  val manifestsRouterActor: ActorRef =
+  override val manifestsRouterActor: ActorRef =
     system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")
 
-  val crunchQueueActor: ActorRef =
+  override val crunchQueueActor: ActorRef =
     system.actorOf(Props(new CrunchQueueActor(now = () => SDate.now(), offsetMinutes, minutesToCrunch)), "crunch-queue-actor")
-  val deskRecsQueueActor: ActorRef =
+  override val deskRecsQueueActor: ActorRef =
     system.actorOf(Props(new DeskRecsQueueActor(now = () => SDate.now(), offsetMinutes, minutesToCrunch)), "desk-recs-queue-actor")
-  val deploymentQueueActor: ActorRef =
+  override val deploymentQueueActor: ActorRef =
     system.actorOf(Props(new DeploymentQueueActor(now = () => SDate.now(), offsetMinutes, minutesToCrunch)), "deployments-queue-actor")
-  val staffingQueueActor: ActorRef =
+  override val staffingQueueActor: ActorRef =
     system.actorOf(Props(new StaffingUpdateQueueActor(now = () => SDate.now(), offsetMinutes, minutesToCrunch)), "staffing-queue-actor")
+
+  override val aggregatedArrivalsActor: ActorRef =
+    system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
 }

@@ -6,6 +6,7 @@ import email.GovNotifyEmail
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import slickdb.DropInRow
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -16,13 +17,12 @@ class DropInsController @Inject()(cc: ControllerComponents,
                                   ctrl: DrtSystemInterface,
                                   govNotifyEmail: GovNotifyEmail) extends AuthController(cc, ctrl) {
 
-  lazy val dropInRegistrationTemplateId = ctrl.config.get[String]("notifications.dropIn-registration-templateId")
+  private lazy val dropInRegistrationTemplateId = ctrl.config.get[String]("notifications.dropIn-registration-templateId")
 
-  lazy val dropInRegistrationHostTemplateId = ctrl.config.get[String]("notifications.dropIn-registration-host-templateId")
+  private lazy val dropInRegistrationHostTemplateId = ctrl.config.get[String]("notifications.dropIn-registration-host-templateId")
 
-  lazy val dropInHostEmail = config.get[String]("notifications.dropIn-host-email")
+  private lazy val dropInHostEmail = config.get[String]("notifications.dropIn-host-email")
 
-  import drt.shared.DropIn._
   import drt.shared.DropInRegistration._
 
   def dropIns(): Action[AnyContent] = Action.async { _ =>
@@ -50,12 +50,12 @@ class DropInsController @Inject()(cc: ControllerComponents,
               ctrl.dropInRegistrationService.createDropInRegistration(userEmail, id).map { _ =>
                 ctrl.dropInService.getDropIns(Seq(id)).map(sendDropInRegistrationEmails(userEmail, _))
               }.recover {
-                case e => log.warning(s"Error while db insert for drop-in registration", e)
+                case e => log.warning(s"Error while db insert for drop-in registration: ${e.getMessage}")
                   BadRequest(s"Failed to register drop-ins for user $userEmail")
               }
               Ok("Successfully registered drop-ins")
             }.recover {
-            case e => log.warning(s"Error while drop-in registration", e)
+            case e => log.warning(s"Error while drop-in registration: ${e.getMessage}")
               BadRequest(s"Failed to register drop-ins for user $userEmail")
           }.getOrElse(BadRequest("Failed to parse json"))
         case None => BadRequest("No content")
@@ -63,8 +63,7 @@ class DropInsController @Inject()(cc: ControllerComponents,
     }
   }
 
-
-  private def sendDropInRegistrationEmails(email: String, dropIns: Seq[DropInRow]) = {
+  private def sendDropInRegistrationEmails(email: String, dropIns: Seq[DropInRow]): Seq[Try[Any]] = {
     def contactEmail: Option[String] = config.getOptional[String]("contact-email")
 
     dropIns.map { dropIn =>
@@ -78,14 +77,14 @@ class DropInsController @Inject()(cc: ControllerComponents,
         email,
         dropInRegistrationTemplateId,
         personalisation).recover {
-        case e => log.error(s"Error sending drop-in registration email to user $email", e)
+        case e => log.error(s"Error sending drop-in registration email to user $email: ${e.getMessage}")
       }
 
       govNotifyEmail.sendRequest(govNotifyReference,
         dropInHostEmail,
         dropInRegistrationHostTemplateId,
         hostEmailPersonalisation).recover {
-        case e => log.error(s"Error sending drop-in registration email to host $email", e)
+        case e => log.error(s"Error sending drop-in registration email to host $email: ${e.getMessage}")
       }
 
     }

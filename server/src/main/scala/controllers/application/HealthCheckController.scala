@@ -6,8 +6,8 @@ import providers.MinutesProvider
 import services.healthcheck.{ApiHealthCheck, ArrivalUpdatesHealthCheck, DeskUpdatesHealthCheck, LandingTimesHealthCheck}
 import spray.json.DefaultJsonProtocol._
 import spray.json.enrichAny
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 
-import scala.language.postfixOps
 
 class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
   private val apiHealthCheck: ApiHealthCheck = ApiHealthCheck(ctrl.flightsProvider.allTerminals)
@@ -37,7 +37,7 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     arrivalUpdatesHealthCheck.healthy(end, start, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
-  def deskUpdates() = Action.async { _ =>
+  def deskUpdates(): Action[AnyContent] = Action.async { _ =>
     deskUpdatesHealthCheck.healthy().map(p => Ok(p.toJson.compactPrint))
   }}
 

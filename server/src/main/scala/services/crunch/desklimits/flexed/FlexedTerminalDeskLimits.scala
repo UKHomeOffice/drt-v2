@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 
 import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange}
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -43,8 +43,8 @@ trait FlexedTerminalDeskLimitsLike extends TerminalDeskLimitsLike {
 case class FlexedTerminalDeskLimits(terminalDesks: Int,
                                     flexedQueues: Set[Queue],
                                     minDesksByQueue24Hrs: Map[Queue, IndexedSeq[Int]],
-                                    capacityByQueue: Map[Queue, QueueCapacityProvider])
-                                   (implicit ec: ExecutionContext) extends FlexedTerminalDeskLimitsLike {
+                                    capacityByQueue: Map[Queue, QueueCapacityProvider]
+                                   ) extends FlexedTerminalDeskLimitsLike {
   override def maxDesksForMinutes(minuteMillis: NumericRange[Long],
                                   queue: Queue,
                                   allocatedDesks: Map[Queue, List[Int]]): Future[WorkloadProcessorsProvider] = {

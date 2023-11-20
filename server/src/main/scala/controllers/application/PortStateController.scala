@@ -10,6 +10,7 @@ import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.crunch.CrunchManager.{queueDaysToReCrunch, queueDaysToReCrunchWithUpdatedSplits}
 import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -89,7 +90,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   }
 
   def reCalculateArrivals: Action[AnyContent] = authByRole(SuperAdmin) {
-    Action.async { request: Request[AnyContent] =>
+    Action.async { _ =>
       ctrl.crunchManagerActor ! RecalculateArrivals
       Future.successful(Ok("Re-calculating arrivals"))
     }

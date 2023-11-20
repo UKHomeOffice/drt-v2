@@ -9,6 +9,7 @@ import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import drt.shared.TQM
 import play.api.mvc._
 import services.exports.{GeneralExport, PassengerExports}
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
@@ -40,7 +41,7 @@ class SummariesExportController@Inject()(cc: ControllerComponents, ctrl: DrtSyst
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>
-            log.error("Failed to get CSV export", t)
+            log.error(s"Failed to get CSV export${t.getMessage}")
             BadRequest("Failed to get CSV export")
         }
       case _ =>

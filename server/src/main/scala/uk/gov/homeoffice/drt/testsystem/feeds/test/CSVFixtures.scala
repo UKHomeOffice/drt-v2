@@ -1,4 +1,4 @@
-package test.feeds.test
+package uk.gov.homeoffice.drt.testsystem.feeds.test
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}

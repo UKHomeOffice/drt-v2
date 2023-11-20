@@ -1,4 +1,4 @@
-package test.controllers
+package uk.gov.homeoffice.drt.testsystem.controllers
 
 import actors.TestDrtSystemInterface
 import akka.pattern.ask
@@ -15,13 +15,13 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import play.api.http.HeaderNames
 import play.api.mvc._
 import spray.json._
-import test.TestActors.ResetData
-import test.feeds.test.CSVFixtures
-import test.roles.MockRoles
-import test.roles.MockRoles.MockRolesProtocol._
+import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
+import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.testsystem.MockRoles
+import uk.gov.homeoffice.drt.testsystem.feeds.test.CSVFixtures
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._

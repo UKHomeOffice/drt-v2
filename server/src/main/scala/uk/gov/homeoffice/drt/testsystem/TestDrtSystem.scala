@@ -1,11 +1,7 @@
 
-package test
+package uk.gov.homeoffice.drt.testsystem
 
-import actors.DrtStaticParameters.{expireAfterMillis, time48HoursAgo, timeBeforeThisMonth}
 import actors._
-import actors.persistent.{CrunchQueueActor, DeploymentQueueActor, DeskRecsQueueActor, ManifestRouterActor, StaffingUpdateQueueActor}
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
@@ -21,13 +17,13 @@ import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import slickdb._
-import test.TestActors._
-import test.feeds.test._
-import test.roles.TestUserRoleProvider
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.testsystem.RestartActor.AddStateActors
+import uk.gov.homeoffice.drt.testsystem.TestActors._
+import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
+import uk.gov.homeoffice.drt.testsystem.feeds.test._
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.sql.Timestamp
@@ -38,19 +34,22 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Futu
 import scala.language.postfixOps
 import scala.util.Success
 
-case class MockManifestLookupService()(implicit ec: ExecutionContext, mat: Materializer) extends ManifestLookupLike {
+case class MockManifestLookupService() extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
                                           scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
 
-  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
+  override def historicManifestPax(arrivalPort: PortCode,
+                                   departurePort: PortCode,
+                                   voyageNumber: VoyageNumber,
+                                   scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
   }
 }
 
-case class MockUserTable()(implicit ec: ExecutionContext) extends UserTableLike {
+case class MockUserTable() extends UserTableLike {
 
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
@@ -140,7 +139,6 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
 }
 
 
-
 @Singleton
 case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
                                   (implicit val materializer: Materializer,
@@ -148,37 +146,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends TestDrtSystemInterface {
 
-  import DrtStaticParameters._
-
   log.warn("Using test System")
-
-  override lazy val forecastBaseArrivalsActor: ActorRef =
-    system.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-
-  override lazy val forecastArrivalsActor: ActorRef =
-    system.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override lazy val liveArrivalsActor: ActorRef =
-    system.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
-
-  val manifestLookups: ManifestLookups = ManifestLookups(system)
-
-  override val shiftsActor: ActorRef = system.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
-  override val fixedPointsActor: ActorRef = system.actorOf(Props(new TestFixedPointsActor(now, airportConfig.minutesToCrunch)), "staff-fixed-points")
-  override val staffMovementsActor: ActorRef =
-    system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now), airportConfig.minutesToCrunch)), "TestActor-StaffMovements")
-  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
-  override val manifestsRouterActor: ActorRef =
-    system.actorOf(Props(new TestVoyageManifestsActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
-      name = "voyage-manifests-router-actor")
-
-  override val persistentCrunchQueueActor: ActorRef =
-    system.actorOf(Props(new TestCrunchQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
-  override val persistentDeskRecsQueueActor: ActorRef =
-    system.actorOf(Props(new TestDeskRecsQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
-  override val persistentDeploymentQueueActor: ActorRef =
-    system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
-  override val persistentStaffingUpdateQueueActor: ActorRef =
-    system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)))
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val userService: UserTableLike = MockUserTable()
@@ -234,47 +202,30 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   override val testArrivalActor: ActorRef = system.actorOf(Props(new TestArrivalsActor()), s"TestActor-LiveArrivals")
   override val testFeed: Feed[typed.ActorRef[Feed.FeedTick]] = Feed(TestFixtureFeed(system, testArrivalActor, Feed.actorRefSource), 1.second, 2.seconds)
 
+  override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem)), name = "TestActor-ResetData")
 
-  val testActors = List(
-    forecastBaseArrivalsActor,
-    forecastArrivalsActor,
-    liveArrivalsActor,
-    forecastArrivalsActor,
-    portStateActor,
-    manifestsRouterActor,
-    shiftsActor,
-    fixedPointsActor,
-    staffMovementsActor,
-    aggregatedArrivalsActor,
-    testManifestsActor,
-    testArrivalActor,
-    persistentCrunchQueueActor,
-    persistentDeskRecsQueueActor,
-    persistentDeploymentQueueActor,
-    persistentStaffingUpdateQueueActor,
-  )
-
-  override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, testActors)), name = "TestActor-ResetData")
+  restartActor ! RestartActor.AddStateActors(Seq(portStateActor, testManifestsActor, testArrivalActor))
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
     log.info(s"Loading fixtures from $file")
-    system.scheduler.schedule(1 second, 1 day)({
-      val startDay = SDate.now()
-      DateRange.utcDateRange(startDay, startDay.addDays(30)).map(day => {
-        val arrivals = CSVFixtures
-          .csvPathToArrivalsOnDate(day.toISOString, file)
-          .collect {
-            case Success(arrival) => arrival
-          }
-        arrivals.map(testArrivalActor.ask)
+    system.scheduler.scheduleAtFixedRate(1 second, 1 day)(
+      () => {
+        val startDay = SDate.now()
+        DateRange.utcDateRange(startDay, startDay.addDays(30)).map(day => {
+          val arrivals = CSVFixtures
+            .csvPathToArrivalsOnDate(day.toISOString, file)
+            .collect {
+              case Success(arrival) => arrival
+            }
+          arrivals.map(testArrivalActor.ask)
 
-        val manifests = arrivals.map(a => {
-          MockManifest.manifestForArrival(a)
+          val manifests = arrivals.map(a => {
+            MockManifest.manifestForArrival(a)
+          })
+          Await.ready(testManifestsActor.ask(VoyageManifests(manifests.toSet)), 5 seconds)
         })
-        Await.ready(testManifestsActor.ask(VoyageManifests(manifests.toSet)), 5 seconds)
       })
-    })
   }
 
   override def liveArrivalsSource(portCode: PortCode): Feed[typed.ActorRef[Feed.FeedTick]] = testFeed
@@ -287,7 +238,32 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     restartActor ! StartTestSystem
   }
 
-  def startSystem: () => List[KillSwitch] = () => {
+  private def startSystem: () => List[KillSwitch] = () => {
+    val actors = TestPersistentStateActors(
+      system,
+      now,
+      airportConfig.minutesToCrunch,
+      airportConfig.crunchOffsetMinutes,
+      params.forecastMaxDays,
+      manifestLookups
+    )
+
+    restartActor ! RestartActor.AddStateActors(Seq(
+      actors.forecastBaseArrivalsActor,
+      actors.forecastArrivalsActor,
+      actors.liveArrivalsActor,
+      actors.forecastArrivalsActor,
+      actors.manifestsRouterActor,
+      actors.shiftsActor,
+      actors.fixedPointsActor,
+      actors.staffMovementsActor,
+      actors.aggregatedArrivalsActor,
+      actors.crunchQueueActor,
+      actors.deskRecsQueueActor,
+      actors.deploymentQueueActor,
+      actors.staffingQueueActor,
+    ))
+
     val crunchInputs = startCrunchSystem(
       initialPortState = None,
       initialForecastBaseArrivals = None,
@@ -295,11 +271,13 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
       refreshArrivalsOnStart = false,
-      startDeskRecs = startDeskRecs(SortedSet(), SortedSet(), SortedSet(), SortedSet()))
+      startDeskRecs = startDeskRecs(actors, SortedSet(), SortedSet(), SortedSet(), SortedSet()),
+      actors = actors,
+    )
 
     liveActor ! Enable(crunchInputs.liveArrivalsResponse)
 
-    setSubscribers(crunchInputs)
+    setSubscribers(crunchInputs, actors.manifestsRouterActor)
 
     testManifestsActor ! SubscribeResponseQueue(crunchInputs.manifestsLiveResponseSource)
 
@@ -307,17 +285,23 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   }
 }
 
+object RestartActor {
+  case class AddStateActors(actors: Iterable[ActorRef])
+}
 
-class RestartActor(startSystem: () => List[KillSwitch],
-                   testActors: List[ActorRef]) extends Actor with ActorLogging {
+class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with ActorLogging {
 
-  lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(context.system)
+  private lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(context.system)
 
-  var currentKillSwitches: List[KillSwitch] = List()
+  private var currentKillSwitches: List[KillSwitch] = List()
+  private var actorsToReset: Seq[ActorRef] = Seq.empty
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
   override def receive: Receive = {
+    case AddStateActors(actors) =>
+      actorsToReset = actorsToReset ++ actors
+
     case ResetData =>
       val replyTo = sender()
       log.info(s"About to shut down everything. Pressing kill switches")
@@ -327,7 +311,7 @@ class RestartActor(startSystem: () => List[KillSwitch],
         ks.shutdown()
       }
 
-      val resetFutures = testActors.map(_.ask(ResetData)(new Timeout(5 second)))
+      val resetFutures = actorsToReset.map(_.ask(ResetData)(new Timeout(5 second)))
       Future.sequence(resetFutures).onComplete { _ =>
         log.info(s"Shutdown triggered")
         resetInMemoryData()
@@ -339,15 +323,15 @@ class RestartActor(startSystem: () => List[KillSwitch],
       log.info(s"Got a Status acknowledgement from InMemoryJournalStorage")
 
     case Status.Failure(t) =>
-      log.error("Got a failure message", t)
+      log.error(s"Got a failure message: ${t.getMessage}")
 
     case StartTestSystem => startTestSystem()
     case u => log.error(s"Received unexpected message: ${u.getClass}")
   }
 
-  def startTestSystem(): Unit = currentKillSwitches = startSystem()
+  private def startTestSystem(): Unit = currentKillSwitches = startSystem()
 
-  def resetInMemoryData(): Unit = persistenceTestKit.clearAll()
+  private def resetInMemoryData(): Unit = persistenceTestKit.clearAll()
 }
 
 case object StartTestSystem

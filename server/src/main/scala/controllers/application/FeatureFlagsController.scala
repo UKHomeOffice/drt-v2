@@ -3,6 +3,7 @@ package controllers.application
 import com.google.inject.Inject
 import drt.shared.FeatureFlags
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 
 
 class FeatureFlagsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {

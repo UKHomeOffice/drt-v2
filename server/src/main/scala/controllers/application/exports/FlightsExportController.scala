@@ -2,13 +2,11 @@ package controllers.application.exports
 
 import actors.PartitionedPortStateActor.PointInTimeQuery
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.inject.Inject
-import controllers.Application
 import controllers.application.AuthController
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -18,9 +16,11 @@ import play.api.mvc._
 import services.exports.flights.ArrivalFeedExport
 import services.exports.flights.templates._
 import services.exports.{FlightExports, GeneralExport}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ApiView, ArrivalSource, ArrivalsAndSplitsView, SuperAdmin}
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -44,7 +44,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
   private def doExportForPointInTime(localDateString: String,
                                      pointInTime: MillisSinceEpoch,
                                      terminalName: String,
-                                     export: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] =
+                                     `export`: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] =
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -87,7 +87,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>
-            log.error("Failed to get CSV export", t)
+            log.error(s"Failed to get CSV export: ${t.getMessage}")
             BadRequest("Failed to get CSV export")
         }
       case _ =>
@@ -98,7 +98,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
   private def doExportForDateRange(startLocalDateString: String,
                                    endLocalDateString: String,
                                    terminalName: String,
-                                   export: (LoggedInUser, PortCode, RedListUpdates)
+                                   `export`: (LoggedInUser, PortCode, RedListUpdates)
                                      => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] = {
     Action.async {
       request =>
@@ -116,7 +116,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     }
   }
 
-  private def flightsRequestToCsv(pointInTime: MillisSinceEpoch, export: FlightsExport): Future[Result] = {
+  private def flightsRequestToCsv(pointInTime: MillisSinceEpoch, `export`: FlightsExport): Future[Result] = {
     val pitRequest = PointInTimeQuery(pointInTime, export.request)
     ctrl.flightsRouterActor.ask(pitRequest).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].map {
       flightsStream =>
@@ -128,7 +128,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>
-            log.error("Failed to get CSV export", t)
+            log.error(s"Failed to get CSV export: ${t.getMessage}")
             BadRequest("Failed to get CSV export")
         }
     }

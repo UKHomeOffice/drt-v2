@@ -14,8 +14,9 @@ import controllers.application.exports.{DesksExportController, FlightsExportCont
 import email.GovNotifyEmail
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
-import test.controllers.TestController
-import test.{MockDrtParameters, TestDrtSystem}
+import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
+import uk.gov.homeoffice.drt.testsystem.controllers.TestController
+import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -23,13 +24,10 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 class DRTModule extends AbstractModule with AkkaGuiceSupport {
   implicit lazy val config: Configuration = new Configuration(ConfigFactory.load)
   lazy val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
-  lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, MockDrtParameters())
-  lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config))
-
+  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, MockDrtParameters())
   implicit lazy val mat: Materializer = Materializer.createMaterializer(provideActorSystem)
   implicit lazy val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit lazy val timeout: Timeout = new Timeout(5.seconds)
-
 
   override def configure(): Unit = {
     if (isTestEnvironment) {
@@ -76,7 +74,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
     if (isTestEnvironment) {
       drtTestSystem
     } else {
-      drtProdSystem
+      ProdDrtSystem(airportConfig, ProdDrtParameters(config))
     }
 
   @Provides

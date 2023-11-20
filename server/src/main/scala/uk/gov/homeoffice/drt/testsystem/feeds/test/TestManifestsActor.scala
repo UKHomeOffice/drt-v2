@@ -1,4 +1,4 @@
-package test.feeds.test
+package uk.gov.homeoffice.drt.testsystem.feeds.test
 
 import actors.SubscribeResponseQueue
 import akka.actor.{Actor, ActorLogging, Scheduler}
@@ -7,7 +7,7 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.OfferHandler
-import test.TestActors.ResetData
+import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -16,7 +16,7 @@ class TestManifestsActor extends Actor with ActorLogging {
 
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
-  var maybeManifests: Option[Iterable[VoyageManifest]] = None
+  private var maybeManifests: Option[Iterable[VoyageManifest]] = None
   var maybeSubscriber: Option[SourceQueueWithComplete[ManifestsFeedResponse]] = None
 
   override def receive: PartialFunction[Any, Unit] = {

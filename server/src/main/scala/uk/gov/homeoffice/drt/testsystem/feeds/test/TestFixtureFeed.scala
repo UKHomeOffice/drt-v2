@@ -1,4 +1,4 @@
-package test.feeds.test
+package uk.gov.homeoffice.drt.testsystem.feeds.test
 
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, typed}
 import akka.pattern.{StatusReply, ask}
@@ -8,7 +8,7 @@ import drt.server.feeds.ArrivalsFeedSuccess
 import drt.server.feeds.Feed.FeedTick
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import test.TestActors.ResetData
+import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.time.SDate
 

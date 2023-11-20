@@ -18,6 +18,7 @@ import services.staffing.StaffTimeSlots
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -64,7 +65,7 @@ class ApiService(airportConfig: AirportConfig,
     ctrl.getLoggedInUser(config, headers, session)
 
 
-  def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
+  private def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
     val startOfWeekMidnight = SDate(startDay).getLocalLastMidnight
     val endOfForecast = startOfWeekMidnight.addDays(numberOfDays)
 

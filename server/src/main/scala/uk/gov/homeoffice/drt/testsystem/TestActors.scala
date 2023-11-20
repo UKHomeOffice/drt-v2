@@ -1,4 +1,4 @@
-package test
+package uk.gov.homeoffice.drt.testsystem
 
 import actors._
 import actors.daily._

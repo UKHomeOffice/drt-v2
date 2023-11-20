@@ -9,6 +9,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.prediction.arrival.{ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
+import uk.gov.homeoffice.drt.time.MilliDate
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 
 object FlightTableComponents {

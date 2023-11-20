@@ -4,6 +4,7 @@ import com.google.inject.Inject
 import drt.shared.{NegativeFeedback, PositiveFeedback}
 import email.GovNotifyEmail
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import upickle.default.read
 
 class EmailNotificationController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface, govNotifyEmail: GovNotifyEmail) extends AuthController(cc, ctrl) {

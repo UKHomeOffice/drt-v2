@@ -5,10 +5,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.CrunchMinute
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
-import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
-import scala.collection.MapView
 import scala.concurrent.{ExecutionContext, Future}
 
 case class DeskUpdatesHealthCheck(now: () => SDateLike,

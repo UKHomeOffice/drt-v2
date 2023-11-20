@@ -5,6 +5,7 @@ import drt.shared.api.{WalkTime, WalkTimes}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.actor.WalkTimeProvider
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 
 class WalkTimeController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 

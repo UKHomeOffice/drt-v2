@@ -1,4 +1,4 @@
-package test.feeds.test
+package uk.gov.homeoffice.drt.testsystem.feeds.test
 
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._

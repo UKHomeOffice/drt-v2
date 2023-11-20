@@ -1,7 +1,5 @@
 package drt.server.feeds.api
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
 import org.joda.time.DateTimeZone
