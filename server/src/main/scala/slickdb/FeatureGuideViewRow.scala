@@ -1,8 +1,8 @@
 package slickdb
 
-import actors.PostgresTables
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.ProvenShape
+import uk.gov.homeoffice.drt.db.AggregateDb
 
 import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, Future}

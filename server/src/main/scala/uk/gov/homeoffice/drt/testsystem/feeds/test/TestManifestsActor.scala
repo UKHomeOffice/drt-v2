@@ -1,12 +1,12 @@
 package uk.gov.homeoffice.drt.testsystem.feeds.test
 
-import actors.SubscribeResponseQueue
 import akka.actor.{Actor, ActorLogging, Scheduler}
 import akka.pattern.StatusReply
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.OfferHandler
+import uk.gov.homeoffice.drt.db.SubscribeResponseQueue
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 
 import scala.concurrent.ExecutionContext.Implicits.global

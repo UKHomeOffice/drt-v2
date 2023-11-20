@@ -19,6 +19,7 @@ import play.api.mvc.{Headers, Session}
 import slickdb._
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.db.SubscribeResponseQueue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.testsystem.RestartActor.AddStateActors
 import uk.gov.homeoffice.drt.testsystem.TestActors._

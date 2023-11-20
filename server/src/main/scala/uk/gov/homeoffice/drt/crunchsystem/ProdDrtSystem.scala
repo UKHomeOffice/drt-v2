@@ -30,6 +30,7 @@ import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate}
@@ -51,17 +52,17 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
-  override val manifestLookupService: ManifestLookup = ManifestLookup(PostgresTables)
+  override val manifestLookupService: ManifestLookup = ManifestLookup(AggregateDb)
 
-  override val userService: UserTableLike = UserTable(PostgresTables)
+  override val userService: UserTableLike = UserTable(AggregateDb)
 
-  override val featureGuideService: FeatureGuideTableLike = FeatureGuideTable(PostgresTables)
+  override val featureGuideService: FeatureGuideTableLike = FeatureGuideTable(AggregateDb)
 
-  override val featureGuideViewService: FeatureGuideViewLike = FeatureGuideViewTable(PostgresTables)
+  override val featureGuideViewService: FeatureGuideViewLike = FeatureGuideViewTable(AggregateDb)
 
-  override val dropInService: DropInTableLike = DropInTable(PostgresTables)
+  override val dropInService: DropInTableLike = DropInTable(AggregateDb)
 
-  override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(PostgresTables)
+  override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(AggregateDb)
 
   override val minuteLookups: MinuteLookups = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
@@ -183,8 +184,8 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
           else initialState[ApiFeedState](actors.manifestsRouterActor).map(_.lastProcessedMarker)
         system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
 
-        val arrivalKeysProvider = DbManifestArrivalKeys(PostgresTables, airportConfig.portCode)
-        val manifestProcessor = DbManifestProcessor(PostgresTables, airportConfig.portCode, crunchInputs.manifestsLiveResponseSource)
+        val arrivalKeysProvider = DbManifestArrivalKeys(AggregateDb, airportConfig.portCode)
+        val manifestProcessor = DbManifestProcessor(AggregateDb, airportConfig.portCode, crunchInputs.manifestsLiveResponseSource)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
         log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
         ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 1.second)

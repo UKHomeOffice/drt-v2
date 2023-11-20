@@ -1,4 +1,4 @@
-package actors
+package uk.gov.homeoffice.drt.db
 
 import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.server.feeds.ManifestsFeedResponse
@@ -7,7 +7,7 @@ import slickdb._
 
 import scala.concurrent.Future
 
-object PostgresTables extends Tables {
+object AggregateDb extends Tables {
   override val profile = slick.jdbc.PostgresProfile
   val db: profile.backend.Database = profile.api.Database.forConfig("aggregated-db")
 

@@ -4,9 +4,10 @@ import actors.DrtStaticParameters.{expireAfterMillis, time48HoursAgo, timeBefore
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent._
-import actors.{AggregatedArrivalsActor, ManifestLookups, PostgresTables}
+import actors.{AggregatedArrivalsActor, ManifestLookups}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import slickdb.ArrivalTable
+import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -47,5 +48,5 @@ case class ProdPersistentStateActors(system: ActorSystem,
     system.actorOf(Props(new StaffingUpdateQueueActor(now = () => SDate.now(), offsetMinutes, minutesToCrunch)), "staffing-queue-actor")
 
   override val aggregatedArrivalsActor: ActorRef =
-    system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(portCode, PostgresTables, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
+    system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(portCode, AggregateDb, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
 }
