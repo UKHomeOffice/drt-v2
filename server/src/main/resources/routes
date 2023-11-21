@@ -54,8 +54,13 @@ DELETE        /sla-configs/:effectiveFrom                                       
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 
+GET           /shifts                                                                 controllers.application.StaffingController.getShifts
+POST          /shifts                                                                 controllers.application.StaffingController.saveShifts
+GET           /shifts-for-month/:monthMillis                                          controllers.application.StaffingController.getShiftsForMonth(monthMillis: Long)
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
+
+GET           /forecast-summary/:terminalName/:startDay                               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long)
 
 GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
 GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)
@@ -81,9 +86,6 @@ GET           /export/forecast-accuracy/:daysForComparison/:daysAhead           
 GET           /assets/fonts/*file                                                     controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
 GET           /assets/images/*file                                                    controllers.Assets.at(path="/public/images", file)
 GET           /assets/*file                                                           controllers.Assets.versioned(path="/public", file: Asset)
-
-# Autowire calls
-POST          /api-legacy/*path                                                       controllers.Application.autowireApi(path: String)
 
 GET           /data/user                                                              controllers.Application.getLoggedInUser
 

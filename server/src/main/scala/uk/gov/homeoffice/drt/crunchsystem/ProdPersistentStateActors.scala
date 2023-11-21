@@ -20,12 +20,12 @@ case class ProdPersistentStateActors(system: ActorSystem,
                                      portCode: PortCode,
                                      paxFeedSourceOrder: List[FeedSource],
                                     ) extends PersistentStateActors {
-  override val shiftsActor: ActorRef =
-    system.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
-  override val fixedPointsActor: ActorRef =
-    system.actorOf(Props(new FixedPointsActor(now, minutesToCrunch, maxForecastDays)), "staff-fixed-points")
-  override val staffMovementsActor: ActorRef =
-    system.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now), minutesToCrunch)), "staff-movements")
+//  override val shiftsActor: ActorRef =
+//    system.actorOf(Props(new ShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
+//  override val fixedPointsActor: ActorRef =
+//    system.actorOf(Props(new FixedPointsActor(now, minutesToCrunch, maxForecastDays)), "staff-fixed-points")
+//  override val staffMovementsActor: ActorRef =
+//    system.actorOf(Props(new StaffMovementsActor(now, time48HoursAgo(now), minutesToCrunch)), "staff-movements")
 
   override val forecastBaseArrivalsActor: ActorRef =
     system.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")

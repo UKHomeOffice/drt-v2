@@ -6,7 +6,6 @@ import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.ApiFeedState
 import actors.persistent.staffing.GetFeedStatuses
-import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.ask
 import akka.stream.Materializer
@@ -17,7 +16,7 @@ import drt.server.feeds.Feed
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FixedPointAssignments, PortState, ShiftAssignments, StaffMovements}
+import drt.shared.PortState
 import manifests.ManifestLookup
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
@@ -208,26 +207,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
             log.warn("Failed to shut down actor system", exception)
             System.exit(1)
         }
-    }
-
-    val staffingStates: Future[NotUsed] = {
-      val maybeShifts = initialStateFuture[ShiftAssignments](actors.shiftsActor)
-      val maybeFixedPoints = initialStateFuture[FixedPointAssignments](actors.fixedPointsActor)
-      val maybeMovements = initialStateFuture[StaffMovements](actors.staffMovementsActor)
-      for {
-        _ <- maybeShifts
-        _ <- maybeFixedPoints
-        _ <- maybeMovements
-      } yield NotUsed
-    }
-
-    staffingStates.onComplete {
-      case Success(NotUsed) =>
-        system.log.info(s"Successfully restored initial staffing states for App")
-
-      case Failure(error) =>
-        system.log.error(error, s"Failed to restore initial staffing state for App")
-        System.exit(1)
     }
   }
 }

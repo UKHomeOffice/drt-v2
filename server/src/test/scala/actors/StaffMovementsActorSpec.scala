@@ -49,7 +49,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val movementUuid1 = newUuidString
       val staffMovements = StaffMovements(Seq(StaffMovement(T1, "lunch start", SDate(s"2017-01-01T00:00").millisSinceEpoch, -1, movementUuid1, createdBy = Some("batman"))))
 
-      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor1")
+      val actor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(staffMovements.movements)
       expectMsg(AddStaffMovementsAck(staffMovements.movements))
@@ -57,7 +57,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
 
       Thread.sleep(100)
 
-      val newActor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor2")
+      val newActor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor2")
 
       newActor ! GetState
 
@@ -74,7 +74,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val movement2 = StaffMovement(T1, "coffee start", SDate(s"2017-01-01T01:15").millisSinceEpoch, -1, movementUuid2, createdBy = Some("robin"))
       val staffMovements = StaffMovements(Seq(movement1, movement2))
 
-      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor1")
+      val actor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(staffMovements.movements)
       expectMsg(AddStaffMovementsAck(staffMovements.movements))
@@ -83,7 +83,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       expectMsg(RemoveStaffMovementsAck(movementUuid1))
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor2")
+      val newActor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor2")
 
       newActor ! GetState
       val expected = Set(movement2)
@@ -106,7 +106,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val movement3 = StaffMovement(T1, "supper start", SDate("2017-01-01T21:30").millisSinceEpoch, -1, movementUuid3, createdBy = Some("bruce"))
       val movement4 = StaffMovement(T1, "supper start", SDate("2017-01-01T21:40").millisSinceEpoch, -1, movementUuid4, createdBy = Some("bruce"))
 
-      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor1")
+      val actor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(movement1, movement2))
       expectMsg(AddStaffMovementsAck(Seq(movement1, movement2)))
@@ -122,7 +122,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
 
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(classOf[StaffMovementsActorBase], now, expireAfterOneDay), "movementsActor2")
+      val newActor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor2")
 
       newActor ! GetState
       val expected = Set(movement2, movement3)
@@ -148,7 +148,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T02:00")
       val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
 
-      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
+      val actor = system.actorOf(Props(classOf[StaffMovementsActor], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
       expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))
@@ -175,7 +175,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T02:00")
       val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
 
-      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
+      val actor = system.actorOf(Props(classOf[StaffMovementsActor], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
       expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))
@@ -208,7 +208,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T01:00")
       val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
 
-      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
+      val actor = system.actorOf(Props(classOf[StaffMovementsActor], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
       expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))
@@ -241,7 +241,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val now_is_20170102_0200: () => SDateLike = () => SDate("2017-01-02T21:35")
       val expireAfterOneDay: () => SDateLike = () => now_is_20170102_0200().addDays(-1)
 
-      val actor = system.actorOf(Props(classOf[StaffMovementsActorBase], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
+      val actor = system.actorOf(Props(classOf[StaffMovementsActor], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
       expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))

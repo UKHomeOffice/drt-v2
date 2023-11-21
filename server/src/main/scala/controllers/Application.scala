@@ -2,13 +2,11 @@ package controllers
 
 import akka.event.Logging
 import api._
-import boopickle.Default._
 import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import drt.http.ProdSendAndReceive
-import drt.shared._
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -18,27 +16,14 @@ import slickdb._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
-import java.nio.ByteBuffer
 import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
-
-object Router extends autowire.Server[ByteBuffer, Pickler, Pickler] {
-
-  import scala.language.experimental.macros
-
-  override def read[R: Pickler](p: ByteBuffer): R = Unpickle[R].fromBytes(p)
-
-//  def myroute[Trait](target: Trait): Router = macro MyMacros.routeMacro[Trait, ByteBuffer]
-
-  override def write[R: Pickler](r: R): ByteBuffer = Pickle.intoBytes(r)
-}
 
 trait AirportConfiguration {
   def airportConfig: AirportConfig
@@ -92,8 +77,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   val now: () => SDateLike = () => SDate.now()
 
-//  val virusScannerUrl: String = config.get[String]("virus-scanner-url")
-
   private val baseDomain: String = config.get[String]("drt.domain")
 
   private val isSecure: Boolean = config.get[Boolean]("drt.use-https")
@@ -113,11 +96,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   assert(defaultTimeZone == "UTC", "Default Timezone is not set to UTC")
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
-
-//  def previousDay(date: MilliDate): SDateLike = {
-//    val oneDayInMillis = 60 * 60 * 24 * 1000L
-//    SDate(date.millisSinceEpoch - oneDayInMillis)
-//  }
 
   def featureGuides: Action[AnyContent] = Action.async { _ =>
     val featureGuidesJson: Future[String] = ctrl.featureGuideService.getAll()
@@ -158,29 +136,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       import spray.json.DefaultJsonProtocol.{StringJsonFormat, immSeqFormat}
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
       ctrl.featureGuideViewService.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
-    }
-  }
-
-  def autowireApi(path: String): Action[RawBuffer] = authByRole(BorderForceStaff) {
-    Action.async(parse.raw) {
-      implicit request =>
-        log.debug(s"Request path: $path")
-
-        val b = request.body.asBytes(parse.UNLIMITED).get
-
-        val router = Router.route[Api](
-          new ApiService(airportConfig,
-            ctrl.shiftsActor,
-            request.headers,
-            request.session, ctrl))
-
-        router(
-          autowire.Core.Request(path.split("/"), Unpickle[Map[String, ByteBuffer]].fromBytes(b.asByteBuffer))
-        ).map(buffer => {
-          val data = Array.ofDim[Byte](buffer.remaining())
-          buffer.get(data)
-          Ok(data)
-        })
     }
   }
 
@@ -239,7 +194,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     import KeyCloakAuthTokenParserProtocol._
     import spray.json._
 
-    def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse) = token match {
+    def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse): Result = token match {
       case t: KeyCloakAuthToken =>
         log.info(s"Successful login to API via keycloak for $username")
         Ok(t.toJson.toString)
@@ -279,7 +234,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     }
   }
 
-
   def logging: Action[Map[String, Seq[String]]] = auth {
     Action(parse.tolerantFormUrlEncoded) {
       implicit request =>
@@ -313,4 +267,4 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   }
 }
 
-case class GetTerminalCrunch(terminalName: Terminal)
+//case class GetTerminalCrunch(terminalName: Terminal)

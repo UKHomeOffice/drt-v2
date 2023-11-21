@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, Strea
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
 trait RouterActorLikeWithSubscriber[U <: Updates, P] extends RouterActorLike[U, P] {
@@ -44,9 +44,9 @@ trait RouterActorLikeWithSubscriber2[U <: Updates, P] extends RouterActorLike2[U
 trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
   var processingRequest: Boolean = false
 
-  implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
+  implicit val dispatcher: ExecutionContext = context.dispatcher
   implicit val mat: Materializer = Materializer.createMaterializer(context)
-  implicit val timeout: Timeout = new Timeout(90 seconds)
+  implicit val timeout: Timeout = new Timeout(90.seconds)
 
   var updateRequestsQueue: List[(ActorRef, U)] = List.empty
 
@@ -97,12 +97,11 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
       receiveUnexpected
 
   def receiveUtil: Receive = {
-
     case StreamInitialized => sender() ! StatusReply.Ack
 
     case StreamCompleted => log.info(s"Stream completed")
 
-    case StreamFailure(t) => log.error(s"Stream failed", t)
+    case StreamFailure(t) => log.error(s"Stream failed: ${t.getMessage}")
   }
 
   private def receiveUpdates: Receive = {
@@ -159,7 +158,7 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
 
     case StreamCompleted => log.info(s"Stream completed")
 
-    case StreamFailure(t) => log.error(s"Stream failed", t)
+    case StreamFailure(t) => log.error(s"Stream failed: ${t.getMessage}")
   }
 
   private def receiveUpdates: Receive = {
@@ -172,3 +171,61 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
       log.warning(s"Got an unexpected message: ${unexpected.getClass}")
   }
 }
+
+class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor with ActorLogging {
+  implicit val dispatcher: ExecutionContext = context.dispatcher
+  implicit val mat: Materializer = Materializer.createMaterializer(context)
+  implicit val timeout: Timeout = new Timeout(90.seconds)
+
+  var requestsQueue: List[(ActorRef, U)] = List.empty
+  var processingRequest: Boolean = false
+  var subscribers: List[ActorRef] = List.empty
+
+  def handleUpdateAndAck(update: U, replyTo: ActorRef): Any = {
+    processingRequest = true
+    val eventualAck = performUpdate(update)
+    eventualAck
+      .onComplete { response =>
+        processingRequest = false
+        subscribers.foreach(_ ! response)
+        replyTo ! StatusReply.Ack
+        self ! ProcessNextUpdateRequest
+      }
+    eventualAck
+  }
+
+  override def receive: Receive =
+    receiveSubscriber orElse
+      receiveUpdates orElse
+      receiveProcessRequest orElse
+      receiveUnexpected
+
+  private def receiveSubscriber: Receive = {
+    case AddUpdatesSubscriber(subscriber) =>
+      subscribers = subscriber :: subscribers
+  }
+
+  private def receiveUpdates: Receive = {
+    case updates: U =>
+      requestsQueue = (sender(), updates) :: requestsQueue
+      self ! ProcessNextUpdateRequest
+  }
+
+  private def receiveProcessRequest: Receive = {
+    case ProcessNextUpdateRequest =>
+      if (!processingRequest) {
+        requestsQueue match {
+          case (replyTo, nextUpdate) :: tail =>
+            handleUpdateAndAck(nextUpdate, replyTo)
+            requestsQueue = tail
+          case Nil =>
+            log.debug("Update requests queue is empty. Nothing to do")
+        }
+      }
+  }
+
+  private def receiveUnexpected: Receive = {
+    case unexpected => log.warning(s"Got an unexpected message: ${unexpected.getClass}")
+  }
+}
+

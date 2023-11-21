@@ -1,12 +1,13 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors.CrunchManagerActor.AddQueueCrunchSubscriber
+import actors.DrtStaticParameters.{time48HoursAgo, timeBeforeThisMonth}
 import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors._
-import actors.daily.PassengersActor
+import actors.daily.{PassengersActor, RequestAndTerminateActor}
 import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing.GetFeedStatuses
+import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
 import actors.routing.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
@@ -78,7 +79,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
-import uk.gov.homeoffice.drt.time.{MilliDate, _}
+import uk.gov.homeoffice.drt.time._
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -138,6 +139,19 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     system.actorOf(AclForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-base-arrivals-feed-status")
   private val manifestsFeedStatusActor: ActorRef =
     system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
+
+  val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(journalType), name = "shifts-read-actor")
+  val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(journalType), name = "fixed-points-read-actor")
+  private val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(journalType), name = "fixed-points-read-actor")
+
+  val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
+
+  val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
+    now, timeBeforeThisMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
+  val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
+    now, airportConfig.minutesToCrunch, params.forecastMaxDays, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
+  val staffMovementsSequentialWritesActor: ActorRef = system.actorOf(StaffMovementsActor.sequentialWritesProps(
+    now, time48HoursAgo(now), airportConfig.minutesToCrunch, requestAndTerminateActor, system), "staff-movements-sequential-writes-actor")
 
   val flightsRouterActor: ActorRef
   val queueLoadsRouterActor: ActorRef
@@ -317,10 +331,13 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
-  val manifestsRouterActorReadOnly: ActorRef =
-    system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor-read-only")
+  private val manifestsRouterActorReadOnly: ActorRef =
+    system.actorOf(
+      Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
+      name = "voyage-manifests-router-actor-read-only")
 
-  val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] = ManifestsProvider(manifestsRouterActorReadOnly)
+  val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] =
+    ManifestsProvider(manifestsRouterActorReadOnly)
 
   val startDeskRecs: (
     PersistentStateActors,
@@ -373,16 +390,16 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       val (deploymentRequestQueueActor, deploymentsKillSwitch) =
         startOptimisationGraph(deploymentsProducer, actors.deploymentQueueActor, deploymentQueue, minuteLookups.queueMinutesRouterActor, "deployments")
 
-      val shiftsProvider = (r: ProcessingRequest) => actors.shiftsActor.ask(r).mapTo[ShiftAssignments]
-      val fixedPointsProvider = (r: ProcessingRequest) => actors.fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
-      val movementsProvider = (r: ProcessingRequest) => actors.staffMovementsActor.ask(r).mapTo[StaffMovements]
+      val shiftsProvider = (r: ProcessingRequest) => liveShiftsReadActor.ask(r).mapTo[ShiftAssignments]
+      val fixedPointsProvider = (r: ProcessingRequest) => liveFixedPointsReadActor.ask(r).mapTo[FixedPointAssignments]
+      val movementsProvider = (r: ProcessingRequest) => liveStaffMovementsReadActor.ask(r).mapTo[StaffMovements]
 
       val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
       val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
         startOptimisationGraph(staffMinutesProducer, actors.staffingQueueActor, staffQueue, minuteLookups.staffMinutesRouterActor, "staffing")
-      actors.shiftsActor ! staffingUpdateRequestQueue
-      actors.fixedPointsActor ! staffingUpdateRequestQueue
-      actors.staffMovementsActor ! staffingUpdateRequestQueue
+      shiftsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
+      fixedPointsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
+      staffMovementsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
 
       val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
       log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString}")

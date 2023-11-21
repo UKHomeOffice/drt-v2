@@ -12,7 +12,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsRestorer}
 
 object StreamingUpdatesActor {
   def startUpdatesStream(system: ActorSystem, journalType: StreamingJournalLike, persistenceId: String, receivingRef: ActorRef)
@@ -43,8 +42,6 @@ class StreamingUpdatesActor[T](val persistenceId: String,
   implicit val mat: Materializer = Materializer.createMaterializer(context)
 
   var maybeKillSwitch: Option[UniqueKillSwitch] = None
-
-  val restorer = new ArrivalsRestorer[Arrival]
 
   var state: T = initialState
 

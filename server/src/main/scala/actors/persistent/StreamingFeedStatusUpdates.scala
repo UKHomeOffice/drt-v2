@@ -5,7 +5,7 @@ import actors.persistent.staffing.GetFeedStatuses
 import akka.actor.Props
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatuses}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestStateSnapshotMessage
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusesFromFeedStatusesMessage, feedStatusesFromSnapshotMessage}
 
