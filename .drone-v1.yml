@@ -77,7 +77,7 @@ steps:
       event:
         - push
     depends_on:
-      - drone_s3_cache_pull
+      - unit-test
 
   - name: sonar-scanner
     pull: if-not-exists
