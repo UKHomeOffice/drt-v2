@@ -54,20 +54,6 @@ steps:
     depends_on:
       - build
 
-  - name: sonar-scanner
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/sonar-scanner:v4.6
-    commands:
-      - sonar-scanner -Dsonar.projectVersion=B${DRONE_BUILD_NUMBER} -X
-    environment:
-      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
-    when:
-      event:
-        - push
-    depends_on:
-      - analysis
-      - build
-
   - name: ecr-login-drt-v2
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
@@ -149,6 +135,20 @@ steps:
         - push
     depends_on:
       - unit-test
+
+  - name: sonar-scanner
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/sonar-scanner:v4.6
+    commands:
+      - sonar-scanner -Dsonar.projectVersion=B${DRONE_BUILD_NUMBER} -X
+    environment:
+      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+    depends_on:
+      - analysis
+      - build
 
   - name: publish-drt
     image: plugins/ecr
