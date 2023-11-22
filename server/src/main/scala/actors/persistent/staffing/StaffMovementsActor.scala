@@ -85,7 +85,7 @@ object StaffMovementsActor {
                             system: ActorSystem
                            )
                            (implicit timeout: Timeout): Props =
-    Props(new SequentialWritesActor[ShiftUpdate](update => {
+    Props(new SequentialWritesActor[MovementUpdate](update => {
       val actor = system.actorOf(Props(new StaffMovementsActor(now, expireBeforeMillis)), "staff-movements-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
@@ -109,13 +109,11 @@ case class StaffMovementsState(staffMovements: StaffMovements) {
   def -(movementsToRemove: Seq[String]): StaffMovementsState = copy(staffMovements = staffMovements - movementsToRemove)
 }
 
-case class AddStaffMovements(movementsToAdd: Seq[StaffMovement])
+trait MovementUpdate
 
-case class AddStaffMovementsAck(movementsToAdd: Seq[StaffMovement])
+case class AddStaffMovements(movementsToAdd: Seq[StaffMovement]) extends MovementUpdate
 
-case class RemoveStaffMovements(movementUuidsToRemove: String)
-
-case class RemoveStaffMovementsAck(movementUuidsToRemove: String)
+case class RemoveStaffMovements(movementUuidsToRemove: String) extends MovementUpdate
 
 
 class StaffMovementsActor(val now: () => SDateLike,

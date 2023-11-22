@@ -42,9 +42,7 @@ case object SaveSnapshot
 object ShiftsActor {
   def persistenceId = "shifts-store"
 
-  def expireBefore(): () => SDateLike = timeBeforeThisMonth(() => SDate.now())
-
-  def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int): Props =
+  def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int, now: () => SDateLike): Props =
     Props(new StreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
@@ -57,21 +55,24 @@ object ShiftsActor {
         case msg: ShiftsMessage =>
           val shiftsToRecover = shiftMessagesToStaffAssignments(msg.shifts)
           val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
-          val newState = ShiftAssignments(updatedShifts).purgeExpired(expireBefore())
+          val newState = ShiftAssignments(updatedShifts).purgeExpired(timeBeforeThisMonth(now))
           val subscriberEvents = terminalUpdateRequests(shiftsToRecover, minutesToCrunch)
+//          println(s"newState: $newState")
           (newState, subscriberEvents)
         case _ => (state, Seq.empty)
       },
       (getState, getSender) => {
         case GetState =>
-          getSender() ! getState().purgeExpired(expireBefore())
+          getSender() ! getState().purgeExpired(timeBeforeThisMonth(now))
 
         case TerminalUpdateRequest(terminal, localDate, _, _) =>
-          getSender() ! ShiftAssignments(getState().assignments.filter { assignment =>
+          val assignmentsForDate = ShiftAssignments(getState().assignments.filter { assignment =>
             val sdate = SDate(localDate)
             assignment.terminal == terminal &&
-              (sdate.millisSinceEpoch <= assignment.end || assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch)
+            (sdate.millisSinceEpoch <= assignment.end || assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch)
           })
+//          println(s"got state request for $localDate: ${assignmentsForDate}")
+          getSender() ! assignmentsForDate
       }
     ))
 

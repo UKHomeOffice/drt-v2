@@ -69,7 +69,7 @@ object FixedPointsActor {
                             system: ActorSystem
                            )
                            (implicit timeout: Timeout): Props =
-    Props(new SequentialWritesActor[ShiftUpdate](update => {
+    Props(new SequentialWritesActor[FixedPointsUpdate](update => {
       val actor = system.actorOf(Props(new FixedPointsActor(now)), "fixed-points-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
@@ -89,9 +89,10 @@ object FixedPointsActor {
     }.flatten
 }
 
-case class SetFixedPoints(newFixedPoints: Seq[StaffAssignmentLike])
+trait FixedPointsUpdate
 
-case class SetFixedPointsAck(newFixedPoints: Seq[StaffAssignmentLike])
+case class SetFixedPoints(newFixedPoints: Seq[StaffAssignmentLike]) extends FixedPointsUpdate
+
 
 class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
 

@@ -141,7 +141,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
 
   val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
-    journalType, airportConfig.minutesToCrunch), name = "shifts-read-actor")
+    journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
   val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
     journalType, now, params.forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
   private val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(

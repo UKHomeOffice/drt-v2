@@ -124,7 +124,7 @@ class TestDrtActor extends Actor {
 
 
       val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
-        journalType, tc.airportConfig.minutesToCrunch), name = "shifts-read-actor")
+        journalType, tc.airportConfig.minutesToCrunch, tc.now), name = "shifts-read-actor")
       val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
         journalType, tc.now, tc.forecastMaxDays, tc.airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
       val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
