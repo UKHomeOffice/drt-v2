@@ -54,32 +54,6 @@ steps:
     depends_on:
       - build
 
-  - name: analysis
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-    commands:
-      - /root/entrypoint.sh
-      - sbt -ivy ./.ivy2 dependencyCheck
-      - sbt scalastyle | true
-      - sbt scapegoat | true
-      - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean coverage test | true
-      - sbt coverageReport
-      - ls -ltr /drone/src/server/target/scala-2.13/scoverage-report/
-    environment:
-      NVD_BASE_URL: http://nvdmirror:8008
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
-      ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
-    when:
-      branch: master
-      event:
-        - push
-    depends_on:
-      - unit-test
-
   - name: sonar-scanner
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/sonar-scanner:v4.6
@@ -149,6 +123,32 @@ steps:
         - push
     depends_on:
       - build
+
+  - name: analysis
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt -ivy ./.ivy2 dependencyCheck
+      - sbt scalastyle | true
+      - sbt scapegoat | true
+      - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean coverage test | true
+      - sbt coverageReport
+      - ls -ltr /drone/src/server/target/scala-2.13/scoverage-report/
+    environment:
+      NVD_BASE_URL: http://nvdmirror:8008
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      branch: master
+      event:
+        - push
+    depends_on:
+      - unit-test
 
   - name: publish-drt
     image: plugins/ecr
