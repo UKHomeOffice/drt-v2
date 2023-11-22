@@ -4,7 +4,6 @@ import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source, SourceQueueW
 import akka.stream.{ClosedShape, OverflowStrategy}
 import akka.testkit.{TestKit, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared._
 import org.specs2.specification.AfterEach
 import services.PcpArrival
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsNoop}
@@ -15,7 +14,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.arrival.WalkTimeModelAndFeatures
 import uk.gov.homeoffice.drt.time.MilliTimes.oneDayMillis
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliDate, SDate, SDateLike}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
@@ -69,7 +68,6 @@ object TestableArrivalsGraphStage {
   def buildArrivalsGraphStage(now: SDateLike,
                               sanitiser: ArrivalDataSanitiser = ArrivalDataSanitiser(None, None)
                              ) = new ArrivalsGraphStage(
-    name = "",
     initialForecastBaseArrivals = SortedMap[UniqueArrival, Arrival](),
     initialForecastArrivals = SortedMap[UniqueArrival, Arrival](),
     initialLiveBaseArrivals = SortedMap[UniqueArrival, Arrival](),

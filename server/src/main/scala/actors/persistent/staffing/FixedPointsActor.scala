@@ -131,6 +131,7 @@ class FixedPointsActor(now: () => SDateLike,
         val createdAt = now()
         val fixedPointsMessage = FixedPointsMessage(fixedPointsToFixedPointsMessages(state, createdAt), Option(createdAt.millisSinceEpoch))
         val requests = terminalUpdateRequests(diff)
+        println(s"Sending requests: $requests")
         persistAndMaybeSnapshotWithAck(fixedPointsMessage, List((sender(), requests)))
       } else {
         log.info(s"No change. Nothing to persist")

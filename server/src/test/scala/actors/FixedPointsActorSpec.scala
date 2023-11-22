@@ -21,7 +21,7 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
   val forecastLengthDays = 2
 
   "FixedPoints actor" should {
-    "remember a fixedPoint staff assignmesnt added before a shutdown" in {
+    "remember a fixedPoint staff assignments added before a shutdown" in {
       val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
       val endTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
       val fixedPoints = FixedPointAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
@@ -137,7 +137,11 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
   }
 
   def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsActor(now, 1440, forecastLengthDays)))
-  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsReadActor(now(), now)))
+  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsReadActor(
+    now(),
+    now,
+    defaultAirportConfig.minutesToCrunch,
+    forecastLengthDays)))
 
   def nowAs(date: String): () => SDateLike = () => SDate(date)
 }

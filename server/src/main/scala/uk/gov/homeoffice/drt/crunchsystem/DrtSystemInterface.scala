@@ -142,9 +142,9 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
 
   val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(journalType), name = "shifts-read-actor")
   val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(journalType), name = "fixed-points-read-actor")
-  private val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(journalType), name = "fixed-points-read-actor")
+  private val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(journalType), name = "staff-movements-read-actor")
 
-  val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
+  val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
   val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
     now, timeBeforeThisMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")

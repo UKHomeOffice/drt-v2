@@ -33,7 +33,7 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
 
     nowDate = SDate(tuesday)
 
-    val crunch = runCrunchGraph(TestConfig(now = myNow, maxDaysToCrunch = 5))
+    val crunch = runCrunchGraph(TestConfig(now = myNow, forecastMaxDays = 5))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
 
@@ -61,7 +61,7 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
 
     nowDate = SDate(tuesday)
 
-    val crunch = runCrunchGraph(TestConfig(now = myNow, maxDaysToCrunch = 5))
+    val crunch = runCrunchGraph(TestConfig(now = myNow, forecastMaxDays = 5))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
 

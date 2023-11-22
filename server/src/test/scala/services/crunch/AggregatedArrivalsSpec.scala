@@ -76,7 +76,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
   }
 
   def aggregatedArrivalsTestActor(actorProbe: ActorRef, arrivalTable: ArrivalTableLike): ActorRef = {
-    system.actorOf(Props(classOf[TestAggregatedArrivalsActor], arrivalTable, actorProbe), name = "aggregated-arrivals-actor")
+    system.actorOf(Props(classOf[TestAggregatedArrivalsActor], arrivalTable, actorProbe), name = "test-aggregated-arrivals-actor")
   }
 
   "Given a live arrival " +
@@ -163,7 +163,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
       now = () => SDate(scheduled),
       expireAfterMillis = 250,
       maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table)),
-      maxDaysToCrunch = 10
+      forecastMaxDays = 10
     ))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival))))
