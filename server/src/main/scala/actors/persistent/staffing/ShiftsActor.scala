@@ -8,7 +8,7 @@ import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssign
 import actors.routing.SequentialWritesActor
 import actors.{ExpiryActorLike, StreamingJournalLike}
 import akka.actor.{ActorRef, ActorSystem, Props, Scheduler}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.persistence._
 import akka.util.Timeout
 import drt.shared._
@@ -44,8 +44,8 @@ object ShiftsActor {
 
   def expireBefore(): () => SDateLike = timeBeforeThisMonth(() => SDate.now())
 
-  def streamingUpdatesProps(journalType: StreamingJournalLike): Props =
-    Props(new StreamingUpdatesActor[ShiftAssignments](
+  def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int): Props =
+    Props(new StreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
       ShiftAssignments.empty,
@@ -57,8 +57,10 @@ object ShiftsActor {
         case msg: ShiftsMessage =>
           val shiftsToRecover = shiftMessagesToStaffAssignments(msg.shifts)
           val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
-          ShiftAssignments(updatedShifts).purgeExpired(expireBefore())
-        case _ => state
+          val newState = ShiftAssignments(updatedShifts).purgeExpired(expireBefore())
+          val subscriberEvents = terminalUpdateRequests(shiftsToRecover, minutesToCrunch)
+          (newState, subscriberEvents)
+        case _ => (state, Seq.empty)
       },
       (getState, getSender) => {
         case GetState =>
@@ -92,6 +94,19 @@ object ShiftsActor {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
+
+  def terminalUpdateRequests(shifts: ShiftAssignments,
+                             minutesToCrunch: Int,
+                            ): immutable.Iterable[TerminalUpdateRequest] =
+    shifts.assignments.groupBy(_.terminal).collect {
+      case (terminal, assignments) if shifts.assignments.nonEmpty =>
+        val earliest = SDate(assignments.map(_.start).min).millisSinceEpoch
+        val latest = SDate(assignments.map(_.end).max).millisSinceEpoch
+        (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
+        }
+    }.flatten
+
 }
 
 
@@ -99,7 +114,6 @@ class ShiftsActor(val now: () => SDateLike,
                   val expireBefore: () => SDateLike) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  var subscribers: List[ActorRef] = List()
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
   val snapshotInterval = 5000
@@ -152,9 +166,9 @@ class ShiftsActor(val now: () => SDateLike,
 
       val createdAt = now()
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
-      val requests = terminalUpdateRequests(ShiftAssignments(shiftsToUpdate))
+
       persistAndMaybeSnapshotWithAck(shiftsMessage, List(
-        (sender(), requests),
+        (sender(), StatusReply.Ack),
       ))
 
     case SetShifts(newShiftAssignments) =>
@@ -164,9 +178,8 @@ class ShiftsActor(val now: () => SDateLike,
 
         val createdAt = now()
         val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(newShiftAssignments), createdAt), Option(createdAt.millisSinceEpoch))
-        val requests = terminalUpdateRequests(ShiftAssignments(newShiftAssignments))
-        persistAndMaybeSnapshotWithAck(shiftsMessage, List((sender(), requests)))
 
+        persistAndMaybeSnapshotWithAck(shiftsMessage, List((sender(), StatusReply.Ack)))
       } else {
         log.info(s"No change. Nothing to persist")
         sender() ! Iterable()
@@ -187,16 +200,6 @@ class ShiftsActor(val now: () => SDateLike,
 
     case unexpected => log.info(s"unhandled message: $unexpected")
   }
-
-  def terminalUpdateRequests(shifts: ShiftAssignments): immutable.Iterable[TerminalUpdateRequest] =
-    shifts.assignments.groupBy(_.terminal).collect {
-      case (terminal, assignments) if shifts.assignments.nonEmpty =>
-        val earliest = SDate(assignments.map(_.start).min).millisSinceEpoch
-        val latest = SDate(assignments.map(_.end).max).millisSinceEpoch
-        (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
-          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, 1440)
-        }
-    }.flatten
 }
 
 object ShiftsMessageParser {

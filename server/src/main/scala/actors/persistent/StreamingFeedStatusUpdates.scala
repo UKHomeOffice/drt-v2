@@ -2,6 +2,7 @@ package actors.persistent
 
 import actors.StreamingJournalLike
 import actors.persistent.staffing.GetFeedStatuses
+import akka.NotUsed
 import akka.actor.Props
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatuses}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
@@ -14,7 +15,7 @@ trait StreamingFeedStatusUpdates {
   val persistenceId: String
 
   def streamingUpdatesProps(journalType: StreamingJournalLike): Props =
-    Props(new StreamingUpdatesActor[Option[FeedSourceStatuses]](
+    Props(new StreamingUpdatesActor[Option[FeedSourceStatuses], NotUsed](
       persistenceId,
       journalType,
       Option.empty[FeedSourceStatuses],
@@ -36,8 +37,9 @@ trait StreamingFeedStatusUpdates {
             )
             case None => FeedSourceStatuses(sourceType, FeedStatuses(List(), None, None, None).add(newStatus))
           }
-          Option(updated)
-        case _ => state
+          (Option(updated), NotUsed)
+        case _ =>
+          (state, NotUsed)
       },
       (getState, getSender) => {
         case GetFeedStatuses =>

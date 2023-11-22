@@ -6,7 +6,7 @@ import actors.persistent.StreamingUpdatesActor
 import actors.persistent.staffing.StaffMovementsActor.staffMovementMessagesToStaffMovements
 import actors.routing.SequentialWritesActor
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.persistence._
 import akka.util.Timeout
 import drt.shared.{StaffMovement, StaffMovements}
@@ -26,8 +26,8 @@ import scala.collection.immutable
 object StaffMovementsActor {
   def persistenceId = "staff-movements-store"
 
-  def streamingUpdatesProps(journalType: StreamingJournalLike): Props =
-    Props(new StreamingUpdatesActor[StaffMovementsState](
+  def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int): Props =
+    Props(new StreamingUpdatesActor[StaffMovementsState, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
       StaffMovementsState(StaffMovements(List())),
@@ -37,12 +37,20 @@ object StaffMovementsActor {
       },
       (state, msg) => msg match {
         case msg: StaffMovementsMessage =>
-          val update = state.staffMovements + staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
-          state.updated(update)
+          val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
+          val newState = state.updated(state.staffMovements + movementsToAdd)
+          val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd), minutesToCrunch)
+          (newState, subscriberEvents)
+
         case msg: RemoveStaffMovementMessage =>
           val uuidToRemove = msg.getUUID
-          state.updated(state.staffMovements - Seq(uuidToRemove))
-        case _ => state
+          val movementsToRemove = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
+          val newState = state.updated(state.staffMovements - Seq(uuidToRemove))
+          val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToRemove), minutesToCrunch)
+          (newState, subscriberEvents)
+
+        case _ =>
+          (state, Seq())
       },
       (getState, getSender) => {
         case GetState =>
@@ -73,15 +81,24 @@ object StaffMovementsActor {
 
   def sequentialWritesProps(now: () => SDateLike,
                             expireBeforeMillis: () => SDateLike,
-                            minutesToCrunch: Int,
                             requestAndTerminateActor: ActorRef,
                             system: ActorSystem
                            )
                            (implicit timeout: Timeout): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
-      val actor = system.actorOf(Props(new StaffMovementsActor(now, expireBeforeMillis, minutesToCrunch)), "staff-movements-actor-writes")
+      val actor = system.actorOf(Props(new StaffMovementsActor(now, expireBeforeMillis)), "staff-movements-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
+
+  def terminalUpdateRequests(data: StaffMovements, minutesToCrunch: Int): immutable.Iterable[TerminalUpdateRequest] =
+    data.movements.groupBy(_.terminal).collect {
+      case (terminal, movements) if data.movements.nonEmpty =>
+        val earliest = SDate(movements.map(_.time).min).millisSinceEpoch
+        val latest = SDate(movements.map(_.time).max).millisSinceEpoch
+        (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
+        }
+    }.flatten
 }
 
 case class StaffMovementsState(staffMovements: StaffMovements) {
@@ -103,7 +120,6 @@ case class RemoveStaffMovementsAck(movementUuidsToRemove: String)
 
 class StaffMovementsActor(val now: () => SDateLike,
                           val expireBefore: () => SDateLike,
-                          minutesToCrunch: Int
                          ) extends ExpiryActorLike[StaffMovements] with RecoveryActorLike with PersistentDrtActor[StaffMovementsState] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -159,24 +175,19 @@ class StaffMovementsActor(val now: () => SDateLike,
       val updatedStaffMovements = state.staffMovements + movementsToAdd
       purgeExpiredAndUpdateState(updatedStaffMovements)
 
-      log.info(s"Added $movementsToAdd. We have ${state.staffMovements.movements.length} movements after purging")
-      val movements: StaffMovements = StaffMovements(movementsToAdd)
+      val movements = StaffMovements(movementsToAdd)
       val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
-      val requests = terminalUpdateRequests(StaffMovements(movementsToAdd))
-      persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), requests)))
+      persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), StatusReply.Ack)))
 
     case RemoveStaffMovements(uuidToRemove) =>
-      val removed = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
-      val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
-      purgeExpiredAndUpdateState(updatedStaffMovements)
+      val toRemove = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
 
-      log.info(s"Removed $uuidToRemove. We have ${state.staffMovements.movements.length} movements after purging")
-      val messagesToPersist: RemoveStaffMovementMessage = RemoveStaffMovementMessage(Option(uuidToRemove), Option(now().millisSinceEpoch))
-      persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), RemoveStaffMovementsAck(uuidToRemove))))
-
-      if (removed.nonEmpty)
-        sender() ! terminalUpdateRequests(StaffMovements(removed))
-      else
+      if (toRemove.nonEmpty) {
+        val updatedStaffMovements = state.staffMovements - Seq(uuidToRemove)
+        purgeExpiredAndUpdateState(updatedStaffMovements)
+        val messagesToPersist = RemoveStaffMovementMessage(Option(uuidToRemove), Option(now().millisSinceEpoch))
+        persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), StatusReply.Ack)))
+      } else
         sender() ! Iterable()
 
     case SaveSnapshotSuccess(md) =>
@@ -195,15 +206,6 @@ class StaffMovementsActor(val now: () => SDateLike,
     case unexpected => log.info(s"unhandled message: $unexpected")
   }
 
-  def terminalUpdateRequests(data: StaffMovements): immutable.Iterable[TerminalUpdateRequest] =
-    data.movements.groupBy(_.terminal).collect {
-      case (terminal, movements) if data.movements.nonEmpty =>
-        val earliest = SDate(movements.map(_.time).min).millisSinceEpoch
-        val latest = SDate(movements.map(_.time).max).millisSinceEpoch
-        (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
-          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
-        }
-    }.flatten
 
   private def staffMovementsToStaffMovementMessages(staffMovements: StaffMovements): Seq[StaffMovementMessage] =
     staffMovements.movements.map(staffMovementToStaffMovementMessage)

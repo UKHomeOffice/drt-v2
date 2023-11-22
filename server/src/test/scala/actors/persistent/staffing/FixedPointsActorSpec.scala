@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.time.SDate
 class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
   "Given a FixedPointsActor" >> {
     val now = SDate("2023-01-26T10:00:00")
-    val fpActor = system.actorOf(Props(new FixedPointsActor(() => now, 1440, 2)))
+    val fpActor = system.actorOf(Props(new FixedPointsActor(() => now)))
 
     "When I send it some fixed points, and then no fixed points" >> {
       "Then it should send minute updates to the test probe covering the period from now until now + max forecast days" >> {

@@ -31,7 +31,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val uuid = newUuidString
       val staffMovements = StaffMovements(Seq(StaffMovement(T1, "lunch start", SDate(s"2017-01-01T00:00").millisSinceEpoch, -1, uuid, createdBy = Some("batman"))))
 
-      val actor = system.actorOf(Props(new StaffMovementsActor(now, expireAfterOneDay, 1440)), "movementsActor1")
+      val actor = system.actorOf(Props(new StaffMovementsActor(now, expireAfterOneDay)), "movementsActor1")
 
       val probe = TestProbe("movements-subscriber-test")
       actor ! probe.ref

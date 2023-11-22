@@ -101,10 +101,12 @@ class PartitionedPortStateTestActor(probe: ActorRef,
           mc.minutes.headOption match {
             case None => sendStateToProbe()
             case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[CrunchMinute] =>
+              println(s"got a crunch minute container: $minuteLike")
               actor
                 .ask(GetStateForDateRange(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[CrunchMinute, TQM]]
                 .foreach(container => self ! UpdateStateCrunchMinutes(container))
             case Some(minuteLike) if minuteLike.toMinute.isInstanceOf[StaffMinute] =>
+              println(s"got a staff minute container: $minuteLike")
               actor.ask(GetStateForDateRange(minuteMillis.min, minuteMillis.max)).mapTo[MinutesContainer[StaffMinute, TM]]
                 .foreach(container => self ! UpdateStateStaffMinutes(container))
           }

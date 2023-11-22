@@ -120,22 +120,24 @@ class TestDrtActor extends Actor {
       val portStateProbe = testProbe("portstate")
       val forecastBaseArrivalsProbe = testProbe("forecast-base-arrivals")
       val forecastArrivalsProbe = testProbe("forecast-arrivals")
-//      val liveBaseArrivalsProbe = testProbe("live-base-arrivals")
       val liveArrivalsProbe = testProbe("live-arrivals")
 
 
-      val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(journalType), name = "shifts-read-actor")
-      val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(journalType), name = "fixed-points-read-actor")
-      val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(journalType), name = "staff-movements-read-actor")
+      val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
+        journalType, tc.airportConfig.minutesToCrunch), name = "shifts-read-actor")
+      val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
+        journalType, tc.now, tc.forecastMaxDays, tc.airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
+      val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
+        journalType, tc.airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
 
       val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
       val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
         tc.now, timeBeforeThisMonth(tc.now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
       val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
-        tc.now, tc.airportConfig.minutesToCrunch, tc.forecastMaxDays, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
+        tc.now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
       val staffMovementsSequentialWritesActor: ActorRef = system.actorOf(StaffMovementsActor.sequentialWritesProps(
-        tc.now, time48HoursAgo(tc.now), tc.airportConfig.minutesToCrunch, requestAndTerminateActor, system), "staff-movements-sequential-writes-actor")
+        tc.now, time48HoursAgo(tc.now), requestAndTerminateActor, system), "staff-movements-sequential-writes-actor")
 
       val manifestLookups = ManifestLookups(system)
 
@@ -255,9 +257,9 @@ class TestDrtActor extends Actor {
         val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
           RunnableOptimisation.createGraph(staffingGraphSource, portStateActor, staffMinutesProducer, "staffing").run()
 
-        shiftsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
-        fixedPointsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
-        staffMovementsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
+        liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
+        liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
+        liveStaffMovementsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
 
         flightsActor ! AddUpdatesSubscriber(crunchRequestActor)
         manifestsRouterActor ! AddUpdatesSubscriber(crunchRequestActor)

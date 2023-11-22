@@ -6,7 +6,7 @@ import actors.persistent.StreamingUpdatesActor
 import actors.persistent.staffing.FixedPointsMessageParser.fixedPointMessagesToFixedPoints
 import actors.routing.SequentialWritesActor
 import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.persistence._
 import akka.util.Timeout
 import drt.shared.{FixedPointAssignments, StaffAssignment, StaffAssignmentLike}
@@ -28,8 +28,12 @@ object FixedPointsActor {
 
   import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 
-  def streamingUpdatesProps(journalType: StreamingJournalLike): Props =
-    Props(new StreamingUpdatesActor[FixedPointAssignments](
+  def streamingUpdatesProps(journalType: StreamingJournalLike,
+                            now: () => SDateLike,
+                            forecastMaxDays: Int,
+                            minutesToCrunch: Int,
+                           ): Props =
+    Props(new StreamingUpdatesActor[FixedPointAssignments, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
       FixedPointAssignments.empty,
@@ -39,8 +43,11 @@ object FixedPointsActor {
       },
       (state, msg) => msg match {
         case msg: FixedPointsMessage =>
-          fixedPointMessagesToFixedPoints(msg.fixedPoints)
-        case _ => state
+          val newState = fixedPointMessagesToFixedPoints(msg.fixedPoints)
+          val diff = state.diff(newState)
+          val subscriberEvents = terminalUpdateRequests(diff, now, forecastMaxDays, minutesToCrunch)
+          (newState, subscriberEvents)
+        case _ => (state, Seq.empty)
       },
       (getState, getSender) => {
         case GetState =>
@@ -58,25 +65,35 @@ object FixedPointsActor {
     ))
 
   def sequentialWritesProps(now: () => SDateLike,
-                            minutesToCrunch: Int,
-                            forecastLengthDays: Int,
                             requestAndTerminateActor: ActorRef,
                             system: ActorSystem
                            )
                            (implicit timeout: Timeout): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
-      val actor = system.actorOf(Props(new FixedPointsActor(now, minutesToCrunch, forecastLengthDays)), "fixed-points-actor-writes")
+      val actor = system.actorOf(Props(new FixedPointsActor(now)), "fixed-points-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
+
+  def terminalUpdateRequests(fixedPoints: FixedPointAssignments,
+                             now: () => SDateLike,
+                             forecastMaxDays: Int,
+                             minutesToCrunch: Int,
+                            ): immutable.Iterable[TerminalUpdateRequest] =
+    fixedPoints.assignments.groupBy(_.terminal).collect {
+      case (terminal, _) if fixedPoints.assignments.nonEmpty =>
+        val earliest = now().millisSinceEpoch
+        val latest = now().addDays(forecastMaxDays).millisSinceEpoch
+        (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
+        }
+    }.flatten
 }
 
 case class SetFixedPoints(newFixedPoints: Seq[StaffAssignmentLike])
 
 case class SetFixedPointsAck(newFixedPoints: Seq[StaffAssignmentLike])
 
-class FixedPointsActor(now: () => SDateLike,
-                       minutesToCrunch: Int,
-                       forecastLengthDays: Int) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
+class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
 
   import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 
@@ -125,14 +142,11 @@ class FixedPointsActor(now: () => SDateLike,
     case SetFixedPoints(fixedPointStaffAssignments) =>
       if (fixedPointStaffAssignments != state) {
         log.info(s"Replacing fixed points state")
-        val diff = state.diff(FixedPointAssignments(fixedPointStaffAssignments))
         updateState(FixedPointAssignments(fixedPointStaffAssignments))
 
         val createdAt = now()
         val fixedPointsMessage = FixedPointsMessage(fixedPointsToFixedPointsMessages(state, createdAt), Option(createdAt.millisSinceEpoch))
-        val requests = terminalUpdateRequests(diff)
-        println(s"Sending requests: $requests")
-        persistAndMaybeSnapshotWithAck(fixedPointsMessage, List((sender(), requests)))
+        persistAndMaybeSnapshotWithAck(fixedPointsMessage, List((sender(), StatusReply.Ack)))
       } else {
         log.info(s"No change. Nothing to persist")
         sender() ! Iterable()
@@ -153,16 +167,6 @@ class FixedPointsActor(now: () => SDateLike,
 
     case unexpected => log.info(s"unhandled message: $unexpected")
   }
-
-  def terminalUpdateRequests(fixedPoints: FixedPointAssignments): immutable.Iterable[TerminalUpdateRequest] =
-    fixedPoints.assignments.groupBy(_.terminal).collect {
-      case (terminal, _) if fixedPoints.assignments.nonEmpty =>
-        val earliest = now().millisSinceEpoch
-        val latest = now().addDays(forecastLengthDays).millisSinceEpoch
-        (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
-          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
-        }
-    }.flatten
 }
 
 object FixedPointsMessageParser {

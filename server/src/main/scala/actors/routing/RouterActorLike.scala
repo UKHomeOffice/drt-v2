@@ -180,7 +180,6 @@ class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor wi
 
   var requestsQueue: List[(ActorRef, U)] = List.empty
   var processingRequest: Boolean = false
-  var subscribers: List[ActorRef] = List.empty
 
   def handleUpdateAndAck(update: U, replyTo: ActorRef): Any = {
     processingRequest = true
@@ -188,9 +187,7 @@ class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor wi
     eventualAck
       .onComplete { tryResponse =>
         tryResponse match {
-          case Success(response) =>
-            println(s"Received response: $response")
-            subscribers.foreach(_ ! response)
+          case Success(_) =>
             replyTo ! StatusReply.Ack
           case Failure(exception) =>
             log.error(exception, s"Failed to handle update $update. Re-queuing ${update.getClass.getSimpleName}")
@@ -205,14 +202,8 @@ class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor wi
   }
 
   override def receive: Receive =
-    receiveSubscriber orElse
-      receiveProcessRequest orElse
+    receiveProcessRequest orElse
       receiveUpdates
-
-  private def receiveSubscriber: Receive = {
-    case AddUpdatesSubscriber(subscriber) =>
-      subscribers = subscriber :: subscribers
-  }
 
   private def receiveProcessRequest: Receive = {
     case ProcessNextUpdateRequest =>
@@ -233,7 +224,6 @@ class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor wi
       self ! ProcessNextUpdateRequest
 
     case update: U =>
-      println(s"Received updates: $update")
       requestsQueue = (sender(), update) :: requestsQueue
       self ! ProcessNextUpdateRequest
   }

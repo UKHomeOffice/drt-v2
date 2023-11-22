@@ -138,13 +138,12 @@ object TestActors {
     extends ShiftsActor(now, expireBefore) with Resettable {
     override def resetState(): Unit = {
       state = initialState
-      subscribers = List()
     }
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestFixedPointsActor(now: () => SDateLike, minutesToCrunch: Int) extends FixedPointsActor(now, minutesToCrunch, 5) with Resettable {
+  class TestFixedPointsActor(now: () => SDateLike, minutesToCrunch: Int) extends FixedPointsActor(now) with Resettable {
     override def resetState(): Unit = {
       state = initialState
     }
@@ -154,7 +153,7 @@ object TestActors {
 
   class TestStaffMovementsActor(now: () => SDateLike,
                                 expireBefore: () => SDateLike,
-                                minutesToCrunch: Int) extends StaffMovementsActor(now, expireBefore, minutesToCrunch) with Resettable {
+                                minutesToCrunch: Int) extends StaffMovementsActor(now, expireBefore) with Resettable {
     override def resetState(): Unit = {
       state = initialState
     }

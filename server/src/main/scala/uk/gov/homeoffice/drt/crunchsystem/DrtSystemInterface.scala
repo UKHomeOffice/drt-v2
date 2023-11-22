@@ -140,18 +140,21 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   private val manifestsFeedStatusActor: ActorRef =
     system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
 
-  val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(journalType), name = "shifts-read-actor")
-  val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(journalType), name = "fixed-points-read-actor")
-  private val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(journalType), name = "staff-movements-read-actor")
+  val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
+    journalType, airportConfig.minutesToCrunch), name = "shifts-read-actor")
+  val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
+    journalType, now, params.forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
+  private val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
+    journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
 
   val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
   val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
     now, timeBeforeThisMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
   val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
-    now, airportConfig.minutesToCrunch, params.forecastMaxDays, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
+    now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
   val staffMovementsSequentialWritesActor: ActorRef = system.actorOf(StaffMovementsActor.sequentialWritesProps(
-    now, time48HoursAgo(now), airportConfig.minutesToCrunch, requestAndTerminateActor, system), "staff-movements-sequential-writes-actor")
+    now, time48HoursAgo(now), requestAndTerminateActor, system), "staff-movements-sequential-writes-actor")
 
   val flightsRouterActor: ActorRef
   val queueLoadsRouterActor: ActorRef
@@ -399,9 +402,9 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
         startOptimisationGraph(staffMinutesFlow, actors.staffingQueueActor, staffQueue, minuteLookups.staffMinutesRouterActor, "staffing")
 
-      shiftsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
-      fixedPointsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
-      staffMovementsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
+      liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
+      liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
+      liveStaffMovementsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
 
       val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
       log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString}")

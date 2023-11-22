@@ -5,10 +5,7 @@ import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
-class FixedPointsReadActor(pointInTime: SDateLike,
-                           val now: () => SDateLike,
-                           minutesToCrunch: Int,
-                           forecastLengthDays: Int) extends FixedPointsActor(() => pointInTime, minutesToCrunch, forecastLengthDays) {
+class FixedPointsReadActor(pointInTime: SDateLike, val now: () => SDateLike) extends FixedPointsActor(() => pointInTime) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: FixedPointsStateSnapshotMessage => state = fixedPointMessagesToFixedPoints(snapshot.fixedPoints.toList)
   }

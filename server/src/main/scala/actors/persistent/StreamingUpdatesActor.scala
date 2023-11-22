@@ -12,6 +12,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
+import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 
 object StreamingUpdatesActor {
   def startUpdatesStream(system: ActorSystem, journalType: StreamingJournalLike, persistenceId: String, receivingRef: ActorRef)
@@ -29,13 +30,13 @@ object StreamingUpdatesActor {
 
 }
 
-class StreamingUpdatesActor[T](val persistenceId: String,
-                               journalType: StreamingJournalLike,
-                               initialState: T,
-                               snapshotMessageToState: Any => T,
-                               eventToState: (T, Any) => T,
-                               query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
-                              ) extends PersistentActor {
+class StreamingUpdatesActor[T, S](val persistenceId: String,
+                                  journalType: StreamingJournalLike,
+                                  initialState: T,
+                                  snapshotMessageToState: Any => T,
+                                  eventToState: (T, Any) => (T, S),
+                                  query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
+                                 ) extends PersistentActor {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -54,7 +55,7 @@ class StreamingUpdatesActor[T](val persistenceId: String,
     case SnapshotOffer(_, msg) =>
       state = snapshotMessageToState(msg)
     case event: GeneratedMessage =>
-      state = eventToState(state, event)
+      state = eventToState(state, event)._1
     case RecoveryCompleted =>
       log.info(s"Recovery complete. Starting update stream")
       val killSwitch = startUpdatesStream(lastSequenceNr)
@@ -63,7 +64,9 @@ class StreamingUpdatesActor[T](val persistenceId: String,
 
   private val receiveEvent: Receive = {
     case EventEnvelope(_, _, _, msg) =>
-      state = eventToState(state, msg)
+      val (newState, subscriberEvent) = eventToState(state, msg)
+      state = newState
+      subscribers.foreach(_ ! subscriberEvent)
       sender() ! Ack
   }
 
@@ -77,15 +80,21 @@ class StreamingUpdatesActor[T](val persistenceId: String,
       maybeKillSwitch.foreach(_.shutdown())
   }
 
-  private val receiveUnknown: Receive = {
-    case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")
+  private val receiveSubscriber: Receive = {
+    case AddUpdatesSubscriber(subscriber) =>
+      subscribers = subscribers + subscriber
   }
 
   private val receiveQuery: Receive = query(() => state, sender)
 
+  private val receiveUnknown: Receive = {
+    case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")
+  }
+
   override def receiveCommand: Receive =
     receiveEvent orElse
-      receiveQuery orElse
       receiveStreamEvent orElse
+      receiveSubscriber orElse
+      receiveQuery orElse
       receiveUnknown
 }
