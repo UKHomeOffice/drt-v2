@@ -30,6 +30,7 @@ import uk.gov.homeoffice.drt.testsystem.TestActors.MockAggregatedArrivalsActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
+import uk.gov.homeoffice.drt.crunchsystem.ProdPersistentStateActors
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -269,17 +270,25 @@ class TestDrtActor extends Actor {
         case Some(actor) => actor
       }
 
+      val crunchActors = ProdPersistentStateActors(
+        system = system,
+        now = tc.now,
+        minutesToCrunch = tc.airportConfig.minutesToCrunch,
+        offsetMinutes = tc.airportConfig.crunchOffsetMinutes,
+        maxForecastDays = tc.maxDaysToCrunch,
+        manifestLookups = manifestLookups,
+        portCode = tc.airportConfig.portCode,
+        paxFeedSourceOrder = paxFeedSourceOrder,
+      )
+
       val crunchInputs = CrunchSystem(CrunchProps(
-        logLabel = tc.logLabel,
         airportConfig = tc.airportConfig,
         portStateActor = portStateActor,
-        flightsActor = flightsActor,
         maxDaysToCrunch = tc.maxDaysToCrunch,
         expireAfterMillis = tc.expireAfterMillis,
-        useNationalityBasedProcessingTimes = false,
         now = tc.now,
         manifestsLiveSource = manifestsSource,
-        voyageManifestsActor = manifestsRouterActor,
+        crunchActors = crunchActors,
         initialPortState = tc.initialPortState,
         initialForecastBaseArrivals = tc.initialForecastBaseArrivals,
         initialForecastArrivals = tc.initialForecastArrivals,
@@ -289,15 +298,15 @@ class TestDrtActor extends Actor {
         arrivalsForecastFeed = Feed(forecastArrivals, 1.second, 5.second),
         arrivalsLiveBaseFeed = Feed(liveBaseArrivals, 1.second, 1.second),
         arrivalsLiveFeed = Feed(liveArrivals, 1.second, 500.millis),
-        passengerAdjustments = tc.passengerAdjustments,
+        flushArrivalsSource = flushArrivalsSource,
+        flushArrivalsOnStart = tc.recrunchOnStart,
         refreshArrivalsOnStart = tc.refreshArrivalsOnStart,
         optimiser = tc.cruncher,
         startDeskRecs = startDeskRecs,
         arrivalsAdjustments = tc.arrivalsAdjustments,
-        flushArrivalsSource = flushArrivalsSource,
         addArrivalPredictions = tc.addTouchdownPredictions,
         setPcpTimes = tc.setPcpTimes,
-        flushArrivalsOnStart = tc.recrunchOnStart,
+        passengerAdjustments = tc.passengerAdjustments,
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(

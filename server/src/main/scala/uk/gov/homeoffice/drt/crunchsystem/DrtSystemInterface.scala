@@ -486,10 +486,11 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       portStateActor = portStateActor,
-      flightsActor = flightsRouterActor,
+//      flightsActor = flightsRouterActor,
       maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = DrtStaticParameters.expireAfterMillis,
-      useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
+//      useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
+      now = now,
       manifestsLiveSource = voyageManifestsLiveSource,
       crunchActors = actors,
       initialPortState = initialPortState,

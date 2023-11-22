@@ -35,16 +35,11 @@ case class CrunchSystem[FT](forecastBaseArrivalsResponse: EnabledFeedWithFrequen
                             killSwitches: List[UniqueKillSwitch]
                            )
 
-case class CrunchProps[FT](logLabel: String = "",
-                           airportConfig: AirportConfig,
+case class CrunchProps[FT](airportConfig: AirportConfig,
                            portStateActor: ActorRef,
-                           flightsActor: ActorRef,
                            maxDaysToCrunch: Int,
                            expireAfterMillis: Int,
-                           crunchOffsetMillis: MillisSinceEpoch = 0,
-                           useNationalityBasedProcessingTimes: Boolean,
                            now: () => SDateLike = () => SDate.now(),
-                           initialFlightsWithSplits: Option[FlightsWithSplitsDiff] = None,
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            crunchActors: PersistentStateActors,
                            initialPortState: Option[PortState] = None,
@@ -84,7 +79,6 @@ object CrunchSystem {
       initialFlightsWithSplits.map(_.flightsToUpdate.map(fws => (fws.apiFlight.unique, fws.apiFlight))).getOrElse(List())
 
     val arrivalsStage = new ArrivalsGraphStage(
-      name = props.logLabel,
       initialForecastBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastBaseArrivals,
       initialForecastArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialForecastArrivals,
       initialLiveBaseArrivals = if (props.refreshArrivalsOnStart) SortedMap[UniqueArrival, Arrival]() else props.initialLiveBaseArrivals,
