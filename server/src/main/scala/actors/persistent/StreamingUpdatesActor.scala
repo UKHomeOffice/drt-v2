@@ -45,6 +45,8 @@ class StreamingUpdatesActor[T](val persistenceId: String,
 
   var state: T = initialState
 
+  var subscribers = Set.empty[ActorRef]
+
   val startUpdatesStream: Long => UniqueKillSwitch =
     StreamingUpdatesActor.startUpdatesStream(context.system, journalType, persistenceId, self)
 

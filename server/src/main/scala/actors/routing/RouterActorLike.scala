@@ -1,7 +1,7 @@
 package actors.routing
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
+import actors.routing.minutes.MinutesActorLike.{ProcessNextUpdateRequest, QueueUpdateRequest}
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.pattern.{StatusReply, ask, pipe}
@@ -15,6 +15,7 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 trait RouterActorLikeWithSubscriber[U <: Updates, P] extends RouterActorLike[U, P] {
   var updatesSubscribers: List[ActorRef] = List.empty
@@ -185,30 +186,32 @@ class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor wi
     processingRequest = true
     val eventualAck = performUpdate(update)
     eventualAck
-      .onComplete { response =>
+      .onComplete { tryResponse =>
+        tryResponse match {
+          case Success(response) =>
+            println(s"Received response: $response")
+            subscribers.foreach(_ ! response)
+            replyTo ! StatusReply.Ack
+          case Failure(exception) =>
+            log.error(exception, s"Failed to handle update $update. Re-queuing ${update.getClass.getSimpleName}")
+            replyTo ! StatusReply.Error(exception)
+            self ! QueueUpdateRequest(update, replyTo)
+        }
         processingRequest = false
-        subscribers.foreach(_ ! response)
-        replyTo ! StatusReply.Ack
         self ! ProcessNextUpdateRequest
       }
+
     eventualAck
   }
 
   override def receive: Receive =
     receiveSubscriber orElse
-      receiveUpdates orElse
       receiveProcessRequest orElse
-      receiveUnexpected
+      receiveUpdates
 
   private def receiveSubscriber: Receive = {
     case AddUpdatesSubscriber(subscriber) =>
       subscribers = subscriber :: subscribers
-  }
-
-  private def receiveUpdates: Receive = {
-    case updates: U =>
-      requestsQueue = (sender(), updates) :: requestsQueue
-      self ! ProcessNextUpdateRequest
   }
 
   private def receiveProcessRequest: Receive = {
@@ -224,8 +227,15 @@ class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor wi
       }
   }
 
-  private def receiveUnexpected: Receive = {
-    case unexpected => log.warning(s"Got an unexpected message: ${unexpected.getClass}")
+  private def receiveUpdates: Receive = {
+    case qur: QueueUpdateRequest[U] =>
+      requestsQueue = (qur.replyTo, qur.update) :: requestsQueue
+      self ! ProcessNextUpdateRequest
+
+    case update: U =>
+      println(s"Received updates: $update")
+      requestsQueue = (sender(), update) :: requestsQueue
+      self ! ProcessNextUpdateRequest
   }
 }
 

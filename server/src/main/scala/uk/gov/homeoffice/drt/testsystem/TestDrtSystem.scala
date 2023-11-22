@@ -272,7 +272,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
       refreshArrivalsOnStart = false,
-      startDeskRecs = startDeskRecs(actors, SortedSet(), SortedSet(), SortedSet(), SortedSet()),
+      startUpdateGraphs = startUpdateGraphs(actors, SortedSet(), SortedSet(), SortedSet(), SortedSet()),
       actors = actors,
     )
 

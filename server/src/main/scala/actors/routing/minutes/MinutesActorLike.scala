@@ -37,6 +37,7 @@ object MinutesActorLike {
   type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[UpdatedMillis]
 
   case object ProcessNextUpdateRequest
+  case class QueueUpdateRequest[U](update: U, replyTo: ActorRef)
 
 }
 

@@ -43,6 +43,7 @@ class PortStateSpec extends CrunchTestLike {
           case (TQM(T1, Queues.EeaDesk, m), cm) if m == millis => cm.paxLoad == 10
           case _ => false
         }
+        println(s"got an update: $staffUpdated && $paxLoadUnchanged")
 
         staffUpdated && paxLoadUnchanged
     }

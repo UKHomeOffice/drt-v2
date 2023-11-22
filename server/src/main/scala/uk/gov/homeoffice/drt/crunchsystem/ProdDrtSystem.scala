@@ -157,7 +157,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
           initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
           initialLiveArrivals = maybeLiveArrivals,
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
-          startDeskRecs = startDeskRecs(actors, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue),
+          startUpdateGraphs = startUpdateGraphs(actors, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue),
         )
 
         fcstBaseActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)

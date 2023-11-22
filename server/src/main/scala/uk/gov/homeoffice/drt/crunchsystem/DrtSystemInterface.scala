@@ -339,7 +339,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] =
     ManifestsProvider(manifestsRouterActorReadOnly)
 
-  val startDeskRecs: (
+  val startUpdateGraphs: (
     PersistentStateActors,
       SortedSet[ProcessingRequest],
       SortedSet[ProcessingRequest],
@@ -354,7 +354,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
       val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
-      val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
+      val passengerLoadsFlow = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
         liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsProvider),
         historicManifestsProvider =
@@ -369,18 +369,18 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       )
 
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =
-        startOptimisationGraph(passengerLoadsProducer, actors.crunchQueueActor, crunchQueue, minuteLookups.queueLoadsMinutesActor, "passenger-loads")
+        startOptimisationGraph(passengerLoadsFlow, actors.crunchQueueActor, crunchQueue, minuteLookups.queueLoadsMinutesActor, "passenger-loads")
 
-      val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
+      val deskRecsFlow = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
         loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
         maxDesksProviders = deskLimitsProviders,
         loadsToQueueMinutes = portDeskRecs.loadsToDesks,
       )
 
       val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
-        startOptimisationGraph(deskRecsProducer, actors.deskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesRouterActor, "desk-recs")
+        startOptimisationGraph(deskRecsFlow, actors.deskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesRouterActor, "desk-recs")
 
-      val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
+      val deploymentsFlow = DynamicRunnableDeployments.crunchRequestsToDeployments(
         loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
         staffProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
         staffToDeskLimits = staffToDeskLimits,
@@ -388,15 +388,17 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       )
 
       val (deploymentRequestQueueActor, deploymentsKillSwitch) =
-        startOptimisationGraph(deploymentsProducer, actors.deploymentQueueActor, deploymentQueue, minuteLookups.queueMinutesRouterActor, "deployments")
+        startOptimisationGraph(deploymentsFlow, actors.deploymentQueueActor, deploymentQueue, minuteLookups.queueMinutesRouterActor, "deployments")
 
       val shiftsProvider = (r: ProcessingRequest) => liveShiftsReadActor.ask(r).mapTo[ShiftAssignments]
       val fixedPointsProvider = (r: ProcessingRequest) => liveFixedPointsReadActor.ask(r).mapTo[FixedPointAssignments]
       val movementsProvider = (r: ProcessingRequest) => liveStaffMovementsReadActor.ask(r).mapTo[StaffMovements]
 
-      val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
+      val staffMinutesFlow = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
+
       val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
-        startOptimisationGraph(staffMinutesProducer, actors.staffingQueueActor, staffQueue, minuteLookups.staffMinutesRouterActor, "staffing")
+        startOptimisationGraph(staffMinutesFlow, actors.staffingQueueActor, staffQueue, minuteLookups.staffMinutesRouterActor, "staffing")
+
       shiftsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       fixedPointsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       staffMovementsSequentialWritesActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
@@ -455,7 +457,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
                         initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         refreshArrivalsOnStart: Boolean,
-                        startDeskRecs: () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
+                        startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] =
       Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -486,10 +488,8 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       portStateActor = portStateActor,
-//      flightsActor = flightsRouterActor,
       maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = DrtStaticParameters.expireAfterMillis,
-//      useNationalityBasedProcessingTimes = params.useNationalityBasedProcessingTimes,
       now = now,
       manifestsLiveSource = voyageManifestsLiveSource,
       crunchActors = actors,
@@ -505,7 +505,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       passengerAdjustments = PaxDeltas.applyAdjustmentsToArrivals(passengersActorProvider, aclPaxAdjustmentDays),
       refreshArrivalsOnStart = refreshArrivalsOnStart,
       optimiser = optimiser,
-      startDeskRecs = startDeskRecs,
+      startDeskRecs = startUpdateGraphs,
       arrivalsAdjustments = arrivalAdjustments,
       flushArrivalsSource = flushArrivalsSource,
       addArrivalPredictions = addArrivalPredictions,
