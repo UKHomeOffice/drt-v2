@@ -6,21 +6,12 @@ import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
 import play.api.test._
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 
 class DropInsControllerSpec extends PlaySpec with MockitoSugar {
-
   "DropInsController" should {
-
     "get published drop-ins" in {
-
-      val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
-      }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
-      val govNotify = mock[GovNotifyEmail]
-
-      val controller = new DropInsController(Helpers.stubControllerComponents(), drtSystemInterface, govNotify)
+      val controller: DropInsController = dropInSessionsController
 
       val result = controller.dropIns().apply(FakeRequest())
 
@@ -34,15 +25,7 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar {
     }
 
     "get drop-ins in registration" in {
-
-      val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
-      }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
-      val govNotify = mock[GovNotifyEmail]
-
-      val controller = new DropInsController(Helpers.stubControllerComponents(), drtSystemInterface, govNotify)
+      val controller: DropInsController = dropInSessionsController
 
       val result = controller.getDropInRegistrations().apply(FakeRequest())
 
@@ -54,17 +37,9 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar {
 
       contentAsString(result) must include(resultExpected)
     }
-
+    
     "create drop-ins registration" in {
-
-      val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
-      }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
-      val govNotify = mock[GovNotifyEmail]
-
-      val controller = new DropInsController(Helpers.stubControllerComponents(), drtSystemInterface, govNotify)
+      val controller: DropInsController = dropInSessionsController
 
       val result = controller.createDropInRegistration().apply(FakeRequest().withTextBody(""""1"""")
         .withHeaders("X-Auth-Email" -> "someone@test.com", "X-Auth-Roles" -> "border-force-staff,TEST"))
@@ -73,5 +48,17 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar {
 
       contentAsString(result) must include("Successfully registered drop-ins")
     }
+  }
+
+  private def dropInSessionsController = {
+    val module = new DRTModule() {
+      override val isTestEnvironment: Boolean = true
+    }
+
+    val drtSystemInterface: DrtSystemInterface = module.provideDrtSystemInterface
+
+    val govNotify = mock[GovNotifyEmail]
+
+    new DropInsController(Helpers.stubControllerComponents(), drtSystemInterface, govNotify)
   }
 }
