@@ -131,6 +131,8 @@ GET           /drop-in-registrations                                            
 
 GET          /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
 
+POST          /close-banner                                                          controllers.application.UserFeedbackController.closeBanner
+
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 
 GET           /is-new-feature-available-since-last-login                              controllers.Application.isNewFeatureAvailableSinceLastLogin

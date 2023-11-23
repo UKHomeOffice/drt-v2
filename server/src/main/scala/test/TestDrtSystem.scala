@@ -23,6 +23,7 @@ import test.roles.TestUserRoleProvider
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.db.{IUserFeedbackDao, UserFeedbackDao, UserFeedbackRow}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
@@ -298,8 +299,17 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
     crunchInputs.killSwitches
   }
+
+  override val userFeedbackService: IUserFeedbackDao = MockUserFeedbackDao()
 }
 
+case class MockUserFeedbackDao() extends IUserFeedbackDao {
+  override def insertOrUpdate(userFeedbackRow: UserFeedbackRow): Future[Int] = Future.successful(1)
+
+  override def selectAll()(implicit executionContext: ExecutionContext): Future[Seq[UserFeedbackRow]] = Future.successful(Seq())
+
+  override def selectByEmail(email: String): Future[Seq[UserFeedbackRow]] = Future.successful(Seq())
+}
 
 class RestartActor(startSystem: () => List[KillSwitch],
                    testActors: List[ActorRef]) extends Actor with ActorLogging {

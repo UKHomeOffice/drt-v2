@@ -31,6 +31,7 @@ import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.db.{IUserFeedbackDao, UserFeedbackDao}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate}
@@ -240,5 +241,5 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     }
   }
 
-  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(PostgresTables, airportConfig.portCode)
+  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(PostgresTables.db)
 }
