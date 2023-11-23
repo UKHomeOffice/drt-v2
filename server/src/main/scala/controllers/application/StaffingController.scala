@@ -65,7 +65,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
-          ctrl.shiftsSequentialWritesActor ! SetFixedPoints(shifts.assignments)
+          ctrl.shiftsSequentialWritesActor ! SetShifts(shifts.assignments)
           Accepted
         case None =>
           BadRequest
@@ -75,14 +75,14 @@ class StaffingController @Inject()(cc: ControllerComponents,
 
   def getShiftsForMonth(month: MillisSinceEpoch): Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
-      val shiftsFuture = ctrl.liveShiftsReadActor ? GetState
-
-      val monthOfShifts = shiftsFuture.collect {
-        case shifts: ShiftAssignments =>
-          log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString}")
-          val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
-          MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
-      }
+      val monthOfShifts = ctrl.liveShiftsReadActor
+        .ask(GetState)
+        .collect {
+          case shifts: ShiftAssignments =>
+            log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString}")
+            val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
+            MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
+        }
       monthOfShifts.map(s => Ok(write(s)))
     }
   }
@@ -104,8 +104,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
             classOf[FixedPointsReadActor],
             date,
             ctrl.now,
-            airportConfig.minutesToCrunch,
-            ctrl.params.forecastMaxDays
           ), actorName)
 
           fixedPointsReadActor.ask(GetState)
@@ -218,7 +216,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
       classOf[StaffMovementsReadActor],
       pointInTime,
       expireBefore,
-      airportConfig.minutesToCrunch
     ), actorName)
 
     staffMovementsReadActor.ask(GetState)

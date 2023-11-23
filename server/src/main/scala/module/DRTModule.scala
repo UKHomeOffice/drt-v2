@@ -22,12 +22,15 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class DRTModule extends AbstractModule with AkkaGuiceSupport {
-  implicit lazy val config: Configuration = new Configuration(ConfigFactory.load)
-  lazy val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
+  val config: Configuration = new Configuration(ConfigFactory.load)
+
+  val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
+
   private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, MockDrtParameters())
-  implicit lazy val mat: Materializer = Materializer.createMaterializer(provideActorSystem)
-  implicit lazy val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit lazy val timeout: Timeout = new Timeout(5.seconds)
+  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config))
+
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  implicit val timeout: Timeout = new Timeout(5.seconds)
 
   override def configure(): Unit = {
     if (isTestEnvironment) {
@@ -71,11 +74,10 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   def provideDrtSystemInterface: DrtSystemInterface =
-    if (isTestEnvironment) {
+    if (isTestEnvironment)
       drtTestSystem
-    } else {
-      ProdDrtSystem(airportConfig, ProdDrtParameters(config))
-    }
+    else
+      drtProdSystem
 
   @Provides
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(config.get[String]("notifications.gov-notify-api-key"))

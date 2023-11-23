@@ -14,7 +14,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfShifts]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetShiftsForMonth(month) =>
-      val url = s"/shifts-for-month/${month.millisSinceEpoch}"
+      val url = s"shifts-for-month/${month.millisSinceEpoch}"
       val apiCallEffect = Effect(DrtApi.get(url)
         .map(r => SetShiftsForMonth(read[MonthOfShifts](r.responseText)))
         .recoverWith {
