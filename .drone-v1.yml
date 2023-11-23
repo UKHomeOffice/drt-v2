@@ -76,6 +76,8 @@ steps:
     when:
       event:
         - push
+      branch:
+        - master
     depends_on:
       - drone_s3_cache_pull
 
@@ -89,6 +91,8 @@ steps:
     when:
       event:
         - push
+      branch:
+        - master
     depends_on:
       - analysis
       - build
@@ -218,6 +222,7 @@ services:
     image: sspringett/nvdmirror
     ports:
       - 8008
+
 volumes:
   - name: dockerclientconfig
     temp: { }
