@@ -35,8 +35,6 @@ case class SetShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
 case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
-case class UpdateShiftsAck(shiftsToUpdate: Seq[StaffAssignmentLike])
-
 case object SaveSnapshot
 
 object ShiftsActor {
@@ -57,7 +55,6 @@ object ShiftsActor {
           val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
           val newState = ShiftAssignments(updatedShifts).purgeExpired(timeBeforeThisMonth(now))
           val subscriberEvents = terminalUpdateRequests(shiftsToRecover, minutesToCrunch)
-//          println(s"newState: $newState")
           (newState, subscriberEvents)
         case _ => (state, Seq.empty)
       },
@@ -71,7 +68,6 @@ object ShiftsActor {
             assignment.terminal == terminal &&
             (sdate.millisSinceEpoch <= assignment.end || assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch)
           })
-//          println(s"got state request for $localDate: ${assignmentsForDate}")
           getSender() ! assignmentsForDate
       }
     ))

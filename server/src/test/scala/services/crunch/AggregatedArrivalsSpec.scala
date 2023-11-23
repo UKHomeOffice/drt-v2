@@ -31,7 +31,8 @@ object RemovalHandled
 
 class TestAggregatedArrivalsActor(arrivalTable: ArrivalTableLike, probe: ActorRef) extends AggregatedArrivalsActor(arrivalTable) {
   def testReceive: Receive = {
-    case GetArrivals => sender() ! arrivalTable.selectAll
+    case GetArrivals =>
+      sender() ! arrivalTable.selectAll
   }
 
   override def receive: Receive = testReceive orElse super.receive
@@ -79,107 +80,113 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     system.actorOf(Props(classOf[TestAggregatedArrivalsActor], arrivalTable, actorProbe), name = "test-aggregated-arrivals-actor")
   }
 
-  "Given a live arrival " +
-    "When I inspect the message received by the aggregated arrivals actor " +
-    "Then I should see no removals and one update " >> {
+  "Given a live arrival " >> {
+    "When I inspect the message received by the aggregated arrivals actor " >> {
+      "Then I should see no removals and one update " >> {
 
-    val scheduled = "2017-01-01T00:00Z"
+        val scheduled = "2017-01-01T00:00Z"
 
-    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21),None)))
-    val liveFlights = Flights(List(liveArrival))
+        val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
+        val liveFlights = Flights(List(liveArrival))
 
-    val testProbe = TestProbe("arrivals-probe")
+        val testProbe = TestProbe("arrivals-probe")
 
-    val crunch = runCrunchGraph(TestConfig(
-      now = () => SDate(scheduled),
-      maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
-    ))
+        val crunch = runCrunchGraph(TestConfig(
+          now = () => SDate(scheduled),
+          maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
+        ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
-    testProbe.expectMsg(UpdateHandled)
+        testProbe.expectMsg(UpdateHandled)
 
-    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
-      case ag: AggregatedArrivals => ag
+        val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
+          case ag: AggregatedArrivals => ag
+        }
+
+        val expected = AggregatedArrival(liveArrival, defaultAirportConfig.portCode.iata)
+
+        arrivalsResult === AggregatedArrivals(Seq(expected))
+      }
     }
-
-    val expected = AggregatedArrival(liveArrival, defaultAirportConfig.portCode.iata)
-
-    arrivalsResult === AggregatedArrivals(Seq(expected))
   }
 
-  "Given an existing arrival which is due to expire and a new live arrival " +
-    "When I inspect the aggregated arrivals " +
-    "Then I should see both arrivals, ie the expired arrival is not removed because it's in the past " >> {
+  "Given an existing arrival which is due to expire and a new live arrival " >> {
+    "When I inspect the aggregated arrivals " >> {
+      "Then I should see both arrivals, ie the expired arrival is not removed because it's in the past " >> {
 
-    val scheduledExpired = "2017-01-05T00:00Z"
-    val scheduled = "2017-01-05T00:01Z"
+        val scheduledExpired = "2017-01-05T00:00Z"
+        val scheduled = "2017-01-05T00:01Z"
 
-    val expiredArrival = ArrivalGenerator.arrival(schDt = scheduledExpired, iata = "BA0022", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21),None)))
+        val expiredArrival = ArrivalGenerator.arrival(schDt = scheduledExpired, iata = "BA0022", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
 
-    table.insertOrUpdateArrival(expiredArrival)
+        table.insertOrUpdateArrival(expiredArrival)
 
-    val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21),None)))
-    val liveFlights = Flights(List(liveArrival))
+        val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
+        val liveFlights = Flights(List(liveArrival))
 
-    val testProbe = TestProbe("arrivals-probe")
+        val testProbe = TestProbe("arrivals-probe")
 
-    val crunch = runCrunchGraph(TestConfig(
-      now = () => SDate(scheduled),
-      expireAfterMillis = 250,
-      maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
-    ))
+        val crunch = runCrunchGraph(TestConfig(
+          now = () => SDate(scheduled),
+          expireAfterMillis = 250,
+          maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table))
+        ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
 
-    testProbe.expectMsg(UpdateHandled)
+        testProbe.expectMsg(UpdateHandled)
 
-    val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
-      case ag: AggregatedArrivals => ag.arrivals.toSet
+        val arrivalsResult = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
+          case ag: AggregatedArrivals => ag.arrivals.toSet
+        }
+
+        val expected = Set(
+          AggregatedArrival(liveArrival, defaultAirportConfig.portCode.iata),
+          AggregatedArrival(expiredArrival, defaultAirportConfig.portCode.iata)
+        )
+
+        arrivalsResult === expected
+      }
     }
-
-    val expected = Set(
-      AggregatedArrival(liveArrival, defaultAirportConfig.portCode.iata),
-      AggregatedArrival(expiredArrival, defaultAirportConfig.portCode.iata)
-    )
-
-    arrivalsResult === expected
   }
 
-  "Given an existing future base arrival followed by an empty list of base arrivals " +
-    "When I inspect the aggregated arrivals " +
-    "Then I should see no arrivals" >> {
+  "Given an existing future base arrival followed by an empty list of base arrivals " >> {
+    "When I inspect the aggregated arrivals " >> {
+      "Then I should see no arrivals" >> {
 
-    val scheduledDescheduled = "2017-01-10T00:00Z"
-    val scheduled = "2017-01-05T00:00Z"
+        val scheduledDescheduled = "2017-01-10T00:00Z"
+        val scheduled = "2017-01-05T00:00Z"
 
-    val descheduledArrival = ArrivalGenerator.arrival(schDt = scheduledDescheduled, iata = "BA0022", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21),None)))
+        val descheduledArrival = ArrivalGenerator.arrival(schDt = scheduledDescheduled, iata = "BA0022", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
 
-    table.insertOrUpdateArrival(descheduledArrival)
+        table.insertOrUpdateArrival(descheduledArrival)
 
-    val testProbe = TestProbe("arrivals-probe")
+        val testProbe = TestProbe("arrivals-probe")
 
-    val crunch = runCrunchGraph(TestConfig(
-      now = () => SDate(scheduled),
-      expireAfterMillis = 250,
-      maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table)),
-      forecastMaxDays = 10
-    ))
+        val crunch = runCrunchGraph(TestConfig(
+          now = () => SDate(scheduled),
+          expireAfterMillis = 250,
+          maybeAggregatedArrivalsActor = Option(aggregatedArrivalsTestActor(testProbe.ref, table)),
+          forecastMaxDays = 10
+        ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival))))
-    testProbe.expectMsg(UpdateHandled)
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival))))
+        testProbe.expectMsg(UpdateHandled)
 
-    val arrivalsResult1 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
-      case ag: AggregatedArrivals => ag.arrivals.toSet
+        val arrivalsResult1 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
+          case ag: AggregatedArrivals => ag.arrivals.toSet
+        }
+
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
+        testProbe.expectMsg(RemovalHandled)
+
+        val arrivalsResult2 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
+          case ag: AggregatedArrivals => ag.arrivals.toSet
+        }
+
+        arrivalsResult1.size === 1 && arrivalsResult2 === Set()
+      }
     }
-
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
-    testProbe.expectMsg(RemovalHandled)
-
-    val arrivalsResult2 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
-      case ag: AggregatedArrivals => ag.arrivals.toSet
-    }
-
-    arrivalsResult1.size === 1 && arrivalsResult2 === Set()
   }
 }

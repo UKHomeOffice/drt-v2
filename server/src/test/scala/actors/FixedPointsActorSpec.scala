@@ -3,10 +3,11 @@ package actors
 import actors.persistent.staffing._
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern.StatusReply
-import akka.testkit.ImplicitSender
+import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared._
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -20,6 +21,31 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
   import StaffAssignmentGenerator._
 
   val forecastLengthDays = 2
+
+  "Given a FixedPointsActor" >> {
+    val now = SDate("2023-01-26T10:00:00")
+    val writeActor = newStaffActor(() => now)
+
+    val readActor = newReadActor(() => now)
+    val updatesProbe = TestProbe()
+    readActor ! AddUpdatesSubscriber(updatesProbe.ref)
+
+    "When I send it some fixed points, and then no fixed points" >> {
+      "Then it should send minute updates to the test probe covering the period from now until now + max forecast days" >> {
+        writeActor ! SetFixedPoints(Seq(StaffAssignment("assignment", T1, now.millisSinceEpoch, now.addMinutes(30).millisSinceEpoch, 1, None)))
+
+        val expectedRequests = (0 to 2).map(day => TerminalUpdateRequest(T1, now.addDays(day).toLocalDate, 0, 1440))
+
+        updatesProbe.expectMsg(expectedRequests)
+
+        writeActor ! SetFixedPoints(Seq())
+
+        updatesProbe.expectMsg(expectedRequests)
+
+        success
+      }
+    }
+  }
 
   "FixedPoints actor" should {
     "remember a fixedPoint staff assignments added before a shutdown" in {
@@ -138,7 +164,10 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
   }
 
   def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsActor(now)))
-  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsReadActor(now(), now)))
+  def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsReadActor(now(), now)), "fpa-pit")
+  def newReadActor(now: () => SDateLike): ActorRef = system.actorOf(
+    FixedPointsActor.streamingUpdatesProps(
+      InMemoryStreamingJournal, now, forecastLengthDays, 1440), "fpa-read")
 
   def nowAs(date: String): () => SDateLike = () => SDate(date)
 }

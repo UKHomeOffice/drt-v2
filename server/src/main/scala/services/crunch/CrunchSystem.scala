@@ -110,7 +110,7 @@ object CrunchSystem {
       deploymentsKillSwitch,
       staffingUpdateKillSwitch) = props.startDeskRecs()
 
-    val crunchSystem = RunnableCrunch(
+    val runnableCrunch = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseFeed.source,
       forecastArrivalsSource = props.arrivalsForecastFeed.source,
       liveBaseArrivalsSource = props.arrivalsLiveBaseFeed.source,
@@ -144,7 +144,7 @@ object CrunchSystem {
       actDesksIn,
       flushArrivalsIn,
       arrivalsKillSwitch,
-      manifestsKillSwitch) = crunchSystem.run()
+      manifestsKillSwitch) = runnableCrunch.run()
 
     val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
 

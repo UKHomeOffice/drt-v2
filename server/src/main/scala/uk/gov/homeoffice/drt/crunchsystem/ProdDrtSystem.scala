@@ -116,7 +116,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
       now,
       airportConfig.minutesToCrunch,
       airportConfig.crunchOffsetMinutes,
-      params.forecastMaxDays,
       manifestLookups,
       airportConfig.portCode,
       paxFeedSourceOrder)

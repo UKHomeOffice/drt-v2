@@ -3,10 +3,11 @@ package actors
 
 import actors.persistent.staffing._
 import akka.actor.{PoisonPill, Props}
+import akka.pattern.StatusReply
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.{StaffMovement, StaffMovements}
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
@@ -32,15 +33,16 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val staffMovements = StaffMovements(Seq(StaffMovement(T1, "lunch start", SDate(s"2017-01-01T00:00").millisSinceEpoch, -1, uuid, createdBy = Some("batman"))))
 
       val actor = system.actorOf(Props(new StaffMovementsActor(now, expireAfterOneDay)), "movementsActor1")
+      val updatesActor = system.actorOf(StaffMovementsActor.streamingUpdatesProps(InMemoryStreamingJournal, 1440))
 
       val probe = TestProbe("movements-subscriber-test")
-      actor ! probe.ref
+      updatesActor ! AddUpdatesSubscriber(probe.ref)
 
       actor ! AddStaffMovements(staffMovements.movements)
-      probe.expectMsg(TerminalUpdateRequest(T1, LocalDate(2017, 1, 1), 0, 1440))
+      probe.expectMsg(List(TerminalUpdateRequest(T1, LocalDate(2017, 1, 1), 0, 1440)))
 
       actor ! RemoveStaffMovements(uuid)
-      probe.expectMsg(TerminalUpdateRequest(T1, LocalDate(2017, 1, 1), 0, 1440))
+      probe.expectMsg(List(TerminalUpdateRequest(T1, LocalDate(2017, 1, 1), 0, 1440)))
 
       true
     }
@@ -52,7 +54,7 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(staffMovements.movements)
-      expectMsg(AddStaffMovementsAck(staffMovements.movements))
+      expectMsg(StatusReply.Ack)
       actor ! PoisonPill
 
       Thread.sleep(100)
@@ -77,10 +79,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(staffMovements.movements)
-      expectMsg(AddStaffMovementsAck(staffMovements.movements))
+      expectMsg(StatusReply.Ack)
 
       actor ! RemoveStaffMovements(movementUuid1)
-      expectMsg(RemoveStaffMovementsAck(movementUuid1))
+      expectMsg(StatusReply.Ack)
       actor ! PoisonPill
 
       val newActor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor2")
@@ -109,16 +111,16 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(classOf[StaffMovementsActor], now, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(movement1, movement2))
-      expectMsg(AddStaffMovementsAck(Seq(movement1, movement2)))
+      expectMsg(StatusReply.Ack)
 
       actor ! RemoveStaffMovements(movementUuid1)
-      expectMsg(RemoveStaffMovementsAck(movementUuid1))
+      expectMsg(StatusReply.Ack)
 
       actor ! AddStaffMovements(Seq(movement3, movement4))
-      expectMsg(AddStaffMovementsAck(Seq(movement3, movement4)))
+      expectMsg(StatusReply.Ack)
 
       actor ! RemoveStaffMovements(movementUuid4)
-      expectMsg(RemoveStaffMovementsAck(movementUuid4))
+      expectMsg(StatusReply.Ack)
 
       actor ! PoisonPill
 
@@ -151,10 +153,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(classOf[StaffMovementsActor], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
-      expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))
+      expectMsg(StatusReply.Ack)
 
       actor ! AddStaffMovements(Seq(unexpiredMovement1, unexpiredMovement2))
-      expectMsg(AddStaffMovementsAck(Seq(unexpiredMovement1, unexpiredMovement2)))
+      expectMsg(StatusReply.Ack)
 
       actor ! GetState
       val expected = Set(unexpiredMovement1, unexpiredMovement2)
@@ -178,10 +180,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(classOf[StaffMovementsActor], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
-      expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))
+      expectMsg(StatusReply.Ack)
 
       actor ! AddStaffMovements(Seq(unexpiredMovement1, unexpiredMovement2))
-      expectMsg(AddStaffMovementsAck(Seq(unexpiredMovement1, unexpiredMovement2)))
+      expectMsg(StatusReply.Ack)
 
       actor ! PoisonPill
 
@@ -211,10 +213,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(classOf[StaffMovementsActor], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
-      expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))
+      expectMsg(StatusReply.Ack)
 
       actor ! AddStaffMovements(Seq(unexpiredMovement1, unexpiredMovement2))
-      expectMsg(AddStaffMovementsAck(Seq(unexpiredMovement1, unexpiredMovement2)))
+      expectMsg(StatusReply.Ack)
 
       actor ! PoisonPill
 
@@ -244,10 +246,10 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(classOf[StaffMovementsActor], now_is_20170102_0200, expireAfterOneDay), "movementsActor1")
 
       actor ! AddStaffMovements(Seq(expiredMovement1, expiredMovement2))
-      expectMsg(AddStaffMovementsAck(Seq(expiredMovement1, expiredMovement2)))
+      expectMsg(StatusReply.Ack)
 
       actor ! AddStaffMovements(Seq(unexpiredMovement1, unexpiredMovement2))
-      expectMsg(AddStaffMovementsAck(Seq(unexpiredMovement1, unexpiredMovement2)))
+      expectMsg(StatusReply.Ack)
 
       actor ! PoisonPill
 
