@@ -10,7 +10,7 @@ import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin.autoImport._
 import java.net.URL
 
 scalaVersion := Settings.versions.scala
-ThisBuild / scapegoatVersion := "2.1.1"
+ThisBuild / scapegoatVersion := "2.1.2"
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
 
