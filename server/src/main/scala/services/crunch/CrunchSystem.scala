@@ -1,6 +1,7 @@
 package services.crunch
 
-import akka.actor.ActorRef
+import akka.Done
+import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.chroma.ArrivalsDiffingStage
@@ -60,6 +61,7 @@ case class CrunchProps[FT](airportConfig: AirportConfig,
                            addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                            setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
                            passengerAdjustments: List[Arrival] => Future[List[Arrival]],
+                           system: ActorSystem,
                           )
 
 object CrunchSystem {
@@ -147,6 +149,14 @@ object CrunchSystem {
       manifestsKillSwitch) = runnableCrunch.run()
 
     val killSwitches = List(arrivalsKillSwitch, manifestsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+
+    CoordinatedShutdown(props.system).addTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "shutdown-crunch") { () =>
+      log.info("Shutting down crunch system")
+
+      killSwitches.foreach(_.shutdown())
+
+      Future.successful(Done)
+    }
 
     CrunchSystem(
       forecastBaseArrivalsResponse =

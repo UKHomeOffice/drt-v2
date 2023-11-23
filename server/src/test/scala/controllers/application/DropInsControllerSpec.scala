@@ -37,7 +37,7 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar {
 
       contentAsString(result) must include(resultExpected)
     }
-    
+
     "create drop-ins registration" in {
       val controller: DropInsController = dropInSessionsController
 

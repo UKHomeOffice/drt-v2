@@ -9,9 +9,9 @@ import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
 import actors.routing.FlightsRouterActor
-import akka.NotUsed
+import akka.{Done, NotUsed}
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
-import akka.actor.{ActorRef, ActorSystem, Props, Scheduler, typed}
+import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown, Props, Scheduler, typed}
 import akka.pattern.ask
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
@@ -126,6 +126,18 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   val liveBaseActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live-base")
   val liveActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live")
   val crunchManagerActor: ActorRef = system.actorOf(Props(new CrunchManagerActor), name = "crunch-manager-actor")
+
+  CoordinatedShutdown(system).addTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "shutdown-feeds") { () =>
+    log.info("Shutting down feed polling")
+
+    fcstBaseActor ! FeedPoller.Shutdown
+    fcstActor ! FeedPoller.Shutdown
+    liveBaseActor ! FeedPoller.Shutdown
+    liveActor ! FeedPoller.Shutdown
+
+    Future.successful(Done)
+  }
+
 
   val portStateActor: ActorRef
 
@@ -514,6 +526,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       addArrivalPredictions = addArrivalPredictions,
       setPcpTimes = setPcpTimes,
       flushArrivalsOnStart = params.flushArrivalsOnStart,
+      system = system,
     ))
   }
 

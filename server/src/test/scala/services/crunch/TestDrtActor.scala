@@ -325,6 +325,7 @@ class TestDrtActor extends Actor {
         addArrivalPredictions = tc.addTouchdownPredictions,
         setPcpTimes = tc.setPcpTimes,
         passengerAdjustments = tc.passengerAdjustments,
+        system = system,
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(
