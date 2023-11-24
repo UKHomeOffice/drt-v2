@@ -37,40 +37,63 @@ case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftU
 
 case object SaveSnapshot
 
-object ShiftsActor {
+trait ShiftsActorLike {
   def persistenceId = "shifts-store"
+
+  val snapshotMessageToState: Any => ShiftAssignments = {
+    case snapshot: ShiftStateSnapshotMessage =>
+      shiftMessagesToStaffAssignments(snapshot.shifts)
+  }
+
+  val eventToState: (() => SDateLike, Int) => (ShiftAssignments, Any) => (ShiftAssignments, Iterable[TerminalUpdateRequest]) =
+    (now, minutesToCrunch) => (state, msg) => msg match {
+      case m: ShiftsMessage =>
+        val shiftsToRecover = shiftMessagesToStaffAssignments(m.shifts)
+        val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
+        val newState = ShiftAssignments(updatedShifts).purgeExpired(timeBeforeThisMonth(now))
+        val subscriberEvents = terminalUpdateRequests(shiftsToRecover, minutesToCrunch)
+        (newState, subscriberEvents)
+      case _ => (state, Seq.empty)
+    }
+
+  val query: (() => SDateLike) => (() => ShiftAssignments, () => ActorRef) => PartialFunction[Any, Unit] =
+    now => (getState, getSender) => {
+      case GetState =>
+        getSender() ! getState().purgeExpired(timeBeforeThisMonth(now))
+
+      case TerminalUpdateRequest(terminal, localDate, _, _) =>
+        val assignmentsForDate = ShiftAssignments(getState().assignments.filter { assignment =>
+          val sdate = SDate(localDate)
+          assignment.terminal == terminal &&
+            (sdate.millisSinceEpoch <= assignment.end || assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch)
+        })
+        getSender() ! assignmentsForDate
+    }
 
   def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int, now: () => SDateLike): Props =
     Props(new StreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
       ShiftAssignments.empty,
-      {
-        case snapshot: ShiftStateSnapshotMessage =>
-          shiftMessagesToStaffAssignments(snapshot.shifts)
-      },
-      (state, msg) => msg match {
-        case msg: ShiftsMessage =>
-          val shiftsToRecover = shiftMessagesToStaffAssignments(msg.shifts)
-          val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
-          val newState = ShiftAssignments(updatedShifts).purgeExpired(timeBeforeThisMonth(now))
-          val subscriberEvents = terminalUpdateRequests(shiftsToRecover, minutesToCrunch)
-          (newState, subscriberEvents)
-        case _ => (state, Seq.empty)
-      },
-      (getState, getSender) => {
-        case GetState =>
-          getSender() ! getState().purgeExpired(timeBeforeThisMonth(now))
-
-        case TerminalUpdateRequest(terminal, localDate, _, _) =>
-          val assignmentsForDate = ShiftAssignments(getState().assignments.filter { assignment =>
-            val sdate = SDate(localDate)
-            assignment.terminal == terminal &&
-            (sdate.millisSinceEpoch <= assignment.end || assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch)
-          })
-          getSender() ! assignmentsForDate
-      }
+      snapshotMessageToState,
+      eventToState(now, minutesToCrunch),
+      query(now)
     ))
+
+  def terminalUpdateRequests(shifts: ShiftAssignments,
+                             minutesToCrunch: Int,
+                            ): immutable.Iterable[TerminalUpdateRequest] =
+    shifts.assignments.groupBy(_.terminal).collect {
+      case (terminal, assignments) if shifts.assignments.nonEmpty =>
+        val earliest = SDate(assignments.map(_.start).min).millisSinceEpoch
+        val latest = SDate(assignments.map(_.end).max).millisSinceEpoch
+        (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
+        }
+    }.flatten
+}
+
+object ShiftsActor extends ShiftsActorLike {
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = shiftsToUpdate
@@ -91,18 +114,6 @@ object ShiftsActor {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
-
-  def terminalUpdateRequests(shifts: ShiftAssignments,
-                             minutesToCrunch: Int,
-                            ): immutable.Iterable[TerminalUpdateRequest] =
-    shifts.assignments.groupBy(_.terminal).collect {
-      case (terminal, assignments) if shifts.assignments.nonEmpty =>
-        val earliest = SDate(assignments.map(_.start).min).millisSinceEpoch
-        val latest = SDate(assignments.map(_.end).max).millisSinceEpoch
-        (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
-          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
-        }
-    }.flatten
 
 }
 

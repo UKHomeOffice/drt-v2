@@ -152,12 +152,9 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
   private val manifestsFeedStatusActor: ActorRef =
     system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
 
-  val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
-    journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
-  val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
-    journalType, now, params.forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
-  private val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
-    journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
+  val liveShiftsReadActor: ActorRef
+  val liveFixedPointsReadActor: ActorRef
+  val liveStaffMovementsReadActor: ActorRef
 
   val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
@@ -500,7 +497,8 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       diff => Future.successful(diff)
     }
 
-    CrunchSystem(CrunchProps(
+    println(s"\n\n** CrunchSystem starting")
+    val x = CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       portStateActor = portStateActor,
       maxDaysToCrunch = params.forecastMaxDays,
@@ -528,6 +526,8 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       flushArrivalsOnStart = params.flushArrivalsOnStart,
       system = system,
     ))
+    println(s"\n\n** CrunchSystem started")
+    x
   }
 
   private def arrivalsNoOp: Feed[typed.ActorRef[FeedTick]] = {

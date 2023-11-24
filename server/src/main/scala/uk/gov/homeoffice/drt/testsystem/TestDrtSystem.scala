@@ -2,7 +2,7 @@
 package uk.gov.homeoffice.drt.testsystem
 
 import actors._
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, PoisonPill, Props, Status, Terminated, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
@@ -21,7 +21,7 @@ import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.SubscribeResponseQueue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
-import uk.gov.homeoffice.drt.testsystem.RestartActor.AddStateActors
+import uk.gov.homeoffice.drt.testsystem.RestartActor.{AddResetAndKillActors, AddResetOnlyActors}
 import uk.gov.homeoffice.drt.testsystem.TestActors._
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
 import uk.gov.homeoffice.drt.testsystem.feeds.test._
@@ -149,6 +149,13 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   log.warn("Using test System")
 
+  override val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
+    journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
+  override val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
+    journalType, now, params.forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
+  override val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
+    journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
+
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val userService: UserTableLike = MockUserTable()
   override val featureGuideService: FeatureGuideTableLike = MockFeatureGuideTable()
@@ -196,7 +203,8 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
         airportConfig.queuesByTerminal,
         journalType
       )
-    )
+    ),
+    "port-state-actor"
   )
 
   override val testManifestsActor: ActorRef = system.actorOf(Props(new TestManifestsActor()), s"TestActor-APIManifests")
@@ -205,7 +213,8 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem)), name = "TestActor-ResetData")
 
-  restartActor ! RestartActor.AddStateActors(Seq(portStateActor, testManifestsActor, testArrivalActor))
+  restartActor ! RestartActor.AddResetAndKillActors(Seq(portStateActor, testManifestsActor, testArrivalActor))
+  //  restartActor ! AddKillActors(Seq(live))
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -239,30 +248,30 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     restartActor ! StartTestSystem
   }
 
-  private def startSystem: () => List[KillSwitch] = () => {
-    val actors = TestPersistentStateActors(
-      system,
-      now,
-      airportConfig.minutesToCrunch,
-      airportConfig.crunchOffsetMinutes,
-      params.forecastMaxDays,
-      manifestLookups
-    )
+  val actors: TestPersistentStateActors = TestPersistentStateActors(
+    system,
+    now,
+    airportConfig.minutesToCrunch,
+    airportConfig.crunchOffsetMinutes,
+    params.forecastMaxDays,
+    manifestLookups
+  )
 
-    restartActor ! RestartActor.AddStateActors(Seq(
+  private def startSystem: () => List[KillSwitch] = () => {
+    restartActor ! RestartActor.AddResetAndKillActors(Seq(
       actors.forecastBaseArrivalsActor,
       actors.forecastArrivalsActor,
       actors.liveArrivalsActor,
-      actors.forecastArrivalsActor,
+      actors.liveBaseArrivalsActor,
       actors.manifestsRouterActor,
-      shiftsSequentialWritesActor,
-      fixedPointsSequentialWritesActor,
-      staffMovementsSequentialWritesActor,
-      actors.aggregatedArrivalsActor,
       actors.crunchQueueActor,
       actors.deskRecsQueueActor,
       actors.deploymentQueueActor,
       actors.staffingQueueActor,
+      actors.aggregatedArrivalsActor,
+      //      shiftsSequentialWritesActor,
+      //      fixedPointsSequentialWritesActor,
+      //      staffMovementsSequentialWritesActor,
     ))
 
     val crunchInputs = startCrunchSystem(
@@ -287,7 +296,9 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 }
 
 object RestartActor {
-  case class AddStateActors(actors: Iterable[ActorRef])
+  case class AddResetAndKillActors(actors: Iterable[ActorRef])
+  case class AddResetOnlyActors(actors: Iterable[ActorRef])
+
 }
 
 class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with ActorLogging {
@@ -295,29 +306,73 @@ class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with Actor
   private lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(context.system)
 
   private var currentKillSwitches: List[KillSwitch] = List()
-  private var actorsToReset: Seq[ActorRef] = Seq.empty
+  private var actorsToResetAndKill: Map[String, ActorRef] = Map.empty
+  private var actorsToResetOnly: Seq[ActorRef] = Seq.empty
+  private var maybeKiller: Option[ActorRef] = None
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
   override def receive: Receive = {
-    case AddStateActors(actors) =>
-      actorsToReset = actorsToReset ++ actors
+    case AddResetAndKillActors(actors) =>
+      actorsToResetAndKill = actorsToResetAndKill ++ actors.map(a => a.path.toStringWithoutAddress -> a)
+
+    case AddResetOnlyActors(actors) =>
+      actorsToResetOnly = actorsToResetOnly ++ actors
 
     case ResetData =>
-      val replyTo = sender()
-      log.info(s"About to shut down everything. Pressing kill switches")
+      maybeKiller = Option(sender())
+      println(s"\n\n** Killer is ${sender()}")
+      log.info(s"\n\n**About to shut down everything. Pressing kill switches")
 
       currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
         log.info(s"Kill switch ${idx + 1}")
         ks.shutdown()
       }
 
-      val resetFutures = actorsToReset.map(_.ask(ResetData)(new Timeout(5 second)))
+      val resetFutures = (actorsToResetAndKill.values ++ actorsToResetOnly)
+        .map(_.ask(ResetData)(new Timeout(3 second)))
+
+
       Future.sequence(resetFutures).onComplete { _ =>
-        log.info(s"Shutdown triggered")
         resetInMemoryData()
+        log.info(s"Restarting system")
         startTestSystem()
-        replyTo ! StatusReply.Ack
+        println(s"\n\n**Sending Ack to killer: $maybeKiller")
+        maybeKiller.foreach { k =>
+          log.info(s"Sending Ack to killer")
+          k ! StatusReply.Ack
+        }
+        maybeKiller = None
+//        log.info("\n\n**Data reset. Killing actors")
+//        if (actorsToResetAndKill.nonEmpty) {
+//          log.info("\n\nKilling actors")
+//
+//          actorsToResetAndKill.foreach { case (path, actor) =>
+//            log.info(s"Killing actor ${path}")
+//            context.watch(actor)
+//            actor ! PoisonPill
+//          }
+//        } else {
+//          maybeKiller = None
+//          log.info("\n\n**No actors to kill. Sending Ack")
+//          sender() ! StatusReply.Ack
+//        }
+      }
+
+    case Terminated(actor) =>
+      actorsToResetAndKill = actorsToResetAndKill - actor.path.toStringWithoutAddress
+
+      log.info(s"Actor ${actor.path} terminated. Remaining actors to kill: ${actorsToResetAndKill.size}")
+      if (actorsToResetAndKill.isEmpty) {
+        resetInMemoryData()
+        log.info(s"Restarting system")
+        startTestSystem()
+        println(s"\n\n**Sending Ack to killer: $maybeKiller")
+        maybeKiller.foreach { k =>
+          log.info(s"Sending Ack to killer")
+          k ! StatusReply.Ack
+        }
+        maybeKiller = None
       }
 
     case Status.Success(_) =>

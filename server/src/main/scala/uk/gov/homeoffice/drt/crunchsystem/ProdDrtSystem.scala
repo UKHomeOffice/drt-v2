@@ -5,7 +5,7 @@ import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, 
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.ApiFeedState
-import actors.persistent.staffing.GetFeedStatuses
+import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.ask
 import akka.stream.Materializer
@@ -72,6 +72,13 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     params.maybeRemovalCutOffSeconds,
     paxFeedSourceOrder,
   )
+
+  override val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
+    journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
+  override val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
+    journalType, now, params.forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
+  override val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
+    journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
 
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
   override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor

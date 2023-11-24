@@ -2,17 +2,22 @@ package actors.persistent
 
 import actors.StreamingJournalLike
 import actors.daily.StreamingUpdatesLike.StopUpdates
-import akka.actor.{ActorRef, ActorSystem}
+import actors.persistent.staffing.ShiftsActorLike
+import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.StatusReply.Ack
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
+import drt.shared.ShiftAssignments
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object StreamingUpdatesActor {
   def startUpdatesStream(system: ActorSystem, journalType: StreamingJournalLike, persistenceId: String, receivingRef: ActorRef)
@@ -28,6 +33,34 @@ object StreamingUpdatesActor {
       killSwitch
     }
 
+}
+
+class TestStreamingUpdatesActor[T, S](persistenceId: String,
+                                      journalType: StreamingJournalLike,
+                                      initialState: T,
+                                      snapshotMessageToState: Any => T,
+                                      eventToState: (T, Any) => (T, S),
+                                      query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
+                                     ) extends StreamingUpdatesActor[T, S](persistenceId, journalType, initialState, snapshotMessageToState, eventToState, query) {
+  override val receiveQuery: Receive = query(() => state, sender) orElse {
+    case ResetData =>
+      maybeKillSwitch.foreach(_.shutdown())
+      state = initialState
+      val killSwitch = startUpdatesStream(lastSequenceNr)
+      maybeKillSwitch = Option(killSwitch)
+  }
+}
+
+object TestStreamingUpdatesActor extends ShiftsActorLike {
+  override def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int, now: () => SDateLike): Props =
+    Props(new TestStreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
+      persistenceId,
+      journalType,
+      ShiftAssignments.empty,
+      snapshotMessageToState,
+      eventToState(now, minutesToCrunch),
+      query(now)
+    ))
 }
 
 class StreamingUpdatesActor[T, S](val persistenceId: String,
@@ -85,7 +118,7 @@ class StreamingUpdatesActor[T, S](val persistenceId: String,
       subscribers = subscribers + subscriber
   }
 
-  private val receiveQuery: Receive = query(() => state, sender)
+  val receiveQuery: Receive = query(() => state, sender)
 
   private val receiveUnknown: Receive = {
     case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")

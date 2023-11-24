@@ -15,13 +15,6 @@ case class TestPersistentStateActors(system: ActorSystem,
                                      maxForecastDays: Int,
                                      manifestLookups: ManifestLookups,
                            ) extends PersistentStateActors {
-//  override val shiftsActor: ActorRef =
-//    system.actorOf(Props(new TestShiftsActor(now, timeBeforeThisMonth(now))), "staff-shifts")
-//  override val fixedPointsActor: ActorRef =
-//    system.actorOf(Props(new TestFixedPointsActor(now, minutesToCrunch)), "staff-fixed-points")
-//  override val staffMovementsActor: ActorRef =
-//    system.actorOf(Props(new TestStaffMovementsActor(now, time48HoursAgo(now), minutesToCrunch)), "staff-movements")
-
   override val forecastBaseArrivalsActor: ActorRef =
     system.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
   override val forecastArrivalsActor: ActorRef =
@@ -43,5 +36,5 @@ case class TestPersistentStateActors(system: ActorSystem,
   override val staffingQueueActor: ActorRef =
     system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), offsetMinutes, minutesToCrunch)), "staffing-queue-actor")
 
-  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()))
+  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()), "aggregated-arrivals-actor")
 }
