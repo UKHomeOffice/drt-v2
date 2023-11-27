@@ -1,10 +1,11 @@
 package drt.client.services.handlers
 
 import diode._
-import diode.data.{Pot, Ready}
+import diode.data.{Pending, Pot, Ready}
 import drt.client.actions.Actions.{GetShiftsForMonth, SetShiftsForMonth}
 import drt.client.logger.log
 import drt.client.services.DrtApi
+import drt.client.services.JSDateConversions.SDate
 import drt.shared.MonthOfShifts
 import upickle.default.read
 
@@ -22,7 +23,7 @@ class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfShifts]]) extends 
             log.error(msg = s"Failed to get shifts for month: ${t.getMessage}")
             Future(NoAction)
         })
-      effectOnly(apiCallEffect)
+      updated(Pending(), apiCallEffect)
 
     case SetShiftsForMonth(monthOfRawShifts) =>
       updated(Ready(monthOfRawShifts))

@@ -2,7 +2,7 @@
 package uk.gov.homeoffice.drt.testsystem
 
 import actors._
-import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, PoisonPill, Props, Status, Terminated, typed}
+import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.{KillSwitch, Materializer}
@@ -21,7 +21,7 @@ import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.SubscribeResponseQueue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
-import uk.gov.homeoffice.drt.testsystem.RestartActor.{AddResetAndKillActors, AddResetOnlyActors}
+import uk.gov.homeoffice.drt.testsystem.RestartActor.AddResetActors
 import uk.gov.homeoffice.drt.testsystem.TestActors._
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
 import uk.gov.homeoffice.drt.testsystem.feeds.test._
@@ -213,8 +213,8 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem)), name = "TestActor-ResetData")
 
-  restartActor ! RestartActor.AddResetAndKillActors(Seq(portStateActor, testManifestsActor, testArrivalActor))
-  //  restartActor ! AddKillActors(Seq(live))
+  restartActor ! RestartActor.AddResetActors(Seq(
+    portStateActor, testManifestsActor, testArrivalActor, liveShiftsReadActor, liveFixedPointsReadActor, liveStaffMovementsReadActor))
 
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
@@ -258,7 +258,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   )
 
   private def startSystem: () => List[KillSwitch] = () => {
-    restartActor ! RestartActor.AddResetAndKillActors(Seq(
+    restartActor ! RestartActor.AddResetActors(Seq(
       actors.forecastBaseArrivalsActor,
       actors.forecastArrivalsActor,
       actors.liveArrivalsActor,
@@ -269,9 +269,6 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
       actors.deploymentQueueActor,
       actors.staffingQueueActor,
       actors.aggregatedArrivalsActor,
-      //      shiftsSequentialWritesActor,
-      //      fixedPointsSequentialWritesActor,
-      //      staffMovementsSequentialWritesActor,
     ))
 
     val crunchInputs = startCrunchSystem(
@@ -296,9 +293,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 }
 
 object RestartActor {
-  case class AddResetAndKillActors(actors: Iterable[ActorRef])
-  case class AddResetOnlyActors(actors: Iterable[ActorRef])
-
+  case class AddResetActors(actors: Iterable[ActorRef])
 }
 
 class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with ActorLogging {
@@ -306,73 +301,36 @@ class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with Actor
   private lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(context.system)
 
   private var currentKillSwitches: List[KillSwitch] = List()
-  private var actorsToResetAndKill: Map[String, ActorRef] = Map.empty
-  private var actorsToResetOnly: Seq[ActorRef] = Seq.empty
-  private var maybeKiller: Option[ActorRef] = None
+  private var actorsToReset: Seq[ActorRef] = Seq.empty
+  private var maybeReplyTo: Option[ActorRef] = None
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
 
   override def receive: Receive = {
-    case AddResetAndKillActors(actors) =>
-      actorsToResetAndKill = actorsToResetAndKill ++ actors.map(a => a.path.toStringWithoutAddress -> a)
-
-    case AddResetOnlyActors(actors) =>
-      actorsToResetOnly = actorsToResetOnly ++ actors
+    case AddResetActors(actors) =>
+      actorsToReset = actorsToReset ++ actors
 
     case ResetData =>
-      maybeKiller = Option(sender())
-      println(s"\n\n** Killer is ${sender()}")
-      log.info(s"\n\n**About to shut down everything. Pressing kill switches")
+      maybeReplyTo = Option(sender())
+      log.info(s"About to shut down everything. Pressing kill switches")
 
       currentKillSwitches.zipWithIndex.foreach { case (ks, idx) =>
         log.info(s"Kill switch ${idx + 1}")
         ks.shutdown()
       }
 
-      val resetFutures = (actorsToResetAndKill.values ++ actorsToResetOnly)
+      val resetFutures = actorsToReset
         .map(_.ask(ResetData)(new Timeout(3 second)))
-
 
       Future.sequence(resetFutures).onComplete { _ =>
         resetInMemoryData()
         log.info(s"Restarting system")
         startTestSystem()
-        println(s"\n\n**Sending Ack to killer: $maybeKiller")
-        maybeKiller.foreach { k =>
-          log.info(s"Sending Ack to killer")
+        maybeReplyTo.foreach { k =>
+          log.info(s"Sending Ack to sender")
           k ! StatusReply.Ack
         }
-        maybeKiller = None
-//        log.info("\n\n**Data reset. Killing actors")
-//        if (actorsToResetAndKill.nonEmpty) {
-//          log.info("\n\nKilling actors")
-//
-//          actorsToResetAndKill.foreach { case (path, actor) =>
-//            log.info(s"Killing actor ${path}")
-//            context.watch(actor)
-//            actor ! PoisonPill
-//          }
-//        } else {
-//          maybeKiller = None
-//          log.info("\n\n**No actors to kill. Sending Ack")
-//          sender() ! StatusReply.Ack
-//        }
-      }
-
-    case Terminated(actor) =>
-      actorsToResetAndKill = actorsToResetAndKill - actor.path.toStringWithoutAddress
-
-      log.info(s"Actor ${actor.path} terminated. Remaining actors to kill: ${actorsToResetAndKill.size}")
-      if (actorsToResetAndKill.isEmpty) {
-        resetInMemoryData()
-        log.info(s"Restarting system")
-        startTestSystem()
-        println(s"\n\n**Sending Ack to killer: $maybeKiller")
-        maybeKiller.foreach { k =>
-          log.info(s"Sending Ack to killer")
-          k ! StatusReply.Ack
-        }
-        maybeKiller = None
+        maybeReplyTo = None
       }
 
     case Status.Success(_) =>

@@ -497,8 +497,7 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       diff => Future.successful(diff)
     }
 
-    println(s"\n\n** CrunchSystem starting")
-    val x = CrunchSystem(CrunchProps(
+    CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       portStateActor = portStateActor,
       maxDaysToCrunch = params.forecastMaxDays,
@@ -526,8 +525,6 @@ trait DrtSystemInterface extends UserRoleProviderLike with FeatureGuideProviderL
       flushArrivalsOnStart = params.flushArrivalsOnStart,
       system = system,
     ))
-    println(s"\n\n** CrunchSystem started")
-    x
   }
 
   private def arrivalsNoOp: Feed[typed.ActorRef[FeedTick]] = {

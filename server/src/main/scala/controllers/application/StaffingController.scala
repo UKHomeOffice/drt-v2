@@ -152,19 +152,20 @@ class StaffingController @Inject()(cc: ControllerComponents,
   }
 
   def addStaffMovements: Action[AnyContent] = authByRole(StaffMovementsEdit) {
-    Action {
+    Action.async {
       request =>
         request.body.asText match {
           case Some(text) =>
             val movementsToAdd: List[StaffMovement] = read[List[StaffMovement]](text)
-            ctrl.staffMovementsSequentialWritesActor ! AddStaffMovements(movementsToAdd)
-            Accepted
+            println(s"Received ${movementsToAdd} movements. Sending to actor")
+            ctrl.staffMovementsSequentialWritesActor
+              .ask(AddStaffMovements(movementsToAdd))
+              .map(_ => Accepted)
           case None =>
-            BadRequest
+            Future.successful(BadRequest)
         }
     }
   }
-
 
   def removeStaffMovements(movementsToRemove: String): Action[AnyContent] = authByRole(StaffMovementsEdit) {
     Action {

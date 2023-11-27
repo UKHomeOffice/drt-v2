@@ -2,22 +2,17 @@ package actors.persistent
 
 import actors.StreamingJournalLike
 import actors.daily.StreamingUpdatesLike.StopUpdates
-import actors.persistent.staffing.{FixedPointsActorLike, ShiftsActorLike}
-import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.actor.{ActorRef, ActorSystem}
 import akka.pattern.StatusReply.Ack
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
-import drt.shared.{FixedPointAssignments, ShiftAssignments}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
-import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
-import uk.gov.homeoffice.drt.time.SDateLike
 
 object StreamingUpdatesActor {
   def startUpdatesStream(system: ActorSystem, journalType: StreamingJournalLike, persistenceId: String, receivingRef: ActorRef)
@@ -32,7 +27,6 @@ object StreamingUpdatesActor {
         .run()
       killSwitch
     }
-
 }
 
 class StreamingUpdatesActor[T, S](val persistenceId: String,
@@ -51,7 +45,7 @@ class StreamingUpdatesActor[T, S](val persistenceId: String,
 
   var state: T = initialState
 
-  var subscribers = Set.empty[ActorRef]
+  var subscriber = Option.empty[ActorRef]
 
   val startUpdatesStream: Long => UniqueKillSwitch =
     StreamingUpdatesActor.startUpdatesStream(context.system, journalType, persistenceId, self)
@@ -71,7 +65,11 @@ class StreamingUpdatesActor[T, S](val persistenceId: String,
     case EventEnvelope(_, _, _, msg) =>
       val (newState, subscriberEvent) = eventToState(state, msg)
       state = newState
-      subscribers.foreach(_ ! subscriberEvent)
+      if (subscriber.isEmpty) println(s"\n\nNo subscribers to event")
+      subscriber.foreach { s =>
+        println(s"\n\nSending $subscriberEvent to $s")
+        s ! subscriberEvent
+      }
       sender() ! Ack
   }
 
@@ -86,8 +84,9 @@ class StreamingUpdatesActor[T, S](val persistenceId: String,
   }
 
   private val receiveSubscriber: Receive = {
-    case AddUpdatesSubscriber(subscriber) =>
-      subscribers = subscribers + subscriber
+    case AddUpdatesSubscriber(newSub) =>
+      println(s"\n\n**adding subscriber")
+      subscriber = Option(newSub)
   }
 
   val receiveQuery: Receive = query(() => state, sender)

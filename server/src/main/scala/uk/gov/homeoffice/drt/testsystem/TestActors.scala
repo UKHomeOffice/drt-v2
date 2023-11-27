@@ -4,7 +4,7 @@ import actors._
 import actors.daily._
 import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing.{FixedPointsActor, FixedPointsActorLike, ShiftsActor, ShiftsActorLike, StaffMovementsActor, StaffMovementsActorLike}
+import actors.persistent.staffing.{FixedPointsActorLike, ShiftsActorLike, StaffMovementsActorLike, StaffMovementsState}
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
@@ -135,34 +135,6 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-//  class TestShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike)
-//    extends ShiftsActor(now, expireBefore) with Resettable {
-//    override def resetState(): Unit = {
-//      state = initialState
-//    }
-//
-//    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-//  }
-
-//  class TestFixedPointsActor(now: () => SDateLike, minutesToCrunch: Int) extends FixedPointsActor(now) with Resettable {
-//    override def resetState(): Unit = {
-//      state = initialState
-//    }
-//
-//    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-//  }
-
-//  class TestStaffMovementsActor(now: () => SDateLike,
-//                                expireBefore: () => SDateLike,
-//                                minutesToCrunch: Int) extends StaffMovementsActor(now, expireBefore) with Resettable {
-//    override def resetState(): Unit = {
-//      state = initialState
-//    }
-//
-//    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-//  }
-
-
   class TestStreamingUpdatesActor[T, S](persistenceId: String,
                                         journalType: StreamingJournalLike,
                                         initialState: T,
@@ -215,20 +187,14 @@ object TestActors {
 
   object TestStaffMovementsActor extends StaffMovementsActorLike {
 
-    import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
-
-    override def streamingUpdatesProps(journalType: StreamingJournalLike,
-                                       now: () => SDateLike,
-                                       forecastMaxDays: Int,
-                                       minutesToCrunch: Int,
-                                      ): Props =
-      Props(new TestStreamingUpdatesActor[FixedPointAssignments, Iterable[TerminalUpdateRequest]](
+    override def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int): Props =
+      Props(new TestStreamingUpdatesActor[StaffMovementsState, Iterable[TerminalUpdateRequest]](
         persistenceId,
         journalType,
-        FixedPointAssignments.empty,
+        StaffMovementsState(StaffMovements(List())),
         snapshotMessageToState,
-        eventToState(now, forecastMaxDays, minutesToCrunch),
-        query(now)
+        eventToState(minutesToCrunch),
+        query
       ))
   }
 

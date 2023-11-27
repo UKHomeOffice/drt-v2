@@ -35,12 +35,15 @@ trait StaffMovementsActorLike {
   val eventToState: Int => (StaffMovementsState, Any) => (StaffMovementsState, Iterable[TerminalUpdateRequest]) =
     minutesToCrunch => (state, msg) => msg match {
       case msg: StaffMovementsMessage =>
+        println(s"\n\n** Got a movements addition: $msg")
         val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
         val newState = state.updated(state.staffMovements + movementsToAdd)
         val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd), minutesToCrunch)
+        println(s"\n\n** Sending terminal update requests: $subscriberEvents")
         (newState, subscriberEvents)
 
       case msg: RemoveStaffMovementMessage =>
+        println(s"\n\n** Got a movements removal: $msg")
         val uuidToRemove = msg.getUUID
         val movementsToRemove = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
         val newState = state.updated(state.staffMovements - Seq(uuidToRemove))
