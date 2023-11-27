@@ -70,7 +70,10 @@ trait ShiftsActorLike {
         getSender() ! assignmentsForDate
     }
 
-  def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int, now: () => SDateLike): Props =
+  def streamingUpdatesProps(journalType: StreamingJournalLike,
+                            minutesToCrunch: Int,
+                            now: () => SDateLike,
+                           ): Props =
     Props(new StreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,

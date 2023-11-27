@@ -149,11 +149,11 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   log.warn("Using test System")
 
-  override val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
+  override val liveShiftsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
-  override val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
+  override val liveFixedPointsReadActor: ActorRef = system.actorOf(TestFixedPointsActor.streamingUpdatesProps(
     journalType, now, params.forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
-  override val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
+  override val liveStaffMovementsReadActor: ActorRef = system.actorOf(TestStaffMovementsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()

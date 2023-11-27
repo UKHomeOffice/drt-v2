@@ -23,10 +23,42 @@ import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 import scala.collection.immutable
 
 
-object FixedPointsActor {
+trait FixedPointsActorLike {
   def persistenceId: String = "fixedPoints-store"
 
   import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
+
+
+  val snapshotMessageToState: Any => FixedPointAssignments = {
+    case snapshot: FixedPointsStateSnapshotMessage =>
+      fixedPointMessagesToFixedPoints(snapshot.fixedPoints)
+  }
+
+  val eventToState: (() => SDateLike, Int, Int) => (FixedPointAssignments, Any) => (FixedPointAssignments, immutable.Iterable[TerminalUpdateRequest]) =
+    (now, forecastMaxDays, minutesToCrunch) => (state: FixedPointAssignments, msg: Any) => msg match {
+      case msg: FixedPointsMessage =>
+        val newState = fixedPointMessagesToFixedPoints(msg.fixedPoints)
+        val diff = state.diff(newState)
+        val subscriberEvents = terminalUpdateRequests(diff, now, forecastMaxDays, minutesToCrunch)
+        (newState, subscriberEvents)
+      case _ => (state, Seq.empty)
+    }
+
+  val query: (() => SDateLike) => (() => FixedPointAssignments, () => ActorRef) => PartialFunction[Any, Unit] =
+    now => (getState, getSender) => {
+      case GetState =>
+        getSender() ! getState()
+
+      case TerminalUpdateRequest(terminal, localDate, _, _) =>
+        getSender() ! FixedPointAssignments(getState().assignments.filter { assignment =>
+          val sdate = SDate(localDate)
+          assignment.terminal == terminal && (
+            sdate.millisSinceEpoch <= assignment.end ||
+              assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch
+            )
+        })
+    }
+
 
   def streamingUpdatesProps(journalType: StreamingJournalLike,
                             now: () => SDateLike,
@@ -37,42 +69,10 @@ object FixedPointsActor {
       persistenceId,
       journalType,
       FixedPointAssignments.empty,
-      {
-        case snapshot: FixedPointsStateSnapshotMessage =>
-          fixedPointMessagesToFixedPoints(snapshot.fixedPoints)
-      },
-      (state, msg) => msg match {
-        case msg: FixedPointsMessage =>
-          val newState = fixedPointMessagesToFixedPoints(msg.fixedPoints)
-          val diff = state.diff(newState)
-          val subscriberEvents = terminalUpdateRequests(diff, now, forecastMaxDays, minutesToCrunch)
-          (newState, subscriberEvents)
-        case _ => (state, Seq.empty)
-      },
-      (getState, getSender) => {
-        case GetState =>
-          getSender() ! getState()
-
-        case TerminalUpdateRequest(terminal, localDate, _, _) =>
-          getSender() ! FixedPointAssignments(getState().assignments.filter { assignment =>
-            val sdate = SDate(localDate)
-            assignment.terminal == terminal && (
-              sdate.millisSinceEpoch <= assignment.end ||
-                assignment.start <= sdate.getLocalNextMidnight.millisSinceEpoch
-              )
-          })
-      }
+      snapshotMessageToState,
+      eventToState(now, forecastMaxDays, minutesToCrunch),
+      query(now),
     ))
-
-  def sequentialWritesProps(now: () => SDateLike,
-                            requestAndTerminateActor: ActorRef,
-                            system: ActorSystem
-                           )
-                           (implicit timeout: Timeout): Props =
-    Props(new SequentialWritesActor[FixedPointsUpdate](update => {
-      val actor = system.actorOf(Props(new FixedPointsActor(now)), "fixed-points-actor-writes")
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
-    }))
 
   def terminalUpdateRequests(fixedPoints: FixedPointAssignments,
                              now: () => SDateLike,
@@ -87,6 +87,18 @@ object FixedPointsActor {
           TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
         }
     }.flatten
+}
+
+object FixedPointsActor extends FixedPointsActorLike {
+  def sequentialWritesProps(now: () => SDateLike,
+                            requestAndTerminateActor: ActorRef,
+                            system: ActorSystem
+                           )
+                           (implicit timeout: Timeout): Props =
+    Props(new SequentialWritesActor[FixedPointsUpdate](update => {
+      val actor = system.actorOf(Props(new FixedPointsActor(now)), "fixed-points-actor-writes")
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
+    }))
 }
 
 trait FixedPointsUpdate

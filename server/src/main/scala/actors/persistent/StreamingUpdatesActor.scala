@@ -2,14 +2,14 @@ package actors.persistent
 
 import actors.StreamingJournalLike
 import actors.daily.StreamingUpdatesLike.StopUpdates
-import actors.persistent.staffing.ShiftsActorLike
+import actors.persistent.staffing.{FixedPointsActorLike, ShiftsActorLike}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.StatusReply.Ack
 import akka.persistence.query.{EventEnvelope, PersistenceQuery}
 import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
-import drt.shared.ShiftAssignments
+import drt.shared.{FixedPointAssignments, ShiftAssignments}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.StreamSupervision
@@ -33,34 +33,6 @@ object StreamingUpdatesActor {
       killSwitch
     }
 
-}
-
-class TestStreamingUpdatesActor[T, S](persistenceId: String,
-                                      journalType: StreamingJournalLike,
-                                      initialState: T,
-                                      snapshotMessageToState: Any => T,
-                                      eventToState: (T, Any) => (T, S),
-                                      query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
-                                     ) extends StreamingUpdatesActor[T, S](persistenceId, journalType, initialState, snapshotMessageToState, eventToState, query) {
-  override val receiveQuery: Receive = query(() => state, sender) orElse {
-    case ResetData =>
-      maybeKillSwitch.foreach(_.shutdown())
-      state = initialState
-      val killSwitch = startUpdatesStream(lastSequenceNr)
-      maybeKillSwitch = Option(killSwitch)
-  }
-}
-
-object TestStreamingUpdatesActor extends ShiftsActorLike {
-  override def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int, now: () => SDateLike): Props =
-    Props(new TestStreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
-      persistenceId,
-      journalType,
-      ShiftAssignments.empty,
-      snapshotMessageToState,
-      eventToState(now, minutesToCrunch),
-      query(now)
-    ))
 }
 
 class StreamingUpdatesActor[T, S](val persistenceId: String,

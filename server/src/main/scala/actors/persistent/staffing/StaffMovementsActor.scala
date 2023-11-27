@@ -3,7 +3,7 @@ package actors.persistent.staffing
 import actors._
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
-import actors.persistent.staffing.StaffMovementsActor.staffMovementMessagesToStaffMovements
+import actors.persistent.staffing.StaffMovementsActor.{staffMovementMessagesToStaffMovements, terminalUpdateRequests}
 import actors.routing.SequentialWritesActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
@@ -23,48 +23,60 @@ import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable
 
-object StaffMovementsActor {
+trait StaffMovementsActorLike {
+
   def persistenceId = "staff-movements-store"
+
+  val snapshotMessageToState: Any => StaffMovementsState = {
+    case snapshot: StaffMovementsStateSnapshotMessage =>
+      StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
+  }
+
+  val eventToState: Int => (StaffMovementsState, Any) => (StaffMovementsState, Iterable[TerminalUpdateRequest]) =
+    minutesToCrunch => (state, msg) => msg match {
+      case msg: StaffMovementsMessage =>
+        val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
+        val newState = state.updated(state.staffMovements + movementsToAdd)
+        val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd), minutesToCrunch)
+        (newState, subscriberEvents)
+
+      case msg: RemoveStaffMovementMessage =>
+        val uuidToRemove = msg.getUUID
+        val movementsToRemove = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
+        val newState = state.updated(state.staffMovements - Seq(uuidToRemove))
+        val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToRemove), minutesToCrunch)
+        (newState, subscriberEvents)
+
+      case _ =>
+        (state, Seq())
+    }
+
+  val query: (() => StaffMovementsState, () => ActorRef) => PartialFunction[Any, Unit] =
+    (getState, getSender) => {
+      case GetState =>
+        getSender() ! getState()
+
+      case TerminalUpdateRequest(terminal, localDate, _, _) =>
+        getSender() ! StaffMovements(getState().staffMovements.movements.filter { movement =>
+          val sdate = SDate(localDate)
+          movement.terminal == terminal && (
+            sdate.millisSinceEpoch <= movement.time || movement.time <= sdate.getLocalNextMidnight.millisSinceEpoch
+            )
+        })
+    }
 
   def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int): Props =
     Props(new StreamingUpdatesActor[StaffMovementsState, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
       StaffMovementsState(StaffMovements(List())),
-      {
-        case snapshot: StaffMovementsStateSnapshotMessage =>
-          StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
-      },
-      (state, msg) => msg match {
-        case msg: StaffMovementsMessage =>
-          val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
-          val newState = state.updated(state.staffMovements + movementsToAdd)
-          val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd), minutesToCrunch)
-          (newState, subscriberEvents)
-
-        case msg: RemoveStaffMovementMessage =>
-          val uuidToRemove = msg.getUUID
-          val movementsToRemove = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
-          val newState = state.updated(state.staffMovements - Seq(uuidToRemove))
-          val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToRemove), minutesToCrunch)
-          (newState, subscriberEvents)
-
-        case _ =>
-          (state, Seq())
-      },
-      (getState, getSender) => {
-        case GetState =>
-          getSender() ! getState()
-
-        case TerminalUpdateRequest(terminal, localDate, _, _) =>
-          getSender() ! StaffMovements(getState().staffMovements.movements.filter { movement =>
-            val sdate = SDate(localDate)
-            movement.terminal == terminal && (
-              sdate.millisSinceEpoch <= movement.time || movement.time <= sdate.getLocalNextMidnight.millisSinceEpoch
-              )
-          })
-      }
+      snapshotMessageToState,
+      eventToState(minutesToCrunch),
+      query
     ))
+}
+
+object StaffMovementsActor extends StaffMovementsActorLike {
 
   def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements =
     StaffMovements(messages.map(staffMovementMessageToStaffMovement))
