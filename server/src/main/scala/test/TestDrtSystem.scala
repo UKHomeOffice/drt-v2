@@ -21,9 +21,8 @@ import test.TestActors._
 import test.feeds.test._
 import test.roles.TestUserRoleProvider
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
-import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.db.{IUserFeedbackDao, UserFeedbackDao, UserFeedbackRow}
+import uk.gov.homeoffice.drt.db.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, UserFeedbackDao, UserFeedbackRow}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
@@ -300,7 +299,8 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     crunchInputs.killSwitches
   }
 
-  override val userFeedbackService: IUserFeedbackDao = MockUserFeedbackDao()
+  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(PostgresTables.db)
+  override val abFeatureService: IABFeatureDao = ABFeatureDao(PostgresTables.db)
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {

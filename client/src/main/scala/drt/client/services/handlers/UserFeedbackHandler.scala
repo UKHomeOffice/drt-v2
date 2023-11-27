@@ -13,7 +13,7 @@ import upickle.default._
 import UserFeedbackRow._
 import uk.gov.homeoffice.drt.feedback.UserFeedback
 
-case class CloseBanner() extends Action
+case class CloseBanner(feedbackType: String, aORbTest: String) extends Action
 
 case class GetUserFeedback() extends Action
 
@@ -27,8 +27,8 @@ class UserFeedbackHandler[M](modelRW: ModelRW[M, Pot[Seq[UserFeedback]]]) extend
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
-    case CloseBanner() =>
-      val apiCallEffect = Effect(DrtApi.post("close-banner", "")
+    case CloseBanner(feedbackType, aORbTest) =>
+      val apiCallEffect = Effect(DrtApi.post(s"close-banner/$feedbackType/$aORbTest", "")
         .map(_ => GetUserFeedback())
         .recoverWith {
           case _ =>

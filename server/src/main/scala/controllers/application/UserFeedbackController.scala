@@ -22,20 +22,27 @@ class UserFeedbackController @Inject()(cc: ControllerComponents,
     val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
     val userFeedbackRow: Future[Seq[UserFeedbackRow]] = ctrl.userFeedbackService.selectByEmail(userEmail)
     userFeedbackRow.map(userFeedbacks => Ok(write(userFeedbacks.map(_.toUserFeedback))))
+      .recoverWith { case e =>
+        log.error("Error getting user feedback: " + e.getMessage)
+        Future(Ok("[]"))
+      }
   }
 
-  def closeBanner = Action.async { implicit request =>
+  def closeBannerAction(feedbackType: String, aORbTest: String) = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
     val result: Future[Int] = ctrl.userFeedbackService
       .insertOrUpdate(UserFeedbackRow(email = userEmail,
         actionedAt = new Timestamp(System.currentTimeMillis()),
         feedbackAt = None,
         closeBanner = true,
+        feedbackType = Option(feedbackType),
         bfRole = "",
         drtQuality = "",
-        drtLikes = "",
-        drtImprovements = "",
-        participationInterest = false))
+        drtLikes = None,
+        drtImprovements = None,
+        participationInterest = false,
+        aOrBTest = Option(aORbTest)
+      ))
     result.map(_ => Ok("Successfully closed banner"))
   }
 

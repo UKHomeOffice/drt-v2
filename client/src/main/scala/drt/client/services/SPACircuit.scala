@@ -10,6 +10,7 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
+import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
@@ -20,6 +21,7 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import uk.gov.homeoffice.drt.training.FeatureGuide
+
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -166,6 +168,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      dropIns: Pot[Seq[DropIn]] = Empty,
                      dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
                      userFeedbacks: Pot[Seq[UserFeedback]] = Empty,
+                     abFeatures:Pot[Seq[ABFeature]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                     )
 
@@ -240,6 +243,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new DropInHandler(zoomRW(_.dropIns)((m, v) => m.copy(dropIns = v))),
       new DropInRegistrationsHandler(zoomRW(_.dropInRegistrations)((m, v) => m.copy(dropInRegistrations = v))),
       new UserFeedbackHandler(zoomRW(_.userFeedbacks)((m, v) => m.copy(userFeedbacks = v))),
+      new ABFeatureHandler(zoomRW(_.abFeatures)((m, v) => m.copy(abFeatures = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
     )
     composedHandlers

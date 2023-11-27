@@ -131,7 +131,9 @@ GET           /drop-in-registrations                                            
 
 GET          /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
 
-POST          /close-banner                                                          controllers.application.UserFeedbackController.closeBanner
+POST          /close-banner/:feedbackType/:aORbTest                                  controllers.application.UserFeedbackController.closeBannerAction(feedbackType:String,aORbTest: String)
+
+GET           /ab-feature/:functionName                                               controllers.application.ABFeatureController.getABFeature(functionName: String)
 
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 

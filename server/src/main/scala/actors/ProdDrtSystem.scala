@@ -31,7 +31,7 @@ import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.db.{IUserFeedbackDao, UserFeedbackDao}
+import uk.gov.homeoffice.drt.db.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, UserFeedbackDao}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate}
@@ -54,10 +54,10 @@ case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsF
 
 @Singleton
 case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
-                        (implicit val materializer: Materializer,
-                         val ec: ExecutionContext,
-                         val system: ActorSystem,
-                         val timeout: Timeout) extends DrtSystemInterface {
+  (implicit val materializer: Materializer,
+    val ec: ExecutionContext,
+    val system: ActorSystem,
+    val timeout: Timeout) extends DrtSystemInterface {
 
   import DrtStaticParameters._
 
@@ -85,7 +85,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val dropInService: DropInTableLike = DropInTable(PostgresTables)
 
-  override val dropInRegistrationService: DropInsRegistrationTableLike =  DropInsRegistrationTable(PostgresTables)
+  override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(PostgresTables)
 
   override val minuteLookups: MinuteLookups = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
@@ -242,4 +242,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   }
 
   override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(PostgresTables.db)
+
+  override val abFeatureService: IABFeatureDao = ABFeatureDao(PostgresTables.db)
 }
