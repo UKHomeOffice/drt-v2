@@ -99,7 +99,6 @@ object Layout {
                                 )
                               case _ => EmptyVdom
                             },
-                            feedBackNavBar(user, airportConfig.portCode)
                           ),
                           <.div(<.div(props.currentLoc.render()))
                         ),
