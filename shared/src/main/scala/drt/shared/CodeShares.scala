@@ -1,42 +1,38 @@
 package drt.shared
 
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 
 object CodeShares {
 
-  def uniqueArrivals[GenFlight](apiFlightFromGenFlight: GenFlight => Arrival,
-                                paxFeedSourceOrder: List[FeedSource],
-                               )
-                               (flights: Seq[GenFlight]): Iterable[GenFlight] =
-    uniqueArrivalsWithCodeShares(apiFlightFromGenFlight, paxFeedSourceOrder)(flights).map(_._1)
+  def uniqueArrivals(paxFeedSourceOrder: List[FeedSource])
+                    (flights: Seq[ApiFlightWithSplits]): Iterable[ApiFlightWithSplits] =
+    uniqueArrivalsWithCodeShares(paxFeedSourceOrder)(flights).map(_._1)
 
-  def uniqueArrivalsWithCodeShares[GenFlight](apiFlightFromGenFlight: GenFlight => Arrival,
-                                              paxFeedSourceOrder: List[FeedSource],
-                                             )
-                                             (flights: Seq[GenFlight]): Seq[(GenFlight, Seq[String])] = {
+  def uniqueArrivalsWithCodeShares(paxFeedSourceOrder: List[FeedSource])
+                                  (flights: Seq[ApiFlightWithSplits]): Seq[(ApiFlightWithSplits, Seq[String])] = {
     flights
       .groupBy(f =>
-        (apiFlightFromGenFlight(f).Scheduled, apiFlightFromGenFlight(f).Terminal, apiFlightFromGenFlight(f).Origin)
+        (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
       )
       .values
       .map { flights =>
         val mainFlight = flights
           .sortBy { f =>
-            val apiScore = if (apiFlightFromGenFlight(f).PassengerSources.contains(ApiFeedSource)) 10000 else 0
-            val paxScore = apiFlightFromGenFlight(f).bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0)
+            val apiScore = if (f.apiFlight.PassengerSources.contains(ApiFeedSource) || f.hasApi) 10000 else 0
+            val paxScore = f.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.getOrElse(0)
             apiScore + paxScore
           }
           .reverse.head
-        val shares = flights.filter(_ != mainFlight).map(f => apiFlightFromGenFlight(f).flightCodeString)
+        val shares = flights.filter(_ != mainFlight).map(f => f.apiFlight.flightCodeString)
 
         (mainFlight, shares)
       }
       .toSeq
       .sortBy {
         case (mainFlight, _) =>
-          val pcpTime = apiFlightFromGenFlight(mainFlight).PcpTime.getOrElse(0L)
-          (pcpTime, apiFlightFromGenFlight(mainFlight).VoyageNumber.numeric)
+          val pcpTime = mainFlight.apiFlight.PcpTime.getOrElse(0L)
+          (pcpTime, mainFlight.apiFlight.VoyageNumber.numeric)
       }
   }
 }

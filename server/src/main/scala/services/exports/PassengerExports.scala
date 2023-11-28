@@ -67,13 +67,13 @@ object PassengerExports {
       val windowStart = SDate(current)
       val windowEnd = SDate(current).addDays(1).addMinutes(-1)
       val arrivals = flights.collect {
-        case fws if fws.apiFlight.hasPcpDuring(windowStart, windowEnd, paxFeedSourceOrder) => fws.apiFlight
+        case fws if fws.apiFlight.hasPcpDuring(windowStart, windowEnd, paxFeedSourceOrder) => fws
       }
-      val uniqueArrivals = CodeShares.uniqueArrivals[Arrival](identity, paxFeedSourceOrder)(arrivals).toSeq
+      val uniqueArrivals = CodeShares.uniqueArrivals(paxFeedSourceOrder)(arrivals).toSeq
 
       uniqueArrivals
-        .sortBy(_.PcpTime.getOrElse(0L))
-        .map(arrival => totalPaxForArrivalInWindow(arrival, paxFeedSourceOrder, windowStart.millisSinceEpoch, windowEnd.millisSinceEpoch))
+        .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
+        .map(arrival => totalPaxForArrivalInWindow(arrival.apiFlight, paxFeedSourceOrder, windowStart.millisSinceEpoch, windowEnd.millisSinceEpoch))
         .sum
     }
 
