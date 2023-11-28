@@ -71,7 +71,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   log.info(s"Scheduling crunch system to start in ${systemStartGracePeriod.toString()}")
   actorSystem.scheduler.scheduleOnce(systemStartGracePeriod) {
-    log.info("\n\n**Starting crunch system")
     ctrl.run()
   }
 

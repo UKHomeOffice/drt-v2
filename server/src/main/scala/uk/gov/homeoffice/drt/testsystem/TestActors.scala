@@ -146,7 +146,6 @@ object TestActors {
       case ResetData =>
         maybeKillSwitch.foreach(_.shutdown())
         state = initialState
-        println(s"\n\n** Resetting $persistenceId - streaming from $lastSequenceNr **\n\n")
         val killSwitch = startUpdatesStream(lastSequenceNr)
         maybeKillSwitch = Option(killSwitch)
     }

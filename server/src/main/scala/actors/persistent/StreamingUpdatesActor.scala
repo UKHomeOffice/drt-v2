@@ -65,9 +65,7 @@ class StreamingUpdatesActor[T, S](val persistenceId: String,
     case EventEnvelope(_, _, _, msg) =>
       val (newState, subscriberEvent) = eventToState(state, msg)
       state = newState
-      if (subscriber.isEmpty) println(s"\n\nNo subscribers to event")
       subscriber.foreach { s =>
-        println(s"\n\nSending $subscriberEvent to $s")
         s ! subscriberEvent
       }
       sender() ! Ack
@@ -85,7 +83,6 @@ class StreamingUpdatesActor[T, S](val persistenceId: String,
 
   private val receiveSubscriber: Receive = {
     case AddUpdatesSubscriber(newSub) =>
-      println(s"\n\n**adding subscriber")
       subscriber = Option(newSub)
   }
 

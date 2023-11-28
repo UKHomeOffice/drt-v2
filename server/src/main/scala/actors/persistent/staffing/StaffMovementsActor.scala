@@ -35,15 +35,12 @@ trait StaffMovementsActorLike {
   val eventToState: Int => (StaffMovementsState, Any) => (StaffMovementsState, Iterable[TerminalUpdateRequest]) =
     minutesToCrunch => (state, msg) => msg match {
       case msg: StaffMovementsMessage =>
-        println(s"\n\n** Got a movements addition: $msg")
         val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
         val newState = state.updated(state.staffMovements + movementsToAdd)
         val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd), minutesToCrunch)
-        println(s"\n\n** Sending terminal update requests: $subscriberEvents")
         (newState, subscriberEvents)
 
       case msg: RemoveStaffMovementMessage =>
-        println(s"\n\n** Got a movements removal: $msg")
         val uuidToRemove = msg.getUUID
         val movementsToRemove = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
         val newState = state.updated(state.staffMovements - Seq(uuidToRemove))
@@ -101,7 +98,6 @@ object StaffMovementsActor extends StaffMovementsActorLike {
                            )
                            (implicit timeout: Timeout): Props =
     Props(new SequentialWritesActor[MovementUpdate](update => {
-      println(s"\n\n** Got a movements update to write via request and terminate: $update")
       val actor = system.actorOf(Props(new StaffMovementsActor(now, expireBeforeMillis)), "staff-movements-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
@@ -190,8 +186,6 @@ class StaffMovementsActor(val now: () => SDateLike,
       purgeExpiredAndUpdateState(updatedStaffMovements)
 
       val movements = StaffMovements(movementsToAdd)
-      println(s"\n\n** Movements actor received $movements to persist")
-      println(s"** sequence number: $lastSequenceNr")
       val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
       persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), StatusReply.Ack)))
 
