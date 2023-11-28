@@ -34,6 +34,9 @@ trait FlightsExport {
 
   val paxFeedSourceOrder: List[FeedSource]
 
+  lazy val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits] =
+    CodeShares.uniqueArrivals(paxFeedSourceOrder)
+
   private def flightToCsvRow(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): String = rowValues(fws, maybeManifest).mkString(",")
 
   def csvStream(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed]): Source[String, NotUsed] =
@@ -55,8 +58,5 @@ trait FlightsExport {
           (fws, maybeManifest)
         }
     }
-
-  val uniqueArrivalsWithCodeShares: Seq[ApiFlightWithSplits] => Iterable[ApiFlightWithSplits] = CodeShares
-    .uniqueArrivals((f: ApiFlightWithSplits) => identity(f.apiFlight), paxFeedSourceOrder)
 
 }
