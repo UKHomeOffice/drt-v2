@@ -101,6 +101,7 @@ object StaffMovementsActor extends StaffMovementsActorLike {
                            )
                            (implicit timeout: Timeout): Props =
     Props(new SequentialWritesActor[MovementUpdate](update => {
+      println(s"\n\n** Got a movements update to write via request and terminate: $update")
       val actor = system.actorOf(Props(new StaffMovementsActor(now, expireBeforeMillis)), "staff-movements-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
@@ -189,6 +190,8 @@ class StaffMovementsActor(val now: () => SDateLike,
       purgeExpiredAndUpdateState(updatedStaffMovements)
 
       val movements = StaffMovements(movementsToAdd)
+      println(s"\n\n** Movements actor received $movements to persist")
+      println(s"** sequence number: $lastSequenceNr")
       val messagesToPersist = StaffMovementsMessage(staffMovementsToStaffMovementMessages(movements), Option(now().millisSinceEpoch))
       persistAndMaybeSnapshotWithAck(messagesToPersist, List((sender(), StatusReply.Ack)))
 

@@ -157,7 +157,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
         request.body.asText match {
           case Some(text) =>
             val movementsToAdd: List[StaffMovement] = read[List[StaffMovement]](text)
-            println(s"Received ${movementsToAdd} movements. Sending to actor")
+            println(s"\n\n**Controller received $movementsToAdd movements. Sending to actor")
             ctrl.staffMovementsSequentialWritesActor
               .ask(AddStaffMovements(movementsToAdd))
               .map(_ => Accepted)

@@ -213,9 +213,6 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem)), name = "TestActor-ResetData")
 
-  restartActor ! RestartActor.AddResetActors(Seq(
-    portStateActor, testManifestsActor, testArrivalActor, liveShiftsReadActor, liveFixedPointsReadActor, liveStaffMovementsReadActor))
-
   config.getOptional[String]("test.live_fixture_csv").foreach { file =>
     implicit val timeout: Timeout = Timeout(250 milliseconds)
     log.info(s"Loading fixtures from $file")
@@ -257,20 +254,26 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     manifestLookups
   )
 
-  private def startSystem: () => List[KillSwitch] = () => {
-    restartActor ! RestartActor.AddResetActors(Seq(
-      actors.forecastBaseArrivalsActor,
-      actors.forecastArrivalsActor,
-      actors.liveArrivalsActor,
-      actors.liveBaseArrivalsActor,
-      actors.manifestsRouterActor,
-      actors.crunchQueueActor,
-      actors.deskRecsQueueActor,
-      actors.deploymentQueueActor,
-      actors.staffingQueueActor,
-      actors.aggregatedArrivalsActor,
-    ))
+  restartActor ! RestartActor.AddResetActors(Seq(
+    actors.forecastBaseArrivalsActor,
+    actors.forecastArrivalsActor,
+    actors.liveArrivalsActor,
+    actors.liveBaseArrivalsActor,
+    actors.manifestsRouterActor,
+    actors.crunchQueueActor,
+    actors.deskRecsQueueActor,
+    actors.deploymentQueueActor,
+    actors.staffingQueueActor,
+    actors.aggregatedArrivalsActor,
+    portStateActor,
+    testManifestsActor,
+    testArrivalActor,
+    liveShiftsReadActor,
+    liveFixedPointsReadActor,
+    liveStaffMovementsReadActor
+  ))
 
+  private def startSystem: () => List[KillSwitch] = () => {
     val crunchInputs = startCrunchSystem(
       initialPortState = None,
       initialForecastBaseArrivals = None,
@@ -319,11 +322,12 @@ class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with Actor
         ks.shutdown()
       }
 
+      resetInMemoryData()
+
       val resetFutures = actorsToReset
         .map(_.ask(ResetData)(new Timeout(3 second)))
 
       Future.sequence(resetFutures).onComplete { _ =>
-        resetInMemoryData()
         log.info(s"Restarting system")
         startTestSystem()
         maybeReplyTo.foreach { k =>
@@ -339,8 +343,11 @@ class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with Actor
     case Status.Failure(t) =>
       log.error(s"Got a failure message: ${t.getMessage}")
 
-    case StartTestSystem => startTestSystem()
-    case u => log.error(s"Received unexpected message: ${u.getClass}")
+    case StartTestSystem =>
+      startTestSystem()
+
+    case u =>
+      log.error(s"Received unexpected message: ${u.getClass}")
   }
 
   private def startTestSystem(): Unit = currentKillSwitches = startSystem()
