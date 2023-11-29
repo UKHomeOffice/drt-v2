@@ -20,6 +20,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
+import uk.gov.homeoffice.drt.time.MilliDate
 
 object TerminalDesksAndQueuesRow {
 

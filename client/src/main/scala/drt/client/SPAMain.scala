@@ -147,7 +147,7 @@ object SPAMain {
       case Planning =>
         GetForecastWeek(TerminalPlanningComponent.defaultStartDate(dateFromUrlOrNow), terminal)
       case Staffing =>
-        GetShiftsForMonth(dateFromUrlOrNow, terminal)
+        GetShiftsForMonth(dateFromUrlOrNow)
       case _ =>
         SetViewMode(viewMode)
     }

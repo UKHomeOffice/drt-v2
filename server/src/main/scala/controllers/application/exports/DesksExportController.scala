@@ -1,6 +1,5 @@
 package controllers.application.exports
 
-import actors.DrtSystemInterface
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
@@ -12,6 +11,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.time.SDate
 import services.exports.StreamingDesksExport
 import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import upickle.default.write
@@ -129,7 +129,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     Try(sourceToCsvResponse(exportSource, fileName)) match {
       case Success(value) => Future(value)
       case Failure(t) =>
-        log.error("Failed to get CSV export", t)
+        log.error(s"Failed to get CSV export: ${t.getMessage}")
         Future(BadRequest("Failed to get CSV export"))
     }
   }

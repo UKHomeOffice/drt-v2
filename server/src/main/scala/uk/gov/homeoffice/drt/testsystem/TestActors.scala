@@ -1,10 +1,10 @@
-package test
+package uk.gov.homeoffice.drt.testsystem
 
 import actors._
 import actors.daily._
 import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActorLike, ShiftsActorLike, StaffMovementsActorLike, StaffMovementsState}
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
@@ -15,6 +15,7 @@ import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, Persiste
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.Logger
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -134,34 +135,67 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestShiftsActor(now: () => SDateLike, expireBefore: () => SDateLike)
-    extends ShiftsActor(now, expireBefore) with Resettable {
-    override def resetState(): Unit = {
-      state = initialState
-      subscribers = List()
+  class TestStreamingUpdatesActor[T, S](persistenceId: String,
+                                        journalType: StreamingJournalLike,
+                                        initialState: T,
+                                        snapshotMessageToState: Any => T,
+                                        eventToState: (T, Any) => (T, S),
+                                        query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
+                                       ) extends StreamingUpdatesActor[T, S](persistenceId, journalType, initialState, snapshotMessageToState, eventToState, query) {
+    override val receiveQuery: Receive = query(() => state, sender) orElse {
+      case ResetData =>
+        maybeKillSwitch.foreach(_.shutdown())
+        state = initialState
+        val killSwitch = startUpdatesStream(lastSequenceNr)
+        maybeKillSwitch = Option(killSwitch)
     }
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestFixedPointsActor(now: () => SDateLike, minutesToCrunch: Int) extends FixedPointsActor(now, minutesToCrunch, 5) with Resettable {
-    override def resetState(): Unit = {
-      state = initialState
-      subscribers = List()
-    }
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  object TestShiftsActor extends ShiftsActorLike {
+    override def streamingUpdatesProps(journalType: StreamingJournalLike,
+                                       minutesToCrunch: Int,
+                                       now: () => SDateLike,
+                                      ): Props =
+      Props(new TestStreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
+        persistenceId,
+        journalType,
+        ShiftAssignments.empty,
+        snapshotMessageToState,
+        eventToState(now, minutesToCrunch),
+        query(now)
+      ))
   }
 
-  class TestStaffMovementsActor(now: () => SDateLike,
-                                expireBefore: () => SDateLike,
-                                minutesToCrunch: Int) extends StaffMovementsActor(now, expireBefore, minutesToCrunch) with Resettable {
-    override def resetState(): Unit = {
-      state = initialState
-      subscribers = List()
-    }
+  object TestFixedPointsActor extends FixedPointsActorLike {
 
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+    import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
+
+    override def streamingUpdatesProps(journalType: StreamingJournalLike,
+                                       now: () => SDateLike,
+                                       forecastMaxDays: Int,
+                                       minutesToCrunch: Int,
+                                      ): Props =
+      Props(new TestStreamingUpdatesActor[FixedPointAssignments, Iterable[TerminalUpdateRequest]](
+        persistenceId,
+        journalType,
+        FixedPointAssignments.empty,
+        snapshotMessageToState,
+        eventToState(now, forecastMaxDays, minutesToCrunch),
+        query(now)
+      ))
+  }
+
+  object TestStaffMovementsActor extends StaffMovementsActorLike {
+
+    override def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int): Props =
+      Props(new TestStreamingUpdatesActor[StaffMovementsState, Iterable[TerminalUpdateRequest]](
+        persistenceId,
+        journalType,
+        StaffMovementsState(StaffMovements(List())),
+        snapshotMessageToState,
+        eventToState(minutesToCrunch),
+        query
+      ))
   }
 
   class MockAggregatedArrivalsActor extends Actor {

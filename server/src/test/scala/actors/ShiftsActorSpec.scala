@@ -1,7 +1,8 @@
 package actors
 
-import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor, UpdateShifts, UpdateShiftsAck}
+import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor, UpdateShifts}
 import akka.actor.{ActorRef, PoisonPill, Props}
+import akka.pattern.StatusReply
 import akka.testkit.ImplicitSender
 import drt.shared._
 import services.crunch.CrunchTestLike
@@ -38,7 +39,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor")
 
       actor ! UpdateShifts(shifts.assignments)
-      expectMsg(UpdateShiftsAck(shifts.assignments))
+      expectMsg(StatusReply.Ack)
       actor ! PoisonPill
 
       val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor2")
@@ -60,11 +61,11 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor1")
 
       actor ! UpdateShifts(Seq(shift1, shift2))
-      expectMsg(UpdateShiftsAck(Seq(shift1, shift2)))
+      expectMsg(StatusReply.Ack)
 
       val updatedShifts = Seq(shift1, shift2).map(_.copy(numberOfStaff = 0))
       actor ! UpdateShifts(updatedShifts)
-      expectMsg(UpdateShiftsAck(updatedShifts))
+      expectMsg(StatusReply.Ack)
       actor ! PoisonPill
 
       val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor2")
@@ -89,12 +90,12 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor1")
 
       actor ! UpdateShifts(Seq(shift1, shift2, shift3, shift4))
-      expectMsg(UpdateShiftsAck(Seq(shift1, shift2, shift3, shift4)))
+      expectMsg(StatusReply.Ack)
 
       val updatedShift1 = shift1.copy(numberOfStaff = 0)
       val updatedShift3 = shift3.copy(numberOfStaff = 0)
       actor ! UpdateShifts(Seq(updatedShift1, updatedShift3))
-      expectMsg(UpdateShiftsAck(Seq(updatedShift1, updatedShift3)))
+      expectMsg(StatusReply.Ack)
       actor ! PoisonPill
 
       val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor2")
@@ -118,19 +119,19 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor2000 = newStaffActor(nowAs("2017-01-01T20:00"))
 
       actor2000 ! UpdateShifts(Seq(shift1))
-      expectMsg(UpdateShiftsAck(Seq(shift1)))
+      expectMsg(StatusReply.Ack)
       actor2000 ! PoisonPill
 
       val actor2005 = newStaffActor(nowAs("2017-01-01T20:05"))
 
       actor2005 ! UpdateShifts(Seq(shift2))
-      expectMsg(UpdateShiftsAck(Seq(shift2)))
+      expectMsg(StatusReply.Ack)
       actor2005 ! PoisonPill
 
       val actor2010 = newStaffActor(nowAs("2017-01-01T20:10"))
 
       actor2010 ! UpdateShifts(Seq(shift3, shift4))
-      expectMsg(UpdateShiftsAck(Seq(shift3, shift4)))
+      expectMsg(StatusReply.Ack)
       actor2010 ! PoisonPill
 
       val actorPit2006 = newStaffPointInTimeActor(nowAs("2017-01-01T20:06"))

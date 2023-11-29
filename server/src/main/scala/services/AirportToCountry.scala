@@ -6,7 +6,6 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.io.Codec
-import scala.language.postfixOps
 import scala.util.Try
 
 object AirportToCountry {
@@ -33,6 +32,3 @@ object AirportToCountry {
     .get(portToCheck.iata)
     .exists(ai => redListUpdates.countryCodesByName(forDate).contains(ai.country))
 }
-
-
-

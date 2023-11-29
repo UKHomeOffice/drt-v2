@@ -1,12 +1,12 @@
 package controllers.application
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import actors.DrtSystemInterface
 import akka.pattern.ask
 import com.google.inject.Inject
 import drt.shared.CrunchApi.MillisSinceEpoch
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.auth.Roles.EgateBanksEdit
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default._

@@ -1,11 +1,11 @@
-package test
+package uk.gov.homeoffice.drt.testsystem
 
 import actors.MinuteLookupsLike
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
-import test.TestActors._
+import TestActors._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

@@ -44,8 +44,7 @@ case class UniqueArrivalKey(arrivalPort: PortCode,
     (arrivalPort.iata, departurePort.iata, voyageNumber.numeric.toString, new Timestamp(scheduled.millisSinceEpoch))
 }
 
-case class ManifestLookup(tables: Tables)
-                         (implicit mat: Materializer) extends ManifestLookupLike {
+case class ManifestLookup(tables: Tables) extends ManifestLookupLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
@@ -74,8 +73,8 @@ case class ManifestLookup(tables: Tables)
                                        (implicit mat: Materializer): Future[immutable.Seq[ManifestPassengerProfile]] =
     manifestsForScheduled(flightKeys).map(_.flatten)
 
-  def manifestPaxForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
-                             (implicit mat: Materializer): Future[Int] =
+  private def manifestPaxForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
+                                     (implicit mat: Materializer): Future[Int] =
     manifestsForScheduled(flightKeys).map { manifests => manifests.flatten.size / manifests.size }
 
   private def paxProfilesFromQuery(builder: SQLActionBuilder): Future[Try[List[ManifestPassengerProfile]]] =

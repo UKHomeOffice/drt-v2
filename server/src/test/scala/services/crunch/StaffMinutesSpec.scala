@@ -249,7 +249,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(TestConfig(
           now = () => now,
-          maxDaysToCrunch = 5
+          forecastMaxDays = 5
         ))
 
         offerAndWait(crunch.fixedPointsInput, fixedPoints)
@@ -297,7 +297,7 @@ class StaffMinutesSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(TestConfig(
           now = () => now,
-          maxDaysToCrunch = daysToCrunch,
+          forecastMaxDays = daysToCrunch,
           initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), staffMinutes(daysToCrunch, 15, scheduled)))
         ))
 
@@ -338,7 +338,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         val crunch = runCrunchGraph(TestConfig(
           now = () => now,
           airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap)),
-          maxDaysToCrunch = daysToCrunch,
+          forecastMaxDays = daysToCrunch,
           initialPortState = Option(PortState.empty)
         ))
 
@@ -377,7 +377,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         val crunch = runCrunchGraph(TestConfig(
           now = () => now,
           airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap)),
-          maxDaysToCrunch = daysToCrunch,
+          forecastMaxDays = daysToCrunch,
           initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
         ))
 
@@ -417,7 +417,7 @@ class StaffMinutesSpec extends CrunchTestLike {
         val crunch = runCrunchGraph(TestConfig(
           now = () => now,
           airportConfig = defaultAirportConfig.copy(queuesByTerminal = defaultAirportConfig.queuesByTerminal.view.filterKeys(_ == T1).to(SortedMap)),
-          maxDaysToCrunch = daysToCrunch,
+          forecastMaxDays = daysToCrunch,
           initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits](), SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]()))
         ))
 

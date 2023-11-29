@@ -1,10 +1,12 @@
 package actors.persistent.staffing
 
+import actors.persistent.staffing.StaffMovementsActor.staffMovementMessagesToStaffMovements
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
 import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 
-class StaffMovementsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike) extends StaffMovementsActorBase(() => pointInTime, expireBefore) {
+class StaffMovementsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike)
+  extends StaffMovementsActor(() => pointInTime, expireBefore) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: StaffMovementsStateSnapshotMessage => state = StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }

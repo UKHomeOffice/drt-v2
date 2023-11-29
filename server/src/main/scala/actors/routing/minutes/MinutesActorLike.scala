@@ -37,6 +37,7 @@ object MinutesActorLike {
   type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[UpdatedMillis]
 
   case object ProcessNextUpdateRequest
+  case class QueueUpdateRequest[U](update: U, replyTo: ActorRef)
 
 }
 
@@ -237,6 +238,7 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
       val replyTo = sender()
       MinutesActorLikeCommon.handleLookups(lookup, request.terminal, SDate(request.from), SDate(request.to), None).foreach(replyTo ! _)
   }
+
   override def partitionUpdates: PartialFunction[MinutesContainer[A, B], Map[(Terminal, UtcDate), MinutesContainer[A, B]]] = {
     case container: MinutesContainer[A, B] => container.minutes
       .groupBy(minuteLike => (minuteLike.terminal, SDate(minuteLike.minute).toUtcDate))

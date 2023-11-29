@@ -1,7 +1,7 @@
 package drt.server.feeds.lgw
 
 import drt.server.feeds.lgw.LgwForecastSftpService.sshClient
-import net.schmizz.sshj.{Config, SSHClient}
+import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
@@ -9,7 +9,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 
 import java.io.ByteArrayOutputStream
-import java.nio.charset.StandardCharsets
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.util.{Failure, Success, Try}
 

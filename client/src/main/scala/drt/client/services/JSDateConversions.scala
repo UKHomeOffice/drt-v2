@@ -2,9 +2,8 @@ package drt.client.services
 
 import drt.client.services.JSDateConversions.SDate.JSSDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.MilliDate
 import moment._
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliDate, SDateLike, UtcDate}
 
 import scala.language.implicitConversions
 import scala.scalajs.js.Date

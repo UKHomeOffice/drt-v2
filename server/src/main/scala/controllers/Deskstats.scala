@@ -26,9 +26,9 @@ object Deskstats {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   class NaiveTrustManager extends X509TrustManager {
-    override def checkClientTrusted(cert: Array[X509Certificate], authType: String) {}
+    override def checkClientTrusted(cert: Array[X509Certificate], authType: String): Unit = {}
 
-    override def checkServerTrusted(cert: Array[X509Certificate], authType: String) {}
+    override def checkServerTrusted(cert: Array[X509Certificate], authType: String): Unit = {}
 
     override def getAcceptedIssuers = null
   }

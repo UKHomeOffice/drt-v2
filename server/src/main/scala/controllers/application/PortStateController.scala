@@ -1,16 +1,18 @@
 package controllers.application
 
 import actors.CrunchManagerActor.RecalculateArrivals
-import actors.DrtSystemInterface
-import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince, PointInTimeQuery}
+import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
-import drt.shared.CrunchApi.{MillisSinceEpoch, PortStateUpdates}
+import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.crunch.CrunchManager.{queueDaysToReCrunch, queueDaysToReCrunchWithUpdatedSplits}
 import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -39,6 +41,40 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
             log.error(t, "Error processing request for port state or port state updates")
             Future(InternalServerError)
         }
+    }
+  }
+
+  private def startAndEndForDay(startDay: MillisSinceEpoch, numberOfDays: Int): (SDateLike, SDateLike) = {
+    val startOfWeekMidnight = SDate(startDay).getLocalLastMidnight
+    val endOfForecast = startOfWeekMidnight.addDays(numberOfDays)
+
+    (startOfWeekMidnight, endOfForecast)}
+
+  def forecastWeekSummary(terminalName: String, startDay: MillisSinceEpoch): Action[AnyContent] = authByRole(DesksAndQueuesView) {
+    Action.async {
+      val terminal = Terminal(terminalName)
+      val numberOfDays = 7
+      val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, numberOfDays)
+
+      val portStateFuture = ctrl.portStateActor.ask(
+        GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
+      )(new Timeout(30.seconds))
+
+      val forecast = portStateFuture
+        .map {
+          case portState: PortState =>
+            log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
+            val fp = services.exports.Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+            val hf = services.exports.Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
+              airportConfig.queuesByTerminal(terminal).toList)
+            Option(ForecastPeriodWithHeadlines(fp, hf))
+        }
+        .recover {
+          case t =>
+            log.error(s"Failed to get PortState: ${t.getMessage}")
+            None
+        }
+      forecast.map(r => Ok(write(r)))
     }
   }
 
@@ -90,7 +126,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   }
 
   def reCalculateArrivals: Action[AnyContent] = authByRole(SuperAdmin) {
-    Action.async { request: Request[AnyContent] =>
+    Action.async { _ =>
       ctrl.crunchManagerActor ! RecalculateArrivals
       Future.successful(Ok("Re-calculating arrivals"))
     }

@@ -45,6 +45,11 @@ final class SortedActorRefSource(persistentActor: ActorRef,
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
 
       val ref: ActorRef = getEagerStageActor(eagerMaterializer) {
+        case (_, m: Iterable[ProcessingRequest@unchecked]) =>
+          buffer ++= m
+          persistentActor ! m
+          tryPushElement()
+
         case (_, m: ProcessingRequest@unchecked) =>
           buffer += m
           persistentActor ! m

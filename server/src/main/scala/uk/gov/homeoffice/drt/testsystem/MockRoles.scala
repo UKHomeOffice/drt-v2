@@ -1,15 +1,14 @@
 
-package test.roles
+package uk.gov.homeoffice.drt.testsystem
 
-import controllers.UserRoleProviderLike
-import uk.gov.homeoffice.drt.auth.Roles
-import uk.gov.homeoffice.drt.auth.Roles.Role
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import slickdb.UserTableLike
 import spray.json.{DefaultJsonProtocol, JsValue, RootJsonFormat}
-import test.MockUserTable
+import uk.gov.homeoffice.drt.auth.Roles
+import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 
 object MockRoles {
   val log: Logger = LoggerFactory.getLogger(getClass)

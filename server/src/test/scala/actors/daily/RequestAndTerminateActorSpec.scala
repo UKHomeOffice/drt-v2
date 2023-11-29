@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import test.TestActors.{ResetData, TestTerminalDayQueuesActor}
+import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestTerminalDayQueuesActor}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._

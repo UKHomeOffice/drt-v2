@@ -33,7 +33,10 @@ import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-object ManifestRouterActor {
+object ManifestRouterActor extends StreamingFeedStatusUpdates {
+  override val sourceType: FeedSource = ApiFeedSource
+  override val persistenceId: String = "arrival-manifests"
+
   case class GetForArrival(arrival: ArrivalKey)
 
   sealed trait ManifestResult
@@ -51,6 +54,7 @@ object ManifestRouterActor {
     DateRange
       .utcDateRangeSource(start, end)
       .mapAsync(1)(d => manifestsByDayLookup(d, maybePit).map(m => (d, m)))
+
 }
 
 case class ApiFeedState(lastProcessedMarker: MillisSinceEpoch, maybeSourceStatuses: Option[FeedSourceStatuses]) extends FeedStateLike {
@@ -59,7 +63,7 @@ case class ApiFeedState(lastProcessedMarker: MillisSinceEpoch, maybeSourceStatus
 
 class ManifestRouterActor(manifestLookup: ManifestLookup,
                           manifestsUpdate: ManifestsUpdate) extends RecoveryActorLike {
-  override def persistenceId: String = "arrival-manifests"
+  override def persistenceId: String = ManifestRouterActor.persistenceId
 
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
   implicit val mat: Materializer = Materializer.createMaterializer(context)

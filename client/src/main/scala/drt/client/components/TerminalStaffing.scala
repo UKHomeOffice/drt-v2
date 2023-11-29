@@ -9,7 +9,6 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
@@ -22,7 +21,8 @@ import org.scalajs.dom.raw.HTMLElement
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
 
 import scala.collection.immutable.NumericRange
 import scala.util.Success
