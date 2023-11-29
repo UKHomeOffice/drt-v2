@@ -265,5 +265,3 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     }
   }
 }
-
-//case class GetTerminalCrunch(terminalName: Terminal)
