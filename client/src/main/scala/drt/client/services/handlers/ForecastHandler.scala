@@ -16,10 +16,10 @@ class ForecastHandler[M](modelRW: ModelRW[M, Pot[ForecastPeriodWithHeadlines]]) 
     case GetForecastWeek(startDay, terminalName) =>
       log.info(s"Calling forecastWeekSummary starting at ${startDay.toLocalDateTimeString}")
       val apiCallEffect = Effect(DrtApi.get(s"forecast-summary/$terminalName/${startDay.millisSinceEpoch}")
-        .map(res => SetForecastPeriod(Option(read[ForecastPeriodWithHeadlines](res.responseText))))
+        .map(res => SetForecastPeriod(read[Option[ForecastPeriodWithHeadlines]](res.responseText)))
         .recoverWith {
-          case _ =>
-            log.error(s"Failed to get Forecast Period. Re-requesting after ${PollDelay.recoveryDelay}")
+          case t =>
+            log.error(s"Failed to get Forecast Period: ${t.getMessage}. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(RetryActionAfter(GetForecastWeek(startDay, terminalName), PollDelay.recoveryDelay))
         })
 

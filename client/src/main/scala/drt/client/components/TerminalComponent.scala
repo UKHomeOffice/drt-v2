@@ -147,9 +147,9 @@ object TerminalComponent {
                     )
 
                   case Planning =>
-                    <.div(model.forecastPeriodPot.render(fp => {
+                    <.div(model.forecastPeriodPot.render { fp =>
                       TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
-                    }))
+                    })
                   case Staffing if loggedInUser.roles.contains(StaffEdit) =>
                     model.potMonthOfShifts.render { ms =>
                       MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
