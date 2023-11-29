@@ -115,10 +115,9 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
-      - sbt -ivy ./.ivy2 dependencyCheck
-      - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC coverage test coverageReport
-      - sbt scalastyle | true
+      - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean coverage test coverageReport
       - sbt scapegoat | true
+      - sbt -ivy ./.ivy2 dependencyCheckAggregate
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
       ARTIFACTORY_PASSWORD:
