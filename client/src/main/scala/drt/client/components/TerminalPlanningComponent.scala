@@ -84,7 +84,6 @@ object TerminalPlanningComponent {
           scope.modState(s => updateState(s, true)) >>
             Callback {
               val direct = scope.withEffectsImpure
-
               DrtApi.get(url)
                 .map { r =>
                   val fileName = r.getResponseHeader("Content-Disposition").split("filename=")(1)
