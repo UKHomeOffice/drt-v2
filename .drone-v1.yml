@@ -124,7 +124,6 @@ steps:
       - /root/entrypoint.sh
       - sbt -mem 4096 dependencyCheckAggregate
     environment:
-      NVD_BASE_URL: http://nvdmirror:8008
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt-artifactory-robot
@@ -213,10 +212,10 @@ steps:
       - Code coverage report
 
 services:
-  - name: docker
+  - name: Docker in Docker
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
 
-  - name: nvdmirror
+  - name: NVD mirror service
     image: sspringett/nvdmirror
     ports:
       - 8008
