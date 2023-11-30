@@ -68,6 +68,11 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error test
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
     when:
       event:
         - push
@@ -81,6 +86,11 @@ steps:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error test coverage | true
       - sbt coverageReport
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
     when:
       event:
         - push
@@ -92,7 +102,13 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
-      - sbt -mem 4096 scapegoat | true
+      - sbt scapegoat | true
+    environment:
+      NVD_BASE_URL: http://nvdmirror:8008
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
     when:
       event:
         - push
@@ -107,6 +123,12 @@ steps:
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 dependencyCheckAggregate
+    environment:
+      NVD_BASE_URL: http://nvdmirror:8008
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
     when:
       event:
         - push
