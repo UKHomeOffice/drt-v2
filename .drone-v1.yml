@@ -86,8 +86,7 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
-      - sbt coverage
-      - sbt -mem 4096 --error test | true
+      - sbt -mem 4096 --error test coverage| true
       - sbt coverageReport
     environment:
       ARTIFACTORY_PASSWORD:
