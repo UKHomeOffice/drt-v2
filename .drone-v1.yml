@@ -112,8 +112,8 @@ steps:
     when:
       event:
         - push
-#      branch:
-#        - master
+      branch:
+        - master
     depends_on:
       - Code coverage report
 
@@ -131,8 +131,8 @@ steps:
     when:
       event:
         - push
-#      branch:
-#        - master
+      branch:
+        - master
     depends_on:
       - Scapegoat
 
@@ -146,8 +146,8 @@ steps:
     when:
       event:
         - push
-#      branch:
-#        - master
+      branch:
+        - master
     depends_on:
       - Dependency check
 
