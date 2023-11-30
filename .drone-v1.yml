@@ -8,19 +8,7 @@ platform:
   arch: amd64
 
 steps:
-  - name: drone_s3_cache_pull
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-    settings:
-      drone_s3_cache_mode: pull
-    environment:
-      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
-      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-
-  - name: build
+  - name: Build app
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
@@ -36,25 +24,8 @@ steps:
     when:
       event:
         - push
-    depends_on:
-      - drone_s3_cache_pull
 
-  - name: drone_s3_cache_push
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-    settings:
-      drone_s3_cache_folders: .ivy2
-      drone_s3_cache_mode: push
-    environment:
-      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
-      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-    depends_on:
-      - build
-
-  - name: ecr-login-drt-v2
+  - name: ECR login
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
     environment:
@@ -72,7 +43,7 @@ steps:
       event:
         - push
 
-  - name: publish-cypress
+  - name: Publish cypress
     image: plugins/ecr
     environment:
       AWS_REGION: eu-west-2
@@ -89,34 +60,48 @@ steps:
       event:
         - push
     depends_on:
-      - ecr-login-drt-v2
+      - ECR login
 
-  - name: unit-test
+  - name: Unit tests
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
-      - sbt --error test
+      - sbt -mem 4096 --error test
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt-artifactory-robot
       ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
     when:
       event:
         - push
     depends_on:
-      - build
+      - Build app
 
-  - name: analysis
+  - name: Code coverage report
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
-      - sbt -ivy ./.ivy2 -mem 4096 dependencyCheckAggregate
-      - sbt -ivy ./.ivy2 -mem 6144 coverage test coverageReport
+      - sbt -mem 4096 --error test coverage | true
+      - sbt coverageReport
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+    depends_on:
+      - Unit tests
+
+  - name: Scapegoat
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
       - sbt scapegoat | true
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
@@ -130,10 +115,28 @@ steps:
       branch:
         - master
     depends_on:
-      - build
-      - drone_s3_cache_pull
+      - Code coverage report
 
-  - name: sonar-scanner
+  - name: Dependency check
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt -mem 4096 dependencyCheckAggregate
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+      branch:
+        - master
+    depends_on:
+      - Scapegoat
+
+  - name: Sonar scanner
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/sonar-scanner:v4.6
     commands:
@@ -146,10 +149,9 @@ steps:
       branch:
         - master
     depends_on:
-      - analysis
-      - build
+      - Dependency check
 
-  - name: publish-drt
+  - name: Publish app
     image: plugins/ecr
     environment:
       AWS_REGION: eu-west-2
@@ -165,9 +167,9 @@ steps:
       event:
         - push
     depends_on:
-      - build
+      - Build app
 
-  - name: e2e-tests
+  - name: End to end test
     pull: if-not-exists
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
     environment:
@@ -186,10 +188,10 @@ steps:
       event:
         - push
     depends_on:
-      - publish-drt
-      - publish-cypress
+      - Publish app
+      - Publish cypress
 
-  - name: slack_notification
+  - name: Slack notification
     pull: if-not-exists
     image: plugins/slack
     settings:
@@ -206,15 +208,14 @@ steps:
       event:
         - push
     depends_on:
-      - build
-      - e2e-tests
-      - unit-test
+      - End to end test
+      - Code coverage report
 
 services:
-  - name: docker
+  - name: Docker in Docker
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
 
-  - name: nvdmirror
+  - name: NVD mirror service
     image: sspringett/nvdmirror
     ports:
       - 8008
