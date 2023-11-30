@@ -24,8 +24,6 @@ steps:
     when:
       event:
         - push
-    depends_on:
-      - drone_s3_cache_pull
 
   - name: ECR login
     pull: if-not-exists
@@ -102,7 +100,6 @@ steps:
 #        - master
     depends_on:
       - unit test
-      - drone_s3_cache_pull
 
   - name: Dependency check
     pull: if-not-exists
