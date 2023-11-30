@@ -115,7 +115,8 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
-      - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean coverage test coverageReport
+      - sbt -ivy ./.ivy2 -mem 4096 dependencyCheckAggregate
+      - sbt -ivy ./.ivy2 -mem 6144 coverage test coverageReport
       - sbt scapegoat | true
       - sbt -ivy ./.ivy2 dependencyCheckAggregate
     environment:
@@ -130,6 +131,7 @@ steps:
       branch:
         - master
     depends_on:
+      - build
       - drone_s3_cache_pull
 
   - name: sonar-scanner
