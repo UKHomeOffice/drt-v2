@@ -195,7 +195,7 @@ object TerminalComponent {
           ))
         }),
       <.li(^.className := tabClass(Planning),
-        <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"),
+        <.a(^.id := "planning-tab", VdomAttr("data-toggle") := "tab", "Planning"),
         ^.onClick ==> { e: ReactEventFromInput =>
           e.preventDefault()
           GoogleEventTracker.sendEvent(terminalName, "click", "Planning")
