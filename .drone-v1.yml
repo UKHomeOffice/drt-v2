@@ -99,7 +99,7 @@ steps:
 #      branch:
 #        - master
     depends_on:
-      - unit test
+      - Unit tests with code coverage
 
   - name: Dependency check
     pull: if-not-exists
