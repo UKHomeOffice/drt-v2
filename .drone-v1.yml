@@ -62,12 +62,12 @@ steps:
     depends_on:
       - ECR login
 
-  - name: Unit tests with code coverage
+  - name: Unit tests
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
-      - sbt -mem 4096 --error clean coverage test coverageReport
+      - sbt -mem 4096 --error test
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -80,6 +80,27 @@ steps:
         - push
     depends_on:
       - Build app
+
+  - name: Code coverage report
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt coverage
+      - sbt -mem 4096 --error test | true
+      - sbt coverageReport
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+    depends_on:
+      - Unit tests
 
   - name: Scapegoat
     pull: if-not-exists
@@ -99,7 +120,7 @@ steps:
 #      branch:
 #        - master
     depends_on:
-      - Unit tests with code coverage
+      - Code coverage report
 
   - name: Dependency check
     pull: if-not-exists
@@ -194,7 +215,7 @@ steps:
         - push
     depends_on:
       - End to end test
-      - Unit tests with code coverage
+      - Code coverage report
 
 services:
   - name: docker
