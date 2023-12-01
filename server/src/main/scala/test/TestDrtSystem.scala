@@ -5,6 +5,7 @@ import actors._
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
+import akka.stream.scaladsl.Source
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -22,7 +23,7 @@ import test.feeds.test._
 import test.roles.TestUserRoleProvider
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.db.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, UserFeedbackDao, UserFeedbackRow}
+import uk.gov.homeoffice.drt.db.{ABFeatureRow, IABFeatureDao, IUserFeedbackDao, UserFeedbackRow}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
@@ -299,8 +300,8 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     crunchInputs.killSwitches
   }
 
-  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(PostgresTables.db)
-  override val abFeatureService: IABFeatureDao = ABFeatureDao(PostgresTables.db)
+  override val userFeedbackService: IUserFeedbackDao = MockUserFeedbackDao()
+  override val abFeatureService: IABFeatureDao = MockAbFeatureDao()
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {
@@ -309,6 +310,18 @@ case class MockUserFeedbackDao() extends IUserFeedbackDao {
   override def selectAll()(implicit executionContext: ExecutionContext): Future[Seq[UserFeedbackRow]] = Future.successful(Seq())
 
   override def selectByEmail(email: String): Future[Seq[UserFeedbackRow]] = Future.successful(Seq())
+
+  override def selectAllAsStream(): Source[UserFeedbackRow, _] = Source.empty
+}
+
+case class MockAbFeatureDao() extends IABFeatureDao {
+  override def insertOrUpdate(aBFeatureRow: ABFeatureRow): Future[Int] = Future.successful(1)
+
+  override def getABFeatures: Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
+
+  override def getABFeaturesByEmailForFunction(email: String, functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
+
+  override def getABFeatureByFunctionName(functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
 }
 
 class RestartActor(startSystem: () => List[KillSwitch],

@@ -29,7 +29,7 @@ object Layout {
   case class LayoutModelItems(user: Pot[LoggedInUser],
     airportConfig: Pot[AirportConfig],
     userFeedbacks: Pot[Seq[UserFeedback]],
-    abFeatures: Pot[Seq[ABFeature]],
+    abFeatures: Pot[Seq[ABFeature]]
   ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
@@ -45,7 +45,7 @@ object Layout {
             model.user.renderReady { user =>
               model.userFeedbacks.renderReady { userFeedbacks =>
                 model.abFeatures.renderReady { abFeatures =>
-                  val aORbTest = abFeatures.headOption.map(_.test_type).getOrElse("B")
+                  val aORbTest = abFeatures.headOption.map(_.testType).getOrElse("B")
                   val (bannerHead, gridItem1, gridItem2, gridItem3) = aORbTest == "A" match {
                     case true => ("Your feedback improves DRT for everyone", 4, 2, 2)
                     case false => ("Help us improve DRT experience", 3, 2, 3)

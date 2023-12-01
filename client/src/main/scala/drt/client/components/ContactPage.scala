@@ -142,7 +142,7 @@ object FeedBackComponent {
         feedbackRCP(feedbackMP => {
           <.div(
             feedbackMP().abFeatures.renderReady { abFeatures =>
-              val aORbTest = abFeatures.headOption.map(_.test_type).getOrElse("B")
+              val aORbTest = abFeatures.headOption.map(_.testType).getOrElse("B")
               val bannerHead = aORbTest == "A" match {
                 case true => "Your feedback improves DRT for everyone"
                 case false => "Help us improve your DRT experience"
