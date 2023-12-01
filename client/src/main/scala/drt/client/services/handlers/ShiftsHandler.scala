@@ -1,15 +1,14 @@
 package drt.client.services.handlers
 
-import autowire._
-import boopickle.Default._
 import diode.Implicits.runAfterImpl
 import diode._
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{AjaxClient, PollDelay, ViewMode}
-import drt.shared.{Api, ShiftAssignments}
+import drt.client.services.{DrtApi, PollDelay, ViewMode}
+import drt.shared.ShiftAssignments
+import upickle.default.{read, write}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -31,25 +30,30 @@ class ShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, P
       noChange
 
     case GetShifts(viewMode) =>
-      val maybePointInTimeMillis = if (viewMode.isHistoric(SDate.now())) Option(viewMode.millis) else None
+      val url = if (viewMode.isHistoric(SDate.now()))
+        s"shifts?pointInTime=${viewMode.millis}"
+      else
+        "shifts"
 
-      val apiCallEffect = Effect(AjaxClient[Api].getShifts(maybePointInTimeMillis).call()
-        .map(res => SetShifts(viewMode, res, None))
-        .recoverWith {
-          case _ =>
-            log.error(s"Failed to get shifts. Polling will continue")
-            Future(NoAction)
-        })
+      val apiCallEffect: EffectSingle[Action] = Effect(
+        DrtApi.get(url)
+          .map(r => SetShifts(viewMode, read[ShiftAssignments](r.responseText), None))
+          .recoverWith {
+            case _ =>
+              log.error(s"Failed to get fixed points. Polling will continue")
+              Future(NoAction)
+          }
+      )
       effectOnly(apiCallEffect)
 
-    case UpdateShifts(shiftsToUpdate) =>
-      log.info(s"Saving staff time slots as Shifts")
-      val action: Future[Action] = AjaxClient[Api].updateShifts(shiftsToUpdate).call().map(_ => NoAction)
+    case UpdateShifts(assignments) =>
+      val futureResponse = DrtApi.post("shifts", write(ShiftAssignments(assignments)))
+        .map(_ => NoAction)
         .recoverWith {
-          case error =>
-            log.error(s"Failed to save staff month timeslots: $error, retrying after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(UpdateShifts(shiftsToUpdate), PollDelay.recoveryDelay))
+          case _ =>
+            log.error(s"Failed to save Shifts. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(UpdateShifts(assignments), PollDelay.recoveryDelay))
         }
-      effectOnly(Effect(action))
+      effectOnly(Effect(futureResponse))
   }
 }

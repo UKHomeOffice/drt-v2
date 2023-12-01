@@ -15,7 +15,7 @@ object FeedPoller {
 
   object AdhocCheck extends Command
 
-  case class StartPolling() extends Command
+  object Shutdown extends Command
 
   case class Enable(feed: EnabledFeedWithFrequency[typed.ActorRef[FeedTick]]) extends Command
 
@@ -51,6 +51,10 @@ object FeedPoller {
         log.info("Adhoc check")
         feed.feedSource ! Tick
         Behaviors.same
+
+      case Shutdown =>
+        timers.cancelAll()
+        Behaviors.stopped
 
       case unexpected =>
         log.warn(s"Received $unexpected, whilst in enabled state")

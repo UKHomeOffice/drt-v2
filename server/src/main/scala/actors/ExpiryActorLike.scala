@@ -12,9 +12,9 @@ trait ExpiryActorLike[A <: HasExpireables[A]] {
 
   def onUpdateState(newState: A): Unit
 
-  def purgeExpiredAndUpdateState(hasExpireables: A): Unit = {
-    val withoutExpired = hasExpireables.purgeExpired(expireBefore)
-    updateState(withoutExpired)
-    onUpdateState(withoutExpired)
+  def purgeExpiredAndUpdateState(newState: A): Unit = {
+    val newStateWithoutExpired = newState.purgeExpired(expireBefore)
+    updateState(newStateWithoutExpired)
+    onUpdateState(newStateWithoutExpired)
   }
 }

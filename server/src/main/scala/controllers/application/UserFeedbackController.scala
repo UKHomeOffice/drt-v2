@@ -1,9 +1,9 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import com.google.inject.Inject
 import email.GovNotifyEmail
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.UserFeedbackRow
 import uk.gov.homeoffice.drt.feedback.UserFeedback
 

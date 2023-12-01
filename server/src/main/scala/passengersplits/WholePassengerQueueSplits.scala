@@ -8,10 +8,8 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PaxType, PaxTypeAndQueue}
-import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
-import scala.collection.MapView
 import scala.collection.immutable.NumericRange
 
 object WholePassengerQueueSplits {
@@ -49,13 +47,13 @@ object WholePassengerQueueSplits {
           (tqm, LoadMinute(tqm.terminal, tqm.queue, loadsByPassenger, totalLoad, tqm.minute))
       }
 
-  def flightSplits(minuteMillis: NumericRange[MillisSinceEpoch],
-                   flight: ApiFlightWithSplits,
-                   processingTime: (PaxType, Queue) => Double,
-                   queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-                   queueFallbacks: QueueFallbacks,
-                   paxFeedSourceOrder: List[FeedSource],
-                  ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
+  private def flightSplits(minuteMillis: NumericRange[MillisSinceEpoch],
+                           flight: ApiFlightWithSplits,
+                           processingTime: (PaxType, Queue) => Double,
+                           queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
+                           queueFallbacks: QueueFallbacks,
+                           paxFeedSourceOrder: List[FeedSource],
+                          ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
     flight.bestSplits match {
       case Some(splitsToUse) =>
         val pcpPax = flight.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)
@@ -191,11 +189,11 @@ object WholePassengerQueueSplits {
       .sortBy(_._2).reverse.map(_._1)
       .headOption.getOrElse(throw new Exception("No splits found"))
 
-  def paxDistributionToWorkloads(distribution: Map[MillisSinceEpoch, Map[PaxTypeAndQueue, Int]],
-                                 processingTime: (PaxType, Queue) => Double,
-                                 queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
-                                 queueFallbacks: (Queue, PaxType) => List[Queue],
-                                ): Map[MillisSinceEpoch, Map[Queue, List[Double]]] =
+  private def paxDistributionToWorkloads(distribution: Map[MillisSinceEpoch, Map[PaxTypeAndQueue, Int]],
+                                         processingTime: (PaxType, Queue) => Double,
+                                         queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
+                                         queueFallbacks: (Queue, PaxType) => List[Queue],
+                                        ): Map[MillisSinceEpoch, Map[Queue, List[Double]]] =
     distribution.map { case (millisecondMinute, splitCounts) =>
       val workloads = splitCounts.foldLeft(Map[Queue, List[Double]]()) {
         case (acc, (PaxTypeAndQueue(paxType, queue), count)) =>
@@ -214,7 +212,7 @@ object WholePassengerQueueSplits {
       (millisecondMinute, workloads)
     }
 
-  def transposeMaps(workload: Map[MillisSinceEpoch, Map[Queue, List[Double]]]): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
+  private def transposeMaps(workload: Map[MillisSinceEpoch, Map[Queue, List[Double]]]): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
     workload.foldLeft(Map[Queue, Map[MillisSinceEpoch, List[Double]]]()) { case (acc, (millis, queueWorkloads)) =>
       queueWorkloads.foldLeft(acc) { case (acc, (queue, workloads)) =>
         val existingQueueWorkloads = acc.getOrElse(queue, Map[MillisSinceEpoch, List[Double]]())

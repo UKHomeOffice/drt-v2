@@ -1,9 +1,9 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import com.google.inject.Inject
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.ABFeature
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.ABFeatureRow
 import upickle.default._
 

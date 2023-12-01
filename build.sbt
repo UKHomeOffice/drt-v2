@@ -1,16 +1,15 @@
 
 import Settings.versions.scalajsReact
-import com.typesafe.config._
+import com.typesafe.config.*
+import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin.autoImport.*
 import sbt.Credentials
-import sbt.Keys.{credentials, _}
+import sbt.Keys.{credentials, *}
 import sbt.Project.projectToRef
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
-import com.sksamuel.scapegoat.sbt.ScapegoatSbtPlugin.autoImport._
-import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin.autoImport._
+
 import java.net.URL
 
 scalaVersion := Settings.versions.scala
-ThisBuild / scapegoatVersion := "2.1.2"
 // uncomment the following to get a breakdown  of where build time is spent
 //enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
 
@@ -140,7 +139,7 @@ lazy val server = (project in file("server"))
     Compile / doc / sources := List(),
     dependencyCheckFormats := Seq("XML", "JSON" ,"HTML")
   )
-  .aggregate(clients.map(projectToRef): _*)
+  .aggregate(clients.map(projectToRef) *)
   .dependsOn(sharedJVM)
 
 // Command for building a release

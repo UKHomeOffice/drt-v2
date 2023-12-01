@@ -101,7 +101,7 @@ object Actions {
 
   case class SetShiftsForMonth(shiftsForMonth: MonthOfShifts) extends Action
 
-  case class GetShiftsForMonth(month: SDateLike, terminal: Terminal) extends Action
+  case class GetShiftsForMonth(month: SDateLike) extends Action
 
   case class SaveMonthTimeSlotsToShifts(staffTimeSlots: StaffTimeSlotsForTerminalMonth) extends Action
 

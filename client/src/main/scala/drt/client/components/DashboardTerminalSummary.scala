@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.{InvalidQueue, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PaxTypeAndQueue, Queues}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
 
 
 object DashboardTerminalSummary {

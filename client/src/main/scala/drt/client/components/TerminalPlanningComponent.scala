@@ -7,7 +7,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.DrtApi
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
-import drt.shared.{Forecast, MilliDate}
+import drt.shared.Forecast
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiCircularProgress, MuiDivider}
@@ -22,7 +22,7 @@ import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaCom
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
 import uk.gov.homeoffice.drt.ports.Queues
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
@@ -84,7 +84,6 @@ object TerminalPlanningComponent {
           scope.modState(s => updateState(s, true)) >>
             Callback {
               val direct = scope.withEffectsImpure
-
               DrtApi.get(url)
                 .map { r =>
                   val fileName = r.getResponseHeader("Content-Disposition").split("filename=")(1)

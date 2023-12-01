@@ -147,9 +147,9 @@ object TerminalComponent {
                     )
 
                   case Planning =>
-                    <.div(model.forecastPeriodPot.render(fp => {
+                    <.div(model.forecastPeriodPot.render { fp =>
                       TerminalPlanningComponent(TerminalPlanningComponent.Props(fp, props.terminalPageTab, props.router))
-                    }))
+                    })
                   case Staffing if loggedInUser.roles.contains(StaffEdit) =>
                     model.potMonthOfShifts.render { ms =>
                       MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
@@ -195,7 +195,7 @@ object TerminalComponent {
           ))
         }),
       <.li(^.className := tabClass(Planning),
-        <.a(^.id := "planningTab", VdomAttr("data-toggle") := "tab", "Planning"),
+        <.a(^.id := "planning-tab", VdomAttr("data-toggle") := "tab", "Planning"),
         ^.onClick ==> { e: ReactEventFromInput =>
           e.preventDefault()
           GoogleEventTracker.sendEvent(terminalName, "click", "Planning")

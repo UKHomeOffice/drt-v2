@@ -3,16 +3,14 @@ package services.graphstages
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import services.crunch.deskrecs.DeskRecs
 import services.graphstages.Crunch.europeLondonTimeZone
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import java.util.UUID
 import scala.collection.immutable.{NumericRange, SortedMap}
 import scala.collection.mutable
 import scala.util.Try

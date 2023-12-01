@@ -11,7 +11,7 @@ import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.CrunchMinuteMessage
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import test.TestActors.TestTerminalDayQueuesActor
+import uk.gov.homeoffice.drt.testsystem.TestActors.TestTerminalDayQueuesActor
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 

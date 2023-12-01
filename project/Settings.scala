@@ -25,14 +25,13 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v679"
+    val drtLib = "v682"
 
     val scala = "2.13.12"
     val scalaDom = "2.0.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
     val scalaJsMomentJs = "0.10.9"
-    val autowire = "0.3.3"
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
@@ -51,7 +50,7 @@ object Settings {
     val pprint = "0.5.9"
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "v95"
-    val postgres = "42.6.0"
+    val postgres = "42.7.0"
     val sshJ = "0.24.0"
     val jodaTime = "2.12.5"
     val exposeLoader = "0.7.1"
@@ -128,7 +127,6 @@ object Settings {
    * the special %%% function selects the correct version for each project
    */
   val sharedDependencies = Def.setting(Seq(
-    "com.lihaoyi" %%% "autowire" % autowire,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "uk.gov.homeoffice" %%% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "io.suzaku" %%% "boopickle" % booPickle,

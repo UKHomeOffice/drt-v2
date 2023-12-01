@@ -1,19 +1,9 @@
-
 package controllers
 
-import actors.{DrtSystemInterface, ProdDrtParameters, ProdDrtSystem}
-import akka.actor.ActorSystem
-import akka.persistence.testkit.PersistenceTestKitPlugin
-import akka.stream.Materializer
-import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import drt.shared.DrtPortConfigs
 import play.api.Configuration
-import test.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.ports.AirportConfig
-
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 object DrtActorSystem extends AirportConfProvider {
   val config: Configuration = new Configuration(ConfigFactory.load)

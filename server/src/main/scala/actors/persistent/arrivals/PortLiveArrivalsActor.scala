@@ -1,13 +1,15 @@
 package actors.persistent.arrivals
 
-import uk.gov.homeoffice.drt.time.SDateLike
+import actors.persistent.StreamingFeedStatusUpdates
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.ports.{FeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
-object PortLiveArrivalsActor {
+object PortLiveArrivalsActor extends StreamingFeedStatusUpdates {
   val persistenceId = "actors.LiveArrivalsActor-live"
+  override val sourceType: FeedSource = LiveFeedSource
 }
 
 class PortLiveArrivalsActor(val now: () => SDateLike,

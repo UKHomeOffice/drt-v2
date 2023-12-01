@@ -1,9 +1,9 @@
 package services
 
-import drt.shared.MilliDate
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.prediction.arrival.WalkTimeModelAndFeatures
+import uk.gov.homeoffice.drt.time.MilliDate
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
 
 object PcpArrival {

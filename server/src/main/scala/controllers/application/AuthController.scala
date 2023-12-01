@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DrtSystemInterface
 import akka.actor.ActorSystem
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.model.HttpResponse
@@ -16,6 +15,7 @@ import play.api.mvc._
 import slickdb.UserRow
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{ManageUsers, Role}
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import upickle.default.write
 

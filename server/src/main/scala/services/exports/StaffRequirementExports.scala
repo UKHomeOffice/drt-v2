@@ -51,7 +51,7 @@ object StaffRequirementExports {
   def toHourlyStaffing(staffProvider: LocalDate => Future[Seq[StaffMinute]], minutesInSlot: Int)
                       (implicit ec: ExecutionContext): (LocalDate, Seq[CrunchMinute]) => Future[Seq[(String, String, String)]] =
     (date, crunchMinutes) => {
-      val numberOfSlots = (1440 / minutesInSlot).ceil.toInt
+      val numberOfSlots = 1440 / minutesInSlot
       val dateFormatted = f"${date.day}%02d/${date.month}%02d"
       staffProvider(date).map { staffMinutes =>
         val staffMinutesBySlot = groupByXMinutes(staffMinutes, minutesInSlot)
