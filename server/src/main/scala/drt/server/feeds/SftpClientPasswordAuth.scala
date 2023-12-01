@@ -1,12 +1,11 @@
 package drt.server.feeds
 
-import java.io.ByteArrayOutputStream
-
+import java.io.{ByteArrayOutputStream, OutputStream}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.xfer.InMemoryDestFile
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class SftpClientPasswordAuth(ftpServer: String, username: String, password: String) {
   val sshClient: SSHClient = {
@@ -26,7 +25,7 @@ case class SftpClientPasswordAuth(ftpServer: String, username: String, password:
     val outputStream: ByteArrayOutputStream = new ByteArrayOutputStream()
 
     val file: InMemoryDestFile = new InMemoryDestFile {
-      def getOutputStream: ByteArrayOutputStream = outputStream
+      override def getOutputStream: ByteArrayOutputStream = outputStream
     }
 
     sftpClient.get(fileName, file)

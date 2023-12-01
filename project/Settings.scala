@@ -28,48 +28,53 @@ object Settings {
     val drtLib = "v672"
 
     val scala = "2.13.12"
-    val scalaDom = "2.0.0"
+    val scalaDom = "2.8.0"
     val scalajsReact = "2.1.1"
     val scalaCSS = "1.0.0"
     val scalaJsMomentJs = "0.10.9"
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
-    val h2 = "2.2.220"
+    val h2 = "2.2.224"
 
     val akka = "2.8.5"
 
-    val specs2 = "4.20.0"
+    val specs2 = "4.20.3"
     val react = "18.2.0"
 
     val bootstrap = "3.3.6"
 
     val renjin = "0.9.2725"
     val csvCommons = "1.10.0"
-    val poi = "5.2.3"
+    val poi = "5.2.4"
     val pprint = "0.5.9"
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "v95"
     val postgres = "42.6.0"
-    val sshJ = "0.24.0"
+    val sshJ = "0.33.0"
     val jodaTime = "2.12.5"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
-    val typesafeConfig = "1.4.2"
+    val typesafeConfig = "1.4.3"
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
-    val uPickle = "3.1.0"
+    val uPickle = "3.1.3"
     val akkaHttp = "10.5.2"
     val slick = "3.4.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.1.15"
     val sprayJsonScalaJs = "1.3.5-7"
-    val scalaTestVersion = "3.2.16"
-    val twirlApi = "1.5.2"
-    val mockitoVersion = "4.6.1"
+    val scalaTestVersion = "3.2.17"
+    val twirlApi = "1.6.3"
+    val mockitoVersion = "4.11.0"
+    val rtVersion = "4.0.2"
+    val jakartaXmlWsApi = "4.0.1"
+    val scalatestplusPlay = "7.0.0"
+    val nettyAll = "4.1.101.Final"
+    val jwtCore = "9.4.5"
   }
 
   import versions._
@@ -135,13 +140,14 @@ object Settings {
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
     "com.github.gphat" %% "censorinus" % censorinus,
-    "com.pauldijou" %% "jwt-core" % "5.0.0",
+//    "com.pauldijou" %% "jwt-core" % jwtCore,
+    "com.github.jwt-scala" %% "jwt-core" % jwtCore,
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %%% "utest" % uTest % Test,
 
     "javax.mail" % "mail" % "1.4.7",
-    "jakarta.xml.ws" % "jakarta.xml.ws-api" % "4.0.0",
-    "com.sun.xml.ws" % "rt" % "4.0.1",
+    "jakarta.xml.ws" % "jakarta.xml.ws-api" % jakartaXmlWsApi,
+    "com.sun.xml.ws" % "rt" % rtVersion,
     "javax.xml.bind" % "jaxb-api" % "2.3.1",
 
     "com.h2database" % "h2" % h2 % Test,
@@ -191,12 +197,12 @@ object Settings {
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
     "org.mockito" % "mockito-core" % mockitoVersion % Test,
-    "org.scalatestplus.play" %% "scalatestplus-play" % "5.1.0" % Test,
+    "org.scalatestplus.play" %% "scalatestplus-play" % scalatestplusPlay % Test,
     "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
-    "io.netty" % "netty-all" % "4.1.94.Final",
+    "io.netty" % "netty-all" % nettyAll,
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
