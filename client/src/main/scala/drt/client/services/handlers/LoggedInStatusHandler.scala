@@ -34,7 +34,7 @@ class LoggedInStatusHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingAc
 
     case TriggerReload =>
       log.info(s"LoginStatus: triggering reload")
-      dom.window.location.reload(true)
+      dom.window.location.reload()
       noChange
   }
 }
