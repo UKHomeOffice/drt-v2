@@ -21,4 +21,27 @@ object GeneralExport {
       .collect {
         case line if line.nonEmpty => line
       }
+
+  def toDailyRows[A, T](start: LocalDate,
+                        end: LocalDate,
+                        dataStream: (LocalDate, LocalDate) => Source[(LocalDate, A), NotUsed],
+                        transform: (LocalDate, A) => Future[Seq[(LocalDate, Int, T)]]
+                       )
+                       (implicit ec: ExecutionContext, toRow: Seq[(LocalDate, Int, T)] => String): Source[String, NotUsed] =
+    dataStream(start, end)
+      .mapAsync(1) {
+        case (localDate, data) => transform(localDate, data).map(toRow(_))
+      }
+      .collect {
+        case line if line.nonEmpty => line
+      }
+
+  def toTotalsRow[A, T](start: LocalDate,
+                        end: LocalDate,
+                        dataStream: (LocalDate, LocalDate) => Source[(LocalDate, A), NotUsed],
+                        transform: (LocalDate, A) => Future[Seq[(LocalDate, Int, T)]]
+                       )
+                       (implicit ec: ExecutionContext, toRow: Seq[(LocalDate, Int, T)] => String): Source[String, NotUsed] =
+    dataStream(start, end)
+      .fold(Seq[(Int, T)]())(_ ++ _)
 }

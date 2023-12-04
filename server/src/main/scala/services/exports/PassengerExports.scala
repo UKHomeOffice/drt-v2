@@ -14,34 +14,67 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 import scala.concurrent.{ExecutionContext, Future}
 
 object PassengerExports {
-  def flightsToDailySummaryRow(port: PortCode,
-                               maybeTerminal: Option[Terminal],
-                               start: LocalDate,
-                               end: LocalDate,
-                               passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]]
-                              )
-                              (implicit ec: ExecutionContext): (LocalDate, Int) => Future[Seq[String]] = {
+//  def flightsToDailySummaryRow_(port: PortCode,
+//                               maybeTerminal: Option[Terminal],
+//                               start: LocalDate,
+//                               end: LocalDate,
+//                               passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]]
+//                              )
+//                              (implicit ec: ExecutionContext): (LocalDate, Int) => Future[Seq[String]] = {
+//    val regionName = PortRegion.fromPort(port).name
+//    val portName = port.toString
+//    val maybeTerminalName = maybeTerminal.map(_.toString)
+//    (localDate, totalPax) => {
+//      if (start <= localDate && localDate <= end)
+//        passengerLoadsProvider(localDate).map { passengerLoads =>
+//          val date = localDate.toISOString
+//          val queuePax = queueTotals(passengerLoads)
+//          val queueCells = Queues.queueOrder
+//            .map(queue => queuePax.getOrElse(queue, 0).toString)
+//            .mkString(",")
+//          val pcpPax = queuePax.values.sum
+//          val transPax = if (totalPax >= pcpPax) totalPax - pcpPax else 0
+//
+//          maybeTerminalName match {
+//            case Some(terminalName) =>
+//              Seq(s"$date,$regionName,$portName,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n")
+//            case None =>
+//              Seq(s"$date,$regionName,$portName,$totalPax,$pcpPax,$transPax,$queueCells\n")
+//          }
+//        }
+//      else Future.successful(Seq())
+//    }
+//  }
+
+  def paxMinutesToDailyRows(port: PortCode, maybeTerminal: Option[Terminal]): Seq[(LocalDate, Int, Iterable[PassengersMinute])] => String = {
     val regionName = PortRegion.fromPort(port).name
     val portName = port.toString
     val maybeTerminalName = maybeTerminal.map(_.toString)
+    paxMinutes =>
+      val date = paxMinutes.head._1.toISOString
+      val queuePax = queueTotals(paxMinutes.flatMap(_._3))
+      val queueCells = Queues.queueOrder
+        .map(queue => queuePax.getOrElse(queue, 0).toString)
+        .mkString(",")
+      val pcpPax = queuePax.values.sum
+      val transPax = paxMinutes.head._2 - pcpPax
+
+      maybeTerminalName match {
+        case Some(terminalName) =>
+          s"$date,$regionName,$portName,$terminalName,${paxMinutes.head._2},$pcpPax,$transPax,$queueCells\n"
+        case None =>
+          s"$date,$regionName,$portName,${paxMinutes.head._2},$pcpPax,$transPax,$queueCells\n"
+      }
+  }
+
+  def flightsToDailySummaryRow(start: LocalDate,
+                               end: LocalDate,
+                               passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]]
+                              )
+                              (implicit ec: ExecutionContext): (LocalDate, Int) => Future[Seq[(LocalDate, Int, Iterable[PassengersMinute])]] = {
     (localDate, totalPax) => {
       if (start <= localDate && localDate <= end)
-        passengerLoadsProvider(localDate).map { passengerLoads =>
-          val date = localDate.toISOString
-          val queuePax = queueTotals(passengerLoads)
-          val queueCells = Queues.queueOrder
-            .map(queue => queuePax.getOrElse(queue, 0).toString)
-            .mkString(",")
-          val pcpPax = queuePax.values.sum
-          val transPax = if (totalPax >= pcpPax) totalPax - pcpPax else 0
-
-          maybeTerminalName match {
-            case Some(terminalName) =>
-              Seq(s"$date,$regionName,$portName,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n")
-            case None =>
-              Seq(s"$date,$regionName,$portName,$totalPax,$pcpPax,$transPax,$queueCells\n")
-          }
-        }
+        passengerLoadsProvider(localDate).map(pl => Seq((localDate, totalPax, pl)))
       else Future.successful(Seq())
     }
   }
