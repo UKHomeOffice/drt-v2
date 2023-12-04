@@ -83,7 +83,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
         val getManifests = FlightExports.manifestsForLocalDateProvider(ctrl.manifestsProvider)
         val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.paxFeedSourceOrder, getManifests)
         val csvStream = GeneralExport.toCsv(start, end, getFlights, toRows)
-        val fileName = makeFileName("flights", terminal, start, end, airportConfig.portCode)
+        val fileName = makeFileName("flights", Option(terminal), start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>
@@ -124,7 +124,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
           ctrl.manifestsProvider(d, d).map(_._2).runFold(VoyageManifests.empty)(_ ++ _).map(m => (fws, m))
         }
         val csvStream = export.csvStream(flightsAndManifestsStream)
-        val fileName = makeFileName("flights", export.terminal, export.start.toLocalDate, export.end.toLocalDate, airportConfig.portCode)
+        val fileName = makeFileName("flights", Option(export.terminal), export.start.toLocalDate, export.end.toLocalDate, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>

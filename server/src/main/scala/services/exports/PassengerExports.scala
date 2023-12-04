@@ -15,7 +15,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object PassengerExports {
   def flightsToDailySummaryRow(port: PortCode,
-                               terminal: Terminal,
+                               maybeTerminal: Option[Terminal],
                                start: LocalDate,
                                end: LocalDate,
                                passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]]
@@ -23,7 +23,7 @@ object PassengerExports {
                               (implicit ec: ExecutionContext): (LocalDate, Int) => Future[Seq[String]] = {
     val regionName = PortRegion.fromPort(port).name
     val portName = port.toString
-    val terminalName = terminal.toString
+    val maybeTerminalName = maybeTerminal.map(_.toString)
     (localDate, totalPax) => {
       if (start <= localDate && localDate <= end)
         passengerLoadsProvider(localDate).map { passengerLoads =>
@@ -35,7 +35,12 @@ object PassengerExports {
           val pcpPax = queuePax.values.sum
           val transPax = if (totalPax >= pcpPax) totalPax - pcpPax else 0
 
-          Seq(s"$date,$regionName,$portName,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n")
+          maybeTerminalName match {
+            case Some(terminalName) =>
+              Seq(s"$date,$regionName,$portName,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n")
+            case None =>
+              Seq(s"$date,$regionName,$portName,$totalPax,$pcpPax,$transPax,$queueCells\n")
+          }
         }
       else Future.successful(Seq())
     }
@@ -55,19 +60,19 @@ object PassengerExports {
       .groupBy(_._1)
       .view.mapValues(x => x.map(_._2).sum).toMap
 
-  def totalPassengerCountProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                                  paxFeedSourceOrder: List[FeedSource],
-                                 ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Int), NotUsed] = {
-    val transformer = relevantPaxDuringWindow(paxFeedSourceOrder)
-    LocalDateStream(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
-  }
-
   def totalPassengerCountProvider(utcFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                                   paxFeedSourceOrder: List[FeedSource],
                                  ): (LocalDate, LocalDate) => Source[(LocalDate, Int), NotUsed] = {
     val transformer = relevantPaxDuringWindow(paxFeedSourceOrder)
     LocalDateStream(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
   }
+
+//  def totalPassengerCountProvider(utcFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+//                                  paxFeedSourceOrder: List[FeedSource],
+//                                 ): (LocalDate, LocalDate) => Source[(LocalDate, Int), NotUsed] = {
+//    val transformer = relevantPaxDuringWindow(paxFeedSourceOrder)
+//    LocalDateStream(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
+//  }
 
   def relevantPaxDuringWindow(paxFeedSourceOrder: List[FeedSource]): (LocalDate, Seq[ApiFlightWithSplits]) => Int =
     (current, flights) => {

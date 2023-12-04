@@ -1,6 +1,6 @@
 package controllers.application.exports
 
-import actors.PartitionedPortStateActor.GetMinutesForTerminalDateRange
+import actors.PartitionedPortStateActor.{GetMinutesForTerminalDateRange, GetStateForDateRange}
 import akka.pattern.ask
 import com.google.inject.Inject
 import controllers.application.AuthController
@@ -18,7 +18,7 @@ import scala.util.{Failure, Success, Try}
 
 class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
-  val terminalPassengersProvider: Terminal => LocalDate => Future[Seq[PassengersMinute]] =
+  private val terminalPassengersProvider: Terminal => LocalDate => Future[Seq[PassengersMinute]] =
     terminal => date => {
       val start = SDate(date).millisSinceEpoch
       val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
@@ -28,12 +28,12 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
         .map(_.minutes.map(_.toMinute).toSeq)
     }
 
-  val portPassengersProvider: LocalDate => Future[Seq[PassengersMinute]] =
+  private val portPassengersProvider: LocalDate => Future[Seq[PassengersMinute]] =
     date => {
       val start = SDate(date).millisSinceEpoch
       val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
       ctrl.queueLoadsRouterActor
-        .ask(GetMinutesForTerminalDateRange(start, end, terminal))
+        .ask(GetStateForDateRange(start, end))
         .mapTo[MinutesContainer[PassengersMinute, TQM]]
         .map(_.minutes.map(_.toMinute).toSeq)
     }
@@ -45,9 +45,9 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
       case (Some(start), Some(end)) =>
         val terminal = Terminal(terminalName)
         val getPassengers = PassengerExports.totalPassengerCountProvider(ctrl.terminalFlightsProvider(terminal), ctrl.paxFeedSourceOrder)
-        val toRows = PassengerExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, terminal, start, end, terminalPassengersProvider(terminal))
+        val toRows = PassengerExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, Option(terminal), start, end, terminalPassengersProvider(terminal))
         val csvStream = GeneralExport.toCsv(start, end, getPassengers, toRows)
-        val fileName = makeFileName("passengers", terminal, start, end, airportConfig.portCode)
+        val fileName = makeFileName("passengers", Option(terminal), start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>
@@ -63,9 +63,9 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val getPassengers = PassengerExports.totalPassengerCountProvider(ctrl.portFlightsProvider, ctrl.paxFeedSourceOrder)
-        val toRows = PassengerExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, start, end, terminalPassengersProvider)
+        val toRows = PassengerExports.flightsToDailySummaryRow(ctrl.airportConfig.portCode, None, start, end, portPassengersProvider)
         val csvStream = GeneralExport.toCsv(start, end, getPassengers, toRows)
-        val fileName = makeFileName("passengers", start, end, airportConfig.portCode)
+        val fileName = makeFileName("passengers", None, start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>

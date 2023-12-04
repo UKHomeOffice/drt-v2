@@ -171,7 +171,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         .map(dr => dr.key -> dr.toMinute).toMap
 
       val fileName = CsvFileStreaming.makeFileName(s"simulation-${simulationParams.passengerWeighting}",
-        simulationParams.terminal,
+        Option(simulationParams.terminal),
         simulationParams.date,
         simulationParams.date,
         airportConfig.portCode
