@@ -18,7 +18,7 @@ object PassengerExports {
                                terminal: Terminal,
                                start: LocalDate,
                                end: LocalDate,
-                               passengerLoadsProvider: (LocalDate, Terminal) => Future[Iterable[PassengersMinute]]
+                               passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]]
                               )
                               (implicit ec: ExecutionContext): (LocalDate, Int) => Future[Seq[String]] = {
     val regionName = PortRegion.fromPort(port).name
@@ -26,7 +26,7 @@ object PassengerExports {
     val terminalName = terminal.toString
     (localDate, totalPax) => {
       if (start <= localDate && localDate <= end)
-        passengerLoadsProvider(localDate, terminal).map { passengerLoads =>
+        passengerLoadsProvider(localDate).map { passengerLoads =>
           val date = localDate.toISOString
           val queuePax = queueTotals(passengerLoads)
           val queueCells = Queues.queueOrder
@@ -59,7 +59,14 @@ object PassengerExports {
                                   paxFeedSourceOrder: List[FeedSource],
                                  ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Int), NotUsed] = {
     val transformer = relevantPaxDuringWindow(paxFeedSourceOrder)
-    LocalDateStream.apply(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
+    LocalDateStream(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
+  }
+
+  def totalPassengerCountProvider(utcFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                  paxFeedSourceOrder: List[FeedSource],
+                                 ): (LocalDate, LocalDate) => Source[(LocalDate, Int), NotUsed] = {
+    val transformer = relevantPaxDuringWindow(paxFeedSourceOrder)
+    LocalDateStream(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
   }
 
   def relevantPaxDuringWindow(paxFeedSourceOrder: List[FeedSource]): (LocalDate, Seq[ApiFlightWithSplits]) => Int =

@@ -13,8 +13,8 @@ import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 case class FlightsProvider(flightsRouterActor: ActorRef)
                           (implicit timeout: Timeout) {
-  def singleTerminal: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
-    (start, end, terminal) => {
+  def singleTerminal: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+    terminal => (start, end) => {
       val startMillis = SDate(start).millisSinceEpoch
       val endMillis = SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch
       val request = PartitionedPortStateActor.GetFlightsForTerminals(startMillis, endMillis, Seq(terminal))

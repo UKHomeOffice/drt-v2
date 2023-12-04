@@ -2,18 +2,17 @@ package services
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 object LocalDateStream {
-  def apply[A, B](utcDateRangeTerminalStream: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[A]), NotUsed],
+  def apply[A, B](utcDateRangeTerminalStream: (UtcDate, UtcDate) => Source[(UtcDate, Seq[A]), NotUsed],
                   startBufferDays: Int,
                   endBufferDays: Int,
                   transformData: (LocalDate, Seq[A]) => B,
-                 ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, B), NotUsed] =
-    (start, end, terminal) => {
+                 ): (LocalDate, LocalDate) => Source[(LocalDate, B), NotUsed] =
+    (start, end) => {
       val (utcStartDate: UtcDate, utcEndDate: UtcDate) = utcStartAndEnd(startBufferDays, endBufferDays, start, end)
-      utcDateRangeTerminalStream(utcStartDate, utcEndDate, terminal)
+      utcDateRangeTerminalStream(utcStartDate, utcEndDate)
         .sliding(3, 1)
         .filter(_.nonEmpty)
         .map { days =>

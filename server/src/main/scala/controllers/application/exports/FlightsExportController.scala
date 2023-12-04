@@ -79,10 +79,10 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val terminal = Terminal(terminalName)
-        val getFlights = FlightExports.flightsForLocalDateRangeProvider(ctrl.terminalFlightsProvider)
+        val getFlights = FlightExports.flightsForLocalDateRangeProvider(ctrl.terminalFlightsProvider(terminal))
         val getManifests = FlightExports.manifestsForLocalDateProvider(ctrl.manifestsProvider)
         val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.paxFeedSourceOrder, getManifests)
-        val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)
+        val csvStream = GeneralExport.toCsv(start, end, getFlights, toRows)
         val fileName = makeFileName("flights", terminal, start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value

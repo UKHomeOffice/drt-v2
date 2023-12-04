@@ -70,8 +70,8 @@ object FlightExports {
         pcpStart.toLocalDate == localDate
       }
 
-  def flightsForLocalDateRangeProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                                      ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Seq[ApiFlightWithSplits]), NotUsed] =
+  def flightsForLocalDateRangeProvider(utcFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                      ): (LocalDate, LocalDate) => Source[(LocalDate, Seq[ApiFlightWithSplits]), NotUsed] =
     LocalDateStream(utcFlightsProvider, startBufferDays = 1, endBufferDays = 2, transformData = relevantFlight)
 
   def manifestsForLocalDateProvider(utcProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])

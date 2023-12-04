@@ -10,12 +10,11 @@ import scala.concurrent.{ExecutionContext, Future}
 object GeneralExport {
   def toCsv[A](start: LocalDate,
                end: LocalDate,
-               terminal: Terminal,
-               dataStream: (LocalDate, LocalDate, Terminal) => Source[(LocalDate, A), NotUsed],
+               dataStream: (LocalDate, LocalDate) => Source[(LocalDate, A), NotUsed],
                dataToCsvRows: (LocalDate, A) => Future[Seq[String]]
               )
               (implicit ec: ExecutionContext): Source[String, NotUsed] =
-    dataStream(start, end, terminal)
+    dataStream(start, end)
       .mapAsync(1) {
         case (localDate, data) => dataToCsvRows(localDate, data).map(_.mkString)
       }
