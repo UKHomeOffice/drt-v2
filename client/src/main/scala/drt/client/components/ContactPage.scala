@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.data.Pot
+import drt.client.SPAMain
 import drt.client.components.styles.DrtTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
@@ -174,7 +175,7 @@ object FeedBackComponent {
                     ),
                     MuiGrid(item = true, xs = 12)(
                       MuiButton(variant = "outlined", sx = SxProps(Map("border" -> "1px solid white", "color" -> "white", "font-weight" -> "bold")))(
-                        "Give feedback >", ^.onClick --> Callback(dom.window.open(s"http://0.0.0.0:3000/feedback/contact-us/$aORbTest", "_blank")),
+                        "Give feedback >", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/contact-us/$aORbTest", "_blank")),
                       )
                     )
                   )))

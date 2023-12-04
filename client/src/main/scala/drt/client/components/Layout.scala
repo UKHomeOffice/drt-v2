@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
+import drt.client.SPAMain
 import drt.client.SPAMain._
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.{CloseBanner, GetABFeature, GetUserFeedback, IsNewFeatureAvailable, TrackUser}
@@ -69,7 +70,7 @@ object Layout {
                           ),
                           MuiGrid(item = true, xs = gridItem3)(
                             MuiButton(variant = "outlined", sx = SxProps(Map("border" -> "1px solid white", "color" -> "white", "font-weight" -> "bold")))(
-                              "Give feedback >", ^.onClick --> Callback(dom.window.open(s"http://0.0.0.0:3000/feedback/banner/$aORbTest", "_blank")),
+                              "Give feedback >", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest", "_blank")),
                             )
                           ),
                           MuiGrid(item = true, xs = 4)(
