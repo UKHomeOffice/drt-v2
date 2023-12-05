@@ -162,16 +162,23 @@ object FeedBackComponent {
                       )
                     ),
                     MuiGrid(item = true, xs = 12)(
-                      MuiTypography(variant = "h7", sx = SxProps(Map("color" -> "white", "float" -> "left", "padding" -> "2px 0", "font-weight" -> "bold")))(
-                        "Your feedback improves how our data can:"
-                      ),
-                      MuiTypography(variant = "h7", sx = SxProps(Map("color" -> "white", "float" -> "left", "padding" -> "2px 0")))(
-                        <.ul(
-                          <.li("support resource planning capability"),
-                          <.li("facilitate smoother journeys for legitimate passengers"),
-                          <.li("identify potential risks"),
-                          <.li("create a more resilient Border")
-                        ))
+                      MuiGrid(container = true, direction = "column")(
+                        MuiGrid(item = true, xs = 12)(
+                          MuiTypography(variant = "h7",
+                            sx = SxProps(Map("color" -> "white", "float" -> "left", "padding" -> "2px 0", "font-weight" -> "bold")))(
+                            "Your feedback improves how our data can:"
+                          )
+                        ),
+                        MuiGrid(item = true, xs = 12)(
+                          MuiTypography(variant = "h7", sx = SxProps(Map("color" -> "white", "float" -> "left", "padding" -> "0px 0")))(
+                            <.ul(
+                              <.li("support resource planning capability"),
+                              <.li("facilitate smoother journeys for legitimate passengers"),
+                              <.li("identify potential risks"),
+                              <.li("create a more resilient Border")
+                            ))
+                        )
+                      )
                     ),
                     MuiGrid(item = true, xs = 12)(
                       MuiButton(variant = "outlined", sx = SxProps(Map("border" -> "1px solid white", "color" -> "white", "font-weight" -> "bold")))(
