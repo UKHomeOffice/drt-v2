@@ -1,21 +1,16 @@
 package controllers.application
 
 import com.google.inject.Inject
-import email.GovNotifyEmail
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.UserFeedbackRow
 import uk.gov.homeoffice.drt.feedback.UserFeedback
-
-import scala.concurrent.Future
-import upickle.default.{macroRW, write}
 import upickle.default._
 
 import java.sql.Timestamp
+import scala.concurrent.Future
 
-class UserFeedbackController @Inject()(cc: ControllerComponents,
-  ctrl: DrtSystemInterface,
-  govNotifyEmail: GovNotifyEmail) extends AuthController(cc, ctrl) {
+class UserFeedbackController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
   implicit val rw: ReadWriter[UserFeedback] = macroRW
 
   def getUserFeedback: Action[AnyContent] = Action.async { implicit request =>
@@ -28,12 +23,11 @@ class UserFeedbackController @Inject()(cc: ControllerComponents,
       }
   }
 
-  def closeBannerAction(feedbackType: String, aORbTest: String) = Action.async { implicit request =>
+  def closeBannerAction(feedbackType: String, aORbTest: String): Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
     val result: Future[Int] = ctrl.userFeedbackService
       .insertOrUpdate(UserFeedbackRow(email = userEmail,
-        actionedAt = new Timestamp(System.currentTimeMillis()),
-        feedbackAt = None,
+        createdAt = new Timestamp(System.currentTimeMillis()),
         closeBanner = true,
         feedbackType = Option(feedbackType),
         bfRole = "",
@@ -41,7 +35,7 @@ class UserFeedbackController @Inject()(cc: ControllerComponents,
         drtLikes = None,
         drtImprovements = None,
         participationInterest = false,
-        aOrBTest = Option(aORbTest)
+        abVersion = Option(aORbTest)
       ))
     result.map(_ => Ok("Successfully closed banner"))
   }

@@ -143,10 +143,10 @@ object FeedBackComponent {
         feedbackRCP(feedbackMP => {
           <.div(
             feedbackMP().abFeatures.renderReady { abFeatures =>
-              val aORbTest = abFeatures.headOption.map(_.testType).getOrElse("B")
-              val bannerHead = aORbTest == "A" match {
-                case true => "Your feedback improves DRT for everyone"
-                case false => "Help us improve your DRT experience"
+              val aORbTest = abFeatures.headOption.map(_.abVersion).getOrElse("B")
+              val bannerHead = aORbTest match {
+                case "A"  => "Your feedback improves DRT for everyone"
+                case _ => "Help us improve your DRT experience"
               }
               <.div(
                 MuiPaper(sx = SxProps(Map("elevation" -> "4", "padding" -> "16px", "margin" -> "20px", "backgroundColor" -> "#0E2560")))(
@@ -157,7 +157,7 @@ object FeedBackComponent {
                       )
                     ),
                     MuiGrid(item = true, xs = 12)(
-                      MuiTypography(variant = "h7", sx = SxProps(Map("color" -> "white", "float" -> "left", "padding" -> "2px 0")))(
+                      MuiTypography(variant = "h7", sx = SxProps(Map("color" -> "white", "padding" -> "2px 0")))(
                         "Complete a short survey (approx. 2 minutes)"
                       )
                     ),
@@ -165,12 +165,12 @@ object FeedBackComponent {
                       MuiGrid(container = true, direction = "column")(
                         MuiGrid(item = true, xs = 12)(
                           MuiTypography(variant = "h7",
-                            sx = SxProps(Map("color" -> "white", "float" -> "left", "padding" -> "2px 0", "font-weight" -> "bold")))(
+                            sx = SxProps(Map("color" -> "white", "padding" -> "2px 0", "font-weight" -> "bold")))(
                             "Your feedback improves how our data can:"
                           )
                         ),
                         MuiGrid(item = true, xs = 12)(
-                          MuiTypography(variant = "h7", sx = SxProps(Map("color" -> "white", "float" -> "left", "padding" -> "0px 0")))(
+                          MuiTypography(variant = "h7", sx = SxProps(Map("color" -> "white", "padding" -> "0px 0")))(
                             <.ul(
                               <.li("support resource planning capability"),
                               <.li("facilitate smoother journeys for legitimate passengers"),

@@ -10,19 +10,11 @@ import upickle.default._
 import java.sql.Timestamp
 import java.time.Instant
 import scala.concurrent.Future
+import scala.util.Random
 
 class ABFeatureController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
   implicit val rw: ReadWriter[ABFeature] = macroRW
-
-  def getRandomABTest = {
-    val random = scala.util.Random
-    val randomInt = random.nextInt(100)
-    if (randomInt < 50) {
-      "A"
-    } else {
-      "B"
-    }
-  }
+  private def getRandomABTest: String = if (Random.nextInt(100) < 50) "A" else "B"
 
   def getABFeature(functionName: String): Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
@@ -34,7 +26,7 @@ class ABFeatureController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           ctrl.abFeatureService.insertOrUpdate(row).map { _ =>
             Seq(row)
           }.recoverWith {
-            case e => log.warning(s"Error while db insert for ab feature", e)
+            case e => log.warning(s"Error while db insert for ab feature: ${e.getMessage}")
               Future.successful(Seq(row))
           }
         case _ => Future.successful(abFeatureRows)
