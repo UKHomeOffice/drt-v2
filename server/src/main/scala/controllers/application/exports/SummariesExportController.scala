@@ -49,7 +49,7 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
     val flightsProvider = ctrl.terminalFlightsProvider(terminal)
     val paxProvider = terminalPassengersProvider(terminal)
 
-    exportForDateRange(startLocalDateString, endLocalDateString, maybeTerminal, flightsProvider, paxProvider)
+    exportDailyForDateRange(startLocalDateString, endLocalDateString, maybeTerminal, flightsProvider, paxProvider)
   }
 
   def exportDailyPortPassengersForDateRangeApi(startLocalDateString: String, endLocalDateString: String): Action[AnyContent] = Action {
@@ -57,23 +57,54 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
     val flightsProvider = ctrl.portFlightsProvider
     val paxProvider = portPassengersProvider
 
-    exportForDateRange(startLocalDateString, endLocalDateString, maybeTerminal, flightsProvider, paxProvider)
+    exportDailyForDateRange(startLocalDateString, endLocalDateString, maybeTerminal, flightsProvider, paxProvider)
   }
 
-  private def exportForDateRange(startLocalDateString: String,
-                                 endLocalDateString: String,
-                                 maybeTerminal: Option[Terminal],
-                                 flightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                                 paxProvider: LocalDate => Future[Seq[PassengersMinute]]
-                                ): Result = {
+  private def exportDailyForDateRange(startLocalDateString: String,
+                                      endLocalDateString: String,
+                                      maybeTerminal: Option[Terminal],
+                                      flightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                      paxProvider: LocalDate => Future[Seq[PassengersMinute]]
+                                     ): Result = {
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         implicit val toRows: Seq[(LocalDate, Int, Iterable[PassengersMinute])] => String =
           PassengerExports.paxMinutesToDailyRows(ctrl.airportConfig.portCode, maybeTerminal)
 
-        val getPassengers = PassengerExports.totalPassengerCountProvider(flightsProvider, ctrl.paxFeedSourceOrder)
-        val paxMinutesProvider = PassengerExports.flightsToDailySummary(start, end, paxProvider)
-        val csvStream = GeneralExport.toDailyRows(start, end, getPassengers, paxMinutesProvider)
+        val totalPassengersForDate = PassengerExports.totalPassengerCountProvider(flightsProvider, ctrl.paxFeedSourceOrder)
+        val paxMinutesProvider = PassengerExports.dailyPassengerMinutes(start, end, paxProvider)
+        val csvStream = GeneralExport.toDailyRows(start, end, totalPassengersForDate, paxMinutesProvider)
+        val fileName = makeFileName("passengers", maybeTerminal, start, end, airportConfig.portCode)
+        Try(sourceToCsvResponse(csvStream, fileName)) match {
+          case Success(value) => value
+          case Failure(t) =>
+            log.error(s"Failed to get CSV export${t.getMessage}")
+            BadRequest("Failed to get CSV export")
+        }
+      case _ =>
+        BadRequest("Invalid date format for start or end date")
+    }
+  }
+
+  private def exportSummaryForDateRange(startLocalDateString: String,
+                                        endLocalDateString: String,
+                                        maybeTerminal: Option[Terminal],
+                                        flightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                        paxProvider: LocalDate => Future[Seq[PassengersMinute]]
+                                       ): Result = {
+    (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
+      case (Some(start), Some(end)) =>
+        implicit val toRows: Seq[(LocalDate, Int, Iterable[PassengersMinute])] => String =
+          PassengerExports.paxMinutesToDailyRows(ctrl.airportConfig.portCode, maybeTerminal)
+
+        val totalPassengersForDate: (LocalDate, LocalDate) => Source[(LocalDate, Int), NotUsed] =
+          PassengerExports.totalPassengerCountProvider(flightsProvider, ctrl.paxFeedSourceOrder)
+
+        val paxMinutesProvider: (LocalDate, Int) => Future[Seq[(LocalDate, Int, Iterable[PassengersMinute])]] =
+          (date, total) => PassengerExports.dailyPassengerMinutes(start, end, paxProvider)
+
+        val csvStream = GeneralExport.toTotalsRow(start, end, totalPassengersForDate, paxMinutesProvider)
+
         val fileName = makeFileName("passengers", maybeTerminal, start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value

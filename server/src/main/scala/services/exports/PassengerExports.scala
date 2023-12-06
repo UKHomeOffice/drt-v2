@@ -69,7 +69,7 @@ object PassengerExports {
       (totalPax, pcpPax, transPax, queueCells)
     }
 
-  val reducePassengerMinutesToSummary: Iterable[(Int, Iterable[PassengersMinute])] => (Int, Int, Int, Map[Queue, Int]) = _
+  val reducePassengerMinutesToSummary: Seq[(Int, Iterable[PassengersMinute])] => (Int, Int, Int, Map[Queue, Int]) = _
     .map(passengersToSummary.tupled)
     .reduce(reduceDailyPassengerSummaries)
 
@@ -94,7 +94,7 @@ object PassengerExports {
       }
   }
 
-  def flightsToDailySummary(start: LocalDate,
+  def dailyPassengerMinutes(start: LocalDate,
                             end: LocalDate,
                             passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]]
                            )
