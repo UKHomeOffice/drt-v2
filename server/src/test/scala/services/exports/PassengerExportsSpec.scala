@@ -115,7 +115,7 @@ class PassengerExportsSpec extends CrunchTestLike {
           PassengersMinute(T1, NonEeaDesk, SDate(date).addMinutes(55).millisSinceEpoch, Seq.fill(9)(0d), None),
           PassengersMinute(T1, NonEeaDesk, SDate(date).addMinutes(56).millisSinceEpoch, Seq.fill(10)(0d), None),
         ))
-      val dateAndFlightsToRows: (LocalDate, Int) => Future[Seq[String]] = PassengerExports.flightsToDailySummaryRow(port, Option(terminal), date, date, paxMinutesProvider)
+      val dateAndFlightsToRows: (LocalDate, Int) => Future[Seq[String]] = PassengerExports.flightsToDailySummary(port, Option(terminal), date, date, paxMinutesProvider)
       val csv = Await.result(dateAndFlightsToRows(date, totalPax), 1.second).mkString
 
       val pcpPax = 5 + 6 + 7 + 8 + 9 + 10

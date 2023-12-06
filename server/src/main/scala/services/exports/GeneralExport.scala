@@ -39,9 +39,9 @@ object GeneralExport {
   def toTotalsRow[A, T](start: LocalDate,
                         end: LocalDate,
                         dataStream: (LocalDate, LocalDate) => Source[(LocalDate, A), NotUsed],
-                        transform: (LocalDate, A) => Future[Seq[(LocalDate, Int, T)]]
+                        fold: ((LocalDate, A), (LocalDate, A)) => Future[T]
                        )
-                       (implicit ec: ExecutionContext, toRow: Seq[(LocalDate, Int, T)] => String): Source[String, NotUsed] =
+                       (implicit ec: ExecutionContext, toRow: Seq[T] => String): Source[String, NotUsed] =
     dataStream(start, end)
-      .fold(Seq[(Int, T)]())(_ ++ _)
+      .map(a => a._2)
 }

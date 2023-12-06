@@ -72,7 +72,7 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
           PassengerExports.paxMinutesToDailyRows(ctrl.airportConfig.portCode, maybeTerminal)
 
         val getPassengers = PassengerExports.totalPassengerCountProvider(flightsProvider, ctrl.paxFeedSourceOrder)
-        val paxMinutesProvider = PassengerExports.flightsToDailySummaryRow(start, end, paxProvider)
+        val paxMinutesProvider = PassengerExports.flightsToDailySummary(start, end, paxProvider)
         val csvStream = GeneralExport.toDailyRows(start, end, getPassengers, paxMinutesProvider)
         val fileName = makeFileName("passengers", maybeTerminal, start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
