@@ -25,9 +25,10 @@ object GeneralExport {
   def toDailyRows[A, T](start: LocalDate,
                         end: LocalDate,
                         dataStream: (LocalDate, LocalDate) => Source[(LocalDate, A), NotUsed],
-                        transform: (LocalDate, A) => Future[Seq[(LocalDate, Int, T)]]
+                        transform: (LocalDate, A) => Future[Seq[(LocalDate, Int, T)]],
+                        toRow: Seq[(LocalDate, Int, T)] => String,
                        )
-                       (implicit ec: ExecutionContext, toRow: Seq[(LocalDate, Int, T)] => String): Source[String, NotUsed] =
+                       (implicit ec: ExecutionContext): Source[String, NotUsed] =
     dataStream(start, end)
       .mapAsync(1) {
         case (localDate, data) => transform(localDate, data).map(toRow(_))
@@ -40,10 +41,11 @@ object GeneralExport {
                            end: LocalDate,
                            dataStream: (LocalDate, LocalDate) => Source[(LocalDate, A), NotUsed],
                            transform: (LocalDate, A) => Future[Seq[(LocalDate, Int, B)]], // B = Iterable[PassengersMinute]
-                           reduceToSummary: Seq[(Int, B)] => C,
+                           reduceToSummary: Seq[(Int, B)] => C, // C = (Int, Int, Int, Map[Queue, Int])
                            reduceSummaries: (C, C) => C,
+                           toRow: C => String
                           )
-                          (implicit ec: ExecutionContext, toRow: C => String): Source[String, NotUsed] = {
+                          (implicit ec: ExecutionContext): Source[String, NotUsed] = {
     dataStream(start, end)
       .mapAsync(1) {
         case (localDate, data) => transform(localDate, data)

@@ -106,7 +106,7 @@ object Navbar {
                         val badgeCount = calculateBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
                         <.a(MuiBadge(
                           badgeContent = <.span(^.className := "badge-font", badgeCount), invisible = badgeCount == 0, color = "primary")(Icon.laptopLg),
-                          <.span(if (badgeCount != 0) ^.className := "badge-text" else " ", "New Feature"), ^.onClick ==> handleOpenDialog)
+                          <.span(if (badgeCount != 0) ^.className := "badge-text" else " ", "What's new"), ^.onClick ==> handleOpenDialog)
                       } else EmptyVdom),
                       navbarModel.featureGuides.renderReady { trainingDataTemplates =>
                         navbarModel.showNewFeatureGuideOnLogin.renderReady { showNewFeatureGuideOnLogin =>
