@@ -15,10 +15,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object PassengerExports {
   val paxSummaryToRow: (PortCode, Option[Terminal]) => (Int, Int, Int, Map[Queue, Int]) => String = {
-    (port, maybeTerminal) => {
-    val regionName = PortRegion.fromPort(port).name
-    val portName = port.toString
-    val maybeTerminalName = maybeTerminal.map(_.toString)
+    (portCode, maybeTerminal) => {
+      val regionName = PortRegion.fromPort(portCode).name
+      val portCodeStr = portCode.toString
+      val maybeTerminalName = maybeTerminal.map(_.toString)
       (totalPax, pcpPax, transPax, queuePax) => {
         val queueCells = Queues.queueOrder
           .map(queue => queuePax.getOrElse(queue, 0).toString)
@@ -26,9 +26,9 @@ object PassengerExports {
 
         maybeTerminalName match {
           case Some(terminalName) =>
-            s"$regionName,$portName,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n"
+            s"$regionName,$portCodeStr,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n"
           case None =>
-            s"$regionName,$portName,$totalPax,$pcpPax,$transPax,$queueCells\n"
+            s"$regionName,$portCodeStr,$totalPax,$pcpPax,$transPax,$queueCells\n"
         }
       }
     }
@@ -57,42 +57,23 @@ object PassengerExports {
       (totalPax, pcpPax, transPax, queueCells)
     }
 
-  val reducePassengerMinutesToSummary: Seq[(Int, Iterable[PassengersMinute])] => (Int, Int, Int, Map[Queue, Int]) = _
-    .map(passengersToSummary.tupled)
-    .reduce(reduceDailyPassengerSummaries)
+  def dateToSummary(passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]])
+                   (implicit ec: ExecutionContext): (LocalDate, Int) => Future[(Int, Int, Int, Map[Queue, Int])] =
+    (localDate, totalPax) =>
+      passengerLoadsProvider(localDate).map(passengersToSummary(totalPax, _))
 
-  def paxMinutesToDailyRows(port: PortCode, maybeTerminal: Option[Terminal]): Seq[(LocalDate, Int, Iterable[PassengersMinute])] => String = {
-    val regionName = PortRegion.fromPort(port).name
-    val portName = port.toString
-    val maybeTerminalName = maybeTerminal.map(_.toString)
-    paxMinutes =>
-      val date = paxMinutes.head._1.toISOString
-      val queuePax = queueTotals(paxMinutes.flatMap(_._3))
-      val queueCells = Queues.queueOrder
-        .map(queue => queuePax.getOrElse(queue, 0).toString)
-        .mkString(",")
-      val pcpPax = queuePax.values.sum
-      val transPax = paxMinutes.head._2 - pcpPax
-
-      maybeTerminalName match {
-        case Some(terminalName) =>
-          s"$date,$regionName,$portName,$terminalName,${paxMinutes.head._2},$pcpPax,$transPax,$queueCells\n"
-        case None =>
-          s"$date,$regionName,$portName,${paxMinutes.head._2},$pcpPax,$transPax,$queueCells\n"
-      }
+  def paxMinutesToDailyRows(port: PortCode, maybeTerminal: Option[Terminal]): (LocalDate, Int, Iterable[PassengersMinute]) => String = {
+    (date, totalPax, minutes) =>
+      val row = paxSummaryToRow(port, maybeTerminal).tupled(passengersToSummary(totalPax, minutes))
+      val dateStr = date.ddmmyyyy
+      s"$dateStr,$row"
   }
 
-  def dailyPassengerMinutes(start: LocalDate,
-                            end: LocalDate,
-                            passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]]
-                           )
-                           (implicit ec: ExecutionContext): (LocalDate, Int) => Future[Seq[(LocalDate, Int, Iterable[PassengersMinute])]] = {
-    (localDate, totalPax) => {
-      if (start <= localDate && localDate <= end)
-        passengerLoadsProvider(localDate).map(pl => Seq((localDate, totalPax, pl)))
-      else Future.successful(Seq())
-    }
-  }
+  def dailyPassengerMinutes(passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]])
+                           (implicit ec: ExecutionContext): (LocalDate, Int) => Future[(LocalDate, Int, Iterable[PassengersMinute])] =
+    (localDate, totalPax) =>
+      passengerLoadsProvider(localDate).map(pl => (localDate, totalPax, pl))
+
 
   def paxForMinute(total: Int, minute: Int): Int = {
     val minutesCount = (total.toDouble / 20).ceil.toInt

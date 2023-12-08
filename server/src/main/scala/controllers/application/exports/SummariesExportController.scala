@@ -10,7 +10,7 @@ import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToC
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import drt.shared.TQM
 import play.api.mvc._
-import services.exports.PassengerExports.{reduceDailyPassengerSummaries, reducePassengerMinutesToSummary}
+import services.exports.PassengerExports.reduceDailyPassengerSummaries
 import services.exports.{GeneralExport, PassengerExports}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -103,7 +103,7 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
     (start, end) => {
       val toRows = PassengerExports.paxMinutesToDailyRows(ctrl.airportConfig.portCode, maybeTerminal)
       val totalPassengersForDate = PassengerExports.totalPassengerCountProvider(flightsProvider, ctrl.paxFeedSourceOrder)
-      val paxMinutesProvider = PassengerExports.dailyPassengerMinutes(start, end, paxProvider)
+      val paxMinutesProvider = PassengerExports.dailyPassengerMinutes(paxProvider)
       GeneralExport.toDailyRows(start, end, totalPassengersForDate, paxMinutesProvider, toRows)
     }
 
@@ -114,13 +114,12 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
     (start, end) => {
       val toRow = PassengerExports.paxSummaryToRow(ctrl.airportConfig.portCode, maybeTerminal).tupled
       val totalPassengersForDate = PassengerExports.totalPassengerCountProvider(flightsProvider, ctrl.paxFeedSourceOrder)
-      val paxMinutesProvider = PassengerExports.dailyPassengerMinutes(start, end, paxProvider)
+      val summaries = PassengerExports.dateToSummary(paxProvider)
       GeneralExport.toTotalsRow(
         start,
         end,
         totalPassengersForDate,
-        paxMinutesProvider,
-        reducePassengerMinutesToSummary,
+        summaries,
         reduceDailyPassengerSummaries,
         toRow,
       )
