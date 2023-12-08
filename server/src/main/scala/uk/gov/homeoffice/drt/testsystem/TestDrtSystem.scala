@@ -59,6 +59,8 @@ case class MockUserTable() extends UserTableLike {
   override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(None)
 
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def updateCloseBanner(email: String, at: Timestamp)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 }
 
 case class MockFeatureGuideTable() extends FeatureGuideTableLike {

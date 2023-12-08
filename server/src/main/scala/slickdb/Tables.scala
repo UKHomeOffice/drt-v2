@@ -151,7 +151,7 @@ trait Tables {
   }
 
   class User(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
-    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at) <> (UserRow.tupled, UserRow.unapply)
+    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at,feedback_banner_closed_at) <> (UserRow.tupled, UserRow.unapply)
 
     val id: Rep[String] = column[String]("id")
     val userName: Rep[String] = column[String]("username")
@@ -161,6 +161,8 @@ trait Tables {
     val revoked_access: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("revoked_access")
     val drop_in_notification_at = column[Option[java.sql.Timestamp]]("drop_in_notification_at")
     val created_at = column[Option[Timestamp]]("created_at")
+    val feedback_banner_closed_at = column[Option[java.sql.Timestamp]]("feedback_banner_closed_at")
+
     val pk = primaryKey("user_pkey", (id))
     val index1 = index("username", userName)
     val index2 = index("email", email)

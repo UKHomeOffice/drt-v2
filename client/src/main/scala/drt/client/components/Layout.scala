@@ -16,7 +16,6 @@ import org.scalajs.dom
 import org.scalajs.dom.console
 import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.feedback.UserFeedback
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -28,14 +27,14 @@ object Layout {
 
   case class LayoutModelItems(user: Pot[LoggedInUser],
     airportConfig: Pot[AirportConfig],
-    userFeedbacks: Pot[Seq[UserFeedback]],
-    abFeatures: Pot[Seq[ABFeature]]
+    abFeatures: Pot[Seq[ABFeature]],
+    showFeedbackBanner: Pot[Boolean]
   ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
       val layoutModelItemsRCP = SPACircuit.connect { m =>
-        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.userFeedbacks, m.abFeatures)
+        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner)
       }
       layoutModelItemsRCP { modelProxy =>
         console.log("rendering layout")
@@ -44,19 +43,16 @@ object Layout {
           val content = for {
             airportConfig <- model.airportConfig
             user <- model.user
-            userFeedbacks <- model.userFeedbacks
             abFeatures <- model.abFeatures
+            showFeedbackBanner <- model.showFeedbackBanner
           } yield {
             val aORbTest = abFeatures.headOption.map(_.abVersion).getOrElse("B")
             val (bannerHead, gridItem1, gridItem2, gridItem3) = aORbTest match {
               case "A" => ("Your feedback improves DRT for everyone", 4, 2, 5)
               case _ => ("Help us improve DRT experience", 3, 2, 6)
             }
-            val latestFeedback = userFeedbacks.sortBy(_.createdAt).lastOption
-            val thirtyDays = 1000L * 60 * 60 * 24 * 30
             <.div(
-              if (userFeedbacks.isEmpty || latestFeedback.exists(lf => lf.closeBanner &&
-                lf.createdAt + thirtyDays < System.currentTimeMillis())) {
+              if (showFeedbackBanner) {
                 MuiPaper(sx = SxProps(Map("elevation" -> "4", "padding" -> "16px", "margin" -> "20px", "backgroundColor" -> "#0E2560")))(
                   MuiGrid(container = true)(
                     MuiGrid(item = true, xs = gridItem1)(
@@ -77,7 +73,7 @@ object Layout {
                     MuiGrid(item = true, xs = 1)(
                       <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "justifyContent" -> "right"),
                         MuiIconButton(sx = SxProps(Map("color" -> "white", "font-weight" -> "bold", "display" -> "flex", "justifyContent" -> "right")))
-                        (^.onClick --> Callback(SPACircuit.dispatch(CloseBanner("banner", aORbTest))), ^.aria.label := "Close", Icon.close)
+                        (^.onClick --> Callback(SPACircuit.dispatch(CloseBanner())), ^.aria.label := "Close", Icon.close)
                       ))
                   ))
               } else EmptyVdom,
@@ -116,8 +112,8 @@ object Layout {
     }).componentDidMount(_ =>
     Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
       Callback(SPACircuit.dispatch(TrackUser())) >>
-      Callback(SPACircuit.dispatch(GetUserFeedback())) >>
-      Callback(SPACircuit.dispatch(GetABFeature("feedback")))
+      Callback(SPACircuit.dispatch(GetABFeature("feedback"))) >>
+      Callback(SPACircuit.dispatch(ShouldViewBanner()))
   ).build
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))

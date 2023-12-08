@@ -19,6 +19,7 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import upickle.default.write
 
+import java.sql.Timestamp
 import scala.concurrent.Future
 
 
@@ -60,8 +61,15 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
         inactive_email_sent = None,
         revoked_access = None,
         drop_in_notification_at = None,
-        created_at = Some(new java.sql.Timestamp(ctrl.now().millisSinceEpoch))))
+        created_at = Some(new java.sql.Timestamp(ctrl.now().millisSinceEpoch)),
+        feedback_banner_closed_at = None))
     Future.successful(Ok(s"User-tracked"))
+  }
+
+  def closeBanner: Action[AnyContent] = Action.async { implicit request =>
+    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val result: Future[Int] = ctrl.userService.updateCloseBanner(email = userEmail, at = new Timestamp(ctrl.now().millisSinceEpoch))
+    result.map(_ => Ok("Successfully closed banner"))
   }
 
   def keyCloakClientWithHeader(headers: Headers): KeyCloakClient with ProdSendAndReceive = {

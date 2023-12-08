@@ -108,6 +108,24 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
 
+  def shouldUserViewBanner: Action[AnyContent] = Action.async { implicit request =>
+    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val feedbackExistF: Future[Boolean] = ctrl.userFeedbackService.selectByEmail(userEmail).map(_.nonEmpty)
+    val bannerClosedAtF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.flatMap(_.feedback_banner_closed_at))
+    for {
+      feedbackExist <- feedbackExistF
+      bannerClosedAt <- bannerClosedAtF
+    } yield (feedbackExist, bannerClosedAt) match {
+      case (true, _) =>
+        Ok(false.toString)
+      case (false, Some(closedDate)) =>
+        val thirtyDays = 1000L * 60 * 60 * 24 * 30
+        Ok(closedDate.before(new Timestamp(ctrl.now().millisSinceEpoch - thirtyDays)).toString)
+      case (false, None) =>
+        Ok(true.toString)
+    }
+  }
+
   def featureGuides: Action[AnyContent] = Action.async { _ =>
     val featureGuidesJson: Future[String] = ctrl.featureGuideService.getAll()
     featureGuidesJson.map(Ok(_))

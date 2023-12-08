@@ -170,6 +170,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      userFeedbacks: Pot[Seq[UserFeedback]] = Empty,
                      abFeatures:Pot[Seq[ABFeature]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
+                     showFeedbackBanner: Pot[Boolean] = Empty
                     )
 
 object PollDelay {
@@ -245,6 +246,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UserFeedbackHandler(zoomRW(_.userFeedbacks)((m, v) => m.copy(userFeedbacks = v))),
       new ABFeatureHandler(zoomRW(_.abFeatures)((m, v) => m.copy(abFeatures = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
+      new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
     )
     composedHandlers
   }
