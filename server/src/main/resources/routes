@@ -91,6 +91,10 @@ GET           /data/user                                                        
 
 GET           /data/track-user                                                        controllers.Application.trackUser
 
+POST          /data/close-banner                                                      controllers.Application.closeBanner
+
+GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
+
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
 
@@ -130,6 +134,10 @@ GET           /drop-ins                                                         
 POST          /drop-in-registrations                                                  controllers.application.DropInsController.createDropInRegistration()
 
 GET           /drop-in-registrations                                                  controllers.application.DropInsController.getDropInRegistrations
+
+GET          /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
+
+GET           /ab-feature/:functionName                                               controllers.application.ABFeatureController.getABFeature(functionName: String)
 
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 
