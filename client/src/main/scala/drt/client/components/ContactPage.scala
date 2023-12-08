@@ -23,7 +23,7 @@ object ContactPage {
     .render_P(_ =>
       MuiGrid(container = true)(
         MuiGrid(item = true, xs = 6)(
-          <.div(ContactDetailsComponent())),
+          <.div(^.className := "contact-us", ContactDetailsComponent())),
         MuiGrid(item = true, xs = 6)(
           <.div(FeedBackComponent())
         )
@@ -145,7 +145,7 @@ object FeedBackComponent {
             feedbackMP().abFeatures.renderReady { abFeatures =>
               val aORbTest = abFeatures.headOption.map(_.abVersion).getOrElse("B")
               val bannerHead = aORbTest match {
-                case "A"  => "Your feedback improves DRT for everyone"
+                case "A" => "Your feedback improves DRT for everyone"
                 case _ => "Help us improve your DRT experience"
               }
               <.div(
