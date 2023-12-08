@@ -12,8 +12,9 @@ case class UserRow(
                     inactive_email_sent: Option[java.sql.Timestamp],
                     revoked_access: Option[java.sql.Timestamp],
                     drop_in_notification_at: Option[java.sql.Timestamp],
-                    created_at: Option[java.sql.Timestamp]
-                  )
+                    created_at: Option[java.sql.Timestamp],
+                    feedback_banner_closed_at: Option[java.sql.Timestamp]
+)
 
 trait UserTableLike {
 
@@ -22,6 +23,8 @@ trait UserTableLike {
   def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int]
 
   def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int]
+
+  def updateCloseBanner(email: String, at: java.sql.Timestamp)(implicit ec: ExecutionContext): Future[Int]
 }
 
 case class UserTable(tables: Tables) extends UserTableLike {
@@ -43,6 +46,17 @@ case class UserTable(tables: Tables) extends UserTableLike {
           log.error(s"delete failed", throwable)
           0
       }
+  }
+
+  def updateCloseBanner(email: String, at: java.sql.Timestamp)(implicit ec: ExecutionContext): Future[Int] = {
+    val query = userTableQuery.filter(_.email === email)
+      .map(f => (f.feedback_banner_closed_at))
+      .update(Option(at))
+    tables.run(query).recover {
+      case throwable =>
+        log.error(s"updateCloseBanner failed", throwable)
+        0
+    }
   }
 
   def upsertUser(user: UserRow)(implicit ec: ExecutionContext): Future[Int] = {

@@ -5,6 +5,7 @@ import actors._
 import akka.actor.{Actor, ActorLogging, ActorRef, ActorSystem, Props, Status, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
+import akka.stream.scaladsl.Source
 import akka.stream.{KillSwitch, Materializer}
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -20,6 +21,7 @@ import slickdb._
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.SubscribeResponseQueue
+import uk.gov.homeoffice.drt.db.{ABFeatureRow, IABFeatureDao, IUserFeedbackDao, UserFeedbackRow}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.testsystem.RestartActor.AddResetActors
 import uk.gov.homeoffice.drt.testsystem.TestActors._
@@ -57,6 +59,8 @@ case class MockUserTable() extends UserTableLike {
   override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(None)
 
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def updateCloseBanner(email: String, at: Timestamp)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 }
 
 case class MockFeatureGuideTable() extends FeatureGuideTableLike {
@@ -293,6 +297,29 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
     crunchInputs.killSwitches
   }
+
+  override val userFeedbackService: IUserFeedbackDao = MockUserFeedbackDao()
+  override val abFeatureService: IABFeatureDao = MockAbFeatureDao()
+}
+
+case class MockUserFeedbackDao() extends IUserFeedbackDao {
+  override def insertOrUpdate(userFeedbackRow: UserFeedbackRow): Future[Int] = Future.successful(1)
+
+  override def selectAll()(implicit executionContext: ExecutionContext): Future[Seq[UserFeedbackRow]] = Future.successful(Seq())
+
+  override def selectByEmail(email: String): Future[Seq[UserFeedbackRow]] = Future.successful(Seq())
+
+  override def selectAllAsStream(): Source[UserFeedbackRow, _] = Source.empty
+}
+
+case class MockAbFeatureDao() extends IABFeatureDao {
+  override def insertOrUpdate(aBFeatureRow: ABFeatureRow): Future[Int] = Future.successful(1)
+
+  override def getABFeatures: Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
+
+  override def getABFeaturesByEmailForFunction(email: String, functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
+
+  override def getABFeatureByFunctionName(functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
 }
 
 object RestartActor {

@@ -8,6 +8,7 @@ CREATE TABLE public.user
     revoked_access          timestamp,
     drop_in_notification_at timestamp,
     created_at              timestamp,
+    feedback_banner_closed_at timestamp,
     PRIMARY KEY (id)
 );
 

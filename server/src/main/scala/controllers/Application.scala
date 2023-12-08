@@ -24,6 +24,8 @@ import java.util.{Calendar, TimeZone}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import uk.gov.homeoffice.drt.db.{IABFeatureDao, IUserFeedbackDao}
+
 
 trait AirportConfiguration {
   def airportConfig: AirportConfig
@@ -61,6 +63,16 @@ trait DropInProviderLike {
   val dropInRegistrationService: DropInsRegistrationTableLike
 }
 
+trait UserFeedBackProviderLike {
+
+  val userFeedbackService: IUserFeedbackDao
+}
+
+trait ABFeatureProviderLike {
+
+  val abFeatureService: IABFeatureDao
+}
+
 class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)
   extends AuthController(cc, ctrl) {
 
@@ -95,6 +107,33 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   assert(defaultTimeZone == "UTC", "Default Timezone is not set to UTC")
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
+
+  def shouldUserViewBanner: Action[AnyContent] = Action.async { implicit request =>
+    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val oneEightyDaysInMillis: Long = 180L * 24 * 60 * 60 * 1000 // 180 days in milliseconds
+    val cutoffTime = new Timestamp(ctrl.now().millisSinceEpoch - oneEightyDaysInMillis)
+    val feedbackExistF = ctrl.userFeedbackService.selectByEmail(userEmail)
+      .map(_.sortBy(_.createdAt)(Ordering[Timestamp].reverse).headOption)
+      .map {
+        case Some(latestFeedback) => latestFeedback.createdAt.after(cutoffTime)
+        case None => false
+      }
+
+    val bannerClosedAtF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.flatMap(_.feedback_banner_closed_at))
+
+    for {
+      feedbackExist <- feedbackExistF
+      bannerClosedAt <- bannerClosedAtF
+    } yield (feedbackExist, bannerClosedAt) match {
+      case (false, Some(closedDate)) =>
+        val thirtyDays = 1000L * 60 * 60 * 24 * 30 // 30 days in milliseconds
+        Ok(closedDate.before(new Timestamp(ctrl.now().millisSinceEpoch - thirtyDays)).toString)
+      case (true, _) =>
+        Ok(false.toString)
+      case (false, _) =>
+        Ok(true.toString)
+    }
+  }
 
   def featureGuides: Action[AnyContent] = Action.async { _ =>
     val featureGuidesJson: Future[String] = ctrl.featureGuideService.getAll()
