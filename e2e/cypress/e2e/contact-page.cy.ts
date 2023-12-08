@@ -38,6 +38,7 @@ describe('Contact page', () => {
       .click({ force: true })
       .get('.contact-us')
       .contains("Email :")
+      .get('.contact-us')
       .contains("support@test.com")
 
   });
