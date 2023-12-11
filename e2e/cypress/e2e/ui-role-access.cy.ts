@@ -51,7 +51,7 @@ describe('UI role access', () => {
       cy
         .asAPortOperator()
         .navigateHome()
-        .get('[data-toggle="modal"]')
+        .get('[data-toggle="modal"]').should('not.exist')
         .get('#multi-day-export-modal-dialog').should('not.exist');
     });
 
