@@ -51,7 +51,7 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
                                  paxFeedSourceOrder: List[FeedSource],
                                 )
                                 (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes = {
-    val uniqueWithCodeShares = CodeShares.uniqueArrivals[ApiFlightWithSplits](f => f.apiFlight, paxFeedSourceOrder)(flights.flights.values.toSeq)
+    val uniqueWithCodeShares = CodeShares.uniqueArrivals(paxFeedSourceOrder)(flights.flights.values.toSeq)
     val relevantFlights = flightsWithPcpWorkload(uniqueWithCodeShares, redListUpdates)
     val procTimes = (terminal: Terminal) => (paxType: PaxType, queue: Queue) =>
       terminalProcTimes

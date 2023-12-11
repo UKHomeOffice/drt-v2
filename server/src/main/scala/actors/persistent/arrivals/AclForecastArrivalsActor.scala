@@ -1,18 +1,20 @@
 package actors.persistent.arrivals
 
+import actors.persistent.StreamingFeedStatusUpdates
 import org.slf4j.{Logger, LoggerFactory}
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.feeds.FeedStatusSuccess
-import uk.gov.homeoffice.drt.ports.AclFeedSource
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.SortedMap
 
 
-object AclForecastArrivalsActor {
+object AclForecastArrivalsActor extends StreamingFeedStatusUpdates {
   val persistenceId = "actors.ForecastBaseArrivalsActor-forecast-base"
+  override val sourceType: FeedSource = AclFeedSource
 }
 
 class AclForecastArrivalsActor(val now: () => SDateLike,

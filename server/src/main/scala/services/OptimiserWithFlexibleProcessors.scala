@@ -211,7 +211,7 @@ object OptimiserWithFlexibleProcessors {
       if (winStart == 0) backlog = 0
 
       val runAv = runningAverage(winWork, List(blockSize, sla).min, winProcessors, startSlot)
-      val guessMax: Int = runAv.max.ceil.toInt
+      val guessMax: Int = runAv.max
 
       val capacity = capacityWithMinimumLimit(winProcessors.forMinute(startSlot), 1)
       val lowerLimit = List(winXmin.max, (winWork.sum / (winWork.size * capacity)).ceil.toInt).max
@@ -404,7 +404,7 @@ object OptimiserWithFlexibleProcessors {
 
     while (cursor >= 0) {
       while (candidates(cursor).nonEmpty) {
-        val middle = ((candidates(cursor).length - 1) / 2).floor.toInt
+        val middle = (candidates(cursor).length - 1) / 2
         desks(cursor) = candidates(cursor)(middle)
         candidates(cursor) = candidates(cursor).filterNot(_ == desks(cursor))
 
@@ -459,7 +459,6 @@ object OptimiserWithFlexibleProcessors {
       var lastDesksOpen = 0
 
       val desks = blockMean(runningAverage(work, smoothingWidth, processors, 0), blockWidth)
-        .map(_.ceil.toInt)
         .zip(maxDesks)
         .map {
           case (d, max) => List(d, max).min

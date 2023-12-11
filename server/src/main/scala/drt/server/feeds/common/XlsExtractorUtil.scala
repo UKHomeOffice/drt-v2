@@ -1,9 +1,9 @@
 package drt.server.feeds.common
 
-import java.util.Date
-import org.apache.poi.ss.usermodel.{Cell, CellType, Row, Sheet, Workbook}
+import org.apache.poi.ss.usermodel.{CellType, Row, Sheet, Workbook}
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 
+import java.util.Date
 import scala.util.Try
 
 object XlsExtractorUtil {

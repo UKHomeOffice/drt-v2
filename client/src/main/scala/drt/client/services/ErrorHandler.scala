@@ -23,7 +23,7 @@ object ErrorHandler {
       }
       val reload = dom.window.confirm("Sorry, we have encountered an error. The error has been logged. Would you like to reload the page?")
       if (reload) {
-        dom.window.location.reload(true)
+        dom.window.location.reload()
       }
     }
   }

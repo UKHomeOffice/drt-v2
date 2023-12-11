@@ -43,9 +43,7 @@ GET           /arrival/:pointInTime/:number/:terminal/:scheduled/:origin        
 GET           /manifest-summaries                                                     controllers.application.ManifestsController.getManifestSummariesForArrivals
 GET           /manifest-summaries/:utcDate/summary                                    controllers.application.ManifestsController.getManifestSummariesForDay(utcDate: String)
 GET           /red-list/ports/:date                                                   controllers.application.RedListsController.getRedListPorts(date: String)
-POST          /red-list/updates                                                       controllers.application.RedListsController.updateRedListUpdates
 GET           /red-list/updates                                                       controllers.application.RedListsController.getRedListUpdates
-DELETE        /red-list/updates/:effectiveFrom                                        controllers.application.RedListsController.deleteRedListUpdates(effectiveFrom: Long)
 GET           /red-list/updates-legacy                                                controllers.application.RedListsController.getRedListUpdatesLegacy
 POST          /egate-banks/updates                                                    controllers.application.EgateBanksController.updateEgateBanksUpdates
 GET           /egate-banks/updates                                                    controllers.application.EgateBanksController.getEgateBanksUpdates
@@ -56,8 +54,13 @@ DELETE        /sla-configs/:effectiveFrom                                       
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 
+GET           /shifts                                                                 controllers.application.StaffingController.getShifts
+POST          /shifts                                                                 controllers.application.StaffingController.saveShifts
+GET           /shifts-for-month/:monthMillis                                          controllers.application.StaffingController.getShiftsForMonth(monthMillis: Long)
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
+
+GET           /forecast-summary/:terminalName/:startDay                               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long)
 
 GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
 GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)
@@ -84,12 +87,13 @@ GET           /assets/fonts/*file                                               
 GET           /assets/images/*file                                                    controllers.Assets.at(path="/public/images", file)
 GET           /assets/*file                                                           controllers.Assets.versioned(path="/public", file: Asset)
 
-# Autowire calls
-POST          /api-legacy/*path                                                       controllers.Application.autowireApi(path: String)
-
 GET           /data/user                                                              controllers.Application.getLoggedInUser
 
 GET           /data/track-user                                                        controllers.Application.trackUser
+
+POST          /data/close-banner                                                      controllers.Application.closeBanner
+
+GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
@@ -130,6 +134,10 @@ GET           /drop-ins                                                         
 POST          /drop-in-registrations                                                  controllers.application.DropInsController.createDropInRegistration()
 
 GET           /drop-in-registrations                                                  controllers.application.DropInsController.getDropInRegistrations
+
+GET          /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
+
+GET           /ab-feature/:functionName                                               controllers.application.ABFeatureController.getABFeature(functionName: String)
 
 GET           /feature-guides                                                         controllers.Application.featureGuides()
 

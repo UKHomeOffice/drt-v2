@@ -10,9 +10,11 @@ import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
+import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
+import uk.gov.homeoffice.drt.feedback.UserFeedback
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
@@ -165,7 +167,10 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureGuideViewedIds: Pot[Seq[String]] = Empty,
                      dropIns: Pot[Seq[DropIn]] = Empty,
                      dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
+                     userFeedbacks: Pot[Seq[UserFeedback]] = Empty,
+                     abFeatures:Pot[Seq[ABFeature]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
+                     showFeedbackBanner: Pot[Boolean] = Empty
                     )
 
 object PollDelay {
@@ -238,7 +243,10 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),
       new DropInHandler(zoomRW(_.dropIns)((m, v) => m.copy(dropIns = v))),
       new DropInRegistrationsHandler(zoomRW(_.dropInRegistrations)((m, v) => m.copy(dropInRegistrations = v))),
+      new UserFeedbackHandler(zoomRW(_.userFeedbacks)((m, v) => m.copy(userFeedbacks = v))),
+      new ABFeatureHandler(zoomRW(_.abFeatures)((m, v) => m.copy(abFeatures = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
+      new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
     )
     composedHandlers
   }

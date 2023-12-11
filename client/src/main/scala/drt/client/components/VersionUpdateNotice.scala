@@ -21,7 +21,7 @@ object VersionUpdateNotice {
               <.br(),
               <.a("Click here to update", ^.onClick --> Callback {
                 GoogleEventTracker.sendEvent("VersionUpdateNotice", "click", "Version Update Notice")
-                dom.document.location.reload(true)
+                dom.document.location.reload()
               }))
           case _ => <.div()
         }

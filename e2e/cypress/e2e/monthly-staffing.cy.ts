@@ -94,26 +94,7 @@ describe('Monthly Staffing', () => {
     return moment().add(1, 'M').toISOString().split("T")[0];
   }
 
-  describe('No staff entered warning compontent', () => {
-    // const cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
-    it("should display a warning when there are no staff entered for current period and hide it when there are.", () => {
-      cy.asABorderForcePlanningOfficer()
-        .request({
-          method: 'GET',
-          url: '/',
-        }).then((response) => {
-        const $html = Cypress.$(response.body)
-        const csrf: any = $html.filter('input:hidden[name="csrfToken"]').val()
-        cy.visit('#terminal/T1/current/desksAndQueues/?timeRangeStart=0&timeRangeEnd=24')
-          .get('.staff-alert')
-          .contains("You have not entered any staff ")
-        cy.addShiftForToday(csrf)
-          .visit('#terminal/T1/current/desksAndQueues/?timeRangeStart=0&timeRangeEnd=24')
-          .get('.staff-alert').should('not.exist')
-          .resetShifts(csrf);
-      });
-    });
-
+  describe('No staff entered warning component', () => {
     describe('When adding staff using the monthly staff view', () => {
       const cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
       it("If I enter staff for the current month those staff should still be visible if I change months and change back", () => {

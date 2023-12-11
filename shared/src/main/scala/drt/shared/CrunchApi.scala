@@ -356,13 +356,33 @@ object CrunchApi {
 
   case class ForecastTimeSlot(startMillis: MillisSinceEpoch, available: Int, required: Int)
 
+  object ForecastTimeSlot {
+    implicit val rw: ReadWriter[ForecastTimeSlot] = macroRW
+  }
+
   case class ForecastPeriodWithHeadlines(forecast: ForecastPeriod, headlines: ForecastHeadlineFigures)
+
+  object ForecastPeriodWithHeadlines {
+    implicit val rw: ReadWriter[ForecastPeriodWithHeadlines] = macroRW
+  }
 
   case class ForecastPeriod(days: IMap[MillisSinceEpoch, Seq[ForecastTimeSlot]])
 
+  object ForecastPeriod {
+    implicit val rw: ReadWriter[ForecastPeriod] = macroRW
+  }
+
   case class ForecastHeadlineFigures(queueDayHeadlines: Seq[QueueHeadline])
 
+  object ForecastHeadlineFigures {
+    implicit val rw: ReadWriter[ForecastHeadlineFigures] = macroRW
+  }
+
   case class QueueHeadline(day: MillisSinceEpoch, queue: Queue, paxNos: Int, workload: Int)
+
+  object QueueHeadline {
+    implicit val rw: ReadWriter[QueueHeadline] = macroRW
+  }
 
   def groupCrunchMinutesByX(groupSize: Int)
                            (crunchMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])],

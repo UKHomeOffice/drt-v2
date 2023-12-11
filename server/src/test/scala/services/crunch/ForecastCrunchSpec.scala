@@ -35,7 +35,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val baseArrival = ArrivalGenerator.arrival(schDt = base, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)))
     val baseFlights = Flights(List(baseArrival))
 
-    val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), maxDaysToCrunch = 4, cruncher = CrunchMocks.mockCrunchWholePax))
+    val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), forecastMaxDays = 4, cruncher = CrunchMocks.mockCrunchWholePax))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
@@ -85,7 +85,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       initialShifts = ShiftAssignments(Seq(assignment1, assignment2)),
       cruncher = OptimiserWithFlexibleProcessors.crunchWholePax,
-      maxDaysToCrunch = 4
+      forecastMaxDays = 4
     ))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
@@ -313,7 +313,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
       now = () => SDate(scheduled),
       initialForecastBaseArrivals = initialBaseArrivals,
       initialPortState = Option(PortState(SortedMap[UniqueArrival, ApiFlightWithSplits]() ++ initialPortStateArrivals, SortedMap[TQM, CrunchMinute](), SortedMap[TM, StaffMinute]())),
-      maxDaysToCrunch = 4
+      forecastMaxDays = 4
     ))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(updatedBaseArrivals.values.toSeq)))

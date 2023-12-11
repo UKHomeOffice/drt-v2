@@ -1,7 +1,6 @@
 package services.exports.flights.templates
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
-import drt.shared.api.{AgeRange, FlightManifestSummary, UnknownAge}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.exports.FlightExports.{actualAPISplitsForFlightInHeadingOrder, ageRangesFromSummary, nationalitiesFromSummary}

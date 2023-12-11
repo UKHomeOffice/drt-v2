@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.AirportConfigs
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliDate, SDate, SDateLike}
 
 import scala.collection.immutable.SortedMap
 import scala.concurrent.Future

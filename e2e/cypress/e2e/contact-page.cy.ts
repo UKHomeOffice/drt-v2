@@ -16,9 +16,9 @@ describe('Contact page', () => {
       .get('.contact-us-link > a')
       .click({ force: true })
       .get('.contact-us')
-      .contains("For anything else, please email us at support@test.com and we'll respond on the next business day.")
+      .contains("Contact number (outside of office hours) :")
       .get('.contact-us')
-      .contains("For urgent issues contact our out of hours support team on 012345.");
+      .contains("012345");
   });
 
   it("Clicking on the contact page during office hours should display the office hours support message", () => {
@@ -37,7 +37,10 @@ describe('Contact page', () => {
       .get('.contact-us-link > a')
       .click({ force: true })
       .get('.contact-us')
-      .contains("Contact the Dynamic Response Tool service team by email at support@test.com.")
+      .contains("Email :")
+      .get('.contact-us')
+      .contains("support@test.com")
+
   });
 
 });

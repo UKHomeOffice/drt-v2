@@ -6,7 +6,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.arrivals.{ArrivalDataSanitiser, ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop, LiveArrivalsUtil}
 import services.graphstages.ApproximateScheduleMatch.{mergeApproxIfFoundElseNone, mergeApproxIfFoundElseOriginal}
 import services.metrics.{Metrics, StageTimer}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, ArrivalsDiff, Passengers, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -62,8 +62,7 @@ object ArrivalsGraphStage {
 
 }
 
-class ArrivalsGraphStage(name: String = "",
-                         initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival],
+class ArrivalsGraphStage(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival],
                          initialForecastArrivals: SortedMap[UniqueArrival, Arrival],
                          initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival],
                          initialLiveArrivals: SortedMap[UniqueArrival, Arrival],
@@ -76,7 +75,7 @@ class ArrivalsGraphStage(name: String = "",
                          flushOnStart: Boolean = false,
                         )
   extends GraphStage[FanInShape5[List[Arrival], List[Arrival], List[Arrival], List[Arrival], Boolean, ArrivalsDiff]] {
-  val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
+  val log: Logger = LoggerFactory.getLogger(s"$getClass")
 
   import ArrivalsGraphStage._
 
@@ -113,7 +112,7 @@ class ArrivalsGraphStage(name: String = "",
     var liveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap()
     var toPush: Option[ArrivalsDiff] = None
 
-    val log: Logger = LoggerFactory.getLogger(s"$getClass-$name")
+    val log: Logger = LoggerFactory.getLogger(s"$getClass")
 
     def arrivalsForSource(source: ArrivalsSourceType): SortedMap[UniqueArrival, Arrival] = source match {
       case BaseArrivals => forecastBaseArrivals

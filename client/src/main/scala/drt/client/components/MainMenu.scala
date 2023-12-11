@@ -2,18 +2,16 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain
-import drt.client.SPAMain
 import drt.client.SPAMain._
 import drt.client.components.Icon._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.spa.TerminalPageModes.Dashboard
-import drt.shared.CrunchApi.MillisSinceEpoch
+import japgolly.scalajs.react._
 import japgolly.scalajs.react.component.Js
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react._
 import org.scalajs.dom.html.{Div, LI}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles._
@@ -21,25 +19,24 @@ import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, PortRegion}
 
 object MainMenu {
-  @inline private def bss: BootstrapStyles.type = GlobalStyles.bootstrapStyles
-
   case class Props(router: RouterCtl[Loc],
                    currentLoc: Loc,
                    feeds: Seq[FeedSourceStatuses],
                    airportConfig: AirportConfig,
                    user: LoggedInUser) extends UseValueEq
 
-  case class MenuItem(idx: Int, label: String, icon: Icon, location: Loc, classes: List[String] = List())
+  case class MenuItem(idx: Int, label: String, icon: Icon, location: Loc, tabClasses: Iterable[String] = List(), linkClasses: Iterable[String] = List())
 
-  val dashboardMenuItem: MenuItem = MenuItem(0, "Dashboard", Icon.dashboard, UserDashboardLoc)
+  private val dashboardMenuItem: MenuItem = MenuItem(0, "Dashboard", Icon.dashboard, UserDashboardLoc)
 
-  def statusMenuItem(position: Int, feeds: Seq[FeedSourceStatuses]): MenuItem = MenuItem(position, "Feeds", Icon.barChart, StatusLoc, List(feedsRag(feeds)))
+  private def statusMenuItem(position: Int, feeds: Seq[FeedSourceStatuses]): MenuItem =
+    MenuItem(position, "Feeds", Icon.barChart, StatusLoc, tabClasses = List(feedsRag(feeds)))
 
-  val portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, "Port Config", Icon.cogs, PortConfigLoc)
+  private val portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, "Port Config", Icon.cogs, PortConfigLoc)
 
-  val forecastUploadFile: Int => MenuItem = (position: Int) => MenuItem(position, "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
+  private val forecastUploadFile: Int => MenuItem = (position: Int) => MenuItem(position, "Forecast Upload", Icon.upload, ForecastFileUploadLoc)
 
-  def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
+  private def feedsRag(feeds: Seq[FeedSourceStatuses]): String = {
     val statuses = feeds.map(f => FeedStatuses.ragStatus(SDate.now().millisSinceEpoch, f.feedSource.maybeLastUpdateThreshold, f.feedStatuses))
     val rag = if (statuses.contains(Red)) Red
     else if (statuses.contains(Amber)) Amber
@@ -66,7 +63,8 @@ object MainMenu {
               UrlTimeRangeEnd(tptl.timeRangeEndString)).queryParams)
         case _ => TerminalPageTabLoc(terminalName)
       }
-      (BorderForceStaff, (offset: Int) => MenuItem(offset, terminalName, Icon.calculator, targetLoc))
+      (BorderForceStaff, (offset: Int) =>
+        MenuItem(offset, terminalName, Icon.calculator, targetLoc, linkClasses = Seq(s"terminal-${terminalName.toLowerCase}")))
     }.toList
 
     val restrictedMenuItems: List[(Role, Int => MenuItem)] = addFileUpload ++ terminalDepsMenuItem :+ ((ViewConfig, portConfigMenuItem))
@@ -79,7 +77,7 @@ object MainMenu {
     nonTerminalMenuItems :+ statusMenuItem(nonTerminalMenuItems.length + airportConfig.terminals.size, feeds)
   }
 
-  def restrictedMenuItemsForRole(restrictedMenuItems: List[(Role, Int => MenuItem)], roles: Set[Role], startIndex: Int): List[MenuItem] = {
+  private def restrictedMenuItemsForRole(restrictedMenuItems: List[(Role, Int => MenuItem)], roles: Set[Role], startIndex: Int): List[MenuItem] = {
     val itemsForLoggedInUser = restrictedMenuItems.collect {
       case (role, menuItemCallback) if roles.contains(role) => menuItemCallback
     }.zipWithIndex.map {
@@ -89,12 +87,6 @@ object MainMenu {
     itemsForLoggedInUser
   }
 
-  def lastUpdatedDescription(maybeLastUpdated: Option[MillisSinceEpoch]): String = maybeLastUpdated.map(lastUpdated => {
-    val secondsAgo = (SDate.now().millisSinceEpoch - lastUpdated) / 1000
-    val minutesAgo = secondsAgo / 60
-    if (minutesAgo > 1) s"$minutesAgo mins" else if (minutesAgo == 1) s"$minutesAgo min" else "< 1 min"
-  }).getOrElse("n/a")
-
   private class Backend() {
     def render(props: Props): VdomTagOf[Div] = {
       val children = for (item <- menuItems(props.airportConfig, props.currentLoc, props.user.roles, props.feeds)) yield {
@@ -103,8 +95,8 @@ object MainMenu {
           case (current, itemLoc) => current == itemLoc
         }
         val classes = List(("active", active))
-        <.div(^.key := item.idx, ^.classSet(classes: _*), ^.className := item.classes.mkString(" "),
-          props.router.link(item.location)(item.icon, " ", item.label)
+        <.div(^.key := item.idx, ^.classSet(classes: _*), ^.className := item.tabClasses.mkString(" "),
+          props.router.link(item.location)(item.icon, " ", item.label, ^.className := item.linkClasses.mkString(" "))
         )
       }
 
@@ -148,7 +140,7 @@ object PortSwitcher {
           }.getOrElse(EmptyVdom)
         } else {
           val regions = PortRegion.regions.collect {
-            case region if region.ports.intersect(ports).nonEmpty => (region.name -> region.ports.intersect(ports))
+            case region if region.ports.intersect(ports).nonEmpty => region.name -> region.ports.intersect(ports)
           }.toList.sortBy(_._1)
           <.span(
             ^.className := "dropdown",

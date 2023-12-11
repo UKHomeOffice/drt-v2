@@ -29,7 +29,11 @@ class PortStateSpec extends CrunchTestLike {
     val cm = CrunchMinute(T1, Queues.EeaDesk, millis, 10, 50, 10, 50, None)
     val portState = PortState(List(), List(cm), List())
 
-    val crunch = runCrunchGraph(TestConfig(initialPortState = Option(portState), now = () => SDate(minute).addMinutes(-60)))
+    val crunch = runCrunchGraph(TestConfig(
+      initialPortState = Option(portState),
+      now = () => SDate(minute).addMinutes(-60),
+      airportConfig = defaultAirportConfig.copy(minutesToCrunch = 1440),
+    ))
 
     offerAndWait(crunch.shiftsInput, UpdateShifts(Seq(StaffAssignment("", T1, SDate(minute).addMinutes(-15).millisSinceEpoch, SDate(minute).addMinutes(15).millisSinceEpoch, 1, None))))
 

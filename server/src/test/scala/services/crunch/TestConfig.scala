@@ -32,7 +32,7 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       simulator: TrySimulator = CrunchMocks.mockSimulator,
                       maybeAggregatedArrivalsActor: Option[ActorRef] = None,
                       useLegacyManifests: Boolean = false,
-                      maxDaysToCrunch: Int = 2,
+                      forecastMaxDays: Int = 2,
                       refreshArrivalsOnStart: Boolean = false,
                       recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,

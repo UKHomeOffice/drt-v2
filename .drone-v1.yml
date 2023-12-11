@@ -8,19 +8,7 @@ platform:
   arch: amd64
 
 steps:
-  - name: drone_s3_cache_pull
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-    settings:
-      drone_s3_cache_mode: pull
-    environment:
-      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
-      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-
-  - name: build
+  - name: Build app
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
@@ -36,64 +24,8 @@ steps:
     when:
       event:
         - push
-    depends_on:
-      - drone_s3_cache_pull
 
-  - name: drone_s3_cache_push
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/drone-s3cache:v0.2.0
-    settings:
-      drone_s3_cache_folders: .ivy2
-      drone_s3_cache_mode: push
-    environment:
-      DRONE_S3_CACHE_BUCKET_NAME: drt-drone-cache
-      DRONE_S3_CACHE_AWS_ACCESS_KEY_ID:
-        from_secret: DRONE_S3_CACHE_AWS_ACCESS_KEY_ID
-      DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY:
-        from_secret: DRONE_S3_CACHE_AWS_SECRET_ACCESS_KEY
-    depends_on:
-      - build
-
-  - name: analysis
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
-    commands:
-      - /root/entrypoint.sh
-      - sbt -ivy ./.ivy2 dependencyCheck
-      - sbt scalastyle | true
-      - sbt scapegoat | true
-      - sbt -ivy ./.ivy2 -mem 4096 -J-Xmx6G -J-XX:+UseG1GC clean coverage test | true
-      - sbt coverageReport
-      - ls -ltr /drone/src/server/target/scala-2.13/scoverage-report/
-    environment:
-      NVD_BASE_URL: http://nvdmirror:8008
-      ARTIFACTORY_PASSWORD:
-        from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
-      ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
-    when:
-      event:
-        - push
-    depends_on:
-      - drone_s3_cache_pull
-
-  - name: sonar-scanner
-    pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/sonar-scanner:v4.6
-    commands:
-      - sonar-scanner -Dsonar.projectVersion=B${DRONE_BUILD_NUMBER} -X
-    environment:
-      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
-    when:
-      event:
-        - push
-    depends_on:
-      - analysis
-      - build
-
-  - name: ecr-login-drt-v2
+  - name: ECR login
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/dind-awscli:19.03.12-dind-1.18.55
     environment:
@@ -111,7 +43,7 @@ steps:
       event:
         - push
 
-  - name: publish-cypress
+  - name: Publish cypress
     image: plugins/ecr
     environment:
       AWS_REGION: eu-west-2
@@ -128,29 +60,101 @@ steps:
       event:
         - push
     depends_on:
-      - ecr-login-drt-v2
+      - ECR login
 
-  - name: unit-test
+  - name: Unit tests
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
     commands:
       - /root/entrypoint.sh
-      - sbt --error test
+      - sbt -mem 4096 --error test
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt-artifactory-robot
       ENV_LOG_LEVEL: ERROR
-      KEYTOOL_PASSWORD:
-        from_secret: KEYTOOL_PASSWORD
     when:
       event:
         - push
     depends_on:
-      - build
-      - sonar-scanner
+      - Build app
 
-  - name: publish-drt
+  - name: Code coverage report
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt -mem 4096 --error coverage test | true
+      - sbt coverageReport
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+      branch:
+        - master
+    depends_on:
+      - Unit tests
+
+  - name: Scapegoat
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt scapegoat | true
+    environment:
+      NVD_BASE_URL: http://nvdmirror:8008
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+      branch:
+        - master
+    depends_on:
+      - Code coverage report
+
+  - name: Dependency check
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.0.0
+    commands:
+      - /root/entrypoint.sh
+      - sbt -mem 4096 dependencyCheck
+    environment:
+      NVD_BASE_URL: http://nvdmirror:8008
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ENV_LOG_LEVEL: ERROR
+    when:
+      event:
+        - push
+      branch:
+        - master
+    depends_on:
+      - Scapegoat
+
+  - name: Sonar scanner
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/sonar-scanner:v4.6
+    commands:
+      - sonar-scanner -Dsonar.projectVersion=B${DRONE_BUILD_NUMBER} -X
+    environment:
+      DRONE_BUILD_NUMBER: ${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+      branch:
+        - master
+    depends_on:
+      - Dependency check
+
+  - name: Publish app
     image: plugins/ecr
     environment:
       AWS_REGION: eu-west-2
@@ -166,9 +170,9 @@ steps:
       event:
         - push
     depends_on:
-      - build
+      - Build app
 
-  - name: e2e-tests
+  - name: End to end test
     pull: if-not-exists
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
     environment:
@@ -178,7 +182,7 @@ steps:
       PLAY_HTTP_SECRET_KEY:
         from_secret: PLAY_HTTP_SECRET_KEY
     commands:
-      - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e S3_AWS_ACCESS_KEY_ID="some-aws-access-id" -e S3_AWS_SECRET_ACCESS_KEY="some-aws-secret-access-id" -e PLAY_HTTP_SECRET_KEY=$${PLAY_HTTP_SECRET_KEY} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e DISPLAY_RED_LIST_INFO=false -e BASE_DOMAIN=drt-test.homeoffice.gov.uk 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:B${DRONE_BUILD_NUMBER} $${PLAY}
+      - docker run -m 5g -d --name $${DRONE_COMMIT_SHA} -e S3_AWS_ACCESS_KEY_ID="some-aws-access-id" -e S3_AWS_SECRET_ACCESS_KEY="some-aws-secret-access-id" -e PLAY_HTTP_SECRET_KEY=$${PLAY_HTTP_SECRET_KEY} -e ENABLE_STATSD=false -e CONTACT_EMAIL=support@test.com -e OOH_PHONE=012345 -e KEY_CLOAK_URL="https://sso-dev.notprod.homeoffice.gov.uk/auth/admin/realms/drt-notprod" -e JAVA_OPTS="-Xmx4g -Dconfig.resource=application-inmemory.conf" -e USE_API_PAX_NOS=true -e ADJUST_EGATES_USE_BY_U12S=true -e PORT_CODE="test" -e ENV="test" -e FORECAST_MAX_DAYS=2 -e DISPLAY_RED_LIST_INFO=false -e BASE_DOMAIN=drt-test.homeoffice.gov.uk -e START_UP_GRACE_PERIOD_SECONDS=0 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:B${DRONE_BUILD_NUMBER} $${PLAY}
       - docker run --net=container:$${DRONE_COMMIT_SHA} -e CYPRESS_baseUrl="http://localhost:9000" 340268328991.dkr.ecr.eu-west-2.amazonaws.com/drt/drt-v2:cypress-${DRONE_BUILD_NUMBER} /bin/bash -c "/app/node_modules/.bin/cypress run"
     volumes:
       - name: dockerclientconfig
@@ -187,10 +191,10 @@ steps:
       event:
         - push
     depends_on:
-      - publish-drt
-      - publish-cypress
+      - Publish app
+      - Publish cypress
 
-  - name: slack_notification
+  - name: Slack notification
     pull: if-not-exists
     image: plugins/slack
     settings:
@@ -207,18 +211,18 @@ steps:
       event:
         - push
     depends_on:
-      - build
-      - e2e-tests
-      - unit-test
+      - End to end test
+      - Code coverage report
 
 services:
-  - name: docker
+  - name: Docker in Docker
     image: 340268328991.dkr.ecr.eu-west-2.amazonaws.com/acp/dind
 
-  - name: nvdmirror
+  - name: NVD mirror service
     image: sspringett/nvdmirror
     ports:
       - 8008
+
 volumes:
   - name: dockerclientconfig
     temp: { }

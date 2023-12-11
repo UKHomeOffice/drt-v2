@@ -1,5 +1,6 @@
 package actors.persistent.staffing
 
+import actors.persistent.staffing.ShiftsActor.applyUpdatedShifts
 import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
@@ -11,7 +12,7 @@ object ShiftsReadActor {
   def props(pointInTime: SDateLike, expireBefore: () => SDateLike): Props = Props(new ShiftsReadActor(pointInTime, expireBefore))
 }
 
-class ShiftsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike) extends ShiftsActorBase(() => pointInTime, expireBefore) {
+class ShiftsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike) extends ShiftsActor(() => pointInTime, expireBefore) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: ShiftStateSnapshotMessage => state = shiftMessagesToStaffAssignments(snapshot.shifts)
   }

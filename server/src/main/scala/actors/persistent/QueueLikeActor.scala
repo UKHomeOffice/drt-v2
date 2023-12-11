@@ -82,9 +82,17 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
       updateState(Seq(cr))
       persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(cr))))
 
+    case cr: Iterable[CrunchRequest] =>
+      updateState(cr)
+      persistAndMaybeSnapshot(CrunchRequestsMessage(cr.map(crunchRequestToMessage).toList))
+
     case tur: TerminalUpdateRequest =>
       updateState(Seq(tur))
       persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(tur))))
+
+    case tur: Iterable[TerminalUpdateRequest] =>
+      updateState(tur)
+      persistAndMaybeSnapshot(CrunchRequestsMessage(tur.map(crunchRequestToMessage).toList))
 
     case RemoveCrunchRequest(cr) =>
       log.info(s"Removing ${cr.localDate} from queue. Queue now contains ${state.size} days")

@@ -2,16 +2,15 @@ package actors.daily
 
 import actors.StreamingJournalLike
 import actors.daily.StreamingUpdatesLike.StopUpdates
+import actors.persistent.StreamingUpdatesActor
 import akka.actor.PoisonPill
 import akka.pattern.StatusReply.Ack
-import akka.persistence.query.{EventEnvelope, PersistenceQuery}
+import akka.persistence.query.EventEnvelope
 import akka.persistence.{PersistentActor, RecoveryCompleted}
-import akka.stream.scaladsl.{Keep, Sink}
-import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
+import akka.stream.{Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
-import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, SplitsForArrivalsMessage}
@@ -33,16 +32,8 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
   var updatesAndRemovals: FlightUpdatesAndRemovals = FlightUpdatesAndRemovals.empty
 
-  val startUpdatesStream: MillisSinceEpoch => Unit = (sequenceNumber: Long) => if (maybeKillSwitch.isEmpty) {
-    val (_, killSwitch) = PersistenceQuery(context.system)
-      .readJournalFor[journalType.ReadJournalType](journalType.id)
-      .eventsByPersistenceId(persistenceId, sequenceNumber, Long.MaxValue)
-      .viaMat(KillSwitches.single)(Keep.both)
-      .toMat(Sink.actorRefWithAck(self, StreamInitialized, Ack, StreamCompleted))(Keep.left)
-      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
-      .run()
-    maybeKillSwitch = Option(killSwitch)
-  }
+  val startUpdatesStream: MillisSinceEpoch => UniqueKillSwitch =
+    StreamingUpdatesActor.startUpdatesStream(context.system, journalType, persistenceId, self)
 
   def streamingUpdatesReceiveCommand: Receive = {
     case StreamInitialized =>
@@ -69,7 +60,8 @@ class TerminalDayFlightUpdatesActor(year: Int,
   def streamingUpdatesReceiveRecover: Receive = {
     case RecoveryCompleted =>
       log.info(s"Recovered. Starting updates stream")
-      startUpdatesStream(lastSequenceNr)
+      val killSwitch = startUpdatesStream(lastSequenceNr)
+      maybeKillSwitch = Option(killSwitch)
 
     case unexpected =>
       log.error(s"Unexpected message: ${unexpected.getClass}")

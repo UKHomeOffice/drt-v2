@@ -239,11 +239,12 @@ class CrunchTestLike
   var maybeDrtActor: Option[ActorRef] = None
 
   override def afterAll: Unit = {
+    log.info("Final cleanup: Shutting down drt actor")
     maybeDrtActor.foreach(shutDownDrtActor)
   }
 
   override def after: Unit = {
-    log.info("Shutting down actor system!!!")
+    log.info("Cleanup: Shutting down actor system")
     TestKit.shutdownActorSystem(system)
   }
 
