@@ -14,32 +14,66 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 import scala.concurrent.{ExecutionContext, Future}
 
 object PassengerExports {
-  def flightsToDailySummaryRow(port: PortCode,
-                               terminal: Terminal,
-                               start: LocalDate,
-                               end: LocalDate,
-                               passengerLoadsProvider: (LocalDate, Terminal) => Future[Iterable[PassengersMinute]]
-                              )
-                              (implicit ec: ExecutionContext): (LocalDate, Int) => Future[Seq[String]] = {
-    val regionName = PortRegion.fromPort(port).name
-    val portName = port.toString
-    val terminalName = terminal.toString
-    (localDate, totalPax) => {
-      if (start <= localDate && localDate <= end)
-        passengerLoadsProvider(localDate, terminal).map { passengerLoads =>
-          val date = localDate.toISOString
-          val queuePax = queueTotals(passengerLoads)
-          val queueCells = Queues.queueOrder
-            .map(queue => queuePax.getOrElse(queue, 0).toString)
-            .mkString(",")
-          val pcpPax = queuePax.values.sum
-          val transPax = if (totalPax >= pcpPax) totalPax - pcpPax else 0
+  val paxSummaryToRow: (PortCode, Option[Terminal]) => (Int, Int, Int, Map[Queue, Int]) => String = {
+    (portCode, maybeTerminal) => {
+      val regionName = PortRegion.fromPort(portCode).name
+      val portCodeStr = portCode.toString
+      val maybeTerminalName = maybeTerminal.map(_.toString)
+      (totalPax, pcpPax, transPax, queuePax) => {
+        val queueCells = Queues.queueOrder
+          .map(queue => queuePax.getOrElse(queue, 0).toString)
+          .mkString(",")
 
-          Seq(s"$date,$regionName,$portName,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n")
+        maybeTerminalName match {
+          case Some(terminalName) =>
+            s"$regionName,$portCodeStr,$terminalName,$totalPax,$pcpPax,$transPax,$queueCells\n"
+          case None =>
+            s"$regionName,$portCodeStr,$totalPax,$pcpPax,$transPax,$queueCells\n"
         }
-      else Future.successful(Seq())
+      }
     }
   }
+
+  val reduceDailyPassengerSummaries: ((Int, Int, Int, Map[Queue, Int]), (Int, Int, Int, Map[Queue, Int])) => (Int, Int, Int, Map[Queue, Int]) =
+    (a, b) => {
+      val queueCells = Queues.queueOrder
+        .map { queue =>
+          val existing = a._4.getOrElse(queue, 0)
+          val toAdd = b._4.getOrElse(queue, 0)
+          (queue, existing + toAdd)
+        }.toMap
+      (a._1 + b._1, a._2 + b._2, a._3 + b._3, queueCells)
+    }
+
+  private val passengersToSummary: (Int, Iterable[PassengersMinute]) => (Int, Int, Int, Map[Queue, Int]) =
+    (totalPax, paxMinutes) => {
+      val queuePax = queueTotals(paxMinutes)
+      val pcpPax = queuePax.values.sum
+      val transPax = if (totalPax >= pcpPax) totalPax - pcpPax else 0
+      val queueCells = Queues.queueOrder
+        .map { queue =>
+          (queue, queuePax.getOrElse(queue, 0))
+        }.toMap
+      (totalPax, pcpPax, transPax, queueCells)
+    }
+
+  def dateToSummary(passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]])
+                   (implicit ec: ExecutionContext): (LocalDate, Int) => Future[(Int, Int, Int, Map[Queue, Int])] =
+    (localDate, totalPax) =>
+      passengerLoadsProvider(localDate).map(passengersToSummary(totalPax, _))
+
+  def paxMinutesToDailyRows(port: PortCode, maybeTerminal: Option[Terminal]): (LocalDate, Int, Iterable[PassengersMinute]) => String = {
+    (date, totalPax, minutes) =>
+      val row = paxSummaryToRow(port, maybeTerminal).tupled(passengersToSummary(totalPax, minutes))
+      val dateStr = date.ddmmyyyy
+      s"$dateStr,$row"
+  }
+
+  def dailyPassengerMinutes(passengerLoadsProvider: LocalDate => Future[Iterable[PassengersMinute]])
+                           (implicit ec: ExecutionContext): (LocalDate, Int) => Future[(LocalDate, Int, Iterable[PassengersMinute])] =
+    (localDate, totalPax) =>
+      passengerLoadsProvider(localDate).map(pl => (localDate, totalPax, pl))
+
 
   def paxForMinute(total: Int, minute: Int): Int = {
     val minutesCount = (total.toDouble / 20).ceil.toInt
@@ -55,11 +89,11 @@ object PassengerExports {
       .groupBy(_._1)
       .view.mapValues(x => x.map(_._2).sum).toMap
 
-  def totalPassengerCountProvider(utcFlightsProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+  def totalPassengerCountProvider(utcFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                                   paxFeedSourceOrder: List[FeedSource],
-                                 ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Int), NotUsed] = {
+                                 ): (LocalDate, LocalDate) => Source[(LocalDate, Int), NotUsed] = {
     val transformer = relevantPaxDuringWindow(paxFeedSourceOrder)
-    LocalDateStream.apply(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
+    LocalDateStream(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
   }
 
   def relevantPaxDuringWindow(paxFeedSourceOrder: List[FeedSource]): (LocalDate, Seq[ApiFlightWithSplits]) => Int =

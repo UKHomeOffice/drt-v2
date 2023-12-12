@@ -200,7 +200,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
           csvSource,
           CsvFileStreaming.makeFileName(
             "staff-movements",
-            terminal,
+            Option(terminal),
             localDate,
             localDate,
             airportConfig.portCode

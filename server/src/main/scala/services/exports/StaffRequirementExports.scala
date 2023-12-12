@@ -8,7 +8,6 @@ import services.LocalDateStream
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -17,8 +16,8 @@ object StaffRequirementExports {
   private val relevantMinute: (LocalDate, Seq[CrunchMinute]) => Seq[CrunchMinute] =
     (current, minutes) => minutes.filter { m => SDate(m.minute).toLocalDate == current }
 
-  def queuesProvider(utcQueuesProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed],
-                    ): (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Seq[CrunchMinute]), NotUsed] =
+  def queuesProvider(utcQueuesProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed],
+                    ): (LocalDate, LocalDate) => Source[(LocalDate, Seq[CrunchMinute]), NotUsed] =
     LocalDateStream(utcQueuesProvider, startBufferDays = 0, endBufferDays = 0, transformData = relevantMinute)
 
   def toPassengerHeadlines(queues: Seq[Queue]): (LocalDate, Seq[CrunchMinute]) => Seq[String] =
@@ -90,12 +89,12 @@ object StaffRequirementExports {
     .mapValues(_.map(_.toMinute))
     .toMap
 
-  def staffingForLocalDateProvider(terminal: Terminal, utcProvider: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[StaffMinute]), NotUsed])
+  def staffingForLocalDateProvider(utcProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed])
                                   (implicit ec: ExecutionContext, mat: Materializer): LocalDate => Future[Seq[StaffMinute]] =
     date => {
       val startUtc = SDate(date).toUtcDate
       val endUtc = SDate(date).addDays(1).addMinutes(-1).toUtcDate
-      utcProvider(startUtc, endUtc, terminal)
+      utcProvider(startUtc, endUtc)
         .runWith(Sink.seq)
         .map { seq =>
           seq.map(_._2).flatMap { staffMinutes =>

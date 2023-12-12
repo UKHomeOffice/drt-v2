@@ -1,13 +1,15 @@
 package services.exports
 
+import akka.NotUsed
+import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.PassengersMinute
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, FastTrack, NonEeaDesk, Queue, QueueDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration.DurationInt
@@ -98,37 +100,101 @@ class PassengerExportsSpec extends CrunchTestLike {
     PassengerExports.relevantPaxDuringWindow(paxFeedSourceOrder)(LocalDate(2020, 1, 2), arrivals) === 95
   }
 
-  "flightsToDailySummaryRow should" >> {
-    val port = PortCode("MAN")
-    val terminal = Terminal("T1")
+  val totalPax: Int = 95
+  val date: LocalDate = LocalDate(2020, 6, 2)
+  val paxMinutesProvider: Seq[PassengersMinute] =
+    Seq(
+      PassengersMinute(T1, EeaDesk, SDate(date).addMinutes(30).millisSinceEpoch, Seq.fill(5)(0d), None),
+      PassengersMinute(T1, EeaDesk, SDate(date).addMinutes(31).millisSinceEpoch, Seq.fill(6)(0d), None),
+      PassengersMinute(T1, EGate, SDate(date).addMinutes(45).millisSinceEpoch, Seq.fill(7)(0d), None),
+      PassengersMinute(T1, EGate, SDate(date).addMinutes(46).millisSinceEpoch, Seq.fill(8)(0d), None),
+      PassengersMinute(T1, NonEeaDesk, SDate(date).addMinutes(55).millisSinceEpoch, Seq.fill(9)(0d), None),
+      PassengersMinute(T1, NonEeaDesk, SDate(date).addMinutes(56).millisSinceEpoch, Seq.fill(10)(0d), None),
+    )
+  val dateAndFlightsToRows: (LocalDate, Int, Iterable[PassengersMinute]) => String = PassengerExports.paxMinutesToDailyRows(PortCode("MAN"), Option(T1))
 
+  val pcpPax: Int = 5 + 6 + 7 + 8 + 9 + 10
+  val transPax: Int = totalPax - pcpPax
+  val queuePax: Int = 0
+  val egatePax: Int = 7 + 8
+  val eeaPax: Int = 5 + 6
+  val nonEeaPax: Int = 9 + 10
+  val fastTrackPax: Int = 0
+
+  "flightsToDailySummaryRow should" >> {
     val totalPax = 95
 
-    "I should get a single row with total pax from flights and breakdowns from the pax minutes" >> {
-      val date = LocalDate(2020, 6, 2)
-      val paxMinutesProvider: (LocalDate, Terminal) => Future[Seq[PassengersMinute]] = (_, _) =>
-        Future.successful(Seq(
-          PassengersMinute(T1, EeaDesk, SDate(date).addMinutes(30).millisSinceEpoch, Seq.fill(5)(0d), None),
-          PassengersMinute(T1, EeaDesk, SDate(date).addMinutes(31).millisSinceEpoch, Seq.fill(6)(0d), None),
-          PassengersMinute(T1, EGate, SDate(date).addMinutes(45).millisSinceEpoch, Seq.fill(7)(0d), None),
-          PassengersMinute(T1, EGate, SDate(date).addMinutes(46).millisSinceEpoch, Seq.fill(8)(0d), None),
-          PassengersMinute(T1, NonEeaDesk, SDate(date).addMinutes(55).millisSinceEpoch, Seq.fill(9)(0d), None),
-          PassengersMinute(T1, NonEeaDesk, SDate(date).addMinutes(56).millisSinceEpoch, Seq.fill(10)(0d), None),
-        ))
-      val dateAndFlightsToRows: (LocalDate, Int) => Future[Seq[String]] = PassengerExports.flightsToDailySummaryRow(port, terminal, date, date, paxMinutesProvider)
-      val csv = Await.result(dateAndFlightsToRows(date, totalPax), 1.second).mkString
-
-      val pcpPax = 5 + 6 + 7 + 8 + 9 + 10
-      val transPax = totalPax - pcpPax
-      val queuePax = 0
-      val egatePax = 7 + 8
-      val eeaPax = 5 + 6
-      val nonEeaPax = 9 + 10
-      val fastTrackPax = 0
-
-      csv ===
-        s"""2020-06-02,North,MAN,T1,$totalPax,$pcpPax,$transPax,$queuePax,$egatePax,$eeaPax,$nonEeaPax,$fastTrackPax
+    "produce a single row with total pax from flights and breakdowns from the pax minutes" >> {
+      dateAndFlightsToRows(date, totalPax, paxMinutesProvider) ===
+        s"""02/06/2020,North,MAN,T1,$totalPax,$pcpPax,$transPax,$queuePax,$egatePax,$eeaPax,$nonEeaPax,$fastTrackPax
            |""".stripMargin
+    }
+  }
+
+  "dateToSummary should" >> {
+
+    "produce a summary for the given date" >> {
+      val dateToSummary = PassengerExports.dateToSummary(_ => Future.successful(paxMinutesProvider))
+      val summary = Await.result(dateToSummary(date, totalPax), 1.second)
+
+      val queueCounts = Map[Queue, Int](QueueDesk -> queuePax, EGate -> egatePax, EeaDesk -> eeaPax, NonEeaDesk -> nonEeaPax, FastTrack -> fastTrackPax)
+
+      summary === (totalPax, pcpPax, transPax, queueCounts)
+    }
+  }
+
+  "dailyPassengerMinutes should" >> {
+    val totalPax = 95
+
+    "produce a summary for the given date" >> {
+      val dateToSummary = PassengerExports.dailyPassengerMinutes(_ => Future.successful(paxMinutesProvider))
+      val minutes = Await.result(dateToSummary(date, totalPax), 1.second)
+
+      minutes === (date, totalPax, paxMinutesProvider)
+    }
+  }
+
+  "paxSummaryToRow should" >> {
+    "produce a csv row with expected values given no terminal" >> {
+      val totalPax = 100
+      val pcpPax = 80
+      val transPax = 20
+      val queueCells: Map[Queue, Int] = Map(
+        EeaDesk -> 20,
+        NonEeaDesk -> 20,
+        EGate -> 40,
+      )
+      val row = PassengerExports.paxSummaryToRow(PortCode("MAN"), None)(totalPax, pcpPax, transPax, queueCells)
+
+      row === s"North,MAN,$totalPax,$pcpPax,$transPax,${Queues.queueOrder.map(queueCells.getOrElse(_, 0).toString).mkString(",")}\n"
+    }
+  }
+
+  "reduceDailyPassengerSummaries should" >> {
+    "produce a new passenger summary consisting on summing up values from each input" >> {
+      val s1 = (100, 80, 20, Map[Queue, Int](EeaDesk -> 20, EGate -> 60))
+      val s2 = (120, 100, 20, Map[Queue, Int](EeaDesk -> 30, NonEeaDesk -> 70))
+      PassengerExports.reduceDailyPassengerSummaries(s1, s2) ===
+        (220, 180, 40, Map[Queue, Int](EeaDesk -> 50, EGate -> 60, NonEeaDesk -> 70, FastTrack -> 0, QueueDesk -> 0))
+    }
+  }
+
+  "totalPassengerCountProvider should" >> {
+    "Count the passengers on only the non-cta flight" >> {
+      val scheduledDateLocal = LocalDate(2020, 1, 1)
+      val scheduledDateUtc = UtcDate(2020, 1, 1)
+      val arrival: Arrival = ArrivalGenerator.arrival(
+        iata = "BA0001", schDt = "2020-01-01T20:05", pcpDt = "2020-01-01T22:30", passengerSources = passengers(Option(95), None))
+      val arrivalCta: Arrival = ArrivalGenerator.arrival(
+        iata = "BA0001", schDt = "2020-01-01T20:05", pcpDt = "2020-01-01T22:30", passengerSources = passengers(Option(95), None), origin = PortCode("JER"))
+
+      val flight = ApiFlightWithSplits(arrival, Set())
+      val flightCta = ApiFlightWithSplits(arrivalCta, Set())
+      val flightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+        (_, _) =>
+          Source(List((scheduledDateUtc, Seq(flight, flightCta))))
+      val result = Await.result(PassengerExports.totalPassengerCountProvider(flightsProvider, paxSourceOrder)(scheduledDateLocal, scheduledDateLocal).runWith(Sink.seq), 1.second)
+      result === Seq((LocalDate(2020, 1, 1), 95))
     }
   }
 }

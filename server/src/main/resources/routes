@@ -108,7 +108,8 @@ GET           /data/actor-tree                                                  
 
 # v2 exports
 GET           /api/arrivals/:startLocalDay/:endLocalDay/:terminalName                 controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeApi(startLocalDay: String, endLocalDay: String, terminalName: String)
-GET           /api/passengers/:startLocalDay/:endLocalDay/:terminalName               controllers.application.exports.SummariesExportController.exportDailyPassengersForDateRangeApi(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /api/passengers/:startLocalDay/:endLocalDay                             controllers.application.exports.SummariesExportController.exportPassengersByPortForDateRangeApi(startLocalDay: String, endLocalDay: String)
+GET           /api/passengers/:startLocalDay/:endLocalDay/:terminalName               controllers.application.exports.SummariesExportController.exportPassengersByTerminalForDateRangeApi(startLocalDay: String, endLocalDay: String, terminalName: String)
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)

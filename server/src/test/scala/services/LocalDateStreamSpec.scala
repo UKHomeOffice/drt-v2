@@ -22,23 +22,23 @@ class LocalDateStreamSpec extends Specification {
     val transformData: (LocalDate, Seq[Int]) => String = (date, nos) => s"${date.toISOString} ${nos.mkString(",")}"
 
     "give an empty collection when the source provider is an empty stream" in {
-      val utcStream: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[Int]), NotUsed] = (_, _, _) => Source.empty
+      val utcStream: (UtcDate, UtcDate) => Source[(UtcDate, Seq[Int]), NotUsed] = (_, _) => Source.empty
       val localDateStream = LocalDateStream(utcStream, startBufferDays, endBufferDays, transformData)
-      val result = Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 1), T1).runWith(Sink.seq), 1.second)
+      val result = Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 1)).runWith(Sink.seq), 1.second)
       result === Seq()
     }
     "give a single element collection when the source provider is a single element stream" in {
-      val utcStream: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[Int]), NotUsed] = (_, _, _) => Source(List((UtcDate(2020, 1, 1), List(1, 2, 3))))
+      val utcStream: (UtcDate, UtcDate) => Source[(UtcDate, Seq[Int]), NotUsed] = (_, _) => Source(List((UtcDate(2020, 1, 1), List(1, 2, 3))))
       val localDateStream = LocalDateStream(utcStream, startBufferDays, endBufferDays, transformData)
-      val result = Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 1), T1).runWith(Sink.seq), 1.second)
+      val result = Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 1)).runWith(Sink.seq), 1.second)
       result === Seq((LocalDate(2020, 1, 1), "2020-01-01 1,2,3"))
     }
     "give a single element collection when the source provider is a two element stream" in {
-      val utcStream: (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[Int]), NotUsed] = (start, end, _) =>
+      val utcStream: (UtcDate, UtcDate) => Source[(UtcDate, Seq[Int]), NotUsed] = (start, end) =>
         Source(DateRange(start, end).map(d => (d, List(1, 2, 3))))
 
       val localDateStream = LocalDateStream(utcStream, startBufferDays, endBufferDays, transformData)
-      val result = Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 2), T1).runWith(Sink.seq), 1.second)
+      val result = Await.result(localDateStream(LocalDate(2020, 1, 1), LocalDate(2020, 1, 2)).runWith(Sink.seq), 1.second)
       result === Seq((LocalDate(2020, 1, 1), "2020-01-01 1,2,3,1,2,3"))
     }
   }
