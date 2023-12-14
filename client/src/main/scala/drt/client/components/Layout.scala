@@ -61,13 +61,17 @@ object Layout {
                       )
                     ),
                     MuiGrid(item = true, xs = gridItem2)(
-                      MuiTypography(variant = "h5", sx = SxProps(Map("color" -> "white", "padding" -> "2px 0")))(
-                        "Approx. 2 minutes to complete"
+                      MuiTypography(variant = "h5", sx = SxProps(Map("color" -> "white", "padding" -> "3px 10px")))(
+                        "Takes 2 minutes to complete"
                       )
                     ),
                     MuiGrid(item = true, xs = gridItem3)(
-                      MuiButton(variant = "outlined", sx = SxProps(Map("border" -> "1px solid white", "color" -> "white", "font-weight" -> "bold")))(
-                        "Give feedback >", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest", "_blank")),
+                      MuiButton(variant = "outlined", sx = SxProps(Map("textTransform" -> "none",
+                        "border" -> "1px solid white",
+                        "color" -> "white",
+                        "font-weight" -> "bold",
+                        "font-size" -> "1.50rem")))(
+                        "Give feedback", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest", "_blank")),
                       )
                     ),
                     MuiGrid(item = true, xs = 1)(
