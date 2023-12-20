@@ -61,7 +61,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
             )))(Flickity()(props.trainingDataTemplates.map { data =>
               MuiGrid(container = true, spacing = 2)(
                 MuiGrid(item = true, xs = 8, sx = SxProps(Map(
-                  "backgroundColor" -> "#FFFFFF",
+                  "backgroundColor" -> "#C0C7DE",
                   "border" -> "16px solid #C0C7DE"
                 )))(
                   <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"feature-guide-video/${data.fileName.getOrElse("")}"),
@@ -73,7 +73,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                 MuiGrid(item = true, xs = 4, sx = SxProps(Map(
                   "backgroundColor" -> "#FFFFFF",
                   "padding" -> "16px",
-                  "border-top" -> "16px solid #C0C7DE",
+                  "border-top" -> "32px solid #C0C7DE",
                   "border-right" -> "16px solid #C0C7DE",
                   "border-bottom" -> "16px solid #C0C7DE",
                   "border-left" -> "0px solid #C0C7DE",

@@ -17,6 +17,7 @@ https://flickity.metafizzy.co
 }
 
 .flickity-slider {
+    transform: none !important;
     position: absolute;
     width: 100%;
     height: 100%;
