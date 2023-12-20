@@ -18,7 +18,7 @@ object LocalDateStream {
         .map { days =>
           val sortedDates = days.map(_._1).sorted
           val utcDate =
-            if (days.size > 2) sortedDates.drop(1).head
+            if (days.size > 2) sortedDates.drop(startBufferDays).head
             else sortedDates.head
 
           val localDate = LocalDate(utcDate.year, utcDate.month, utcDate.day)

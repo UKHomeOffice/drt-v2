@@ -93,7 +93,7 @@ object PassengerExports {
                                   paxFeedSourceOrder: List[FeedSource],
                                  ): (LocalDate, LocalDate) => Source[(LocalDate, Int), NotUsed] = {
     val transformer = relevantPaxDuringWindow(paxFeedSourceOrder)
-    LocalDateStream(utcFlightsProvider, startBufferDays = 0, endBufferDays = 0, transformData = transformer)
+    LocalDateStream(utcFlightsProvider, startBufferDays = 1, endBufferDays = 1, transformData = transformer)
   }
 
   def relevantPaxDuringWindow(paxFeedSourceOrder: List[FeedSource]): (LocalDate, Seq[ApiFlightWithSplits]) => Int =

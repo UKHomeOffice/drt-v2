@@ -18,7 +18,7 @@ object StaffRequirementExports {
 
   def queuesProvider(utcQueuesProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed],
                     ): (LocalDate, LocalDate) => Source[(LocalDate, Seq[CrunchMinute]), NotUsed] =
-    LocalDateStream(utcQueuesProvider, startBufferDays = 0, endBufferDays = 0, transformData = relevantMinute)
+    LocalDateStream(utcQueuesProvider, startBufferDays = 1, endBufferDays = 1, transformData = relevantMinute)
 
   def toPassengerHeadlines(queues: Seq[Queue]): (LocalDate, Seq[CrunchMinute]) => Seq[String] =
     (date, minutes) => {

@@ -59,8 +59,7 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
       request =>
         val maybeTerminal = None
         val flightsProvider = ctrl.portFlightsProvider
-        val paxProvider = portPassengersProvider
-        exportStream(startLocalDateString, endLocalDateString, request, maybeTerminal, flightsProvider, paxProvider)
+        exportStream(startLocalDateString, endLocalDateString, request, maybeTerminal, flightsProvider, portPassengersProvider)
     }
 
   private def exportStream(startLocalDateString: String,
