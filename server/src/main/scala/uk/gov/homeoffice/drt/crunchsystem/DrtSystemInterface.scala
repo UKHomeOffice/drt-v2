@@ -17,7 +17,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{ABFeatureProviderLike,DropInProviderLike, FeatureGuideProviderLike,UserFeedBackProviderLike}
+import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -58,6 +58,7 @@ import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.FlightFilter
+import services.liveviews.PassengersLiveView
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import uk.gov.homeoffice.drt.AppEnvironment
@@ -384,6 +385,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
         redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
         DynamicQueueStatusProvider(airportConfig, egatesProvider),
         airportConfig.queuesByTerminal,
+        _ => {},
       )
 
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =
