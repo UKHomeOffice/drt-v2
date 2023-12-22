@@ -8,7 +8,6 @@ import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import java.sql.Timestamp
 
-
 object PassengersLiveView {
   def minutesContainerToHourlyRow(port: PortCode): MinutesContainer[PassengersMinute, TQM] => Iterable[PassengersHourlyRow] =
     container =>
