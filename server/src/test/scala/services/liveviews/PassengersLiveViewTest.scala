@@ -3,10 +3,13 @@ package services.liveviews
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import uk.gov.homeoffice.drt.db.PassengersHourlyRow
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.SDate
+
+import java.sql.Timestamp
 
 class PassengersLiveViewTest extends AnyWordSpec with Matchers {
   "minutesContainerToHourlyRow given a container with one minute" should {
@@ -19,10 +22,10 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
 
       val code = PortCode("LHR")
 
-      val result = PassengersLiveView.minutesContainerToHourlyRow(code)(container)
+      val result = PassengersLiveView.minutesContainerToHourlyRows(code, () => 0L)(container)
 
       result.toSet should ===(Set(
-        PassengersHourlyRow(code.iata, T1.toString, EeaDesk.toString, UtcDate(2023, 12, 21), 15, 1, None, None)
+        PassengersHourlyRow(code.iata, T1.toString, EeaDesk.toString, "2023-12-21", 15, 1, new Timestamp(0L))
       ))
     }
   }
@@ -49,13 +52,13 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
 
       val code = PortCode("LHR")
 
-      val result = PassengersLiveView.minutesContainerToHourlyRow(code)(container)
+      val result = PassengersLiveView.minutesContainerToHourlyRows(code, () => 0L)(container)
 
       result.toSet should ===(Set(
-        PassengersHourlyRow(code.iata, T1.toString, EeaDesk.toString, UtcDate(2023, 12, 21), 15, 10, None, None),
-        PassengersHourlyRow(code.iata, T1.toString, EeaDesk.toString, UtcDate(2023, 12, 21), 20, 6, None, None),
-        PassengersHourlyRow(code.iata, T1.toString, EGate.toString, UtcDate(2023, 12, 21), 15, 8, None, None),
-        PassengersHourlyRow(code.iata, T1.toString, EGate.toString, UtcDate(2023, 12, 21), 20, 4, None, None),
+        PassengersHourlyRow(code.iata, T1.toString, EeaDesk.toString, "2023-12-21", 15, 10, new Timestamp(0L)),
+        PassengersHourlyRow(code.iata, T1.toString, EeaDesk.toString, "2023-12-21", 20, 6, new Timestamp(0L)),
+        PassengersHourlyRow(code.iata, T1.toString, EGate.toString, "2023-12-21", 15, 8, new Timestamp(0L)),
+        PassengersHourlyRow(code.iata, T1.toString, EGate.toString, "2023-12-21", 20, 4, new Timestamp(0L)),
       ))
     }
   }

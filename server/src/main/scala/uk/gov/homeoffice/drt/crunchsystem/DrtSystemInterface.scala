@@ -68,6 +68,8 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetS
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.db.AggregateDb
+import uk.gov.homeoffice.drt.db.queries.PassengersHourlyQueries
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -373,6 +375,16 @@ trait DrtSystemInterface extends UserRoleProviderLike
       val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
       val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
+
+      val replaceHours = PassengersHourlyQueries.replaceHours(airportConfig.portCode)
+      val containerToHourlyRow = PassengersLiveView.minutesContainerToHourlyRows(airportConfig.portCode, () => now().millisSinceEpoch)
+      val updateLiveView: MinutesContainer[CrunchApi.PassengersMinute, TQM] => Unit =
+        _.minutes.groupBy(_.key.terminal).foreach {
+          case (terminal, minutes) =>
+            val rows = containerToHourlyRow(MinutesContainer(minutes))
+            AggregateDb.run(replaceHours(terminal, rows))
+        }
+
       val passengerLoadsFlow = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
         liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsProvider),
@@ -385,7 +397,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
         redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
         DynamicQueueStatusProvider(airportConfig, egatesProvider),
         airportConfig.queuesByTerminal,
-        _ => {},
+        updateLiveView = updateLiveView,
       )
 
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =
