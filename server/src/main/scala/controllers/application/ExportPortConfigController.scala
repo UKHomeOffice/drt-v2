@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.egates.{EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.egates.{EgateBanksUpdates, PortEgateBanksUpdates}
 import akka.pattern.ask
 import drt.shared.api.{WalkTime, WalkTimes}
 import uk.gov.homeoffice.drt.ports.{PaxTypes, Queues, Terminals}
@@ -12,7 +12,8 @@ import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.actor.WalkTimeProvider
 
-import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
@@ -26,24 +27,26 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       val eGatesCsv = updatesByTerminal.map { case (k, v) =>
         v.updates.map { updates =>
           updates.banks.zipWithIndex
-            .map { case (v, i) => s"$k,${updates.effectiveFrom},bank-$i ${v.openCount}/${v.maxCapacity}" }.mkString("\n")
+            .map { case (v, i) => s"$k,${SDate(updates.effectiveFrom)},bank-$i ${v.openCount}/${v.maxCapacity}" }.mkString("\n")
         }.mkString("\n")
       }.mkString("\n")
+      val eGatesTitle ="E-gates schedule"
       val eGatesHeaders = "Terminal,Effective from,OpenGates per bank"
-      s"$eGatesHeaders\n$eGatesCsv"
+      s"\n$eGatesTitle\n$eGatesHeaders\n$eGatesCsv"
     }
   }
 
   def getSlaConfig = {
     val slaUpdates: Future[SlaConfigs] = ctrl.slasActor.ask(GetState).mapTo[SlaConfigs]
+    val slaTitle = "Queue SLAs"
     val slaHeaders = "Effective from,Queue,Minutes"
     slaUpdates.map { sla =>
       val slaCsv = sla.configs.map { case (eF, vc) =>
         vc.map { case (queue, v) =>
-          s"${eF},${queue},${v} minutes"
+          s"${SDate(eF)},${queue},${v}"
         }.mkString("\n")
       }.mkString("\n")
-      s"$slaHeaders\n$slaCsv"
+      s"\n\n$slaTitle\n$slaHeaders\n$slaCsv"
     }
   }
 
@@ -55,28 +58,28 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       }
       .map {
         case (ptq, time) =>
-          s"${ptq.displayName} ${(time * 60).toInt}"
+          s"${ptq.displayName},${(time * 60).toInt}"
       }.mkString("\n")
-    val processingTimeHeader = "Processing Times"
-    s"$processingTimeHeader\n$processingTimeString"
+    val processingTimeTitle = "Processing Times"
+    val processingTimeHeader = "Passenger Type & Queue,Seconds"
+    s"\n\n$processingTimeTitle\n$processingTimeHeader\n$processingTimeString"
   }
 
   def getDeskAndEGates(terminal: Terminals.Terminal): String = {
-    val eGates: Future[String] = updatesByTerminalF.map(_.get(terminal).flatMap(_.updatesForDate(SDate.now().millisSinceEpoch)))
+    val eGates: String = Await.result(updatesByTerminalF.map(_.get(terminal).flatMap(_.updatesForDate(SDate.now().millisSinceEpoch)))
       .map { update =>
         val openGatesByBank: Seq[Int] = update.map(_.banks.map { bank => bank.openCount }).getOrElse(List())
         val totalOpenGates = openGatesByBank.sum
-        s"$totalOpenGates egates in ${openGatesByBank.length} banks: ${openGatesByBank.mkString(", ")}"
-      }
+        s"$totalOpenGates egates in ${openGatesByBank.length} banks: ${openGatesByBank.mkString(" ")}"
+      }, 2.seconds)
 
     val deskEGateHeader = s"Desks and Egates"
     val desk: String = s"${airportConfig.desksByTerminal.getOrElse(terminal, "n/a")} desks"
-    //    eGates.map(e => s"$deskEGateHeader\n$desk\n$e")
-    s"$deskEGateHeader\n$desk"
+    s"\n$deskEGateHeader\n$desk\n$eGates"
   }
 
   def defaultPaxSplits(terminal: Terminals.Terminal) = {
-    val passengerAllocationHeader = "Passenger Queue Allocation"
+    val passengerAllocationTitle = "Passenger Queue Allocation"
     val queueAllocationHeader = "Passenger Type,Queue,Allocation"
     val allocationString = airportConfig.terminalPaxTypeQueueAllocation(terminal)
       .toList
@@ -86,16 +89,17 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       case (pt, list) =>
         list.map {
           case (qt, ratio) =>
-            s"${PaxTypes.displayName(pt)} ${Queues.displayName(qt)} ${Math.round(ratio * 100)}%"
+            s"${PaxTypes.displayName(pt)},${Queues.displayName(qt)},${Math.round(ratio * 100)}%"
         }
     }.mkString("\n")
-    s"$passengerAllocationHeader\n$queueAllocationHeader\n$allocationString"
+    s"\n\n$passengerAllocationTitle\n$queueAllocationHeader\n$allocationString"
   }
 
   def defaultWalktime(terminal: Terminals.Terminal) = {
-    val walktimeHeader = "Walktimes"
-    val walktimeString = s"${airportConfig.defaultWalkTimeMillis(terminal) / 60000} minutes"
-    s"$walktimeHeader\n$walktimeString"
+    val walktimeTitle = "Walktimes"
+    val walktimeHeader = "Gate,Walk time minutes"
+    val walktimeString = s"Default,${airportConfig.defaultWalkTimeMillis(terminal) / 60000}"
+    s"\n\n$walktimeTitle\n$walktimeHeader\n$walktimeString"
   }
 
   def walkTimesFromConfig(terminal: Terminals.Terminal): String = {
@@ -112,21 +116,21 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       val gateStandHeader = "Gate/Stand Walktime"
       val gate = gateWalktimeString(walktimesGatesStands.byTerminal(terminal).gateWalktimes)
       val stand = standWalktime(walktimesGatesStands.byTerminal(terminal).standWalkTimes)
-      s"$gateStandHeader\n$gate\n$stand"
+      s"\n\n$gateStandHeader\n$gate\n$stand"
     } else ""
   }
 
   def gateWalktimeString(gateWalktimes: Map[String, WalkTime]) = {
-    val gateWalktimeHeader = "Gate Walktimes"
+    val gateWalktimeHeader = "Gate, Walk time in minutes"
     val gateWalktimeString = gateWalktimes
-      .map { case (k, v) => s"$k,$v minutes" }.mkString("\n")
-    s"$gateWalktimeHeader\n$gateWalktimeString"
+      .map { case (k, v) => s"$k,$v" }.mkString("\n")
+    s"\n$gateWalktimeHeader\n$gateWalktimeString"
   }
 
   def standWalktime(standWalkTimes: Map[String, WalkTime]) = {
-    val standWalktimeHeader = "Stand Walktimes"
-    val standWalktimeString = standWalkTimes.map { case (k, v) => s"$k,$v minutes" }.mkString("\n")
-    s"$standWalktimeHeader\n$standWalktimeString"
+    val standWalktimeHeader = "Stand, Walk time in minutes"
+    val standWalktimeString = standWalkTimes.map { case (k, v) => s"$k,$v" }.mkString("\n")
+    s"\n$standWalktimeHeader\n$standWalktimeString"
   }
 
   def getAirportConfig(tn: Terminals.Terminal) = {
@@ -145,7 +149,7 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     val aConfig: String = airportConfig.terminals.map { tn =>
       val airportConfigString = getAirportConfig(tn)
       val deskAndEGates = getDeskAndEGates(tn)
-      s"${tn.toString}\n$deskAndEGates\n$airportConfigString"
+      s"\n\n${tn.toString}\n$deskAndEGates\n$airportConfigString"
     }.mkString("\n")
 
     slaAndEgateBanks.map { a =>
