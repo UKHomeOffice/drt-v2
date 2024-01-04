@@ -1,6 +1,6 @@
 package services.crunch
 
-import actors.DrtStaticParameters.{time48HoursAgo, timeBeforeThisMonth}
+import actors.DrtStaticParameters.{time48HoursAgo, startOfTheMonth}
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
@@ -133,7 +133,7 @@ class TestDrtActor extends Actor {
       val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
       val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
-        tc.now, timeBeforeThisMonth(tc.now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
+        tc.now, startOfTheMonth(tc.now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
       val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
         tc.now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
       val staffMovementsSequentialWritesActor: ActorRef = system.actorOf(StaffMovementsActor.sequentialWritesProps(

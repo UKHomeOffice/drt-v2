@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
-import actors.DrtStaticParameters.{expireAfterMillis, time48HoursAgo, timeBeforeThisMonth}
+import actors.DrtStaticParameters.{expireAfterMillis, time48HoursAgo, startOfTheMonth}
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent._

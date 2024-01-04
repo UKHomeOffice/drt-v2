@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors.CrunchManagerActor.AddQueueCrunchSubscriber
-import actors.DrtStaticParameters.{time48HoursAgo, timeBeforeThisMonth}
+import actors.DrtStaticParameters.{time48HoursAgo, startOfTheMonth}
 import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors._
 import actors.daily.{PassengersActor, RequestAndTerminateActor}
@@ -163,7 +163,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
   val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
-    now, timeBeforeThisMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
+    now, startOfTheMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
   val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
     now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
   val staffMovementsSequentialWritesActor: ActorRef = system.actorOf(StaffMovementsActor.sequentialWritesProps(

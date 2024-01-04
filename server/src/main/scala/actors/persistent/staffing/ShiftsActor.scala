@@ -1,6 +1,6 @@
 package actors.persistent.staffing
 
-import actors.DrtStaticParameters.timeBeforeThisMonth
+import actors.DrtStaticParameters.startOfTheMonth
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
 import actors.persistent.staffing.ShiftsActor.applyUpdatedShifts
@@ -50,7 +50,7 @@ trait ShiftsActorLike {
       case m: ShiftsMessage =>
         val shiftsToRecover = shiftMessagesToStaffAssignments(m.shifts)
         val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
-        val newState = ShiftAssignments(updatedShifts).purgeExpired(timeBeforeThisMonth(now))
+        val newState = ShiftAssignments(updatedShifts).purgeExpired(startOfTheMonth(now))
         val subscriberEvents = terminalUpdateRequests(shiftsToRecover, minutesToCrunch)
         (newState, subscriberEvents)
       case _ => (state, Seq.empty)
@@ -59,7 +59,7 @@ trait ShiftsActorLike {
   val query: (() => SDateLike) => (() => ShiftAssignments, () => ActorRef) => PartialFunction[Any, Unit] =
     now => (getState, getSender) => {
       case GetState =>
-        getSender() ! getState().purgeExpired(timeBeforeThisMonth(now))
+        getSender() ! getState().purgeExpired(startOfTheMonth(now))
 
       case TerminalUpdateRequest(terminal, localDate, _, _) =>
         val assignmentsForDate = ShiftAssignments(getState().assignments.filter { assignment =>
