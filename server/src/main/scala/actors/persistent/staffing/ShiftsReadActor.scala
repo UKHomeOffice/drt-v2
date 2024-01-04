@@ -13,7 +13,7 @@ object ShiftsReadActor {
 }
 
 class ShiftsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike)
-  extends ShiftsActor(() => pointInTime, expireBefore) {
+  extends ShiftsActor(() => pointInTime, expireBefore, ShiftsActor.snapshotInterval) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: ShiftStateSnapshotMessage => state = shiftMessagesToStaffAssignments(snapshot.shifts)
   }

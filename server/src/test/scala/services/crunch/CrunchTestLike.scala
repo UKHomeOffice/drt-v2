@@ -2,7 +2,7 @@ package services.crunch
 
 import akka.actor.{ActorRef, ActorSystem, Props, Terminated, typed}
 import akka.pattern.ask
-import akka.persistence.testkit.PersistenceTestKitPlugin
+import akka.persistence.testkit.{PersistenceTestKitPlugin, PersistenceTestKitSnapshotPlugin}
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.SourceQueueWithComplete
@@ -225,7 +225,7 @@ object TestDefaults {
 }
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("DRT-TEST", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load())))
+  extends TestKit(ActorSystem("DRT-TEST", PersistenceTestKitPlugin.config.withFallback(PersistenceTestKitSnapshotPlugin.config.withFallback(ConfigFactory.load()))))
     with SpecificationLike
     with AfterAll
     with AfterEach {

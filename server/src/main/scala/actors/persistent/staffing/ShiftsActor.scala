@@ -115,7 +115,7 @@ object ShiftsActor extends ShiftsActorLike {
                            )
                            (implicit timeout: Timeout): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
-      val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore)), "shifts-actor-writes")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 }
@@ -123,7 +123,7 @@ object ShiftsActor extends ShiftsActorLike {
 
 class ShiftsActor(val now: () => SDateLike,
                   val expireBefore: () => SDateLike,
-                  val snapshotInterval: Int = 5000,
+                  val snapshotInterval: Int,
                  ) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
