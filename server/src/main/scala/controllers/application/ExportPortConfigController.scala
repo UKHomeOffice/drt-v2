@@ -97,7 +97,7 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
 
   def defaultWalktime(terminal: Terminals.Terminal) = {
     val walktimeTitle = "Walktimes"
-    val walktimeHeader = "Gate,Walk time minutes"
+    val walktimeHeader = "Gate,Walk time in minutes"
     val walktimeString = s"Default,${airportConfig.defaultWalkTimeMillis(terminal) / 60000}"
     s"\n\n$walktimeTitle\n$walktimeHeader\n$walktimeString"
   }
@@ -123,13 +123,14 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   def gateWalktimeString(gateWalktimes: Map[String, WalkTime]) = {
     val gateWalktimeHeader = "Gate, Walk time in minutes"
     val gateWalktimeString = gateWalktimes
-      .map { case (k, v) => s"$k,$v" }.mkString("\n")
+      .map { case (k, v) => s"$k,${v.walkTimeMillis/60000}" }.mkString("\n")
     s"\n$gateWalktimeHeader\n$gateWalktimeString"
   }
 
   def standWalktime(standWalkTimes: Map[String, WalkTime]) = {
     val standWalktimeHeader = "Stand, Walk time in minutes"
-    val standWalktimeString = standWalkTimes.map { case (k, v) => s"$k,$v" }.mkString("\n")
+    val standWalktimeString = standWalkTimes
+      .map { case (k, v) => s"$k,${v.walkTimeMillis/60000}" }.mkString("\n")
     s"\n$standWalktimeHeader\n$standWalktimeString"
   }
 
