@@ -51,6 +51,28 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       true
     }
 
+    "snapshots are correctly persisted and replayed" in {
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
+      val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
+
+      val now: () => SDateLike = () => SDate("2017-01-01T23:59")
+      val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
+
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 1)), "shiftsActor")
+
+      actor ! UpdateShifts(shifts.assignments)
+      expectMsg(StatusReply.Ack)
+      actor ! PoisonPill
+
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 1)), "shiftsActor2")
+      newActor ! GetState
+
+      expectMsg(shifts)
+
+      true
+    }
+
     "correctly remember an update to a shift after a restart" in {
       val shift1 = generateStaffAssignment("Morning 1", T1, "2017-01-01T07:00", "2017-01-01T15:00", 10)
       val shift2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T07:30", "2017-01-01T15:30", 10)

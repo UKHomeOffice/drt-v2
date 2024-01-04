@@ -97,6 +97,7 @@ trait ShiftsActorLike {
 }
 
 object ShiftsActor extends ShiftsActorLike {
+  val snapshotInterval = 5000
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = shiftsToUpdate
@@ -117,17 +118,17 @@ object ShiftsActor extends ShiftsActorLike {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
-
 }
 
 
 class ShiftsActor(val now: () => SDateLike,
-                  val expireBefore: () => SDateLike) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
+                  val expireBefore: () => SDateLike,
+                  val snapshotInterval: Int = 5000,
+                 ) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
-  val snapshotInterval = 5000
   override val maybeSnapshotInterval: Option[Int] = Option(snapshotInterval)
 
   override def persistenceId: String = ShiftsActor.persistenceId
@@ -138,7 +139,14 @@ class ShiftsActor(val now: () => SDateLike,
 
   import ShiftsMessageParser._
 
-  override def stateToMessage: GeneratedMessage = ShiftStateSnapshotMessage(staffAssignmentsToShiftsMessages(state, now()))
+  override def stateToMessage: GeneratedMessage = {
+    terminalDays.foreach {
+      case (terminal, shiftCount, days) =>
+        log.info(s"ShiftsActor stateToMessage: $shiftCount shifts for $terminal, ${days.mkString(", ")}")
+    }
+
+    ShiftStateSnapshotMessage(staffAssignmentsToShiftsMessages(state, now()))
+  }
 
   def updateState(shifts: ShiftAssignments): Unit = state = shifts
 
@@ -157,6 +165,20 @@ class ShiftsActor(val now: () => SDateLike,
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
   }
+
+  override def postRecoveryComplete(): Unit = terminalDays.foreach {
+    case (terminal, shiftCount, days) =>
+      log.info(s"ShiftsActor recovered: $shiftCount shifts for $terminal, ${days.mkString(", ")}")
+  }
+
+  def terminalDays: immutable.Iterable[(Terminal, Int, Seq[String])] = state.assignments
+    .groupBy(_.terminal)
+    .map { case (terminal, assignments) =>
+      val days = assignments
+        .groupBy(a => SDate(a.start).toISODateOnly)
+        .keys
+      (terminal, assignments.size, days.toSeq.sorted)
+    }
 
   def receiveCommand: Receive = {
     case GetState =>
