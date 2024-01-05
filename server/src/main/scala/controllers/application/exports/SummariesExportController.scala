@@ -122,9 +122,9 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
                 .mkString(",")
               maybeTerminalName match {
                 case Some(terminalName) =>
-                  s"$regionName,$portCodeStr,$terminalName,$totalPcpPax,$queueCells\n"
+                  s"${date.toISOString},$regionName,$portCodeStr,$terminalName,$totalPcpPax,$queueCells\n"
                 case None =>
-                  s"$regionName,$portCodeStr,$totalPcpPax,$queueCells\n"
+                  s"${date.toISOString},$regionName,$portCodeStr,$totalPcpPax,$queueCells\n"
               }
             }
         }
