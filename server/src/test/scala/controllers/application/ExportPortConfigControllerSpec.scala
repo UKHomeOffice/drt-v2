@@ -17,19 +17,13 @@ class ExportPortConfigControllerSpec extends PlaySpec {
       status(result) mustBe OK
 
       val resultExpected =
-        s"""
-           |E-gates schedule
+        s"""E-gates schedule
            |Terminal,Effective from,OpenGates per bank
-           |T1,2020-01-01T0000,bank-1  10/10
-           |T1,2020-01-01T0000,bank-2  10/10
-           |T1,2020-01-01T0000,bank-3  10/10
-           |
+           |T1,2020-01-01T0000,3 bank: 10/10 10/10 10/10
            |
            |Queue SLAs
-           |Effective from,Queue,Minutes
-           |2014-09-01T0000,EeaDesk,25
-           |2014-09-01T0000,EGate,5
-           |2014-09-01T0000,NonEeaDesk,45
+           |Effective from,EEA,e-Gates,Non-EEA
+           |2014-09-01T0000,25,5,45
            |
            |Desks and Egates
            |22 desks
@@ -50,7 +44,6 @@ class ExportPortConfigControllerSpec extends PlaySpec {
            |Non-Visa National to Non-EEA,75
            |Visa National to Non-EEA,89
            |
-           |
            |Passenger Queue Allocation
            |Passenger Type,Queue,Allocation
            |B5J+ National,e-Gates,70%
@@ -66,20 +59,15 @@ class ExportPortConfigControllerSpec extends PlaySpec {
            |Non-Visa National,Non-EEA,100%
            |Visa National,Non-EEA,100%
            |
-           |
-           |Walktimes
+           |Walk times
            |Gate,Walk time in minutes
            |Default,10
            |
-           |
-           |Gate/Stand Walktime
-           |
+           |Gate/Stand Walk time
            |Gate, Walk time in minutes
            |1,2
-           |
            |Stand, Walk time in minutes
-           |03A,4
-           |         """.stripMargin
+           |03A,4""".stripMargin
 
       contentAsString(result) must include(resultExpected)
     }
@@ -89,8 +77,8 @@ class ExportPortConfigControllerSpec extends PlaySpec {
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
       lazy override val mockDrtParameters: MockDrtParameters = new MockDrtParameters() {
-        override val gateWalkTimesFilePath = Some(getClass.getClassLoader.getResource("gate-walktime-test.csv").getPath)
-        override val standWalkTimesFilePath = Some(getClass.getClassLoader.getResource("stand-walktime-test.csv").getPath)
+        override val gateWalkTimesFilePath = Some(getClass.getClassLoader.getResource("gate-walkTime-test.csv").getPath)
+        override val standWalkTimesFilePath = Some(getClass.getClassLoader.getResource("stand-walkTime-test.csv").getPath)
       }
     }
 
