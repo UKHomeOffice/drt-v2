@@ -36,14 +36,36 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor")
 
       actor ! UpdateShifts(shifts.assignments)
       expectMsg(StatusReply.Ack)
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
 
+      newActor ! GetState
+
+      expectMsg(shifts)
+
+      true
+    }
+
+    "snapshots are correctly persisted and replayed" in {
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
+      val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
+
+      val now: () => SDateLike = () => SDate("2017-01-01T23:59")
+      val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
+
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 1)), "shiftsActor")
+
+      actor ! UpdateShifts(shifts.assignments)
+      expectMsg(StatusReply.Ack)
+      actor ! PoisonPill
+
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 1)), "shiftsActor2")
       newActor ! GetState
 
       expectMsg(shifts)
@@ -58,7 +80,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor1")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor1")
 
       actor ! UpdateShifts(Seq(shift1, shift2))
       expectMsg(StatusReply.Ack)
@@ -68,7 +90,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       expectMsg(StatusReply.Ack)
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
 
       newActor ! GetState
       val expected = ShiftAssignments(updatedShifts)
@@ -87,7 +109,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor1")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor1")
 
       actor ! UpdateShifts(Seq(shift1, shift2, shift3, shift4))
       expectMsg(StatusReply.Ack)
@@ -98,7 +120,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       expectMsg(StatusReply.Ack)
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay)), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
 
       newActor ! GetState
       val expected = Set(updatedShift1, shift2, updatedShift3, shift4)
@@ -148,7 +170,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
   }
 
-  def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsActor(now, expiryDateXDaysFrom(now, 1))))
+  def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsActor(now, expiryDateXDaysFrom(now, 1), 10)))
   def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsReadActor(now(), expiryDateXDaysFrom(now, 1))))
 
   def nowAs(date: String): () => SDateLike = () => SDate(date)

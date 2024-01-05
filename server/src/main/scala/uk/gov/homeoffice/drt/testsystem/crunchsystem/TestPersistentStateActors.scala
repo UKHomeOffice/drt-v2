@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.testsystem.crunchsystem
 
-import actors.DrtStaticParameters.{expireAfterMillis, time48HoursAgo, timeBeforeThisMonth}
+import actors.DrtStaticParameters.{expireAfterMillis, time48HoursAgo, startOfTheMonth}
 import actors.ManifestLookups
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import akka.actor.{ActorRef, ActorSystem, Props}
