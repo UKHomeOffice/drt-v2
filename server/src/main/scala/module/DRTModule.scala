@@ -26,7 +26,8 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
   val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
 
-  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, MockDrtParameters())
+  lazy val mockDrtParameters: MockDrtParameters = MockDrtParameters()
+  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, mockDrtParameters)
   private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config))
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global

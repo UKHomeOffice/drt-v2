@@ -10,47 +10,56 @@ import drt.shared.api.{WalkTime, WalkTimes}
 import uk.gov.homeoffice.drt.ports.{PaxTypes, Queues, Terminals}
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.actor.WalkTimeProvider
+import scala.concurrent.Future
 
-import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, Future}
+class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) with WalktimeLike {
 
-class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+  private def createTitleHeaderAndBody(title: String, headers: String, body: String, isFirst: Boolean = false): String = {
+    val doubleNewlines = "\n\n"
+    if (isFirst)
+      s"\n$title\n$headers\n$body"
+    else
+      s"$doubleNewlines$title\n$headers\n$body"
+  }
 
-  def updatesByTerminalF: Future[Map[Terminals.Terminal, EgateBanksUpdates]] = {
+  private def createHeaderAndBody(headers: String, body: String): String = {
+    s"\n$headers\n$body"
+  }
+
+  private def updatesByTerminalF: Future[Map[Terminals.Terminal, EgateBanksUpdates]] = {
     val eGateBanks: Future[PortEgateBanksUpdates] = ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
     eGateBanks.map(_.updatesByTerminal)
   }
 
-  def getEGateConfig: Future[String] = {
+  private def getEGateConfig: Future[String] = {
     updatesByTerminalF.map { updatesByTerminal =>
       val eGatesCsv = updatesByTerminal.map { case (k, v) =>
         v.updates.map { updates =>
           updates.banks.zipWithIndex
-            .map { case (v, i) => s"$k,${SDate(updates.effectiveFrom)},bank-$i ${v.openCount}/${v.maxCapacity}" }.mkString("\n")
+            .map { case (v, i) => s"$k,${SDate(updates.effectiveFrom)},bank-${i + 1}  ${v.openCount}/${v.maxCapacity}" }.mkString("\n")
         }.mkString("\n")
       }.mkString("\n")
-      val eGatesTitle ="E-gates schedule"
+      val eGatesTitle = "E-gates schedule"
       val eGatesHeaders = "Terminal,Effective from,OpenGates per bank"
-      s"\n$eGatesTitle\n$eGatesHeaders\n$eGatesCsv"
+      createTitleHeaderAndBody(eGatesTitle, eGatesHeaders, eGatesCsv, true)
     }
   }
 
-  def getSlaConfig = {
+  private def getSlaConfig = {
     val slaUpdates: Future[SlaConfigs] = ctrl.slasActor.ask(GetState).mapTo[SlaConfigs]
     val slaTitle = "Queue SLAs"
     val slaHeaders = "Effective from,Queue,Minutes"
     slaUpdates.map { sla =>
       val slaCsv = sla.configs.map { case (eF, vc) =>
         vc.map { case (queue, v) =>
-          s"${SDate(eF)},${queue},${v}"
+          s"${SDate(eF)},$queue,$v"
         }.mkString("\n")
       }.mkString("\n")
-      s"\n\n$slaTitle\n$slaHeaders\n$slaCsv"
+      createTitleHeaderAndBody(slaTitle, slaHeaders, slaCsv)
     }
   }
 
-  def processingTime(terminal: Terminals.Terminal) = {
+  private def processingTime(terminal: Terminals.Terminal) = {
     val processingTimeString = airportConfig.terminalProcessingTimes(terminal)
       .toList
       .sortBy {
@@ -62,23 +71,25 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       }.mkString("\n")
     val processingTimeTitle = "Processing Times"
     val processingTimeHeader = "Passenger Type & Queue,Seconds"
-    s"\n\n$processingTimeTitle\n$processingTimeHeader\n$processingTimeString"
+    createTitleHeaderAndBody(processingTimeTitle, processingTimeHeader, processingTimeString)
   }
 
-  def getDeskAndEGates(terminal: Terminals.Terminal): String = {
-    val eGates: String = Await.result(updatesByTerminalF.map(_.get(terminal).flatMap(_.updatesForDate(SDate.now().millisSinceEpoch)))
-      .map { update =>
-        val openGatesByBank: Seq[Int] = update.map(_.banks.map { bank => bank.openCount }).getOrElse(List())
-        val totalOpenGates = openGatesByBank.sum
-        s"$totalOpenGates egates in ${openGatesByBank.length} banks: ${openGatesByBank.mkString(" ")}"
-      }, 2.seconds)
-
-    val deskEGateHeader = s"Desks and Egates"
-    val desk: String = s"${airportConfig.desksByTerminal.getOrElse(terminal, "n/a")} desks"
-    s"\n$deskEGateHeader\n$desk\n$eGates"
+  private def getDeskAndEGates(terminal: Terminals.Terminal): Future[String] = {
+    updatesByTerminalF.map { updatesByTerminal =>
+      updatesByTerminal.get(terminal).flatMap(_.updatesForDate(SDate.now().millisSinceEpoch))
+        .map { update =>
+          val openGatesByBank: Seq[Int] = update.banks.map { bank => bank.openCount }
+          val totalOpenGates = openGatesByBank.sum
+          s"$totalOpenGates egates in ${openGatesByBank.length} banks: ${openGatesByBank.mkString(" ")}"
+        }
+    }.map { eGates =>
+      val deskEGateHeader = "Desks and Egates"
+      val desk: String = s"${airportConfig.desksByTerminal.getOrElse(terminal, "n/a")} desks"
+      createHeaderAndBody(deskEGateHeader, s"$desk\n${eGates.getOrElse("")}")
+    }
   }
 
-  def defaultPaxSplits(terminal: Terminals.Terminal) = {
+  private def defaultPaxSplits(terminal: Terminals.Terminal) = {
     val passengerAllocationTitle = "Passenger Queue Allocation"
     val queueAllocationHeader = "Passenger Type,Queue,Allocation"
     val allocationString = airportConfig.terminalPaxTypeQueueAllocation(terminal)
@@ -92,70 +103,75 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
             s"${PaxTypes.displayName(pt)},${Queues.displayName(qt)},${Math.round(ratio * 100)}%"
         }
     }.mkString("\n")
-    s"\n\n$passengerAllocationTitle\n$queueAllocationHeader\n$allocationString"
+    createTitleHeaderAndBody(passengerAllocationTitle, queueAllocationHeader, allocationString)
   }
 
-  def defaultWalktime(terminal: Terminals.Terminal) = {
+  private def defaultWalktime(terminal: Terminals.Terminal) = {
+    val MillisInMinute = 60000
     val walktimeTitle = "Walktimes"
     val walktimeHeader = "Gate,Walk time in minutes"
-    val walktimeString = s"Default,${airportConfig.defaultWalkTimeMillis(terminal) / 60000}"
-    s"\n\n$walktimeTitle\n$walktimeHeader\n$walktimeString"
+    val walktimeString = s"Default,${airportConfig.defaultWalkTimeMillis(terminal) / MillisInMinute}"
+    createTitleHeaderAndBody(walktimeTitle, walktimeHeader, walktimeString)
   }
 
-  def walkTimesFromConfig(terminal: Terminals.Terminal): String = {
-    val walkTimes: String => Iterable[WalkTime] = csvPath => WalkTimeProvider.walkTimes(csvPath).map {
-      case ((terminal, gateOrStand), walkTimeSeconds) => WalkTime(gateOrStand, terminal, walkTimeSeconds * 1000)
-    }
+  private def walkTimesFromConfig(terminal: Terminals.Terminal): String = {
 
-    val gates = ctrl.params.gateWalkTimesFilePath.map(walkTimes).getOrElse(Iterable())
-    val stands = ctrl.params.standWalkTimesFilePath.map(walkTimes).getOrElse(Iterable())
+    val gates = walktimes(ctrl.params.gateWalkTimesFilePath)
+    val stands = walktimes(ctrl.params.standWalkTimesFilePath)
 
     val walktimesGatesStands = WalkTimes(gates, stands)
 
     if (walktimesGatesStands.byTerminal.nonEmpty) {
-      val gateStandHeader = "Gate/Stand Walktime"
+      val gateStandTitle = "Gate/Stand Walktime"
       val gate = gateWalktimeString(walktimesGatesStands.byTerminal(terminal).gateWalktimes)
       val stand = standWalktime(walktimesGatesStands.byTerminal(terminal).standWalkTimes)
-      s"\n\n$gateStandHeader\n$gate\n$stand"
+      createTitleHeaderAndBody(gateStandTitle, gate, stand)
     } else ""
   }
 
-  def gateWalktimeString(gateWalktimes: Map[String, WalkTime]) = {
+  val walkTimesString: Map[String, WalkTime] => String = walkTimes => walkTimes
+    .map { case (k, v) => s"$k,${v.walkTimeMillis / 60000}" }.mkString("\n")
+
+  private def gateWalktimeString(gateWalktimes: Map[String, WalkTime]) = {
     val gateWalktimeHeader = "Gate, Walk time in minutes"
-    val gateWalktimeString = gateWalktimes
-      .map { case (k, v) => s"$k,${v.walkTimeMillis/60000}" }.mkString("\n")
-    s"\n$gateWalktimeHeader\n$gateWalktimeString"
+    val gateWalktimeString = walkTimesString(gateWalktimes)
+    createHeaderAndBody(gateWalktimeHeader, gateWalktimeString)
   }
 
-  def standWalktime(standWalkTimes: Map[String, WalkTime]) = {
+  private def standWalktime(standWalkTimes: Map[String, WalkTime]) = {
     val standWalktimeHeader = "Stand, Walk time in minutes"
-    val standWalktimeString = standWalkTimes
-      .map { case (k, v) => s"$k,${v.walkTimeMillis/60000}" }.mkString("\n")
-    s"\n$standWalktimeHeader\n$standWalktimeString"
+    val standWalktimeString = walkTimesString(standWalkTimes)
+    createHeaderAndBody(standWalktimeHeader, standWalktimeString)
   }
 
-  def getAirportConfig(tn: Terminals.Terminal) = {
-    s"${processingTime(tn)}\n" +
-      s"${defaultPaxSplits(tn)}\n" +
-      s"${defaultWalktime(tn)}\n" +
-      s"${walkTimesFromConfig(tn)}"
+  private def getAirportConfig(tn: Terminals.Terminal) = {
+    s"""${processingTime(tn)}
+       |${defaultPaxSplits(tn)}
+       |${defaultWalktime(tn)}
+       |${walkTimesFromConfig(tn)}"""
   }
 
   def exportConfig: Action[AnyContent] = Action.async { _ =>
-    val slaAndEgateBanks: Future[String] = for {
+    val aConfigAndDeskByTerminal = Future.sequence {
+      airportConfig.terminals.map { tn =>
+        val airportConfigString = getAirportConfig(tn)
+        val deskAndEGates: Future[String] = getDeskAndEGates(tn)
+        deskAndEGates.map { dAndE =>
+          s"$dAndE$airportConfigString"
+        }
+      }
+    }.map(_.mkString("\n"))
+
+    for {
       eGateConfig <- getEGateConfig
       slaConfig <- getSlaConfig
-    } yield s"$eGateConfig\n$slaConfig"
+      terminalConfig <- aConfigAndDeskByTerminal
+    } yield Ok(
+      s"""$eGateConfig
+         |$slaConfig
+         |$terminalConfig
+         """.stripMargin)
 
-    val aConfig: String = airportConfig.terminals.map { tn =>
-      val airportConfigString = getAirportConfig(tn)
-      val deskAndEGates = getDeskAndEGates(tn)
-      s"\n\n${tn.toString}\n$deskAndEGates\n$airportConfigString"
-    }.mkString("\n")
-
-    slaAndEgateBanks.map { a =>
-      Ok(s"$a\n$aConfig")
-    }
   }
 
 

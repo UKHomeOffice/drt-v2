@@ -2,16 +2,11 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.SPAMain
 import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.{WalkTime, WalkTimes}
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
-import io.kinoplan.scalajs.react.material.ui.icons._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
@@ -46,16 +41,6 @@ object PortConfigPage {
       } yield
         <.div(
           <.h3("Port Config"),
-          MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-            MuiIcons(GetApp)(fontSize = "small"),
-            s"Export Config",
-            ^.className := "btn btn-default",
-            ^.href := SPAMain.absoluteUrl(s"export/port-config"),
-            ^.target := "_blank",
-            ^.id := s"config-export",
-            ^.onClick --> {
-              Callback(println(s"Exporting port config"))
-            }),
           if (user.hasRole(EgateBanksEdit)) {
             <.div(
               <.h2("E-gates schedule"),
