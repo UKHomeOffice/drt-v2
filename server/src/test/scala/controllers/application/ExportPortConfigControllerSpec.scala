@@ -19,11 +19,11 @@ class ExportPortConfigControllerSpec extends PlaySpec {
       val resultExpected =
         s"""E-gates schedule
            |Terminal,Effective from,OpenGates per bank
-           |T1,01-01-2020 00:00,3 bank: 10/10 10/10 10/10
+           |T1,01-01-2020 00:00,3 banks: 10/10 10/10 10/10
            |
            |Queue SLAs
-           |Effective from,EEA,e-Gates,Non-EEA
-           |01-09-2014 00:00,25,5,45
+           |Effective from,EGate,EeaDesk,NonEeaDesk
+           |01-09-2014 00:00,5,25,45
            |
            |Desks and Egates
            |22 desks
@@ -60,8 +60,7 @@ class ExportPortConfigControllerSpec extends PlaySpec {
            |Visa National,Non-EEA,100%
            |
            |Walk times
-           |Gate,Walk time in minutes
-           |Default,10
+           |Default walk time (minutes),10
            |
            |Gate/Stand Walk time
            |Gate, Walk time in minutes
@@ -77,8 +76,8 @@ class ExportPortConfigControllerSpec extends PlaySpec {
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
       lazy override val mockDrtParameters: MockDrtParameters = new MockDrtParameters() {
-        override val gateWalkTimesFilePath = Some(getClass.getClassLoader.getResource("gate-walkTime-test.csv").getPath)
-        override val standWalkTimesFilePath = Some(getClass.getClassLoader.getResource("stand-walkTime-test.csv").getPath)
+        override val gateWalkTimesFilePath = Some(getClass.getClassLoader.getResource("gate-walk-time-test.csv").getPath)
+        override val standWalkTimesFilePath = Some(getClass.getClassLoader.getResource("stand-walk-time-test.csv").getPath)
       }
     }
 

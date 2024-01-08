@@ -28,11 +28,12 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     eGateBanks.map(_.updatesByTerminal)
   }
 
+  val bankSizeString:Int => String = size => s"$size bank${if (size > 1) "s" else ""}"
   private def getEGateConfig: Future[String] = {
     updatesByTerminalF.map { updatesByTerminal =>
       val eGatesCsv = updatesByTerminal.map { case (k, v) =>
         v.updates.map { updates =>
-          s"$k,${SDate(updates.effectiveFrom).prettyDateTime},${updates.banks.length} bank: ${
+          s"$k,${SDate(updates.effectiveFrom).prettyDateTime},${bankSizeString(updates.banks.length)}: ${
             updates.banks.map { bank => s"${bank.openCount}/${bank.maxCapacity}" }.mkString(" ")
           }"
         }.mkString("\n")
@@ -43,13 +44,18 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     }
   }
 
-  private def getSlaConfig = {
+  private def getSlaConfig(thisTerminal: Terminals.Terminal) = {
     val slaUpdates: Future[SlaConfigs] = ctrl.slasActor.ask(GetState).mapTo[SlaConfigs]
     val slaTitle = "Queue SLAs"
     slaUpdates.map { sla =>
-      val slaHeaders = s"Effective from,${sla.configs.head._2.map { case (q, _) => s"${Queues.displayName(q)}" }.mkString(",")}"
+      val terminalQueueOrder = Queues.queueOrder.filter(q => airportConfig.queuesByTerminal.get(thisTerminal).exists(_.contains(q)))
+      val slaHeaders = s"Effective from,${terminalQueueOrder.mkString(",")}"
       val slaCsv = sla.configs.map { case (date, queues) =>
-        s"${SDate(date).prettyDateTime},${queues.map { case (_, minutes) => minutes }.mkString(",")}"
+        s"${SDate(date).prettyDateTime},${
+          terminalQueueOrder.map { queue =>
+            queues.get(queue).map(minutes => minutes).getOrElse("")
+          }.mkString(",")
+        }"
       }.mkString("\n")
       createTitleHeaderAndBody(slaTitle, slaHeaders, slaCsv)
     }
@@ -103,10 +109,9 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   }
 
   private def defaultWalkTime(terminal: Terminals.Terminal) = {
-    val walkTimeTitle = "Walk times"
-    val walkTimeHeader = "Gate,Walk time in minutes"
-    val walkTimeString = s"Default,${airportConfig.defaultWalkTimeMillis(terminal) / MilliTimes.oneMinuteMillis}"
-    createTitleHeaderAndBody(walkTimeTitle, walkTimeHeader, walkTimeString)
+    val walkTimeHeader = "Walk times"
+    val walkTimeString = s"Default walk time (minutes),${airportConfig.defaultWalkTimeMillis(terminal) / MilliTimes.oneMinuteMillis}"
+    createHeaderAndBody(walkTimeHeader, walkTimeString)
   }
 
   private def walkTimesFromConfig(terminal: Terminals.Terminal): String = {
@@ -143,22 +148,24 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   def exportConfig: Action[AnyContent] = Action.async { _ =>
     val aConfigAndDeskByTerminal = Future.sequence {
       airportConfig.terminals.map { tn =>
+        val slaConfig: Future[String] = getSlaConfig(tn)
         val airportConfigString = getAirportConfig(tn)
         val deskAndEGates: Future[String] = getDeskAndEGates(tn)
-        deskAndEGates.map { dAndE =>
-          s"""$dAndE\n
-             |$airportConfigString"""
+        slaConfig.flatMap { sla =>
+          deskAndEGates.map { dAndE =>
+            s"""$sla\n
+               |$dAndE\n
+               |$airportConfigString"""
+          }
         }
       }
     }.map(_.mkString("","\n",""))
 
     for {
       eGateConfig <- getEGateConfig
-      slaConfig <- getSlaConfig
       terminalConfig <- aConfigAndDeskByTerminal
     } yield Ok(
       s"""$eGateConfig\n
-         |$slaConfig\n
          |$terminalConfig
          """.stripMargin)
 
