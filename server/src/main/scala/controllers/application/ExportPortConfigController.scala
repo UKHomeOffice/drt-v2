@@ -148,14 +148,16 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   def exportConfig: Action[AnyContent] = Action.async { _ =>
     val aConfigAndDeskByTerminal = Future.sequence {
       airportConfig.terminals.map { tn =>
+        val terminal = tn.toString
         val slaConfig: Future[String] = getSlaConfig(tn)
         val airportConfigString = getAirportConfig(tn)
         val deskAndEGates: Future[String] = getDeskAndEGates(tn)
         slaConfig.flatMap { sla =>
           deskAndEGates.map { dAndE =>
-            s"""$sla\n
+            s"""$terminal\n
+               |$sla\n
                |$dAndE\n
-               |$airportConfigString"""
+               |$airportConfigString\n"""
           }
         }
       }

@@ -21,6 +21,8 @@ class ExportPortConfigControllerSpec extends PlaySpec {
            |Terminal,Effective from,OpenGates per bank
            |T1,01-01-2020 00:00,3 banks: 10/10 10/10 10/10
            |
+           |T1
+           |
            |Queue SLAs
            |Effective from,EGate,EeaDesk,NonEeaDesk
            |01-09-2014 00:00,5,25,45
