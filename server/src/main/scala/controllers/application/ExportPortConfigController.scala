@@ -32,7 +32,7 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     updatesByTerminalF.map { updatesByTerminal =>
       val eGatesCsv = updatesByTerminal.map { case (k, v) =>
         v.updates.map { updates =>
-          s"$k,${SDate(updates.effectiveFrom)},${updates.banks.length} bank: ${
+          s"$k,${SDate(updates.effectiveFrom).prettyDateTime},${updates.banks.length} bank: ${
             updates.banks.map { bank => s"${bank.openCount}/${bank.maxCapacity}" }.mkString(" ")
           }"
         }.mkString("\n")
@@ -49,7 +49,7 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     slaUpdates.map { sla =>
       val slaHeaders = s"Effective from,${sla.configs.head._2.map { case (q, _) => s"${Queues.displayName(q)}" }.mkString(",")}"
       val slaCsv = sla.configs.map { case (date, queues) =>
-        s"${SDate(date)},${queues.map { case (_, minutes) => minutes }.mkString(",")}"
+        s"${SDate(date).prettyDateTime},${queues.map { case (_, minutes) => minutes }.mkString(",")}"
       }.mkString("\n")
       createTitleHeaderAndBody(slaTitle, slaHeaders, slaCsv)
     }

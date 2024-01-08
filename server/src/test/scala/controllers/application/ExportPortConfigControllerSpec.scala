@@ -19,11 +19,11 @@ class ExportPortConfigControllerSpec extends PlaySpec {
       val resultExpected =
         s"""E-gates schedule
            |Terminal,Effective from,OpenGates per bank
-           |T1,2020-01-01T0000,3 bank: 10/10 10/10 10/10
+           |T1,01-01-2020 00:00,3 bank: 10/10 10/10 10/10
            |
            |Queue SLAs
            |Effective from,EEA,e-Gates,Non-EEA
-           |2014-09-01T0000,25,5,45
+           |01-09-2014 00:00,25,5,45
            |
            |Desks and Egates
            |22 desks
