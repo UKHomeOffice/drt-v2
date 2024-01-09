@@ -1,13 +1,13 @@
 package services.liveviews
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import akka.{Done, NotUsed}
+import akka.Done
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
 import drt.shared.{CrunchApi, TQM}
 import org.slf4j.LoggerFactory
 import services.graphstages.Crunch
@@ -71,10 +71,13 @@ object PassengersLiveView {
         val date = today.addDays(-1 * day)
         val request = GetStateForDateRange(date.getLocalLastMidnight.millisSinceEpoch, date.getLocalNextMidnight.millisSinceEpoch)
         minutesActor
-          .ask(request).mapTo[MinutesContainer[PassengersMinute, TQM]]
+          .ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
           .map { container =>
             if (container.minutes.nonEmpty) {
-              update(container)
+              val paxMins = MinutesContainer(container
+                .minutes.map(cm => PassengersMinute(cm.terminal, cm.key.queue, cm.minute, Seq.fill(cm.toMinute.paxLoad.round.toInt)(1), None))
+              )
+              update(paxMins)
               log.info(s"Populated historic pax for ${date.toISODateOnly}")
             } else log.info(s"No historic pax for ${date.toISODateOnly}")
           }

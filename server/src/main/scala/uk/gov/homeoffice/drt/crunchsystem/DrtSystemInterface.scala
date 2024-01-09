@@ -380,7 +380,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
       val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
 
-      PassengersLiveView.populateHistoricPax(minuteLookups.queueLoadsMinutesActor, updateLivePaxView)
+      PassengersLiveView.populateHistoricPax(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
       val passengerLoadsFlow = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
