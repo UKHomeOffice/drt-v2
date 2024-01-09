@@ -8,6 +8,8 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.collection.immutable
+
 object Forecast {
   def headlineFigures(startOfForecast: SDateLike,
                       numberOfDays: Int,
@@ -16,7 +18,7 @@ object Forecast {
                       queues: List[Queue]): ForecastHeadlineFigures = {
     val crunchSummaryDaily = portState.dailyCrunchSummary(startOfForecast, numberOfDays, terminal, queues)
 
-    val figures = for {
+    val figures: immutable.Iterable[QueueHeadline] = for {
       (dayMillis, queueMinutes) <- crunchSummaryDaily
       (queue, queueMinute) <- queueMinutes
     } yield {

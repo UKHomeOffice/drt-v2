@@ -1,52 +1,34 @@
-package controllers.application.exports
+package controllers.application
 
 import actors.DateRange
-import actors.PartitionedPortStateActor.{GetMinutesForTerminalDateRange, GetStateForDateRange}
 import akka.NotUsed
-import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import controllers.application.AuthController
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
-import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
-import drt.shared.TQM
 import play.api.mvc._
-import services.exports.PassengerExports.reduceDailyPassengerSummaries
-import services.exports.{GeneralExport, PassengerExports}
-import slick.dbio.Effect
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.Db.slickProfile
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyQueries
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
+import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
-import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
-class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
-
-//  private val terminalPassengersProvider: Terminal => LocalDate => Future[Seq[PassengersMinute]] =
-//    terminal => date => {
-//      val start = SDate(date).millisSinceEpoch
-//      val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
-//      ctrl.queueLoadsRouterActor
-//        .ask(GetMinutesForTerminalDateRange(start, end, terminal))
-//        .mapTo[MinutesContainer[PassengersMinute, TQM]]
-//        .map(_.minutes.map(_.toMinute).toSeq)
-//    }
-
-//  private val portPassengersProvider: LocalDate => Future[Seq[PassengersMinute]] =
-//    date => {
-//      val start = SDate(date).millisSinceEpoch
-//      val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
-//      ctrl.queueLoadsRouterActor
-//        .ask(GetStateForDateRange(start, end))
-//        .mapTo[MinutesContainer[PassengersMinute, TQM]]
-//        .map(_.minutes.map(_.toMinute).toSeq)
-//    }
+class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+  def populatePassengersForDate(localDateStr: String): Action[AnyContent] = {
+    LocalDate.parse(localDateStr) match {
+      case Some(localDate) =>
+        Action.async(
+          Source(Set(SDate(localDate).toUtcDate, SDate(localDate).addDays(1).addMinutes(-1).toUtcDate))
+            .mapAsync(1)(ctrl.populateLivePaxViewForDate)
+            .run()
+            .map(_ => Ok(s"Populated passengers for $localDate"))
+        )
+      case None =>
+        Action(BadRequest(s"Invalid date format for $localDateStr. Expected YYYY-mm-dd"))
+    }
+  }
 
   def exportPassengersByTerminalForDateRangeApi(startLocalDateString: String,
                                                 endLocalDateString: String,
@@ -55,31 +37,26 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
       request =>
         val terminal = Terminal(terminalName)
         val maybeTerminal = Option(terminal)
-//        val flightsProvider = ctrl.terminalFlightsProvider(terminal)
-//        val paxProvider = terminalPassengersProvider(terminal)
-        exportStream(startLocalDateString, endLocalDateString, request, maybeTerminal/*, flightsProvider, paxProvider*/)
+        exportStream(startLocalDateString, endLocalDateString, request, maybeTerminal)
     }
 
   def exportPassengersByPortForDateRangeApi(startLocalDateString: String, endLocalDateString: String): Action[AnyContent] =
     Action {
       request =>
         val maybeTerminal = None
-//        val flightsProvider = ctrl.portFlightsProvider
-        exportStream(startLocalDateString, endLocalDateString, request, maybeTerminal/*, flightsProvider, portPassengersProvider*/)
+        exportStream(startLocalDateString, endLocalDateString, request, maybeTerminal)
     }
 
   private def exportStream(startLocalDateString: String,
                            endLocalDateString: String,
                            request: Request[AnyContent],
                            maybeTerminal: Option[Terminal],
-//                           flightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-//                           paxProvider: LocalDate => Future[Seq[PassengersMinute]],
                           ): Result = {
-    val dailyBreakdown = request.getQueryString("daily-breakdown").contains("true")
+    val dailyBreakdown = request.getQueryString("granularity").contains("daily")
 
     val stream =
-      if (dailyBreakdown) dailyStream(maybeTerminal /*, flightsProvider, paxProvider*/)
-      else totalsStream(maybeTerminal/*, flightsProvider, paxProvider*/)
+      if (dailyBreakdown) dailyStream(maybeTerminal)
+      else totalsStream(maybeTerminal)
 
     exportDateRange(startLocalDateString, endLocalDateString, maybeTerminal, stream)
   }
@@ -102,10 +79,7 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
         BadRequest("Invalid date format for start or end date")
     }
 
-  private def dailyStream(maybeTerminal: Option[Terminal],
-                          //                          flightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                          //                          paxProvider: LocalDate => Future[Seq[PassengersMinute]],
-                         ): (LocalDate, LocalDate) => Source[String, NotUsed] =
+  private def dailyStream(maybeTerminal: Option[Terminal]): (LocalDate, LocalDate) => Source[String, NotUsed] =
     (start, end) => {
       val portCode = airportConfig.portCode
       val regionName = PortRegion.fromPort(portCode).name
@@ -129,16 +103,9 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
               }
             }
         }
-      //      val toRows = PassengerExports.paxMinutesToDailyRows(ctrl.airportConfig.portCode, maybeTerminal)
-      //      val totalPassengersForDate = PassengerExports.totalPassengerCountProvider(flightsProvider, ctrl.paxFeedSourceOrder)
-      //      val paxMinutesProvider = PassengerExports.dailyPassengerMinutes(paxProvider)
-      //      GeneralExport.toDailyRows(start, end, totalPassengersForDate, paxMinutesProvider, toRows)
     }
 
-  private def totalsStream(maybeTerminal: Option[Terminal],
-//                           flightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-//                           paxProvider: LocalDate => Future[Seq[PassengersMinute]],
-                          ): (LocalDate, LocalDate) => Source[String, NotUsed] =
+  private def totalsStream(maybeTerminal: Option[Terminal]): (LocalDate, LocalDate) => Source[String, NotUsed] =
     (start, end) => {
       val portCode = airportConfig.portCode
       val regionName = PortRegion.fromPort(portCode).name
@@ -166,16 +133,5 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
               s"$regionName,$portCodeStr,$totalPcpPax,$queueCells\n"
           }
         }
-      //      val toRow = PassengerExports.paxSummaryToRow(ctrl.airportConfig.portCode, maybeTerminal).tupled
-      //      val totalPassengersForDate = PassengerExports.totalPassengerCountProvider(flightsProvider, ctrl.paxFeedSourceOrder)
-      //      val summaries = PassengerExports.dateToSummary(paxProvider)
-      //      GeneralExport.toTotalsRow(
-      //        start,
-      //        end,
-      //        totalPassengersForDate,
-      //        summaries,
-      //        reduceDailyPassengerSummaries,
-      //        toRow,
-      //      )
     }
 }

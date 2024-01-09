@@ -362,6 +362,9 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] =
     ManifestsProvider(manifestsRouterActorReadOnly)
 
+  private val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
+  val populateLivePaxViewForDate: UtcDate => Future[Unit] = PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
+
   val startUpdateGraphs: (
     PersistentStateActors,
       SortedSet[ProcessingRequest],
@@ -378,10 +381,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
       val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
 
-      val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
-
       if (config.getOptional[Boolean]("feature-flags.populate-historic-pax").getOrElse(false))
-        PassengersLiveView.populateHistoricPax(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
+        PassengersLiveView.populateHistoricPax(populateLivePaxViewForDate)
 
       val passengerLoadsFlow = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),

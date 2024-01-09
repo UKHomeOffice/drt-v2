@@ -15,7 +15,7 @@ import slickdb.Tables
 import uk.gov.homeoffice.drt.db.queries.{PassengersHourlyQueries, PassengersHourlySerialiser}
 import uk.gov.homeoffice.drt.db.{PassengersHourly, PassengersHourlyRow}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -62,30 +62,33 @@ object PassengersLiveView {
     }
   }
 
-  def populateHistoricPax(minutesActor: ActorRef,
-                          update: MinutesContainer[PassengersMinute, TQM] => Unit)
-                         (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): Future[Done] = {
+  def populateHistoricPax(updateForDate: UtcDate => Future[Unit])
+                         (implicit mat: Materializer): Future[Done] = {
     val today = SDate.now()
     Source(1 to (365 * 6))
-      .mapAsync(1) { day =>
-        val date = today.addDays(-1 * day)
-        val request = GetStateForDateRange(date.getLocalLastMidnight.millisSinceEpoch, date.getLocalNextMidnight.millisSinceEpoch)
-        minutesActor
-          .ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
-          .map { container =>
-            if (container.minutes.nonEmpty) {
-              val paxMins = MinutesContainer(container
-                .minutes.map(cm => PassengersMinute(cm.terminal, cm.key.queue, cm.minute, Seq.fill(cm.toMinute.paxLoad.round.toInt)(1), None))
-              )
-              update(paxMins)
-              log.info(s"Populated historic pax for ${date.toISODateOnly}")
-            } else log.info(s"No historic pax for ${date.toISODateOnly}")
-          }
-          .recover {
-            case t: Throwable =>
-              log.error(s"Error populating historic pax for ${date.toISODateOnly}", t)
-          }
-      }
+      .mapAsync(1)(day => updateForDate(today.addDays(-1 * day).toUtcDate))
       .run()
   }
+
+  def populatePaxForDate(minutesActor: ActorRef, update: MinutesContainer[PassengersMinute, TQM] => Unit)
+                        (implicit ec: ExecutionContext, timeout: Timeout): UtcDate => Future[Unit] =
+    utcDate => {
+      val sdate = SDate(utcDate)
+      val request = GetStateForDateRange(sdate.millisSinceEpoch, sdate.getLocalNextMidnight.millisSinceEpoch)
+      minutesActor
+        .ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
+        .map { container =>
+          if (container.minutes.size < MilliTimes.oneDayMillis) {
+            val paxMins = MinutesContainer(
+              container.minutes.map(cm => PassengersMinute(cm.terminal, cm.key.queue, cm.minute, Seq.fill(cm.toMinute.paxLoad.round.toInt)(1), None))
+            )
+            update(paxMins)
+            log.info(s"Populated pax for ${utcDate.toISOString}")
+          } else log.info(s"No pax for ${utcDate.toISOString}")
+        }
+        .recover {
+          case t: Throwable =>
+            log.error(s"Error populating pax for ${utcDate.toISOString}", t)
+        }
+    }
 }
