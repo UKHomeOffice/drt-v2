@@ -1,17 +1,27 @@
 package services.liveviews
 
+import actors.PartitionedPortStateActor.GetStateForDateRange
+import akka.{Done, NotUsed}
+import akka.actor.ActorRef
+import akka.pattern.ask
+import akka.stream.Materializer
+import akka.stream.scaladsl.Source
+import akka.util.Timeout
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import drt.shared.{CrunchApi, TQM}
+import org.slf4j.LoggerFactory
 import services.graphstages.Crunch
 import slickdb.Tables
 import uk.gov.homeoffice.drt.db.queries.{PassengersHourlyQueries, PassengersHourlySerialiser}
-import uk.gov.homeoffice.drt.db.{AggregateDb, PassengersHourly, PassengersHourlyRow}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
+import uk.gov.homeoffice.drt.db.{PassengersHourly, PassengersHourlyRow}
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 object PassengersLiveView {
+  private val log = LoggerFactory.getLogger(getClass)
+
   def minutesContainerToHourlyRows(port: PortCode, nowMillis: () => Long): MinutesContainer[PassengersMinute, TQM] => Iterable[PassengersHourlyRow] =
     container => {
       val updatedAt = nowMillis()
@@ -41,7 +51,7 @@ object PassengersLiveView {
     }
 
   def updateLiveView(portCode: PortCode, now: () => SDateLike, db: Tables)
-                     (implicit ec: ExecutionContext): MinutesContainer[CrunchApi.PassengersMinute, TQM] => Unit = {
+                    (implicit ec: ExecutionContext): MinutesContainer[CrunchApi.PassengersMinute, TQM] => Unit = {
     val replaceHours = PassengersHourlyQueries.replaceHours(portCode)
     val containerToHourlyRow = PassengersLiveView.minutesContainerToHourlyRows(portCode, () => now().millisSinceEpoch)
 
@@ -50,5 +60,29 @@ object PassengersLiveView {
         val rows = containerToHourlyRow(MinutesContainer(terminalMinutes))
         db.run(replaceHours(terminal, rows))
     }
+  }
+
+  def populateHistoricPax(minutesActor: ActorRef,
+                          update: MinutesContainer[PassengersMinute, TQM] => Unit)
+                         (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): Future[Done] = {
+    val today = SDate.now()
+    Source(1 to (365 * 3))
+      .mapAsync(1) { day =>
+        val date = today.addDays(-1 * day)
+        val request = GetStateForDateRange(date.getLocalLastMidnight.millisSinceEpoch, date.getLocalNextMidnight.millisSinceEpoch)
+        minutesActor
+          .ask(request).mapTo[MinutesContainer[PassengersMinute, TQM]]
+          .map { container =>
+            if (container.minutes.nonEmpty) {
+              update(container)
+              log.info(s"Populated historic pax for ${date.toISODateOnly}")
+            } else log.info(s"No historic pax for ${date.toISODateOnly}")
+          }
+          .recover {
+            case t: Throwable =>
+              log.error(s"Error populating historic pax for ${date.toISODateOnly}", t)
+          }
+      }
+      .run()
   }
 }
