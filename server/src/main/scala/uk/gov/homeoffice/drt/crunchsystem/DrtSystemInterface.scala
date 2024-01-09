@@ -219,8 +219,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   lazy val terminalFlightsProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     flightsProvider.singleTerminal
-//  lazy val portFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
-//    flightsProvider.allTerminals
+  //  lazy val portFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+  //    flightsProvider.allTerminals
   lazy val crunchMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] =
     MinutesProvider.singleTerminal(queuesRouterActor)
   lazy val staffMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
@@ -380,7 +380,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
       val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
 
-      PassengersLiveView.populateHistoricPax(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
+      if (config.getOptional[Boolean]("feature-flags.populate-historic-pax").getOrElse(false))
+        PassengersLiveView.populateHistoricPax(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
       val passengerLoadsFlow = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),

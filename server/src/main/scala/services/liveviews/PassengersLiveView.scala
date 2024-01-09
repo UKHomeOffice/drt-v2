@@ -66,7 +66,7 @@ object PassengersLiveView {
                           update: MinutesContainer[PassengersMinute, TQM] => Unit)
                          (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): Future[Done] = {
     val today = SDate.now()
-    Source(1 to (365 * 3))
+    Source(1 to (365 * 6))
       .mapAsync(1) { day =>
         val date = today.addDays(-1 * day)
         val request = GetStateForDateRange(date.getLocalLastMidnight.millisSinceEpoch, date.getLocalNextMidnight.millisSinceEpoch)

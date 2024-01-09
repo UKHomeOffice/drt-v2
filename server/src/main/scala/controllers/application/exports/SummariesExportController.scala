@@ -20,7 +20,7 @@ import uk.gov.homeoffice.drt.db.Db.slickProfile
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyQueries
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.concurrent.Future
@@ -112,6 +112,7 @@ class SummariesExportController @Inject()(cc: ControllerComponents, ctrl: DrtSys
       val portCodeStr = portCode.toString
       val maybeTerminalName = maybeTerminal.map(_.toString)
       val queueTotalsQueryForDate = PassengersHourlyQueries.queueTotalsForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
+      Queues.queueOrder.filter(q => airportConfig.queuesByTerminal.get(T2).exists(_.contains(q)))
       Source(DateRange(start, end))
         .mapAsync(1) { date =>
           ctrl.db.run(queueTotalsQueryForDate(date))
