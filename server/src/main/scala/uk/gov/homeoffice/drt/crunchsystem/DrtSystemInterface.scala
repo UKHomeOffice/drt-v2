@@ -362,8 +362,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] =
     ManifestsProvider(manifestsRouterActorReadOnly)
 
-  private val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
-  val populateLivePaxViewForDate: UtcDate => Future[Unit] = PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
+  lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
+  lazy val populateLivePaxViewForDate: UtcDate => Future[Unit] = PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
   val startUpdateGraphs: (
     PersistentStateActors,
