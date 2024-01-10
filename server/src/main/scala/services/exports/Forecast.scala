@@ -18,7 +18,7 @@ object Forecast {
                       queues: List[Queue]): ForecastHeadlineFigures = {
     val crunchSummaryDaily = portState.dailyCrunchSummary(startOfForecast, numberOfDays, terminal, queues)
 
-    val figures: immutable.Iterable[QueueHeadline] = for {
+    val figures = for {
       (dayMillis, queueMinutes) <- crunchSummaryDaily
       (queue, queueMinute) <- queueMinutes
     } yield {
