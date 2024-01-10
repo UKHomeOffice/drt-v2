@@ -9,7 +9,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.util.DateUtil.isNotValidDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.redlist.LhrRedListDatesImpl.{dayHasPaxDiversions, isRedListActive}
+import drt.shared.redlist.LhrRedListDatesImpl.{overlapsRedListDates, dayHasPaxDiversions, isRedListActive}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiTextField}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -37,15 +37,11 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
   case class State(startDate: StateDate, endDate: StateDate, showDialogue: Boolean = false) extends UseValueEq {
 
-    def setDate(isStart: Boolean, dateString: String, isNotValid: Boolean): State = {
-      val date = LocalDate.parse(dateString).getOrElse(if (isStart) startDate.date else endDate.date)
-      if (isStart) copy(startDate = StateDate(date, isNotValid))
-      else copy(endDate = StateDate(date, isNotValid))
-    }
+    def setStart(dateString: String, isNotValid: Boolean): State =
+      copy(startDate = StateDate(LocalDate.parse(dateString).getOrElse(startDate.date), isNotValid))
 
-    def setStart(dateString: String, isNotValid: Boolean): State = setDate(isStart = true, dateString, isNotValid)
-
-    def setEnd(dateString: String, isNotValid: Boolean): State = setDate(isStart = false, dateString, isNotValid)
+    def setEnd(dateString: String, isNotValid: Boolean): State =
+      copy(endDate = StateDate(LocalDate.parse(dateString).getOrElse(endDate.date), isNotValid))
 
     def startMillis: MillisSinceEpoch = SDate(startDate.date).millisSinceEpoch
 
@@ -79,18 +75,12 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
       val setStartDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
-        if (isNotValidDate(e.target.value))
-          scope.modState(_.setStart(e.target.value, isNotValid = true))
-        else
-          scope.modState(_.setStart(e.target.value, isNotValid = false))
+        scope.modState(_.setStart(e.target.value, isNotValid = isNotValidDate(e.target.value)))
       }
 
       val setEndDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
-        if (isNotValidDate(e.target.value))
-          scope.modState(_.setEnd(e.target.value, isNotValid = true))
-        else
-          scope.modState(_.setEnd(e.target.value, isNotValid = false))
+        scope.modState(_.setEnd(e.target.value, isNotValid = isNotValidDate(e.target.value)))
       }
 
       def showDialogue(event: Event): Callback = {
@@ -137,7 +127,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
                       if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
                         val exports = props.portCode match {
-                          case PortCode("LHR") if (isRedListActive(SDate(state.startDate.date)) || isRedListActive(SDate(state.endDate.date)))
+                          case PortCode("LHR") if overlapsRedListDates(SDate(state.startDate.date), SDate(state.endDate.date))
                             && dayHasPaxDiversions(SDate(state.endDate.date)) =>
                             List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"),
                               ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
