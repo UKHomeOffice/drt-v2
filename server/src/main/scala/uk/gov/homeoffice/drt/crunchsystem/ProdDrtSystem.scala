@@ -216,7 +216,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     }
   }
 
-  override val userFeedbackService: IUserFeedbackDao = UserFeedbackQueries(AggregateDb.db)
+  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb.db)
 
   override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb.db)
 }

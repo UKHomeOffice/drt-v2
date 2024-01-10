@@ -7,7 +7,7 @@ import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import play.api.mvc._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.queries.PassengersHourlyQueries
+import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
@@ -85,7 +85,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val regionName = PortRegion.fromPort(portCode).name
       val portCodeStr = portCode.toString
       val maybeTerminalName = maybeTerminal.map(_.toString)
-      val queueTotalsQueryForDate = PassengersHourlyQueries.queueTotalsForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
+      val queueTotalsQueryForDate = PassengersHourlyDao.queueTotalsForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
       Queues.queueOrder.filter(q => airportConfig.queuesByTerminal.get(T2).exists(_.contains(q)))
       Source(DateRange(start, end))
         .mapAsync(1) { date =>
@@ -111,7 +111,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val regionName = PortRegion.fromPort(portCode).name
       val portCodeStr = portCode.toString
       val maybeTerminalName = maybeTerminal.map(_.toString)
-      val queueTotalsQueryForDate = PassengersHourlyQueries.queueTotalsForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
+      val queueTotalsQueryForDate = PassengersHourlyDao.queueTotalsForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
       Source(DateRange(start, end))
         .mapAsync(1)(date => ctrl.db.run(queueTotalsQueryForDate(date)))
         .fold(Map[Queue, Int]()) {

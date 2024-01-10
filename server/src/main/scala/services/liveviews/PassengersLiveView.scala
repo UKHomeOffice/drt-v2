@@ -12,7 +12,8 @@ import drt.shared.{CrunchApi, TQM}
 import org.slf4j.LoggerFactory
 import services.graphstages.Crunch
 import slickdb.Tables
-import uk.gov.homeoffice.drt.db.queries.{PassengersHourlyQueries, PassengersHourlySerialiser}
+import uk.gov.homeoffice.drt.db.queries.{PassengersHourlyDao}
+import uk.gov.homeoffice.drt.db.serialisers.PassengersHourlySerialiser
 import uk.gov.homeoffice.drt.db.{PassengersHourly, PassengersHourlyRow}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
@@ -52,7 +53,7 @@ object PassengersLiveView {
 
   def updateLiveView(portCode: PortCode, now: () => SDateLike, db: Tables)
                     (implicit ec: ExecutionContext): MinutesContainer[CrunchApi.PassengersMinute, TQM] => Unit = {
-    val replaceHours = PassengersHourlyQueries.replaceHours(portCode)
+    val replaceHours = PassengersHourlyDao.replaceHours(portCode)
     val containerToHourlyRow = PassengersLiveView.minutesContainerToHourlyRows(portCode, () => now().millisSinceEpoch)
 
     _.minutes.groupBy(_.key.terminal).foreach {
