@@ -219,8 +219,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   lazy val terminalFlightsProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     flightsProvider.singleTerminal
-  //  lazy val portFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
-  //    flightsProvider.allTerminals
   lazy val crunchMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] =
     MinutesProvider.singleTerminal(queuesRouterActor)
   lazy val staffMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
@@ -362,7 +360,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] =
     ManifestsProvider(manifestsRouterActorReadOnly)
 
-  lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
+  private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
   lazy val populateLivePaxViewForDate: UtcDate => Future[Unit] = PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
   val startUpdateGraphs: (
