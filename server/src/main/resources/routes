@@ -76,6 +76,7 @@ GET           /export/planning/:weekStarting/:terminalName                      
 GET           /export/headlines/:weekStarting/:terminalName                           controllers.application.ExportsController.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 GET           /export/users                                                           controllers.application.ExportsController.exportUsers
 GET           /export/staff-movements/:date/:terminal                                 controllers.application.StaffingController.exportStaffMovements(terminal: String, date: String)
+GET           /export/port-config                                                     controllers.application.ExportPortConfigController.exportConfig
 GET           /export/desk-rec-simulation                                             controllers.application.SimulationsController.simulationExport
 GET           /desk-rec-simulation                                                    controllers.application.SimulationsController.simulation
 
