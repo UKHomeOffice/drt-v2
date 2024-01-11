@@ -34,29 +34,34 @@ class LhrRedListDatesImplSpec extends Specification {
   }
 
   "LhrRedListDatesImpl.overlapsRedListDates should" >> {
-    "Give a start and end dates for multi days containing red List active range, it should be overlaps red listed dates as true" >> {
+    "return true given a date range starting before and ending after the red list period" >> {
       LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-01-01T00:00", Crunch.europeLondonTimeZone),
         SDate("2022-01-15T00:00", Crunch.europeLondonTimeZone)) === true
     }
 
-    "Give a start and end dates not containing red List active range, it should be overlaps red listed dates as false" >> {
+    "return false given a date range falling ending before the red list period starts" >> {
       LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-01-01T00:00", Crunch.europeLondonTimeZone),
         SDate("2021-02-14T00:00", Crunch.europeLondonTimeZone)) === false
     }
 
-    "Give a start and end dates with red List active range, it should be overlaps red listed dates as true" >> {
+    "return false given a date range falling starting after the red list period ends" >> {
+      LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-12-16T00:00", Crunch.europeLondonTimeZone),
+        SDate("2022-01-15T00:00", Crunch.europeLondonTimeZone)) === false
+    }
+
+    "return true when given a date falling inside the red list period" >> {
       LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-05-01T00:00", Crunch.europeLondonTimeZone),
         SDate("2021-06-14T00:00", Crunch.europeLondonTimeZone)) === true
     }
 
-    "Give a start date with in red list active range , it should be overlaps red listed dates as true" >> {
-      LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-01-30T00:00", Crunch.europeLondonTimeZone),
-        SDate("2022-01-01T00:00", Crunch.europeLondonTimeZone)) === true
-    }
-
-    "Give a end date with in red list active range , it should be overlaps red listed dates as true" >> {
+    "return true given a date range overlapping the start of the red list period" >> {
       LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-01-01T00:00", Crunch.europeLondonTimeZone),
         SDate("2021-02-24T00:00", Crunch.europeLondonTimeZone)) === true
+    }
+
+    "return true given a date range overlapping the end of the red list period" >> {
+      LhrRedListDatesImpl.overlapsRedListDates(SDate("2021-10-01T00:00", Crunch.europeLondonTimeZone),
+        SDate("2022-02-24T00:00", Crunch.europeLondonTimeZone)) === true
     }
   }
 
