@@ -18,7 +18,7 @@ object CsvFileStreaming {
     HttpEntity.Strict(ByteString(data), Option("application/csv")))
 
   def sourceToCsvResponse(exportSource: Source[String, NotUsed], fileName: String): Result = {
-    implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
+    val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("text/csv"))
 
     Result(
       header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
@@ -27,6 +27,20 @@ object CsvFileStreaming {
       }.map(c => {
         HttpChunk.Chunk(writeable.transform(c))
       }), writeable.contentType))
+  }
+
+  def sourceToJsonResponse(exportSource: Source[String, NotUsed]): Result = {
+    val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/json"))
+
+    Result(
+      header = ResponseHeader(200, Map("Content-Type" -> "application/json")),
+      body = HttpEntity.Chunked(
+        exportSource.collect {
+          case s if s.nonEmpty => HttpChunk.Chunk(writeable.transform(s))
+        },
+        writeable.contentType
+      )
+    )
   }
 
   def makeFileName(subject: String,
