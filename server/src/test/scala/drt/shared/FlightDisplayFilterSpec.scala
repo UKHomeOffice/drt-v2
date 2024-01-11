@@ -15,6 +15,8 @@ class FlightDisplayFilterSpec extends Specification {
   object LhrRedListDatesImpl extends LhrRedListDates {
     override val t3RedListOpeningDate: MillisSinceEpoch = 500L
     override val t4RedListOpeningDate: MillisSinceEpoch = 1000L
+    override val startRedListingDate: MillisSinceEpoch = 500L
+    override val endRedListingDate: MillisSinceEpoch = 500L
   }
 
   private val beforeT4Opening: MillisSinceEpoch = LhrRedListDatesImpl.t4RedListOpeningDate - 10

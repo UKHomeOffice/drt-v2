@@ -20,12 +20,12 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
         List(PassengersMinute(T1, EeaDesk, minute1.millisSinceEpoch, Seq(0.5), None))
       )
 
-      val code = PortCode("LHR")
+      val portCode = PortCode("LHR")
 
-      val result = PassengersLiveView.minutesContainerToHourlyRows(code, () => 0L)(container)
+      val result = PassengersLiveView.minutesContainerToHourlyRows(portCode, () => 0L)(container)
 
       result.toSet should ===(Set(
-        PassengersHourlyRow(code.iata, T1.toString, EeaDesk.toString, "2023-12-21", 15, 1, new Timestamp(0L))
+        PassengersHourlyRow(portCode.iata, T1.toString, EeaDesk.toString, "2023-12-21", 15, 1, new Timestamp(0L))
       ))
     }
   }

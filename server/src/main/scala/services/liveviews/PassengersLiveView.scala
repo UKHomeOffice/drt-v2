@@ -66,7 +66,10 @@ object PassengersLiveView {
   def populateHistoricPax(updateForDate: UtcDate => Future[Unit])
                          (implicit mat: Materializer): Future[Done] = {
     val today = SDate.now()
-    Source(1 to (365 * 6))
+    val oneYearDays = 365
+    val historicDaysToPopulate = oneYearDays * 6
+
+    Source(1 to historicDaysToPopulate)
       .mapAsync(1)(day => updateForDate(today.addDays(-1 * day).toUtcDate))
       .run()
   }
