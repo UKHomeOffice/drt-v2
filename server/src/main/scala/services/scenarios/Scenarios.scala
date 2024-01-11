@@ -72,8 +72,9 @@ object Scenarios {
       splitsSink = flightsActor,
       portDesksAndWaitsProvider = portDesksAndWaitsProvider,
       redListUpdatesProvider = redListUpdatesProvider,
-      DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider),
-      simulationAirportConfig.queuesByTerminal,
+      dynamicQueueStatusProvider = DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider),
+      queuesByTerminal = simulationAirportConfig.queuesByTerminal,
+      updateLiveView = _ => {},
     )
 
     class DummyPersistentActor extends Actor {

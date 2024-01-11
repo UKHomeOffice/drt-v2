@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors.CrunchManagerActor.AddQueueCrunchSubscriber
-import actors.DrtStaticParameters.{time48HoursAgo, startOfTheMonth}
+import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors._
 import actors.daily.{PassengersActor, RequestAndTerminateActor}
@@ -17,7 +17,7 @@ import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{ABFeatureProviderLike,DropInProviderLike, FeatureGuideProviderLike,UserFeedBackProviderLike}
+import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.chroma.{ChromaFeedType, ChromaLive}
@@ -58,8 +58,10 @@ import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
 import services.graphstages.FlightFilter
+import services.liveviews.PassengersLiveView
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
+import slickdb.Tables
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
@@ -67,6 +69,7 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetS
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -142,6 +145,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
     Future.successful(Done)
   }
 
+  val db: Tables = AggregateDb
+
 
   val portStateActor: ActorRef
 
@@ -214,8 +219,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   lazy val terminalFlightsProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     flightsProvider.singleTerminal
-  lazy val portFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
-    flightsProvider.allTerminals
   lazy val crunchMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] =
     MinutesProvider.singleTerminal(queuesRouterActor)
   lazy val staffMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
@@ -357,6 +360,9 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] =
     ManifestsProvider(manifestsRouterActorReadOnly)
 
+  private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
+  lazy val populateLivePaxViewForDate: UtcDate => Future[Unit] = PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
+
   val startUpdateGraphs: (
     PersistentStateActors,
       SortedSet[ProcessingRequest],
@@ -372,6 +378,10 @@ trait DrtSystemInterface extends UserRoleProviderLike
       val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
       val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
+
+      if (config.getOptional[Boolean]("feature-flags.populate-historic-pax").getOrElse(false))
+        PassengersLiveView.populateHistoricPax(populateLivePaxViewForDate)
+
       val passengerLoadsFlow = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
         liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsProvider),
@@ -384,6 +394,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
         redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
         DynamicQueueStatusProvider(airportConfig, egatesProvider),
         airportConfig.queuesByTerminal,
+        updateLiveView = updateLivePaxView,
       )
 
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =

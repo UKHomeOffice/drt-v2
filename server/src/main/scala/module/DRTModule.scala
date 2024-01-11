@@ -10,7 +10,7 @@ import com.typesafe.config.ConfigFactory
 import controllers.Application
 import controllers.DrtActorSystem.airportConfig
 import controllers.application._
-import controllers.application.exports.{DesksExportController, FlightsExportController, SummariesExportController}
+import controllers.application.exports.{DesksExportController, FlightsExportController}
 import email.GovNotifyEmail
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
@@ -58,7 +58,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
     bind(classOf[PortStateController]).asEagerSingleton()
     bind(classOf[RedListsController]).asEagerSingleton()
     bind(classOf[StaffingController]).asEagerSingleton()
-    bind(classOf[SummariesExportController]).asEagerSingleton()
+    bind(classOf[SummariesController]).asEagerSingleton()
     bind(classOf[SimulationsController]).asEagerSingleton()
     bind(classOf[WalkTimeController]).asEagerSingleton()
   }

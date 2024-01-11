@@ -215,6 +215,7 @@ class TestDrtActor extends Actor {
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
           DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
           tc.airportConfig.queuesByTerminal,
+          _ => {},
         )
 
         val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet(), "passenger-loads")

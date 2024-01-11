@@ -2,7 +2,6 @@ package services.exports
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.concurrent.{ExecutionContext, Future}

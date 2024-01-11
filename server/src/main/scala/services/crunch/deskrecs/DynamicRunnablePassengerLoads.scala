@@ -44,6 +44,7 @@ object DynamicRunnablePassengerLoads {
                                    redListUpdatesProvider: () => Future[RedListUpdates],
                                    dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                                    queuesByTerminal: Map[Terminal, Iterable[Queue]],
+                                   updateLiveView: MinutesContainer[PassengersMinute, TQM] => Unit,
                                   )
                                   (implicit
                                    ec: ExecutionContext,
@@ -63,6 +64,7 @@ object DynamicRunnablePassengerLoads {
       .via(updateSplits(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
       .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal))
+      .wireTap(updateLiveView)
       .recover {
         case t =>
           log.error(s"Failed to process crunch request", t)

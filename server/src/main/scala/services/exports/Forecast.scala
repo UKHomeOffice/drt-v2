@@ -8,6 +8,8 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.collection.immutable
+
 object Forecast {
   def headlineFigures(startOfForecast: SDateLike,
                       numberOfDays: Int,

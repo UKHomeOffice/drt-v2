@@ -13,16 +13,16 @@ object DateRange {
   val millisToLocal: MillisToDateLike[LocalDate] = (millis: MillisSinceEpoch) => SDate(millis).toLocalDate
 
   def dateRangeWithBuffer[A <: DateLike](startBuffer: Int, endBuffer: Int, millisToDate: MillisToDateLike[A])(start: SDateLike, end: SDateLike): Seq[A] = {
-    val lookupStartMillis = start.addDays(startBuffer * -1).millisSinceEpoch
-    val lookupEndMillis = end.addDays(endBuffer).millisSinceEpoch
-    val daysRangeMillis = lookupStartMillis to lookupEndMillis by MilliTimes.oneDayMillis
+    val startMillis = start.addDays(startBuffer * -1).millisSinceEpoch
+    val endMillis = end.addDays(endBuffer).millisSinceEpoch
+    val daysRangeMillis = startMillis to endMillis by MilliTimes.oneDayMillis
     daysRangeMillis.map(millisToDate)
   }
 
   def dateRange[A <: DateLike](start: SDateLike, end: SDateLike, millisToDate: MillisToDateLike[A]): Seq[A] = {
-    val lookupStartMillis = start.millisSinceEpoch
-    val lookupEndMillis = end.millisSinceEpoch
-    val daysRangeMillis = (lookupStartMillis to lookupEndMillis by MilliTimes.oneDayMillis) :+ end.millisSinceEpoch
+    val startMillis = start.millisSinceEpoch
+    val endMillis = end.millisSinceEpoch
+    val daysRangeMillis = (startMillis to endMillis by MilliTimes.oneDayMillis) :+ end.millisSinceEpoch
     daysRangeMillis.map(millisToDate).distinct
   }
 
