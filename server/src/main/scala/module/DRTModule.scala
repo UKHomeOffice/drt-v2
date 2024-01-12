@@ -3,14 +3,12 @@ package module
 import actors.{ProdDrtParameters, TestDrtSystemInterface}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
-import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
-import controllers.Application
-import controllers.DrtActorSystem.airportConfig
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController}
+import controllers.{Application, DrtActorSystem}
 import email.GovNotifyEmail
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
@@ -25,6 +23,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   val config: Configuration = new Configuration(ConfigFactory.load)
 
   val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
+  val airportConfig = DrtActorSystem.airportConfig
 
   lazy val mockDrtParameters: MockDrtParameters = MockDrtParameters()
   private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, mockDrtParameters)

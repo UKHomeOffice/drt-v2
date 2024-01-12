@@ -54,12 +54,13 @@ object PassengersLiveView {
   def updateLiveView(portCode: PortCode, now: () => SDateLike, db: Tables)
                     (implicit ec: ExecutionContext): MinutesContainer[CrunchApi.PassengersMinute, TQM] => Unit = {
     val replaceHours = PassengersHourlyDao.replaceHours(portCode)
-    val containerToHourlyRow = PassengersLiveView.minutesContainerToHourlyRows(portCode, () => now().millisSinceEpoch)
+    val containerToHourlyRows = PassengersLiveView.minutesContainerToHourlyRows(portCode, () => now().millisSinceEpoch)
 
     _.minutes.groupBy(_.key.terminal).foreach {
       case (terminal, terminalMinutes) =>
-        val rows = containerToHourlyRow(MinutesContainer(terminalMinutes))
-        db.run(replaceHours(terminal, rows))
+        val hoursToReplace = containerToHourlyRows(MinutesContainer(terminalMinutes))
+        println(s"Replacing ${hoursToReplace.size} hours: ${hoursToReplace.toSeq.sortBy(p => (p.terminal, p.queue, p.hour))} hours for $terminal")
+        db.run(replaceHours(terminal, hoursToReplace))
     }
   }
 
@@ -78,7 +79,8 @@ object PassengersLiveView {
                         (implicit ec: ExecutionContext, timeout: Timeout): UtcDate => Future[Unit] =
     utcDate => {
       val sdate = SDate(utcDate)
-      val request = GetStateForDateRange(sdate.millisSinceEpoch, sdate.getLocalNextMidnight.millisSinceEpoch)
+      val request = GetStateForDateRange(sdate.millisSinceEpoch, sdate.addDays(1).addMinutes(-1).millisSinceEpoch)
+      println(s"request from ${SDate(request.from).toISOString} to ${SDate(request.to).toISOString} for ${utcDate.toISOString}")
       minutesActor
         .ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
         .map { container =>

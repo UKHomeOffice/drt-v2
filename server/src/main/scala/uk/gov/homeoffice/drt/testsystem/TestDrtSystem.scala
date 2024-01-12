@@ -20,8 +20,7 @@ import play.api.mvc.{Headers, Session}
 import slickdb._
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.db.SubscribeResponseQueue
-import uk.gov.homeoffice.drt.db.{ABFeatureRow, IABFeatureDao, IUserFeedbackDao, UserFeedbackRow}
+import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.testsystem.RestartActor.AddResetActors
 import uk.gov.homeoffice.drt.testsystem.TestActors._
@@ -159,6 +158,8 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     journalType, now, params.forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
   override val liveStaffMovementsReadActor: ActorRef = system.actorOf(TestStaffMovementsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
+
+  override val db: Tables = AggregateDbH2
 
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val userService: UserTableLike = MockUserTable()

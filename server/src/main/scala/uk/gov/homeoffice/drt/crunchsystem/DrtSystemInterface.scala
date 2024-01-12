@@ -145,8 +145,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     Future.successful(Done)
   }
 
-  val db: Tables = AggregateDb
-
+  val db: Tables
 
   val portStateActor: ActorRef
 

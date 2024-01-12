@@ -63,8 +63,8 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           sourceToCsvResponse(contentStream(start, end), fileName)
         else
           sourceToJsonResponse(contentStream(start, end)
-            .fold("")(_ + "," + _)
-            .map(json => s"[$json]"))
+            .fold(Seq[String]())(_ :+ _)
+            .map(objects => s"[${objects.mkString(",")}]"))
 
         Try(result) match {
           case Success(value) => value
@@ -147,9 +147,9 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     val dateStr = maybeDate.map(_.toISOString)
     maybeTerminalName match {
       case Some(terminalName) =>
-        (dateStr ++ Seq(regionName, portCodeStr, terminalName, totalPcpPax, queueCells).mkString(",")) + "\n"
+        (dateStr.toList ++ List(regionName, portCodeStr, terminalName, totalPcpPax, queueCells)).mkString(",") + "\n"
       case None =>
-        (dateStr ++ Seq(regionName, portCodeStr, totalPcpPax, queueCells).mkString(",")) + "\n"
+        (dateStr.toList ++ List(regionName, portCodeStr, totalPcpPax, queueCells)).mkString(",") + "\n"
     }
   }
 
@@ -160,8 +160,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
                              maybeDate: Option[LocalDate],
                             ): String = {
     val totalPcpPax = queueCounts.values.sum
-    val json = PassengersJson(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, maybeDate).toJson(JsonFormat)
-    json.compactPrint
+    PassengersJson(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, maybeDate).toJson(JsonFormat).compactPrint
   }
 }
 

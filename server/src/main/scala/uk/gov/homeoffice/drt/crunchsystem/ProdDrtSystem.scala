@@ -65,6 +65,8 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val minuteLookups: MinuteLookups = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
+  override val db: Tables = AggregateDb
+
   val flightLookups: FlightLookups = FlightLookups(
     system,
     now,
