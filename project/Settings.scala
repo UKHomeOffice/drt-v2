@@ -72,7 +72,7 @@ object Settings {
     val mockitoVersion = "4.11.0"
     val rtVersion = "4.0.2"
     val jakartaXmlWsApi = "4.0.1"
-    val scalatestplusPlay = "7.0.0"
+    val scalatestplusPlay = "7.0.1"
     val nettyAll = "4.1.101.Final"
     val jwtCore = "9.4.5"
   }
