@@ -104,8 +104,10 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           val hourlyQueueTotals = PassengersHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
           val hourlyQueueTotalsQueryForDate: LocalDate => Future[Map[Long, Map[Queue, Int]]] = date => ctrl.db.run(hourlyQueueTotals(date))
           hourlyStream(hourlyQueueTotalsQueryForDate)
-        case Some("daily") => dailyStream(queueTotalsQueryForDate)
-        case _ => totalsStream(queueTotalsQueryForDate)
+        case Some("daily") =>
+          dailyStream(queueTotalsQueryForDate)
+        case _ =>
+          totalsStream(queueTotalsQueryForDate)
       }
       stream(start, end)
         .map {
