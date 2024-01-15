@@ -8,8 +8,10 @@ import controllers.application.PassengersJsonFormat.JsonFormat
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
 import play.api.mvc._
 import services.graphstages.Crunch
+import slick.dbio.Effect
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.db.Db.slickProfile
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -101,7 +103,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
       val stream = granularity match {
         case Some("hourly") =>
-          val hourlyQueueTotals = PassengersHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
+          val hourlyQueueTotals: LocalDate => slickProfile.api.DBIOAction[Map[Long, Map[Queue, Int]], slickProfile.api.NoStream, Effect.Read] = PassengersHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
           val hourlyQueueTotalsQueryForDate: LocalDate => Future[Map[Long, Map[Queue, Int]]] = date => ctrl.db.run(hourlyQueueTotals(date))
           hourlyStream(hourlyQueueTotalsQueryForDate)
         case Some("daily") =>
