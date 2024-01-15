@@ -15,6 +15,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
+import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
@@ -81,9 +82,9 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   }
 
   private def streamForGranularity(maybeTerminal: Option[Terminal],
-                                      granularity: Option[String],
-                                      contentType: String,
-                                     ): (LocalDate, LocalDate) => Source[String, NotUsed] =
+                                   granularity: Option[String],
+                                   contentType: String,
+                                  ): (LocalDate, LocalDate) => Source[String, NotUsed] =
     (start, end) => {
       val portCode = airportConfig.portCode
       val regionName = PortRegion.fromPort(portCode).name
@@ -91,77 +92,106 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val maybeTerminalName = maybeTerminal.map(_.toString)
       val queueTotals = PassengersHourlyDao.queueTotalsForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
       val queueTotalsQueryForDate: LocalDate => Future[Map[Queue, Int]] = date => ctrl.db.run(queueTotals(date))
+
+      val hourlyQueueTotals = PassengersHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
+      val hourlyQueueTotalsQueryForDate: LocalDate => Future[Map[Long, Map[Queue, Int]]] = date => ctrl.db.run(hourlyQueueTotals(date))
+
       val content = if (contentType == "application/json")
-        passengersJson _
+        passengersJson(regionName, portCodeStr, maybeTerminalName)
       else
-        passengersCsvRow _
+        passengersCsvRow(regionName, portCodeStr, maybeTerminalName)
 
-      if (granularity.contains("daily"))
-        dailyStream(start, end, regionName, portCodeStr, maybeTerminalName, queueTotalsQueryForDate, content)
-      else
-        totalsStream(start, end, regionName, portCodeStr, maybeTerminalName, queueTotalsQueryForDate, content)
+      val stream = granularity match {
+        case Some("hourly") => hourlyStream(hourlyQueueTotalsQueryForDate)
+        case Some("daily") => dailyStream(queueTotalsQueryForDate)
+        case _ => totalsStream(queueTotalsQueryForDate)
+      }
+      stream(start, end)
+        .map {
+          case (queues, maybeDate) => content(queues, maybeDate)
+        }
     }
 
-  private def dailyStream(start: LocalDate,
-                             end: LocalDate,
-                             regionName: String,
-                             portCodeStr: String,
-                             maybeTerminalName: Option[String],
-                             queueTotalsQueryForDate: LocalDate => Future[Map[Queue, Int]],
-                             content: (String, String, Option[String], Map[Queue, Int], Option[LocalDate]) => String,
-                            ): Source[String, NotUsed] =
-    Source(DateRange(start, end))
-      .mapAsync(1)(date => queueTotalsQueryForDate(date).map(content(regionName, portCodeStr, maybeTerminalName, _, Option(date))))
-
-  private def totalsStream(start: LocalDate,
-                              end: LocalDate,
-                              regionName: String,
-                              portCodeStr: String,
-                              maybeTerminalName: Option[String],
-                              queueTotalsQueryForDate: LocalDate => Future[Map[Queue, Int]],
-                              content: (String, String, Option[String], Map[Queue, Int], Option[LocalDate]) => String,
-                             ): Source[String, NotUsed] =
-    Source(DateRange(start, end))
-      .mapAsync(1)(date => queueTotalsQueryForDate(date))
-      .fold(Map[Queue, Int]()) {
-        case (acc, queueCounts) =>
-          acc ++ queueCounts.map {
-            case (queue, count) =>
-              queue -> (acc.getOrElse(queue, 0) + count)
+  private val hourlyStream: (LocalDate => Future[Map[Long, Map[Queue, Int]]]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Option[Long]), NotUsed] =
+    queueTotalsQueryForDate => (start, end) =>
+      Source(DateRange(start, end)).mapAsync(1) { date =>
+          queueTotalsQueryForDate(date).map {
+            _.toSeq.map {
+              case (hour, queues) => (queues, Option(hour))
+            }
           }
-      }
-      .map { queueCounts =>
-        content(regionName, portCodeStr, maybeTerminalName, queueCounts, None)
-      }
+        }
+        .mapConcat(identity)
 
-  private def passengersCsvRow(regionName: String,
-                               portCodeStr: String,
-                               maybeTerminalName: Option[String],
-                               queueCounts: Map[Queue, Int],
-                               maybeDate: Option[LocalDate],
-                              ): String = {
-    val totalPcpPax = queueCounts.values.sum
-    val queueCells = Queues.queueOrder
-      .map(queue => queueCounts.getOrElse(queue, 0).toString)
-      .mkString(",")
-    val dateStr = maybeDate.map(_.toISOString)
-    maybeTerminalName match {
-      case Some(terminalName) =>
-        (dateStr.toList ++ List(regionName, portCodeStr, terminalName, totalPcpPax, queueCells)).mkString(",") + "\n"
-      case None =>
-        (dateStr.toList ++ List(regionName, portCodeStr, totalPcpPax, queueCells)).mkString(",") + "\n"
+  private val dailyStream: (LocalDate => Future[Map[Queue, Int]]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Option[LocalDate]), NotUsed] =
+    queueTotalsQueryForDate => (start, end) =>
+      Source(DateRange(start, end))
+        .mapAsync(1)(date => queueTotalsQueryForDate(date).map(queues => (queues, Option(date))))
+
+  private val totalsStream: (LocalDate => Future[Map[Queue, Int]]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Option[LocalDate]), NotUsed] =
+    queueTotalsQueryForDate => (start, end) =>
+      Source(DateRange(start, end))
+        .mapAsync(1)(date => queueTotalsQueryForDate(date))
+        .fold(Map[Queue, Int]()) {
+          case (acc, queueCounts) =>
+            acc ++ queueCounts.map {
+              case (queue, count) =>
+                queue -> (acc.getOrElse(queue, 0) + count)
+            }
+        }
+        .map(queueCounts => (queueCounts, None))
+
+  private def passengersCsvRow[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Option[T]) => String =
+    (queueCounts, maybeDateOrDateHour) => {
+      val totalPcpPax = queueCounts.values.sum
+      val queueCells = Queues.queueOrder
+        .map(queue => queueCounts.getOrElse(queue, 0).toString)
+        .mkString(",")
+
+      val dateStr = maybeDateOrDateHour.map {
+        case date: LocalDate => date.toISOString
+        case date: Long => s"${SDate(date).toISOString}"
+      }
+      maybeTerminalName match {
+        case Some(terminalName) =>
+          (dateStr.toList ++ List(regionName, portCodeStr, terminalName, totalPcpPax, queueCells)).mkString(",") + "\n"
+        case None =>
+          (dateStr.toList ++ List(regionName, portCodeStr, totalPcpPax, queueCells)).mkString(",") + "\n"
+      }
     }
-  }
+  //  private def passengersCsvRow(regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Option[LocalDate]) => String =
+  //    (queueCounts, maybeDate) => {
+  //      val totalPcpPax = queueCounts.values.sum
+  //      val queueCells = Queues.queueOrder
+  //        .map(queue => queueCounts.getOrElse(queue, 0).toString)
+  //        .mkString(",")
+  //      val dateStr = maybeDate.map(_.toISOString)
+  //      maybeTerminalName match {
+  //        case Some(terminalName) =>
+  //          (dateStr.toList ++ List(regionName, portCodeStr, terminalName, totalPcpPax, queueCells)).mkString(",") + "\n"
+  //        case None =>
+  //          (dateStr.toList ++ List(regionName, portCodeStr, totalPcpPax, queueCells)).mkString(",") + "\n"
+  //      }
+  //    }
 
-  private def passengersJson(regionName: String,
-                             portCodeStr: String,
-                             maybeTerminalName: Option[String],
-                             queueCounts: Map[Queue, Int],
-                             maybeDate: Option[LocalDate],
-                            ): String = {
-    val totalPcpPax = queueCounts.values.sum
-    PassengersJson(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, maybeDate).toJson(JsonFormat).compactPrint
-  }
+  private def passengersJson[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Option[T]) => String =
+    (queueCounts, maybeDateOrDateHour) => {
+      val totalPcpPax = queueCounts.values.sum
+      val (maybeDate, maybeHour) = maybeDateOrDateHour match {
+        case Some(date: LocalDate) => (Option(date), None)
+        case Some(date: Long) =>
+          val sdate = SDate(date)
+          (Option(sdate.toLocalDate), Option(sdate.getHours))
+        case _ => (None, None)
+      }
+      PassengersJson(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
+    }
+
+  //  private def passengersJson_(regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Option[LocalDate]) => String =
+  //    (queueCounts, maybeDate) => {
+  //      val totalPcpPax = queueCounts.values.sum
+  //      PassengersJson(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, maybeDate).toJson(JsonFormat).compactPrint
+  //    }
 }
 
 case class PassengersJson(regionName: String,
@@ -170,6 +200,7 @@ case class PassengersJson(regionName: String,
                           totalPcpPax: Int,
                           queueCounts: Map[Queue, Int],
                           maybeDate: Option[LocalDate],
+                          maybeHour: Option[Int],
                          )
 
 object PassengersJsonFormat extends DefaultJsonProtocol {
@@ -180,8 +211,9 @@ object PassengersJsonFormat extends DefaultJsonProtocol {
     override def write(obj: PassengersJson): JsValue = {
       val maybeTerminal = obj.terminalName.map(terminalName => "terminalName" -> JsString(terminalName))
       val maybeDate = obj.maybeDate.map(date => "date" -> JsString(date.toISOString))
+      val maybeHour = obj.maybeHour.map(hour => "hour" -> JsNumber(hour))
 
-      JsObject(Map(
+      val fields = SortedMap(
         "regionName" -> JsString(obj.regionName),
         "portCode" -> JsString(obj.portCode),
         "totalPcpPax" -> JsNumber(obj.totalPcpPax),
@@ -191,7 +223,9 @@ object PassengersJsonFormat extends DefaultJsonProtocol {
             "count" -> JsNumber(count)
           ))
         }.toVector),
-      ) ++ maybeTerminal ++ maybeDate)
+      ) ++ maybeTerminal ++ maybeDate ++ maybeHour
+
+      JsObject(fields)
     }
   }
 }

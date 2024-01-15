@@ -12,7 +12,7 @@ import actors.routing.FlightsRouterActor
 import akka.{Done, NotUsed}
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
 import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown, Props, Scheduler, typed}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
@@ -360,7 +360,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
     ManifestsProvider(manifestsRouterActorReadOnly)
 
   private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
-  lazy val populateLivePaxViewForDate: UtcDate => Future[Unit] = PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
+  lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
+    PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
   val startUpdateGraphs: (
     PersistentStateActors,

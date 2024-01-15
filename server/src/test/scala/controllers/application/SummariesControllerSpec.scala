@@ -5,7 +5,7 @@ import akka.pattern.ask
 import akka.stream.Materializer
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import module.DRTModule
-import org.scalatest.BeforeAndAfter
+import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers._
@@ -25,14 +25,13 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 
-class SummariesControllerSpec extends PlaySpec with BeforeAndAfter {
+class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
 
   val schema = PassengersHourlyDao.table.schema
 
-  before {
-    println(s"Creating schema $schema")
+  override def beforeEach(): Unit = {
     Await.ready(H2Tables.db.run(DBIO.seq(schema.dropIfExists, schema.create)), 1.second)
   }
 
@@ -52,7 +51,6 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfter {
 
   "populatePassengersForDate" should {
     "create hourly entries from existing crunch minutes for the date requested" in {
-      println(s"running test 1")
       val drtInterface = newDrtInterface
       val minutes = MinutesContainer(generateMinutes(SDate("2024-05-31T23:00"), SDate("2024-06-01T22:59"), Seq(T3, T2), queues, queuePaxPerMinute))
 
@@ -65,14 +63,14 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfter {
 
       val function = PassengersHourlyDao.hourlyForPortAndDate("LHR", Option("T3"))
       val rows = Await.result(H2Tables.db.run(function(LocalDate(2024, 6, 1))), 1.second)
-      rows must ===((0 to 23).map(hour => (SDate("2024-06-01", Crunch.europeLondonTimeZone).addHours(hour).millisSinceEpoch, 1200)).toMap)
-      println(s"test 1 complete")
+      rows must ===((0 to 23).map { hour =>
+        (SDate("2024-06-01", Crunch.europeLondonTimeZone).addHours(hour).millisSinceEpoch, Map(EeaDesk -> queuePaxPerHour, NonEeaDesk -> queuePaxPerHour))
+      }.toMap)
     }
   }
 
   "exportPassengersByTerminalForDateRangeApi" should {
-    "generate a csv with the correct headers for the given terminal" in {
-      println(s"running test 2")
+    "generate a csv with the correct headers for the given port" in {
       val terminals = Seq(T2, T3)
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Content-Type", "text/csv")), body = AnyContentAsEmpty)
@@ -81,37 +79,41 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfter {
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/csv"))
       contentAsString(result) must ===(s"Heathrow,LHR,${terminalPaxPerDay * terminals.size},0,0,${queuePaxPerDay * terminals.size},${queuePaxPerDay * terminals.size},0\n")
-      println(s"test 2 complete")
     }
-  }
-
-  "exportPassengersByTerminalForDateRangeApi" should {
-    "generate a csv with the correct headers for the given port" in {
-      println(s"running test 3")
+    "generate a csv with the correct headers for the given terminal" in {
       val terminals = Seq(T2, T3)
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "/api/passengers/2024-06-01/2024-06-01/T3", headers = Headers(("Content-Type", "text/csv")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Content-Type", "text/csv")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/csv"))
       contentAsString(result) must ===(s"Heathrow,LHR,T3,${queuePaxPerDay * queues.size},0,0,$queuePaxPerDay,$queuePaxPerDay,0\n")
-      println(s"test 3 complete")
     }
   }
 
   "exportPassengersByTerminalForDateRangeApi" should {
-    "generate a json response for the given terminal" in {
-      println(s"running test 4")
+    "generate a json response for the given port" in {
       val terminals = Seq(T2, T3)
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "/api/passengers/2024-06-01/2024-06-01/T3", headers = Headers(("Content-Type", "application/json")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Content-Type", "application/json")), body = AnyContentAsEmpty)
+      val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
+
+      status(result) must ===(OK)
+      contentType(result) must ===(Some("application/json"))
+      val totalPax = queuePaxPerDay * queues.size * terminals.size
+      val queuePax = queuePaxPerDay * terminals.size
+      contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EEA","count":$queuePax},{"queueName":"Non-EEA","count":$queuePax}],"regionName":"Heathrow","totalPcpPax":$totalPax}]""")
+    }
+    "generate a json response for the given terminal" in {
+      val terminals = Seq(T2, T3)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Content-Type", "application/json")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("application/json"))
-      contentAsString(result) must ===(s"""[{"portCode":"LHR","totalPcpPax":${queuePaxPerDay * queues.size},"queueCounts":[{"queueName":"EEA","count":$queuePaxPerDay},{"queueName":"Non-EEA","count":$queuePaxPerDay}],"terminalName":"T3","regionName":"Heathrow"}]""")
-      println(s"test 4 complete")
+      contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EEA","count":$queuePaxPerDay},{"queueName":"Non-EEA","count":$queuePaxPerDay}],"regionName":"Heathrow","terminalName":"T3","totalPcpPax":${queuePaxPerDay * queues.size}}]""")
     }
   }
 
@@ -124,7 +126,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfter {
     Await.ready(drtInterface.minuteLookups.queueMinutesRouterActor.ask(minutes), 1.second)
     val controller = newController(drtInterface)
 
-    Await.result(controller.populatePassengersForDate(localDate.toISOString).apply(FakeRequest()), 1.second)
+    Await.ready(controller.populatePassengersForDate(localDate.toISOString).apply(FakeRequest()), 1.second)
     controller
   }
 

@@ -1,8 +1,8 @@
 package services.crunch.deskrecs
 
-import akka.NotUsed
+import akka.{Done, NotUsed}
 import akka.actor.ActorRef
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
@@ -44,7 +44,7 @@ object DynamicRunnablePassengerLoads {
                                    redListUpdatesProvider: () => Future[RedListUpdates],
                                    dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                                    queuesByTerminal: Map[Terminal, Iterable[Queue]],
-                                   updateLiveView: MinutesContainer[PassengersMinute, TQM] => Unit,
+                                   updateLiveView: MinutesContainer[PassengersMinute, TQM] => Future[StatusReply[Done]],
                                   )
                                   (implicit
                                    ec: ExecutionContext,
@@ -64,7 +64,7 @@ object DynamicRunnablePassengerLoads {
       .via(updateSplits(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
       .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal))
-      .wireTap(updateLiveView)
+      .wireTap(updateLiveView(_))
       .recover {
         case t =>
           log.error(s"Failed to process crunch request", t)
