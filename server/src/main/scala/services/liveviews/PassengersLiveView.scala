@@ -61,7 +61,6 @@ object PassengersLiveView {
       val eventuals = container.minutes.groupBy(_.key.terminal).map {
         case (terminal, terminalMinutes) =>
           val hoursToReplace = containerToHourlyRows(MinutesContainer(terminalMinutes))
-          println(s"Replacing ${hoursToReplace.size} hours for $terminal")
           db.run(replaceHours(terminal, hoursToReplace))
       }
       Future.sequence(eventuals).map(_ => Ack)
@@ -83,7 +82,6 @@ object PassengersLiveView {
     utcDate => {
       val sdate = SDate(utcDate)
       val request = GetStateForDateRange(sdate.millisSinceEpoch, sdate.addDays(1).addMinutes(-1).millisSinceEpoch)
-      println(s"request from ${SDate(request.from).toISOString} to ${SDate(request.to).toISOString} for ${utcDate.toISOString}")
       minutesActor
         .ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
         .flatMap { container =>
