@@ -64,8 +64,8 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
       status(result) must ===(OK)
 
-      val function = PassengersHourlyDao.hourlyForPortAndDate("LHR", Option("T3"))
-      val rows = Await.result(H2Tables.db.run(function(LocalDate(2024, 6, 1))), 1.second)
+      val hourlyForLhrT3 = PassengersHourlyDao.hourlyForPortAndDate("LHR", Option("T3"))
+      val rows = Await.result(H2Tables.db.run(hourlyForLhrT3(LocalDate(2024, 6, 1))), 1.second)
       rows must ===((0 to 23).map { hour =>
         (SDate("2024-06-01", Crunch.europeLondonTimeZone).addHours(hour).millisSinceEpoch, Map(EeaDesk -> queuePaxPerHour, NonEeaDesk -> queuePaxPerHour))
       }.toMap)
@@ -162,7 +162,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("application/json"))
-      contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EEA","count":$terminalPaxPerDay},{"queueName":"Non-EEA","count":$terminalPaxPerDay}],"regionName":"Heathrow","totalPcpPax":${portPaxPerDay}}]""")
+      contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EEA","count":$terminalPaxPerDay},{"queueName":"Non-EEA","count":$terminalPaxPerDay}],"regionName":"Heathrow","totalPcpPax":$portPaxPerDay}]""")
     }
     "generate a hourly breakdown json response for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
