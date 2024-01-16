@@ -211,8 +211,8 @@ steps:
       event:
         - push
     depends_on:
+      - Unit tests
       - End to end test
-      - Code coverage report
 
 services:
   - name: Docker in Docker
