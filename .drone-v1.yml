@@ -192,7 +192,6 @@ steps:
         - push
     depends_on:
       - Publish app
-      - Publish cypress
 
   - name: Slack notification
     pull: if-not-exists
