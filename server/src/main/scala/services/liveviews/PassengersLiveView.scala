@@ -3,7 +3,8 @@ package services.liveviews
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import akka.Done
 import akka.actor.ActorRef
-import akka.pattern.ask
+import akka.pattern.StatusReply.Ack
+import akka.pattern.{StatusReply, ask}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
@@ -12,7 +13,7 @@ import drt.shared.{CrunchApi, TQM}
 import org.slf4j.LoggerFactory
 import services.graphstages.Crunch
 import slickdb.Tables
-import uk.gov.homeoffice.drt.db.queries.{PassengersHourlyDao}
+import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
 import uk.gov.homeoffice.drt.db.serialisers.PassengersHourlySerialiser
 import uk.gov.homeoffice.drt.db.{PassengersHourly, PassengersHourlyRow}
 import uk.gov.homeoffice.drt.ports.PortCode
@@ -52,18 +53,20 @@ object PassengersLiveView {
     }
 
   def updateLiveView(portCode: PortCode, now: () => SDateLike, db: Tables)
-                    (implicit ec: ExecutionContext): MinutesContainer[CrunchApi.PassengersMinute, TQM] => Unit = {
+                    (implicit ec: ExecutionContext): MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]] = {
     val replaceHours = PassengersHourlyDao.replaceHours(portCode)
-    val containerToHourlyRow = PassengersLiveView.minutesContainerToHourlyRows(portCode, () => now().millisSinceEpoch)
+    val containerToHourlyRows = PassengersLiveView.minutesContainerToHourlyRows(portCode, () => now().millisSinceEpoch)
 
-    _.minutes.groupBy(_.key.terminal).foreach {
-      case (terminal, terminalMinutes) =>
-        val rows = containerToHourlyRow(MinutesContainer(terminalMinutes))
-        db.run(replaceHours(terminal, rows))
-    }
+    container =>
+      val eventuals = container.minutes.groupBy(_.key.terminal).map {
+        case (terminal, terminalMinutes) =>
+          val hoursToReplace = containerToHourlyRows(MinutesContainer(terminalMinutes))
+          db.run(replaceHours(terminal, hoursToReplace))
+      }
+      Future.sequence(eventuals).map(_ => Ack)
   }
 
-  def populateHistoricPax(updateForDate: UtcDate => Future[Unit])
+  def populateHistoricPax(updateForDate: UtcDate => Future[StatusReply[Done]])
                          (implicit mat: Materializer): Future[Done] = {
     val today = SDate.now()
     val oneYearDays = 365
@@ -74,25 +77,29 @@ object PassengersLiveView {
       .run()
   }
 
-  def populatePaxForDate(minutesActor: ActorRef, update: MinutesContainer[PassengersMinute, TQM] => Unit)
-                        (implicit ec: ExecutionContext, timeout: Timeout): UtcDate => Future[Unit] =
+  def populatePaxForDate(minutesActor: ActorRef, update: MinutesContainer[PassengersMinute, TQM] => Future[StatusReply[Done]])
+                        (implicit ec: ExecutionContext, timeout: Timeout): UtcDate => Future[StatusReply[Done]] =
     utcDate => {
       val sdate = SDate(utcDate)
-      val request = GetStateForDateRange(sdate.millisSinceEpoch, sdate.getLocalNextMidnight.millisSinceEpoch)
+      val request = GetStateForDateRange(sdate.millisSinceEpoch, sdate.addDays(1).addMinutes(-1).millisSinceEpoch)
       minutesActor
         .ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
-        .map { container =>
+        .flatMap { container =>
           if (container.minutes.size < MilliTimes.oneDayMillis) {
             val paxMins = MinutesContainer(
               container.minutes.map(cm => PassengersMinute(cm.terminal, cm.key.queue, cm.minute, Seq.fill(cm.toMinute.paxLoad.round.toInt)(1), None))
             )
+            log.info(s"Populating pax for ${utcDate.toISOString}")
             update(paxMins)
-            log.info(s"Populated pax for ${utcDate.toISOString}")
-          } else log.info(s"No pax for ${utcDate.toISOString}")
+          } else {
+            log.info(s"No pax for ${utcDate.toISOString}")
+            Future.successful(Ack)
+          }
         }
         .recover {
           case t: Throwable =>
             log.error(s"Error populating pax for ${utcDate.toISOString}", t)
+            Ack
         }
     }
 }

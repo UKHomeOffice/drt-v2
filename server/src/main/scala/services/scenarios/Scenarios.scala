@@ -4,7 +4,7 @@ import actors.persistent.SortedActorRefSource
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.ask
+import akka.pattern.{StatusReply, ask}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
@@ -74,7 +74,7 @@ object Scenarios {
       redListUpdatesProvider = redListUpdatesProvider,
       dynamicQueueStatusProvider = DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider),
       queuesByTerminal = simulationAirportConfig.queuesByTerminal,
-      updateLiveView = _ => {},
+      updateLiveView = _ => Future.successful(StatusReply.Ack),
     )
 
     class DummyPersistentActor extends Actor {

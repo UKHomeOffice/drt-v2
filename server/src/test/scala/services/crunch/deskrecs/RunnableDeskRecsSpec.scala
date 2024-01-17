@@ -125,7 +125,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
       DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
       airportConfig.queuesByTerminal,
-      _ => {},
+      _ => Future.successful(StatusReply.Ack),
     )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "desk-recs")
