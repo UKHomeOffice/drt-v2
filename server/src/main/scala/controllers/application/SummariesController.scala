@@ -61,9 +61,9 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val fileName = makeFileName("passengers", maybeTerminal, start, end, airportConfig.portCode)
-        val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"), contentType(request))
+        val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"), acceptHeader(request))
 
-        val result = if (contentType(request) == "text/csv")
+        val result = if (acceptHeader(request) == "text/csv")
           sourceToCsvResponse(contentStream(start, end), fileName)
         else
           sourceToJsonResponse(contentStream(start, end)
@@ -80,8 +80,8 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         BadRequest("Invalid date format for start or end date")
     }
 
-  private def contentType(request: Request[AnyContent]) = {
-    request.headers.get("Content-Type").getOrElse("application/json")
+  private def acceptHeader(request: Request[AnyContent]): String = {
+    request.headers.get("Accept").getOrElse("application/json")
   }
 
   private def streamForGranularity(maybeTerminal: Option[Terminal],

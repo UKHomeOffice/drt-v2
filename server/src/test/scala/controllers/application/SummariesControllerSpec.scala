@@ -75,7 +75,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   "exportPassengersByTerminalForDateRangeApi" should {
     "generate a csv with the correct headers for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Content-Type", "text/csv")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Accept", "text/csv")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -84,7 +84,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate a daily breakdown csv with the correct headers for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = Headers(("Content-Type", "text/csv")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = Headers(("Accept", "text/csv")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-02").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -96,7 +96,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate an hourly breakdown csv with the correct headers for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = Headers(("Content-Type", "text/csv")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = Headers(("Accept", "text/csv")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-02").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -109,7 +109,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate a csv with the correct headers for the given terminal" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Content-Type", "text/csv")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Accept", "text/csv")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -118,7 +118,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate a daily breakdown csv with the correct headers for the given terminal" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = Headers(("Content-Type", "text/csv")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = Headers(("Accept", "text/csv")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-02", "T3").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -130,7 +130,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate an hourly breakdown csv with the correct headers for the given terminal" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = Headers(("Content-Type", "text/csv")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = Headers(("Accept", "text/csv")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-02", "T3").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -146,7 +146,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   "exportPassengersByTerminalForDateRangeApi" should {
     "generate a json response for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Content-Type", "application/json")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Accept", "application/json")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -157,7 +157,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate a daily breakdown json response for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = Headers(("Content-Type", "application/json")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = Headers(("Accept", "application/json")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -166,7 +166,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate a hourly breakdown json response for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = Headers(("Content-Type", "application/json")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = Headers(("Accept", "application/json")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -178,7 +178,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate a json response for the given terminal" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Content-Type", "application/json")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "", headers = Headers(("Accept", "application/json")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -187,7 +187,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate a daily breakdown json response for the given terminal" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = Headers(("Content-Type", "application/json")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = Headers(("Accept", "application/json")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
       status(result) must ===(OK)
@@ -196,7 +196,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "generate a hourly breakdown json response for the given terminal" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = Headers(("Content-Type", "application/json")), body = AnyContentAsEmpty)
+      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = Headers(("Accept", "application/json")), body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
       status(result) must ===(OK)
