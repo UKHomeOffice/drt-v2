@@ -83,8 +83,7 @@ class ExportPortConfigControllerSpec extends PlaySpec {
       }
     }
 
-    val drtSystemInterface: DrtSystemInterface = module.provideDrtSystemInterface
-
+    val drtSystemInterface: DrtSystemInterface = module.provideTestDrtSystemInterface
 
     new ExportPortConfigController(Helpers.stubControllerComponents(), drtSystemInterface)
   }
