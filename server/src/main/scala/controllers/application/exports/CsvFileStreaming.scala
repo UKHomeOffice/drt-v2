@@ -21,7 +21,7 @@ object CsvFileStreaming {
     val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("text/csv"))
 
     Result(
-      header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
+      header = ResponseHeader(200, Map("Content-Type" -> "text/csv", "Content-Disposition" -> s"attachment; filename=$fileName.csv")),
       body = HttpEntity.Chunked(exportSource.collect {
         case s if s.nonEmpty => s
       }.map(c => {
