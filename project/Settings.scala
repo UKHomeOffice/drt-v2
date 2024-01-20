@@ -74,7 +74,7 @@ object Settings {
     val jakartaXmlWsApi = "4.0.1"
     val scalatestplusPlay = "7.0.0"
     val nettyAll = "4.1.101.Final"
-    val jwtCore = "9.4.5"
+    val jwtCore = "9.4.6"
   }
 
   import versions._
