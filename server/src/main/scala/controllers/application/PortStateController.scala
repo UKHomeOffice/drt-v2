@@ -121,7 +121,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         ctrl.crunchManagerActor ! UpdatedMillis(datesToReCrunch)
         Ok(s"Queued dates $from to $to for re-crunch")
       }
-      maybeFuture.getOrElse(BadRequest("Unable to parse dates"))
+      maybeFuture.getOrElse(BadRequest(s"Unable to parse dates '$fromStr' or '$toStr'"))
     }
   }
 
