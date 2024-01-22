@@ -55,7 +55,7 @@ object DynamicRunnablePassengerLoads {
     Flow[ProcessingRequest]
       .wireTap(cr => log.info(s"${cr.localDate} crunch request - started"))
       .via(addArrivals(arrivalsProvider))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder))} passengers"))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum} passengers"))
       .via(addPax(historicManifestsPaxProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request - pax added"))
       .via(updateHistoricApiPaxNos(splitsSink))
