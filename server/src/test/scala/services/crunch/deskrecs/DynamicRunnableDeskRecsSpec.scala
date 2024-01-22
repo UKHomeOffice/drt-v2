@@ -167,9 +167,10 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       splitsSink = mockSplitsSink,
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-      DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
-      airportConfig.queuesByTerminal,
-      _ => Future.successful(StatusReply.Ack),
+      dynamicQueueStatusProvider = DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
+      queuesByTerminal = airportConfig.queuesByTerminal,
+      updateLiveView = _ => Future.successful(StatusReply.Ack),
+      paxFeedSourceOrder = paxFeedSourceOrder,
     )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "passenger-loads")

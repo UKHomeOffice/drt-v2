@@ -46,7 +46,7 @@ object DynamicRunnableDeskRecs {
             .map(minutes => Option(minutes))
             .recover {
               case t =>
-                log.error(s"Failed to fetch staff", t)
+                log.error(s"Failed to optimise queues", t)
                 None
             }
       }

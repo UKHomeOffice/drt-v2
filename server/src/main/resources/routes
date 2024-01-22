@@ -31,7 +31,10 @@ DELETE        /alerts                                                           
 GET           /version                                                                controllers.application.ApplicationInfoController.getApplicationVersion
 
 GET           /crunch                                                                 controllers.application.PortStateController.getCrunch
-POST          /control/crunch/recalculate                                             controllers.application.PortStateController.reCrunch
++ nocsrf
+POST          /control/crunch/recalculate                                             controllers.application.PortStateController.reCrunchFullForecast
++ nocsrf
+POST          /control/crunch/recalculate/:startLocalDate/:endLocalDate               controllers.application.PortStateController.reCrunch(startLocalDate: String, endLocalDate: String)
 POST          /control/arrivals/recalculate                                           controllers.application.PortStateController.reCalculateArrivals
 GET           /crunch-snapshot/:pit                                                   controllers.application.PortStateController.getCrunchSnapshot(pit: Long)
 

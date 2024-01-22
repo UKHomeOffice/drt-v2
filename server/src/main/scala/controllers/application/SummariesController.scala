@@ -10,6 +10,7 @@ import play.api.mvc._
 import services.graphstages.Crunch
 import slick.dbio.Effect
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
+import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.Db.slickProfile
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
@@ -24,7 +25,7 @@ import scala.util.{Failure, Success, Try}
 
 
 class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
-  def populatePassengersForDate(localDateStr: String): Action[AnyContent] = {
+  def populatePassengersForDate(localDateStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
     LocalDate.parse(localDateStr) match {
       case Some(localDate) =>
         Action.async(
@@ -41,17 +42,17 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   def exportPassengersByTerminalForDateRangeApi(startLocalDateString: String,
                                                 endLocalDateString: String,
                                                 terminalName: String): Action[AnyContent] =
-    Action {
+    auth(Action {
       request =>
         val terminal = Terminal(terminalName)
         val maybeTerminal = Option(terminal)
         exportPassengersCsv(startLocalDateString, endLocalDateString, request, maybeTerminal)
-    }
+    })
 
   def exportPassengersByPortForDateRangeApi(startLocalDateString: String, endLocalDateString: String): Action[AnyContent] =
-    Action {
+    auth(Action {
       request => exportPassengersCsv(startLocalDateString, endLocalDateString, request, maybeTerminal = None)
-    }
+    })
 
   private def exportPassengersCsv(startLocalDateString: String,
                                   endLocalDateString: String,

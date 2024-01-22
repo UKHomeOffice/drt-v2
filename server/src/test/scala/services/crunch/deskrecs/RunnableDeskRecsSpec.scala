@@ -17,7 +17,6 @@ import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import services.TryCrunchWholePax
-import services.crunch.TestDefaults.airportConfig
 import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.OptimiserMocks._
@@ -123,9 +122,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       splitsSink = mockSplitsSink,
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-      DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
-      airportConfig.queuesByTerminal,
-      _ => Future.successful(StatusReply.Ack),
+      dynamicQueueStatusProvider = DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
+      queuesByTerminal = airportConfig.queuesByTerminal,
+      updateLiveView = _ => Future.successful(StatusReply.Ack),
+      paxFeedSourceOrder = paxFeedSourceOrder,
     )
 
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "desk-recs")

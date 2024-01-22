@@ -213,9 +213,10 @@ class TestDrtActor extends Actor {
           splitsSink = portStateActor,
           portDesksAndWaitsProvider = portDeskRecs,
           redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-          DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
-          tc.airportConfig.queuesByTerminal,
-          _ => Future.successful(StatusReply.Ack),
+          dynamicQueueStatusProvider = DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
+          queuesByTerminal = tc.airportConfig.queuesByTerminal,
+          updateLiveView = _ => Future.successful(StatusReply.Ack),
+          paxFeedSourceOrder = paxFeedSourceOrder,
         )
 
         val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch, SortedSet(), "passenger-loads")
