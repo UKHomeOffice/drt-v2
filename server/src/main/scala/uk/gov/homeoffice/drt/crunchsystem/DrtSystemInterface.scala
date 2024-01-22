@@ -9,13 +9,13 @@ import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
 import actors.routing.FlightsRouterActor
-import akka.{Done, NotUsed}
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
 import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown, Props, Scheduler, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
+import akka.{Done, NotUsed}
 import com.typesafe.config.ConfigFactory
 import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
@@ -69,7 +69,6 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetS
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -395,6 +394,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
         DynamicQueueStatusProvider(airportConfig, egatesProvider),
         airportConfig.queuesByTerminal,
         updateLiveView = updateLivePaxView,
+        paxFeedSourceOrder = paxFeedSourceOrder,
       )
 
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =

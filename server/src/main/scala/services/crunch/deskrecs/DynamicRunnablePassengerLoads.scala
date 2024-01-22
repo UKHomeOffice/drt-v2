@@ -20,7 +20,7 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, HistoricApiFeedSource}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -45,6 +45,7 @@ object DynamicRunnablePassengerLoads {
                                    dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                                    queuesByTerminal: Map[Terminal, Iterable[Queue]],
                                    updateLiveView: MinutesContainer[PassengersMinute, TQM] => Future[StatusReply[Done]],
+                                   paxFeedSourceOrder: List[FeedSource],
                                   )
                                   (implicit
                                    ec: ExecutionContext,
@@ -52,19 +53,25 @@ object DynamicRunnablePassengerLoads {
                                    timeout: Timeout,
                                   ): Flow[ProcessingRequest, MinutesContainer[PassengersMinute, TQM], NotUsed] =
     Flow[ProcessingRequest]
-      .wireTap(cr => log.info(s"${cr.localDate} crunch request processing started"))
+      .wireTap(cr => log.info(s"${cr.localDate} crunch request - started"))
       .via(addArrivals(arrivalsProvider))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing arrivals added"))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder))} passengers"))
       .via(addPax(historicManifestsPaxProvider))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax added"))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request - pax added"))
       .via(updateHistoricApiPaxNos(splitsSink))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing pax updated"))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request - pax updated"))
       .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits added"))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request - splits added"))
       .via(updateSplits(splitsSink))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request processing splits persisted"))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.localDate} crunch request - splits persisted"))
       .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal))
-      .wireTap(updateLiveView(_))
+      .wireTap { crWithPax =>
+        log.info(s"${crWithPax._1.localDate} crunch request - ${crWithPax._2.minutes.size} minutes of passenger loads with ${crWithPax._2.minutes.map(_.toMinute.passengers.size).sum} passengers")
+        updateLiveView(crWithPax._2)
+      }
+      .via(Flow[(ProcessingRequest, MinutesContainer[PassengersMinute, TQM])].map {
+        case (_, paxMinutes) => paxMinutes
+      })
       .recover {
         case t =>
           log.error(s"Failed to process crunch request", t)
@@ -125,36 +132,36 @@ object DynamicRunnablePassengerLoads {
                               (implicit
                                ec: ExecutionContext,
                                mat: Materializer
-                              ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), MinutesContainer[PassengersMinute, TQM], NotUsed] = {
+                              ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, MinutesContainer[PassengersMinute, TQM]), NotUsed] = {
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
-        case (crunchDay, flights) =>
-          log.info(s"Passenger load calculation starting: ${flights.size} flights, ${crunchDay.durationMinutes} minutes (${crunchDay.start.toISOString} to ${crunchDay.end.toISOString})")
+        case (procRequest, flights) =>
+          log.info(s"Passenger load calculation starting: ${flights.size} flights, ${procRequest.durationMinutes} minutes (${procRequest.start.toISOString} to ${procRequest.end.toISOString})")
           val eventualDeskRecs = for {
             redListUpdates <- redListUpdatesProvider()
-            statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(crunchDay.minutesInMillis)
+            statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(procRequest.minutesInMillis)
             queueStatusProvider = queueStatusesProvider(statuses)
           } yield {
-            val flightsPax = portDesksAndWaitsProvider.flightsToLoads(crunchDay.minutesInMillis, FlightsWithSplits(flights), redListUpdates, queueStatusProvider)
+            val flightsPax = portDesksAndWaitsProvider.flightsToLoads(procRequest.minutesInMillis, FlightsWithSplits(flights), redListUpdates, queueStatusProvider)
             val paxMinutesForCrunchPeriod = for {
               terminal <- queuesByTerminal.keys
               queue <- queuesByTerminal(terminal)
-              minute <- crunchDay.minutesInMillis
+              minute <- procRequest.minutesInMillis
             } yield {
               flightsPax.getOrElse(TQM(terminal, queue, minute), PassengersMinute(terminal, queue, minute, Seq(), Option(SDate.now().millisSinceEpoch)))
             }
 
-            log.info(s"Passenger load calculation finished: (${crunchDay.start.toISOString} to ${crunchDay.end.toISOString})")
-            Option(MinutesContainer(paxMinutesForCrunchPeriod.toSeq))
+            log.info(s"Passenger load calculation finished: (${procRequest.start.toISOString} to ${procRequest.end.toISOString})")
+            Option((procRequest, MinutesContainer(paxMinutesForCrunchPeriod.toSeq)))
           }
           eventualDeskRecs.recover {
             case t =>
-              log.error(s"Failed to optimise desks for ${crunchDay.localDate}", t)
+              log.error(s"Failed to optimise desks for ${procRequest.localDate}", t)
               None
           }
       }
       .collect {
-        case Some(minutes) => minutes
+        case Some((procRequest, minutes)) => (procRequest, minutes)
       }
   }
 

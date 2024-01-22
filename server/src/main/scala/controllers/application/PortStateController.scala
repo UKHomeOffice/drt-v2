@@ -1,7 +1,9 @@
 package controllers.application
 
 import actors.CrunchManagerActor.RecalculateArrivals
+import actors.DateRange
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
+import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -12,7 +14,7 @@ import services.crunch.CrunchManager.{queueDaysToReCrunch, queueDaysToReCrunchWi
 import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -109,7 +111,21 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     }
   }
 
-  def reCrunch: Action[AnyContent] = authByRole(SuperAdmin) {
+  def reCrunch(fromStr: String, toStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
+    Action {
+      val maybeFuture = for {
+        from <- LocalDate.parse(fromStr)
+        to <- LocalDate.parse(toStr)
+      } yield {
+        val datesToReCrunch = DateRange(from, to).map { localDate => SDate(localDate).millisSinceEpoch}.toSet
+        ctrl.crunchManagerActor ! UpdatedMillis(datesToReCrunch)
+        Ok(s"Queued dates $from to $to for re-crunch")
+      }
+      maybeFuture.getOrElse(BadRequest("Unable to parse dates"))
+    }
+  }
+
+  def reCrunchFullForecast: Action[AnyContent] = authByRole(SuperAdmin) {
     Action.async { request: Request[AnyContent] =>
       request.body.asText match {
         case Some("true") =>

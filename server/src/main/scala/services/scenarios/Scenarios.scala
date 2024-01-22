@@ -75,6 +75,7 @@ object Scenarios {
       dynamicQueueStatusProvider = DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider),
       queuesByTerminal = simulationAirportConfig.queuesByTerminal,
       updateLiveView = _ => Future.successful(StatusReply.Ack),
+      paxFeedSourceOrder = paxFeedSourceOrder,
     )
 
     class DummyPersistentActor extends Actor {
