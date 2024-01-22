@@ -42,17 +42,17 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   def exportPassengersByTerminalForDateRangeApi(startLocalDateString: String,
                                                 endLocalDateString: String,
                                                 terminalName: String): Action[AnyContent] =
-    Action {
+    auth(Action {
       request =>
         val terminal = Terminal(terminalName)
         val maybeTerminal = Option(terminal)
         exportPassengersCsv(startLocalDateString, endLocalDateString, request, maybeTerminal)
-    }
+    })
 
   def exportPassengersByPortForDateRangeApi(startLocalDateString: String, endLocalDateString: String): Action[AnyContent] =
-    Action {
+    auth(Action {
       request => exportPassengersCsv(startLocalDateString, endLocalDateString, request, maybeTerminal = None)
-    }
+    })
 
   private def exportPassengersCsv(startLocalDateString: String,
                                   endLocalDateString: String,
