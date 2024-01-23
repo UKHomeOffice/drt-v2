@@ -65,7 +65,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
-          ctrl.shiftsSequentialWritesActor ! SetShifts(shifts.assignments)
+          ctrl.shiftsSequentialWritesActor ! UpdateShifts(shifts.assignments)
           Accepted
         case None =>
           BadRequest
@@ -132,22 +132,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
         case None =>
           BadRequest
       }
-    }
-  }
-
-  def saveStaff: Action[AnyContent] = authByRole(StaffEdit) {
-    Action {
-      implicit request =>
-        val maybeShifts: Option[ShiftAssignments] = request.body.asJson.flatMap(ImportStaff.staffJsonToShifts)
-
-        maybeShifts match {
-          case Some(shifts) =>
-            log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
-            ctrl.shiftsSequentialWritesActor ! SetShifts(shifts.assignments)
-            Created
-          case _ =>
-            BadRequest("{\"error\": \"Unable to parse data\"}")
-        }
     }
   }
 

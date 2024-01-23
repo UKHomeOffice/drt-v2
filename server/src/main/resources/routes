@@ -123,7 +123,6 @@ POST          /email/feedback/:feedback                                         
 + nocsrf
 POST          /logging                                                                controllers.Application.logging
 
-POST          /data/staff                                                             controllers.application.StaffingController.saveStaff
 GET           /staff-movements/:date                                                  controllers.application.StaffingController.getStaffMovements(date: String)
 POST          /staff-movements                                                        controllers.application.StaffingController.addStaffMovements
 DELETE        /staff-movements/:uuid                                                  controllers.application.StaffingController.removeStaffMovements(uuid: String)

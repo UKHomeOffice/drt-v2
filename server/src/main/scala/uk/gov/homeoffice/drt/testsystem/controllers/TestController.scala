@@ -1,6 +1,7 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
 import actors.TestDrtSystemInterface
+import actors.persistent.staffing.ReplaceAllShifts
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -8,6 +9,8 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.server.feeds.Implicits._
+import drt.shared.ShiftAssignments
+import drt.staff.ImportStaff
 import module.NoCSRFAction
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
@@ -18,6 +21,7 @@ import spray.json._
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
+import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.testsystem.MockRoles
@@ -150,4 +154,19 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInte
   def deleteAllData: Action[AnyContent] = noCSRFAction.async { _ =>
     resetData.map(_ => Accepted)
   }
+
+  def replaceAllShifts: Action[AnyContent] =
+    Action {
+      implicit request =>
+        val maybeShifts: Option[ShiftAssignments] = request.body.asJson.flatMap(ImportStaff.staffJsonToShifts)
+
+        maybeShifts match {
+          case Some(shifts) =>
+            log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
+            ctrl.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
+            Created
+          case _ =>
+            BadRequest("{\"error\": \"Unable to parse data\"}")
+        }
+    }
 }
