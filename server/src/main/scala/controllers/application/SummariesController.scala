@@ -104,8 +104,8 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
       val stream = granularity match {
         case Some("hourly") =>
-          val hourlyQueueTotals: LocalDate => slickProfile.api.DBIOAction[Map[Long, Map[Queue, Int]], slickProfile.api.NoStream, Effect.Read] = PassengersHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
-          val hourlyQueueTotalsQueryForDate: LocalDate => Future[Map[Long, Map[Queue, Int]]] = date => ctrl.db.run(hourlyQueueTotals(date))
+          val hourlyQueueTotals = PassengersHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
+          val hourlyQueueTotalsQueryForDate = (date: LocalDate) => ctrl.db.run(hourlyQueueTotals(date))
           hourlyStream(hourlyQueueTotalsQueryForDate)
         case Some("daily") =>
           dailyStream(queueTotalsQueryForDate)
