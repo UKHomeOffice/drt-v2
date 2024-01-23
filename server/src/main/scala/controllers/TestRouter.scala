@@ -24,6 +24,8 @@ class TestRouter @Inject()(cc: ControllerComponents, testController: TestControl
 
     case DELETE(p"/test/data") => testController.deleteAllData
 
+    case POST(p"/test/replace-all-shifts") => testController.replaceAllShifts
+
   }
 
 

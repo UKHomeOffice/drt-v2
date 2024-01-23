@@ -135,7 +135,7 @@ Cypress.Commands.add('deleteData', (csrfToken) => {
 Cypress.Commands.add('saveShifts', (shiftsJson, csrfToken) => {
   cy.request({
     method: "POST",
-    url: "/data/staff",
+    url: "/test/replace-all-shifts",
     body: shiftsJson,
     headers: {
       "Csrf-Token": csrfToken,

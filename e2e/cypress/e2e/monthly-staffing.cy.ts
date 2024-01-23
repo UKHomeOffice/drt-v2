@@ -41,7 +41,7 @@ describe('Monthly Staffing', () => {
     cy
       .request({
         method: "POST",
-        url: "/data/staff",
+        url: "/test/replace-all-shifts",
         body: {
           "shifts": [
             {
@@ -59,7 +59,7 @@ describe('Monthly Staffing', () => {
   Cypress.Commands.add('resetShifts', (csrfToken) => {
     cy.request({
       method: "POST",
-      url: "/data/staff",
+      url: "/test/replace-all-shifts",
       body: {
         "shifts": [
           {

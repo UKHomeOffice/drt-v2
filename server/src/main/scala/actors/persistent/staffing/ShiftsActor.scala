@@ -31,7 +31,7 @@ case object GetFeedStatuses
 
 trait ShiftUpdate
 
-case class SetShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
+case class ReplaceAllShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
 case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
@@ -204,7 +204,7 @@ class ShiftsActor(val now: () => SDateLike,
         (sender(), StatusReply.Ack),
       ))
 
-    case SetShifts(newShiftAssignments) =>
+    case ReplaceAllShifts(newShiftAssignments) =>
       if (newShiftAssignments != state) {
         log.info(s"Replacing shifts state with ${newShiftAssignments.size} shifts")
         purgeExpiredAndUpdateState(ShiftAssignments(newShiftAssignments))
