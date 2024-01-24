@@ -134,7 +134,6 @@ POST          /data/feed/:feedType/:portCode                                    
 # Training
 GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
-GET           /feature-guides                                                         controllers.Application.featureGuides
 GET           /drop-ins                                                               controllers.application.DropInsController.dropIns()
 + nocsrf
 POST          /drop-in-registrations                                                  controllers.application.DropInsController.createDropInRegistration()
