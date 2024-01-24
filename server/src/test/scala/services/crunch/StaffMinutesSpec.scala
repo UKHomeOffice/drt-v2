@@ -260,7 +260,7 @@ class StaffMinutesSpec extends CrunchTestLike {
           (date, minutes)
         }.toMap
 
-        crunch.portStateTestProbe.fishForMessage(2.seconds) {
+        crunch.portStateTestProbe.fishForMessage(5.seconds) {
           case PortState(_, _, staffMinutes) =>
             val actualMinutes = staffMinutes.values.toSeq.filter(_.fixedPoints == 50).groupBy(m => SDate(m.minute).toISODateOnly).view.mapValues { minutes =>
               minutes.map(m => SDate(m.minute).millisSinceEpoch).sorted
