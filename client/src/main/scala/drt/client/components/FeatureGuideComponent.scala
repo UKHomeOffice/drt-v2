@@ -83,9 +83,11 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                       "font-size" -> DrtTheme.theme.typography.h3.fontSize,
                       "font-weight" -> DrtTheme.theme.typography.h3.fontWeight,
                       "padding-top" -> "16px",
-                      "padding-bottom" -> "16px",
                     )))(<.span(data.title)),
-                    MuiGrid(item = true, xs = 12, sx = SxProps(Map()))
+                    MuiGrid(item = true, xs = 12, sx = SxProps(Map(
+                      "padding-right" -> "16px",
+                      "padding-bottom" -> "16px"
+                    )))
                     (TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
                   )
                 ))
