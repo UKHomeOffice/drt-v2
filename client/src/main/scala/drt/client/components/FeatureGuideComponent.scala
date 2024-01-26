@@ -72,20 +72,23 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                     ^.onPlay ==> recordFeatureGuideView(data.fileName.getOrElse("")))),
                 MuiGrid(item = true, xs = 4, sx = SxProps(Map(
                   "backgroundColor" -> "#FFFFFF",
-                  "padding" -> "16px",
-                  "border-top" -> "32px solid #C0C7DE",
+                  "margin-top" -> "16px",
+                  "border-top" -> "16px solid #C0C7DE",
                   "border-right" -> "16px solid #C0C7DE",
                   "border-bottom" -> "16px solid #C0C7DE",
                   "border-left" -> "0px solid #C0C7DE",
                 )))(
-                  MuiGrid(container = true, spacing = 2)(
+                  MuiGrid(container = true, spacing = 2 , sx = SxProps(Map("overflow" -> "auto","height" -> "400px")))(
                     MuiGrid(item = true, xs = 12, sx = SxProps(Map(
                       "font-size" -> DrtTheme.theme.typography.h3.fontSize,
                       "font-weight" -> DrtTheme.theme.typography.h3.fontWeight,
-                      "padding-bottom" -> "16px",
+                      "padding-top" -> "16px",
                     )))(<.span(data.title)),
                     MuiGrid(item = true, xs = 12, sx = SxProps(Map(
-                    )))(TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
+                      "padding-right" -> "16px",
+                      "padding-bottom" -> "16px"
+                    )))
+                    (TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
                   )
                 ))
             })
