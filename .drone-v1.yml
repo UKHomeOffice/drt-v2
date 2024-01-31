@@ -17,7 +17,7 @@ steps:
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ARTIFACTORY_USERNAME: drt_ci
       ENV_LOG_LEVEL: ERROR
       KEYTOOL_PASSWORD:
         from_secret: KEYTOOL_PASSWORD
@@ -71,7 +71,7 @@ steps:
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ARTIFACTORY_USERNAME: drt_ci
       ENV_LOG_LEVEL: ERROR
     when:
       event:
@@ -89,7 +89,7 @@ steps:
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ARTIFACTORY_USERNAME: drt_ci
       ENV_LOG_LEVEL: ERROR
     when:
       event:
@@ -109,7 +109,7 @@ steps:
       NVD_BASE_URL: http://nvdmirror:8008
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ARTIFACTORY_USERNAME: drt_ci
       ENV_LOG_LEVEL: ERROR
     when:
       event:
@@ -129,7 +129,7 @@ steps:
       NVD_BASE_URL: http://nvdmirror:8008
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
-      ARTIFACTORY_USERNAME: drt-artifactory-robot
+      ARTIFACTORY_USERNAME: drt_ci
       ENV_LOG_LEVEL: ERROR
     when:
       event:
