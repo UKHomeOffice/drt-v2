@@ -144,7 +144,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
 
 
 @Singleton
-case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
+case class TestDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters, now: () => SDateLike)
                                   (implicit val materializer: Materializer,
                                    val ec: ExecutionContext,
                                    val system: ActorSystem,

@@ -32,7 +32,7 @@ import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import javax.inject.Singleton
 import scala.collection.SortedSet
@@ -42,7 +42,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Singleton
-case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters)
+case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters, now: () => SDateLike)
                                   (implicit val materializer: Materializer,
                                    val ec: ExecutionContext,
                                    val system: ActorSystem,

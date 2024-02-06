@@ -12,7 +12,7 @@ import upickle.default.write
 import scala.concurrent.Future
 
 
-class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface, currentDate: () => SDateLike) extends AuthController(cc, ctrl) {
+class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def getForecastAccuracy(dateStr: String): Action[AnyContent] = auth {
     val daysToCalculate = List(1, 3, 7, 14, 30)
@@ -21,7 +21,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       val maybeResponse = for {
         date <- LocalDate.parse(dateStr)
       } yield {
-        ForecastAccuracyCalculator(date, daysToCalculate, ctrl.actualPaxNos, ctrl.forecastPaxNos, currentDate().toLocalDate)
+        ForecastAccuracyCalculator(date, daysToCalculate, ctrl.actualPaxNos, ctrl.forecastPaxNos, ctrl.now().toLocalDate)
       }
       maybeResponse match {
         case Some(eventualAccuracy) =>
@@ -35,7 +35,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   def forecastAccuracyExport(daysForComparison: Int, daysAhead: Int): Action[AnyContent] = auth {
     Action { _ =>
       val stream = ForecastAccuracyCalculator
-        .predictionsVsLegacyForecast(daysForComparison, daysAhead, ctrl.actualArrivals, ctrl.forecastArrivals, currentDate().toLocalDate)
+        .predictionsVsLegacyForecast(daysForComparison, daysAhead, ctrl.actualArrivals, ctrl.forecastArrivals, ctrl.now().toLocalDate)
         .map {
           case (date, terminal, e) =>
             f"${date.toISOString},${terminal.toString},${maybeDoubleToPctString(e.predictionRmse)},${maybeDoubleToPctString(e.legacyRmse)},${maybeDoubleToPctString(e.predictionError)},${maybeDoubleToPctString(e.legacyError)}\n"

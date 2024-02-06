@@ -98,7 +98,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
   implicit val system: ActorSystem
   implicit val timeout: Timeout
 
-  val now: () => SDateLike = () => SDate.now()
+  val now: () => SDateLike
 
   val manifestLookupService: ManifestLookupLike
 

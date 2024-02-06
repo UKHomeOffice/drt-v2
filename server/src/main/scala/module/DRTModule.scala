@@ -27,8 +27,11 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   val airportConfig = DrtActorSystem.airportConfig
 
   lazy val mockDrtParameters: MockDrtParameters = MockDrtParameters()
-  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, mockDrtParameters)
-  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config))
+
+  val now: () => SDateLike = () => SDate.now()
+
+  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, mockDrtParameters, now)
+  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config), now)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(4.seconds)
@@ -73,8 +76,6 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
     ActorSystem("DRT-Module")
   }
 
-  @Provides
-  def provideCurrentDate: () => SDateLike = () => SDate.now()
 
   @Provides
   def provideDrtSystemInterface: DrtSystemInterface =

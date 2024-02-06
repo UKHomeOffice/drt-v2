@@ -11,7 +11,7 @@ import play.api.test.{FakeRequest, Helpers}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, MlFeedSource}
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
@@ -25,7 +25,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   implicit val timeout: akka.util.Timeout = 5.seconds
 
   "ForecastAccuracyController" should {
-    val controller: ForecastAccuracyController = forecastAccuracyController(forecastPax = 120, actualPax = 100)
+    val controller: ForecastAccuracyController = forecastAccuracyController(forecastPax = 120, mlPax = 150, actualPax = 100)
     "get forecast accuracy percentage" in {
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
 
@@ -46,18 +46,18 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       contentType(result) must ===(Some("text/csv"))
       contentAsString(result) must ===(
         s"""Date,Terminal,Prediction RMSE,Legacy RMSE,Prediction Error,Legacy Error
-           |2023-01-31,T1,-,20.000,-,20.000
+           |2023-01-31,T1,50.000,20.000,50.000,20.000
            |""".stripMargin)
     }
   }
 
-  private def forecastAccuracyController(forecastPax: Int, actualPax: Int) = {
+  private def forecastAccuracyController(forecastPax: Int, mlPax: Int, actualPax: Int) = {
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
-      override val provideCurrentDate = () => SDate("2023-02-01T00:00")
+      override val now = () => SDate("2023-02-01T00:00")
     }
 
-    val drtSystemInterface: DrtSystemInterface = new TestDrtSystem(module.airportConfig, module.mockDrtParameters) {
+    val drtSystemInterface: DrtSystemInterface = new TestDrtSystem(module.airportConfig, module.mockDrtParameters, module.now) {
 
       override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
         (_, _) => Future.successful(Map(Terminal("T1") -> forecastPax))
@@ -69,18 +69,21 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
         Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
           schDt = "2023-10-20T12:25",
           terminal = T1,
-          passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastPax), None))))))
+          passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastPax), None),
+            MlFeedSource -> Passengers(Some(mlPax), None))))))
 
       override val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = _ => Future.successful(
         Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
           schDt = "2023-10-20T12:25",
           terminal = T1,
           passengerSources = Map(LiveFeedSource -> Passengers(Some(actualPax), None),
-            ForecastFeedSource -> Passengers(Some(forecastPax), None)
-          )))))
+            ForecastFeedSource -> Passengers(Some(forecastPax), None),
+            MlFeedSource -> Passengers(Some(mlPax), None))
+        )))
+      )
 
     }
 
-    new ForecastAccuracyController(Helpers.stubControllerComponents(), drtSystemInterface, module.provideCurrentDate)
+    new ForecastAccuracyController(Helpers.stubControllerComponents(), drtSystemInterface)
   }
 }
