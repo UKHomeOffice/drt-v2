@@ -15,6 +15,7 @@ import play.api.libs.concurrent.AkkaGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
 import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -71,6 +72,9 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   } else {
     ActorSystem("DRT-Module")
   }
+
+  @Provides
+  def provideCurrentDate: () => SDateLike = () => SDate.now()
 
   @Provides
   def provideDrtSystemInterface: DrtSystemInterface =

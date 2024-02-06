@@ -184,7 +184,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     flightValuesForDate(
       date,
       Option(atTime),
-      arrival => SDate(arrival.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date,
+      arrival => SDate(arrival.Scheduled).toLocalDate == date,
       arrivals => arrivals.map(arrival => arrival.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
     )
 
@@ -192,7 +192,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     flightValuesForDate(
       date,
       None,
-      arrival => SDate(arrival.bestArrivalTime(airportConfig.useTimePredictions)).toLocalDate == date,
+      arrival => SDate(arrival.Scheduled).toLocalDate == date,
       arrivals => arrivals.map(arrival => arrival.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
     )
 
