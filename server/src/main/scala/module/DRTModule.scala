@@ -15,6 +15,7 @@ import play.api.libs.concurrent.AkkaGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
 import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
@@ -26,8 +27,11 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   val airportConfig = DrtActorSystem.airportConfig
 
   lazy val mockDrtParameters: MockDrtParameters = MockDrtParameters()
-  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, mockDrtParameters)
-  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config))
+
+  val now: () => SDateLike = () => SDate.now()
+
+  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, mockDrtParameters, now)
+  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config), now)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(4.seconds)
@@ -71,6 +75,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   } else {
     ActorSystem("DRT-Module")
   }
+
 
   @Provides
   def provideDrtSystemInterface: DrtSystemInterface =
