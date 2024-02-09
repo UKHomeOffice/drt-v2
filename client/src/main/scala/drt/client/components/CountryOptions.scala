@@ -123,6 +123,7 @@ object CountryOptions {
     Country(twoLetterCode = "KI", threeLetterCode = "KIR", name = "Kiribati", id = 296),
     Country(twoLetterCode = "KP", threeLetterCode = "PRK", name = "Korea (the Democratic People's Republic of)", id = 408),
     Country(twoLetterCode = "KR", threeLetterCode = "KOR", name = "Korea (the Republic of)", id = 410),
+    Country(twoLetterCode = "KS", threeLetterCode = "RKS", name = "Kosovo", id = 411),
     Country(twoLetterCode = "KW", threeLetterCode = "KWT", name = "Kuwait", id = 414),
     Country(twoLetterCode = "KG", threeLetterCode = "KGZ", name = "Kyrgyzstan", id = 417),
     Country(twoLetterCode = "LA", threeLetterCode = "LAO", name = "Lao People's Democratic Republic (the)", id = 418),
