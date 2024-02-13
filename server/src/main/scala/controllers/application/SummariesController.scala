@@ -4,7 +4,6 @@ import actors.DateRange
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import uk.gov.homeoffice.drt.models.PassengersSummaryFormat.JsonFormat
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
 import play.api.mvc._
 import services.graphstages.Crunch
@@ -12,6 +11,7 @@ import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
+import uk.gov.homeoffice.drt.jsonformats.PassengersSummaryFormat.JsonFormat
 import uk.gov.homeoffice.drt.models.PassengersSummary
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
