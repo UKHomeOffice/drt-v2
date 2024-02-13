@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v728"
+    val drtLib = "v753"
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
@@ -180,6 +180,7 @@ object Settings {
 
     "joda-time" % "joda-time" % jodaTime,
 
+    "ch.qos.logback" % "logback-classic" % "1.3.5",
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
@@ -205,7 +206,7 @@ object Settings {
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
-    "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
+    "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
     "uk.gov.service.notify" % "notifications-java-client" % "4.1.0-RELEASE",
