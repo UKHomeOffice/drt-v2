@@ -492,8 +492,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
       Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
     val flushArrivalsSource: Source[Boolean, SourceQueueWithComplete[Boolean]] = Source.queue[Boolean](100, OverflowStrategy.backpressure)
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
-    val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
-      log.info(s"Flight predictions enabled")
+    val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
       ArrivalPredictions(
         (a: Arrival) => Iterable(
           TerminalOrigin(a.Terminal.toString, a.Origin.iata),
@@ -509,10 +508,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
         ),
         15
       ).addPredictions
-    } else {
-      log.info(s"Touchdown predictions disabled. Using noop lookup")
-      diff => Future.successful(diff)
-    }
 
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
