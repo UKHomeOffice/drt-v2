@@ -4,22 +4,20 @@ import actors.DateRange
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import controllers.application.PassengersJsonFormat.JsonFormat
+import uk.gov.homeoffice.drt.models.PassengersSummaryFormat.JsonFormat
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
 import play.api.mvc._
 import services.graphstages.Crunch
-import slick.dbio.Effect
-import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
+import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.Db.slickProfile
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
+import uk.gov.homeoffice.drt.models.PassengersSummary
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
-import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
@@ -176,42 +174,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           (Option(sdate.toLocalDate), Option(sdate.getHours))
         case _ => (None, None)
       }
-      PassengersJson(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
+      PassengersSummary(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
     }
-}
-
-case class PassengersJson(regionName: String,
-                          portCode: String,
-                          terminalName: Option[String],
-                          totalPcpPax: Int,
-                          queueCounts: Map[Queue, Int],
-                          maybeDate: Option[LocalDate],
-                          maybeHour: Option[Int],
-                         )
-
-object PassengersJsonFormat extends DefaultJsonProtocol {
-  implicit object JsonFormat extends RootJsonFormat[PassengersJson] {
-
-    override def read(json: JsValue): PassengersJson = throw new Exception("Not implemented")
-
-    override def write(obj: PassengersJson): JsValue = {
-      val maybeTerminal = obj.terminalName.map(terminalName => "terminalName" -> JsString(terminalName))
-      val maybeDate = obj.maybeDate.map(date => "date" -> JsString(date.toISOString))
-      val maybeHour = obj.maybeHour.map(hour => "hour" -> JsNumber(hour))
-
-      val fields = SortedMap(
-        "regionName" -> JsString(obj.regionName),
-        "portCode" -> JsString(obj.portCode),
-        "totalPcpPax" -> JsNumber(obj.totalPcpPax),
-        "queueCounts" -> JsArray(obj.queueCounts.map {
-          case (queue, count) => JsObject(Map(
-            "queueName" -> JsString(Queues.displayName(queue)),
-            "count" -> JsNumber(count)
-          ))
-        }.toVector),
-      ) ++ maybeTerminal ++ maybeDate ++ maybeHour
-
-      JsObject(fields)
-    }
-  }
 }
