@@ -1,5 +1,5 @@
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
-import sbt._
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
+import sbt.*
 
 /**
  * Application settings. Configure the build for your application here.
@@ -66,7 +66,6 @@ object Settings {
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.1.15"
-    val sprayJsonScalaJs = "1.3.6"
     val scalaTestVersion = "3.2.17"
     val twirlApi = "1.6.3"
     val mockitoVersion = "4.11.0"
@@ -77,7 +76,7 @@ object Settings {
     val jwtCore = "9.4.5"
   }
 
-  import versions._
+  import versions.*
 
   val clientNpmDependencies: Seq[(String, String)] = Seq(
     "react" -> react,
