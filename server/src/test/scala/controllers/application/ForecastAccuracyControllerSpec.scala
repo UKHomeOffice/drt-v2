@@ -31,13 +31,13 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   implicit val timeout: akka.util.Timeout = 5.seconds
 
   "ForecastAccuracyController" should {
-    val forecastArrivalPax = 150
+    val forecastArrivalPax = 120
     val forecastArrivalTransPax = 10
     val forecastArrivalModelPax = 150
     val paxSources: Map[FeedSource, Passengers] = Map(ForecastFeedSource -> Passengers(Option(forecastArrivalPax), Option(forecastArrivalTransPax)))
     val arrival = ArrivalGenerator.arrival(maxPax = Option(100), passengerSources = paxSources)
     val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
-    val controller: ForecastAccuracyController = forecastAccuracyController(forecastPax = 120, mlPax = forecastArrivalModelPax, actualPax = 100, flights = flights)
+    val controller: ForecastAccuracyController = forecastAccuracyController(forecastPax = forecastArrivalPax, mlPax = forecastArrivalModelPax, actualPax = 100, flights = flights)
     "get forecast accuracy percentage" in {
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
 
