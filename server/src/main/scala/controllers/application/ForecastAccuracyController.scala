@@ -74,8 +74,9 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
             val localDate = ctrl.now().addDays(day).toLocalDate
             terminalFlights(localDate)
               .map { arrivals =>
-                val predPaxs = sortedModels.collect { case (_, model: ArrivalModelAndFeatures) => predictedPaxTotal(model, localDate, arrivals) }
-                val forecastPax = forecastPaxTotal(localDate, arrivals)
+                val validArrivals = arrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
+                val predPaxs = sortedModels.collect { case (_, model: ArrivalModelAndFeatures) => predictedPaxTotal(model, localDate, validArrivals) }
+                val forecastPax = forecastPaxTotal(localDate, validArrivals)
                 (Seq(localDate, forecastPax.toString) ++ predPaxs.map(_.toString)).mkString(",") + "\n"
               }
           }
