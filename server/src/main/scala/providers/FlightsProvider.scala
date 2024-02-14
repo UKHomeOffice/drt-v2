@@ -5,6 +5,7 @@ import actors.PartitionedPortStateActor.FlightsRequest
 import akka.NotUsed
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
@@ -24,38 +25,12 @@ case class FlightsProvider(flightsRouterActor: ActorRef)
       flightsByUtcDate(request)
     }
 
-  def terminalLocalDate: Terminal => LocalDate => Source[Seq[ApiFlightWithSplits], NotUsed] =
-    terminal => (start, end) => (terminal, localDate) => {
-      val sdate = SDate(localDate)
-      val utcDates = Set(sdate.toUtcDate, sdate.addDays(1).addMinutes(-1).toUtcDate)
-      val preProcess = populateMaxPax()
-      Source(utcDates.toList)
-        .mapAsync(1) { utcDate =>
-          val actor = system.actorOf(Props(new FlightsActor(terminal, utcDate, None)))
-          actor
-            .ask(GetState)
-            .mapTo[Seq[Arrival]].map { arrivals =>
-              actor ! PoisonPill
-              arrivals
-                .filter { a =>
-                  SDate(a.Scheduled).toLocalDate == localDate && !a.Origin.isDomesticOrCta && !a.isCancelled
-                }
-                .map(a => (a.unique, a)).toMap.values.toSeq
-            }
-            .flatMap(preProcess(utcDate, _))
-            .recoverWith {
-              case t =>
-                log.error(s"Failed to get state for $terminal on $utcDate", t)
-                Future.successful(Seq.empty[Arrival])
-            }
-        }
-        .runWith(Sink.seq)
-        .map(_.flatten)
-        .recoverWith {
-          case t =>
-            log.error(s"Failed to get state for $terminal on $localDate", t)
-            Future.successful(Seq.empty[Arrival])
-        }
+  def terminalLocalDate(implicit mat: Materializer): Terminal => LocalDate => Future[Seq[ApiFlightWithSplits]] =
+    terminal => localDate => {
+      val startMillis = SDate(localDate).millisSinceEpoch
+      val endMillis = SDate(localDate).addDays(1).addMinutes(-1).millisSinceEpoch
+      val request = PartitionedPortStateActor.GetFlightsForTerminals(startMillis, endMillis, Seq(terminal))
+      flightsByUtcDate(request).map(_._2).runFold(Seq.empty[ApiFlightWithSplits])(_ ++ _)
     }
 
 
@@ -67,12 +42,11 @@ case class FlightsProvider(flightsRouterActor: ActorRef)
       flightsByUtcDate(request)
     }
 
-  private def flightsByUtcDate(request: FlightsRequest): Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = {
+  private def flightsByUtcDate(request: FlightsRequest): Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     Source
       .future(flightsRouterActor.ask(request).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
       .flatMapConcat(identity)
       .map {
         case (date, flights) => (date, flights.flights.values.toSeq)
       }
-  }
 }
