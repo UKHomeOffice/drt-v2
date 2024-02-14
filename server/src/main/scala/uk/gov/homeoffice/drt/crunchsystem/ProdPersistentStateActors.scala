@@ -1,15 +1,14 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
-import actors.DrtStaticParameters.{expireAfterMillis, time48HoursAgo, startOfTheMonth}
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors.DrtStaticParameters.expireAfterMillis
 import actors.persistent._
+import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.{AggregatedArrivalsActor, ManifestLookups}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import slickdb.ArrivalTable
 import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 
 object ProdPersistentStateActors {

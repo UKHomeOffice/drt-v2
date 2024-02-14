@@ -1,5 +1,5 @@
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
-import sbt._
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
+import sbt.*
 
 /**
  * Application settings. Configure the build for your application here.
@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v753"
+    val drtLib = "v758"
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
@@ -66,7 +66,6 @@ object Settings {
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.1.15"
-    val sprayJsonScalaJs = "1.3.5-7"
     val scalaTestVersion = "3.2.17"
     val twirlApi = "1.6.3"
     val mockitoVersion = "4.11.0"
@@ -77,9 +76,9 @@ object Settings {
     val jwtCore = "9.4.5"
   }
 
-  import versions._
+  import versions.*
 
-  val clientNpmDependencies = Seq(
+  val clientNpmDependencies: Seq[(String, String)] = Seq(
     "react" -> react,
     "react-dom" -> react,
     "log4javascript" -> log4Javascript,
@@ -118,7 +117,6 @@ object Settings {
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
-    "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
     "com.dedipresta" %%% "scala-crypto" % "1.0.0",
     "io.lemonlabs" %%% "scala-uri" % "4.0.3",
 
