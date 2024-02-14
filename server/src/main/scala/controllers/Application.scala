@@ -39,8 +39,6 @@ trait AirportConfProvider extends AirportConfiguration {
 
   def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
 
-  def useTimePredictions: Boolean = config.get[Boolean]("feature-flags.use-time-predictions")
-
   def noLivePortFeed: Boolean = config.get[Boolean]("feature-flags.no-live-port-feed")
 
   def aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)

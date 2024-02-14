@@ -14,7 +14,7 @@ object DrtActorSystem extends AirportConfProvider {
     val configForPort = getPortConfFromEnvVar.copy(
       contactEmail = contactEmail,
       outOfHoursContactPhone = oohPhone,
-      useTimePredictions = useTimePredictions,
+      useTimePredictions = true,
       noLivePortFeed = noLivePortFeed,
       aclDisabled = aclDisabled,
       idealStaffAsDefault = idealStaffAsDefault

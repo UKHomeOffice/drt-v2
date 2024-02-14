@@ -10,11 +10,11 @@ object PcpArrival {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  type FlightWalkTime = Arrival => Long
+  private type FlightWalkTime = Arrival => Long
 
-  def pcpFrom(firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime, considerPredictions: Boolean)
+  def pcpFrom(firstPaxOffMillis: Long, walkTimeForFlight: FlightWalkTime)
              (arrival: Arrival): MilliDate = {
-    val bestChoxTimeMillis: Long = arrival.bestArrivalTime(considerPredictions)
+    val bestChoxTimeMillis: Long = arrival.bestArrivalTime(considerPredictions = true)
     val walkTimeMillis = arrival.Predictions.predictions
       .get(WalkTimeModelAndFeatures.targetName)
       .map(_.toLong * oneSecondMillis)

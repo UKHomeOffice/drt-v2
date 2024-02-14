@@ -337,7 +337,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
   }
 
   private val pcpArrivalTimeCalculator: Arrival => MilliDate =
-    pcpFrom(airportConfig.firstPaxOffMillis, walkTimeProviderWithFallback, airportConfig.useTimePredictions)
+    pcpFrom(airportConfig.firstPaxOffMillis, walkTimeProviderWithFallback)
 
   val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff =>
     Future.successful {
