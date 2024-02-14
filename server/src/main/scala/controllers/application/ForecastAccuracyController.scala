@@ -82,16 +82,15 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     }
   }
 
-  private def predictedPaxTotal(model: ArrivalModelAndFeatures, localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits]) = {
+  private def predictedPaxTotal(model: ArrivalModelAndFeatures, localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits]): Int =
     arrivals.map { fws =>
       fws.apiFlight.MaxPax.map(mp => (model.prediction(fws.apiFlight).getOrElse(80).toDouble * mp / 100).round.toInt).getOrElse {
         log.warning(s"No max pax for ${fws.apiFlight.unique} on $localDate. Assuming freight, 0 pax")
         0
       }
     }.sum
-  }
 
-  private def forecastPaxTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits]): Int = {
+  private def forecastPaxTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits]): Int =
     arrivals
       .map { fws =>
         fws.apiFlight.bestPcpPaxEstimate(Seq(ForecastFeedSource, AclFeedSource)).getOrElse {
@@ -99,5 +98,4 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
           175
         }
       }.sum
-  }
 }
