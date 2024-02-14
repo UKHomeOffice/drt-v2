@@ -33,11 +33,16 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   "ForecastAccuracyController" should {
     val forecastArrivalPax = 120
     val forecastArrivalTransPax = 10
-    val forecastArrivalModelPax = 150
+    val mlPredPax = 150
+
+    val forecastTotalPax = 120
+    val mlFeedPax = 150
+    val liveFeedPax = 100
+
     val paxSources: Map[FeedSource, Passengers] = Map(ForecastFeedSource -> Passengers(Option(forecastArrivalPax), Option(forecastArrivalTransPax)))
     val arrival = ArrivalGenerator.arrival(maxPax = Option(100), passengerSources = paxSources)
     val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
-    val controller: ForecastAccuracyController = forecastAccuracyController(forecastPax = forecastArrivalPax, mlPax = forecastArrivalModelPax, actualPax = 100, flights = flights)
+    val controller: ForecastAccuracyController = forecastAccuracyController(forecastTotalPax, mlFeedPax, liveFeedPax, mlPredPax, flights)
     "get forecast accuracy percentage" in {
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
 
@@ -72,12 +77,12 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       contentType(result) must ===(Some("text/csv"))
       contentAsString(result) must ===(
         s"""Date,Forecast,$modelId
-           |2023-02-02,${forecastArrivalPax - forecastArrivalTransPax},$forecastArrivalModelPax
+           |2023-02-02,${forecastArrivalPax - forecastArrivalTransPax},$mlPredPax
            |""".stripMargin)
     }
   }
 
-  private def forecastAccuracyController(forecastPax: Int, mlPax: Int, actualPax: Int, flights: FlightsWithSplits) = {
+  private def forecastAccuracyController(forecastTotalPax: Int, mlFeedPax: Int, liveFeedPax: Int, mlPred: Int, flights: FlightsWithSplits) = {
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
       override val now = () => SDate("2023-02-01T00:00")
@@ -85,29 +90,29 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
 
     val drtSystemInterface: DrtSystemInterface = new TestDrtSystem(module.airportConfig, module.mockDrtParameters, module.now) {
       override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
-        (_, _) => Future.successful(Map(Terminal("T1") -> forecastPax))
+        (_, _) => Future.successful(Map(Terminal("T1") -> forecastTotalPax))
 
       override val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] =
-        _ => Future.successful(Map(Terminal("T1") -> actualPax))
+        _ => Future.successful(Map(Terminal("T1") -> liveFeedPax))
 
       override val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (_, _) => Future.successful(
         Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
           schDt = "2023-10-20T12:25",
           terminal = T1,
-          passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastPax), None),
-            MlFeedSource -> Passengers(Some(mlPax), None))))))
+          passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
+            MlFeedSource -> Passengers(Some(mlFeedPax), None))))))
 
       override val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = _ => Future.successful(
         Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
           schDt = "2023-10-20T12:25",
           terminal = T1,
-          passengerSources = Map(LiveFeedSource -> Passengers(Some(actualPax), None),
-            ForecastFeedSource -> Passengers(Some(forecastPax), None),
-            MlFeedSource -> Passengers(Some(mlPax), None))
+          passengerSources = Map(LiveFeedSource -> Passengers(Some(liveFeedPax), None),
+            ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
+            MlFeedSource -> Passengers(Some(mlFeedPax), None))
         )))
       )
 
-      override val flightModelPersistence: ModelPersistence = MockModelPersistence(mlPax)
+      override val flightModelPersistence: ModelPersistence = MockModelPersistence(mlPred)
       override val flightsRouterActor: ActorRef = system.actorOf(Props(new MockFlightsRouter(flights)))
     }
 
