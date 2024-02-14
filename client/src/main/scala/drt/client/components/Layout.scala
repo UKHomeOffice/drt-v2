@@ -96,7 +96,6 @@ object Layout {
                           <.div(^.className := "status-bar",
                             ApiStatusComponent(ApiStatusComponent.Props(
                               !airportConfig.noLivePortFeed,
-                              airportConfig.useTimePredictions,
                               terminal)),
                             PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
                           )

@@ -75,6 +75,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
+import uk.gov.homeoffice.drt.prediction.ModelPersistence
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -327,6 +328,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
   else
     AdjustmentsNoop
 
+  val flightModelPersistence: ModelPersistence = Flight()
+
   def run(): Unit
 
   private def walkTimeProviderWithFallback(arrival: Arrival): MillisSinceEpoch = {
@@ -337,7 +340,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
   }
 
   private val pcpArrivalTimeCalculator: Arrival => MilliDate =
-    pcpFrom(airportConfig.firstPaxOffMillis, walkTimeProviderWithFallback, airportConfig.useTimePredictions)
+    pcpFrom(airportConfig.firstPaxOffMillis, walkTimeProviderWithFallback)
 
   val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff =>
     Future.successful {
@@ -492,15 +495,14 @@ trait DrtSystemInterface extends UserRoleProviderLike
       Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
     val flushArrivalsSource: Source[Boolean, SourceQueueWithComplete[Boolean]] = Source.queue[Boolean](100, OverflowStrategy.backpressure)
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
-    val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
-      log.info(s"Flight predictions enabled")
+    val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
       ArrivalPredictions(
         (a: Arrival) => Iterable(
           TerminalOrigin(a.Terminal.toString, a.Origin.iata),
           TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
           PredictionModelActor.Terminal(a.Terminal.toString),
         ),
-        Flight().getModels(enabledPredictionModelNames),
+        flightModelPersistence.getModels(enabledPredictionModelNames),
         Map(
           OffScheduleModelAndFeatures.targetName -> 45,
           ToChoxModelAndFeatures.targetName -> 20,
@@ -509,10 +511,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
         ),
         15
       ).addPredictions
-    } else {
-      log.info(s"Touchdown predictions disabled. Using noop lookup")
-      diff => Future.successful(diff)
-    }
 
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,

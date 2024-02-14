@@ -311,7 +311,7 @@ class ArrivalsGraphStageLiveBaseArrivalsSpec extends CrunchTestLike with AfterEa
     success
   }
 
-  def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, _ => 0, considerPredictions = true)(a)
+  def pcpTimeCalc(a: Arrival): MilliDate = PcpArrival.pcpFrom(0, _ => 0)(a)
 
   def arrival(estimated: Option[Long] = None,
               predictions: Predictions = Predictions(0L, Map()),
