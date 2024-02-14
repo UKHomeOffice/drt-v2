@@ -1,5 +1,6 @@
 package controllers.application
 
+import actors.DateRange
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import com.google.inject.Inject
@@ -15,7 +16,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource}
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
-import uk.gov.homeoffice.drt.time.LocalDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -58,8 +59,11 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   private def maybeDoubleToPctString(double: Option[Double]): String =
     double.map(d => f"${d * 100}%.3f").getOrElse("-")
 
-  def forecastModelComparison(modelNames: String, terminalName: String, daysCount: Int): Action[AnyContent] = auth {
+  def forecastModelComparison(modelNames: String, terminalName: String, startDateStr: String, daysCount: Int): Action[AnyContent] = auth {
     Action.async { _ =>
+      val startDate = LocalDate
+        .parse(startDateStr)
+        .getOrElse(throw new Exception("Bad date format. Expected YYYY-mm-dd"))
       val terminal = Terminal(terminalName)
       val terminalFlights = FlightsProvider(ctrl.flightsRouterActor).terminalLocalDate(ctrl.materializer)(terminal)
       val id = PredictionModelActor.Terminal(terminalName)
@@ -71,7 +75,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         val headerRow = (Seq("Date","Forecast") ++ sortedModels.map(_._1)).mkString(",") + "\n"
         Source(1 to daysCount)
           .mapAsync(1) { day =>
-            val localDate = ctrl.now().addDays(day).toLocalDate
+            val localDate = SDate(startDate).addDays(day).toLocalDate
             terminalFlights(localDate)
               .map { arrivals =>
                 val validArrivals = arrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)

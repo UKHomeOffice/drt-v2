@@ -71,7 +71,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
 
       val modelId = "some-model-id"
-      val result = controller.forecastModelComparison(modelId, "T1", 1).apply(request)
+      val result = controller.forecastModelComparison(modelId, "T1", "2024-02-14", 1).apply(request)
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/csv"))
