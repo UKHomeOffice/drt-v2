@@ -59,10 +59,13 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   private def maybeDoubleToPctString(double: Option[Double]): String =
     double.map(d => f"${d * 100}%.3f").getOrElse("-")
 
-  def forecastModelComparison(modelNames: String, terminalName: String, startDateStr: String, daysCount: Int): Action[AnyContent] = auth {
+  def forecastModelComparison(modelNames: String, terminalName: String, startDateStr: String, endDateStr: String): Action[AnyContent] = auth {
     Action.async { _ =>
       val startDate = LocalDate
         .parse(startDateStr)
+        .getOrElse(throw new Exception("Bad date format. Expected YYYY-mm-dd"))
+      val endDate = LocalDate
+        .parse(endDateStr)
         .getOrElse(throw new Exception("Bad date format. Expected YYYY-mm-dd"))
       val terminal = Terminal(terminalName)
       val terminalFlights = FlightsProvider(ctrl.flightsRouterActor).terminalLocalDate(ctrl.materializer)(terminal)
@@ -73,9 +76,8 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       getModelsForId(id).flatMap { models =>
         val sortedModels = models.models.toList.sortBy(_._1)
         val headerRow = (Seq("Date","Forecast") ++ sortedModels.map(_._1)).mkString(",") + "\n"
-        Source(1 to daysCount)
-          .mapAsync(1) { day =>
-            val localDate = SDate(startDate).addDays(day).toLocalDate
+        Source(DateRange(startDate, endDate))
+          .mapAsync(1) { localDate =>
             terminalFlights(localDate)
               .map { arrivals =>
                 val validArrivals = arrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
