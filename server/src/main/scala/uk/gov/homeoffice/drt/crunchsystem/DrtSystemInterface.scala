@@ -75,6 +75,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
+import uk.gov.homeoffice.drt.prediction.ModelPersistence
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -327,6 +328,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
   else
     AdjustmentsNoop
 
+  val flightModelPersistence: ModelPersistence = Flight()
+
   def run(): Unit
 
   private def walkTimeProviderWithFallback(arrival: Arrival): MillisSinceEpoch = {
@@ -499,7 +502,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
           TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
           PredictionModelActor.Terminal(a.Terminal.toString),
         ),
-        Flight().getModels(enabledPredictionModelNames),
+        flightModelPersistence.getModels(enabledPredictionModelNames),
         Map(
           OffScheduleModelAndFeatures.targetName -> 45,
           ToChoxModelAndFeatures.targetName -> 20,

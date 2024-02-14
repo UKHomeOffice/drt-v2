@@ -1,10 +1,11 @@
 package controllers.application
 
-import akka.NotUsed
 import akka.stream.scaladsl.{Sink, Source}
+import akka.util.ByteString
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
-import play.api.mvc.{Action, AnyContent, ControllerComponents}
+import play.api.http.HttpEntity
+import play.api.mvc._
 import providers.FlightsProvider
 import services.accuracy.ForecastAccuracyCalculator
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
@@ -63,21 +64,29 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       val terminalFlights = FlightsProvider(ctrl.flightsRouterActor).terminalLocalDate(ctrl.materializer)(terminal)
       val id = PredictionModelActor.Terminal(terminalName)
       val modelNamesList = modelNames.split(",").toList
-      val getModelsForId: PredictionModelActor.WithId => Future[PredictionModelActor.Models] = Flight().getModels(modelNamesList)
-      val headerRow = (Seq("Date","Forecast") ++ modelNamesList).mkString(",") + "\n"
+      val getModelsForId: PredictionModelActor.WithId => Future[PredictionModelActor.Models] = ctrl.flightModelPersistence.getModels(modelNamesList)
+
       getModelsForId(id).flatMap { models =>
+        val sortedModels = models.models.toList.sortBy(_._1)
+        val headerRow = (Seq("Date","Forecast") ++ sortedModels.map(_._1)).mkString(",") + "\n"
         Source(1 to daysCount)
           .mapAsync(1) { day =>
             val localDate = ctrl.now().addDays(day).toLocalDate
             terminalFlights(localDate)
               .map { arrivals =>
-                val predPaxs = models.models.collect { case (_, model: ArrivalModelAndFeatures) => predictedPaxTotal(model, localDate, arrivals) }
+                val predPaxs = sortedModels.collect { case (_, model: ArrivalModelAndFeatures) => predictedPaxTotal(model, localDate, arrivals) }
                 val forecastPax = forecastPaxTotal(localDate, arrivals)
                 (Seq(localDate, forecastPax.toString) ++ predPaxs.map(_.toString)).mkString(",") + "\n"
               }
           }
           .runWith(Sink.seq)
-          .map(rows => Ok(headerRow + rows.mkString))
+          .map { rows =>
+            val content = headerRow + rows.mkString
+            Result(
+              header = ResponseHeader(200, Map("Content-Type" -> "application/json")),
+              body = HttpEntity.Strict(ByteString(content), Option("text/csv"))
+            )
+          }
       }
     }
   }

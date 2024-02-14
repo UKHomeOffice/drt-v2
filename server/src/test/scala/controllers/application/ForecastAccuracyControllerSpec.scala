@@ -1,19 +1,25 @@
 package controllers.application
 
-import akka.actor.ActorSystem
+import akka.Done
+import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import module.DRTModule
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers.{OK, contentAsString, contentType, status}
 import play.api.test.{FakeRequest, Helpers}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
+import uk.gov.homeoffice.drt.actor.PredictionModelActor
+import uk.gov.homeoffice.drt.actor.PredictionModelActor.Models
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, MlFeedSource}
+import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, MlFeedSource}
+import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
+import uk.gov.homeoffice.drt.prediction.{FeaturesWithOneToManyValues, ModelPersistence, RegressionModel}
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
@@ -25,7 +31,13 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   implicit val timeout: akka.util.Timeout = 5.seconds
 
   "ForecastAccuracyController" should {
-    val controller: ForecastAccuracyController = forecastAccuracyController(forecastPax = 120, mlPax = 150, actualPax = 100)
+    val forecastArrivalPax = 150
+    val forecastArrivalTransPax = 10
+    val forecastArrivalModelPax = 150
+    val paxSources: Map[FeedSource, Passengers] = Map(ForecastFeedSource -> Passengers(Option(forecastArrivalPax), Option(forecastArrivalTransPax)))
+    val arrival = ArrivalGenerator.arrival(maxPax = Option(100), passengerSources = paxSources)
+    val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
+    val controller: ForecastAccuracyController = forecastAccuracyController(forecastPax = 120, mlPax = forecastArrivalModelPax, actualPax = 100, flights = flights)
     "get forecast accuracy percentage" in {
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
 
@@ -37,7 +49,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
 
     }
 
-    "get forecast Accuracy predication csv" in {
+    "get forecast Accuracy prediction csv" in {
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
 
       val result = controller.forecastAccuracyExport(1, 1).apply(request)
@@ -49,16 +61,29 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
            |2023-01-31,T1,50.000,20.000,50.000,20.000
            |""".stripMargin)
     }
+
+    "get forecast comparison csv" in {
+      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
+
+      val modelId = "some-model-id"
+      val result = controller.forecastModelComparison(modelId, "T1", 1).apply(request)
+
+      status(result) must ===(OK)
+      contentType(result) must ===(Some("text/csv"))
+      contentAsString(result) must ===(
+        s"""Date,Forecast,$modelId
+           |2023-02-02,${forecastArrivalPax - forecastArrivalTransPax},$forecastArrivalModelPax
+           |""".stripMargin)
+    }
   }
 
-  private def forecastAccuracyController(forecastPax: Int, mlPax: Int, actualPax: Int) = {
+  private def forecastAccuracyController(forecastPax: Int, mlPax: Int, actualPax: Int, flights: FlightsWithSplits) = {
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
       override val now = () => SDate("2023-02-01T00:00")
     }
 
     val drtSystemInterface: DrtSystemInterface = new TestDrtSystem(module.airportConfig, module.mockDrtParameters, module.now) {
-
       override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
         (_, _) => Future.successful(Map(Terminal("T1") -> forecastPax))
 
@@ -82,8 +107,37 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
         )))
       )
 
+      override val flightModelPersistence: ModelPersistence = MockModelPersistence(mlPax)
+      override val flightsRouterActor: ActorRef = system.actorOf(Props(new MockFlightsRouter(flights)))
     }
 
     new ForecastAccuracyController(Helpers.stubControllerComponents(), drtSystemInterface)
+  }
+
+  case class MockModelPersistence(pax: Int) extends ModelPersistence {
+    override def getModels(validModelNames: Seq[String]): PredictionModelActor.WithId => Future[PredictionModelActor.Models] =
+      _ => Future.successful(Models(Map("some-model-id" -> new ArrivalModelAndFeatures {
+        override val model: RegressionModel = RegressionModel(Seq(), 1)
+        override val features: FeaturesWithOneToManyValues = FeaturesWithOneToManyValues(List(), IndexedSeq())
+        override val targetName: String = "some-model-id"
+        override val examplesTrainedOn: Int = 1000
+        override val improvementPct: Double = 50
+        override val featuresVersion: Int = 1
+
+        override def prediction(arrival: Arrival): Option[Int] = Some(pax)
+      })))
+
+    override val persist: (PredictionModelActor.WithId, Int, Any, FeaturesWithOneToManyValues, Int, Double, String) => Future[Done] =
+      (_, _, _, _, _, _, _) => Future.successful(Done)
+    override val clear: (PredictionModelActor.WithId, String) => Future[Done] =
+      (_, _) => Future.successful(Done)
+  }
+
+  class MockFlightsRouter(flights: FlightsWithSplits) extends Actor {
+    override def receive: Receive = {
+      case _ =>
+        val date = UtcDate(2023, 1, 1)
+        sender() ! Source(List((date, flights)))
+    }
   }
 }
