@@ -13,10 +13,9 @@ import uk.gov.homeoffice.drt.actor.PredictionModelActor
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, ForecastFeedSource, HistoricApiFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
-import uk.gov.homeoffice.drt.prediction.persistence.Flight
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.write
 
 import scala.concurrent.Future
@@ -83,8 +82,8 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
             terminalFlights(localDate)
               .map { arrivals =>
                 val validArrivals = arrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
-                val actPax = feedPaxTotal(localDate, validArrivals, Seq(LiveFeedSource))
-                val actCapPct = feedCapPctTotal(localDate, validArrivals, Seq(LiveFeedSource))
+                val actPax = feedPaxTotal(localDate, validArrivals, Seq(LiveFeedSource, ApiFeedSource))
+                val actCapPct = feedCapPctTotal(localDate, validArrivals, Seq(LiveFeedSource, ApiFeedSource))
                 val predPaxs = sortedModels.collect { case (_, model: ArrivalModelAndFeatures) => predictedPaxTotal(model, localDate, validArrivals) }
                 val predCapPct = sortedModels.collect { case (_, model: ArrivalModelAndFeatures) => predictedCapPctTotal(model, localDate, validArrivals) }
                 val forecastPax = feedPaxTotal(localDate, validArrivals, Seq(ForecastFeedSource))
