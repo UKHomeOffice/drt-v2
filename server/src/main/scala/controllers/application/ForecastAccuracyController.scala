@@ -126,14 +126,17 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       }
     }.sum.toDouble / arrivals.length
 
-  private def feedPaxTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Int =
-    arrivals
-      .map { fws =>
-        fws.apiFlight.bestPcpPaxEstimate(feedsPreference).getOrElse {
-          log.warning(s"No port or acl forecast for ${fws.apiFlight.unique} on $localDate. Using 0 for a default")
-          0
-        }
-      }.sum
+  private def feedPaxTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Int = {
+    if (localDate < SDate.now().toLocalDate) 0
+    else
+      arrivals
+        .map { fws =>
+          fws.apiFlight.bestPcpPaxEstimate(feedsPreference).getOrElse {
+            log.warning(s"No port or acl forecast for ${fws.apiFlight.unique} on $localDate. Using 0 for a default")
+            0
+          }
+        }.sum
+  }
 
   private def feedCapPctTotal(arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Double =
     arrivals

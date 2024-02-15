@@ -90,7 +90,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
            |""".stripMargin)
     }
   }
-  
+
   private def forecastAccuracyController(forecastTotalPax: Int, mlFeedPax: Int, liveFeedPax: Int, mlPred: Int, flights: FlightsWithSplits) = {
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
