@@ -31,18 +31,23 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   implicit val timeout: akka.util.Timeout = 5.seconds
 
   "ForecastAccuracyController" should {
+    val liveArrivalPax = 80
     val forecastArrivalPax = 120
     val forecastArrivalTransPax = 10
-    val mlPredPax = 150
+    val mlPredCapPct = 75
+    val maxPax = 200
 
     val forecastTotalPax = 120
     val mlFeedPax = 150
     val liveFeedPax = 100
 
-    val paxSources: Map[FeedSource, Passengers] = Map(ForecastFeedSource -> Passengers(Option(forecastArrivalPax), Option(forecastArrivalTransPax)))
-    val arrival = ArrivalGenerator.arrival(maxPax = Option(100), passengerSources = paxSources)
+    val paxSources: Map[FeedSource, Passengers] = Map(
+      LiveFeedSource -> Passengers(Option(liveArrivalPax), None),
+      ForecastFeedSource -> Passengers(Option(forecastArrivalPax), Option(forecastArrivalTransPax))
+    )
+    val arrival = ArrivalGenerator.arrival(maxPax = Option(maxPax), passengerSources = paxSources)
     val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
-    val controller: ForecastAccuracyController = forecastAccuracyController(forecastTotalPax, mlFeedPax, liveFeedPax, mlPredPax, flights)
+    val controller: ForecastAccuracyController = forecastAccuracyController(forecastTotalPax, mlFeedPax, liveFeedPax, mlPredCapPct, flights)
     "get forecast accuracy percentage" in {
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
 
@@ -71,17 +76,21 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
 
       val modelId = "some-model-id"
-      val result = controller.forecastModelComparison(modelId, "T1", "2024-02-14", 1).apply(request)
+      val result = controller.forecastModelComparison(modelId, "T1", "2024-02-14", "2024-02-14").apply(request)
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/csv"))
+      val forecastPcp = forecastArrivalPax - forecastArrivalTransPax
+      val fcstCapPct = forecastPcp.toDouble / maxPax * 100
+      val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
+      val liveCapPct = liveArrivalPax.toDouble / maxPax * 100
       contentAsString(result) must ===(
-        s"""Date,Forecast,$modelId
-           |2023-02-02,${forecastArrivalPax - forecastArrivalTransPax},$mlPredPax
+        f"""Date,Act,Port Forecast,DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,DRT Forecast Cap%%,$modelId Cap%%
+           |2024-02-14,$liveArrivalPax,$forecastPcp,0,$mlPax,$liveCapPct%.2f,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
            |""".stripMargin)
     }
   }
-
+  
   private def forecastAccuracyController(forecastTotalPax: Int, mlFeedPax: Int, liveFeedPax: Int, mlPred: Int, flights: FlightsWithSplits) = {
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
