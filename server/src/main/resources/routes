@@ -83,7 +83,7 @@ GET           /export/port-config                                               
 GET           /export/desk-rec-simulation                                             controllers.application.SimulationsController.simulationExport
 GET           /desk-rec-simulation                                                    controllers.application.SimulationsController.simulation
 
-GET           /forecast-accuracy/compare/:modelNames/:terminalName/:daysCount         controllers.application.ForecastAccuracyController.forecastModelComparison(modelNames: String, terminalName: String, daysCount: Int)
+GET           /forecast-accuracy/compare/:modelNames/:terminalName/:startDate/:endDate  controllers.application.ForecastAccuracyController.forecastModelComparison(modelNames: String, terminalName: String, startDate: String, endDate: String)
 GET           /forecast-accuracy/:date                                                controllers.application.ForecastAccuracyController.getForecastAccuracy(date: String)
 GET           /export/forecast-accuracy/:daysForComparison/:daysAhead                 controllers.application.ForecastAccuracyController.forecastAccuracyExport(daysForComparison: Int, daysAhead: Int)
 
