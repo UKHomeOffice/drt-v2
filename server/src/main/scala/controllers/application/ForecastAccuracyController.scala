@@ -84,13 +84,13 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
               .map { arrivals =>
                 val validArrivals = arrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
                 val actPax = feedPaxTotal(localDate, validArrivals, Seq(LiveFeedSource))
-                val actCapPct = feedCapPctTotal(validArrivals, Seq(LiveFeedSource))
+                val actCapPct = feedCapPctTotal(localDate, validArrivals, Seq(LiveFeedSource))
                 val predPaxs = sortedModels.collect { case (_, model: ArrivalModelAndFeatures) => predictedPaxTotal(model, localDate, validArrivals) }
                 val predCapPct = sortedModels.collect { case (_, model: ArrivalModelAndFeatures) => predictedCapPctTotal(model, localDate, validArrivals) }
                 val forecastPax = feedPaxTotal(localDate, validArrivals, Seq(ForecastFeedSource))
-                val forecastCapPct = feedCapPctTotal(validArrivals, Seq(ForecastFeedSource))
+                val forecastCapPct = feedCapPctTotal(localDate, validArrivals, Seq(ForecastFeedSource))
                 val drtFcstPax = feedPaxTotal(localDate, validArrivals, Seq(AclFeedSource, HistoricApiFeedSource))
-                val drtFcstCapPct = feedCapPctTotal(validArrivals, Seq(AclFeedSource, HistoricApiFeedSource))
+                val drtFcstCapPct = feedCapPctTotal(localDate, validArrivals, Seq(AclFeedSource, HistoricApiFeedSource))
                 val paxCells = Seq(actPax.toString, forecastPax.toString, drtFcstPax.toString) ++ predPaxs.map(_.toString)
                 val capCells = Seq(actCapPct, forecastCapPct, drtFcstCapPct) ++ predCapPct
                 (Seq(localDate.toISOString) ++ paxCells ++ capCells.map(p => f"$p%.2f")).mkString(",") + "\n"
@@ -127,7 +127,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     }.sum.toDouble / arrivals.length
 
   private def feedPaxTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Int = {
-    if (localDate < SDate.now().toLocalDate) 0
+    if (feedsPreference == Seq(LiveFeedSource) && localDate >= ctrl.now().toLocalDate) 0
     else
       arrivals
         .map { fws =>
@@ -138,8 +138,10 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         }.sum
   }
 
-  private def feedCapPctTotal(arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Double =
-    arrivals
+  private def feedCapPctTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Double = {
+    if (feedsPreference == Seq(LiveFeedSource) && localDate >= ctrl.now().toLocalDate) 0
+    else
+      arrivals
       .map { fws =>
         val pct = for {
           pcpPax <- fws.apiFlight.bestPcpPaxEstimate(feedsPreference)
@@ -147,4 +149,5 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         } yield (100 * pcpPax.toDouble / maxPax).round.toInt
         pct.getOrElse(0)
       }.sum.toDouble / arrivals.length
+  }
 }

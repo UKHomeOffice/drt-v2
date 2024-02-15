@@ -72,7 +72,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
            |""".stripMargin)
     }
 
-    "get forecast comparison csv" in {
+    "get forecast comparison csv - future date does not include act pax" in {
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
 
       val modelId = "some-model-id"
@@ -86,7 +86,25 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       val liveCapPct = liveArrivalPax.toDouble / maxPax * 100
       contentAsString(result) must ===(
         f"""Date,Act,Port Forecast,DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,DRT Forecast Cap%%,$modelId Cap%%
-           |2024-02-14,$liveArrivalPax,$forecastPcp,0,$mlPax,$liveCapPct%.2f,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
+           |2024-02-14,0,$forecastPcp,0,$mlPax,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
+           |""".stripMargin)
+    }
+
+    "get forecast comparison csv - historic date does include act pax" in {
+      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
+
+      val modelId = "some-model-id"
+      val result = controller.forecastModelComparison(modelId, "T1", "2023-01-01", "2023-01-01").apply(request)
+
+      status(result) must ===(OK)
+      contentType(result) must ===(Some("text/csv"))
+      val forecastPcp = forecastArrivalPax - forecastArrivalTransPax
+      val fcstCapPct = forecastPcp.toDouble / maxPax * 100
+      val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
+      val liveCapPct = liveArrivalPax.toDouble / maxPax * 100
+      contentAsString(result) must ===(
+        f"""Date,Act,Port Forecast,DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,DRT Forecast Cap%%,$modelId Cap%%
+           |2023-01-01,$liveArrivalPax,$forecastPcp,0,$mlPax,$liveCapPct%.2f,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
            |""".stripMargin)
     }
   }
@@ -98,6 +116,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
     }
 
     val drtSystemInterface: DrtSystemInterface = new TestDrtSystem(module.airportConfig, module.mockDrtParameters, module.now) {
+      override val now: () => SDateLike = () => SDate("2023-02-01T00:00")
       override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
         (_, _) => Future.successful(Map(Terminal("T1") -> forecastTotalPax))
 
