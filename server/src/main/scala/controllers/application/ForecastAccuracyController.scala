@@ -9,11 +9,13 @@ import play.api.http.HttpEntity
 import play.api.mvc._
 import providers.FlightsProvider
 import services.accuracy.ForecastAccuracyCalculator
+import spray.json.{DefaultJsonProtocol, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.write
@@ -58,8 +60,12 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   private def maybeDoubleToPctString(double: Option[Double]): String =
     double.map(d => f"${d * 100}%.3f").getOrElse("-")
 
+  private def acceptHeader(request: Request[AnyContent]): String = {
+    request.headers.get("Accept").getOrElse("application/json")
+  }
+
   def forecastModelComparison(modelNames: String, terminalName: String, startDateStr: String, endDateStr: String): Action[AnyContent] = auth {
-    Action.async { _ =>
+    Action.async { request =>
       val startDate = LocalDate
         .parse(startDateStr)
         .getOrElse(throw new Exception("Bad date format. Expected YYYY-mm-dd"))
@@ -71,6 +77,11 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       val id = PredictionModelActor.Terminal(terminalName)
       val modelNamesList = modelNames.split(",").toList
       val getModelsForId: PredictionModelActor.WithId => Future[PredictionModelActor.Models] = ctrl.flightModelPersistence.getModels(modelNamesList)
+
+      val contentType = acceptHeader(request) match {
+        case "text/csv" => "text/csv"
+        case _ => "application/json"
+      }
 
       getModelsForId(id).flatMap { models =>
         val sortedModels = models.models.toList.sortBy(_._1)
@@ -92,7 +103,11 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                 val drtFcstCapPct = feedCapPctTotal(localDate, validArrivals, Seq(AclFeedSource, HistoricApiFeedSource))
                 val paxCells = Seq(actPax.toString, forecastPax.toString, drtFcstPax.toString) ++ predPaxs.map(_.toString)
                 val capCells = Seq(actCapPct, forecastCapPct, drtFcstCapPct) ++ predCapPct
-                (Seq(localDate.toISOString) ++ paxCells ++ capCells.map(p => f"$p%.2f")).mkString(",") + "\n"
+                if (contentType == "text/csv")
+                  (Seq(localDate.toISOString) ++ paxCells ++ capCells.map(p => f"$p%.2f")).mkString(",") + "\n"
+                else
+                  DayPaxFigures(localDate, actPax, actCapPct, forecastPax, forecastCapPct, drtFcstPax, drtFcstCapPct,
+                    addModelNames(sortedModels, predPaxs), addModelNames(sortedModels, predCapPct)).toJson
               }
           }
           .runWith(Sink.seq)
@@ -106,6 +121,12 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       }
     }
   }
+
+  private def addModelNames[T](sortedModels: List[(String, ModelAndFeatures)], predPaxs: List[T]): Map[String, T] =
+    predPaxs
+      .zip(sortedModels.map(_._1))
+      .map { case (pax, name) => name -> pax }
+      .toMap
 
   private val defaultCapPct = 80
 
@@ -141,12 +162,12 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     if (feedsPreference == Seq(LiveFeedSource) && localDate >= ctrl.now().toLocalDate) 0
     else
       arrivals
-      .map { fws =>
-        val pct = for {
-          pcpPax <- fws.apiFlight.bestPcpPaxEstimate(feedsPreference)
-          maxPax <- fws.apiFlight.MaxPax
-        } yield (100 * pcpPax.toDouble / maxPax).round.toInt
-        pct.getOrElse(0)
-      }.sum.toDouble / arrivals.length
+        .map { fws =>
+          val pct = for {
+            pcpPax <- fws.apiFlight.bestPcpPaxEstimate(feedsPreference)
+            maxPax <- fws.apiFlight.MaxPax
+          } yield (100 * pcpPax.toDouble / maxPax).round.toInt
+          pct.getOrElse(0)
+        }.sum.toDouble / arrivals.length
   }
 }
