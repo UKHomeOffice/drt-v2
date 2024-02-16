@@ -2,10 +2,9 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.CodeShares.uniqueArrivalsWithCodeShares
 import drt.shared.FlightsApi.Flights
 import drt.shared._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
+import uk.gov.homeoffice.drt.arrivals.Passengers
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PortCode, Queues}

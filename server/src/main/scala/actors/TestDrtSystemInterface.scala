@@ -5,8 +5,6 @@ import drt.server.feeds._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.time.{MilliDate => _}
 
-import scala.language.postfixOps
-
 trait TestDrtSystemInterface extends DrtSystemInterface {
   val testManifestsActor: ActorRef
   val testArrivalActor: ActorRef

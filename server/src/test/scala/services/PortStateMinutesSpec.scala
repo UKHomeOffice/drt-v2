@@ -6,14 +6,14 @@ import drt.shared._
 import org.specs2.mutable.Specification
 import services.crunch.TestDefaults
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, FlightsWithSplitsDiff}
+import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.time.SDate
 
 class PortStateMinutesSpec extends Specification {
   val now: MillisSinceEpoch = SDate.now().millisSinceEpoch
 
-  val paxFeedSourceOrder = TestDefaults.paxFeedSourceOrder
+  val paxFeedSourceOrder: List[FeedSource] = TestDefaults.paxFeedSourceOrder
 
   "When I apply a FlightsWithSplits " >> {
     "Containing only new arrivals " >> {

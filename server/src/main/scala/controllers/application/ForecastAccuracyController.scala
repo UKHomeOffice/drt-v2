@@ -9,7 +9,6 @@ import play.api.http.HttpEntity
 import play.api.mvc._
 import providers.FlightsProvider
 import services.accuracy.ForecastAccuracyCalculator
-import spray.json.{DefaultJsonProtocol, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -103,11 +102,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                 val drtFcstCapPct = feedCapPctTotal(localDate, validArrivals, Seq(AclFeedSource, HistoricApiFeedSource))
                 val paxCells = Seq(actPax.toString, forecastPax.toString, drtFcstPax.toString) ++ predPaxs.map(_.toString)
                 val capCells = Seq(actCapPct, forecastCapPct, drtFcstCapPct) ++ predCapPct
-                if (contentType == "text/csv")
-                  (Seq(localDate.toISOString) ++ paxCells ++ capCells.map(p => f"$p%.2f")).mkString(",") + "\n"
-                else
-                  DayPaxFigures(localDate, actPax, actCapPct, forecastPax, forecastCapPct, drtFcstPax, drtFcstCapPct,
-                    addModelNames(sortedModels, predPaxs), addModelNames(sortedModels, predCapPct)).toJson
+                (Seq(localDate.toISOString) ++ paxCells ++ capCells.map(p => f"$p%.2f")).mkString(",") + "\n"
               }
           }
           .runWith(Sink.seq)

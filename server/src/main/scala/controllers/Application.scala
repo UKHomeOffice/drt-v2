@@ -23,7 +23,6 @@ import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.language.postfixOps
 import uk.gov.homeoffice.drt.db.{IABFeatureDao, IUserFeedbackDao}
 
 

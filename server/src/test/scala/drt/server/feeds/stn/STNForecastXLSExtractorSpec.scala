@@ -3,7 +3,7 @@ package drt.server.feeds.stn
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
 class STNForecastXLSExtractorSpec extends Specification {

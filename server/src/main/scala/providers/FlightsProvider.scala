@@ -3,13 +3,12 @@ package providers
 import actors.PartitionedPortStateActor
 import actors.PartitionedPortStateActor.FlightsRequest
 import akka.NotUsed
-import akka.actor.{ActorRef, Props}
+import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Source
 import akka.util.Timeout
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
@@ -32,7 +31,6 @@ case class FlightsProvider(flightsRouterActor: ActorRef)
       val request = PartitionedPortStateActor.GetFlightsForTerminals(startMillis, endMillis, Seq(terminal))
       flightsByUtcDate(request).map(_._2).runFold(Seq.empty[ApiFlightWithSplits])(_ ++ _)
     }
-
 
   def allTerminals: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     (start, end) => {
