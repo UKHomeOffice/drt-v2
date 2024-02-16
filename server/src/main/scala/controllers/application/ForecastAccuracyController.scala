@@ -89,11 +89,12 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         val headerRow = (Seq("Date") ++ paxHeaders ++ capHeaders).mkString(",") + "\n"
         Source(DateRange(startDate, endDate))
           .mapAsync(1) { localDate =>
+            val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
             terminalFlights(localDate)
               .map { arrivals =>
                 val validArrivals = arrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
-                val actPax = feedPaxTotal(localDate, validArrivals, Seq(LiveFeedSource, ApiFeedSource))
-                val actCapPct = feedCapPctTotal(localDate, validArrivals, Seq(LiveFeedSource, ApiFeedSource))
+                val actPax = if (isNonHistoricDate) 0 else feedPaxTotal(localDate, validArrivals, Seq(LiveFeedSource, ApiFeedSource))
+                val actCapPct = if (isNonHistoricDate) 0d else feedCapPctTotal(localDate, validArrivals, Seq(LiveFeedSource, ApiFeedSource))
                 val predPaxs = sortedModels.collect { case (_, model: ArrivalModelAndFeatures) => predictedPaxTotal(model, localDate, validArrivals) }
                 val predCapPct = sortedModels.collect { case (_, model: ArrivalModelAndFeatures) => predictedCapPctTotal(model, localDate, validArrivals) }
                 val forecastPax = feedPaxTotal(localDate, validArrivals, Seq(ForecastFeedSource))
@@ -141,28 +142,22 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       }
     }.sum.toDouble / arrivals.length
 
-  private def feedPaxTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Int = {
-    if (feedsPreference == Seq(LiveFeedSource) && localDate >= ctrl.now().toLocalDate) 0
-    else
-      arrivals
-        .map { fws =>
-          fws.apiFlight.bestPcpPaxEstimate(feedsPreference).getOrElse {
-            log.warning(s"No port or acl forecast for ${fws.apiFlight.unique} on $localDate. Using 0 for a default")
-            0
-          }
-        }.sum
-  }
+  private def feedPaxTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Int =
+    arrivals
+      .map { fws =>
+        fws.apiFlight.bestPcpPaxEstimate(feedsPreference).getOrElse {
+          log.warning(s"No port or acl forecast for ${fws.apiFlight.unique} on $localDate. Using 0 for a default")
+          0
+        }
+      }.sum
 
-  private def feedCapPctTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Double = {
-    if (feedsPreference == Seq(LiveFeedSource) && localDate >= ctrl.now().toLocalDate) 0
-    else
-      arrivals
-        .map { fws =>
-          val pct = for {
-            pcpPax <- fws.apiFlight.bestPcpPaxEstimate(feedsPreference)
-            maxPax <- fws.apiFlight.MaxPax
-          } yield (100 * pcpPax.toDouble / maxPax).round.toInt
-          pct.getOrElse(0)
-        }.sum.toDouble / arrivals.length
-  }
+  private def feedCapPctTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Double =
+    arrivals
+      .map { fws =>
+        val pct = for {
+          pcpPax <- fws.apiFlight.bestPcpPaxEstimate(feedsPreference)
+          maxPax <- fws.apiFlight.MaxPax
+        } yield (100 * pcpPax.toDouble / maxPax).round.toInt
+        pct.getOrElse(0)
+      }.sum.toDouble / arrivals.length
 }
