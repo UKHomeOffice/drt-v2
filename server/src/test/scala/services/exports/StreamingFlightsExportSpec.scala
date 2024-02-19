@@ -4,7 +4,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
 import passengersplits.parsing.VoyageManifestParser._
 import services.crunch.CrunchTestLike
-import services.exports.flights.templates._
+import services.exports.flights.templates.{FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExport, FlightsWithSplitsWithoutActualApiExportImpl}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.{Passengers, _}

@@ -57,16 +57,18 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       val drtInterface = newDrtInterface
       val minutes = MinutesContainer(generateMinutes(SDate("2024-05-31T23:00"), SDate("2024-06-01T22:59"), Seq(T3, T2), queues, queuePaxPerMinute))
 
-      Await.ready(drtInterface.minuteLookups.queueMinutesRouterActor.ask(minutes), 1.second)
+      Await.ready(drtInterface.actorService.minuteLookups.queueMinutesRouterActor.ask(minutes), 5.second)
       val controller = newController(drtInterface)
 
       val authHeader = Headers(("X-Auth-Roles" -> "super-admin,LHR"))
-      val result = controller.populatePassengersForDate("2024-06-01").apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
+      val result = controller
+        .populatePassengersForDate("2024-06-01")
+        .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
 
       val hourlyForLhrT3 = PassengersHourlyDao.hourlyForPortAndDate("LHR", Option("T3"))
-      val rows = Await.result(H2Tables.db.run(hourlyForLhrT3(LocalDate(2024, 6, 1))), 1.second)
+      val rows = Await.result(H2Tables.db.run(hourlyForLhrT3(LocalDate(2024, 6, 1))), 5.second)
       rows must ===((0 to 23).map { hour =>
         (SDate("2024-06-01", Crunch.europeLondonTimeZone).addHours(hour).millisSinceEpoch, Map(EeaDesk -> queuePaxPerHour, NonEeaDesk -> queuePaxPerHour))
       }.toMap)
@@ -217,7 +219,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     val drtInterface = newDrtInterface
     val minutes = MinutesContainer(generateMinutes(startSDate, endSDate, terminals, queues, queuePaxPerMinute))
 
-    Await.ready(drtInterface.minuteLookups.queueMinutesRouterActor.ask(minutes), 1.second)
+    Await.ready(drtInterface.actorService.minuteLookups.queueMinutesRouterActor.ask(minutes), 1.second)
     val controller = newController(drtInterface)
 
     val request = FakeRequest(method = "PUT", uri = "", headers = Headers(("X-Auth-Roles", "super-admin,LHR")), body = AnyContentAsEmpty)

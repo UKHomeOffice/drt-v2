@@ -2,8 +2,8 @@ package drt.shared.redlist
 
 import uk.gov.homeoffice.drt.time.SDateLike
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.Map

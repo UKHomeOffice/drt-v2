@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
-import actors.TestDrtSystemInterface
+import actors.{TestDrtSystemActors, TestDrtSystemActorsLike}
 import actors.persistent.staffing.ReplaceAllShifts
 import akka.pattern.ask
 import akka.util.Timeout
@@ -22,6 +22,7 @@ import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
+import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.testsystem.MockRoles
@@ -33,28 +34,32 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInterface, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
+class TestController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
   lazy implicit val timeout: Timeout = Timeout(5 second)
 
   lazy implicit val ec: ExecutionContext = ctrl.ec
 
+  lazy implicit val system = ctrl.system
+
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  val testDrtSystemActor: TestDrtSystemActorsLike =  TestDrtSystemActors(ctrl.applicationService, ctrl.feedService, ctrl.actorService, ctrl.persistentActors)
 
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    ctrl.testArrivalActor.ask(arrival).map { _ =>
-      ctrl.liveActor ! AdhocCheck
+    testDrtSystemActor.testArrivalActor.ask(arrival).map { _ =>
+      ctrl.feedService.liveActor ! AdhocCheck
     }
   }
 
   def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
     log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
-    ctrl.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
+    testDrtSystemActor.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
   }
 
   def resetData: Future[Any] = {
     log.info(s"Sending reset message")
-    ctrl.restartActor.ask(ResetData)
+    testDrtSystemActor.restartActor.ask(ResetData)
   }
 
   def hello = Action {
@@ -163,7 +168,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInte
         maybeShifts match {
           case Some(shifts) =>
             log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
-            ctrl.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
+            ctrl.applicationService.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
             Created
           case _ =>
             BadRequest("{\"error\": \"Unable to parse data\"}")

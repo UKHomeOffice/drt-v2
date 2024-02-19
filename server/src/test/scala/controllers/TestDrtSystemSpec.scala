@@ -1,15 +1,16 @@
 package controllers
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince}
+import actors.TestDrtSystemActors
 import akka.pattern.ask
 import drt.shared.CrunchApi._
 import drt.shared.PortState
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, Passengers}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.UnknownFeedSource
+import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -22,10 +23,11 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
   "Given a test drt system" >> {
     val drtSystem = TestDrtSystem(defaultAirportConfig, MockDrtParameters(), () => SDate.now())
+    val testDrtSystemActor: TestDrtSystemActors =  TestDrtSystemActors(drtSystem.applicationService, drtSystem.feedService, drtSystem.actorService, drtSystem.persistentActors)
 
     "When I send its port state actor an arrival" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
-      Await.ready(drtSystem.portStateActor.ask(ArrivalsDiff(List(arrival), List())), 1.second)
+      Await.ready(drtSystem.actorService.portStateActor.ask(ArrivalsDiff(List(arrival), List())), 1.second)
 
       "Then I should see the arrival when I check its port state" >> {
         val flightExists = doesFlightExist(drtSystem, arrival) === true
@@ -36,7 +38,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
       "Then I should see no arrivals after sending a Reset message to the reset actor" >> {
         val existsBeforeReset = doesFlightExist(drtSystem, arrival) === true
-        resetData(drtSystem)
+        resetData(testDrtSystemActor)
         val emptyAfterReset = getPortState(drtSystem).flights.isEmpty
         val noUpdatesAfterReset = getUpdates(drtSystem).toList.flatMap(_.updatesAndRemovals.arrivalUpdates).isEmpty
 
@@ -47,7 +49,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     "When I send its port state actor a DeskRecMinute" >> {
       val minute = drtSystem.now().getUtcLastMidnight.addMinutes(10)
       val drm = DeskRecMinute(T1, EeaDesk, minute.millisSinceEpoch, 1, 2, 3, 4, Option(10))
-      Await.ready(drtSystem.portStateActor.ask(MinutesContainer(List(drm))), 1.second)
+      Await.ready(drtSystem.actorService.portStateActor.ask(MinutesContainer(List(drm))), 1.second)
 
       "Then I should see the corresponding CrunchMinute when I check its port state" >> {
         val minuteExists = doesCrunchMinuteExist(drtSystem, drm) === true
@@ -57,7 +59,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
       "Then I should see no crunch minutes after sending a Reset message to the reset actor" >> {
         val existsBeforeReset = doesCrunchMinuteExist(drtSystem, drm) === true
-        resetData(drtSystem)
+        resetData(testDrtSystemActor)
         val emptyAfterReset = getPortState(drtSystem).staffMinutes.values.forall(_.available == 0)
         val noUpdatesAfterReset = getUpdates(drtSystem).toList.forall(_.staffMinutes.forall(_.available == 0))
 
@@ -68,7 +70,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     "When I send its port state actor a StaffMinute" >> {
       val minute = drtSystem.now().getLocalLastMidnight.addMinutes(10)
       val sm = StaffMinute(T1, minute.millisSinceEpoch, 1, 2, 3)
-      Await.ready(drtSystem.portStateActor.ask(MinutesContainer(List(sm))), 1.second)
+      Await.ready(drtSystem.actorService.portStateActor.ask(MinutesContainer(List(sm))), 1.second)
 
       "Then I should see the corresponding StaffMinute when I check its port state" >> {
         val minuteExists = doesStaffMinuteExist(drtSystem, sm) === true
@@ -78,7 +80,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
       "Then I should see no staff minutes after sending a Reset message to the reset actor" >> {
         val existsBeforeReset = doesStaffMinuteExist(drtSystem, sm) === true
-        resetData(drtSystem)
+        resetData(testDrtSystemActor)
         val emptyAfterReset = getPortState(drtSystem).staffMinutes.values.forall(_.available == 0)
         val noUpdatesAfterReset = getUpdates(drtSystem).toList.forall(_.staffMinutes.forall(_.available == 0))
 
@@ -87,15 +89,15 @@ class TestDrtSystemSpec extends CrunchTestLike {
     }
   }
 
-  private def resetData(drtSystem: TestDrtSystem): Future[Any] = {
-    Await.ready(drtSystem.restartActor.ask(ResetData), 5.seconds)
+  private def resetData(testDrtSystemActor: TestDrtSystemActors): Future[Any] = {
+    Await.ready(testDrtSystemActor.restartActor.ask(ResetData), 20.seconds)
   }
 
   private def getPortState(drtSystem: TestDrtSystem) = {
     Thread.sleep(100)
     val lastMidnight = drtSystem.now().getLocalLastMidnight
     val nextMidnight = lastMidnight.addDays(1)
-    Await.result(drtSystem.portStateActor.ask(GetStateForDateRange(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1.second)
+    Await.result(drtSystem.actorService.portStateActor.ask(GetStateForDateRange(lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[PortState], 1.second)
   }
 
   private def doesFlightExist(drtSystem: TestDrtSystem, arrival: Arrival): Boolean =
@@ -116,6 +118,6 @@ class TestDrtSystemSpec extends CrunchTestLike {
     val lastMidnight = drtSystem.now().getLocalLastMidnight
     val nextMidnight = lastMidnight.addDays(1)
     val sinceMillis = drtSystem.now().addMinutes(-1).millisSinceEpoch
-    Await.result(drtSystem.portStateActor.ask(GetUpdatesSince(sinceMillis, lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortStateUpdates]], 1.second)
+    Await.result(drtSystem.actorService.portStateActor.ask(GetUpdatesSince(sinceMillis, lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortStateUpdates]], 1.second)
   }
 }

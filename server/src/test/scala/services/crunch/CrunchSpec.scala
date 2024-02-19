@@ -1,9 +1,9 @@
 package services.crunch
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
-import services.graphstages.Crunch.crunchStartWithOffset
+import uk.gov.homeoffice.drt.time.SDate
+import Crunch.crunchStartWithOffset
 import uk.gov.homeoffice.drt.time.MilliTimes.{minutesInADay, oneDayMillis, oneHourMillis, oneMinuteMillis}
 
 class CrunchSpec extends Specification {

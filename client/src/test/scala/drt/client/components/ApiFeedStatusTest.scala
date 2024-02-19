@@ -10,21 +10,27 @@ import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 class ApiFeedStatusTest extends AnyWordSpec with Matchers {
-  val paxFeedSourceOrder = List(ApiFeedSource, LiveFeedSource)
+  private val paxFeedSourceOrder = List(ApiFeedSource, LiveFeedSource)
   "ApiFeedStatus" should {
     val now: SDateLike = SDate("2022-05-31T12:00")
     val beforeNow = "2022-05-31T11:30"
     val afterNow = "2022-05-31T12:30"
     val considerPredictions = true
 
-    val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None)))
-    val landedWithNoPax = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = None,transit = None)))
-    val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(LiveFeedSource -> Passengers(actual = Option(100),transit = None)), feedSources = Set(LiveFeedSource))
-    val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None))), Set())
+    val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow,
+      passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(100), transit = None)))
+    val landedWithNoPax = ArrivalGenerator.apiFlight(schDt = beforeNow,
+      passengerSources = Map(ApiFeedSource -> Passengers(actual = None, transit = None)))
+    val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow,
+      passengerSources = Map(LiveFeedSource -> Passengers(actual = Option(100), transit = None)), feedSources = Set(LiveFeedSource))
+    val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow,
+      passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(100), transit = None))), Set())
     val ctaLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("ORK")), Set())
     val domesticLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("EMA")), Set())
-    val landedWithValidApi = ApiFlightWithSplits(landedWithNoSources, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
-    val landedWithInvalidApi = ApiFlightWithSplits(landedWithLiveSource, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
+    val landedWithValidApi = ApiFlightWithSplits(landedWithNoSources,
+      Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
+    val landedWithInvalidApi = ApiFlightWithSplits(landedWithLiveSource,
+      Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
     val landedWithNoActPax = ApiFlightWithSplits(landedWithNoPax, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
 
     "given no flights, give None for stats and zero for total landed" in {
@@ -63,7 +69,7 @@ class ApiFeedStatusTest extends AnyWordSpec with Matchers {
       status.totalLanded should ===(1)
     }
 
-    "given two landed flights, one with with invalid live API and one with valid live API, give Option(100) for received and Option(50) for valid and 2 for total landed" in {
+    "given two landed flights, one with with invalid live API and one with valid live API,give Option(100) for received and Option(50) for valid and 2 for total landed" in {
       val oneLandedWithInvalidAPI = Seq(landedWithInvalidApi, landedWithValidApi)
       val status = ApiFeedStatus(oneLandedWithInvalidAPI, now.millisSinceEpoch, considerPredictions, hasLiveFeed = true, paxFeedSourceOrder)
 

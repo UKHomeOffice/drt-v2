@@ -1,5 +1,6 @@
 package controllers.application
 
+import actors.StreamingJournal
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import controllers.ArrivalGenerator
@@ -12,6 +13,7 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, MlFeedSource}
+import uk.gov.homeoffice.drt.service.FeedService
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
@@ -19,7 +21,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 class ForecastAccuracyControllerSpec extends PlaySpec {
-  implicit val system: ActorSystem = akka.actor.ActorSystem("test")
+  implicit val system: ActorSystem = akka.actor.ActorSystem("test-1")
   implicit val mat: Materializer = Materializer(system)
   implicit val ec: ExecutionContext = system.dispatcher
   implicit val timeout: akka.util.Timeout = 5.seconds
@@ -59,29 +61,36 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
 
     val drtSystemInterface: DrtSystemInterface = new TestDrtSystem(module.airportConfig, module.mockDrtParameters, module.now) {
 
-      override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
-        (_, _) => Future.successful(Map(Terminal("T1") -> forecastPax))
+      lazy override val feedService = new FeedService(StreamingJournal.forConfig(module.config),
+        module.airportConfig,
+        module.now,
+        module.mockDrtParameters,
+        module.config,
+        paxFeedSourceOrder,
+        flightLookups)(system, ec, mat, module.timeout) {
+        override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
+          (_, _) => Future.successful(Map(Terminal("T1") -> forecastPax))
 
-      override val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] =
-        _ => Future.successful(Map(Terminal("T1") -> actualPax))
+        override val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] =
+          _ => Future.successful(Map(Terminal("T1") -> actualPax))
 
-      override val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (_, _) => Future.successful(
-        Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
-          schDt = "2023-10-20T12:25",
-          terminal = T1,
-          passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastPax), None),
-            MlFeedSource -> Passengers(Some(mlPax), None))))))
+        override val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (_, _) => Future.successful(
+          Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
+            schDt = "2023-10-20T12:25",
+            terminal = T1,
+            passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastPax), None),
+              MlFeedSource -> Passengers(Some(mlPax), None))))))
 
-      override val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = _ => Future.successful(
-        Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
-          schDt = "2023-10-20T12:25",
-          terminal = T1,
-          passengerSources = Map(LiveFeedSource -> Passengers(Some(actualPax), None),
-            ForecastFeedSource -> Passengers(Some(forecastPax), None),
-            MlFeedSource -> Passengers(Some(mlPax), None))
-        )))
-      )
-
+        override val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = _ => Future.successful(
+          Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
+            schDt = "2023-10-20T12:25",
+            terminal = T1,
+            passengerSources = Map(LiveFeedSource -> Passengers(Some(actualPax), None),
+              ForecastFeedSource -> Passengers(Some(forecastPax), None),
+              MlFeedSource -> Passengers(Some(mlPax), None))
+          )))
+        )
+      }
     }
 
     new ForecastAccuracyController(Helpers.stubControllerComponents(), drtSystemInterface)

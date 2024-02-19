@@ -30,7 +30,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       case Some(localDate) =>
         Action.async(
           Source(Set(SDate(localDate).toUtcDate, SDate(localDate).addDays(1).addMinutes(-1).toUtcDate))
-            .mapAsync(1)(ctrl.populateLivePaxViewForDate)
+            .mapAsync(1)(ctrl.applicationService.populateLivePaxViewForDate)
             .run()
             .map(_ => Ok(s"Populated passengers for $localDate"))
         )

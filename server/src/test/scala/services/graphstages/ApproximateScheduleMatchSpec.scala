@@ -3,7 +3,7 @@ package services.graphstages
 import controllers.ArrivalGenerator
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import services.graphstages.ApproximateScheduleMatch._
+import ApproximateScheduleMatch._
 import uk.gov.homeoffice.drt.ports.PortCode
 
 class ApproximateScheduleMatchSpec extends CrunchTestLike {

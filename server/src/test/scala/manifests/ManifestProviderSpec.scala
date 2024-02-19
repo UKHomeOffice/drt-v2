@@ -6,8 +6,8 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import services.crunch.VoyageManifestGenerator.euPassport
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.OptimisationProviders
+import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode

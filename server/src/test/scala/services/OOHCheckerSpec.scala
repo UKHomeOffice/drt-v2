@@ -7,6 +7,7 @@ import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 
 class OOHCheckerSpec extends CrunchTestLike {
   sequential

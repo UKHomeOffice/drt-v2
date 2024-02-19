@@ -1,6 +1,7 @@
 package services
 
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBank}
 
 import scala.util.Try

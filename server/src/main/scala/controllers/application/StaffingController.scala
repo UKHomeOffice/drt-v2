@@ -35,7 +35,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
     Action.async { request: Request[AnyContent] =>
       val shifts = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong)) match {
         case None =>
-          ctrl.liveShiftsReadActor.ask(GetState)
+          ctrl.actorService.liveShiftsReadActor.ask(GetState)
             .map { case sa: ShiftAssignments => sa }
             .recoverWith { case _ => Future(ShiftAssignments.empty) }
 
@@ -65,7 +65,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
-          ctrl.shiftsSequentialWritesActor ! UpdateShifts(shifts.assignments)
+          ctrl.applicationService.shiftsSequentialWritesActor ! UpdateShifts(shifts.assignments)
           Accepted
         case None =>
           BadRequest
@@ -75,7 +75,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
 
   def getShiftsForMonth(month: MillisSinceEpoch): Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
-      val monthOfShifts = ctrl.liveShiftsReadActor
+      val monthOfShifts = ctrl.actorService.liveShiftsReadActor
         .ask(GetState)
         .collect {
           case shifts: ShiftAssignments =>
@@ -92,7 +92,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
 
       val fixedPoints = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong)) match {
         case None =>
-          ctrl.liveFixedPointsReadActor.ask(GetState)
+          ctrl.actorService.liveFixedPointsReadActor.ask(GetState)
             .map { case sa: FixedPointAssignments => sa }
             .recoverWith { case _ => Future(FixedPointAssignments.empty) }
 
@@ -127,7 +127,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
       request.body.asText match {
         case Some(text) =>
           val fixedPoints: FixedPointAssignments = read[FixedPointAssignments](text)
-          ctrl.fixedPointsSequentialWritesActor ! SetFixedPoints(fixedPoints.assignments)
+          ctrl.applicationService.fixedPointsSequentialWritesActor ! SetFixedPoints(fixedPoints.assignments)
           Accepted
         case None =>
           BadRequest
@@ -141,7 +141,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
         request.body.asText match {
           case Some(text) =>
             val movementsToAdd: List[StaffMovement] = read[List[StaffMovement]](text)
-            ctrl.staffMovementsSequentialWritesActor
+            ctrl.applicationService.staffMovementsSequentialWritesActor
               .ask(AddStaffMovements(movementsToAdd))
               .map(_ => Accepted)
           case None =>
@@ -152,7 +152,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
 
   def removeStaffMovements(movementsToRemove: String): Action[AnyContent] = authByRole(StaffMovementsEdit) {
     Action {
-      ctrl.staffMovementsSequentialWritesActor ! RemoveStaffMovements(movementsToRemove)
+      ctrl.applicationService.staffMovementsSequentialWritesActor ! RemoveStaffMovements(movementsToRemove)
       Accepted
     }
   }

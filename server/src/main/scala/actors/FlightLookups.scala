@@ -15,7 +15,6 @@ import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -55,7 +54,7 @@ case class FlightLookups(system: ActorSystem,
                          removalMessageCutOff: Option[FiniteDuration],
                          paxFeedSourceOrder: List[FeedSource],
                         ) extends FlightLookupsLike {
-  override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
+  val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
   override val flightsRouterActor: ActorRef = system.actorOf(
     Props(new FlightsRouterActor(

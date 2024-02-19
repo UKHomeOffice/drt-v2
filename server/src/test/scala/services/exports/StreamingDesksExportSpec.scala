@@ -8,7 +8,6 @@ import drt.shared.{TM, TQM}
 import uk.gov.homeoffice.drt.time.SDate
 import services.exports.CsvTestHelper._
 import services.crunch.CrunchTestLike
-import services.exports.StreamingDesksExport
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 

@@ -10,7 +10,7 @@ import drt.http.ProdSendAndReceive
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
-import services._
+import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
 import services.graphstages.Crunch
 import slickdb._
 import spray.json.enrichAny
@@ -199,13 +199,13 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       ForecastFeedSource -> 7.days,
     )
 
-    val feedsToMonitor = ctrl.feedActorsForPort
+    val feedsToMonitor = ctrl.feedService.feedActorsForPort
       .view.filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
       .values.toList
 
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
-      ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneSecondMillis))
+      ActorResponseTimeHealthCheck(ctrl.actorService.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneSecondMillis))
     )
   } else {
     HealthChecker(Seq())

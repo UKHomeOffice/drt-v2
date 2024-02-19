@@ -16,10 +16,9 @@ import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus._
-import services.TryCrunchWholePax
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
-import services.crunch.deskrecs.DynamicRunnablePassengerLoads.addManifests
+import DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
+import DynamicRunnablePassengerLoads.addManifests
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
@@ -34,6 +33,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import services.TryCrunchWholePax
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.collection.{SortedSet, immutable}

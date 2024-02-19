@@ -10,13 +10,13 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 
 
 class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
-  private val apiHealthCheck: ApiHealthCheck = ApiHealthCheck(ctrl.flightsProvider.allTerminals)
-  private val landingTimesHealthCheck: LandingTimesHealthCheck = LandingTimesHealthCheck(ctrl.flightsProvider.allTerminals)
-  private val arrivalUpdatesHealthCheck: ArrivalUpdatesHealthCheck = ArrivalUpdatesHealthCheck(ctrl.flightsProvider.allTerminals, 30, ctrl.now)
+  private val apiHealthCheck: ApiHealthCheck = ApiHealthCheck(ctrl.applicationService.flightsProvider.allTerminals)
+  private val landingTimesHealthCheck: LandingTimesHealthCheck = LandingTimesHealthCheck(ctrl.applicationService.flightsProvider.allTerminals)
+  private val arrivalUpdatesHealthCheck: ArrivalUpdatesHealthCheck = ArrivalUpdatesHealthCheck(ctrl.applicationService.flightsProvider.allTerminals, 30, ctrl.now)
   private val deskUpdatesHealthCheck: DeskUpdatesHealthCheck = DeskUpdatesHealthCheck(
     ctrl.now,
-    ctrl.flightsProvider.allTerminals,
-    MinutesProvider.allTerminals(ctrl.queuesRouterActor)
+    ctrl.applicationService.flightsProvider.allTerminals,
+    MinutesProvider.allTerminals(ctrl.actorService.queuesRouterActor)
   )
 
   def receivedLiveApiData(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>

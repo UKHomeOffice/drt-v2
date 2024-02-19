@@ -2,9 +2,9 @@ package actors.daily
 
 import uk.gov.homeoffice.drt.time.SDateLike
 import org.specs2.mutable.Specification
+import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.protobuf.messages.PaxMessage.PaxCountMessage
 import uk.gov.homeoffice.drt.time.SDate
-import services.graphstages.Crunch
 
 class PassengersActorSpec extends Specification {
   val now: () => SDateLike = () => SDate("2020-06-15T00:00", Crunch.europeLondonTimeZone)

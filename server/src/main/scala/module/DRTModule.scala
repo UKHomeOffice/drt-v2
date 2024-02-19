@@ -1,6 +1,6 @@
 package module
 
-import actors.{ProdDrtParameters, TestDrtSystemInterface}
+import actors.ProdDrtParameters
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.util.Timeout
@@ -12,14 +12,14 @@ import controllers.{Application, DrtActorSystem}
 import email.GovNotifyEmail
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
-import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
+import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem, ProdPersistentStateActors}
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
 import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-
+import javax.inject.Singleton
 class DRTModule extends AbstractModule with AkkaGuiceSupport {
   val config: Configuration = new Configuration(ConfigFactory.load)
 
@@ -67,9 +67,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   }
 
   @Provides
-  def provideTestDrtSystemInterface: TestDrtSystemInterface = drtTestSystem
-
-  @Provides
+  @Singleton
   implicit val provideActorSystem: ActorSystem = if (isTestEnvironment) {
     ActorSystem("DRT-Module", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load()))
   } else {
@@ -78,11 +76,14 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
 
   @Provides
-  def provideDrtSystemInterface: DrtSystemInterface =
+  @Singleton
+  def provideDrtSystemInterface: DrtSystemInterface = {
+    println(s"Using ${if (isTestEnvironment) "Test" else "Prod"} DrtSystem......")
     if (isTestEnvironment)
       drtTestSystem
     else
       drtProdSystem
+  }
 
   @Provides
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(config.get[String]("notifications.gov-notify-api-key"))

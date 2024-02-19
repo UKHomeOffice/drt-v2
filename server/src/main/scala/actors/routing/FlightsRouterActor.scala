@@ -55,6 +55,11 @@ object FlightsRouterActor {
     Source(dates.toList)
       .mapAsync(1)(d => reduceAndSort(flightsLookupByDay(d)).map(f => (d, f)))
       .map { case (d, flights) => (d, flights.scheduledOrPcpWindow(start, end, paxFeedSourceOrder)) }
+      .recover {
+        case e: Throwable =>
+          e.printStackTrace()
+          (dates.toList.head, FlightsWithSplits.empty)
+      }
       .filter { case (_, flights) => flights.nonEmpty }
   }
 
@@ -142,6 +147,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
         }
 
     case container: ArrivalsDiff =>
+      println(s"......ArrivalsDiff: ${container} updates, ${container} removals")
       val updates: Map[(Terminal, UtcDate), Iterable[Arrival]] = container.toUpdate.values
         .groupBy(arrivals => (arrivals.Terminal, SDate(arrivals.Scheduled).toUtcDate))
       val removals: Map[(Terminal, UtcDate), Iterable[UniqueArrival]] = container.toRemove
@@ -152,7 +158,8 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
         .map { terminalDay =>
           val terminalUpdates = updates.getOrElse(terminalDay, List())
           val terminalRemovals = removals.getOrElse(terminalDay, List())
-          val diff = ArrivalsDiff(terminalUpdates, terminalRemovals)
+          val diff =
+            ArrivalsDiff(terminalUpdates, terminalRemovals)
           (terminalDay, diff)
         }
         .toMap

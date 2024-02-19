@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.renjin.sexp.{DoubleVector, IntVector}
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBank}
 import uk.gov.homeoffice.drt.time.SDate
 

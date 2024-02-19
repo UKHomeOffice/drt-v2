@@ -19,7 +19,7 @@ class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
 
   def getRedListPorts(dateString: String): Action[AnyContent] =
     Action.async { _ =>
-      ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map { redListUpdates =>
+      ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map { redListUpdates =>
         val forDate = SDate(dateString, Crunch.europeLondonTimeZone).millisSinceEpoch
         val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
           case AirportInfo(_, _, country, portCode) if redListUpdates.countryCodesByName(forDate).contains(country) =>
@@ -33,12 +33,12 @@ class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
   def getRedListUpdates: Action[AnyContent] =
     Action.async { _ =>
       implicit val rluFormat: RedListJsonFormats.redListUpdatesJsonFormat.type = RedListJsonFormats.redListUpdatesJsonFormat
-      ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(r.toJson.compactPrint))
+      ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(r.toJson.compactPrint))
     }
 
   def getRedListUpdatesLegacy: Action[AnyContent] =
     Action.async { _ =>
-      ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(write(r)))
+      ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(write(r)))
     }
 }
 

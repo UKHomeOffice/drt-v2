@@ -16,9 +16,9 @@ import drt.shared._
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
-import services.TryCrunchWholePax
 import services.crunch.VoyageManifestGenerator.{euPassport, visa}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
+import DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
+import services.TryCrunchWholePax
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}

@@ -1,8 +1,8 @@
 package services.datetime
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.time.SDate
 
 class UtcDateRangeSpec extends Specification {
   val startDateUtc = "2020-05-01T00:00Z"
