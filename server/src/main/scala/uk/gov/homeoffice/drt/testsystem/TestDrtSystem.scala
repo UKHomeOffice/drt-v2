@@ -187,27 +187,6 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val dropInRegistrationService: DropInsRegistrationTableLike = MockDropInsRegistrationTable()
 //  val testDrtSystemActor: TestDrtSystemActorsLike = TestDrtSystemActors(applicationService, feedService, actorService, persistentActors)
 
-  //  config.getOptional[String]("test.live_fixture_csv").foreach { file =>
-  //    implicit val timeout: Timeout = Timeout(250 milliseconds)
-  //    log.info(s"Loading fixtures from $file")
-  //    system.scheduler.scheduleAtFixedRate(1 second, 1 day)(
-  //      () => {
-  //        val startDay = SDate.now()
-  //        DateRange.utcDateRange(startDay, startDay.addDays(30)).map(day => {
-  //          val arrivals = CSVFixtures
-  //            .csvPathToArrivalsOnDate(day.toISOString, file)
-  //            .collect {
-  //              case Success(arrival) => arrival
-  //            }
-  //          arrivals.map(testDrtSystemActor.testArrivalActor.ask)
-  //
-  //          val manifests = arrivals.map(a => {
-  //            MockManifest.manifestForArrival(a)
-  //          })
-  //          Await.ready(testDrtSystemActor.testManifestsActor.ask(VoyageManifests(manifests.toSet)), 5 seconds)
-  //        })
-  //      })
-  //  }
 
   override def getRoles(config: Configuration,
                         headers: Headers,

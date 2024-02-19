@@ -43,7 +43,11 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfac
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val testDrtSystemActor: TestDrtSystemActorsLike =  TestDrtSystemActors(ctrl.applicationService, ctrl.feedService, ctrl.actorService, ctrl.persistentActors)
+  val testDrtSystemActor: TestDrtSystemActorsLike =  TestDrtSystemActors(ctrl.applicationService,
+    ctrl.feedService,
+    ctrl.actorService,
+    ctrl.persistentActors,
+    ctrl.config)
 
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")

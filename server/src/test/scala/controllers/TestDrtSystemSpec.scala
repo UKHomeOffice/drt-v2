@@ -23,7 +23,11 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
   "Given a test drt system" >> {
     val drtSystem = TestDrtSystem(defaultAirportConfig, MockDrtParameters(), () => SDate.now())
-    val testDrtSystemActor: TestDrtSystemActors =  TestDrtSystemActors(drtSystem.applicationService, drtSystem.feedService, drtSystem.actorService, drtSystem.persistentActors)
+    val testDrtSystemActor = TestDrtSystemActors(drtSystem.applicationService,
+      drtSystem.feedService,
+      drtSystem.actorService,
+      drtSystem.persistentActors,
+      drtSystem.config)
 
     "When I send its port state actor an arrival" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
