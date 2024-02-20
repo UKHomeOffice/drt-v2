@@ -24,6 +24,8 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val timeout: Timeout) extends DrtSystemInterface {
   val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
+  override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+
   override val flightLookups: FlightLookupsLike = FlightLookups(
     system,
     now,
@@ -45,17 +47,18 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(AggregateDb)
 
-  override val db: Tables = AggregateDb
+   lazy override val db: Tables = AggregateDb
 
   override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb.db)
 
   override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb.db)
 
-  override val actorService: ReadRouteUpdateActorsLike = ActorsService(journalType = StreamingJournal.forConfig(config),
+  lazy override val actorService: ReadRouteUpdateActorsLike = ActorsService(journalType = StreamingJournal.forConfig(config),
     airportConfig = airportConfig,
     now = now,
     params = params,
-    flightLookups = flightLookups)
+    flightLookups = flightLookups,
+    minuteLookups = minuteLookups)
 
   val persistentActors = ProdPersistentStateActors(
     system,
@@ -76,6 +79,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     feedService = feedService,
     manifestLookups = manifestLookupsService,
     manifestLookupService = manifestLookupService,
+    minuteLookups = minuteLookups,
     readActorService = actorService,
     persistentStateActors = persistentActors
   )

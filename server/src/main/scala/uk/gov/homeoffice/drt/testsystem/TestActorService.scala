@@ -13,9 +13,8 @@ case class TestActorService(journalType: StreamingJournalLike,
                             airportConfig: AirportConfig,
                             now: () => SDateLike,
                             params: DrtParameters,
-                            flightLookups: FlightLookupsLike)(implicit system: ActorSystem, ec: ExecutionContext) extends ReadRouteUpdateActorsLike {
-
-  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+                            flightLookups: FlightLookupsLike,
+                            minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem, ec: ExecutionContext) extends ReadRouteUpdateActorsLike {
 
   override val liveShiftsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")

@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 import scala.collection.mutable.ArrayBuffer

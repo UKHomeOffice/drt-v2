@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiFeedSource, LiveFeedSource, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{Seq, SortedMap}

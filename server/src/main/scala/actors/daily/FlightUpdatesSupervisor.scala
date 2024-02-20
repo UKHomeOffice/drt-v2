@@ -11,7 +11,6 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.FlightsWithSplitsDiff
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 

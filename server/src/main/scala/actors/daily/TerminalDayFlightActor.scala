@@ -185,8 +185,8 @@ class TerminalDayFlightActor(year: Int,
             restorer.remove(uniqueArrivalsFromMessages(removals))
 
           val incomingFws = updates.map(flightWithSplitsFromMessage).map(fws => (fws.unique, fws)).toMap
-          val updateFws: (Option[ApiFlightWithSplits], ApiFlightWithSplits) => Option[ApiFlightWithSplits] = (_, newFws) =>
-            Option(newFws.copy(lastUpdated = Option(createdAt)))
+          val updateFws: (Option[ApiFlightWithSplits], ApiFlightWithSplits) => Option[ApiFlightWithSplits] = (maybeExisting, newFws) =>
+            Option(maybeExisting.map(_.update(newFws)).getOrElse(newFws))
           restorer.applyUpdates(incomingFws, updateFws)
       }
 
@@ -199,11 +199,13 @@ class TerminalDayFlightActor(year: Int,
             restorer.remove(uniqueArrivalsFromMessages(removals))
 
           val incomingArrivals = updates.map(flightMessageToApiFlight).map(a => (a.unique, a)).toMap
-          val updateFws: (Option[ApiFlightWithSplits], Arrival) => Option[ApiFlightWithSplits] = (maybeFws, incoming) =>
-            maybeFws match {
-              case Some(fws) => Option(fws.copy(apiFlight = incoming, lastUpdated = Option(createdAt)))
-              case None => Option(ApiFlightWithSplits(incoming, Set(), Option(createdAt)))
-            }
+          val updateFws: (Option[ApiFlightWithSplits], Arrival) => Option[ApiFlightWithSplits] = (maybeExistingFws, incoming) => {
+            val updated = maybeExistingFws
+              .map(existingFws => existingFws.copy(apiFlight = existingFws.apiFlight.update(incoming)))
+              .getOrElse(ApiFlightWithSplits(incoming, Set(), Option(createdAt)))
+              .copy(lastUpdated = Option(createdAt))
+            Option(updated)
+          }
 
           restorer.applyUpdates(incomingArrivals, updateFws)
       }

@@ -23,7 +23,6 @@ import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.language.postfixOps
 import uk.gov.homeoffice.drt.db.{IABFeatureDao, IUserFeedbackDao}
 
 
@@ -38,8 +37,6 @@ trait AirportConfProvider extends AirportConfiguration {
   def contactEmail: Option[String] = config.getOptional[String]("contact-email")
 
   def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
-
-  def useTimePredictions: Boolean = config.get[Boolean]("feature-flags.use-time-predictions")
 
   def noLivePortFeed: Boolean = config.get[Boolean]("feature-flags.no-live-port-feed")
 

@@ -41,6 +41,8 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWith
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.prediction.ModelPersistence
+import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import javax.inject.Singleton
@@ -70,6 +72,9 @@ case class FeedService(journalType: StreamingJournalLike,
     AclFeedSource -> forecastBaseArrivalsFeedStatusActor,
     ApiFeedSource -> manifestsFeedStatusActor,
   )
+
+  val flightModelPersistence: ModelPersistence = Flight()
+
 
   private def flightValuesForDate[T](date: LocalDate,
                                      maybeAtTime: Option[SDateLike],

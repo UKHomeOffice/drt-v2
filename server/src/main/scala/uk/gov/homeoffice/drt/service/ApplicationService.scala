@@ -81,6 +81,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               feedService: FeedService,
                               manifestLookups: ManifestLookupsLike,
                               manifestLookupService: ManifestLookupLike,
+                              minuteLookups: MinuteLookupsLike,
                               readActorService: ReadRouteUpdateActorsLike,
                               persistentStateActors: PersistentStateActors)
                              (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
@@ -121,7 +122,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   }
 
   private val pcpArrivalTimeCalculator: Arrival => MilliDate =
-    pcpFrom(airportConfig.firstPaxOffMillis, walkTimeProviderWithFallback, airportConfig.useTimePredictions)
+    pcpFrom(airportConfig.firstPaxOffMillis, walkTimeProviderWithFallback)
 
   val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff =>
     Future.successful {
@@ -143,7 +144,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
-    PassengersLiveView.populatePaxForDate(readActorService.minuteLookups.queueMinutesRouterActor, updateLivePaxView)
+    PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
 
   private def ensureDefaultSlaConfig(): Unit =
@@ -283,21 +284,21 @@ case class ApplicationService(journalType: StreamingJournalLike,
         startOptimisationGraph(passengerLoadsFlow,
           actors.crunchQueueActor,
           crunchQueue,
-          readActorService.minuteLookups.queueLoadsMinutesActor,
+          minuteLookups.queueLoadsMinutesActor,
           "passenger-loads")
 
       val deskRecsFlow = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
-        loadsProvider = OptimisationProviders.passengersProvider(readActorService.minuteLookups.queueLoadsMinutesActor),
+        loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
         maxDesksProviders = deskLimitsProviders,
         loadsToQueueMinutes = portDeskRecs.loadsToDesks,
       )
 
       val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
-        startOptimisationGraph(deskRecsFlow, actors.deskRecsQueueActor, deskRecsQueue, readActorService.minuteLookups.queueMinutesRouterActor, "desk-recs")
+        startOptimisationGraph(deskRecsFlow, actors.deskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesRouterActor, "desk-recs")
 
       val deploymentsFlow = DynamicRunnableDeployments.crunchRequestsToDeployments(
-        loadsProvider = OptimisationProviders.passengersProvider(readActorService.minuteLookups.queueLoadsMinutesActor),
-        staffProvider = OptimisationProviders.staffMinutesProvider(readActorService.minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
+        loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+        staffProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
         staffToDeskLimits = staffToDeskLimits,
         loadsToQueueMinutes = portDeskRecs.loadsToSimulations
       )
@@ -305,7 +306,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val (deploymentRequestQueueActor, deploymentsKillSwitch) = startOptimisationGraph(deploymentsFlow,
         actors.deploymentQueueActor,
         deploymentQueue,
-        readActorService.minuteLookups.queueMinutesRouterActor,
+        minuteLookups.queueMinutesRouterActor,
         "deployments")
 
       val shiftsProvider = (r: ProcessingRequest) => readActorService.liveShiftsReadActor.ask(r).mapTo[ShiftAssignments]
@@ -315,7 +316,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val staffMinutesFlow = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
 
       val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
-        startOptimisationGraph(staffMinutesFlow, actors.staffingQueueActor, staffQueue, readActorService.minuteLookups.staffMinutesRouterActor, "staffing")
+        startOptimisationGraph(staffMinutesFlow, actors.staffingQueueActor, staffQueue, minuteLookups.staffMinutesRouterActor, "staffing")
 
       readActorService.liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       readActorService.liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
@@ -370,15 +371,15 @@ case class ApplicationService(journalType: StreamingJournalLike,
       Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
     val flushArrivalsSource: Source[Boolean, SourceQueueWithComplete[Boolean]] = Source.queue[Boolean](100, OverflowStrategy.backpressure)
     val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
-    val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] = if (airportConfig.useTimePredictions) {
-      log.info(s"Flight predictions enabled")
+
+    val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
       ArrivalPredictions(
         (a: Arrival) => Iterable(
           TerminalOrigin(a.Terminal.toString, a.Origin.iata),
           TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
           PredictionModelActor.Terminal(a.Terminal.toString),
         ),
-        Flight().getModels(enabledPredictionModelNames),
+        feedService.flightModelPersistence.getModels(enabledPredictionModelNames),
         Map(
           OffScheduleModelAndFeatures.targetName -> 45,
           ToChoxModelAndFeatures.targetName -> 20,
@@ -387,10 +388,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
         ),
         15
       ).addPredictions
-    } else {
-      log.info(s"Touchdown predictions disabled. Using noop lookup")
-      diff => Future.successful(diff)
-    }
 
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,

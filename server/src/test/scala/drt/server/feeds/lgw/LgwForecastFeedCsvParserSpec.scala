@@ -4,7 +4,7 @@ import org.specs2.mutable.Specification
 import services.graphstages.Crunch.europeLondonTimeZone
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, ForecastArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
+import uk.gov.homeoffice.drt.ports.Terminals.S
 import uk.gov.homeoffice.drt.time.SDate
 
 class LgwForecastFeedCsvParserSpec extends Specification {

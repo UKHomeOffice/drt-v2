@@ -144,8 +144,8 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       end,
       terminal,
       airportConfig.desksExportQueueOrder,
-      ctrl.actorService.minuteLookups.queuesLookup,
-      ctrl.actorService.minuteLookups.staffLookup,
+      ctrl.minuteLookups.queuesLookup,
+      ctrl.minuteLookups.staffLookup,
       pointInTime
     )
 
@@ -159,8 +159,8 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       end,
       terminal,
       airportConfig.desksExportQueueOrder,
-      ctrl.actorService.minuteLookups.queuesLookup,
-      ctrl.actorService.minuteLookups.staffLookup,
+      ctrl.minuteLookups.queuesLookup,
+      ctrl.minuteLookups.staffLookup,
       pointInTime
     )
 }

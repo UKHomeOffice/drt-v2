@@ -4,7 +4,6 @@ import actors.MinuteLookupsLike
 import akka.actor.ActorRef
 
 trait ReadRouteUpdateActorsLike {
-  val minuteLookups: MinuteLookupsLike
   val portStateActor: ActorRef
   val liveShiftsReadActor: ActorRef
   val liveFixedPointsReadActor: ActorRef

@@ -24,7 +24,8 @@ import uk.gov.homeoffice.drt.service.ApplicationService
 import uk.gov.homeoffice.drt.testsystem.RestartActor.AddResetActors
 import uk.gov.homeoffice.drt.testsystem.TestActors._
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+
 import java.sql.Timestamp
 import javax.inject.Singleton
 import scala.concurrent.duration._
@@ -148,13 +149,15 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
                                    val timeout: Timeout) extends DrtSystemInterface {
 
   log.warn("Using test System")
+  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   override val flightLookups: FlightLookupsLike = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder)
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val manifestLookupsService: ManifestLookupsLike = ManifestLookups(system)
-  override val actorService: ReadRouteUpdateActorsLike = TestActorService(journalType,
+  lazy override val actorService: ReadRouteUpdateActorsLike = TestActorService(journalType,
     airportConfig,
     now, params,
-    flightLookups)
+    flightLookups,
+    minuteLookups)
 
   val persistentActors: TestPersistentStateActors = TestPersistentStateActors(
     system,
@@ -174,11 +177,12 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
     feedService = feedService,
     manifestLookups = manifestLookupsService,
     manifestLookupService = manifestLookupService,
+    minuteLookups = minuteLookups,
     readActorService = actorService,
     persistentStateActors = persistentActors
   )
 
-  override val db: Tables = AggregateDbH2
+  lazy override val db: Tables = AggregateDbH2
 
   override val userService: UserTableLike = MockUserTable()
   override val featureGuideService: FeatureGuideTableLike = MockFeatureGuideTable()

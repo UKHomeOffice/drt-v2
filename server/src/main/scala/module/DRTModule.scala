@@ -78,7 +78,6 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   @Provides
   @Singleton
   def provideDrtSystemInterface: DrtSystemInterface = {
-    println(s"Using ${if (isTestEnvironment) "Test" else "Prod"} DrtSystem......")
     if (isTestEnvironment)
       drtTestSystem
     else

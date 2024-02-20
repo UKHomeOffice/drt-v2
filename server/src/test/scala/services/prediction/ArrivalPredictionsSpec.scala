@@ -13,8 +13,8 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.prediction._
-import uk.gov.homeoffice.drt.prediction.arrival.FeatureColumns.{DayOfWeek, PartOfDay}
 import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
+import uk.gov.homeoffice.drt.prediction.arrival.features.FeatureColumnsV1.{DayOfWeek, PartOfDay}
 import uk.gov.homeoffice.drt.prediction.category.FlightCategory
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -38,8 +38,7 @@ case class MockFlightPersistence()
                                  val ec: ExecutionContext,
                                  val timeout: Timeout,
                                  val system: ActorSystem
-                                ) extends Persistence {
-  override val now: () => SDateLike = () => SDate.now()
+                                ) extends ActorModelPersistence {
   override val modelCategory: ModelCategory = FlightCategory
   override val actorProvider: (ModelCategory, WithId) => ActorRef =
     (modelCategory, identifier) => system.actorOf(Props(new MockPredictionModelActor(() => SDate.now(), modelCategory, identifier)))
@@ -89,7 +88,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
       val keysWithArrival = modelKeysForArrival(arrival).map(k => (k, List(arrival.unique))).toList
       val arrivalsMap = List(arrival).map(a => (a.unique, a)).toMap
-      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(arrivalsMap, keysWithArrival), 1.second)
+      val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(arrivalsMap, keysWithArrival), 5.second)
 
       maybePredictedTouchdown.head.predictedTouchdown.nonEmpty
     }

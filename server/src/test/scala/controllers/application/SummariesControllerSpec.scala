@@ -32,7 +32,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   val schema = PassengersHourlyDao.table.schema
 
   override def beforeEach(): Unit = {
-    Await.ready(H2Tables.db.run(DBIO.seq(schema.dropIfExists, schema.create)), 1.second)
+    Await.ready(H2Tables.db.run(DBIO.seq(schema.dropIfExists, schema.createIfNotExists)), 10.second)
   }
 
   def generateMinutes(start: SDateLike, end: SDateLike, terminals: Seq[Terminal], queues: Seq[Queue], paxPerHour: Double): Seq[CrunchMinute] = {
@@ -57,7 +57,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       val drtInterface = newDrtInterface
       val minutes = MinutesContainer(generateMinutes(SDate("2024-05-31T23:00"), SDate("2024-06-01T22:59"), Seq(T3, T2), queues, queuePaxPerMinute))
 
-      Await.ready(drtInterface.actorService.minuteLookups.queueMinutesRouterActor.ask(minutes), 5.second)
+      Await.ready(drtInterface.minuteLookups.queueMinutesRouterActor.ask(minutes), 5.second)
       val controller = newController(drtInterface)
 
       val authHeader = Headers(("X-Auth-Roles" -> "super-admin,LHR"))
@@ -158,7 +158,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentType(result) must ===(Some("application/json"))
       val totalPax = queuePaxPerDay * queues.size * terminals.size
       val queuePax = queuePaxPerDay * terminals.size
-      contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EEA","count":$queuePax},{"queueName":"Non-EEA","count":$queuePax}],"regionName":"Heathrow","totalPcpPax":$totalPax}]""")
+      contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePax},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePax}],"regionName":"Heathrow","totalPcpPax":$totalPax}]""")
     }
     "generate a daily breakdown json response for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
@@ -167,7 +167,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("application/json"))
-      contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EEA","count":$terminalPaxPerDay},{"queueName":"Non-EEA","count":$terminalPaxPerDay}],"regionName":"Heathrow","totalPcpPax":$portPaxPerDay}]""")
+      contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$terminalPaxPerDay},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$terminalPaxPerDay}],"regionName":"Heathrow","totalPcpPax":$portPaxPerDay}]""")
     }
     "generate a hourly breakdown json response for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
@@ -177,7 +177,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       status(result) must ===(OK)
       contentType(result) must ===(Some("application/json"))
       val hourlyContent = (0 to 23).map { hour =>
-        s"""{"date":"2024-06-01","hour":$hour,"portCode":"LHR","queueCounts":[{"queueName":"EEA","count":${terminalPaxPerDay / 24}},{"queueName":"Non-EEA","count":${terminalPaxPerDay / 24}}],"regionName":"Heathrow","totalPcpPax":${portPaxPerDay / 24}}"""
+        s"""{"date":"2024-06-01","hour":$hour,"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":${terminalPaxPerDay / 24}},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":${terminalPaxPerDay / 24}}],"regionName":"Heathrow","totalPcpPax":${portPaxPerDay / 24}}"""
       }.mkString(",")
       contentAsString(result) must ===(s"[$hourlyContent]")
     }
@@ -188,7 +188,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("application/json"))
-      contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EEA","count":$queuePaxPerDay},{"queueName":"Non-EEA","count":$queuePaxPerDay}],"regionName":"Heathrow","terminalName":"T3","totalPcpPax":${queuePaxPerDay * queues.size}}]""")
+      contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePaxPerDay},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePaxPerDay}],"regionName":"Heathrow","terminalName":"T3","totalPcpPax":${queuePaxPerDay * queues.size}}]""")
     }
     "generate a daily breakdown json response for the given terminal" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
@@ -197,7 +197,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("application/json"))
-      contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EEA","count":$queuePaxPerDay},{"queueName":"Non-EEA","count":$queuePaxPerDay}],"regionName":"Heathrow","terminalName":"T3","totalPcpPax":${queuePaxPerDay * queues.size}}]""")
+      contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePaxPerDay},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePaxPerDay}],"regionName":"Heathrow","terminalName":"T3","totalPcpPax":${queuePaxPerDay * queues.size}}]""")
     }
     "generate a hourly breakdown json response for the given terminal" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
@@ -207,7 +207,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       status(result) must ===(OK)
       contentType(result) must ===(Some("application/json"))
       val hourlyContent = (0 to 23).map { hour =>
-        s"""{"date":"2024-06-01","hour":$hour,"portCode":"LHR","queueCounts":[{"queueName":"EEA","count":$queuePaxPerHour},{"queueName":"Non-EEA","count":$queuePaxPerHour}],"regionName":"Heathrow","terminalName":"T3","totalPcpPax":${queuePaxPerHour * queues.size}}"""
+        s"""{"date":"2024-06-01","hour":$hour,"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePaxPerHour},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePaxPerHour}],"regionName":"Heathrow","terminalName":"T3","totalPcpPax":${queuePaxPerHour * queues.size}}"""
       }.mkString(",")
       contentAsString(result) must ===(s"[$hourlyContent]")
     }
@@ -219,7 +219,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     val drtInterface = newDrtInterface
     val minutes = MinutesContainer(generateMinutes(startSDate, endSDate, terminals, queues, queuePaxPerMinute))
 
-    Await.ready(drtInterface.actorService.minuteLookups.queueMinutesRouterActor.ask(minutes), 1.second)
+    Await.ready(drtInterface.minuteLookups.queueMinutesRouterActor.ask(minutes), 1.second)
     val controller = newController(drtInterface)
 
     val request = FakeRequest(method = "PUT", uri = "", headers = Headers(("X-Auth-Roles", "super-admin,LHR")), body = AnyContentAsEmpty)

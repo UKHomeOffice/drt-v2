@@ -117,7 +117,7 @@ object FlightTableRow {
       val flightCodes = s"${allCodes.mkString(" - ")}$ctaOrRedListMarker"
 
       val arrivalTimes: Seq[(String, Long)] = Seq(
-        "Predicted" -> (if (props.airportConfig.useTimePredictions) flight.predictedTouchdown else None),
+        "Predicted" -> flight.predictedTouchdown,
         "Estimated" -> flight.Estimated,
         "Touchdown" -> flight.Actual,
         "Estimated Chox" -> flight.EstimatedChox,
@@ -186,7 +186,7 @@ object FlightTableRow {
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
-      val trClassName = s"${offScheduleClass(flight, props.airportConfig.useTimePredictions)} $timeIndicatorClass$cancelledClass$noPcpPax"
+      val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
       val queueSplits = props.splitsQueueOrder.map { q =>
         val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
@@ -254,8 +254,8 @@ object FlightTableRow {
     <.span(^.className := "no-wrap", Tippy.interactive(<.span(^.key := "walk-time", walkTimeString), gateOrStand))
   }
 
-  def offScheduleClass(arrival: Arrival, considerPredictions: Boolean): String = {
-    val eta = arrival.bestArrivalTime(considerPredictions)
+  def offScheduleClass(arrival: Arrival): String = {
+    val eta = arrival.bestArrivalTime(considerPredictions = true)
     val differenceFromScheduled = eta - arrival.Scheduled
     val hourInMillis = 3600000
     val offScheduleClass = if (differenceFromScheduled > hourInMillis || differenceFromScheduled < -1 * hourInMillis)

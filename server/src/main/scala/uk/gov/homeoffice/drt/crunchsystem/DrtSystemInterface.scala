@@ -46,16 +46,12 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val now: () => SDateLike
 
-  val manifestLookupService: ManifestLookupLike
-  val manifestLookupsService: ManifestLookupsLike
   val config: Configuration = new Configuration(ConfigFactory.load)
 
   val env: AppEnvironment = AppEnvironment(config.getOptional[String]("env").getOrElse("other"))
   val airportConfig: AirportConfig
   val params: DrtParameters
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
-
-  //  val minuteLookups: MinuteLookupsLike
 
   val db: Tables
 
@@ -76,11 +72,16 @@ trait DrtSystemInterface extends UserRoleProviderLike
     AclFeedSource,
   )
 
+  val manifestLookupService: ManifestLookupLike
+
+  val manifestLookupsService: ManifestLookupsLike
+
   val flightLookups: FlightLookupsLike
+
+  val minuteLookups: MinuteLookupsLike
 
   lazy val feedService: FeedService = service.FeedService(journalType, airportConfig, now, params, config, paxFeedSourceOrder, flightLookups)
 
   def run(): Unit
-
 
 }

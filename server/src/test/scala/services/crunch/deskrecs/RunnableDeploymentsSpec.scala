@@ -54,21 +54,6 @@ class TestQueueMinutesRouterActor(probe: ActorRef,
   }
 }
 
-case class TestMinuteLookups(queueProbe: ActorRef,
-                             system: ActorSystem,
-                             now: () => SDateLike,
-                             expireAfterMillis: Int,
-                             queuesByTerminal: Map[Terminal, Seq[Queue]],
-                             deploymentsQueueSubscriber: ActorRef)
-                            (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
-  override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
-
-  override val queueLoadsMinutesActor: ActorRef = system.actorOf(Props(new QueueLoadsMinutesActor(queuesByTerminal.keys, queuesLoadsLookup, updatePassengerMinutes)))
-
-  override val queueMinutesRouterActor: ActorRef = system.actorOf(Props(new TestQueueMinutesRouterActor(queueProbe, queuesByTerminal.keys, queuesLookup, updateCrunchMinutes, deploymentsQueueSubscriber)))
-
-  override val staffMinutesRouterActor: ActorRef = system.actorOf(Props(new StaffMinutesRouterActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
-}
 
 
 
