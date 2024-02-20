@@ -76,7 +76,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 import uk.gov.homeoffice.drt.prediction.ModelPersistence
-import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
+import uk.gov.homeoffice.drt.prediction.arrival._
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
@@ -479,7 +479,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     OffScheduleModelAndFeatures.targetName,
     ToChoxModelAndFeatures.targetName,
     WalkTimeModelAndFeatures.targetName,
-    PaxCapModelAndFeatures.targetName,
+    PaxCapModelAndFeaturesV2.targetName,
   )
 
   def startCrunchSystem(actors: PersistentStateActors,
