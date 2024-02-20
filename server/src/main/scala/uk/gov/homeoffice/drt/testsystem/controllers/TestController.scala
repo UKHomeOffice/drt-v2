@@ -69,9 +69,10 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
     request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
         case Some(flight) =>
-          val walkTimeMinutes = 4
-          val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
-          val actPax = Option(flight.ActPax).filter(_ != 0)
+          val walkTimeMinutes = 13
+          val actPax: Option[Int] = Option(flight.ActPax).filter(_ != 0)
+          val pcpTime: Long = actPax.map(_ => org.joda.time.DateTime.parse(flight.ActChoxDT).plusMinutes(walkTimeMinutes).getMillis)
+            .getOrElse(org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis)
           val arrival = Arrival(
             Operator = flight.Operator,
             Status = flight.Status,
