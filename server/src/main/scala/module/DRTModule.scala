@@ -67,6 +67,9 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   }
 
   @Provides
+  def provideTestDrtSystem = drtTestSystem
+
+  @Provides
   @Singleton
   implicit val provideActorSystem: ActorSystem = if (isTestEnvironment) {
     ActorSystem("DRT-Module", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load()))

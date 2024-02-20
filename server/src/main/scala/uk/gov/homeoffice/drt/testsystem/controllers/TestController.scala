@@ -1,6 +1,5 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
-import actors.{TestDrtSystemActors, TestDrtSystemActorsLike}
 import actors.persistent.staffing.ReplaceAllShifts
 import akka.pattern.ask
 import akka.util.Timeout
@@ -9,6 +8,8 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.server.feeds.Implicits._
+import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
+import drt.shared.FlightsApi.Flights
 import drt.shared.ShiftAssignments
 import drt.staff.ImportStaff
 import module.NoCSRFAction
@@ -18,15 +19,13 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import play.api.http.HeaderNames
 import play.api.mvc._
 import spray.json._
-import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
-import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
-import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
-import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
-import uk.gov.homeoffice.drt.testsystem.MockRoles
+import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
+import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.testsystem.feeds.test.CSVFixtures
+import uk.gov.homeoffice.drt.testsystem.{MockRoles, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
@@ -34,7 +33,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
+class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
   lazy implicit val timeout: Timeout = Timeout(5 second)
 
   lazy implicit val ec: ExecutionContext = ctrl.ec
@@ -43,27 +42,23 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfac
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val testDrtSystemActor: TestDrtSystemActorsLike =  TestDrtSystemActors(ctrl.applicationService,
-    ctrl.feedService,
-    ctrl.actorService,
-    ctrl.persistentActors,
-    ctrl.config)
-
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    testDrtSystemActor.testArrivalActor.ask(arrival).map { _ =>
+    ctrl.persistentActors.liveArrivalsActor ! ArrivalsFeedSuccess(Flights(List(arrival)))
+    ctrl.actorService.portStateActor.ask(ArrivalsDiff(List(arrival), List())).map { _ =>
       ctrl.feedService.liveActor ! AdhocCheck
     }
   }
 
   def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
     log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
-    testDrtSystemActor.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
+    ctrl.persistentActors.manifestsRouterActor
+      .ask(ManifestsFeedSuccess(DqManifests(0, VoyageManifests(Set(voyageManifest)).manifests)))
   }
 
   def resetData: Future[Any] = {
     log.info(s"Sending reset message")
-    testDrtSystemActor.restartActor.ask(ResetData)
+    ctrl.testDrtSystemActor.restartActor.ask(ResetData)
   }
 
   def hello = Action {
@@ -161,6 +156,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfac
   }
 
   def deleteAllData: Action[AnyContent] = noCSRFAction.async { _ =>
+    println("Deleting all data.............")
     resetData.map(_ => Accepted)
   }
 

@@ -39,9 +39,8 @@ import services.graphstages.FlightFilter
 import services.liveviews.PassengersLiveView
 import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
-import services.TryCrunchWholePax
 import services.staffing.StaffMinutesChecker
-import services.{OptimiserWithFlexibleProcessors, PaxDeltas}
+import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
 import slickdb.Tables
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
@@ -58,7 +57,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
 import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
-import uk.gov.homeoffice.drt.prediction.persistence.Flight
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis

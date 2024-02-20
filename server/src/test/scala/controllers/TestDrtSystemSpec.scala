@@ -1,7 +1,7 @@
 package controllers
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince}
-import actors.TestDrtSystemActors
+import actors.TestDrtSystemActorsLike
 import akka.pattern.ask
 import drt.shared.CrunchApi._
 import drt.shared.PortState
@@ -23,11 +23,6 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
   "Given a test drt system" >> {
     val drtSystem = TestDrtSystem(defaultAirportConfig, MockDrtParameters(), () => SDate.now())
-    val testDrtSystemActor = TestDrtSystemActors(drtSystem.applicationService,
-      drtSystem.feedService,
-      drtSystem.actorService,
-      drtSystem.persistentActors,
-      drtSystem.config)
 
     "When I send its port state actor an arrival" >> {
       val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
@@ -42,7 +37,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
       "Then I should see no arrivals after sending a Reset message to the reset actor" >> {
         val existsBeforeReset = doesFlightExist(drtSystem, arrival) === true
-        resetData(testDrtSystemActor)
+        resetData(drtSystem.testDrtSystemActor)
         val emptyAfterReset = getPortState(drtSystem).flights.isEmpty
         val noUpdatesAfterReset = getUpdates(drtSystem).toList.flatMap(_.updatesAndRemovals.arrivalUpdates).isEmpty
 
@@ -63,7 +58,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
       "Then I should see no crunch minutes after sending a Reset message to the reset actor" >> {
         val existsBeforeReset = doesCrunchMinuteExist(drtSystem, drm) === true
-        resetData(testDrtSystemActor)
+        resetData(drtSystem.testDrtSystemActor)
         val emptyAfterReset = getPortState(drtSystem).staffMinutes.values.forall(_.available == 0)
         val noUpdatesAfterReset = getUpdates(drtSystem).toList.forall(_.staffMinutes.forall(_.available == 0))
 
@@ -84,7 +79,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
 
       "Then I should see no staff minutes after sending a Reset message to the reset actor" >> {
         val existsBeforeReset = doesStaffMinuteExist(drtSystem, sm) === true
-        resetData(testDrtSystemActor)
+        resetData(drtSystem.testDrtSystemActor)
         val emptyAfterReset = getPortState(drtSystem).staffMinutes.values.forall(_.available == 0)
         val noUpdatesAfterReset = getUpdates(drtSystem).toList.forall(_.staffMinutes.forall(_.available == 0))
 
@@ -93,7 +88,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     }
   }
 
-  private def resetData(testDrtSystemActor: TestDrtSystemActors): Future[Any] = {
+  private def resetData(testDrtSystemActor: TestDrtSystemActorsLike): Future[Any] = {
     Await.ready(testDrtSystemActor.restartActor.ask(ResetData), 20.seconds)
   }
 

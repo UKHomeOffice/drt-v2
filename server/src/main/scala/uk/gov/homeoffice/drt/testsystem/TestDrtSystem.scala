@@ -167,6 +167,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
     params.forecastMaxDays,
     manifestLookupsService,
   )
+
   val applicationService: ApplicationService = ApplicationService(
     journalType = journalType,
     airportConfig = airportConfig,
@@ -182,6 +183,8 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
     persistentStateActors = persistentActors
   )
 
+  val testDrtSystemActor: TestDrtSystemActorsLike = TestDrtSystemActors(applicationService, feedService, actorService, persistentActors, config)
+
   lazy override val db: Tables = AggregateDbH2
 
   override val userService: UserTableLike = MockUserTable()
@@ -189,7 +192,6 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val featureGuideViewService: FeatureGuideViewLike = MockFeatureGuideViewTable()
   override val dropInService: DropInTableLike = MockDropInTable()
   override val dropInRegistrationService: DropInsRegistrationTableLike = MockDropInsRegistrationTable()
-//  val testDrtSystemActor: TestDrtSystemActorsLike = TestDrtSystemActors(applicationService, feedService, actorService, persistentActors)
 
 
   override def getRoles(config: Configuration,
@@ -197,7 +199,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
                         session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
 
   override def run(): Unit = {
-    applicationService.run()
+    testDrtSystemActor.restartActor ! StartTestSystem
   }
 
 
