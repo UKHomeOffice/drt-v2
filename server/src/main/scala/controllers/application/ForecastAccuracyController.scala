@@ -145,7 +145,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     arrivals
       .map { fws =>
         fws.apiFlight.bestPcpPaxEstimate(feedsPreference).getOrElse {
-          log.warning(s"No port or acl forecast for ${fws.apiFlight.unique} on $localDate. Using 0 for a default")
+          log.warning(s"No ${feedsPreference.map(_.name).mkString(", ")} for ${fws.apiFlight.unique} on $localDate. Using 0 for a default")
           0
         }
       }.sum
