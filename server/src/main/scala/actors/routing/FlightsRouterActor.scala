@@ -159,8 +159,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
         .map { terminalDay =>
           val terminalUpdates = updates.getOrElse(terminalDay, List())
           val terminalRemovals = removals.getOrElse(terminalDay, List())
-          val diff =
-            ArrivalsDiff(terminalUpdates, terminalRemovals)
+          val diff = ArrivalsDiff(terminalUpdates, terminalRemovals)
           (terminalDay, diff)
         }
         .toMap

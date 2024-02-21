@@ -11,9 +11,10 @@ import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import slickdb._
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ReadRouteUpdateActorsLike}
+import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, DrtSystemInterface}
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
@@ -51,7 +52,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val flightLookups: FlightLookupsLike = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder)
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val manifestLookups: ManifestLookupsLike = ManifestLookups(system)
-  lazy override val actorService: ReadRouteUpdateActorsLike = TestActorService(journalType,
+  lazy override val actorService: ActorsServiceLike = TestActorService(journalType,
     airportConfig,
     now,
     params.forecastMaxDays,

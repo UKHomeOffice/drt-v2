@@ -11,8 +11,8 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import akka.stream.Materializer
 import org.scalatest.BeforeAndAfterAll
-
 import scala.concurrent.ExecutionContext
+
 class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAfterAll {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
@@ -39,7 +39,6 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAft
     }
 
     "get drop-ins in registration" in {
-//      val controller: DropInsController = dropInSessionsController
 
       val result = controller.getDropInRegistrations().apply(FakeRequest())
 
@@ -53,7 +52,6 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAft
     }
 
     "create drop-ins registration" in {
-//      val controller: DropInsController = dropInSessionsController
 
       val result = controller.createDropInRegistration().apply(FakeRequest().withTextBody(""""1"""")
         .withHeaders("X-Auth-Email" -> "someone@test.com", "X-Auth-Roles" -> "border-force-staff,TEST"))

@@ -13,7 +13,7 @@ import play.api.test.{FakeRequest, Helpers}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.Models
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
-import uk.gov.homeoffice.drt.crunchsystem.ReadRouteUpdateActorsLike
+import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, MlFeedSource}
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
@@ -145,7 +145,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
           override val flightModelPersistence: ModelPersistence = MockModelPersistence(mlPred)
         }
 
-        lazy override val actorService: ReadRouteUpdateActorsLike = new TestActorService(journalType,
+        lazy override val actorService: ActorsServiceLike = new TestActorService(journalType,
           airportConfig,
           now,
           params.forecastMaxDays,

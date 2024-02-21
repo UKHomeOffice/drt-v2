@@ -48,7 +48,7 @@ import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.crunchsystem.{PersistentStateActors, ReadRouteUpdateActorsLike}
+import uk.gov.homeoffice.drt.crunchsystem.{PersistentStateActors, ActorsServiceLike}
 import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
@@ -80,7 +80,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               manifestLookups: ManifestLookupsLike,
                               manifestLookupService: ManifestLookupLike,
                               minuteLookups: MinuteLookupsLike,
-                              readActorService: ReadRouteUpdateActorsLike,
+                              readActorService: ActorsServiceLike,
                               persistentStateActors: PersistentStateActors)
                              (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
   val log: Logger = LoggerFactory.getLogger(getClass)

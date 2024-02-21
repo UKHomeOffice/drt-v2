@@ -2,7 +2,7 @@ package uk.gov.homeoffice.drt.testsystem
 
 import actors._
 import akka.actor.{ActorRef, ActorSystem, Props}
-import uk.gov.homeoffice.drt.crunchsystem.ReadRouteUpdateActorsLike
+import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.testsystem.TestActors._
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -12,7 +12,7 @@ case class TestActorService(journalType: StreamingJournalLike,
                             now: () => SDateLike,
                             forecastMaxDays: Int,
                             flightLookups: FlightLookupsLike,
-                            minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ReadRouteUpdateActorsLike {
+                            minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ActorsServiceLike {
 
   override val liveShiftsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")

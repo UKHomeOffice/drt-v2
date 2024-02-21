@@ -73,7 +73,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val minuteLookups: MinuteLookupsLike
 
-  val actorService: ReadRouteUpdateActorsLike
+  val actorService: ActorsServiceLike
 
   val persistentActors: PersistentStateActors
 

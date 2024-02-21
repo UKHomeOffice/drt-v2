@@ -9,7 +9,7 @@ import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.service.ActorsService
+import uk.gov.homeoffice.drt.service.ActorsServiceService
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
@@ -51,7 +51,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb.db)
 
-  lazy override val actorService: ReadRouteUpdateActorsLike = ActorsService(journalType = StreamingJournal.forConfig(config),
+  lazy override val actorService: ActorsServiceLike = ActorsServiceService(journalType = StreamingJournal.forConfig(config),
     airportConfig = airportConfig,
     now = now,
     forecastMaxDays = params.forecastMaxDays,

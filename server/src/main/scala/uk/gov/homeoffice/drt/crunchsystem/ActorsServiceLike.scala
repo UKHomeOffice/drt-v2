@@ -1,9 +1,8 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
-import actors.MinuteLookupsLike
 import akka.actor.ActorRef
 
-trait ReadRouteUpdateActorsLike {
+trait ActorsServiceLike {
   val portStateActor: ActorRef
   val liveShiftsReadActor: ActorRef
   val liveFixedPointsReadActor: ActorRef

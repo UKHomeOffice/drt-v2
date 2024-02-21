@@ -5,13 +5,15 @@ import akka.pattern.{StatusReply, ask}
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.KillSwitch
 import akka.util.Timeout
-import uk.gov.homeoffice.drt.testsystem.RestartActor.AddResetActors
+import uk.gov.homeoffice.drt.testsystem.RestartActor.{AddResetActors, StartTestSystem}
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object RestartActor {
+  case object StartTestSystem
+
   case class AddResetActors(actors: Iterable[ActorRef])
 }
 
@@ -70,5 +72,3 @@ class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with Actor
 
   private def resetInMemoryData(): Unit = persistenceTestKit.clearAll()
 }
-
-case object StartTestSystem

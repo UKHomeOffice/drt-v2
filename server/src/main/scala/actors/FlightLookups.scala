@@ -55,7 +55,7 @@ case class FlightLookups(system: ActorSystem,
                          removalMessageCutOff: Option[FiniteDuration],
                          paxFeedSourceOrder: List[FeedSource],
                         ) extends FlightLookupsLike {
-  val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
+  override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
   override val flightsRouterActor: ActorRef = system.actorOf(
     Props(new FlightsRouterActor(

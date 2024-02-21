@@ -5,19 +5,19 @@ import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
-import uk.gov.homeoffice.drt.crunchsystem.ReadRouteUpdateActorsLike
+import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import javax.inject.Singleton
 
 @Singleton
-case class ActorsService(journalType: StreamingJournalLike,
-                         airportConfig: AirportConfig,
-                         now: () => SDateLike,
-                         forecastMaxDays: Int,
-                         flightLookups: FlightLookupsLike,
-                         minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ReadRouteUpdateActorsLike {
+case class ActorsServiceService(journalType: StreamingJournalLike,
+                                airportConfig: AirportConfig,
+                                now: () => SDateLike,
+                                forecastMaxDays: Int,
+                                flightLookups: FlightLookupsLike,
+                                minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ActorsServiceLike {
 
   override val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")

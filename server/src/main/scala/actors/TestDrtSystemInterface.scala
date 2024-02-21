@@ -5,7 +5,7 @@ import akka.stream.KillSwitch
 import drt.server.feeds.FeedPoller.Enable
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
-import uk.gov.homeoffice.drt.crunchsystem.{PersistentStateActors, ReadRouteUpdateActorsLike}
+import uk.gov.homeoffice.drt.crunchsystem.{PersistentStateActors, ActorsServiceLike}
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
 import uk.gov.homeoffice.drt.testsystem.RestartActor
 import uk.gov.homeoffice.drt.time.{MilliDate => _}
@@ -17,7 +17,7 @@ trait TestDrtSystemActorsLike {
 
 case class TestDrtSystemActors(applicationService: ApplicationService,
                                feedService: FeedService,
-                               actorService: ReadRouteUpdateActorsLike,
+                               actorService: ActorsServiceLike,
                                persistentActors: PersistentStateActors,
                                config: Configuration)
                               (implicit system: ActorSystem) extends TestDrtSystemActorsLike {

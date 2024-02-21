@@ -21,7 +21,6 @@ import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{Failure, Success, Try}
 
 object TerminalDayFlightActor {
   def propsWithRemovalsCutoff(terminal: Terminal,
@@ -143,21 +142,15 @@ class TerminalDayFlightActor(year: Int,
       persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
     } else sender() ! UpdatedMillis.empty
 
-  private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit = {
+  private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
-      Try(diff.applyTo(state, now().millisSinceEpoch, paxFeedSourceOrder)) match {
-        case Success((updatedState, minutesToUpdate)) =>
-          state = updatedState
-          val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
-          val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
-          persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
-        case Failure(t) =>
-          log.error(s"Failed to apply diff to state: ${t.getMessage}")
-          sender() ! UpdatedMillis.empty
-      }
-    } else sender() ! UpdatedMillis.empty
+      val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch, paxFeedSourceOrder)
+      state = updatedState
 
-  }
+      val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
+      val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
+      persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
+    } else sender() ! UpdatedMillis.empty
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {
