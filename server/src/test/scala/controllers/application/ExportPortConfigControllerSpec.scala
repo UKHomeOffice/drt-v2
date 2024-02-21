@@ -2,9 +2,8 @@ package controllers.application
 
 import module.DRTModule
 import org.scalatestplus.play.PlaySpec
-import play.api.test.{FakeRequest, Helpers}
-import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import play.api.test.Helpers._
+import play.api.test.{FakeRequest, Helpers}
 import uk.gov.homeoffice.drt.testsystem.MockDrtParameters
 
 class ExportPortConfigControllerSpec extends PlaySpec {
@@ -78,8 +77,8 @@ class ExportPortConfigControllerSpec extends PlaySpec {
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
       lazy override val mockDrtParameters: MockDrtParameters = new MockDrtParameters() {
-        override val gateWalkTimesFilePath = Some(getClass.getClassLoader.getResource("gate-walk-time-test.csv").getPath)
-        override val standWalkTimesFilePath = Some(getClass.getClassLoader.getResource("stand-walk-time-test.csv").getPath)
+        override val gateWalkTimesFilePath: Option[String] = Some(getClass.getClassLoader.getResource("gate-walk-time-test.csv").getPath)
+        override val standWalkTimesFilePath: Option[String] = Some(getClass.getClassLoader.getResource("stand-walk-time-test.csv").getPath)
       }
     }
 

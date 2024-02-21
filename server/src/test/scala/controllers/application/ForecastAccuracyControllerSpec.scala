@@ -147,7 +147,8 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
 
         lazy override val actorService: ReadRouteUpdateActorsLike = new TestActorService(journalType,
           airportConfig,
-          now, params,
+          now,
+          params.forecastMaxDays,
           flightLookups,
           minuteLookups)(system) {
           override val flightsRouterActor: ActorRef = system.actorOf(Props(new MockFlightsRouter(flights)))

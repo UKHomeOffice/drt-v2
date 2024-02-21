@@ -15,14 +15,14 @@ import javax.inject.Singleton
 case class ActorsService(journalType: StreamingJournalLike,
                          airportConfig: AirportConfig,
                          now: () => SDateLike,
-                         params: DrtParameters,
+                         forecastMaxDays: Int,
                          flightLookups: FlightLookupsLike,
                          minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ReadRouteUpdateActorsLike {
 
   override val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
   override val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
-    journalType, now, params.forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
+    journalType, now, forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
   override val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
 

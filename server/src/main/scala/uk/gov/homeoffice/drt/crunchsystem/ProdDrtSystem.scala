@@ -5,12 +5,11 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.Inject
-import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.service.{ActorsService, ApplicationService}
+import uk.gov.homeoffice.drt.service.ActorsService
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
@@ -22,7 +21,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val ec: ExecutionContext,
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends DrtSystemInterface {
-  val forecastMaxMillis: () => MillisSinceEpoch = () => now().addDays(params.forecastMaxDays).millisSinceEpoch
 
   override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
@@ -35,7 +33,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)
 
-  override val manifestLookupsService = ManifestLookups(system)
+  override val manifestLookups: ManifestLookups = ManifestLookups(system)
 
   override val userService: UserTableLike = UserTable(AggregateDb)
 
@@ -47,7 +45,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(AggregateDb)
 
-   lazy override val db: Tables = AggregateDb
+  lazy override val db: Tables = AggregateDb
 
   override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb.db)
 
@@ -56,33 +54,19 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   lazy override val actorService: ReadRouteUpdateActorsLike = ActorsService(journalType = StreamingJournal.forConfig(config),
     airportConfig = airportConfig,
     now = now,
-    params = params,
+    forecastMaxDays = params.forecastMaxDays,
     flightLookups = flightLookups,
     minuteLookups = minuteLookups)
 
-  val persistentActors = ProdPersistentStateActors(
+  val persistentActors: PersistentStateActors = ProdPersistentStateActors(
     system,
     now,
     airportConfig.minutesToCrunch,
     airportConfig.crunchOffsetMinutes,
-    manifestLookupsService,
+    manifestLookups,
     airportConfig.portCode,
     feedService.paxFeedSourceOrder)
 
-   val applicationService: ApplicationService = uk.gov.homeoffice.drt.service.ApplicationService(
-    journalType = journalType,
-    airportConfig = airportConfig,
-    now = now,
-    params = params,
-    config = config,
-    db = db,
-    feedService = feedService,
-    manifestLookups = manifestLookupsService,
-    manifestLookupService = manifestLookupService,
-    minuteLookups = minuteLookups,
-    readActorService = actorService,
-    persistentStateActors = persistentActors
-  )
   override def run(): Unit = {
     applicationService.run()
   }

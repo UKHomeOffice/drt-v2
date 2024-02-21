@@ -10,14 +10,14 @@ import uk.gov.homeoffice.drt.time.SDateLike
 case class TestActorService(journalType: StreamingJournalLike,
                             airportConfig: AirportConfig,
                             now: () => SDateLike,
-                            params: DrtParameters,
+                            forecastMaxDays: Int,
                             flightLookups: FlightLookupsLike,
                             minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ReadRouteUpdateActorsLike {
 
   override val liveShiftsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
   override val liveFixedPointsReadActor: ActorRef = system.actorOf(TestFixedPointsActor.streamingUpdatesProps(
-    journalType, now, params.forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
+    journalType, now, forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
   override val liveStaffMovementsReadActor: ActorRef = system.actorOf(TestStaffMovementsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
 

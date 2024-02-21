@@ -10,6 +10,7 @@ import manifests.ManifestLookupLike
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import slickdb.Tables
+import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
@@ -17,7 +18,6 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
 import uk.gov.homeoffice.drt.time._
-import uk.gov.homeoffice.drt.{AppEnvironment, service}
 
 import scala.concurrent.ExecutionContext
 
@@ -31,11 +31,13 @@ trait DrtSystemInterface extends UserRoleProviderLike
   implicit val system: ActorSystem
   implicit val timeout: Timeout
 
-  val applicationService: ApplicationService
+  val config: Configuration = new Configuration(ConfigFactory.load)
+  val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
+  val env: AppEnvironment = AppEnvironment(config.getOptional[String]("env").getOrElse("other"))
 
-  val actorService: ReadRouteUpdateActorsLike
-
-  val persistentActors: PersistentStateActors
+  val db: Tables
+  val airportConfig: AirportConfig
+  val params: DrtParameters
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] =
     if (params.isSuperUserMode) {
@@ -45,15 +47,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
 
   val now: () => SDateLike
-
-  val config: Configuration = new Configuration(ConfigFactory.load)
-
-  val env: AppEnvironment = AppEnvironment(config.getOptional[String]("env").getOrElse("other"))
-  val airportConfig: AirportConfig
-  val params: DrtParameters
-  val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
-
-  val db: Tables
 
   val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
     ScenarioSimulationSource,
@@ -74,13 +67,38 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val manifestLookupService: ManifestLookupLike
 
-  val manifestLookupsService: ManifestLookupsLike
+  val manifestLookups: ManifestLookupsLike
 
   val flightLookups: FlightLookupsLike
 
   val minuteLookups: MinuteLookupsLike
 
-  lazy val feedService: FeedService = service.FeedService(journalType, airportConfig, now, params, config, paxFeedSourceOrder, flightLookups)
+  val actorService: ReadRouteUpdateActorsLike
+
+  val persistentActors: PersistentStateActors
+
+  lazy val applicationService: ApplicationService = ApplicationService(
+    journalType = journalType,
+    airportConfig = airportConfig,
+    now = now,
+    params = params,
+    config = config,
+    db = db,
+    feedService = feedService,
+    manifestLookups = manifestLookups,
+    manifestLookupService = manifestLookupService,
+    minuteLookups = minuteLookups,
+    readActorService = actorService,
+    persistentStateActors = persistentActors
+  )
+
+  lazy val feedService: FeedService = FeedService(journalType,
+    airportConfig,
+    now,
+    params,
+    config,
+    paxFeedSourceOrder,
+    flightLookups)
 
   def run(): Unit
 

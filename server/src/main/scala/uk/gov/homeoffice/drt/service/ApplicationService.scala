@@ -129,9 +129,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
       diff.copy(toUpdate = updates)
     }
 
-
-  //  val manifestLookups: ManifestLookups = ManifestLookups(system)
-
   private val manifestsRouterActorReadOnly: ActorRef =
     system.actorOf(
       Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
@@ -418,7 +415,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   }
 
   def run(): Unit = {
-    val actors = persistentStateActors // This is a var so we can set it in the future
+    val actors = persistentStateActors
 
     val futurePortStates: Future[(
       Option[PortState],
