@@ -1,15 +1,15 @@
 package uk.gov.homeoffice.drt.service
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
+import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import uk.gov.homeoffice.drt.crunchsystem.ReadRouteUpdateActorsLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.SDateLike
+
 import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
 
 @Singleton
 case class ActorsService(journalType: StreamingJournalLike,
@@ -17,7 +17,7 @@ case class ActorsService(journalType: StreamingJournalLike,
                          now: () => SDateLike,
                          params: DrtParameters,
                          flightLookups: FlightLookupsLike,
-                         minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem, ec: ExecutionContext) extends ReadRouteUpdateActorsLike {
+                         minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ReadRouteUpdateActorsLike {
 
   override val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")

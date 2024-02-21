@@ -10,7 +10,7 @@ import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.service.{ActorsService, ApplicationService, FeedService}
+import uk.gov.homeoffice.drt.service.{ActorsService, ApplicationService}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton

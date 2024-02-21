@@ -144,7 +144,6 @@ class TerminalDayFlightActor(year: Int,
     } else sender() ! UpdatedMillis.empty
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit = {
-    println(s"ArrivalsDiff: ${state} state, ${diff} diff for paxFeedSourceOrder ${paxFeedSourceOrder}")
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
       Try(diff.applyTo(state, now().millisSinceEpoch, paxFeedSourceOrder)) match {
         case Success((updatedState, minutesToUpdate)) =>

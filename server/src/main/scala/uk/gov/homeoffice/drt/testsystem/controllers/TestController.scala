@@ -1,6 +1,7 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
 import actors.persistent.staffing.ReplaceAllShifts
+import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -38,7 +39,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
 
   lazy implicit val ec: ExecutionContext = ctrl.ec
 
-  lazy implicit val system = ctrl.system
+  lazy implicit val system: ActorSystem = ctrl.system
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -59,10 +60,6 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
   def resetData: Future[Any] = {
     log.info(s"Sending reset message")
     ctrl.testDrtSystemActor.restartActor.ask(ResetData)
-  }
-
-  def hello = Action {
-    Ok("Hello")
   }
 
   def addArrival: Action[AnyContent] = noCSRFAction.async {
@@ -157,7 +154,6 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
   }
 
   def deleteAllData: Action[AnyContent] = noCSRFAction.async { _ =>
-    println("Deleting all data.............")
     resetData.map(_ => Accepted)
   }
 

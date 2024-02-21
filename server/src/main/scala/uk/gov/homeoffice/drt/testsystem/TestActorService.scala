@@ -1,20 +1,18 @@
 package uk.gov.homeoffice.drt.testsystem
 
-import actors.{DrtParameters, FlightLookups, FlightLookupsLike, MinuteLookupsLike, PartitionedPortStateActor, StreamingJournalLike}
+import actors._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import uk.gov.homeoffice.drt.crunchsystem.ReadRouteUpdateActorsLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.testsystem.TestActors.{QueueTestUpdatesSupervisor, StaffTestUpdatesSupervisor, TestFixedPointsActor, TestFlightUpdatesSupervisor, TestPartitionedPortStateActor, TestShiftsActor, TestStaffMovementsActor}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
-
-import scala.concurrent.ExecutionContext
+import uk.gov.homeoffice.drt.testsystem.TestActors._
+import uk.gov.homeoffice.drt.time.SDateLike
 
 case class TestActorService(journalType: StreamingJournalLike,
                             airportConfig: AirportConfig,
                             now: () => SDateLike,
                             params: DrtParameters,
                             flightLookups: FlightLookupsLike,
-                            minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem, ec: ExecutionContext) extends ReadRouteUpdateActorsLike {
+                            minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ReadRouteUpdateActorsLike {
 
   override val liveShiftsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")

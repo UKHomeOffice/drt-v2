@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.{FlightLookupsLike, MinuteLookupsLike}
 import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
@@ -8,24 +7,22 @@ import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import module.DRTModule
 import org.scalatestplus.play.PlaySpec
-import play.api.data.Forms.date
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers.{OK, contentAsString, contentType, status}
 import play.api.test.{FakeRequest, Helpers}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.Models
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
-import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ReadRouteUpdateActorsLike}
+import uk.gov.homeoffice.drt.crunchsystem.ReadRouteUpdateActorsLike
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, MlFeedSource}
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.{FeaturesWithOneToManyValues, ModelPersistence, RegressionModel}
 import uk.gov.homeoffice.drt.service.FeedService
-import uk.gov.homeoffice.drt.testsystem.TestActors.TestTerminalDayFlightActor
-import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem, TestFlightLookups}
+import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 class ForecastAccuracyControllerSpec extends PlaySpec {
@@ -87,7 +84,6 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       val forecastPcp = forecastArrivalPax - forecastArrivalTransPax
       val fcstCapPct = forecastPcp.toDouble / maxPax * 100
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
-      val liveCapPct = liveArrivalPax.toDouble / maxPax * 100
       contentAsString(result) must ===(
         f"""Date,Act,Port Forecast,DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,DRT Forecast Cap%%,$modelId Cap%%
            |2024-02-14,0,$forecastPcp,0,$mlPax,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
@@ -114,13 +110,13 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   }
 
   private def forecastAccuracyController(forecastTotalPax: Int, mlFeedPax: Int, liveFeedPax: Int, mlPred: Int, flights: FlightsWithSplits) = {
-    val module = new DRTModule() {
+    val module: DRTModule = new DRTModule() {
       override val isTestEnvironment: Boolean = true
       override val now: () => SDateLike = () => SDate("2023-02-01T00:00")
 
-      override def provideDrtSystemInterface = new TestDrtSystem(airportConfig, mockDrtParameters, now)(mat, ec, system, timeout) {
+      override def provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(airportConfig, mockDrtParameters, now)(mat, ec, system, timeout) {
 
-        lazy override val feedService = new FeedService(journalType,
+        lazy override val feedService: FeedService = new FeedService(journalType,
           airportConfig, now, params, config, paxFeedSourceOrder, flightLookups)(this.system, ec, this.materializer, timeout) {
 
           override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
@@ -153,7 +149,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
           airportConfig,
           now, params,
           flightLookups,
-          minuteLookups)(system, ec) {
+          minuteLookups)(system) {
           override val flightsRouterActor: ActorRef = system.actorOf(Props(new MockFlightsRouter(flights)))
         }
       }
