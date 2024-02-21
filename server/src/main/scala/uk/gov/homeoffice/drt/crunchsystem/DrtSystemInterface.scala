@@ -475,13 +475,12 @@ trait DrtSystemInterface extends UserRoleProviderLike
     (requestQueueActor, deskRecsKillSwitch)
   }
 
-  private def enabledPredictionModelNames: Seq[String] = Seq(
-    OffScheduleModelAndFeatures.targetName,
-    ToChoxModelAndFeatures.targetName,
-    WalkTimeModelAndFeatures.targetName,
-    PaxCapModelAndFeaturesV2.targetName,
+  private def enabledModelsWithThresholds = Map(
+    OffScheduleModelAndFeatures.targetName -> 45,
+    ToChoxModelAndFeatures.targetName -> 20,
+    WalkTimeModelAndFeatures.targetName -> 30 * 60,
+    PaxCapModelAndFeaturesV2.targetName -> 100,
   )
-
   def startCrunchSystem(actors: PersistentStateActors,
                         initialPortState: Option[PortState],
                         initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
@@ -502,13 +501,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
           TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
           PredictionModelActor.Terminal(a.Terminal.toString),
         ),
-        flightModelPersistence.getModels(enabledPredictionModelNames),
-        Map(
-          OffScheduleModelAndFeatures.targetName -> 45,
-          ToChoxModelAndFeatures.targetName -> 20,
-          WalkTimeModelAndFeatures.targetName -> 30 * 60,
-          PaxCapModelAndFeatures.targetName -> 100,
-        ),
+        flightModelPersistence.getModels(enabledModelsWithThresholds.keys.toList),
+        enabledModelsWithThresholds,
         15
       ).addPredictions
 
