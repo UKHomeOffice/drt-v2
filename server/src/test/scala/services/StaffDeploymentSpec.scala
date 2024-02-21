@@ -4,8 +4,9 @@ import actors.persistent.staffing.{SetFixedPoints, UpdateShifts}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
-import services.graphstages.StaffDeploymentCalculator._
+import services.graphstages.StaffDeploymentCalculator.Deployer
 import services.graphstages.{StaffAssignmentService, StaffSources}
+import services.graphstages.StaffDeploymentCalculator._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue

@@ -9,10 +9,10 @@ import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
@@ -91,7 +91,7 @@ object AclFeed {
   }
 
   def nextAclCheck(now: SDateLike, updateHour: Int): SDateLike = {
-    val todaysCheck = SDate(now.getFullYear, now.getMonth, now.getDate, updateHour, 0, Crunch.europeLondonTimeZone)
+    val todaysCheck = SDate(now.getFullYear, now.getMonth, now.getDate, updateHour, 0, europeLondonTimeZone)
     if (todaysCheck > now) todaysCheck else todaysCheck.addDays(1)
   }
 

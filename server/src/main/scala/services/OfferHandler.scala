@@ -4,7 +4,7 @@ import akka.actor.Scheduler
 import akka.pattern.after
 import akka.stream.scaladsl.SourceQueueWithComplete
 import org.slf4j.{Logger, LoggerFactory}
-import services.OfferHandler.log
+import OfferHandler.log
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}

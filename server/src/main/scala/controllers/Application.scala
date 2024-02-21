@@ -10,7 +10,7 @@ import drt.http.ProdSendAndReceive
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
-import services._
+import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
 import services.graphstages.Crunch
 import slickdb._
 import spray.json.enrichAny
@@ -24,6 +24,7 @@ import java.util.{Calendar, TimeZone}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import uk.gov.homeoffice.drt.db.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 
 trait AirportConfiguration {
@@ -196,13 +197,13 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       ForecastFeedSource -> 7.days,
     )
 
-    val feedsToMonitor = ctrl.feedActorsForPort
+    val feedsToMonitor = ctrl.feedService.feedActorsForPort
       .view.filterKeys(!airportConfig.feedSourceMonitorExemptions.contains(_))
       .values.toList
 
     HealthChecker(Seq(
       FeedsHealthCheck(feedsToMonitor, defaultLastCheckThreshold, feedLastCheckThresholds, now, feedsHealthCheckGracePeriod),
-      ActorResponseTimeHealthCheck(ctrl.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneSecondMillis))
+      ActorResponseTimeHealthCheck(ctrl.actorService.portStateActor, healthyResponseTimeSeconds * MilliTimes.oneSecondMillis))
     )
   } else {
     HealthChecker(Seq())
@@ -281,7 +282,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
         val millis = request.body.get("timestamp")
           .map(_.head.toLong)
-          .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+          .getOrElse(SDate.now(europeLondonTimeZone).millisSinceEpoch)
 
         val logMessage = Map(
           "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),

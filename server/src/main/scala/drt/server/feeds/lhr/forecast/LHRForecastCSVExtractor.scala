@@ -3,10 +3,9 @@ package drt.server.feeds.lhr.forecast
 import drt.server.feeds.lhr.LHRForecastFeed
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.time.SDate
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.io.Source
 import scala.util.{Failure, Success, Try}
@@ -53,7 +52,7 @@ object LHRForecastCSVExtractor {
           LHRForecastFlightRow(scheduledDate, flightCode, origin, intOrDom, totalPax, transfer, terminal)
         } match {
           case Failure(t) =>
-            log.warn(s"Failed to parse CSV row $rowFields for LHR forecast CSV", t.getMessage)
+            log.warn(s"Failed to parse CSV row $rowFields for LHR forecast CSV: ${t.getMessage}")
             Failure(t)
           case s => s
         }
@@ -78,6 +77,6 @@ object LHRForecastCSVExtractor {
       .parseDateTime(asString(dateField))
       .toString(ISODateTimeFormat.dateHourMinuteSecond)
 
-    SDate(dateWithoutTZ, Crunch.europeLondonTimeZone)
+    SDate(dateWithoutTZ, europeLondonTimeZone)
   }
 }

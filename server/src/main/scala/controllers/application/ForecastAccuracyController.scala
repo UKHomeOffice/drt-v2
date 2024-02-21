@@ -18,7 +18,6 @@ import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.time.LocalDate
 import upickle.default.write
-
 import scala.concurrent.Future
 
 
@@ -31,7 +30,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       val maybeResponse = for {
         date <- LocalDate.parse(dateStr)
       } yield {
-        ForecastAccuracyCalculator(date, daysToCalculate, ctrl.actualPaxNos, ctrl.forecastPaxNos, ctrl.now().toLocalDate)
+        ForecastAccuracyCalculator(date, daysToCalculate, ctrl.feedService.actualPaxNos, ctrl.feedService.forecastPaxNos, ctrl.now().toLocalDate)
       }
       maybeResponse match {
         case Some(eventualAccuracy) =>
@@ -45,7 +44,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   def forecastAccuracyExport(daysForComparison: Int, daysAhead: Int): Action[AnyContent] = auth {
     Action { _ =>
       val stream = ForecastAccuracyCalculator
-        .predictionsVsLegacyForecast(daysForComparison, daysAhead, ctrl.actualArrivals, ctrl.forecastArrivals, ctrl.now().toLocalDate)
+        .predictionsVsLegacyForecast(daysForComparison, daysAhead, ctrl.feedService.actualArrivals, ctrl.feedService.forecastArrivals, ctrl.now().toLocalDate)
         .map {
           case (date, terminal, e) =>
             f"${date.toISOString},${terminal.toString},${maybeDoubleToPctString(e.predictionRmse)},${maybeDoubleToPctString(e.legacyRmse)},${maybeDoubleToPctString(e.predictionError)},${maybeDoubleToPctString(e.legacyError)}\n"
@@ -72,10 +71,10 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         .parse(endDateStr)
         .getOrElse(throw new Exception("Bad date format. Expected YYYY-mm-dd"))
       val terminal = Terminal(terminalName)
-      val terminalFlights = FlightsProvider(ctrl.flightsRouterActor).terminalLocalDate(ctrl.materializer)(terminal)
+      val terminalFlights = FlightsProvider(ctrl.actorService.flightsRouterActor).terminalLocalDate(ctrl.materializer)(terminal)
       val id = PredictionModelActor.Terminal(terminalName)
       val modelNamesList = modelNames.split(",").toList
-      val getModelsForId: PredictionModelActor.WithId => Future[PredictionModelActor.Models] = ctrl.flightModelPersistence.getModels(modelNamesList)
+      val getModelsForId: PredictionModelActor.WithId => Future[PredictionModelActor.Models] = ctrl.feedService.flightModelPersistence.getModels(modelNamesList)
 
       val contentType = acceptHeader(request) match {
         case "text/csv" => "text/csv"

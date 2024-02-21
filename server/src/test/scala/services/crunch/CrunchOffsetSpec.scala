@@ -1,7 +1,7 @@
 package services.crunch
 
-import uk.gov.homeoffice.drt.time.SDate
 import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.time.SDate
 
 
 class CrunchOffsetSpec extends CrunchTestLike {

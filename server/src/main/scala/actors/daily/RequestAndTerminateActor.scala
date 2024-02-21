@@ -4,9 +4,7 @@ import akka.actor.{Actor, ActorRef, PoisonPill, Terminated}
 import akka.pattern.{StatusReply, ask}
 import akka.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
-
 import scala.concurrent.ExecutionContextExecutor
-
 
 case class Terminate(actor: ActorRef)
 

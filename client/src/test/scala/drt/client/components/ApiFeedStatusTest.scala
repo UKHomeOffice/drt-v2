@@ -16,14 +16,20 @@ class ApiFeedStatusTest extends AnyWordSpec with Matchers {
     val beforeNow = "2022-05-31T11:30"
     val afterNow = "2022-05-31T12:30"
 
-    val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None)))
-    val landedWithNoPax = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = None,transit = None)))
-    val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow, passengerSources=Map(LiveFeedSource -> Passengers(actual = Option(100),transit = None)), feedSources = Set(LiveFeedSource))
-    val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow, passengerSources=Map(ApiFeedSource -> Passengers(actual = Option(100),transit = None))), Set())
+    val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow,
+      passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(100), transit = None)))
+    val landedWithNoPax = ArrivalGenerator.apiFlight(schDt = beforeNow,
+      passengerSources = Map(ApiFeedSource -> Passengers(actual = None, transit = None)))
+    val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow,
+      passengerSources = Map(LiveFeedSource -> Passengers(actual = Option(100), transit = None)), feedSources = Set(LiveFeedSource))
+    val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow,
+      passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(100), transit = None))), Set())
     val ctaLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("ORK")), Set())
     val domesticLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("EMA")), Set())
-    val landedWithValidApi = ApiFlightWithSplits(landedWithNoSources, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
-    val landedWithInvalidApi = ApiFlightWithSplits(landedWithLiveSource, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
+    val landedWithValidApi = ApiFlightWithSplits(landedWithNoSources,
+      Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
+    val landedWithInvalidApi = ApiFlightWithSplits(landedWithLiveSource,
+      Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
     val landedWithNoActPax = ApiFlightWithSplits(landedWithNoPax, Set(Splits(Set(), SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC))))
 
     "given no flights, give None for stats and zero for total landed" in {

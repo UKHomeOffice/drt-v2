@@ -4,9 +4,9 @@ import actors.DrtStaticParameters
 import akka.actor.ActorRef
 import drt.shared._
 import manifests.ManifestLookupLike
+import services.{TryCrunchWholePax, TrySimulator}
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
-import services.{TryCrunchWholePax, TrySimulator}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig

@@ -19,7 +19,7 @@ class ConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
     Action { _ =>
       import upickle.default._
 
-      Ok(write(ctrl.paxFeedSourceOrder))
+      Ok(write(ctrl.feedService.paxFeedSourceOrder))
     }
   }
 

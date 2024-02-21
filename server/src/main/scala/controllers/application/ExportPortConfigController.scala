@@ -24,7 +24,7 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   }
 
   private def updatesByTerminalF: Future[Map[Terminals.Terminal, EgateBanksUpdates]] = {
-    val eGateBanks: Future[PortEgateBanksUpdates] = ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
+    val eGateBanks: Future[PortEgateBanksUpdates] = ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
     eGateBanks.map(_.updatesByTerminal)
   }
 
@@ -45,7 +45,7 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   }
 
   private def getSlaConfig(thisTerminal: Terminals.Terminal) = {
-    val slaUpdates: Future[SlaConfigs] = ctrl.slasActor.ask(GetState).mapTo[SlaConfigs]
+    val slaUpdates: Future[SlaConfigs] = ctrl.applicationService.slasActor.ask(GetState).mapTo[SlaConfigs]
     val slaTitle = "Queue SLAs"
     slaUpdates.map { sla =>
       val terminalQueueOrder = Queues.queueOrder.filter(q => airportConfig.queuesByTerminal.get(thisTerminal).exists(_.contains(q)))

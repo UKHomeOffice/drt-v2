@@ -26,7 +26,7 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
 
   def getFeedStatuses: Action[AnyContent] = auth {
     Action.async { _ =>
-      ctrl.getFeedStatus.map((s: Seq[FeedSourceStatuses]) => {
+      ctrl.feedService.getFeedStatus.map((s: Seq[FeedSourceStatuses]) => {
         val safeStatusMessages = s
           .map(feedSourceStatuses => feedSourceStatuses
             .copy(feedStatuses = feedSourceStatuses
@@ -49,16 +49,16 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
           read[FeedSource](text) match {
             case AclFeedSource =>
               log.info(s"Sending adhoc feed request to the base forecast feed actor")
-              ctrl.fcstBaseActor ! AdhocCheck
+              ctrl.feedService.fcstBaseActor ! AdhocCheck
             case ForecastFeedSource =>
               log.info(s"Sending adhoc feed request to the forecast feed actor")
-              ctrl.fcstActor ! AdhocCheck
+              ctrl.feedService.fcstActor ! AdhocCheck
             case LiveBaseFeedSource =>
               log.info(s"Sending adhoc feed request to the base live feed actor")
-              ctrl.liveBaseActor ! AdhocCheck
+              ctrl.feedService.liveBaseActor ! AdhocCheck
             case LiveFeedSource =>
               log.info(s"Sending adhoc feed request to the live feed actor")
-              ctrl.liveActor ! AdhocCheck
+              ctrl.feedService.liveActor ! AdhocCheck
             case unexpected =>
               log.info(s"Feed check not supported for $unexpected")
           }
@@ -99,7 +99,7 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
               result
             }
             .map {
-              case Some(feedSourceArrival) if ctrl.isValidFeedSource(feedSourceArrival.feedSource) =>
+              case Some(feedSourceArrival) if ctrl.feedService.isValidFeedSource(feedSourceArrival.feedSource) =>
                 Option(feedSourceArrival)
               case _ => None
             }

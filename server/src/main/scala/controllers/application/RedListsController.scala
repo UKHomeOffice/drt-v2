@@ -5,13 +5,13 @@ import com.google.inject.Inject
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import services.AirportToCountry
-import services.graphstages.Crunch
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
 import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import upickle.default._
 
 
@@ -19,8 +19,8 @@ class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
 
   def getRedListPorts(dateString: String): Action[AnyContent] =
     Action.async { _ =>
-      ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map { redListUpdates =>
-        val forDate = SDate(dateString, Crunch.europeLondonTimeZone).millisSinceEpoch
+      ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map { redListUpdates =>
+        val forDate = SDate(dateString, europeLondonTimeZone).millisSinceEpoch
         val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
           case AirportInfo(_, _, country, portCode) if redListUpdates.countryCodesByName(forDate).contains(country) =>
             PortCode(portCode)
@@ -33,12 +33,12 @@ class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
   def getRedListUpdates: Action[AnyContent] =
     Action.async { _ =>
       implicit val rluFormat: RedListJsonFormats.redListUpdatesJsonFormat.type = RedListJsonFormats.redListUpdatesJsonFormat
-      ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(r.toJson.compactPrint))
+      ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(r.toJson.compactPrint))
     }
 
   def getRedListUpdatesLegacy: Action[AnyContent] =
     Action.async { _ =>
-      ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(write(r)))
+      ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map(r => Ok(write(r)))
     }
 }
 

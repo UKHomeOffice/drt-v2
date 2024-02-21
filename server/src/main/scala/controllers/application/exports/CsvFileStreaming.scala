@@ -5,11 +5,10 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc.{ResponseHeader, Result}
-import uk.gov.homeoffice.drt.time.SDate
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.LocalDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 object CsvFileStreaming {
 
@@ -48,8 +47,8 @@ object CsvFileStreaming {
                    start: LocalDate,
                    end: LocalDate,
                    portCode: PortCode): String = {
-    val startLocal = SDate(SDate(start), Crunch.europeLondonTimeZone)
-    val endLocal = SDate(SDate(end), Crunch.europeLondonTimeZone)
+    val startLocal = SDate(SDate(start), europeLondonTimeZone)
+    val endLocal = SDate(SDate(end), europeLondonTimeZone)
     val endDate = if (startLocal.daysBetweenInclusive(endLocal) > 1)
       f"-to-${endLocal.getFullYear}-${endLocal.getMonth}%02d-${endLocal.getDate}%02d"
     else ""

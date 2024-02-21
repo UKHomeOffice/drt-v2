@@ -5,7 +5,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.WholePassengerQueueSplits
-import services.graphstages.Crunch.SplitMinutes
+import Crunch.SplitMinutes
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

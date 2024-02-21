@@ -10,7 +10,7 @@ import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
-import services.graphstages._
+import services.graphstages.ArrivalsGraphStage
 import services.metrics.Metrics
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}

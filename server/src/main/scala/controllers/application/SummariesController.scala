@@ -6,7 +6,6 @@ import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
 import play.api.mvc._
-import services.graphstages.Crunch
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -16,6 +15,7 @@ import uk.gov.homeoffice.drt.models.PassengersSummary
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.concurrent.Future
@@ -28,7 +28,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       case Some(localDate) =>
         Action.async(
           Source(Set(SDate(localDate).toUtcDate, SDate(localDate).addDays(1).addMinutes(-1).toUtcDate))
-            .mapAsync(1)(ctrl.populateLivePaxViewForDate)
+            .mapAsync(1)(ctrl.applicationService.populateLivePaxViewForDate)
             .run()
             .map(_ => Ok(s"Populated passengers for $localDate"))
         )
@@ -154,7 +154,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
       val dateStr = maybeDateOrDateHour.map {
         case date: LocalDate => date.toISOString
-        case date: Long => s"${SDate(date, Crunch.europeLondonTimeZone).toISOString}"
+        case date: Long => s"${SDate(date, europeLondonTimeZone).toISOString}"
       }
       maybeTerminalName match {
         case Some(terminalName) =>
@@ -170,7 +170,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val (maybeDate, maybeHour) = maybeDateOrDateHour match {
         case Some(date: LocalDate) => (Option(date), None)
         case Some(date: Long) =>
-          val sdate = SDate(date, Crunch.europeLondonTimeZone)
+          val sdate = SDate(date, europeLondonTimeZone)
           (Option(sdate.toLocalDate), Option(sdate.getHours))
         case _ => (None, None)
       }

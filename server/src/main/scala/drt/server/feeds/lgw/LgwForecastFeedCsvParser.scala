@@ -2,11 +2,11 @@ package drt.server.feeds.lgw
 
 import org.apache.commons.csv.{CSVFormat, CSVParser}
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch.europeLondonTimeZone
 import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.util.{Failure, Success, Try}

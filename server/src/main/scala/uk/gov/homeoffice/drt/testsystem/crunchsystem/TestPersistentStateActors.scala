@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.drt.testsystem.crunchsystem
 
-import actors.DrtStaticParameters.{expireAfterMillis, time48HoursAgo, startOfTheMonth}
-import actors.ManifestLookups
+import actors.DrtStaticParameters.expireAfterMillis
+import actors.ManifestLookupsLike
 import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
@@ -12,8 +12,7 @@ case class TestPersistentStateActors(system: ActorSystem,
                                      now: () => SDateLike,
                                      minutesToCrunch: Int,
                                      offsetMinutes: Int,
-                                     maxForecastDays: Int,
-                                     manifestLookups: ManifestLookups,
+                                     manifestLookups: ManifestLookupsLike,
                            ) extends PersistentStateActors {
   override val forecastBaseArrivalsActor: ActorRef =
     system.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")

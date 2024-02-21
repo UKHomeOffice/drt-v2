@@ -38,7 +38,7 @@ class ImportsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
             .map { redListCounts =>
               updateAndGetAllNeboPax(redListCounts)
                 .map { updatedRedListCounts =>
-                  ctrl.flightsRouterActor
+                  ctrl.actorService.flightsRouterActor
                     .ask(RedListCounts(updatedRedListCounts))
                   Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
                 }.recover {
@@ -83,7 +83,7 @@ class ImportsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
 
           if (extractedArrivals.nonEmpty) {
             log.info(s"${extractedArrivals.length} arrivals found to import")
-            ctrl.arrivalsImportActor ! StoreFeedImportArrivals(Flights(extractedArrivals))
+            ctrl.feedService.arrivalsImportActor ! StoreFeedImportArrivals(Flights(extractedArrivals))
             Accepted(toJson(ApiResponseBody("Arrivals have been queued for processing")))
           } else BadRequest(toJson(ApiResponseBody("No arrivals found")))
         } else {

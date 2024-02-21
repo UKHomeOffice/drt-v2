@@ -6,8 +6,8 @@ import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
+import DynamicRunnableDeployments.PassengersToQueueMinutes
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.crunch.deskrecs.DynamicRunnableDeployments.PassengersToQueueMinutes
 import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

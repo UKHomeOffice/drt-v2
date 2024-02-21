@@ -13,6 +13,7 @@ import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi._
 import drt.shared._
+import org.slf4j.{Logger, LoggerFactory}
 import services.SourceUtils
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FlightsWithSplits, SplitsForArrivals, UniqueArrival}
@@ -25,6 +26,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 object FlightsRouterActor {
+  val log: Logger = LoggerFactory.getLogger(getClass)
 
   def scheduledInRange(start: SDateLike, end: SDateLike, scheduled: MillisSinceEpoch): Boolean = {
     val scheduledDate = SDate(scheduled)
@@ -55,6 +57,11 @@ object FlightsRouterActor {
     Source(dates.toList)
       .mapAsync(1)(d => reduceAndSort(flightsLookupByDay(d)).map(f => (d, f)))
       .map { case (d, flights) => (d, flights.scheduledOrPcpWindow(start, end, paxFeedSourceOrder)) }
+      .recover {
+        case e: Throwable =>
+           log.error(s"Error in multiTerminalFlightsByDaySource: ${e.getMessage}")
+          (dates.toList.head, FlightsWithSplits.empty)
+      }
       .filter { case (_, flights) => flights.nonEmpty }
   }
 

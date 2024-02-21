@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
-import actors.TestDrtSystemInterface
 import actors.persistent.staffing.ReplaceAllShifts
+import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -9,6 +9,8 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.server.feeds.Implicits._
+import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
+import drt.shared.FlightsApi.Flights
 import drt.shared.ShiftAssignments
 import drt.staff.ImportStaff
 import module.NoCSRFAction
@@ -18,14 +20,13 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import play.api.http.HeaderNames
 import play.api.mvc._
 import spray.json._
-import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
-import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
-import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
-import uk.gov.homeoffice.drt.testsystem.MockRoles
+import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
+import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.testsystem.feeds.test.CSVFixtures
+import uk.gov.homeoffice.drt.testsystem.{MockRoles, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
@@ -33,41 +34,42 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInterface, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
+class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
   lazy implicit val timeout: Timeout = Timeout(5 second)
 
   lazy implicit val ec: ExecutionContext = ctrl.ec
+
+  lazy implicit val system: ActorSystem = ctrl.system
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    ctrl.testArrivalActor.ask(arrival).map { _ =>
-      ctrl.liveActor ! AdhocCheck
+    ctrl.persistentActors.liveArrivalsActor ! ArrivalsFeedSuccess(Flights(List(arrival)))
+    ctrl.actorService.portStateActor.ask(ArrivalsDiff(List(arrival), List())).map { _ =>
+      ctrl.feedService.liveActor ! AdhocCheck
     }
   }
 
   def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
     log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
-    ctrl.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
+    ctrl.persistentActors.manifestsRouterActor
+      .ask(ManifestsFeedSuccess(DqManifests(0, VoyageManifests(Set(voyageManifest)).manifests)))
   }
 
   def resetData: Future[Any] = {
     log.info(s"Sending reset message")
-    ctrl.restartActor.ask(ResetData)
-  }
-
-  def hello = Action {
-    Ok("Hello")
+    ctrl.testDrtSystemActor.restartActor.ask(ResetData)
   }
 
   def addArrival: Action[AnyContent] = noCSRFAction.async {
     request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
         case Some(flight) =>
-          val walkTimeMinutes = 4
-          val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
-          val actPax = Option(flight.ActPax).filter(_ != 0)
+          val walkTimeMinutes = 13
+          val actPax: Option[Int] = Option(flight.ActPax).filter(_ != 0)
+          val pcpTime: Long = actPax.map(_ => org.joda.time.DateTime.parse(flight.ActChoxDT).plusMinutes(walkTimeMinutes).getMillis)
+            .getOrElse(org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis)
           val arrival = Arrival(
             Operator = flight.Operator,
             Status = flight.Status,
@@ -163,7 +165,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInte
         maybeShifts match {
           case Some(shifts) =>
             log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
-            ctrl.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
+            ctrl.applicationService.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
             Created
           case _ =>
             BadRequest("{\"error\": \"Unable to parse data\"}")

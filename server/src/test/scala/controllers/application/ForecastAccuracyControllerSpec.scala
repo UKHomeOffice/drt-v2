@@ -13,19 +13,20 @@ import play.api.test.{FakeRequest, Helpers}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.Models
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, Passengers}
-import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSource, MlFeedSource}
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.{FeaturesWithOneToManyValues, ModelPersistence, RegressionModel}
-import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
+import uk.gov.homeoffice.drt.service.FeedService
+import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 class ForecastAccuracyControllerSpec extends PlaySpec {
-  implicit val system: ActorSystem = akka.actor.ActorSystem("test")
+  implicit val system: ActorSystem = akka.actor.ActorSystem("test-1")
   implicit val mat: Materializer = Materializer(system)
   implicit val ec: ExecutionContext = system.dispatcher
   implicit val timeout: akka.util.Timeout = 5.seconds
@@ -83,7 +84,6 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       val forecastPcp = forecastArrivalPax - forecastArrivalTransPax
       val fcstCapPct = forecastPcp.toDouble / maxPax * 100
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
-      val liveCapPct = liveArrivalPax.toDouble / maxPax * 100
       contentAsString(result) must ===(
         f"""Date,Act,Port Forecast,DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,DRT Forecast Cap%%,$modelId Cap%%
            |2024-02-14,0,$forecastPcp,0,$mlPax,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
@@ -110,41 +110,54 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   }
 
   private def forecastAccuracyController(forecastTotalPax: Int, mlFeedPax: Int, liveFeedPax: Int, mlPred: Int, flights: FlightsWithSplits) = {
-    val module = new DRTModule() {
+    val module: DRTModule = new DRTModule() {
       override val isTestEnvironment: Boolean = true
-      override val now = () => SDate("2023-02-01T00:00")
-    }
-
-    val drtSystemInterface: DrtSystemInterface = new TestDrtSystem(module.airportConfig, module.mockDrtParameters, module.now) {
       override val now: () => SDateLike = () => SDate("2023-02-01T00:00")
-      override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
-        (_, _) => Future.successful(Map(Terminal("T1") -> forecastTotalPax))
 
-      override val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] =
-        _ => Future.successful(Map(Terminal("T1") -> liveFeedPax))
+      override def provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(airportConfig, mockDrtParameters, now)(mat, ec, system, timeout) {
 
-      override val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (_, _) => Future.successful(
-        Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
-          schDt = "2023-10-20T12:25",
-          terminal = T1,
-          passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
-            MlFeedSource -> Passengers(Some(mlFeedPax), None))))))
+        lazy override val feedService: FeedService = new FeedService(journalType,
+          airportConfig, now, params, config, paxFeedSourceOrder, flightLookups)(this.system, ec, this.materializer, timeout) {
 
-      override val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = _ => Future.successful(
-        Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
-          schDt = "2023-10-20T12:25",
-          terminal = T1,
-          passengerSources = Map(LiveFeedSource -> Passengers(Some(liveFeedPax), None),
-            ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
-            MlFeedSource -> Passengers(Some(mlFeedPax), None))
-        )))
-      )
+          override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
+            (_, _) => Future.successful(Map(Terminal("T1") -> forecastTotalPax))
 
-      override val flightModelPersistence: ModelPersistence = MockModelPersistence(mlPred)
-      override val flightsRouterActor: ActorRef = system.actorOf(Props(new MockFlightsRouter(flights)))
+          override val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] =
+            _ => Future.successful(Map(Terminal("T1") -> liveFeedPax))
+
+          override val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (_, _) => Future.successful(
+            Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
+              schDt = "2023-10-20T12:25",
+              terminal = T1,
+              passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
+                MlFeedSource -> Passengers(Some(mlFeedPax), None))))))
+
+          override val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = _ => Future.successful(
+            Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
+              schDt = "2023-10-20T12:25",
+              terminal = T1,
+              passengerSources = Map(LiveFeedSource -> Passengers(Some(liveFeedPax), None),
+                ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
+                MlFeedSource -> Passengers(Some(mlFeedPax), None))
+            )))
+          )
+
+          override val flightModelPersistence: ModelPersistence = MockModelPersistence(mlPred)
+        }
+
+        lazy override val actorService: ActorsServiceLike = new TestActorService(journalType,
+          airportConfig,
+          now,
+          params.forecastMaxDays,
+          flightLookups,
+          minuteLookups)(system) {
+          override val flightsRouterActor: ActorRef = system.actorOf(Props(new MockFlightsRouter(flights)))
+        }
+      }
     }
 
-    new ForecastAccuracyController(Helpers.stubControllerComponents(), drtSystemInterface)
+
+    new ForecastAccuracyController(Helpers.stubControllerComponents(), module.provideDrtSystemInterface)
   }
 
   case class MockModelPersistence(pax: Int) extends ModelPersistence {

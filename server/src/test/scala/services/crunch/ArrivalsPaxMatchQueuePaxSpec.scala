@@ -13,7 +13,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -50,7 +49,10 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T23:58Z"
 
         val arrivalPax = 112
-        val arrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(arrivalPax), None)))
+        val arrival = ArrivalGenerator.arrival(schDt = scheduled,
+          iata = "BA0001",
+          terminal = T1,
+          passengerSources = Map(LiveFeedSource -> Passengers(Option(arrivalPax), None)))
 
         val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduled),

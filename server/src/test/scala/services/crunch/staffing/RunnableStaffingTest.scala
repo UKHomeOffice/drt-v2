@@ -6,16 +6,16 @@ import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared._
 import services.crunch.CrunchTestLike
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.concurrent.Future
 
 class RunnableStaffingTest extends CrunchTestLike {
-  val date: SDateLike = SDate("2022-06-17", Crunch.europeLondonTimeZone)
+  val date: SDateLike = SDate("2022-06-17", europeLondonTimeZone)
 
   val startTime: Long = date.millisSinceEpoch
   val endTime: Long = date.addMinutes(15).millisSinceEpoch

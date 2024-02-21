@@ -1,7 +1,7 @@
 package services.crunch.desklimits
 
-import services.crunch.deskrecs.DeskRecs
 import services.{WorkloadProcessors, WorkloadProcessorsProvider}
+import services.crunch.deskrecs.DeskRecs
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 

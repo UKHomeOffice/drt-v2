@@ -18,7 +18,7 @@ import scala.concurrent.Future
 class ManifestsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   private val manifestsForDay: UtcDate => Future[VoyageManifests] =
-    (date: UtcDate) => ctrl.manifestsProvider(date, date).map(_._2).runFold(VoyageManifests.empty)(_ ++ _)
+    (date: UtcDate) => ctrl.applicationService.manifestsProvider(date, date).map(_._2).runFold(VoyageManifests.empty)(_ ++ _)
 
   private val manifestsForFlights: List[ArrivalKey] => Future[VoyageManifests] = ManifestsController.manifestsForFlights(manifestsForDay)
 

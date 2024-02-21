@@ -16,7 +16,7 @@ class SlaConfigsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
 
   def getSlaConfigs: Action[AnyContent] = auth {
     Action.async { _ =>
-      ctrl.slasActor.ask(GetState).mapTo[SlaConfigs]
+      ctrl.applicationService.slasActor.ask(GetState).mapTo[SlaConfigs]
         .map(slaConfigs => Ok(write(slaConfigs)))
     }
   }
@@ -26,7 +26,7 @@ class SlaConfigsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
       implicit request =>
         request.body.asText match {
           case Some(text) =>
-            ctrl.slasActor.ask(SetUpdate(read[SlasUpdate](text)))
+            ctrl.applicationService.slasActor.ask(SetUpdate(read[SlasUpdate](text)))
             Accepted
           case None =>
             BadRequest
@@ -36,7 +36,7 @@ class SlaConfigsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
 
   def removeSlaConfig(effectiveFrom: MillisSinceEpoch): Action[AnyContent] = authByRole(SlaConfigsEdit) {
     Action {
-      ctrl.slasActor.ask(RemoveConfig(effectiveFrom))
+      ctrl.applicationService.slasActor.ask(RemoveConfig(effectiveFrom))
       Accepted
     }
   }

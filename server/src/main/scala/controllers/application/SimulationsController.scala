@@ -19,7 +19,7 @@ import play.api.mvc._
 import services.crunch.deskrecs.OptimisationProviders
 import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
-import services.scenarios.Scenarios.simulationResult
+import services.scenarios.Scenarios
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
@@ -52,7 +52,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             val date = SDate(simulationParams.date)
             val start = date.getLocalLastMidnight
             val end = date.getLocalNextMidnight
-            val eventualFlightsWithSplitsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
+            val eventualFlightsWithSplitsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]] = (ctrl.actorService.portStateActor ? GetFlightsForTerminalDateRange(
               start.millisSinceEpoch,
               end.millisSinceEpoch,
               simulationParams.terminal
@@ -64,20 +64,20 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
               val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
-              simulationResult(
+              Scenarios.simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
                 sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
-                splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
+                splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.applicationService.splitAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
+                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.applicationService.manifestsProvider),
                 historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
                 historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
-                flightsActor = ctrl.flightsRouterActor,
+                flightsActor = ctrl.actorService.flightsRouterActor,
                 portStateActor = portStateActor,
-                redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-                egateBanksProvider = () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
-                paxFeedSourceOrder = ctrl.paxFeedSourceOrder,
+                redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+                egateBanksProvider = () => ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
+                paxFeedSourceOrder = ctrl.feedService.paxFeedSourceOrder,
               )
             }.flatten
 
@@ -100,7 +100,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
 
             val date = SDate(simulationParams.date)
-            val eventualFlightsWithSplitsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]] = (ctrl.portStateActor ? GetFlightsForTerminalDateRange(
+            val eventualFlightsWithSplitsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]] = (ctrl.actorService.portStateActor ? GetFlightsForTerminalDateRange(
               date.getLocalLastMidnight.millisSinceEpoch,
               date.getLocalNextMidnight.millisSinceEpoch,
               simulationParams.terminal
@@ -112,20 +112,20 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws => {
               val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
-              simulationResult(
+              Scenarios.simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
                 sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
-                splitsCalculator = SplitsCalculator(ctrl.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.splitAdjustments),
+                splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.applicationService.splitAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.manifestsProvider),
+                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.applicationService.manifestsProvider),
                 historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
                 historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
-                flightsActor = ctrl.flightsRouterActor,
+                flightsActor = ctrl.actorService.flightsRouterActor,
                 portStateActor = portStateActor,
-                redListUpdatesProvider = () => ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-                egateBanksProvider = () => ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
-                paxFeedSourceOrder = ctrl.paxFeedSourceOrder,
+                redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+                egateBanksProvider = () => ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
+                paxFeedSourceOrder = ctrl.feedService.paxFeedSourceOrder,
               )
             }
             }.flatten

@@ -4,9 +4,9 @@ import drt.shared.CrunchApi._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch.europeLondonTimeZone
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 
 object CSVData {

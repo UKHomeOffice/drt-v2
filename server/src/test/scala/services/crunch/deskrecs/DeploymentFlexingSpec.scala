@@ -1,7 +1,7 @@
 package services.crunch.deskrecs
 
-import uk.gov.homeoffice.drt.ports.Queues._
 import services.{OptimiserConfig, OptimizerCrunchResult}
+import uk.gov.homeoffice.drt.ports.Queues._
 import services.crunch.CrunchTestLike
 import services.graphstages.Crunch
 
