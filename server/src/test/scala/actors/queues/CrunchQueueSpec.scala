@@ -10,15 +10,15 @@ import akka.stream.{ClosedShape, Materializer}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.CrunchTestLike
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.collection.SortedSet
 
 
 class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
-  val myNow: () => SDateLike = () => SDate("2020-05-06", Crunch.europeLondonTimeZone)
+  val myNow: () => SDateLike = () => SDate("2020-05-06", europeLondonTimeZone)
 
   val durationMinutes = 60
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int, initialQueue: SortedSet[ProcessingRequest]): ActorRef = {

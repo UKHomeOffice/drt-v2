@@ -1,21 +1,15 @@
 package services.crunch.deskrecs
 
-import actors.MinuteLookupsLike
-import actors.daily.RequestAndTerminateActor
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
-import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesRouterActor, StaffMinutesRouterActor}
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
+import actors.routing.minutes.QueueMinutesRouterActor
+import akka.actor.{Actor, ActorRef}
 import akka.pattern.StatusReply
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
-import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
-
-import scala.concurrent.ExecutionContext
 
 
 class MockPortStateActorForDeployments(probe: TestProbe, responseDelayMillis: Long = 0L) extends Actor {

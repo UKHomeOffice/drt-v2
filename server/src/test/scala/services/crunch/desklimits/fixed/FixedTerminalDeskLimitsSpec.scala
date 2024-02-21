@@ -1,15 +1,15 @@
 package services.crunch.desklimits.fixed
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import services.{WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.DeskCapacityProvider
 import services.crunch.desklimits.flexed.WorkloadProcessorsHelper.uniformDesksForHours
-import services.graphstages.Crunch
+import services.{WorkloadProcessors, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.egates.Desk
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.time.MilliTimes.oneHourMillis
 import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.Await
@@ -18,11 +18,11 @@ import scala.concurrent.duration.DurationInt
 class FixedTerminalDeskLimitsSpec extends CrunchTestLike {
   val minDesks: IndexedSeq[Int] = IndexedSeq.fill(24)(1)
 
-  val nonBst20200101: MillisSinceEpoch = SDate("2020-01-01T00:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
-  val nonBst20200202: MillisSinceEpoch = SDate("2020-01-02T00:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
+  val nonBst20200101: MillisSinceEpoch = SDate("2020-01-01T00:00:00", europeLondonTimeZone).millisSinceEpoch
+  val nonBst20200202: MillisSinceEpoch = SDate("2020-01-02T00:00:00", europeLondonTimeZone).millisSinceEpoch
 
-  val bst20200601: MillisSinceEpoch = SDate("2020-06-01T00:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
-  val bst20200602: MillisSinceEpoch = SDate("2020-06-02T00:00:00", Crunch.europeLondonTimeZone).millisSinceEpoch
+  val bst20200601: MillisSinceEpoch = SDate("2020-06-01T00:00:00", europeLondonTimeZone).millisSinceEpoch
+  val bst20200602: MillisSinceEpoch = SDate("2020-06-02T00:00:00", europeLondonTimeZone).millisSinceEpoch
 
   val nonBstMidnightToMidnightByHour: NumericRange[MillisSinceEpoch] = nonBst20200101 until nonBst20200202 by oneHourMillis
   val bstMidnightToMidnightByHour: NumericRange[MillisSinceEpoch] = bst20200601 until bst20200602 by oneHourMillis

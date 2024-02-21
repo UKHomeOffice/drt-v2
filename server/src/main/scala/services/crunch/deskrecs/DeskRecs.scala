@@ -1,10 +1,10 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.ports.Queues.Queue
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch.europeLondonTimeZone
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.collection.immutable.{Map, NumericRange}
 

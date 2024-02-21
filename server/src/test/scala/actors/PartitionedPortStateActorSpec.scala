@@ -3,12 +3,11 @@ package actors
 import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.testkit.TestProbe
-import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.time.SDateLike
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 
 import scala.concurrent.duration._
 
@@ -51,7 +50,7 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
         val dateRangeMessage = GetStateForDateRange(rangeStart.millisSinceEpoch, rangeEnd.millisSinceEpoch)
         val pitMessage = PointInTimeQuery(SDate(pointInTime).millisSinceEpoch, dateRangeMessage)
         portStateActor ! pitMessage
-        probe.expectNoMessage(250 milliseconds)
+        probe.expectNoMessage(250.milliseconds)
         success
       }
     }
@@ -69,11 +68,11 @@ class PartitionedPortStateActorSpec extends CrunchTestLike {
           queues,
           journalType
         )))
-        val rangeStart = SDate("2020-07-06T00:00", Crunch.utcTimeZone)
-        val rangeEnd = SDate("2020-07-07T12:59", Crunch.utcTimeZone)
+        val rangeStart = SDate("2020-07-06T00:00", utcTimeZone)
+        val rangeEnd = SDate("2020-07-07T12:59", utcTimeZone)
         val message = GetStateForDateRange(rangeStart.millisSinceEpoch, rangeEnd.millisSinceEpoch)
         portStateActor ! message
-        probe.expectNoMessage(250 milliseconds)
+        probe.expectNoMessage(250.milliseconds)
         success
       }
     }

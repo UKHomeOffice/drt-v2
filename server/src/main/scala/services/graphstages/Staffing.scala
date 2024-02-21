@@ -3,12 +3,12 @@ package services.graphstages
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import Crunch.europeLondonTimeZone
 import services.crunch.deskrecs.DeskRecs
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.{NumericRange, SortedMap}
@@ -74,7 +74,7 @@ object Staffing {
     SortedMap[TM, StaffMinute]() ++ minuteMillis
       .map { minute =>
         val shifts = staff.shifts.terminalStaffAt(tn, SDate(minute), sdateFromMillisLocal)
-        val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(minute, Crunch.europeLondonTimeZone), sdateFromMillisLocal)
+        val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(minute, europeLondonTimeZone), sdateFromMillisLocal)
         val movements = staff.movements.terminalStaffAt(tn, minute)
         val staffMinute = StaffMinute(tn, minute, shifts, fixedPoints, movements)
         (staffMinute.key, staffMinute)
@@ -85,7 +85,7 @@ object Staffing {
                       fixedPoints: FixedPointAssignments,
                       movements: StaffMovementsService): (MillisSinceEpoch, Terminal, MillisSinceEpoch => SDateLike) => Int =
     (dateTimeMillis: MillisSinceEpoch, terminalName: Terminal, msToSd: MillisSinceEpoch => SDateLike) => {
-      val date = SDate(dateTimeMillis, Crunch.europeLondonTimeZone)
+      val date = SDate(dateTimeMillis, europeLondonTimeZone)
 
       val baseStaff = shifts.terminalStaffAt(terminalName, date, msToSd)
       val fixedPointStaff = fixedPoints.terminalStaffAt(terminalName, date, msToSd)
@@ -224,7 +224,7 @@ case class StaffSources(shifts: StaffAssignmentsLike,
   def staffMinute(terminal: Terminal, minute: SDateLike): StaffMinute = {
     val millis = minute.millisSinceEpoch
     val sh = shifts.terminalStaffAt(terminal, minute, msToSd)
-    val fp = fixedPoints.terminalStaffAt(terminal, SDate(millis, Crunch.europeLondonTimeZone), msToSd)
+    val fp = fixedPoints.terminalStaffAt(terminal, SDate(millis, europeLondonTimeZone), msToSd)
     val mm = movements.terminalStaffAt(terminal, millis)
     StaffMinute(terminal, minute.millisSinceEpoch, sh, fp, mm, lastUpdated = Option(SDate.now().millisSinceEpoch))
   }

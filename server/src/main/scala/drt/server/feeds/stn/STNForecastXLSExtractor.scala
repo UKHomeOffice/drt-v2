@@ -3,10 +3,10 @@ package drt.server.feeds.stn
 import drt.server.feeds.common.XlsExtractorUtil._
 import org.apache.poi.ss.usermodel.{CellType, DateUtil}
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.util.TimeZone
@@ -68,7 +68,7 @@ object STNForecastXLSExtractor {
 
     val arrivalRows = arrivalRowsTry.zipWithIndex.toList.flatMap {
       case (Success(a), _) =>
-        val inLondonEuropeTz = a.copy(scheduledDate = SDate(s"${a.scheduledDate.toISODateOnly}T${a.scheduledDate.toHoursAndMinutes}", Crunch.europeLondonTimeZone))
+        val inLondonEuropeTz = a.copy(scheduledDate = SDate(s"${a.scheduledDate.toISODateOnly}T${a.scheduledDate.toHoursAndMinutes}", europeLondonTimeZone))
         Some(inLondonEuropeTz)
       case (Failure(e), i) => log.warn(s"Invalid data on row ${i + 3} ${e.getMessage}", e)
         None

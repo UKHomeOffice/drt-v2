@@ -2,18 +2,18 @@ package services.exports
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs
 import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 
 object Exports {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def millisToLocalIsoDateOnly: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate.millisToLocalIsoDateOnly(Crunch.europeLondonTimeZone)(millis)
+  def millisToLocalIsoDateOnly: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate.millisToLocalIsoDateOnly(europeLondonTimeZone)(millis)
 
-  def millisToLocalDateTimeString: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toLocalDateTimeString
+  def millisToLocalDateTimeString: MillisSinceEpoch => String = (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toLocalDateTimeString
 
   def actualAPISplitsAndHeadingsFromFlight(flightWithSplits: ApiFlightWithSplits): Set[(String, Double)] = flightWithSplits
     .splits

@@ -5,14 +5,13 @@ import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared._
+import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import drt.shared._
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
-import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.immutable
 import scala.collection.immutable.SortedMap
@@ -150,7 +149,7 @@ object StreamingDesksExport {
           case _ => "Missing staffing data for this period,,"
         }
         val total = qcms.map(_.deskRec).sum
-        val localMinute = SDate(minute, Crunch.europeLondonTimeZone)
+        val localMinute = SDate(minute, europeLondonTimeZone)
         val misc = terminalStaffMinutesWithinRange.get(minute).map(_.fixedPoints).getOrElse(0)
         s"${localMinute.toISODateOnly},${localMinute.prettyTime},$qsCsv,$staffMinutesCsv,${total + misc}\n"
 

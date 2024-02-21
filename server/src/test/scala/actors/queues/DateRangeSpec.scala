@@ -2,9 +2,8 @@ package actors.queues
 
 import actors.DateRange
 import org.specs2.mutable.Specification
-import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.{DateLike, LocalDate, SDate, UtcDate}
 
 class DateRangeSpec extends Specification {
   "Concerning BST dates" >> {
@@ -33,8 +32,8 @@ class DateRangeSpec extends Specification {
     "Given a start and end date that span two UTC dates but one BST date" >> {
       "When I ask for a UTC Date range" >> {
         "I should get back both UTC Dates in the range" >> {
-          val date1 = SDate("2020-04-02T00:00", Crunch.europeLondonTimeZone)
-          val date2 = SDate("2020-04-02T02:00", Crunch.europeLondonTimeZone)
+          val date1 = SDate("2020-04-02T00:00", europeLondonTimeZone)
+          val date2 = SDate("2020-04-02T02:00", europeLondonTimeZone)
           val range: Seq[DateLike] = DateRange.utcDateRange(date1, date2)
 
           range === Seq(UtcDate(2020, 4, 1), UtcDate(2020, 4, 2))

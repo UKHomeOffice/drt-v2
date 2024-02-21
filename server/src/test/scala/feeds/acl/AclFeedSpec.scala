@@ -8,12 +8,12 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.collection.immutable.{List, SortedMap}
 import scala.concurrent.Future
@@ -106,7 +106,7 @@ class AclFeedSpec extends CrunchTestLike {
     val updateHour = 18
 
     "When the current date time is 2021-10-15 10:00" >> {
-      val now = SDate("2021-10-15T10:00", Crunch.europeLondonTimeZone)
+      val now = SDate("2021-10-15T10:00", europeLondonTimeZone)
       "The next check should be 2021-10-15 18:00" >> {
         nextAclCheck(now, updateHour).toISOString === "2021-10-15T18:00:00+01:00"
       }
@@ -117,7 +117,7 @@ class AclFeedSpec extends CrunchTestLike {
     }
 
     "When the current date time is 2021-10-15 20:00" >> {
-      val now = SDate("2021-10-15T20:00", Crunch.europeLondonTimeZone)
+      val now = SDate("2021-10-15T20:00", europeLondonTimeZone)
       "The next check should be 2021-10-16 18:00" >> {
         nextAclCheck(now, updateHour).toISOString === "2021-10-16T18:00:00+01:00"
       }

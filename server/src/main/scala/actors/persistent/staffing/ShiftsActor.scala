@@ -14,13 +14,13 @@ import akka.util.Timeout
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable
@@ -278,7 +278,7 @@ object ShiftsMessageParser {
     for {
       (d, m, y) <- maybeDayMonthYear
       (hr, min) <- maybeHourMinute
-    } yield SDate(y, m, d, hr, min, Crunch.europeLondonTimeZone)
+    } yield SDate(y, m, d, hr, min, europeLondonTimeZone)
   }
 
   private def shiftMessageToStaffAssignmentv2(shiftMessage: ShiftMessage): Option[StaffAssignment] = Option(StaffAssignment(

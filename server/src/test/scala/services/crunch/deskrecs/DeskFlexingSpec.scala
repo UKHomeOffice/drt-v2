@@ -1,10 +1,10 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.MillisSinceEpoch
+import services.crunch.CrunchTestLike
 import services.crunch.desklimits.DeskCapacityProvider
-import services.{OptimiserConfig, OptimizerCrunchResult}
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimits
-import services.crunch.{CrunchTestLike, deskrecs}
+import services.{OptimiserConfig, OptimizerCrunchResult}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
