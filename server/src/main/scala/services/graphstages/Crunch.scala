@@ -2,11 +2,11 @@ package services.graphstages
 
 import drt.shared.CrunchApi._
 import drt.shared._
-import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
 import scala.collection.immutable.{Map, SortedMap}
@@ -49,12 +49,6 @@ object Crunch {
       LoadMinute(cm.terminal, cm.queue, passengers, cm.workLoad, cm.minute)
     }
   }
-
-  val europeLondonId = "Europe/London"
-  val europeLondonTimeZone: DateTimeZone = DateTimeZone.forID(europeLondonId)
-
-  private val utcId = "UTC"
-  val utcTimeZone: DateTimeZone = DateTimeZone.forID(utcId)
 
   def purgeExpired[A <: WithTimeAccessor, B](expireable: SortedMap[A, B],
                                              atTime: MillisSinceEpoch => A,
@@ -99,8 +93,8 @@ object Crunch {
   }
 
   def utcDaysInPeriod(start: SDateLike, end: SDateLike): Seq[UtcDate] = {
-    val startForTimeZone = SDate(start, Crunch.utcTimeZone)
-    val endForTimeZone = SDate(end, Crunch.utcTimeZone)
+    val startForTimeZone = SDate(start, utcTimeZone)
+    val endForTimeZone = SDate(end, utcTimeZone)
 
     (startForTimeZone.millisSinceEpoch to endForTimeZone.millisSinceEpoch by MilliTimes.oneHourMillis)
       .map(SDate(_).toUtcDate)

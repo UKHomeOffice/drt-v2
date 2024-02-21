@@ -12,12 +12,12 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.exports.StaffMovementsExport
-import services.graphstages.Crunch
 import services.staffing.StaffTimeSlots
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import upickle.default.{read, write}
 
@@ -79,7 +79,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
         .collect {
           case shifts: ShiftAssignments =>
             log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString}")
-            val monthInLocalTime = SDate(month, Crunch.europeLondonTimeZone)
+            val monthInLocalTime = SDate(month, europeLondonTimeZone)
             MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
         }
       monthOfShifts.map(s => Ok(write(s)))

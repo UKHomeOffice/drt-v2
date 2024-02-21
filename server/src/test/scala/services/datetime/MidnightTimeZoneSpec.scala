@@ -2,7 +2,7 @@ package services.datetime
 
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
-import services.graphstages.Crunch.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 class MidnightTimeZoneSpec extends Specification {
 

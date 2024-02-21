@@ -5,7 +5,7 @@ import drt.server.feeds.lhr.forecast.{LHRForecastEmail, LHRForecastXLSExtractor}
 import org.joda.time.DateTimeZone
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.SDate
-import services.graphstages.Crunch.europeLondonId
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonId
 
 
 class LHRMailForecastFeedSpec extends Specification {

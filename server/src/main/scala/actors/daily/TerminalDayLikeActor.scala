@@ -5,11 +5,11 @@ import akka.persistence.SaveSnapshotSuccess
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.mutable
@@ -36,7 +36,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 
-  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.utcTimeZone)
+  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, utcTimeZone)
   private val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
   private val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
 

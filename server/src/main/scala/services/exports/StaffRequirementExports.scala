@@ -5,9 +5,9 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{CrunchMinute, MinuteLike, StaffMinute}
 import services.LocalDateStream
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -82,7 +82,7 @@ object StaffRequirementExports {
 
   def groupByXMinutes[A, B](minutes: Seq[MinuteLike[A, B]], minutesInGroup: Int): Map[Int, Seq[A]] = minutes
     .groupBy { sm =>
-      val localSDate = SDate(sm.minute, Crunch.europeLondonTimeZone)
+      val localSDate = SDate(sm.minute, europeLondonTimeZone)
       ((localSDate.getHours * 60) + localSDate.getMinutes) / minutesInGroup
     }
     .view

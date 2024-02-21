@@ -24,6 +24,7 @@ import java.util.{Calendar, TimeZone}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import uk.gov.homeoffice.drt.db.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 
 trait AirportConfiguration {
@@ -281,7 +282,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
         val millis = request.body.get("timestamp")
           .map(_.head.toLong)
-          .getOrElse(SDate.now(Crunch.europeLondonTimeZone).millisSinceEpoch)
+          .getOrElse(SDate.now(europeLondonTimeZone).millisSinceEpoch)
 
         val logMessage = Map(
           "logger" -> ("CLIENT - " + postStringValOrElse("logger", "log")),

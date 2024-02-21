@@ -11,12 +11,12 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
 import drt.shared.{CrunchApi, TQM}
 import org.slf4j.LoggerFactory
-import services.graphstages.Crunch
 import slickdb.Tables
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
 import uk.gov.homeoffice.drt.db.serialisers.PassengersHourlySerialiser
 import uk.gov.homeoffice.drt.db.{PassengersHourly, PassengersHourlyRow}
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,7 +30,7 @@ object PassengersLiveView {
 
       container.minutes
         .groupBy { minute =>
-          val sdate = SDate(minute.key.minute, Crunch.utcTimeZone)
+          val sdate = SDate(minute.key.minute, utcTimeZone)
           val t = minute.key.terminal
           val q = minute.key.queue
           val d = sdate.toUtcDate

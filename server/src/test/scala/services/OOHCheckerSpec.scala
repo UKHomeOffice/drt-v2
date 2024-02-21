@@ -2,12 +2,11 @@ package services
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
 import services.crunch.CrunchTestLike
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
-import scala.language.postfixOps
 
 class OOHCheckerSpec extends CrunchTestLike {
   sequential
@@ -19,9 +18,9 @@ class OOHCheckerSpec extends CrunchTestLike {
 
     "Given a time on a weekday between 9 and 17:30 then OOH should be false" >> {
 
-      val time = SDate("2019-08-09T09:01:00", Crunch.europeLondonTimeZone)
+      val time = SDate("2019-08-09T09:01:00", europeLondonTimeZone)
 
-      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
+      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1.second)
 
       val expected = false
 
@@ -29,8 +28,8 @@ class OOHCheckerSpec extends CrunchTestLike {
     }
 
     "Given a time on a weekday before 9am then OOH should be true" >> {
-      val time = SDate("2019-08-09T05:58:00", Crunch.europeLondonTimeZone)
-      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
+      val time = SDate("2019-08-09T05:58:00", europeLondonTimeZone)
+      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1.second)
 
       val expected = true
 
@@ -38,9 +37,9 @@ class OOHCheckerSpec extends CrunchTestLike {
     }
 
     "Given a time on a weekday after 17:30pm then OOH should be true" >> {
-      val time = SDate("2019-08-09T17:31:00", Crunch.europeLondonTimeZone)
+      val time = SDate("2019-08-09T17:31:00", europeLondonTimeZone)
 
-      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
+      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1.second)
 
       val expected = true
 
@@ -48,9 +47,9 @@ class OOHCheckerSpec extends CrunchTestLike {
     }
 
     "Given a time on a weekend between 9 and 17:30 OOH should be true" >> {
-      val time = SDate("2019-08-10T17:00:00", Crunch.europeLondonTimeZone)
+      val time = SDate("2019-08-10T17:00:00", europeLondonTimeZone)
 
-      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
+      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1.second)
 
       val expected = true
 
@@ -62,9 +61,9 @@ class OOHCheckerSpec extends CrunchTestLike {
 
     "Given a time on a weekday between 9 and 17:30 then OOH should be false" >> {
 
-      val time = SDate("2019-01-09T09:01:00", Crunch.europeLondonTimeZone)
+      val time = SDate("2019-01-09T09:01:00", europeLondonTimeZone)
 
-      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
+      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1.second)
 
       val expected = false
 
@@ -72,8 +71,8 @@ class OOHCheckerSpec extends CrunchTestLike {
     }
 
     "Given a time on a weekday before 9am then OOH should be true" >> {
-      val time = SDate("2019-01-09T05:58:00", Crunch.europeLondonTimeZone)
-      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
+      val time = SDate("2019-01-09T05:58:00", europeLondonTimeZone)
+      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1.second)
 
       val expected = true
 
@@ -81,9 +80,9 @@ class OOHCheckerSpec extends CrunchTestLike {
     }
 
     "Given a time on a weekday after 17:30pm then OOH should be true" >> {
-      val time = SDate("2019-01-09T17:31:00", Crunch.europeLondonTimeZone)
+      val time = SDate("2019-01-09T17:31:00", europeLondonTimeZone)
 
-      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
+      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1.second)
 
       val expected = true
 
@@ -95,7 +94,7 @@ class OOHCheckerSpec extends CrunchTestLike {
     "Given a bank Holiday json array I should get back a list of bank holidays" >> {
       val client = new BankHolidayApiClient() with GetHolidaysSuccess
 
-      val result = Await.result(client.getHolidays, 1 second)
+      val result = Await.result(client.getHolidays, 1.second)
 
       val expected = Map(
         "england-and-wales" -> BankHolidayDivision(
@@ -113,9 +112,9 @@ class OOHCheckerSpec extends CrunchTestLike {
     "Given christmas day 2019 I should get true when testing if it's a bank holiday" >> {
       val client = new BankHolidayApiClient() with Holidays2019Success
 
-      val time = SDate("2019-12-25T17:00:00", Crunch.europeLondonTimeZone)
+      val time = SDate("2019-12-25T17:00:00", europeLondonTimeZone)
 
-      val result = Await.result(client.isEnglandAndWalesBankHoliday(time), 1 second)
+      val result = Await.result(client.isEnglandAndWalesBankHoliday(time), 1.second)
 
       val expected = true
 
@@ -125,9 +124,9 @@ class OOHCheckerSpec extends CrunchTestLike {
     "Given a normal day I should get false when testing if it's a bank holiday" >> {
       val client = new BankHolidayApiClient() with Holidays2019Success
 
-      val time = SDate("2019-08-12T17:00:00", Crunch.europeLondonTimeZone)
+      val time = SDate("2019-08-12T17:00:00", europeLondonTimeZone)
 
-      val result = Await.result(client.isEnglandAndWalesBankHoliday(time), 1 second)
+      val result = Await.result(client.isEnglandAndWalesBankHoliday(time), 1.second)
 
       val expected = false
 
@@ -135,9 +134,9 @@ class OOHCheckerSpec extends CrunchTestLike {
     }
 
     "Given a bank holiday between 09:00 and 17:30 I OOH should be true" >> {
-      val time = SDate("2019-12-25T17:00:00", Crunch.europeLondonTimeZone)
+      val time = SDate("2019-12-25T17:00:00", europeLondonTimeZone)
 
-      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1 second)
+      val result = Await.result(OOHChecker(mockBankHolidayClient).isOOH(time), 1.second)
 
       val expected = true
 

@@ -11,7 +11,6 @@ import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers._
 import play.api.test._
 import services.crunch.H2Tables
-import services.graphstages.Crunch
 import slick.jdbc.H2Profile.api._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
@@ -19,6 +18,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, T3, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.concurrent.Await
@@ -70,7 +70,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       val hourlyForLhrT3 = PassengersHourlyDao.hourlyForPortAndDate("LHR", Option("T3"))
       val rows = Await.result(H2Tables.db.run(hourlyForLhrT3(LocalDate(2024, 6, 1))), 5.second)
       rows must ===((0 to 23).map { hour =>
-        (SDate("2024-06-01", Crunch.europeLondonTimeZone).addHours(hour).millisSinceEpoch, Map(EeaDesk -> queuePaxPerHour, NonEeaDesk -> queuePaxPerHour))
+        (SDate("2024-06-01", europeLondonTimeZone).addHours(hour).millisSinceEpoch, Map(EeaDesk -> queuePaxPerHour, NonEeaDesk -> queuePaxPerHour))
       }.toMap)
     }
   }

@@ -3,12 +3,12 @@ package services.crunch
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
 import drt.shared._
 import org.specs2.mutable.Specification
-import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.{europeLondonTimeZone, utcTimeZone}
 
 import scala.collection.immutable.SortedMap
 
@@ -107,34 +107,34 @@ class PortStateSummariesSpec extends Specification {
 
   "PortState " should {
     "correctly calculate UTC time days when creating a summary spanning a clock change" in {
-      val summaries = PortState.empty.dailyCrunchSummary(SDate("2022-03-27", Crunch.utcTimeZone), 7, T1, List(EeaDesk))
+      val summaries = PortState.empty.dailyCrunchSummary(SDate("2022-03-27", utcTimeZone), 7, T1, List(EeaDesk))
       val days = summaries.keys.toList.sorted.map(SDate(_))
 
       val expected = List(
-        SDate(2022, 3, 27, 0, 0, Crunch.utcTimeZone),
-        SDate(2022, 3, 28, 0, 0, Crunch.utcTimeZone),
-        SDate(2022, 3, 29, 0, 0, Crunch.utcTimeZone),
-        SDate(2022, 3, 30, 0, 0, Crunch.utcTimeZone),
-        SDate(2022, 3, 31, 0, 0, Crunch.utcTimeZone),
-        SDate(2022, 4, 1, 0, 0, Crunch.utcTimeZone),
-        SDate(2022, 4, 2, 0, 0, Crunch.utcTimeZone),
+        SDate(2022, 3, 27, 0, 0, utcTimeZone),
+        SDate(2022, 3, 28, 0, 0, utcTimeZone),
+        SDate(2022, 3, 29, 0, 0, utcTimeZone),
+        SDate(2022, 3, 30, 0, 0, utcTimeZone),
+        SDate(2022, 3, 31, 0, 0, utcTimeZone),
+        SDate(2022, 4, 1, 0, 0, utcTimeZone),
+        SDate(2022, 4, 2, 0, 0, utcTimeZone),
       )
 
       days === expected
     }
 
     "correctly calculate local time days when creating a summary spanning a clock change" in {
-      val summaries = PortState.empty.dailyCrunchSummary(SDate("2022-03-27", Crunch.europeLondonTimeZone), 7, T1, List(EeaDesk))
+      val summaries = PortState.empty.dailyCrunchSummary(SDate("2022-03-27", europeLondonTimeZone), 7, T1, List(EeaDesk))
       val days = summaries.keys.toList.sorted.map(SDate(_))
 
       val expected = List(
-        SDate(2022, 3, 27, 0, 0, Crunch.utcTimeZone),
-        SDate(2022, 3, 27, 23, 0, Crunch.utcTimeZone),
-        SDate(2022, 3, 28, 23, 0, Crunch.utcTimeZone),
-        SDate(2022, 3, 29, 23, 0, Crunch.utcTimeZone),
-        SDate(2022, 3, 30, 23, 0, Crunch.utcTimeZone),
-        SDate(2022, 3, 31, 23, 0, Crunch.utcTimeZone),
-        SDate(2022, 4, 1, 23, 0, Crunch.utcTimeZone),
+        SDate(2022, 3, 27, 0, 0, utcTimeZone),
+        SDate(2022, 3, 27, 23, 0, utcTimeZone),
+        SDate(2022, 3, 28, 23, 0, utcTimeZone),
+        SDate(2022, 3, 29, 23, 0, utcTimeZone),
+        SDate(2022, 3, 30, 23, 0, utcTimeZone),
+        SDate(2022, 3, 31, 23, 0, utcTimeZone),
+        SDate(2022, 4, 1, 23, 0, utcTimeZone),
       )
 
       days === expected

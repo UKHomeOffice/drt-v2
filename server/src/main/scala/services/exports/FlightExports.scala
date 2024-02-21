@@ -9,7 +9,6 @@ import drt.shared.api.{AgeRange, FlightManifestSummary, UnknownAge}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.LocalDateStream
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
@@ -17,6 +16,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHist
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode, PortRegion}
 import uk.gov.homeoffice.drt.splits.ApiSplitsToSplitRatio
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -112,7 +112,7 @@ object FlightExports {
     if (fws.hasApi && !fws.hasValidApi) "Y" else ""
 
   def millisToLocalDateTimeString: MillisSinceEpoch => String =
-    (millis: MillisSinceEpoch) => SDate(millis, Crunch.europeLondonTimeZone).toLocalDateTimeString
+    (millis: MillisSinceEpoch) => SDate(millis, europeLondonTimeZone).toLocalDateTimeString
 
   def splitsForSources(fws: ApiFlightWithSplits,
                        paxFeedSourceOrder: List[FeedSource],
