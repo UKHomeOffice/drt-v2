@@ -4,13 +4,13 @@ import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
 import services.crunch.TestDefaults
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, PaxSource}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, ApiFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.DurationInt
 
 class ArrivalSpec extends Specification {
-  val paxFeedSourceOrder = TestDefaults.paxFeedSourceOrder
+  val paxFeedSourceOrder: List[FeedSource] = TestDefaults.paxFeedSourceOrder
 
   "Given an arrival with negative passengers" >> {
     "When I ask for the minimum value of the pcp range" >> {
@@ -24,7 +24,8 @@ class ArrivalSpec extends Specification {
 
   "Given an arrival arriving at pcp at noon 2019-01-01 with 100 pax " >> {
     val pcpTime = "2019-01-01T12:00"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)), pcpDt = "2019-01-01T12:00")
+    val arrival = ArrivalGenerator
+      .arrival(iata = "BA0001", schDt = "2019-01-01T12:00", passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)), pcpDt = "2019-01-01T12:00")
 
     val pcpRange = arrival.pcpRange(paxFeedSourceOrder)
 
@@ -49,7 +50,8 @@ class ArrivalSpec extends Specification {
 
   "Given an arrival arriving at pcp at noon 2019-01-01 with 99 pax " >> {
     val pcpTime = "2019-01-01T12:00"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", pcpDt = "2019-01-01T12:00", passengerSources = Map(LiveFeedSource -> Passengers(Option(99), None)))
+    val arrival = ArrivalGenerator
+      .arrival(iata = "BA0001", schDt = "2019-01-01T12:00", pcpDt = "2019-01-01T12:00", passengerSources = Map(LiveFeedSource -> Passengers(Option(99), None)))
 
     val pcpRange = arrival.pcpRange(paxFeedSourceOrder)
     "When I ask how many minutes I should see 5" >> {
@@ -73,7 +75,8 @@ class ArrivalSpec extends Specification {
 
   "Given an arrival arriving at pcp at noon 2019-01-01 with 101 pax " >> {
     val pcpTime = "2019-01-01T12:00"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00", passengerSources = Map(LiveFeedSource -> Passengers(Option(101), None)), pcpDt = "2019-01-01T12:00")
+    val arrival = ArrivalGenerator
+      .arrival(iata = "BA0001", schDt = "2019-01-01T12:00", passengerSources = Map(LiveFeedSource -> Passengers(Option(101), None)), pcpDt = "2019-01-01T12:00")
 
     val pcpRange = arrival.pcpRange(paxFeedSourceOrder)
 
@@ -185,14 +188,26 @@ class ArrivalSpec extends Specification {
     }
     "When flight status is redirected" >> {
       "display status should be Diverted" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), status = ArrivalStatus("redirected"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator
+          .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)),
+            status = ArrivalStatus("redirected"),
+            schDt = "2020-10-22T13:00Z",
+            estDt = "2020-10-22T13:10Z",
+            actDt = "2020-10-22T13:00Z",
+            actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Diverted")
       }
     }
     "When flight status is DIVERTED" >> {
       "display status should be Diverted" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), status = ArrivalStatus("DIVERTED"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator
+          .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)),
+            status = ArrivalStatus("DIVERTED"),
+            schDt = "2020-10-22T13:00Z",
+            estDt = "2020-10-22T13:10Z",
+            actDt = "2020-10-22T13:00Z",
+            actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Diverted")
       }
@@ -200,28 +215,46 @@ class ArrivalSpec extends Specification {
     "When flight status is CANCELLED" >> {
       "display status should be Cancelled" >> {
         val arrival: Arrival = ArrivalGenerator
-          .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), status = ArrivalStatus("CANCELLED"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+          .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)),
+            status = ArrivalStatus("CANCELLED"),
+            schDt = "2020-10-22T13:00Z",
+            estDt = "2020-10-22T13:10Z",
+            actDt = "2020-10-22T13:00Z",
+            actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
     "When flight status is C" >> {
       "display status should be Cancelled" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), status = ArrivalStatus("C"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator
+          .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)),
+            status = ArrivalStatus("C"),
+            schDt = "2020-10-22T13:00Z",
+            estDt = "2020-10-22T13:10Z",
+            actDt = "2020-10-22T13:00Z",
+            actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
     "When flight status is Canceled" >> {
       "display status should be Cancelled" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), status = ArrivalStatus("Canceled"), schDt = "2020-10-22T13:00Z", estDt = "2020-10-22T13:10Z", actDt = "2020-10-22T13:00Z", actChoxDt = "2020-10-22T13:00Z")
+        val arrival: Arrival = ArrivalGenerator
+          .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)),
+            status = ArrivalStatus("Canceled"),
+            schDt = "2020-10-22T13:00Z",
+            estDt = "2020-10-22T13:10Z",
+            actDt = "2020-10-22T13:00Z",
+            actChoxDt = "2020-10-22T13:00Z")
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }
     }
     "When flight status is Deleted / Removed Flight Record" >> {
       "display status should be Cancelled" >> {
-        val arrival: Arrival = ArrivalGenerator.arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), status = ArrivalStatus("Deleted / Removed Flight Record"))
+        val arrival: Arrival = ArrivalGenerator
+          .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), status = ArrivalStatus("Deleted / Removed Flight Record"))
         val result = arrival.displayStatus
         result === ArrivalStatus("Cancelled")
       }

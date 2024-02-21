@@ -63,9 +63,10 @@ object FlightTableRow {
                   ) extends UseValueEq
 
   implicit val propsReuse: Reusability[Props] = Reusability {
-    (a, b) => a.flightWithSplits.lastUpdated == b.flightWithSplits.lastUpdated &&
-      a.manifestSummary == b.manifestSummary &&
-      a.flaggedNationalities == b.flaggedNationalities
+    (a, b) =>
+      a.flightWithSplits.lastUpdated == b.flightWithSplits.lastUpdated &&
+        a.manifestSummary == b.manifestSummary &&
+        a.flaggedNationalities == b.flaggedNationalities
   }
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
@@ -175,7 +176,7 @@ object FlightTableRow {
       )
       val lastCells = List[TagMod](
         <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder),flight.Origin.isDomesticOrCta)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
+        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder), flight.Origin.isDomesticOrCta)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
       )
 
       val flightFields = firstCells ++ lastCells

@@ -4,7 +4,12 @@ import akka.stream.scaladsl.{Sink, Source}
 import controllers.ArrivalGenerator
 import passengersplits.parsing.VoyageManifestParser._
 import services.crunch.CrunchTestLike
-import services.exports.flights.templates.{FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExport, FlightsWithSplitsWithoutActualApiExportImpl}
+import services.exports.flights.templates.{
+  FlightsWithSplitsWithActualApiExport,
+  FlightsWithSplitsWithActualApiExportImpl,
+  FlightsWithSplitsWithoutActualApiExport,
+  FlightsWithSplitsWithoutActualApiExportImpl
+}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.{Passengers, _}
@@ -204,11 +209,15 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     )
   )
 
-  private val flightHeadings = """IATA,ICAO,Origin,Gate/Stand,Status,Scheduled,Predicted Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Total Pax,PCP Pax"""
-  private val apiHeadings = """Invalid API,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
+  private val flightHeadings =
+    """IATA,ICAO,Origin,Gate/Stand,Status,Scheduled,Predicted Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Total Pax,PCP Pax"""
+  private val apiHeadings =
+    """Invalid API,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
 
-  private val withoutActualApiExport: FlightsWithSplitsWithoutActualApiExport = FlightsWithSplitsWithoutActualApiExportImpl(SDate("2017-01-01"), SDate("2017-01-01"), T1, paxFeedSourceOrder)
-  private val withActualApiExport: FlightsWithSplitsWithActualApiExport = FlightsWithSplitsWithActualApiExportImpl(SDate("2017-01-01"), SDate("2017-01-01"), T1, paxFeedSourceOrder)
+  private val withoutActualApiExport: FlightsWithSplitsWithoutActualApiExport =
+    FlightsWithSplitsWithoutActualApiExportImpl(SDate("2017-01-01"), SDate("2017-01-01"), T1, paxFeedSourceOrder)
+  private val withActualApiExport: FlightsWithSplitsWithActualApiExport =
+    FlightsWithSplitsWithActualApiExportImpl(SDate("2017-01-01"), SDate("2017-01-01"), T1, paxFeedSourceOrder)
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data using live feed numbers when available" >> {
 
@@ -292,7 +301,6 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "When asking for Actual API Split Data" >> {
 
     "Given a list of Flights With Splits then I should get Api Split data for each flight" >> {
-      val exporter = withActualApiExport
 
       val result = flights.map { flight =>
         FlightExports.actualAPISplitsForFlightInHeadingOrder(flight, ArrivalExportHeadings.actualApiHeadings.split(","))
@@ -327,13 +335,14 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
   "Given a Flight With Splits and a VoyageManifests with a matching arrival " +
     "I should get all the data with API nos plus the nationalities breakdown in size then alphabetical order, and age breakdowns in ascending range order" >> {
-    val manifests = VoyageManifests(Set(VoyageManifest(DC, PortCode("AAA"), flightWithAllTypesOfAPISplit.apiFlight.Origin, flightWithAllTypesOfAPISplit.apiFlight.VoyageNumber,
-      flightWithAllTypesOfAPISplit.apiFlight.CarrierCode, ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("20:00"), List(
-        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(50)), None, InTransit(false), None, Option(Nationality("GBR")), None),
-        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(25)), None, InTransit(false), None, Option(Nationality("USA")), None),
-        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(5)), None, InTransit(false), None, Option(Nationality("FRA")), None),
-        PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(30)), None, InTransit(false), None, Option(Nationality("FRA")), None),
-      ))))
+    val manifests = VoyageManifests(Set(
+      VoyageManifest(DC, PortCode("AAA"), flightWithAllTypesOfAPISplit.apiFlight.Origin, flightWithAllTypesOfAPISplit.apiFlight.VoyageNumber,
+        flightWithAllTypesOfAPISplit.apiFlight.CarrierCode, ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("20:00"), List(
+          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(50)), None, InTransit(false), None, Option(Nationality("GBR")), None),
+          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(25)), None, InTransit(false), None, Option(Nationality("USA")), None),
+          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(5)), None, InTransit(false), None, Option(Nationality("FRA")), None),
+          PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(30)), None, InTransit(false), None, Option(Nationality("FRA")), None),
+        ))))
     val resultStream = withActualApiExport
       .csvStream(Source(List((FlightsWithSplits(List(flightWithAllTypesOfAPISplit)), manifests))))
 
@@ -404,7 +413,12 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
   private def invalidApiFieldValue(feedSources: Set[FeedSource], passengerSources: Map[FeedSource, Passengers]): String = {
     val arrival = ArrivalGenerator.arrival(feedSources = feedSources, passengerSources = passengerSources)
-    val splits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EGate, passengerSources.get(ApiFeedSource).flatMap(_.actual).getOrElse(0).toDouble, None, None)),
+    val splits = Splits(Set(
+      ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable,
+        Queues.EGate,
+        passengerSources.get(ApiFeedSource).flatMap(_.actual).getOrElse(0).toDouble,
+        None,
+        None)),
       SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
     val fws = ApiFlightWithSplits(arrival, Set(splits))
     val eventualResult = withActualApiExport.csvStream(Source(List((FlightsWithSplits(Iterable(fws)), VoyageManifests.empty)))).runWith(Sink.seq)
