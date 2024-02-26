@@ -88,7 +88,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     manifestLookups = manifestLookups,
     manifestLookupService = manifestLookupService,
     minuteLookups = minuteLookups,
-    readActorService = actorService,
+    actorService = actorService,
     persistentStateActors = persistentActors
   )
 
