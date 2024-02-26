@@ -22,19 +22,19 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   def receivedLiveApiData(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
     val end = ctrl.now()
     val start = end.addMinutes(-windowMinutes)
-    apiHealthCheck.healthy(end, start, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
+    apiHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
   def receivedLandingTimes(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
     val end = ctrl.now()
     val start = end.addMinutes(-windowMinutes)
-    landingTimesHealthCheck.healthy(end, start, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
+    landingTimesHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
   def receivedUpdates(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
     val start = ctrl.now()
     val end = start.addMinutes(windowMinutes)
-    arrivalUpdatesHealthCheck.healthy(end, start, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
+    arrivalUpdatesHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
   def deskUpdates(): Action[AnyContent] = Action.async { _ =>
