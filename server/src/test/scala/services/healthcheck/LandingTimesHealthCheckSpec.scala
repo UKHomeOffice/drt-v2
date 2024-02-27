@@ -29,8 +29,7 @@ class LandingTimesHealthCheckSpec extends CrunchTestLike {
     val result = Await.result(healthCheck.healthy(myNow.addMinutes(-30), myNow, minimumToConsider), 1.second)
     result === expected
   }
-
-
+  
   "Given one flight that was due to land in the last 30 minutes and it has a landing time" >> {
     "the received percentage for the last 30 minutes should be None when minimum-to-consider is 2" >> {
       val flights = flightsStream(Seq(
@@ -42,7 +41,7 @@ class LandingTimesHealthCheckSpec extends CrunchTestLike {
       val flights = flightsStream(Seq(
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35"), Set(), None)
       ))
-      check(flights, Option(1), 1)
+      check(flights, Option(100d), 1)
     }
   }
 
@@ -52,7 +51,7 @@ class LandingTimesHealthCheckSpec extends CrunchTestLike {
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T11:35"), Set(), None),
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", actDt = "2023-10-20T11:45", schDt = "2023-10-20T11:45"), Set(), None)
       ))
-      check(flights, Option(0.5), 2)
+      check(flights, Option(50d), 2)
     }
   }
 
@@ -62,7 +61,7 @@ class LandingTimesHealthCheckSpec extends CrunchTestLike {
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T11:35"), Set(), None),
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", schDt = "2023-10-20T11:45"), Set(), None),
       ))
-      check(flights, Option(0), 2)
+      check(flights, Option(0d), 2)
     }
   }
 
