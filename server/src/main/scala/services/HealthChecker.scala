@@ -39,10 +39,10 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
   override def isPassing: Future[Boolean] =
     Source(feedActorsForPort)
       .mapAsync(1) {
-        _.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
+        _.ask(GetFeedStatuses).mapTo[FeedSourceStatuses]
       }
       .collect {
-        case Some(FeedSourceStatuses(feedSource, FeedStatuses(_, Some(lastSuccessAt), _, _))) =>
+        case FeedSourceStatuses(feedSource, FeedStatuses(_, Some(lastSuccessAt), _, _)) =>
           val threshold = feedLastCheckThresholds.getOrElse(feedSource, defaultLastCheckThreshold)
           if (gracePeriodHasPassed && lastSuccessAt < (now() - threshold).millisSinceEpoch) {
             val minutesSinceLastCheck = ((now().millisSinceEpoch - lastSuccessAt) / 60000).toInt

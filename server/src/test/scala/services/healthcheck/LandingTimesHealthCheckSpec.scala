@@ -29,7 +29,7 @@ class LandingTimesHealthCheckSpec extends CrunchTestLike {
     val result = Await.result(healthCheck.healthy(myNow.addMinutes(-30), myNow, minimumToConsider), 1.second)
     result === expected
   }
-  
+
   "Given one flight that was due to land in the last 30 minutes and it has a landing time" >> {
     "the received percentage for the last 30 minutes should be None when minimum-to-consider is 2" >> {
       val flights = flightsStream(Seq(
