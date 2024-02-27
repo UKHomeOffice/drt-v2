@@ -34,7 +34,7 @@ class ArrivalUpdatesHealthCheckSpec extends CrunchTestLike {
       val flights = flightsStream(Seq(
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:25"), Set(), Option(myNow.addMinutes(-10).millisSinceEpoch))
       ))
-      check(flights, Option(1))
+      check(flights, Option(100d))
     }
   }
 
@@ -44,7 +44,7 @@ class ArrivalUpdatesHealthCheckSpec extends CrunchTestLike {
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:15"), Set(), Option(myNow.addMinutes(-40).millisSinceEpoch)),
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", schDt = "2023-10-20T12:25"), Set(), Option(myNow.addMinutes(-10).millisSinceEpoch))
       ))
-      check(flights, Option(0.5))
+      check(flights, Option(50d))
     }
   }
 
@@ -54,7 +54,7 @@ class ArrivalUpdatesHealthCheckSpec extends CrunchTestLike {
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:15"), Set(), Option(myNow.addMinutes(-40).millisSinceEpoch)),
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", schDt = "2023-10-20T12:25"), Set(), Option(myNow.addMinutes(-40).millisSinceEpoch)),
       ))
-      check(flights, Option(0))
+      check(flights, Option(0d))
     }
   }
 

@@ -44,7 +44,7 @@ class ApiHealthCheckSpec extends CrunchTestLike {
       val flights = flightsStream(Seq(
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35"), Set(apiSplits), None)
       ))
-      check(flights, Option(1))
+      check(flights, Option(100d))
     }
   }
 
@@ -54,7 +54,7 @@ class ApiHealthCheckSpec extends CrunchTestLike {
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35"), Set(apiSplits), None),
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", actDt = "2023-10-20T11:45", schDt = "2023-10-20T11:45"), Set(), None)
       ))
-      check(flights, Option(0.5))
+      check(flights, Option(50d))
     }
   }
 
@@ -64,7 +64,7 @@ class ApiHealthCheckSpec extends CrunchTestLike {
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35"), Set(), None),
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", actDt = "2023-10-20T11:45", schDt = "2023-10-20T11:45"), Set(), None),
       ))
-      check(flights, Option(0))
+      check(flights, Option(0d))
     }
   }
 

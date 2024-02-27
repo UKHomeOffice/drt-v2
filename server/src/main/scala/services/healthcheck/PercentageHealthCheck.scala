@@ -21,6 +21,7 @@ trait PercentageHealthCheck {
       .map { case (_, flights) =>
         flights
           .filterNot(_.apiFlight.Origin.isDomesticOrCta)
+          .filterNot(_.apiFlight.isCancelled)
           .filter { f =>
             val arrivalTime = f.apiFlight.bestArrivalTime(true)
             start.millisSinceEpoch <= arrivalTime && arrivalTime <= end.millisSinceEpoch
@@ -29,7 +30,7 @@ trait PercentageHealthCheck {
       .collect {
         case flights if flights.size >= minimumToConsider => flights
       }
-      .map(flights => healthyCount(flights).toDouble / flights.size)
+      .map(flights => (100 * healthyCount(flights)).toDouble / flights.size)
       .runWith(Sink.seq)
       .map(_.headOption)
 }
