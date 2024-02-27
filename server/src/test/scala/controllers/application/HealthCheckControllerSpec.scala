@@ -61,7 +61,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
-      contentAsString(result) must ===("0.5")
+      contentAsString(result) must ===("50.0")
     }
   }
 
@@ -73,7 +73,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
-      contentAsString(result) must ===("0.5")
+      contentAsString(result) must ===("50.0")
     }
   }
 
@@ -85,7 +85,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
-      contentAsString(result) must ===("0.5")
+      contentAsString(result) must ===("50.0")
     }
   }
 

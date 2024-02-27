@@ -21,47 +21,55 @@ class LandingTimesHealthCheckSpec extends CrunchTestLike {
       ))
   }
 
-  private def check(flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed], expected: Option[Double],
+  private def check(flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                    expected: Option[Double],
+                    minimumToConsider: Int,
                    ): MatchResult[Option[Double]] = {
     val healthCheck = LandingTimesHealthCheck(flights)
-    val result = Await.result(healthCheck.healthy(myNow.addMinutes(-30), myNow, 1), 1.second)
+    val result = Await.result(healthCheck.healthy(myNow.addMinutes(-30), myNow, minimumToConsider), 1.second)
     result === expected
   }
 
 
   "Given one flight that was due to land in the last 30 minutes and it has a landing time" >> {
-    "the missing percentage for the last 30 minutes should be 0" >> {
+    "the received percentage for the last 30 minutes should be None when minimum-to-consider is 2" >> {
       val flights = flightsStream(Seq(
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35"), Set(), None)
       ))
-      check(flights, Option(1))
+      check(flights, None, 2)
+    }
+    "the received percentage for the last 30 minutes should be 1 when minimum-to-consider is 1" >> {
+      val flights = flightsStream(Seq(
+        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35"), Set(), None)
+      ))
+      check(flights, Option(1), 1)
     }
   }
 
   "Given two flights due to land in the last 30 minutes and only one has a landing time" >> {
-    "the missing percentage for the last 30 minutes should be 0.5" >> {
+    "the received percentage for the last 30 minutes should be 0.5" >> {
       val flights = flightsStream(Seq(
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T11:35"), Set(), None),
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", actDt = "2023-10-20T11:45", schDt = "2023-10-20T11:45"), Set(), None)
       ))
-      check(flights, Option(0.5))
+      check(flights, Option(0.5), 2)
     }
   }
 
   "Given two flights due to land in the last 30 minutes and neither has a landing time" >> {
-    "the missing percentage for the last 30 minutes should be 1" >> {
+    "the received percentage for the last 30 minutes should be 0" >> {
       val flights = flightsStream(Seq(
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T11:35"), Set(), None),
         ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", schDt = "2023-10-20T11:45"), Set(), None),
       ))
-      check(flights, Option(0))
+      check(flights, Option(0), 2)
     }
   }
 
   "Given no flights landed in the last 30 minutes" >> {
-    "the missing percentage for the last 30 minutes should be None" >> {
+    "the received percentage for the last 30 minutes should be None" >> {
       val flights = flightsStream(Seq())
-      check(flights, None)
+      check(flights, None, 2)
     }
   }
 }
