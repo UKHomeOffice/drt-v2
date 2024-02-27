@@ -11,12 +11,14 @@ import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
 import org.scalajs.dom.html.{Span, TableCell, TableSection}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -49,6 +51,7 @@ object FlightTableContent {
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
                    paxFeedSourceOrder: List[FeedSource],
+                   filterFlightNumber: String,
                   ) extends UseValueEq
 
   implicit val reuseProps: Reusability[Props] = Reusability {
@@ -71,7 +74,8 @@ object FlightTableContent {
         case _ => DefaultFlightDisplayFilter
       }
 
-      val flights = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder).flights.values.toList
+      val flights: Seq[ApiFlightWithSplits] = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder)
+        .flights.values.toList.filter(f => f.apiFlight.flightCodeString.contains(props.filterFlightNumber))
 
       flights
         .groupBy(f =>
@@ -95,6 +99,7 @@ object FlightTableContent {
       if (sortedFlights.nonEmpty) {
         val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
         <.div(
+          <.div(if (props.filterFlightNumber.nonEmpty) MuiTypography()("Flights displayed : ", <.b(s"${sortedFlights.length}")) else EmptyVdom),
           <.table(
             ^.className := "arrivals-table table-striped",
             tableHead(props, props.queueOrder, redListPaxExist, shortLabel, props.flaggedNationalities.nonEmpty),
@@ -102,7 +107,11 @@ object FlightTableContent {
               sortedFlights.zipWithIndex.map {
                 case ((flightWithSplits, codeShares), idx) =>
                   val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
-                  val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch, props.portCode, props.terminal, flightWithSplits.apiFlight.Terminal, isRedListOrigin)
+                  val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
+                    props.portCode,
+                    props.terminal,
+                    flightWithSplits.apiFlight.Terminal,
+                    isRedListOrigin)
                   val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
                   FlightTableRow.component(FlightTableRow.Props(
                     flightWithSplits = flightWithSplits,

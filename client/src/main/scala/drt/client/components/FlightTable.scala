@@ -3,11 +3,14 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions.RemoveArrivalSources
+import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiTextField, MuiTypography}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{CtorType, _}
@@ -21,6 +24,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.HashSet
+import scala.scalajs.js
 
 object FlightTable {
   case class Props(queueOrder: Seq[Queue],
@@ -40,8 +44,9 @@ object FlightTable {
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
                    showFlagger: Boolean,
-                   paxFeedSourceOrder: List[FeedSource],
-                  ) extends UseValueEq
+                   paxFeedSourceOrder: List[FeedSource]) extends UseValueEq
+
+  case class State(filterFlightNumber: String = "")
 
   implicit val reuseProps: Reusability[Props] = Reusability {
     (a, b) =>
@@ -49,11 +54,14 @@ object FlightTable {
         a.viewEnd == b.viewEnd
   }
 
+  implicit val stateReuse: Reusability[State] = Reusability.by(_.filterFlightNumber)
+
   def apply(shortLabel: Boolean = false,
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-           ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .render_PS { (props, _) =>
+           ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
+    .initialStateFromProps(_ => State())
+    .renderPS { (scope, props, state) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
       else
@@ -75,12 +83,37 @@ object FlightTable {
             case (true, Some((_, sourcesPot))) =>
               <.div(^.tabIndex := 0,
                 <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
-                <.div(^.className := "dashboard-arrivals-popup", ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.airportConfig, props.paxFeedSourceOrder)))
+                <.div(^.className := "dashboard-arrivals-popup",
+                  ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.airportConfig, props.paxFeedSourceOrder)))
               )
             case _ => <.div()
           },
           <.div(
-            if (props.showFlagger) NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)) else EmptyVdom,
+            MuiGrid(container = true, sx = SxProps(Map("backgroundColor" -> "#E6E9F1", "min-height" -> "122px", "padding" -> "24px")))(
+              MuiGrid(item = true, xs = 2, sx = SxProps(Map("borderRight" -> "1px solid #000")))(
+                <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "padding-right" -> "24px"),
+                  MuiTypography(sx = SxProps(Map("font-weight" -> "bold", "padding-bottom" -> "10px")))("Search by flight number"),
+                  MuiTextField(label = "Enter flight number".toVdom, sx = SxProps(Map("font-weight" -> "bold")),
+                    InputProps = js.Dynamic.literal(
+                      "style" -> js.Dictionary(
+                        "backgroundColor" -> "#FFFFFF"
+                      )
+                    ).asInstanceOf[js.Object]
+                  )(
+                    ^.`type` := "text",
+                    ^.defaultValue := state.filterFlightNumber,
+                    ^.autoFocus := true,
+                    ^.onChange ==> { e: ReactEventFromInput =>
+                      val value = e.target.value
+                      scope.modState(_.copy(filterFlightNumber = value))
+                    })
+                ),
+              ),
+              MuiGrid(item = true, xs = 10)(
+                <.div(^.style := js.Dictionary("paddingLeft" -> "24px"),
+                  if (props.showFlagger) NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities))
+                  else EmptyVdom)
+              )),
             <.div(
               model.portStatePot.render { portState =>
                 flightTableContent(
@@ -105,6 +138,7 @@ object FlightTable {
                     viewStart = props.viewStart,
                     viewEnd = props.viewEnd,
                     paxFeedSourceOrder = props.paxFeedSourceOrder,
+                    filterFlightNumber = state.filterFlightNumber
                   ))
               }
             ),
