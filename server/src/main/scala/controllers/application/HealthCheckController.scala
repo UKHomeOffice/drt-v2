@@ -26,8 +26,9 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   }
 
   def receivedLandingTimes(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
-    val end = ctrl.now()
-    val start = end.addMinutes(-windowMinutes)
+    val bufferMinutes = 15
+    val end = ctrl.now().addMinutes(-1 * bufferMinutes)
+    val start = end.addMinutes(-1 * (windowMinutes + bufferMinutes))
     landingTimesHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
