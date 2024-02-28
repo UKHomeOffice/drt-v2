@@ -23,7 +23,7 @@ class ArrivalUpdatesHealthCheckSpec extends CrunchTestLike {
 
   private def check(flights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed], expected: Option[Double],
                    ): MatchResult[Option[Double]] = {
-    val healthCheck = ArrivalUpdatesHealthCheck(flights, 30, () => myNow)
+    val healthCheck = ArrivalUpdatesHealthCheck(flights, () => myNow)(30)
     val result = Await.result(healthCheck.healthy(myNow, myNow.addMinutes(30), 1), 1.second)
     result === expected
   }
