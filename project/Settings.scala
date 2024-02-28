@@ -178,7 +178,7 @@ object Settings {
 
     "joda-time" % "joda-time" % jodaTime,
 
-    "ch.qos.logback" % "logback-classic" % "1.3.5",
+    "ch.qos.logback" % "logback-classic" % "1.3.14",
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
