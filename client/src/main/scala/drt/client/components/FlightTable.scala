@@ -107,13 +107,9 @@ object FlightTable {
                   MuiTextField(label = "Enter flight number".toVdom, sx = SxProps(Map("font-weight" -> "bold")),
                     InputProps = js.Dynamic.literal(
                       "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
-                      "startAdornment" -> MuiInputAdornment(position = "start")(
-                        (MuiIcons(Search)())
-                      ).rawNode.asInstanceOf[js.Object],
+                      "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],
                       "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer")))
-                      (onClick --> updateState(""),
-                        (MuiIcons(Clear)())
-                      ).rawNode.asInstanceOf[js.Object]
+                      (onClick --> updateState(""), MuiIcons(Clear)()).rawNode.asInstanceOf[js.Object]
                     ))(^.`type` := "text",
                     ^.defaultValue := state.filterFlightNumber,
                     ^.autoFocus := true,
