@@ -2,10 +2,11 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.actions.Actions.RemoveArrivalSources
+import drt.client.actions.Actions.{RemoveArrivalSources, SetFlightFilterMessage}
 import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
+import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
@@ -16,7 +17,7 @@ import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Clear, Search
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.{Callback, CtorType, _}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
@@ -47,7 +48,8 @@ object FlightTable {
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
                    showFlagger: Boolean,
-                   paxFeedSourceOrder: List[FeedSource]) extends UseValueEq
+                   paxFeedSourceOrder: List[FeedSource],
+                   filterFlightNumber: String) extends UseValueEq
 
   case class State(filterFlightNumber: String)
 
@@ -63,12 +65,18 @@ object FlightTable {
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .initialStateFromProps(_ => State(""))
+    .initialStateFromProps(p => State(p.filterFlightNumber))
     .renderPS { (scope, props, state) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
       else
         "* Passengers from CTA origins do not contribute to PCP workload"
+
+      def updateState(value: String): CallbackTo[Unit] = {
+        Callback(SPACircuit.dispatch(SetFlightFilterMessage(value))) >>
+          Callback(if (value.nonEmpty) GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "flightNumberSearch", value)) >>
+          scope.modState(_.copy(filterFlightNumber = value))
+      }
 
       case class Model(flaggedNationalities: Set[Country],
                        portStatePot: Pot[PortState],
@@ -103,7 +111,7 @@ object FlightTable {
                         (MuiIcons(Search)())
                       ).rawNode.asInstanceOf[js.Object],
                       "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer")))
-                      (onClick --> scope.modState(_.copy(filterFlightNumber = "")),
+                      (onClick --> updateState(""),
                         (MuiIcons(Clear)())
                       ).rawNode.asInstanceOf[js.Object]
                     ))(^.`type` := "text",
@@ -111,7 +119,7 @@ object FlightTable {
                     ^.autoFocus := true,
                     ^.onChange ==> { e: ReactEventFromInput =>
                       val value = e.target.value
-                      scope.modState(_.copy(filterFlightNumber = value))
+                      updateState(value)
                     })
                 ),
               ),

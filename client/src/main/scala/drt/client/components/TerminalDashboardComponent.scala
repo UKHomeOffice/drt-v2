@@ -65,6 +65,7 @@ object TerminalDashboardComponent {
       val urlNextTime = URIUtils.encodeURI(end.toISOString)
 
       val terminal = props.terminalPageTabLoc.terminal
+
       def slas: Map[Queue, Int] = props.slaConfigs.configForDate(startPoint.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
 
       val flightTableComponent = FlightTable.apply(
@@ -74,6 +75,7 @@ object TerminalDashboardComponent {
       )
 
       val portStateRCP: ReactConnectProxy[Pot[PortState]] = SPACircuit.connect(_.portStatePot)
+      val flightFilterRCP: ReactConnectProxy[String] = SPACircuit.connect(_.filterFlightNumber)
 
       portStateRCP { portStateProxy =>
         val portStatePot = portStateProxy()
@@ -100,29 +102,31 @@ object TerminalDashboardComponent {
                 <.div(^.className := "dashboard-arrivals-popup",
                   <.h2("Arrivals"),
                   <.div(^.className := "terminal-dashboard__arrivals_popup_table", {
-
-                    flightTableComponent(
-                      FlightTable.Props(
-                        queueOrder = props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
-                        hasEstChox = props.airportConfig.hasEstChox,
-                        loggedInUser = props.loggedInUser,
-                        viewMode = ViewLive,
-                        defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
-                        hasTransfer = props.airportConfig.hasTransfer,
-                        displayRedListInfo = featureFlags.displayRedListInfo,
-                        redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
-                        terminal = terminal,
-                        portCode = props.airportConfig.portCode,
-                        redListPorts = redListPorts,
-                        airportConfig = props.airportConfig,
-                        redListUpdates = props.redListUpdates,
-                        walkTimes = walkTimes,
-                        viewStart = start,
-                        viewEnd = end,
-                        showFlagger = false,
-                        paxFeedSourceOrder = props.paxFeedSourceOrder,
-                      )
-                    )
+                    flightFilterRCP { flightFilterProxy =>
+                        flightTableComponent(
+                          FlightTable.Props(
+                            queueOrder = props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
+                            hasEstChox = props.airportConfig.hasEstChox,
+                            loggedInUser = props.loggedInUser,
+                            viewMode = ViewLive,
+                            defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
+                            hasTransfer = props.airportConfig.hasTransfer,
+                            displayRedListInfo = featureFlags.displayRedListInfo,
+                            redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                            terminal = terminal,
+                            portCode = props.airportConfig.portCode,
+                            redListPorts = redListPorts,
+                            airportConfig = props.airportConfig,
+                            redListUpdates = props.redListUpdates,
+                            walkTimes = walkTimes,
+                            viewStart = start,
+                            viewEnd = end,
+                            showFlagger = false,
+                            paxFeedSourceOrder = props.paxFeedSourceOrder,
+                            filterFlightNumber = flightFilterProxy()
+                          )
+                        )
+                    }
 
 
                   }),

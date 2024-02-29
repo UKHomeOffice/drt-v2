@@ -8,7 +8,7 @@ import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
-import org.scalajs.dom.{Element, File, FormData}
+import org.scalajs.dom.File
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
@@ -35,8 +35,6 @@ object Actions {
 
   case object GetUserDashboardState extends Action
 
-  case object GetShouldReload extends Action
-
   case object GetUserHasPortAccess extends Action
 
   case class SetUserHasPortAccess(hasAccess: Boolean) extends Action
@@ -46,8 +44,6 @@ object Actions {
   case class SetApplicationVersion(version: String) extends Action
 
   case class UpdateServerApplicationVersion(version: String) extends Action
-
-  case class ShowVersionWarning(currentVersion: String, newVersion: String) extends Action
 
   case class GetInitialPortState(viewMode: ViewMode) extends Action
 
@@ -103,8 +99,6 @@ object Actions {
 
   case class GetShiftsForMonth(month: SDateLike) extends Action
 
-  case class SaveMonthTimeSlotsToShifts(staffTimeSlots: StaffTimeSlotsForTerminalMonth) extends Action
-
   case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment]) extends Action
 
   case class AddStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
@@ -129,15 +123,11 @@ object Actions {
 
   case class UpdateRedListPorts(codes: HashSet[PortCode], date: LocalDate) extends Action
 
-  case class SetWalktimes(walkTimes: WalkTimes) extends Action
-
   case class GetManifestSummariesForDate(date: UtcDate) extends Action
 
   case class GetManifestSummaries(arrivalKeys: Set[ArrivalKey]) extends Action
 
   case class SetManifestSummaries(summaries: Set[FlightManifestSummary]) extends Action
-
-  case object GetPassengerInfoForCurrentFlights extends Action
 
   case object GetPassengerInfoForFlights extends Action
 
@@ -219,15 +209,13 @@ object Actions {
 
   case class UpdateForecastAccuracy(forecastAccuracy: ForecastAccuracy) extends Action
 
-  case class SetTimeMachineDate(date: SDateLike) extends Action
-
   case class AddFlaggedNationality(country: Country) extends Action
 
   case class RemoveFlaggedNationality(country: Country) extends Action
 
   case object ClearFlaggedNationalities extends Action
 
-  case class SetNationalityFlaggerOpen(open: Boolean) extends Action
+  case class SetFlightFilterMessage(message: String) extends Action
 
   case class UpdateNationalityFlaggerInputText(value: String) extends Action
 }
