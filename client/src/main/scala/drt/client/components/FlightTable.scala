@@ -87,6 +87,23 @@ object FlightTable {
       val flaggerConnect = SPACircuit.connect(m => Model(m.flaggedNationalities, m.portStatePot, m.flightManifestSummaries, m.arrivalSources))
       val flightTableContent = FlightTableContent(shortLabel, originMapper, splitsGraphComponent)
 
+      val filterFlightComponent = <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "padding-right" -> "24px"),
+        MuiTypography(sx = SxProps(Map("font-weight" -> "bold", "padding-bottom" -> "10px")))("Search by flight number"),
+        MuiTextField(label = "Enter flight number".toVdom, sx = SxProps(Map("font-weight" -> "bold")),
+          InputProps = js.Dynamic.literal(
+            "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
+            "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],
+            "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer")))
+            (onClick --> updateState(""), MuiIcons(Clear)()).rawNode.asInstanceOf[js.Object]
+          ))(^.`type` := "text",
+          ^.defaultValue := state.filterFlightNumber,
+          ^.autoFocus := true,
+          ^.onChange ==> { e: ReactEventFromInput =>
+            val value = e.target.value
+            updateState(value)
+          })
+      )
+
       flaggerConnect { flaggerProxy =>
         val model = flaggerProxy()
         <.div(
@@ -100,30 +117,16 @@ object FlightTable {
             case _ => <.div()
           },
           <.div(
-            MuiGrid(container = true, sx = SxProps(Map("backgroundColor" -> "#E6E9F1", "min-height" -> "122px", "padding" -> "24px")))(
-              MuiGrid(item = true, xs = 2, sx = SxProps(Map("borderRight" -> "1px solid #000")))(
-                <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "padding-right" -> "24px"),
-                  MuiTypography(sx = SxProps(Map("font-weight" -> "bold", "padding-bottom" -> "10px")))("Search by flight number"),
-                  MuiTextField(label = "Enter flight number".toVdom, sx = SxProps(Map("font-weight" -> "bold")),
-                    InputProps = js.Dynamic.literal(
-                      "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
-                      "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],
-                      "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer")))
-                      (onClick --> updateState(""), MuiIcons(Clear)()).rawNode.asInstanceOf[js.Object]
-                    ))(^.`type` := "text",
-                    ^.defaultValue := state.filterFlightNumber,
-                    ^.autoFocus := true,
-                    ^.onChange ==> { e: ReactEventFromInput =>
-                      val value = e.target.value
-                      updateState(value)
-                    })
+            if (props.showFlagger) {
+              MuiGrid(container = true, sx = SxProps(Map("backgroundColor" -> "#E6E9F1", "min-height" -> "122px", "padding" -> "24px")))(
+                MuiGrid(item = true, xs = 2, sx = SxProps(Map("borderRight" -> "1px solid #000")))(
+                  filterFlightComponent,
                 ),
-              ),
-              MuiGrid(item = true, xs = 10)(
-                <.div(^.style := js.Dictionary("paddingLeft" -> "24px"),
-                  if (props.showFlagger) NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities))
-                  else EmptyVdom)
-              ))),
+                MuiGrid(item = true, xs = 10)(
+                  <.div(^.style := js.Dictionary("paddingLeft" -> "24px"),
+                    NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)))
+                ))
+            } else EmptyVdom),
           <.div(
             model.portStatePot.render { portState =>
               flightTableContent(
