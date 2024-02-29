@@ -75,8 +75,7 @@ object FlightTableContent {
       }
 
       val flights: Seq[ApiFlightWithSplits] = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder)
-        .flights.values.toList.filter(f => f.apiFlight.flightCodeString.contains(props.filterFlightNumber))
-
+        .flights.values.toList.filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(props.filterFlightNumber.toLowerCase))
       flights
         .groupBy(f =>
           (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
