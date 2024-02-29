@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
   private val apiHealthCheck: ApiHealthCheck = ApiHealthCheck(ctrl.applicationService.flightsProvider.allTerminals)
   private val landingTimesHealthCheck: LandingTimesHealthCheck = LandingTimesHealthCheck(ctrl.applicationService.flightsProvider.allTerminals)
-  private val arrivalUpdatesHealthCheck: ArrivalUpdatesHealthCheck = ArrivalUpdatesHealthCheck(ctrl.applicationService.flightsProvider.allTerminals, 30, ctrl.now)
+  private val arrivalUpdatesHealthCheck: Int => ArrivalUpdatesHealthCheck = ArrivalUpdatesHealthCheck(ctrl.applicationService.flightsProvider.allTerminals, ctrl.now)
   private val deskUpdatesHealthCheck: DeskUpdatesHealthCheck = DeskUpdatesHealthCheck(
     ctrl.now,
     ctrl.applicationService.flightsProvider.allTerminals,
@@ -26,15 +26,16 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   }
 
   def receivedLandingTimes(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
-    val end = ctrl.now()
-    val start = end.addMinutes(-windowMinutes)
+    val bufferMinutes = 15
+    val end = ctrl.now().addMinutes(-1 * bufferMinutes)
+    val start = end.addMinutes(-1 * (windowMinutes + bufferMinutes))
     landingTimesHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
-  def receivedUpdates(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
+  def receivedUpdates(windowMinutes: Int, minimumToConsider: Int, lastUpdatedMinutes: Int): Action[AnyContent] = Action.async { _ =>
     val start = ctrl.now()
     val end = start.addMinutes(windowMinutes)
-    arrivalUpdatesHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
+    arrivalUpdatesHealthCheck(lastUpdatedMinutes).healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
   def deskUpdates(): Action[AnyContent] = Action.async { _ =>

@@ -38,7 +38,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
   val flights: Seq[(UtcDate, FlightsWithSplits)] = Seq(
     (UtcDate(2024, 6, 26), FlightsWithSplits(Seq(
       ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0001", schDt = "2024-06-26T11:30"), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:45"), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:40"), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
       ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0011", schDt = "2024-06-26T12:30"), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
       ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0015", schDt = "2024-06-26T12:35", actDt = "2024-06-26T12:45"), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
     ))),
@@ -81,7 +81,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
     "return the percentage of flights scheduled to land in the past 60 minutes that have been updated in the past 30 minutes" in {
       val authHeader = Headers("X-Auth-Roles" -> "super-admin,LHR")
       val result = controller
-        .receivedUpdates(60, 1)
+        .receivedUpdates(60, 1, 30)
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
