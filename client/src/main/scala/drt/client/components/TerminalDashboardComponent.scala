@@ -75,7 +75,6 @@ object TerminalDashboardComponent {
       )
 
       val portStateRCP: ReactConnectProxy[Pot[PortState]] = SPACircuit.connect(_.portStatePot)
-      val flightFilterRCP: ReactConnectProxy[String] = SPACircuit.connect(_.filterFlightNumber)
 
       portStateRCP { portStateProxy =>
         val portStatePot = portStateProxy()
@@ -102,33 +101,29 @@ object TerminalDashboardComponent {
                 <.div(^.className := "dashboard-arrivals-popup",
                   <.h2("Arrivals"),
                   <.div(^.className := "terminal-dashboard__arrivals_popup_table", {
-                    flightFilterRCP { flightFilterProxy =>
-                        flightTableComponent(
-                          FlightTable.Props(
-                            queueOrder = props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
-                            hasEstChox = props.airportConfig.hasEstChox,
-                            loggedInUser = props.loggedInUser,
-                            viewMode = ViewLive,
-                            defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
-                            hasTransfer = props.airportConfig.hasTransfer,
-                            displayRedListInfo = featureFlags.displayRedListInfo,
-                            redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
-                            terminal = terminal,
-                            portCode = props.airportConfig.portCode,
-                            redListPorts = redListPorts,
-                            airportConfig = props.airportConfig,
-                            redListUpdates = props.redListUpdates,
-                            walkTimes = walkTimes,
-                            viewStart = start,
-                            viewEnd = end,
-                            showFlagger = false,
-                            paxFeedSourceOrder = props.paxFeedSourceOrder,
-                            filterFlightNumber = flightFilterProxy()
-                          )
-                        )
-                    }
-
-
+                    flightTableComponent(
+                      FlightTable.Props(
+                        queueOrder = props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
+                        hasEstChox = props.airportConfig.hasEstChox,
+                        loggedInUser = props.loggedInUser,
+                        viewMode = ViewLive,
+                        defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
+                        hasTransfer = props.airportConfig.hasTransfer,
+                        displayRedListInfo = featureFlags.displayRedListInfo,
+                        redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                        terminal = terminal,
+                        portCode = props.airportConfig.portCode,
+                        redListPorts = redListPorts,
+                        airportConfig = props.airportConfig,
+                        redListUpdates = props.redListUpdates,
+                        walkTimes = walkTimes,
+                        viewStart = start,
+                        viewEnd = end,
+                        showFlagger = false,
+                        paxFeedSourceOrder = props.paxFeedSourceOrder,
+                        filterFlightNumber = ""
+                      )
+                    )
                   }),
                   props.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
                 ))
@@ -160,11 +155,15 @@ object TerminalDashboardComponent {
                 }).toTagMod
               ),
               <.div(^.className := "tb-bar-wrapper",
-                props.router.link(props.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlPrevTime")))(^.aria.label := s"View previous $slotSize minutes", ^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
+                props.router.link(props.terminalPageTabLoc.
+                  copy(queryParams = Map("start" -> s"$urlPrevTime")))
+                (^.aria.label := s"View previous $slotSize minutes", ^.className := "dashboard-time-switcher prev-bar col", Icon.angleDoubleLeft),
                 <.div(^.className := "tb-bar", ^.aria.label := "current display time range",
                   s"${start.prettyTime} - ${end.prettyTime}",
                 ),
-                props.router.link(props.terminalPageTabLoc.copy(queryParams = Map("start" -> s"$urlNextTime")))(^.aria.label := s"View next $slotSize minutes", ^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
+                props.router.link(props.terminalPageTabLoc.
+                  copy(queryParams = Map("start" -> s"$urlNextTime")))
+                (^.aria.label := s"View next $slotSize minutes", ^.className := "dashboard-time-switcher next-bar col", Icon.angleDoubleRight)
               )
             )
             ,
@@ -175,7 +174,8 @@ object TerminalDashboardComponent {
                 ))(^.className := "terminal-dashboard-side__sidebar_widget", "View Arrivals"),
               <.div(
                 ^.className := "terminal-dashboard-side__sidebar_widget time-slot-changer",
-                <.label(^.className := "terminal-dashboard-side__sidebar_widget__label", ^.aria.label := "Select timeslot size for PCP passengers display", "Time slot duration"),
+                <.label(^.className := "terminal-dashboard-side__sidebar_widget__label",
+                  ^.aria.label := "Select timeslot size for PCP passengers display", "Time slot duration"),
                 <.select(
                   ^.onChange ==> ((e: ReactEventFromInput) =>
                     props.router.set(props.terminalPageTabLoc.copy(subMode = e.target.value))),
