@@ -10,8 +10,11 @@ import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiTextField, MuiTypography}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiInputAdornment, MuiTextField, MuiTypography}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Clear, Search}
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{CtorType, _}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
@@ -46,7 +49,7 @@ object FlightTable {
                    showFlagger: Boolean,
                    paxFeedSourceOrder: List[FeedSource]) extends UseValueEq
 
-  case class State(filterFlightNumber: String = "")
+  case class State(filterFlightNumber: String)
 
   implicit val reuseProps: Reusability[Props] = Reusability {
     (a, b) =>
@@ -60,7 +63,7 @@ object FlightTable {
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .initialStateFromProps(_ => State())
+    .initialStateFromProps(_ => State(""))
     .renderPS { (scope, props, state) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
@@ -95,12 +98,15 @@ object FlightTable {
                   MuiTypography(sx = SxProps(Map("font-weight" -> "bold", "padding-bottom" -> "10px")))("Search by flight number"),
                   MuiTextField(label = "Enter flight number".toVdom, sx = SxProps(Map("font-weight" -> "bold")),
                     InputProps = js.Dynamic.literal(
-                      "style" -> js.Dictionary(
-                        "backgroundColor" -> "#FFFFFF"
-                      )
-                    ).asInstanceOf[js.Object]
-                  )(
-                    ^.`type` := "text",
+                      "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
+                      "startAdornment" -> MuiInputAdornment(position = "start")(
+                        (MuiIcons(Search)())
+                      ).rawNode.asInstanceOf[js.Object],
+                      "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer")))
+                      (onClick --> scope.modState(_.copy(filterFlightNumber = "")),
+                        (MuiIcons(Clear)())
+                      ).rawNode.asInstanceOf[js.Object]
+                    ))(^.`type` := "text",
                     ^.defaultValue := state.filterFlightNumber,
                     ^.autoFocus := true,
                     ^.onChange ==> { e: ReactEventFromInput =>
@@ -113,37 +119,36 @@ object FlightTable {
                 <.div(^.style := js.Dictionary("paddingLeft" -> "24px"),
                   if (props.showFlagger) NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities))
                   else EmptyVdom)
-              )),
-            <.div(
-              model.portStatePot.render { portState =>
-                flightTableContent(
-                  FlightTableContent.Props(
-                    portState = portState,
-                    flightManifestSummaries = model.flightManifestSummaries,
-                    queueOrder = props.queueOrder,
-                    hasEstChox = props.hasEstChox,
-                    loggedInUser = props.loggedInUser,
-                    viewMode = props.viewMode,
-                    defaultWalkTime = props.defaultWalkTime,
-                    hasTransfer = props.hasTransfer,
-                    displayRedListInfo = props.displayRedListInfo,
-                    redListOriginWorkloadExcluded = props.redListOriginWorkloadExcluded,
-                    terminal = props.terminal,
-                    portCode = props.portCode,
-                    redListPorts = props.redListPorts,
-                    redListUpdates = props.redListUpdates,
-                    airportConfig = props.airportConfig,
-                    walkTimes = props.walkTimes,
-                    flaggedNationalities = model.flaggedNationalities,
-                    viewStart = props.viewStart,
-                    viewEnd = props.viewEnd,
-                    paxFeedSourceOrder = props.paxFeedSourceOrder,
-                    filterFlightNumber = state.filterFlightNumber
-                  ))
-              }
-            ),
-            excludedPaxNote
-          )
+              ))),
+          <.div(
+            model.portStatePot.render { portState =>
+              flightTableContent(
+                FlightTableContent.Props(
+                  portState = portState,
+                  flightManifestSummaries = model.flightManifestSummaries,
+                  queueOrder = props.queueOrder,
+                  hasEstChox = props.hasEstChox,
+                  loggedInUser = props.loggedInUser,
+                  viewMode = props.viewMode,
+                  defaultWalkTime = props.defaultWalkTime,
+                  hasTransfer = props.hasTransfer,
+                  displayRedListInfo = props.displayRedListInfo,
+                  redListOriginWorkloadExcluded = props.redListOriginWorkloadExcluded,
+                  terminal = props.terminal,
+                  portCode = props.portCode,
+                  redListPorts = props.redListPorts,
+                  redListUpdates = props.redListUpdates,
+                  airportConfig = props.airportConfig,
+                  walkTimes = props.walkTimes,
+                  flaggedNationalities = model.flaggedNationalities,
+                  viewStart = props.viewStart,
+                  viewEnd = props.viewEnd,
+                  paxFeedSourceOrder = props.paxFeedSourceOrder,
+                  filterFlightNumber = state.filterFlightNumber
+                ))
+            }
+          ),
+          excludedPaxNote
         )
       }
     }
