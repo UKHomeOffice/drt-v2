@@ -7,6 +7,7 @@ import services.healthcheck.{ApiHealthCheck, ArrivalUpdatesHealthCheck, DeskUpda
 import spray.json.DefaultJsonProtocol._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.time.SDate
 
 
 class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
@@ -19,26 +20,26 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     MinutesProvider.allTerminals(ctrl.actorService.queuesRouterActor)
   )
 
-  def receivedLiveApiData(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
-    val end = ctrl.now()
-    val start = end.addMinutes(-windowMinutes)
+  def receivedLiveApiData(from: String, to: String, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
+    val start = SDate(from)
+    val end = SDate(to)
     apiHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
-  def receivedLandingTimes(windowMinutes: Int, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
-    val bufferMinutes = 15
-    val end = ctrl.now().addMinutes(-1 * bufferMinutes)
-    val start = end.addMinutes(-1 * (windowMinutes + bufferMinutes))
+  def receivedLandingTimes(from: String, to: String, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
+    val start = SDate(from)
+    val end = SDate(to)
     landingTimesHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
-  def receivedUpdates(windowMinutes: Int, minimumToConsider: Int, lastUpdatedMinutes: Int): Action[AnyContent] = Action.async { _ =>
-    val start = ctrl.now()
-    val end = start.addMinutes(windowMinutes)
+  def receivedUpdates(from: String, to: String, minimumToConsider: Int, lastUpdatedMinutes: Int): Action[AnyContent] = Action.async { _ =>
+    val start = SDate(from)
+    val end = SDate(to)
     arrivalUpdatesHealthCheck(lastUpdatedMinutes).healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
   def deskUpdates(): Action[AnyContent] = Action.async { _ =>
     deskUpdatesHealthCheck.healthy().map(p => Ok(p.toJson.compactPrint))
-  }}
+  }
+}
 
