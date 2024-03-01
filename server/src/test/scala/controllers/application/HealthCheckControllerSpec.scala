@@ -57,7 +57,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
       val authHeader = Headers("X-Auth-Roles" -> "super-admin,LHR")
       val result = controller
-        .receivedLiveApiData(60, 1)
+        .receivedLiveApiData("2024-06-26T11:00", "2024-06-26T12:00", 1)
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
@@ -69,7 +69,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
     "return the percentage of flights scheduled to land in the past 60 minutes that have an actual landing time" in {
       val authHeader = Headers("X-Auth-Roles" -> "super-admin,LHR")
       val result = controller
-        .receivedLandingTimes(60, 1)
+        .receivedLandingTimes("2024-06-26T11:00", "2024-06-26T12:00", 1)
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
@@ -81,7 +81,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
     "return the percentage of flights scheduled to land in the past 60 minutes that have been updated in the past 30 minutes" in {
       val authHeader = Headers("X-Auth-Roles" -> "super-admin,LHR")
       val result = controller
-        .receivedUpdates(60, 1, 30)
+        .receivedUpdates("2024-06-26T11:00", "2024-06-26T12:00", 1, 30)
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
