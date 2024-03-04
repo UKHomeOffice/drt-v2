@@ -12,6 +12,7 @@ import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -98,7 +99,9 @@ object FlightTableContent {
       if (sortedFlights.nonEmpty) {
         val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
         <.div(
-          <.div(if (props.filterFlightNumber.nonEmpty) MuiTypography()("Flights displayed : ", <.b(s"${sortedFlights.length}")) else EmptyVdom),
+          <.div(if (props.filterFlightNumber.nonEmpty)
+            MuiTypography(sx = SxProps(Map("padding" -> "16px")))("Flights displayed : ", <.b(s"${sortedFlights.length}"))
+          else EmptyVdom),
           <.table(
             ^.className := "arrivals-table table-striped",
             tableHead(props, props.queueOrder, redListPaxExist, shortLabel, props.flaggedNationalities.nonEmpty),

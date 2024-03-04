@@ -11,7 +11,7 @@ import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiInputAdornment, MuiTextField, MuiTypography}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiInputAdornment, MuiTextField, MuiTypography}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Clear, Search}
 import japgolly.scalajs.react.component.Scala.Component
@@ -51,22 +51,18 @@ object FlightTable {
                    paxFeedSourceOrder: List[FeedSource],
                    filterFlightNumber: String) extends UseValueEq
 
-  case class State(filterFlightNumber: String)
-
   implicit val reuseProps: Reusability[Props] = Reusability {
     (a, b) =>
       a.viewStart == b.viewStart &&
-        a.viewEnd == b.viewEnd
+        a.viewEnd == b.viewEnd &&
+        a.filterFlightNumber == b.filterFlightNumber
   }
-
-  implicit val stateReuse: Reusability[State] = Reusability.by(_.filterFlightNumber)
 
   def apply(shortLabel: Boolean = false,
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-           ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .initialStateFromProps(p => State(p.filterFlightNumber))
-    .renderPS { (scope, props, state) =>
+           ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
+    .renderPS { (_, props, _) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
       else
@@ -74,8 +70,7 @@ object FlightTable {
 
       def updateState(value: String): CallbackTo[Unit] = {
         Callback(SPACircuit.dispatch(SetFlightFilterMessage(value))) >>
-          Callback(if (value.nonEmpty) GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "flightNumberSearch", value)) >>
-          scope.modState(_.copy(filterFlightNumber = value))
+          Callback(if (value.nonEmpty) GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "flightNumberSearch", value))
       }
 
       case class Model(flaggedNationalities: Set[Country],
@@ -87,16 +82,21 @@ object FlightTable {
       val flaggerConnect = SPACircuit.connect(m => Model(m.flaggedNationalities, m.portStatePot, m.flightManifestSummaries, m.arrivalSources))
       val flightTableContent = FlightTableContent(shortLabel, originMapper, splitsGraphComponent)
 
-      val filterFlightComponent = <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "padding-right" -> "24px"),
-        MuiTypography(sx = SxProps(Map("font-weight" -> "bold", "padding-bottom" -> "10px")))("Search by flight number"),
+      val filterFlightComponent = <.div(^.style := js.Dictionary(
+        "padding-right" -> "24px",
+        "width" -> "199px",
+        "height" -> "40px"),
+        MuiTypography(sx = SxProps(Map("font-weight" -> "bold",
+          "padding-bottom" -> "10px"
+        )))("Search by flight number"),
         MuiTextField(label = "Enter flight number".toVdom, sx = SxProps(Map("font-weight" -> "bold")),
           InputProps = js.Dynamic.literal(
             "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
             "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],
-            "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer")))
+            "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer", "fontSize" -> "small")))
             (onClick --> updateState(""), MuiIcons(Clear)()).rawNode.asInstanceOf[js.Object]
           ))(^.`type` := "text",
-          ^.defaultValue := state.filterFlightNumber,
+          ^.defaultValue := props.filterFlightNumber,
           ^.autoFocus := true,
           ^.onChange ==> { e: ReactEventFromInput =>
             val value = e.target.value
@@ -116,17 +116,16 @@ object FlightTable {
               )
             case _ => <.div()
           },
-          <.div(
+          <.div(^.style := js.Dictionary("backgroundColor" -> "#E6E9F1", "padding-left" -> "24px", "padding-top" -> "24px"),
             if (props.showFlagger) {
-              MuiGrid(container = true, sx = SxProps(Map("backgroundColor" -> "#E6E9F1", "min-height" -> "122px", "padding" -> "24px")))(
-                MuiGrid(item = true, xs = 2, sx = SxProps(Map("borderRight" -> "1px solid #000")))(
-                  filterFlightComponent,
-                ),
-                MuiGrid(item = true, xs = 10)(
-                  <.div(^.style := js.Dictionary("paddingLeft" -> "24px"),
-                    NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)))
-                ))
-            } else EmptyVdom),
+              <.div(^.style := js.Dictionary("display" -> "flex", "min-height" -> "122px"),
+                filterFlightComponent,
+                <.div(^.style := js.Dictionary("borderRight" -> "1px solid #000", "margin" -> "0px 0px 24px 0")),
+                <.div(^.style := js.Dictionary("padding-left" -> "24px"),
+                  NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)))
+              )
+            } else EmptyVdom
+          ),
           <.div(
             model.portStatePot.render { portState =>
               flightTableContent(
@@ -151,7 +150,7 @@ object FlightTable {
                   viewStart = props.viewStart,
                   viewEnd = props.viewEnd,
                   paxFeedSourceOrder = props.paxFeedSourceOrder,
-                  filterFlightNumber = state.filterFlightNumber
+                  filterFlightNumber = props.filterFlightNumber
                 ))
             }
           ),

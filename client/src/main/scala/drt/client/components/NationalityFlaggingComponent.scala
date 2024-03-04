@@ -5,6 +5,8 @@ import drt.client.components.ArrivalsExportComponent.StringExtended
 import drt.client.services.SPACircuit
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Flag
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.facade.React.Node
 import japgolly.scalajs.react.vdom.html_<^._
@@ -30,7 +32,10 @@ object NationalityFlaggingComponent {
           disabled = params.disabled,
           fullWidth = params.fullWidth,
           InputLabelProps = params.InputLabelProps,
-          InputProps = params.InputProps,
+          InputProps = js.Object.assign(
+            params.InputProps,
+            js.Dynamic.literal("startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Flag)()).rawNode.asInstanceOf[js.Object]),
+          ),
           inputProps = params.inputProps,
           label = "Nationality or ICAO code".toVdom,
         )().rawNode
@@ -73,7 +78,7 @@ object NationalityFlaggingComponent {
           MuiAutocomplete[MuiAutocompleteOption](
             options = options,
             renderInput = acTextInput,
-            sx = SxProps(Map("minWidth" -> "250px", "backgroundColor" -> "#FFFFFF")),
+            sx = SxProps(Map("minWidth" -> "265px", "backgroundColor" -> "#FFFFFF")),
             getOptionLabel = (o: MuiAutocompleteOption) => o.label,
             isOptionEqualToValue = (o1: MuiAutocompleteOption, o2: MuiAutocompleteOption) => {
               o1.id == o2.id
