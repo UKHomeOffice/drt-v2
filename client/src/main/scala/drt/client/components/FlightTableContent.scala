@@ -13,6 +13,8 @@ import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.ReportProblemOutlined
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -28,6 +30,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.HashSet
+import scala.scalajs.js
 
 object FlightTableContent {
   private val log = LoggerFactory.getLogger(getClass.getName)
@@ -96,54 +99,65 @@ object FlightTableContent {
       val flightsWithCodeShares = CodeShares.uniqueArrivalsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
       val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
 
-      if (sortedFlights.nonEmpty) {
-        val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
-        <.div(
-          <.div(if (props.filterFlightNumber.nonEmpty)
-            MuiTypography(sx = SxProps(Map("padding" -> "16px")))("Flights displayed : ", <.b(s"${sortedFlights.length}"))
-          else EmptyVdom),
-          <.table(
-            ^.className := "arrivals-table table-striped",
-            tableHead(props, props.queueOrder, redListPaxExist, shortLabel, props.flaggedNationalities.nonEmpty),
-            <.tbody(
-              sortedFlights.zipWithIndex.map {
-                case ((flightWithSplits, codeShares), idx) =>
-                  val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
-                  val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
-                    props.portCode,
-                    props.terminal,
-                    flightWithSplits.apiFlight.Terminal,
-                    isRedListOrigin)
-                  val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
-                  FlightTableRow.component(FlightTableRow.Props(
-                    flightWithSplits = flightWithSplits,
-                    codeShareFlightCodes = codeShares,
-                    idx = idx,
-                    originMapper = originMapper,
-                    splitsGraphComponent = splitsGraphComponent,
-                    splitsQueueOrder = props.queueOrder,
-                    hasEstChox = props.hasEstChox,
-                    loggedInUser = props.loggedInUser,
-                    viewMode = props.viewMode,
-                    defaultWalkTime = props.defaultWalkTime,
-                    hasTransfer = props.hasTransfer,
-                    indirectRedListPax = redListPaxInfo,
-                    directRedListFlight = directRedListFlight,
-                    airportConfig = props.airportConfig,
-                    redListUpdates = props.redListUpdates,
-                    includeIndirectRedListColumn = redListPaxExist,
-                    walkTimes = props.walkTimes,
-                    flaggedNationalities = props.flaggedNationalities,
-                    manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
-                    paxFeedSourceOrder = props.paxFeedSourceOrder,
-                  ))
-              }.toTagMod)
-          ),
-        )
-      }
-      else <.div("No flights to display")
-    }
-    .configure(Reusability.shouldComponentUpdate)
+      <.div(
+        if (sortedFlights.nonEmpty) {
+          val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
+          <.div(
+            if (props.filterFlightNumber.nonEmpty) {
+              <.div(
+                MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))("Flights displayed : ", <.b(s"${sortedFlights.length}")),
+                if (props.flaggedNationalities.nonEmpty) {
+                  <.div(^.style := js.Dictionary("padding-bottom" -> "16px"),
+                    MuiTypography(sx = SxProps(Map("border" -> "1px solid #99001E",
+                      "padding" -> "16px 16px 16px 16px",
+                      "backgroundColor" -> "#FFF2E1")))("Flights filtered doesn't include these nationalities"))
+                } else <.div())
+            } else <.div(),
+            <.div(<.table(
+              ^.className := "arrivals-table table-striped",
+              tableHead(props, props.queueOrder, redListPaxExist, shortLabel, props.flaggedNationalities.nonEmpty),
+              <.tbody(
+                sortedFlights.zipWithIndex.map {
+                  case ((flightWithSplits, codeShares), idx) =>
+                    val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
+                    val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
+                      props.portCode,
+                      props.terminal,
+                      flightWithSplits.apiFlight.Terminal,
+                      isRedListOrigin)
+                    val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
+                    FlightTableRow.component(FlightTableRow.Props(
+                      flightWithSplits = flightWithSplits,
+                      codeShareFlightCodes = codeShares,
+                      idx = idx,
+                      originMapper = originMapper,
+                      splitsGraphComponent = splitsGraphComponent,
+                      splitsQueueOrder = props.queueOrder,
+                      hasEstChox = props.hasEstChox,
+                      loggedInUser = props.loggedInUser,
+                      viewMode = props.viewMode,
+                      defaultWalkTime = props.defaultWalkTime,
+                      hasTransfer = props.hasTransfer,
+                      indirectRedListPax = redListPaxInfo,
+                      directRedListFlight = directRedListFlight,
+                      airportConfig = props.airportConfig,
+                      redListUpdates = props.redListUpdates,
+                      includeIndirectRedListColumn = redListPaxExist,
+                      walkTimes = props.walkTimes,
+                      flaggedNationalities = props.flaggedNationalities,
+                      manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
+                      paxFeedSourceOrder = props.paxFeedSourceOrder,
+                    ))
+                }.toTagMod)
+            )))
+        } else <.div(^.style := js.Dictionary("padding-top" -> "16px", "padding-bottom" -> "16px"),
+          <.div(^.style := js.Dictionary("display" -> "flex",
+            "padding" -> "16px",
+            "backgroundColor" -> "#FFEBEE", "border" -> "1px solid #99001E"),
+            MuiIcons(ReportProblemOutlined)(),
+            MuiTypography(sx = SxProps(Map("padding-left" -> "16px")))(s"No flights found of '${props.filterFlightNumber}'")))
+      )
+    }.configure(Reusability.shouldComponentUpdate)
     .build
 
   def tableHead(props: Props,
