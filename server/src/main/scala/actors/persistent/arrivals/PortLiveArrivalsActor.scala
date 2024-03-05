@@ -20,5 +20,5 @@ class PortLiveArrivalsActor(val now: () => SDateLike,
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = consumeUpdates(diffsMessage)
+  def consumeFlightsDiffMessage(diffsMessage: FlightsDiffMessage): Unit = consumeUpdates(diffsMessage)
 }

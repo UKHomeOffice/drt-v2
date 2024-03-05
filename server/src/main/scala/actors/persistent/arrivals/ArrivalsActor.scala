@@ -42,7 +42,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: FlightsDiffMessage =>
-      consumeDiffsMessage(diff)
+      consumeFlightsDiffMessage(diff)
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)
@@ -61,7 +61,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   override def stateToMessage: GeneratedMessage = arrivalsStateToSnapshotMessage(state)
 
-  def consumeDiffsMessage(message: FlightsDiffMessage): Unit
+  def consumeFlightsDiffMessage(message: FlightsDiffMessage): Unit
 
   def consumeRemovals(diffsMessage: FlightsDiffMessage): Unit = {
     restorer.removeHashLegacies(diffsMessage.removalsOLD)

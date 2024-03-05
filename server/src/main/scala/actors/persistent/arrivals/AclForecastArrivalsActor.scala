@@ -25,7 +25,7 @@ class AclForecastArrivalsActor(val now: () => SDateLike,
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = {
+  def consumeFlightsDiffMessage(diffsMessage: FlightsDiffMessage): Unit = {
     consumeRemovals(diffsMessage)
     consumeUpdates(diffsMessage)
   }

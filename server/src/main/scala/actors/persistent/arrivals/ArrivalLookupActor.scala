@@ -28,7 +28,7 @@ class ArrivalLookupActor(portCode: PortCode, pointInTime: SDateLike, arrivalToLo
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = {
+  def consumeFlightsDiffMessage(diffsMessage: FlightsDiffMessage): Unit = {
     diffsMessage.updates.foreach { msg =>
       val maybeArrivalMsg = maybeMatchingArrivalMessage(msg, arrivalToLookup)
 
@@ -69,7 +69,7 @@ class ArrivalLookupActor(portCode: PortCode, pointInTime: SDateLike, arrivalToLo
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff@FlightsDiffMessage(Some(createdMillis), _, _, _) =>
-      if (createdMillis <= pointInTime.millisSinceEpoch) consumeDiffsMessage(diff)
+      if (createdMillis <= pointInTime.millisSinceEpoch) consumeFlightsDiffMessage(diff)
     case _ =>
   }
 

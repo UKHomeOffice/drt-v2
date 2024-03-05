@@ -5,6 +5,7 @@ import akka.actor.typed.ActorRef
 import akka.stream.scaladsl.Source
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
 import drt.shared.FlightsApi.Flights
+import uk.gov.homeoffice.drt.arrivals.ForecastArrival
 
 object LgwForecastFeed {
   private val log = org.slf4j.LoggerFactory.getLogger(getClass)
@@ -26,8 +27,8 @@ object LgwForecastFeed {
       .map { _ =>
         log.info("Tick - Fetching LGW forecast feed")
         csvParser.parseLatestContent() match {
-          case Some(flights) =>
-            val arrivals = flights.map(_.asArrival)
+          case Some(flights: Seq[ForecastArrival]) =>
+            val arrivals = flights.map(_.toArrival)
             ArrivalsFeedSuccess(Flights(arrivals))
           case None =>
             ArrivalsFeedFailure("Failed to fetch LGW forecast feed")
