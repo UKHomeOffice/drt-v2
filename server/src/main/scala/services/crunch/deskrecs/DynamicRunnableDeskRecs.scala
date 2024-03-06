@@ -22,11 +22,11 @@ object DynamicRunnableDeskRecs {
 
   type HistoricManifestsPaxProvider = Arrival => Future[Option[ManifestPaxCount]]
 
-  def crunchRequestsToDeskRecs(loadsProvider: ProcessingRequest => Future[Map[TQM, PassengersMinute]],
+  def crunchRequestsToDeskRecs(loadsProvider: LoadProcessingRequest => Future[Map[TQM, PassengersMinute]],
                                maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                                loadsToQueueMinutes: PassengersToQueueMinutes)
-                              (implicit executionContext: ExecutionContext): Flow[ProcessingRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
-    Flow[ProcessingRequest]
+                              (implicit executionContext: ExecutionContext): Flow[LoadProcessingRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
+    Flow[LoadProcessingRequest]
       .mapAsync(1) { request =>
         loadsProvider(request)
           .map { minutes => Option((request, minutes)) }

@@ -1,7 +1,6 @@
 package services.scenarios
 
 import actors.persistent.SortedActorRefSource
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
@@ -15,10 +14,11 @@ import passengersplits.parsing.VoyageManifestParser
 import queueus.DynamicQueueStatusProvider
 import services.OptimiserWithFlexibleProcessors
 import services.crunch.desklimits.PortDeskLimits
-import services.graphstages.FlightFilter
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWaitsProvider, RunnableOptimisation}
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
+import services.graphstages.FlightFilter
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -35,8 +35,8 @@ object Scenarios {
                        simulationAirportConfig: AirportConfig,
                        sla: (LocalDate, Queue) => Future[Int],
                        splitsCalculator: SplitsCalculator,
-                       flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
-                       liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
+                       flightsProvider: LoadProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
+                       liveManifestsProvider: LoadProcessingRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
                        historicManifestsProvider: HistoricManifestsProvider,
                        historicManifestsPaxProvider: HistoricManifestsPaxProvider,
                        flightsActor: ActorRef,
@@ -86,7 +86,7 @@ object Scenarios {
 
     val request = CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
 
-    val desksProducer: Flow[ProcessingRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
+    val desksProducer: Flow[LoadProcessingRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
       .mapAsync(1) { loads =>
         portDesksAndWaitsProvider.loadsToDesks(request.minutesInMillis, loads.indexed, terminalDeskLimits)
       }

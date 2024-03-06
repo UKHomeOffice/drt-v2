@@ -15,20 +15,21 @@ import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 object RunnableOptimisation {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def createGraph[A](crunchRequestSource: SortedActorRefSource,
-                     minutesSinkActor: ActorRef,
-                     crunchRequestsToQueueMinutes: Flow[ProcessingRequest, A, NotUsed],
-                     graphName: String,
-                    ): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
+  def createGraph[A, B, C <: ProcessingRequest](crunchRequestSource: SortedActorRefSource[C],
+                                                minutesSinkActor: ActorRef,
+                                                crunchRequestsToQueueMinutes: Flow[B, A, NotUsed],
+                                                graphName: String,
+                                               ): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
     val deskRecsSink = Sink.actorRefWithAck(minutesSinkActor, StreamInitialized, StatusReply.Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[A]
 
     val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
       implicit builder =>
         (crunchRequests, killSwitch) =>
-          crunchRequests.out.map { cr =>
-            log.info(s"[$graphName] Sending $cr to producer")
-            cr
+          crunchRequests.out.collect {
+            case cr: B =>
+              log.info(s"[$graphName] Sending $cr to producer")
+              cr
           } ~> crunchRequestsToQueueMinutes.map { minutes =>
             log.info(s"[$graphName] Sending output to sink")
             minutes

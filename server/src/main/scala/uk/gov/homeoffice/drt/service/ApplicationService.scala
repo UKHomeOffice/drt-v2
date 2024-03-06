@@ -44,11 +44,11 @@ import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
 import slickdb.Tables
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, MergeArrivalsRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.crunchsystem.{PersistentStateActors, ActorsServiceLike}
+import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
@@ -160,7 +160,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     val to = from.addDays(forecastMaxDays)
     val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
     FlightsRouterActor.runAndCombine(actor
-      .ask(request)(new Timeout(15.seconds)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
+        .ask(request)(new Timeout(15.seconds)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
       .map { fws =>
         Option(PortState(fws.flights.values, Iterable(), Iterable()))
       }
@@ -216,13 +216,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
   lazy val staffMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
     MinutesProvider.singleTerminal(actorService.staffRouterActor)
 
-  private def startOptimisationGraph[A, B <: WithTimeAccessor](minutesProducer: Flow[ProcessingRequest, MinutesContainer[A, B], NotUsed],
-                                                               persistentQueueActor: ActorRef,
-                                                               initialQueue: SortedSet[ProcessingRequest],
-                                                               sinkActor: ActorRef,
-                                                               graphName: String,
-                                                              ): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource(persistentQueueActor, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, initialQueue, graphName)
+  private def startOptimisationGraph[A, B <: WithTimeAccessor, C <: ProcessingRequest](minutesProducer: Flow[C, MinutesContainer[A, B], NotUsed],
+                                                                                       persistentQueueActor: ActorRef,
+                                                                                       initialQueue: SortedSet[C],
+                                                                                       sinkActor: ActorRef,
+                                                                                       graphName: String,
+                                                                                       processingRequest: MillisSinceEpoch => C,
+                                                                                      ): (ActorRef, UniqueKillSwitch) = {
+    val graphSource = new SortedActorRefSource[C](persistentQueueActor, processingRequest, initialQueue, graphName)
     val (requestQueueActor, deskRecsKillSwitch) =
       RunnableOptimisation.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
     (requestQueueActor, deskRecsKillSwitch)
@@ -259,7 +260,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       if (config.getOptional[Boolean]("feature-flags.populate-historic-pax").getOrElse(false))
         PassengersLiveView.populateHistoricPax(populateLivePaxViewForDate)
 
-      val passengerLoadsFlow = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
+      val passengerLoadsFlow: Flow[LoadProcessingRequest, MinutesContainer[CrunchApi.PassengersMinute, TQM], NotUsed] = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(actorService.portStateActor),
         liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsProvider),
         historicManifestsProvider =
@@ -275,12 +276,21 @@ case class ApplicationService(journalType: StreamingJournalLike,
         paxFeedSourceOrder = feedService.paxFeedSourceOrder,
       )
 
+      val crunchRequest: MillisSinceEpoch => CrunchRequest =
+        (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+
+      val mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest =
+        (millis: MillisSinceEpoch) => MergeArrivalsRequest(SDate(millis).toUtcDate)
+
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =
-        startOptimisationGraph(passengerLoadsFlow,
+        startOptimisationGraph(
+          passengerLoadsFlow,
           actors.crunchQueueActor,
           crunchQueue,
           minuteLookups.queueLoadsMinutesActor,
-          "passenger-loads")
+          "passenger-loads",
+          crunchRequest,
+        )
 
       val deskRecsFlow = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
         loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
@@ -289,7 +299,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       )
 
       val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
-        startOptimisationGraph(deskRecsFlow, actors.deskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesRouterActor, "desk-recs")
+        startOptimisationGraph(deskRecsFlow, actors.deskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesRouterActor, "desk-recs", crunchRequest)
 
       val deploymentsFlow = DynamicRunnableDeployments.crunchRequestsToDeployments(
         loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
@@ -298,11 +308,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
         loadsToQueueMinutes = portDeskRecs.loadsToSimulations
       )
 
-      val (deploymentRequestQueueActor, deploymentsKillSwitch) = startOptimisationGraph(deploymentsFlow,
-        actors.deploymentQueueActor,
-        deploymentQueue,
-        minuteLookups.queueMinutesRouterActor,
-        "deployments")
+      val (deploymentRequestQueueActor, deploymentsKillSwitch) =
+        startOptimisationGraph(deploymentsFlow,
+          actors.deploymentQueueActor,
+          deploymentQueue,
+          minuteLookups.queueMinutesRouterActor,
+          "deployments",
+          crunchRequest,
+        )
 
       val shiftsProvider = (r: ProcessingRequest) => actorService.liveShiftsReadActor.ask(r).mapTo[ShiftAssignments]
       val fixedPointsProvider = (r: ProcessingRequest) => actorService.liveFixedPointsReadActor.ask(r).mapTo[FixedPointAssignments]
@@ -311,7 +324,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val staffMinutesFlow = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
 
       val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
-        startOptimisationGraph(staffMinutesFlow, actors.staffingQueueActor, staffQueue, minuteLookups.staffMinutesRouterActor, "staffing")
+        startOptimisationGraph(staffMinutesFlow, actors.staffingQueueActor, staffQueue, minuteLookups.staffMinutesRouterActor, "staffing", crunchRequest)
 
       actorService.liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       actorService.liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)

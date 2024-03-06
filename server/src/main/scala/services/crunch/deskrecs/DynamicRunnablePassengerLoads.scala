@@ -1,11 +1,11 @@
 package services.crunch.deskrecs
 
-import akka.{Done, NotUsed}
 import akka.actor.ActorRef
 import akka.pattern.{StatusReply, ask}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.util.Timeout
+import akka.{Done, NotUsed}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared.FlightsApi.PaxForArrivals
 import drt.shared._
@@ -15,7 +15,7 @@ import manifests.queues.SplitsCalculator.SplitsForArrival
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.DynamicQueueStatusProvider
-import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.LoadProcessingRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
@@ -34,8 +34,8 @@ object DynamicRunnablePassengerLoads {
 
   type HistoricManifestsPaxProvider = Arrival => Future[Option[ManifestPaxCount]]
 
-  def crunchRequestsToQueueMinutes(arrivalsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
-                                   liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
+  def crunchRequestsToQueueMinutes(arrivalsProvider: LoadProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
+                                   liveManifestsProvider: LoadProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
                                    historicManifestsProvider: HistoricManifestsProvider,
                                    historicManifestsPaxProvider: HistoricManifestsPaxProvider,
                                    splitsCalculator: SplitsCalculator,
@@ -51,8 +51,8 @@ object DynamicRunnablePassengerLoads {
                                    ec: ExecutionContext,
                                    mat: Materializer,
                                    timeout: Timeout,
-                                  ): Flow[ProcessingRequest, MinutesContainer[PassengersMinute, TQM], NotUsed] =
-    Flow[ProcessingRequest]
+                                  ): Flow[LoadProcessingRequest, MinutesContainer[PassengersMinute, TQM], NotUsed] =
+    Flow[LoadProcessingRequest]
       .wireTap(cr => log.info(s"${cr.date} crunch request - started"))
       .via(addArrivals(arrivalsProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum} passengers"))
@@ -69,7 +69,7 @@ object DynamicRunnablePassengerLoads {
         log.info(s"${crWithPax._1.date} crunch request - ${crWithPax._2.minutes.size} minutes of passenger loads with ${crWithPax._2.minutes.map(_.toMinute.passengers.size).sum} passengers")
         updateLiveView(crWithPax._2)
       }
-      .via(Flow[(ProcessingRequest, MinutesContainer[PassengersMinute, TQM])].map {
+      .via(Flow[(LoadProcessingRequest, MinutesContainer[PassengersMinute, TQM])].map {
         case (_, paxMinutes) => paxMinutes
       })
       .recover {
@@ -90,8 +90,8 @@ object DynamicRunnablePassengerLoads {
                           (implicit
                            ec: ExecutionContext,
                            timeout: Timeout,
-                          ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
-    Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
+                          ): Flow[(LoadProcessingRequest, Iterable[ApiFlightWithSplits]), (LoadProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(LoadProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
           splitsSink
@@ -110,8 +110,8 @@ object DynamicRunnablePassengerLoads {
                                      (implicit
                                       ec: ExecutionContext,
                                       timeout: Timeout,
-                                     ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
-    Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
+                                     ): Flow[(LoadProcessingRequest, Iterable[ApiFlightWithSplits]), (LoadProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(LoadProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flights) =>
           splitsSink
@@ -132,8 +132,8 @@ object DynamicRunnablePassengerLoads {
                               (implicit
                                ec: ExecutionContext,
                                mat: Materializer
-                              ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, MinutesContainer[PassengersMinute, TQM]), NotUsed] = {
-    Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
+                              ): Flow[(LoadProcessingRequest, Iterable[ApiFlightWithSplits]), (LoadProcessingRequest, MinutesContainer[PassengersMinute, TQM]), NotUsed] = {
+    Flow[(LoadProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (procRequest: LoadProcessingRequest, flights) =>
           log.info(s"Passenger load calculation starting: ${flights.size} flights, ${procRequest.durationMinutes} minutes (${procRequest.start.toISOString} to ${procRequest.end.toISOString})")
@@ -182,9 +182,9 @@ object DynamicRunnablePassengerLoads {
       })
     }
 
-  private def addArrivals(flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]])
-                         (implicit ec: ExecutionContext): Flow[ProcessingRequest, (ProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =
-    Flow[ProcessingRequest]
+  private def addArrivals(flightsProvider: LoadProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]])
+                         (implicit ec: ExecutionContext): Flow[LoadProcessingRequest, (LoadProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =
+    Flow[LoadProcessingRequest]
       .mapAsync(1) { crunchRequest =>
         val startTime = SDate.now()
         flightsProvider(crunchRequest)
@@ -208,8 +208,8 @@ object DynamicRunnablePassengerLoads {
       }
 
   def addPax(historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]])
-            (implicit ec: ExecutionContext, mat: Materializer): Flow[(ProcessingRequest, List[ApiFlightWithSplits]), (ProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =
-    Flow[(ProcessingRequest, List[ApiFlightWithSplits])]
+            (implicit ec: ExecutionContext, mat: Materializer): Flow[(LoadProcessingRequest, List[ApiFlightWithSplits]), (LoadProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =
+    Flow[(LoadProcessingRequest, List[ApiFlightWithSplits])]
       .mapAsync(1) { case (cr, flights) =>
         val startTime = SDate.now()
         Source(flights)
@@ -234,11 +234,11 @@ object DynamicRunnablePassengerLoads {
           }
       }
 
-  def addSplits(liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
+  def addSplits(liveManifestsProvider: LoadProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
                 historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
                 splitsCalculator: SplitsCalculator)
-               (implicit ec: ExecutionContext, mat: Materializer): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
-    Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
+               (implicit ec: ExecutionContext, mat: Materializer): Flow[(LoadProcessingRequest, Iterable[ApiFlightWithSplits]), (LoadProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+    Flow[(LoadProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (crunchRequest, flightsSource) =>
           liveManifestsProvider(crunchRequest)

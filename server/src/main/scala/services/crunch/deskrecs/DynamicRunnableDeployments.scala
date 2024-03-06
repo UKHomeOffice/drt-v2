@@ -21,12 +21,12 @@ object DynamicRunnableDeployments {
   type PassengersToQueueMinutes =
     (NumericRange[MillisSinceEpoch], Map[TQM, PassengersMinute], Map[Terminal, TerminalDeskLimitsLike]) => Future[PortStateQueueMinutes]
 
-  def crunchRequestsToDeployments(loadsProvider: ProcessingRequest => Future[Map[TQM, PassengersMinute]],
-                                  staffProvider: ProcessingRequest => Future[Map[Terminal, List[Int]]],
+  def crunchRequestsToDeployments(loadsProvider: LoadProcessingRequest => Future[Map[TQM, PassengersMinute]],
+                                  staffProvider: LoadProcessingRequest => Future[Map[Terminal, List[Int]]],
                                   staffToDeskLimits: StaffToDeskLimits,
                                   loadsToQueueMinutes: PassengersToQueueMinutes)
-                                 (implicit executionContext: ExecutionContext): Flow[ProcessingRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
-    Flow[ProcessingRequest]
+                                 (implicit executionContext: ExecutionContext): Flow[LoadProcessingRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
+    Flow[LoadProcessingRequest]
       .mapAsync(1) { request =>
         loadsProvider(request)
           .map { minutes => Option((request, minutes)) }
