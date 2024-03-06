@@ -13,8 +13,7 @@ import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.ReportProblemOutlined
+import io.kinoplan.scalajs.react.material.ui.core.MuiAlert
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -104,14 +103,7 @@ object FlightTableContent {
           val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
           <.div(
             if (props.filterFlightNumber.nonEmpty) {
-              <.div(
-                MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))("Flights displayed : ", <.b(s"${sortedFlights.length}")),
-                if (props.flaggedNationalities.nonEmpty) {
-                  <.div(^.style := js.Dictionary("padding-bottom" -> "16px"),
-                    MuiTypography(sx = SxProps(Map("border" -> "1px solid #99001E",
-                      "padding" -> "16px 16px 16px 16px",
-                      "backgroundColor" -> "#FFF2E1")))("Flights filtered doesn't include these nationalities"))
-                } else <.div())
+              <.div(MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))("Flights displayed : ", <.b(s"${sortedFlights.length}")))
             } else <.div(),
             <.div(<.table(
               ^.className := "arrivals-table table-striped",
@@ -151,11 +143,9 @@ object FlightTableContent {
                 }.toTagMod)
             )))
         } else <.div(^.style := js.Dictionary("padding-top" -> "16px", "padding-bottom" -> "16px"),
-          <.div(^.style := js.Dictionary("display" -> "flex",
-            "padding" -> "16px",
-            "backgroundColor" -> "#FFEBEE", "border" -> "1px solid #99001E"),
-            MuiIcons(ReportProblemOutlined)(),
-            MuiTypography(sx = SxProps(Map("padding-left" -> "16px")))(s"No flights found of '${props.filterFlightNumber}'")))
+          <.div(^.style := js.Dictionary("border" -> "1px solid #99001E"),
+            MuiAlert(variant = MuiAlert.Variant.standard, color = "error", severity = "error")(s"No flights found of '${props.filterFlightNumber}'"))
+        )
       )
     }.configure(Reusability.shouldComponentUpdate)
     .build

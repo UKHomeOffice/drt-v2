@@ -37,7 +37,7 @@ object NationalityFlaggingComponent {
             js.Dynamic.literal("startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Flag)()).rawNode.asInstanceOf[js.Object]),
           ),
           inputProps = params.inputProps,
-          label = "Nationality or ICAO code".toVdom,
+          label = "Flag flights by pax nationality".toVdom,
         )().rawNode
       }
 
@@ -53,27 +53,16 @@ object NationalityFlaggingComponent {
       val clearFlags = flagCount match {
         case 0 => EmptyVdom
         case _ =>
-          <.div(^.style := js.Dictionary("display" -> "inline"),
-            MuiButton(variant = MuiButton.Variant.text)(
-              MuiTypography(variant = "body1", sx = SxProps(Map(
-                "fontWeight" -> "bold")))(
-                "Clear all"
-              ),
-              ^.onClick ==> { e => {
-                e.preventDefault()
-                Callback(SPACircuit.dispatch(ClearFlaggedNationalities))
-              }
-              }
-            ),
-          )
+          <.div(MuiButton(variant = MuiButton.Variant.text, sx = SxProps(Map("minWidth" -> "40px")))(
+            MuiTypography(variant = "body1", sx = SxProps(Map(
+              "fontWeight" -> "bold","margin-top" -> "0px")))("Clear all"),
+            ^.onClick ==> { e => {
+              e.preventDefault()
+              Callback(SPACircuit.dispatch(ClearFlaggedNationalities))
+            }
+            }))
       }
-      <.div(
-        <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
-          MuiTypography(variant = "body1", sx = SxProps(Map("fontWeight" -> "bold", "padding-bottom" -> "10px")))(
-            s"Flag flights by pax nationality $flagCountDisplay"
-          ),
-          clearFlags
-        ),
+      <.div(^.style := js.Dictionary("padding-top" -> "0px"),
         <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
           MuiAutocomplete[MuiAutocompleteOption](
             options = options,
@@ -97,9 +86,8 @@ object NationalityFlaggingComponent {
 
               case _ => Callback.empty
             },
-          )(),
-          <.div(
-            ^.style := js.Dictionary("display" -> "wrap", "alignItems" -> "center", "gap" -> "16px"),
+          )(), clearFlags,
+          <.div(^.style := js.Dictionary("margin-top" -> "0px","display" -> "wrap", "alignItems" -> "center", "gap" -> "16px"),
             props.flaggedNationalities.toList
               .sortBy(_.name)
               .map { c =>

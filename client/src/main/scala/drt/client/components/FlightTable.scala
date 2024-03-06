@@ -82,14 +82,8 @@ object FlightTable {
       val flaggerConnect = SPACircuit.connect(m => Model(m.flaggedNationalities, m.portStatePot, m.flightManifestSummaries, m.arrivalSources))
       val flightTableContent = FlightTableContent(shortLabel, originMapper, splitsGraphComponent)
 
-      val filterFlightComponent = <.div(^.style := js.Dictionary(
-        "padding-right" -> "24px",
-        "width" -> "199px",
-        "height" -> "40px"),
-        MuiTypography(sx = SxProps(Map("font-weight" -> "bold",
-          "padding-bottom" -> "10px"
-        )))("Search by flight number"),
-        MuiTextField(label = "Enter flight number".toVdom, sx = SxProps(Map("font-weight" -> "bold")),
+      val filterFlightComponent = <.div(^.style := js.Dictionary("padding-right" -> "24px"),
+        MuiTextField(label = "Search by flight number".toVdom, sx = SxProps(Map("minWidth" -> "199px", "font-weight" -> "bold")),
           InputProps = js.Dynamic.literal(
             "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
             "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],
@@ -116,11 +110,11 @@ object FlightTable {
               )
             case _ => <.div()
           },
-          <.div(^.style := js.Dictionary("backgroundColor" -> "#E6E9F1", "padding-left" -> "24px", "padding-top" -> "24px"),
+          <.div(^.style := js.Dictionary("backgroundColor" -> "#E6E9F1", "padding-left" -> "24px", "padding-top" -> "24px", "padding-bottom" -> "24px"),
             if (props.showFlagger) {
-              <.div(^.style := js.Dictionary("display" -> "flex", "min-height" -> "122px"),
+              <.div(^.style := js.Dictionary("display" -> "flex"),
                 filterFlightComponent,
-                <.div(^.style := js.Dictionary("borderRight" -> "1px solid #000", "margin" -> "0px 0px 24px 0")),
+                <.div(^.style := js.Dictionary("borderRight" -> "1px solid #000")),
                 <.div(^.style := js.Dictionary("padding-left" -> "24px"),
                   NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)))
               )
