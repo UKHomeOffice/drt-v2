@@ -15,7 +15,7 @@ import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, Persiste
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.Logger
-import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, MergeArrivalsRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -95,8 +95,8 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestCrunchQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends CrunchQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+  class TestMergeArrivalsQueueActor(now: () => SDateLike, request: Long => MergeArrivalsRequest)
+    extends CrunchQueueActor(now, request) with Resettable {
     override def resetState(): Unit = {
       state.clear()
     }
@@ -104,8 +104,8 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestDeskRecsQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends DeskRecsQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+  class TestCrunchQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
+    extends CrunchQueueActor(now, request) with Resettable {
     override def resetState(): Unit = {
       state.clear()
     }
@@ -113,15 +113,24 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends DeploymentQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+  class TestDeskRecsQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
+    extends DeskRecsQueueActor(now, request) with Resettable {
+    override def resetState(): Unit = {
+      state.clear()
+    }
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestDeploymentQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
+    extends DeploymentQueueActor(now, request) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestStaffingUpdateQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends StaffingUpdateQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+  class TestStaffingUpdateQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
+    extends StaffingUpdateQueueActor(now, request) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

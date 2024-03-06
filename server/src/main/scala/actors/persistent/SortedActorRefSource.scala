@@ -4,7 +4,7 @@ import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.stage._
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, RemoveProcessingRequest}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.{SortedSet, mutable}
@@ -69,10 +69,12 @@ final class SortedActorRefSource(persistentActor: ActorRef,
 
       private def tryPushElement(): Unit = {
         if (isAvailable(out)) {
-          val forecastRequests = buffer.filter(_.start > SDate.now())
+          val forecastRequests = buffer.filter { r =>
+            SDate(r.date) > SDate.now()
+          }
           val maybeNextElement = if (prioritiseForecast && forecastRequests.nonEmpty) forecastRequests.headOption else buffer.headOption
           maybeNextElement.foreach { e =>
-            persistentActor ! RemoveCrunchRequest(e)
+            persistentActor ! RemoveProcessingRequest(e)
             buffer -= e
             push(out, e)
             prioritiseForecast = !prioritiseForecast

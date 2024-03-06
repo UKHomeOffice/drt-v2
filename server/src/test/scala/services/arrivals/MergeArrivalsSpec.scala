@@ -11,65 +11,6 @@ import uk.gov.homeoffice.drt.time.UtcDate
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object MergeArrivals {
-  def apply(existingMerged: UtcDate => Future[Set[UniqueArrival]],
-            arrivalSources: Seq[UtcDate => Future[(Boolean, Map[UniqueArrival, Arrival])]],
-           )
-           (implicit ec: ExecutionContext): UtcDate => Future[(Map[UniqueArrival, Arrival], Set[UniqueArrival])] =
-    (date: UtcDate) => {
-      for {
-        arrivalSets <- Future.sequence(arrivalSources.map(_(date)))
-        existing <- existingMerged(date)
-      } yield {
-        mergeSets(existing, arrivalSets)
-      }
-    }
-
-  def mergeSets(existingMerged: Set[UniqueArrival],
-                arrivalSets: Seq[(Boolean, Map[UniqueArrival, Arrival])],
-               ): (Map[UniqueArrival, Arrival], Set[UniqueArrival]) = {
-    val newMerged = arrivalSets.toList match {
-      case (_, startSet) :: otherSets =>
-        otherSets.foldLeft(startSet) {
-          case (acc, (isPrimary, arrivals)) =>
-            arrivals.foldLeft(acc) {
-              case (acc, (uniqueArrival, nextArrival)) =>
-                acc.get(uniqueArrival) match {
-                  case Some(existingArrival) =>
-                    acc + (uniqueArrival -> mergeArrivals(existingArrival, nextArrival))
-                  case None =>
-                    if (isPrimary) acc + (uniqueArrival -> nextArrival)
-                    else acc
-                }
-            }
-        }
-    }
-    val removed = existingMerged -- newMerged.keySet
-    (newMerged, removed)
-  }
-
-  def mergeArrivals(current: Arrival, next: Arrival): Arrival =
-    next.copy(
-      Operator = next.Operator.orElse(current.Operator),
-      CarrierCode = current.CarrierCode,
-      Estimated = next.Estimated.orElse(current.Estimated),
-      Actual = next.Actual.orElse(current.Actual),
-      EstimatedChox = next.EstimatedChox.orElse(current.EstimatedChox),
-      ActualChox = next.ActualChox.orElse(current.ActualChox),
-      Gate = next.Gate.orElse(current.Gate),
-      Stand = next.Stand.orElse(current.Stand),
-      MaxPax = next.MaxPax.orElse(current.MaxPax),
-      RunwayID = next.RunwayID.orElse(current.RunwayID),
-      BaggageReclaimId = next.BaggageReclaimId.orElse(current.BaggageReclaimId),
-      FeedSources = next.FeedSources ++ current.FeedSources,
-      CarrierScheduled = next.CarrierScheduled.orElse(current.CarrierScheduled),
-      ScheduledDeparture = next.ScheduledDeparture.orElse(current.ScheduledDeparture),
-      RedListPax = next.RedListPax.orElse(current.RedListPax),
-      PassengerSources = next.PassengerSources ++ current.PassengerSources,
-      FlightCodeSuffix = next.FlightCodeSuffix.orElse(current.FlightCodeSuffix),
-    )
-}
-
 class MergeArrivalsSpec extends AnyWordSpec with Matchers {
   private val current = Arrival(
     Operator = Option(Operator("BA")),
@@ -288,6 +229,28 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       result(UtcDate(2024, 6, 1)).futureValue should ===(
         (Map(nextWithAllValues.unique -> expectedMergedArrival), Set.empty)
       )
+    }
+    "propagate exceptions in the existing merged provider" in {
+      val existingMerged = (_: UtcDate) => Future.failed(new Exception("Boom"))
+      val arrivalSources = Seq(
+        (_: UtcDate) => Future.successful((true, Map[UniqueArrival, Arrival](current.unique -> current))),
+        (_: UtcDate) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
+      )
+
+      val result = MergeArrivals(existingMerged, arrivalSources)(ExecutionContext.global)
+
+      result(UtcDate(2024, 6, 1)).failed.futureValue.getMessage should ===("Boom")
+    }
+    "propagate exceptions in the arrival sources providers" in {
+      val existingMerged = (_: UtcDate) => Future.successful(Set.empty[UniqueArrival])
+      val arrivalSources = Seq(
+        (_: UtcDate) => Future.failed(new Exception("Boom")),
+        (_: UtcDate) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
+      )
+
+      val result = MergeArrivals(existingMerged, arrivalSources)(ExecutionContext.global)
+
+      result(UtcDate(2024, 6, 1)).failed.futureValue.getMessage should ===("Boom")
     }
   }
 }

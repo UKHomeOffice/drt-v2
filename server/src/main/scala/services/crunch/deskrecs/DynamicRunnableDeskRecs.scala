@@ -8,7 +8,7 @@ import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
 import DynamicRunnableDeployments.PassengersToQueueMinutes
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
+import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -40,7 +40,7 @@ object DynamicRunnableDeskRecs {
         case Some(requestAndMinutes) => requestAndMinutes
       }
       .mapAsync(1) {
-        case (request, loads) =>
+        case (request: LoadProcessingRequest, loads) =>
           log.info(s"[desk-recs] Optimising ${request.durationMinutes} minutes (${request.start.toISOString} to ${request.end.toISOString})")
           loadsToQueueMinutes(request.minutesInMillis, loads, maxDesksProviders)
             .map(minutes => Option(minutes))

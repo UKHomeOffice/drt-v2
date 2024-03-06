@@ -1,17 +1,17 @@
 package actors.persistent
 
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import actors.serializers.CrunchRequestMessageConversion.{crunchRequestToMessage, crunchRequestsFromMessages}
 import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.DataUpdates.Combinable
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, RemoveCrunchRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchRequestsMessage, DaysMessage, RemoveCrunchRequestMessage, RemoveDayMessage}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
+import uk.gov.homeoffice.drt.protobuf.serialisation.CrunchRequestMessageConversion.{loadProcessingRequestFromMessage, loadProcessingRequestToMessage, mergeArrivalRequestToMessage}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
@@ -31,10 +31,9 @@ object QueueLikeActor {
       case _ => this
     }
   }
-
 }
 
-abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int) extends RecoveryActorLike {
+abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: MillisSinceEpoch => ProcessingRequest) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)
@@ -43,12 +42,9 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
   val state: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet()
 
-  private def crunchRequestFromMillis(millis: MillisSinceEpoch): ProcessingRequest =
-    CrunchRequest(SDate(millis).toLocalDate, crunchOffsetMinutes, durationMinutes)
-
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
-      state ++= crunchRequestsFromMessages(requests)
+      state ++= requests.map(loadProcessingRequestFromMessage)
 
     case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day), maybeTerminal) => state.find {
       case TerminalUpdateRequest(terminal, localDate, _, _) =>
@@ -57,22 +53,36 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
         localDate == LocalDate(year, month, day)
     }.foreach(state -= _)
 
-    case DaysMessage(days) => state ++= days.map(crunchRequestFromMillis)
-    case RemoveDayMessage(Some(day)) => state -= crunchRequestFromMillis(day)
+    case DaysMessage(days) => state ++= days.map(processingRequest)
+    case RemoveDayMessage(Some(day)) => state -= processingRequest(day)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case CrunchRequestsMessage(requests) =>
       log.info(s"Restoring queue to ${requests.size} days")
-      state ++= crunchRequestsFromMessages(requests)
+      state ++= requests.map(loadProcessingRequestFromMessage)
 
     case DaysMessage(days) =>
       log.info(s"Restoring queue to ${days.size} days")
-      state ++= days.map(crunchRequestFromMillis)
+      state ++= days.map(processingRequest)
   }
 
-  override def stateToMessage: GeneratedMessage =
-    CrunchRequestsMessage(state.toList.map(crunchRequestToMessage))
+  override def stateToMessage: GeneratedMessage = {
+    state.headOption.map {
+      case _: CrunchRequest =>
+        CrunchRequestsMessage(state.toList.collect {
+          case cr: CrunchRequest => loadProcessingRequestToMessage(cr)
+        })
+      case _: TerminalUpdateRequest =>
+        CrunchRequestsMessage(state.toList.collect {
+          case cr: TerminalUpdateRequest => loadProcessingRequestToMessage(cr)
+        })
+      case _: MergeArrivalsRequest =>
+        MergeArrivalsRequestsMessage(state.toList.collect {
+          case mar: MergeArrivalsRequest => mergeArrivalRequestToMessage(mar)
+        })
+    }.getOrElse(CrunchRequestsMessage(List()))
+  }
 
   override def receiveCommand: Receive = {
     case GetState =>
@@ -80,27 +90,44 @@ abstract class QueueLikeActor(val now: () => SDateLike, crunchOffsetMinutes: Int
 
     case cr: CrunchRequest =>
       updateState(Seq(cr))
-      persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(cr))))
+      persistAndMaybeSnapshot(CrunchRequestsMessage(List(loadProcessingRequestToMessage(cr))))
+
+    case requests: Iterable[ProcessingRequest] =>
+      updateState(requests)
+      requests.headOption.map {
+        case _: LoadProcessingRequest =>
+          persistAndMaybeSnapshot(CrunchRequestsMessage(requests.collect {
+            case r: LoadProcessingRequest => loadProcessingRequestToMessage(r)
+          }.toList))
+        case _: MergeArrivalsRequest =>
+          persistAndMaybeSnapshot(MergeArrivalsRequestsMessage(requests.collect {
+            case r: MergeArrivalsRequest => mergeArrivalRequestToMessage(r)
+          }.toList))
+      }
 
     case cr: Iterable[CrunchRequest] =>
       updateState(cr)
-      persistAndMaybeSnapshot(CrunchRequestsMessage(cr.map(crunchRequestToMessage).toList))
+      persistAndMaybeSnapshot(CrunchRequestsMessage(cr.map(loadProcessingRequestToMessage).toList))
 
     case tur: TerminalUpdateRequest =>
       updateState(Seq(tur))
-      persistAndMaybeSnapshot(CrunchRequestsMessage(List(crunchRequestToMessage(tur))))
+      persistAndMaybeSnapshot(CrunchRequestsMessage(List(loadProcessingRequestToMessage(tur))))
 
     case tur: Iterable[TerminalUpdateRequest] =>
       updateState(tur)
-      persistAndMaybeSnapshot(CrunchRequestsMessage(tur.map(crunchRequestToMessage).toList))
+      persistAndMaybeSnapshot(CrunchRequestsMessage(tur.map(loadProcessingRequestToMessage).toList))
 
-    case RemoveCrunchRequest(cr) =>
-      log.info(s"Removing ${cr.localDate} from queue. Queue now contains ${state.size} days")
+    case tur: Iterable[TerminalUpdateRequest] =>
+      updateState(tur)
+      persistAndMaybeSnapshot(CrunchRequestsMessage(tur.map(loadProcessingRequestToMessage).toList))
+
+    case RemoveProcessingRequest(cr) =>
+      log.info(s"Removing ${cr.date} from queue. Queue now contains ${state.size} days")
       state -= cr
       persistAndMaybeSnapshot(RemoveCrunchRequestMessage(
-        year = Option(cr.localDate.year),
-        month = Option(cr.localDate.month),
-        day = Option(cr.localDate.day),
+        year = Option(cr.date.year),
+        month = Option(cr.date.month),
+        day = Option(cr.date.day),
         terminalName = None))
 
     case _: SaveSnapshotSuccess =>

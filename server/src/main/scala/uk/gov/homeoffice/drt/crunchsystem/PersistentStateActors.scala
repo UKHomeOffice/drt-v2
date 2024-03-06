@@ -9,6 +9,7 @@ trait PersistentStateActors {
   val liveBaseArrivalsActor: ActorRef
   val manifestsRouterActor: ActorRef
 
+  val mergeArrivalsQueueActor: ActorRef
   val crunchQueueActor: ActorRef
   val deskRecsQueueActor: ActorRef
   val deploymentQueueActor: ActorRef
