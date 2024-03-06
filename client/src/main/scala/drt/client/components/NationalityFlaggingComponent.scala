@@ -48,14 +48,14 @@ object NationalityFlaggingComponent {
       val flagCount = props.flaggedNationalities.size
       val flagCountDisplay = flagCount match {
         case 0 => ""
-        case n => s" ($n)"
+        case n => s"Flag flights ($n)"
       }
       val clearFlags = flagCount match {
         case 0 => EmptyVdom
         case _ =>
           <.div(MuiButton(variant = MuiButton.Variant.text, sx = SxProps(Map("minWidth" -> "40px")))(
             MuiTypography(variant = "body1", sx = SxProps(Map(
-              "fontWeight" -> "bold","margin-top" -> "0px")))("Clear all"),
+              "fontWeight" -> "bold", "margin-top" -> "0px")))("Clear all"),
             ^.onClick ==> { e => {
               e.preventDefault()
               Callback(SPACircuit.dispatch(ClearFlaggedNationalities))
@@ -86,8 +86,8 @@ object NationalityFlaggingComponent {
 
               case _ => Callback.empty
             },
-          )(), clearFlags,
-          <.div(^.style := js.Dictionary("margin-top" -> "0px","display" -> "wrap", "alignItems" -> "center", "gap" -> "16px"),
+          )(),
+          <.div(^.style := js.Dictionary("margin-top" -> "0px", "display" -> "wrap", "alignItems" -> "center", "gap" -> "16px"),
             props.flaggedNationalities.toList
               .sortBy(_.name)
               .map { c =>
@@ -96,6 +96,12 @@ object NationalityFlaggingComponent {
               }
               .toTagMod
           )
+        ),
+        <.div(^.style := js.Dictionary("display" -> "flex", "padding-top" -> "16px", "alignItems" -> "center", "gap" -> "16px"),
+          MuiTypography(variant = "body1", sx = SxProps(Map("textDecoration" -> "underline", "fontWeight" -> "bold")))(
+            s"$flagCountDisplay"
+          ),
+          clearFlags
         )
       )
     }
