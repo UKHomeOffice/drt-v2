@@ -144,7 +144,8 @@ object FlightTableContent {
             )))
         } else <.div(^.style := js.Dictionary("padding-top" -> "16px", "padding-bottom" -> "16px"),
           <.div(^.style := js.Dictionary("border" -> "1px solid #99001E"),
-            MuiAlert(variant = MuiAlert.Variant.standard, color = "error", severity = "error")(s"No flights found of '${props.filterFlightNumber}'"))
+            MuiAlert(variant = MuiAlert.Variant.standard, color = "error", severity = "error")(
+              MuiTypography(sx = SxProps(Map("font-weight" -> "bold")))("No flights found."),"Check the flight number or time period."))
         )
       )
     }.configure(Reusability.shouldComponentUpdate)
