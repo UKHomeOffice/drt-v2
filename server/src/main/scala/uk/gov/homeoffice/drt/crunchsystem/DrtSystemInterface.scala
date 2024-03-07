@@ -92,13 +92,16 @@ trait DrtSystemInterface extends UserRoleProviderLike
     persistentStateActors = persistentActors
   )
 
-  lazy val feedService: FeedService = FeedService(journalType,
-    airportConfig,
-    now,
-    params,
-    config,
-    paxFeedSourceOrder,
-    flightLookups)
+  lazy val feedService: FeedService = FeedService(
+    journalType = journalType,
+    airportConfig = airportConfig,
+    now = now,
+    params = params,
+    config = config,
+    paxFeedSourceOrder = paxFeedSourceOrder,
+    flightLookups = flightLookups,
+    manifestLookups = manifestLookups,
+  )
 
   def run(): Unit
 

@@ -117,7 +117,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       override def provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(airportConfig, mockDrtParameters, now)(mat, ec, system, timeout) {
 
         lazy override val feedService: FeedService = new FeedService(journalType,
-          airportConfig, now, params, config, paxFeedSourceOrder, flightLookups)(this.system, ec, this.materializer, timeout) {
+          airportConfig, now, params, config, paxFeedSourceOrder, flightLookups, manifestLookups)(this.system, ec, this.materializer, timeout) {
 
           override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
             (_, _) => Future.successful(Map(Terminal("T1") -> forecastTotalPax))

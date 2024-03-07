@@ -1,10 +1,11 @@
 package uk.gov.homeoffice.drt.service
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
+import actors.DrtStaticParameters.expireAfterMillis
+import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors.persistent.ManifestRouterActor
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.GetFeedStatuses
-import actors.{ArrivalsImportActor, DrtParameters, FlightLookupsLike, StreamingJournalLike}
+import actors._
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
 import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown, Props, Scheduler, typed}
 import akka.pattern.ask
@@ -37,17 +38,37 @@ import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import services.{Retry, RetryDelays, StreamSupervision}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.ModelPersistence
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time._
 
 import javax.inject.Singleton
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
+
+object FeedService {
+  def arrivalFeedProvidersInOrder(feedActorsWithPrimary: Seq[(Boolean, ActorRef)],
+                                 )
+                                 (implicit timeout: Timeout, ec: ExecutionContext): Seq[DateLike => Future[(Boolean, Map[UniqueArrival, Arrival])]] =
+    feedActorsWithPrimary
+      .map {
+        case (isPrimary, actor) =>
+          val arrivalsForDate = (date: DateLike) => {
+            val start = SDate(date)
+            val end = start.addDays(1).addMinutes(-1)
+            actor
+              .ask(GetFlights(start.millisSinceEpoch, end.millisSinceEpoch))
+              .mapTo[Map[UniqueArrival, Arrival]]
+              .map(f => (isPrimary, f))
+          }
+          arrivalsForDate
+      }
+
+}
 
 @Singleton
 case class FeedService(journalType: StreamingJournalLike,
@@ -56,21 +77,62 @@ case class FeedService(journalType: StreamingJournalLike,
                        params: DrtParameters,
                        config: Configuration,
                        paxFeedSourceOrder: List[FeedSource],
-                       flightLookups: FlightLookupsLike)(implicit val system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
+                       flightLookups: FlightLookupsLike,
+                       manifestLookups: ManifestLookupsLike,
+                      )
+                      (implicit val system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
+  val forecastBaseFeedArrivalsActor: ActorRef =
+    system.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
+  val forecastFeedArrivalsActor: ActorRef =
+    system.actorOf(Props(new PortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
+  val liveFeedArrivalsActor: ActorRef =
+    system.actorOf(Props(new PortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
+  val liveBaseFeedArrivalsActor: ActorRef =
+    system.actorOf(Props(new CirriumLiveArrivalsActor(now, expireAfterMillis)), name = "live-base-arrivals-actor")
 
-  val fcstBaseActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-forecast-base")
-  val fcstActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-forecast")
-  val liveBaseActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live-base")
-  val liveActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live")
+  val fcstBaseFeedPollingActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-forecast-base")
+  val fcstFeedPollingActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-forecast")
+  val liveBaseFeedPollingActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live-base")
+  val liveFeedPollingActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-live")
 
-  lazy private val feedActors: Map[FeedSource, ActorRef] = Map(
+  private val liveArrivalsFeedStatusActor: ActorRef =
+    system.actorOf(PortLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-arrivals-feed-status")
+  private val liveBaseArrivalsFeedStatusActor: ActorRef =
+    system.actorOf(CirriumLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-base-arrivals-feed-status")
+  private val forecastArrivalsFeedStatusActor: ActorRef =
+    system.actorOf(PortForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-arrivals-feed-status")
+  private val forecastBaseArrivalsFeedStatusActor: ActorRef =
+    system.actorOf(AclForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-base-arrivals-feed-status")
+  private val manifestsFeedStatusActor: ActorRef =
+    system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
+
+  private val feedStatusActors: Map[FeedSource, ActorRef] = Map(
     LiveFeedSource -> liveArrivalsFeedStatusActor,
     LiveBaseFeedSource -> liveBaseArrivalsFeedStatusActor,
     ForecastFeedSource -> forecastArrivalsFeedStatusActor,
     AclFeedSource -> forecastBaseArrivalsFeedStatusActor,
     ApiFeedSource -> manifestsFeedStatusActor,
+  )
+
+  val ciriumIsPrimary: Boolean = !airportConfig.feedSources.contains(LiveFeedSource)
+
+  val activeFeedActorsWithPrimary: Seq[(Boolean, ActorRef)] = Seq(
+    AclFeedSource -> (true, forecastBaseFeedArrivalsActor),
+    ForecastFeedSource -> (false, forecastFeedArrivalsActor),
+    LiveBaseFeedSource -> (ciriumIsPrimary, liveBaseFeedArrivalsActor),
+    LiveFeedSource -> (true, liveFeedArrivalsActor)
+  )
+    .collect {
+      case (fs, (isPrimary, actor)) if airportConfig.feedSources.contains(fs) => (isPrimary, actor)
+    }
+
+  val feedActors: Map[FeedSource, ActorRef] = Map(
+    AclFeedSource -> forecastBaseFeedArrivalsActor,
+    ForecastFeedSource -> forecastFeedArrivalsActor,
+    LiveBaseFeedSource -> liveBaseFeedArrivalsActor,
+    LiveFeedSource -> liveFeedArrivalsActor,
   )
 
   val flightModelPersistence: ModelPersistence = Flight()
@@ -180,7 +242,7 @@ case class FeedService(journalType: StreamingJournalLike,
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
-  lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedActors.filter {
+  lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedStatusActors.filter {
     case (feedSource: FeedSource, _) => isValidFeedSource(feedSource)
   }
 
@@ -206,25 +268,13 @@ case class FeedService(journalType: StreamingJournalLike,
   CoordinatedShutdown(system).addTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "shutdown-feeds") { () =>
     log.info("Shutting down feed polling")
 
-    fcstBaseActor ! FeedPoller.Shutdown
-    fcstActor ! FeedPoller.Shutdown
-    liveBaseActor ! FeedPoller.Shutdown
-    liveActor ! FeedPoller.Shutdown
+    fcstBaseFeedPollingActor ! FeedPoller.Shutdown
+    fcstFeedPollingActor ! FeedPoller.Shutdown
+    liveBaseFeedPollingActor ! FeedPoller.Shutdown
+    liveFeedPollingActor ! FeedPoller.Shutdown
 
     Future.successful(Done)
   }
-
-  private val liveArrivalsFeedStatusActor: ActorRef =
-    system.actorOf(PortLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-arrivals-feed-status")
-  private val liveBaseArrivalsFeedStatusActor: ActorRef =
-    system.actorOf(CirriumLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-base-arrivals-feed-status")
-  private val forecastArrivalsFeedStatusActor: ActorRef =
-    system.actorOf(PortForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-arrivals-feed-status")
-  private val forecastBaseArrivalsFeedStatusActor: ActorRef =
-    system.actorOf(AclForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-base-arrivals-feed-status")
-  private val manifestsFeedStatusActor: ActorRef =
-    system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
-
 
   private def azinqConfig: (String, String, String, String) = {
     val url = config.get[String]("feeds.azinq.url")
@@ -233,7 +283,6 @@ case class FeedService(journalType: StreamingJournalLike,
     val token = config.get[String]("feeds.azinq.token")
     (url, username, password, token)
   }
-
 
   private def createLiveChromaFlightFeed(feedType: ChromaFeedType): ChromaLiveFeed = {
     ChromaLiveFeed(new ChromaFetcher[ChromaLiveFlight](feedType, ChromaFlightMarshallers.live) with ProdSendAndReceive)

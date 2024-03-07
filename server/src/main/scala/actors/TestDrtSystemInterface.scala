@@ -25,10 +25,10 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
   override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem)), name = "TestActor-ResetData")
 
   restartActor ! RestartActor.AddResetActors(Seq(
-    persistentActors.forecastBaseArrivalsActor,
-    persistentActors.forecastArrivalsActor,
-    persistentActors.liveArrivalsActor,
-    persistentActors.liveBaseArrivalsActor,
+    feedService.forecastBaseFeedArrivalsActor,
+    feedService.forecastFeedArrivalsActor,
+    feedService.liveFeedArrivalsActor,
+    feedService.liveBaseFeedArrivalsActor,
     persistentActors.manifestsRouterActor,
     persistentActors.crunchQueueActor,
     persistentActors.deskRecsQueueActor,
@@ -50,10 +50,17 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
       initialLiveBaseArrivals = None,
       initialLiveArrivals = None,
       refreshArrivalsOnStart = false,
-      startUpdateGraphs = applicationService.startUpdateGraphs(applicationService.persistentStateActors, SortedSet(), SortedSet(), SortedSet(), SortedSet())
+      startUpdateGraphs = applicationService.startUpdateGraphs(
+        applicationService.persistentStateActors,
+        SortedSet(),
+        SortedSet(),
+        SortedSet(),
+        SortedSet(),
+        SortedSet(),
+      )
     )
 
-    feedService.liveActor ! Enable(crunchInputs.liveArrivalsResponse)
+    feedService.liveFeedPollingActor ! Enable(crunchInputs.liveArrivalsResponse)
 
     applicationService.setSubscribers(crunchInputs, applicationService.persistentStateActors.manifestsRouterActor)
 

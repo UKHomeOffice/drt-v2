@@ -1,8 +1,6 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
-import actors.DrtStaticParameters.expireAfterMillis
 import actors.persistent._
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.{AggregatedArrivalsActor, ManifestLookups}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -22,14 +20,6 @@ object ProdPersistentStateActors {
             portCode: PortCode,
             paxFeedSourceOrder: List[FeedSource],
            ): PersistentStateActors = new PersistentStateActors {
-    override val forecastBaseArrivalsActor: ActorRef =
-      system.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-    override val forecastArrivalsActor: ActorRef =
-      system.actorOf(Props(new PortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-    override val liveArrivalsActor: ActorRef =
-      system.actorOf(Props(new PortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
-    override val liveBaseArrivalsActor: ActorRef =
-      system.actorOf(Props(new CirriumLiveArrivalsActor(now, expireAfterMillis)), name = "live-base-arrivals-actor")
     override val manifestsRouterActor: ActorRef =
       system.actorOf(
         Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")

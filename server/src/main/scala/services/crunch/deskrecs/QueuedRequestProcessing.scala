@@ -10,27 +10,26 @@ import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
-import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 
-object RunnableOptimisation {
+object QueuedRequestProcessing {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def createGraph[A, B, C <: ProcessingRequest](crunchRequestSource: SortedActorRefSource[C],
-                                                minutesSinkActor: ActorRef,
-                                                crunchRequestsToQueueMinutes: Flow[B, A, NotUsed],
-                                                graphName: String,
-                                               ): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
-    val deskRecsSink = Sink.actorRefWithAck(minutesSinkActor, StreamInitialized, StatusReply.Ack, StreamCompleted, StreamFailure)
+  def createGraph[A, B](processingRequestSource: SortedActorRefSource,
+                        sinkActor: ActorRef,
+                        processor: Flow[B, A, NotUsed],
+                        graphName: String,
+                       ): RunnableGraph[(ActorRef, UniqueKillSwitch)] = {
+    val deskRecsSink = Sink.actorRefWithAck(sinkActor, StreamInitialized, StatusReply.Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[A]
 
-    val graph = GraphDSL.create(crunchRequestSource, ks)((_, _)) {
+    val graph = GraphDSL.create(processingRequestSource, ks)((_, _)) {
       implicit builder =>
-        (crunchRequests, killSwitch) =>
-          crunchRequests.out.collect {
+        (requests, killSwitch) =>
+          requests.out.collect {
             case cr: B =>
               log.info(s"[$graphName] Sending $cr to producer")
               cr
-          } ~> crunchRequestsToQueueMinutes.map { minutes =>
+          } ~> processor.map { minutes =>
             log.info(s"[$graphName] Sending output to sink")
             minutes
           } ~> killSwitch ~> deskRecsSink

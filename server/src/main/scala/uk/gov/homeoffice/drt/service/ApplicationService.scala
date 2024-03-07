@@ -28,7 +28,7 @@ import play.api.Configuration
 import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
-import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike}
+import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike, MergeArrivals}
 import services.crunch.CrunchManager.queueDaysToReCrunch
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
@@ -44,7 +44,7 @@ import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
 import slickdb.Tables
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, MergeArrivalsRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
@@ -155,7 +155,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2.minutes)
 
-  def initialFlightsPortState(actor: ActorRef, forecastMaxDays: Int): Future[Option[PortState]] = {
+  private def initialFlightsPortState(actor: ActorRef, forecastMaxDays: Int): Future[Option[PortState]] = {
     val from = now().getLocalLastMidnight.addDays(-1)
     val to = from.addDays(forecastMaxDays)
     val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
@@ -166,7 +166,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       }
   }
 
-  def initialStateFuture[A](askableActor: ActorRef): Future[Option[A]] = {
+  private def initialStateFuture[A](askableActor: ActorRef): Future[Option[A]] = {
     val actorPath = askableActor.actorRef.path
     feedService.queryActorWithRetry[A](askableActor, GetState)
       .map {
@@ -216,17 +216,15 @@ case class ApplicationService(journalType: StreamingJournalLike,
   lazy val staffMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
     MinutesProvider.singleTerminal(actorService.staffRouterActor)
 
-  private def startOptimisationGraph[A, B <: WithTimeAccessor, C <: ProcessingRequest](minutesProducer: Flow[C, MinutesContainer[A, B], NotUsed],
-                                                                                       persistentQueueActor: ActorRef,
-                                                                                       initialQueue: SortedSet[C],
-                                                                                       sinkActor: ActorRef,
-                                                                                       graphName: String,
-                                                                                       processingRequest: MillisSinceEpoch => C,
-                                                                                      ): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource[C](persistentQueueActor, processingRequest, initialQueue, graphName)
-    val (requestQueueActor, deskRecsKillSwitch) =
-      RunnableOptimisation.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
-    (requestQueueActor, deskRecsKillSwitch)
+  private def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[ProcessingRequest, A, NotUsed],
+                                                   persistentQueueActor: ActorRef,
+                                                   initialQueue: SortedSet[ProcessingRequest],
+                                                   sinkActor: ActorRef,
+                                                   graphName: String,
+                                                   processingRequest: MillisSinceEpoch => ProcessingRequest,
+                                                  ): (ActorRef, UniqueKillSwitch) = {
+    val graphSource = new SortedActorRefSource(persistentQueueActor, processingRequest, initialQueue, graphName)
+    QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
   }
 
   private def enabledPredictionModelNames: Seq[String] = Seq(
@@ -246,9 +244,10 @@ case class ApplicationService(journalType: StreamingJournalLike,
       SortedSet[ProcessingRequest],
       SortedSet[ProcessingRequest],
       SortedSet[ProcessingRequest],
-      SortedSet[ProcessingRequest]
-    ) => () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) =
-    (actors, crunchQueue, deskRecsQueue, deploymentQueue, staffQueue) => () => {
+      SortedSet[ProcessingRequest],
+      SortedSet[ProcessingRequest],
+    ) => () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) =
+    (actors, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffQueue) => () => {
       val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
       implicit val timeout: Timeout = new Timeout(10.seconds)
@@ -260,21 +259,22 @@ case class ApplicationService(journalType: StreamingJournalLike,
       if (config.getOptional[Boolean]("feature-flags.populate-historic-pax").getOrElse(false))
         PassengersLiveView.populateHistoricPax(populateLivePaxViewForDate)
 
-      val passengerLoadsFlow: Flow[LoadProcessingRequest, MinutesContainer[CrunchApi.PassengersMinute, TQM], NotUsed] = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
-        arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(actorService.portStateActor),
-        liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsProvider),
-        historicManifestsProvider =
-          OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService, manifestCacheLookup, manifestCacheStore),
-        historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
-        splitsCalculator = splitsCalculator,
-        splitsSink = actorService.portStateActor,
-        portDesksAndWaitsProvider = portDeskRecs,
-        redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-        DynamicQueueStatusProvider(airportConfig, egatesProvider),
-        airportConfig.queuesByTerminal,
-        updateLiveView = updateLivePaxView,
-        paxFeedSourceOrder = feedService.paxFeedSourceOrder,
-      )
+      val passengerLoadsFlow: Flow[ProcessingRequest, MinutesContainer[CrunchApi.PassengersMinute, TQM], NotUsed] =
+        DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
+          arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(actorService.portStateActor),
+          liveManifestsProvider = OptimisationProviders.liveManifestsProvider(manifestsProvider),
+          historicManifestsProvider =
+            OptimisationProviders.historicManifestsProvider(airportConfig.portCode, manifestLookupService, manifestCacheLookup, manifestCacheStore),
+          historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, manifestLookupService),
+          splitsCalculator = splitsCalculator,
+          splitsSink = actorService.portStateActor,
+          portDesksAndWaitsProvider = portDeskRecs,
+          redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+          DynamicQueueStatusProvider(airportConfig, egatesProvider),
+          airportConfig.queuesByTerminal,
+          updateLiveView = updateLivePaxView,
+          paxFeedSourceOrder = feedService.paxFeedSourceOrder,
+        )
 
       val crunchRequest: MillisSinceEpoch => CrunchRequest =
         (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
@@ -282,8 +282,29 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest =
         (millis: MillisSinceEpoch) => MergeArrivalsRequest(SDate(millis).toUtcDate)
 
+      val existingMergedArrivals: UtcDate => Future[Set[UniqueArrival]] =
+        (date: UtcDate) =>
+          FlightsProvider(actorService.flightsRouterActor)
+            .allTerminals(date, date).map(_._2.map(_.unique).toSet)
+            .runWith(Sink.reduce[Set[UniqueArrival]](_ ++ _))
+            .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
+
+      val merger = MergeArrivals(existingMergedArrivals, FeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary))
+
+      val mergeArrivalsFlow: Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = MergeArrivals.processingRequestToArrivalsDiff(merger)
+
+      val (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =
+        startQueuedRequestProcessingGraph(
+          mergeArrivalsFlow,
+          actors.mergeArrivalsQueueActor,
+          mergeArrivalsQueue,
+          actorService.flightsRouterActor,
+          "arrivals",
+          mergeArrivalRequest,
+        )
+
       val (crunchRequestQueueActor, _: UniqueKillSwitch) =
-        startOptimisationGraph(
+        startQueuedRequestProcessingGraph(
           passengerLoadsFlow,
           actors.crunchQueueActor,
           crunchQueue,
@@ -299,7 +320,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
       )
 
       val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
-        startOptimisationGraph(deskRecsFlow, actors.deskRecsQueueActor, deskRecsQueue, minuteLookups.queueMinutesRouterActor, "desk-recs", crunchRequest)
+        startQueuedRequestProcessingGraph(
+          deskRecsFlow,
+          actors.deskRecsQueueActor,
+          deskRecsQueue,
+          minuteLookups.queueMinutesRouterActor,
+          "desk-recs",
+          crunchRequest,
+        )
 
       val deploymentsFlow = DynamicRunnableDeployments.crunchRequestsToDeployments(
         loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
@@ -309,7 +337,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
       )
 
       val (deploymentRequestQueueActor, deploymentsKillSwitch) =
-        startOptimisationGraph(deploymentsFlow,
+        startQueuedRequestProcessingGraph(
+          deploymentsFlow,
           actors.deploymentQueueActor,
           deploymentQueue,
           minuteLookups.queueMinutesRouterActor,
@@ -324,7 +353,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val staffMinutesFlow = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
 
       val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
-        startOptimisationGraph(staffMinutesFlow, actors.staffingQueueActor, staffQueue, minuteLookups.staffMinutesRouterActor, "staffing", crunchRequest)
+        startQueuedRequestProcessingGraph(
+          staffMinutesFlow,
+          actors.staffingQueueActor,
+          staffQueue,
+          minuteLookups.staffMinutesRouterActor,
+          "staffing",
+          crunchRequest,
+        )
 
       actorService.liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       actorService.liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
@@ -345,7 +381,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       if (params.recrunchOnStart)
         queueDaysToReCrunch(crunchRequestQueueActor, portDeskRecs.crunchOffsetMinutes, params.forecastMaxDays, now)
 
-      (crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+      (mergeArrivalsRequestQueueActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, mergeArrivalsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
     }
 
 
@@ -373,7 +409,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
                         initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
                         refreshArrivalsOnStart: Boolean,
-                        startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
+                        startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] =
       Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
@@ -405,6 +441,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
       now = now,
       manifestsLiveSource = voyageManifestsLiveSource,
       crunchActors = actors,
+      feedActors = feedService.feedActors,
+      manifestsRouterActor = persistentStateActors.manifestsRouterActor,
       initialPortState = initialPortState,
       initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
       initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),
@@ -440,24 +478,26 @@ case class ApplicationService(journalType: StreamingJournalLike,
         SortedSet[ProcessingRequest],
         SortedSet[ProcessingRequest],
         SortedSet[ProcessingRequest],
+        SortedSet[ProcessingRequest],
       )] = {
       for {
         lps <- initialFlightsPortState(actorService.portStateActor, params.forecastMaxDays)
-        ba <- initialStateFuture[ArrivalsState](actors.forecastBaseArrivalsActor).map(_.map(_.arrivals))
-        fa <- initialStateFuture[ArrivalsState](actors.forecastArrivalsActor).map(_.map(_.arrivals))
-        la <- initialStateFuture[ArrivalsState](actors.liveArrivalsActor).map(_.map(_.arrivals))
-        aclStatus <- actors.forecastBaseArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
+        ba <- initialStateFuture[ArrivalsState](feedService.forecastBaseFeedArrivalsActor).map(_.map(_.arrivals))
+        fa <- initialStateFuture[ArrivalsState](feedService.forecastFeedArrivalsActor).map(_.map(_.arrivals))
+        la <- initialStateFuture[ArrivalsState](feedService.liveFeedArrivalsActor).map(_.map(_.arrivals))
+        aclStatus <- feedService.forecastBaseFeedArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
+        mergeArrivalsQueue <- actors.mergeArrivalsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         crunchQueue <- actors.crunchQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deskRecsQueue <- actors.deskRecsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deploymentQueue <- actors.deploymentQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         staffingUpdateQueue <- actors.staffingQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
-      } yield (lps, ba, fa, la, aclStatus, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
+      } yield (lps, ba, fa, la, aclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
     }
 
     futurePortStates.onComplete {
       case Success((maybePortState,
       maybeBaseArrivals,
-      maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
+      maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
         val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
@@ -468,13 +508,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
           initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
           initialLiveArrivals = maybeLiveArrivals,
           refreshArrivalsOnStart = params.refreshArrivalsOnStart,
-          startUpdateGraphs = startUpdateGraphs(actors, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue),
+          startUpdateGraphs = startUpdateGraphs(actors, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue),
         )
 
-        feedService.fcstBaseActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
-        feedService.fcstActor ! Enable(crunchInputs.forecastArrivalsResponse)
-        feedService.liveBaseActor ! Enable(crunchInputs.liveBaseArrivalsResponse)
-        feedService.liveActor ! Enable(crunchInputs.liveArrivalsResponse)
+        feedService.fcstBaseFeedPollingActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
+        feedService.fcstFeedPollingActor ! Enable(crunchInputs.forecastArrivalsResponse)
+        feedService.liveBaseFeedPollingActor ! Enable(crunchInputs.liveBaseArrivalsResponse)
+        feedService.liveFeedPollingActor ! Enable(crunchInputs.liveArrivalsResponse)
 
         for {
           aclStatus <- maybeAclStatus
@@ -485,13 +525,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
             val minutesToNextCheck = (Math.random() * 90).toInt.minutes
             log.info(s"Last ACL check was more than 12 hours ago. Will check in ${minutesToNextCheck.toMinutes} minutes")
             system.scheduler.scheduleOnce(minutesToNextCheck) {
-              feedService.fcstBaseActor ! AdhocCheck
+              feedService.fcstBaseFeedPollingActor ! AdhocCheck
             }
           }
         }
         val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] =
           if (refetchApiData) None
-          else initialState[ApiFeedState](actors.manifestsRouterActor).map(_.lastProcessedMarker)
+          else initialState[ApiFeedState](persistentStateActors.manifestsRouterActor).map(_.lastProcessedMarker)
         system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
 
         val arrivalKeysProvider = DbManifestArrivalKeys(AggregateDb, airportConfig.portCode)
@@ -504,7 +544,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
         crunchManagerActor ! AddRecalculateArrivalsSubscriber(crunchInputs.flushArrivalsSource)
 
-        setSubscribers(crunchInputs, actors.manifestsRouterActor)
+        setSubscribers(crunchInputs, persistentStateActors.manifestsRouterActor)
 
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
 

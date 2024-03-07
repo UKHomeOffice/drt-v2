@@ -7,7 +7,7 @@ import akka.pattern.{StatusReply, ask}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
-import drt.shared.CrunchApi.DeskRecMinutes
+import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.SimulationParams
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
@@ -15,10 +15,10 @@ import queueus.DynamicQueueStatusProvider
 import services.OptimiserWithFlexibleProcessors
 import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
-import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWaitsProvider, RunnableOptimisation}
+import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWaitsProvider, QueuedRequestProcessing}
 import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -35,8 +35,8 @@ object Scenarios {
                        simulationAirportConfig: AirportConfig,
                        sla: (LocalDate, Queue) => Future[Int],
                        splitsCalculator: SplitsCalculator,
-                       flightsProvider: LoadProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
-                       liveManifestsProvider: LoadProcessingRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
+                       flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
+                       liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
                        historicManifestsProvider: HistoricManifestsProvider,
                        historicManifestsPaxProvider: HistoricManifestsPaxProvider,
                        flightsActor: ActorRef,
@@ -93,8 +93,12 @@ object Scenarios {
 
     val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
 
-    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch, SortedSet(), "sim-desks")
-    val (crunchRequestQueue, deskRecsKillSwitch) = RunnableOptimisation.createGraph(crunchGraphSource, portStateActor, desksProducer, "sim-desks").run()
+
+    val crunchRequest: MillisSinceEpoch => CrunchRequest =
+      (millis: MillisSinceEpoch) => CrunchRequest(millis, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
+
+    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, crunchRequest, SortedSet.empty[ProcessingRequest], "sim-desks")
+    val (crunchRequestQueue, deskRecsKillSwitch) = QueuedRequestProcessing.createGraph(crunchGraphSource, portStateActor, desksProducer, "sim-desks").run()
 
     crunchRequestQueue ! request
 

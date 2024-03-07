@@ -16,18 +16,18 @@ private object SortedActorRefSource {
   }
 }
 
-final class SortedActorRefSource[A <: ProcessingRequest](persistentActor: ActorRef,
-                                                         processingRequest: MillisSinceEpoch => A,
-                                                         initialQueue: SortedSet[A],
-                                                         graphName: String,
-                                                        )
-  extends GraphStageWithMaterializedValue[SourceShape[A], ActorRef] {
+final class SortedActorRefSource(persistentActor: ActorRef,
+                                 processingRequest: MillisSinceEpoch => ProcessingRequest,
+                                 initialQueue: SortedSet[ProcessingRequest],
+                                 graphName: String,
+                                )
+  extends GraphStageWithMaterializedValue[SourceShape[ProcessingRequest], ActorRef] {
 
   import SortedActorRefSource._
 
-  val out: Outlet[A] = Outlet[A]("actorRefSource.out")
+  val out: Outlet[ProcessingRequest] = Outlet[ProcessingRequest]("actorRefSource.out")
 
-  override val shape: SourceShape[A] = SourceShape.of(out)
+  override val shape: SourceShape[ProcessingRequest] = SourceShape.of(out)
 
   def createLogicAndMaterializedValue(inheritedAttributes: Attributes): (GraphStageLogic, ActorRef) =
     throw new IllegalStateException("Not supported")
@@ -36,21 +36,21 @@ final class SortedActorRefSource[A <: ProcessingRequest](persistentActor: ActorR
                                                eagerMaterializer: Materializer): (GraphStageLogic, ActorRef) = {
     val stage: GraphStageLogic with StageLogging with ActorRefStage = new GraphStageLogic(shape) with StageLogging
       with ActorRefStage {
-      override protected def logSource: Class[_] = classOf[SortedActorRefSource[A]]
+      override protected def logSource: Class[_] = classOf[SortedActorRefSource]
 
-      private val buffer: mutable.SortedSet[A] = mutable.SortedSet[A]() ++ initialQueue
+      private val buffer: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet.empty[ProcessingRequest] ++ initialQueue
       private var prioritiseForecast: Boolean = false
 
       override protected def stageActorName: String =
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
 
       val ref: ActorRef = getEagerStageActor(eagerMaterializer) {
-        case (_, m: Iterable[A @unchecked]) =>
+        case (_, m: Iterable[ProcessingRequest @unchecked]) =>
           buffer ++= m
           persistentActor ! m
           tryPushElement()
 
-        case (_, m: A @unchecked) =>
+        case (_, m: ProcessingRequest @unchecked) =>
           buffer += m
           persistentActor ! m
           tryPushElement()

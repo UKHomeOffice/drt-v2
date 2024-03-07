@@ -1,5 +1,6 @@
 package actors.persistent.arrivals
 
+import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.staffing.GetFeedStatuses
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
@@ -23,7 +24,8 @@ import scala.collection.immutable.SortedMap
 
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
-                             feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
+                             feedSource: FeedSource,
+                            ) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
   val restorer = new ArrivalsRestorer[Arrival]
   var state: ArrivalsState = initialState
@@ -80,11 +82,14 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)
 
     case GetState =>
-      log.debug(s"Received GetState request. Sending ArrivalsState with ${state.arrivals.size} arrivals")
       sender() ! state
 
+    case GetFlights(from, to) =>
+      sender() ! state.arrivals.filter { case (ua, _) =>
+        ua.scheduled >= from && ua.scheduled <= to
+      }
+
     case GetFeedStatuses =>
-      log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
 
     case SaveSnapshotSuccess(md) =>

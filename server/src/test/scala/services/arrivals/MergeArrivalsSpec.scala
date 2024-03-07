@@ -3,10 +3,10 @@ package services.arrivals
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, CarrierCode, FlightCodeSuffix, Operator, Passengers, UniqueArrival, VoyageNumber, Predictions => Preds}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, ArrivalsDiff, CarrierCode, FlightCodeSuffix, Operator, Passengers, UniqueArrival, VoyageNumber, Predictions => Preds}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.UtcDate
+import uk.gov.homeoffice.drt.time.{DateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -176,7 +176,9 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         PassengerSources = current.PassengerSources ++ nextWithAllValues.PassengerSources,
       )
 
-      result should ===(Map(nextWithAllValues.unique -> expectedMergedArrival), Set.empty)
+      result should ===(
+        ArrivalsDiff(Map(nextWithAllValues.unique -> expectedMergedArrival), Set.empty)
+      )
     }
     "not merge an arrival where it only exists on the non-primary source" in {
       val existingMerged = Set.empty[UniqueArrival]
@@ -187,7 +189,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets)
 
-      result should ===(Map.empty, Set.empty)
+      result should ===(ArrivalsDiff(Iterable.empty, Set.empty))
     }
     "take an arrival exiting in the second set and not the first if the second set is a primary source" in {
       val existingMerged = Set.empty[UniqueArrival]
@@ -198,7 +200,9 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets)
 
-      result should ===(Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues), Set.empty)
+      result should ===(
+        ArrivalsDiff(Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues), Set.empty)
+      )
     }
     "remove a unique arrival when it exists in the existing merged but not in a primary set" in {
       val existingMerged = Set(current.unique)
@@ -208,15 +212,17 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
 
       val result = MergeArrivals.mergeSets(existingMerged, arrivalSets)
 
-      result should ===(Map.empty[UniqueArrival, Arrival], Set(current.unique))
+      result should ===(
+        ArrivalsDiff(Map.empty[UniqueArrival, Arrival], Set(current.unique))
+      )
     }
   }
   "MergeArrival" should {
     "merge arrivals from multiple sources" in {
       val existingMerged = (_: UtcDate) => Future.successful(Set.empty[UniqueArrival])
       val arrivalSources = Seq(
-        (_: UtcDate) => Future.successful((true, Map[UniqueArrival, Arrival](current.unique -> current))),
-        (_: UtcDate) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
+        (_: DateLike) => Future.successful((true, Map[UniqueArrival, Arrival](current.unique -> current))),
+        (_: DateLike) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
       )
 
       val result = MergeArrivals(existingMerged, arrivalSources)(ExecutionContext.global)
@@ -227,14 +233,14 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
       )
 
       result(UtcDate(2024, 6, 1)).futureValue should ===(
-        (Map(nextWithAllValues.unique -> expectedMergedArrival), Set.empty)
+        ArrivalsDiff(Map(nextWithAllValues.unique -> expectedMergedArrival), Set.empty)
       )
     }
     "propagate exceptions in the existing merged provider" in {
       val existingMerged = (_: UtcDate) => Future.failed(new Exception("Boom"))
       val arrivalSources = Seq(
-        (_: UtcDate) => Future.successful((true, Map[UniqueArrival, Arrival](current.unique -> current))),
-        (_: UtcDate) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
+        (_: DateLike) => Future.successful((true, Map[UniqueArrival, Arrival](current.unique -> current))),
+        (_: DateLike) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
       )
 
       val result = MergeArrivals(existingMerged, arrivalSources)(ExecutionContext.global)
@@ -244,8 +250,8 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     "propagate exceptions in the arrival sources providers" in {
       val existingMerged = (_: UtcDate) => Future.successful(Set.empty[UniqueArrival])
       val arrivalSources = Seq(
-        (_: UtcDate) => Future.failed(new Exception("Boom")),
-        (_: UtcDate) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
+        (_: DateLike) => Future.failed(new Exception("Boom")),
+        (_: DateLike) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
       )
 
       val result = MergeArrivals(existingMerged, arrivalSources)(ExecutionContext.global)

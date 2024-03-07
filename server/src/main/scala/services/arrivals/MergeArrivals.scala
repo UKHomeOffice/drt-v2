@@ -1,21 +1,25 @@
 package services.arrivals
 
-import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
-import uk.gov.homeoffice.drt.time.UtcDate
+import akka.NotUsed
+import akka.stream.scaladsl.Flow
+import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.time.{DateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object MergeArrivals {
   def apply(existingMerged: UtcDate => Future[Set[UniqueArrival]],
-            arrivalSources: Seq[UtcDate => Future[(Boolean, Map[UniqueArrival, Arrival])]],
+            arrivalSources: Seq[DateLike => Future[(Boolean, Map[UniqueArrival, Arrival])]],
            )
-           (implicit ec: ExecutionContext): UtcDate => Future[(Map[UniqueArrival, Arrival], Set[UniqueArrival])] =
+           (implicit ec: ExecutionContext): UtcDate => Future[ArrivalsDiff] =
     (date: UtcDate) => {
       for {
         arrivalSets <- Future.sequence(arrivalSources.map(_(date)))
         existing <- existingMerged(date)
       } yield {
-        mergeSets(existing, arrivalSets)
+        val (updates: Map[UniqueArrival, Arrival], removals: Set[UniqueArrival]) = mergeSets(existing, arrivalSets)
+        ArrivalsDiff(updates, removals)
       }
     }
 
@@ -62,4 +66,15 @@ object MergeArrivals {
       PassengerSources = next.PassengerSources ++ current.PassengerSources,
       FlightCodeSuffix = next.FlightCodeSuffix.orElse(current.FlightCodeSuffix),
     )
+
+  def processingRequestToArrivalsDiff(mergeArrivalsForDate: UtcDate => Future[ArrivalsDiff],
+                                     ): Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = {
+    Flow[ProcessingRequest]
+      .collect {
+        case request: MergeArrivalsRequest => request
+      }
+      .mapAsync(1) {
+        request => mergeArrivalsForDate(request.date)
+      }
+  }
 }

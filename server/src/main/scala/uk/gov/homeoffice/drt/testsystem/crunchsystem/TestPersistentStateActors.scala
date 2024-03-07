@@ -1,8 +1,6 @@
 package uk.gov.homeoffice.drt.testsystem.crunchsystem
 
-import actors.DrtStaticParameters.expireAfterMillis
 import actors.ManifestLookupsLike
-import actors.persistent.arrivals.CirriumLiveArrivalsActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest}
@@ -16,14 +14,6 @@ case class TestPersistentStateActors(system: ActorSystem,
                                      offsetMinutes: Int,
                                      manifestLookups: ManifestLookupsLike,
                            ) extends PersistentStateActors {
-  override val forecastBaseArrivalsActor: ActorRef =
-    system.actorOf(Props(new TestAclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastArrivalsActor: ActorRef =
-    system.actorOf(Props(new TestPortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveArrivalsActor: ActorRef =
-    system.actorOf(Props(new TestPortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
-  override val liveBaseArrivalsActor: ActorRef =
-    system.actorOf(Props(new CirriumLiveArrivalsActor(now, expireAfterMillis)), name = "live-base-arrivals-actor")
   override val manifestsRouterActor: ActorRef =
     system.actorOf(Props(new TestVoyageManifestsActor(
       manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)), name = "voyage-manifests-router-actor")

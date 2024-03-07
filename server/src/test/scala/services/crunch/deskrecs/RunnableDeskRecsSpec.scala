@@ -10,7 +10,7 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared.FlightsApi.{Flights, PaxForArrivals}
 import drt.shared._
 import manifests.queues.SplitsCalculator
@@ -127,10 +127,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
     )
+    val crunchRequest: MillisSinceEpoch => CrunchRequest =
+      (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "desk-recs")
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "desk-recs")
-
-    RunnableOptimisation.createGraph(crunchGraphSource, mockPortStateActor, deskRecsProducer, "desk-recs").run()
+    QueuedRequestProcessing.createGraph(crunchGraphSource, mockPortStateActor, deskRecsProducer, "desk-recs").run()
   }
 
   private def crunchRequest(midnight20190101: SDateLike, airportConfig: AirportConfig = defaultAirportConfig): CrunchRequest = {

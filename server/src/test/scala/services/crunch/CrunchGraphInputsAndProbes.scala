@@ -17,9 +17,6 @@ case class CrunchGraphInputsAndProbes(aclArrivalsInput: SourceQueueWithComplete[
                                       staffMovementsInput: ActorRef,
                                       actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
                                       portStateTestProbe: TestProbe,
-                                      baseArrivalsTestProbe: TestProbe,
-                                      forecastArrivalsTestProbe: TestProbe,
-                                      liveArrivalsTestProbe: TestProbe,
                                       aggregatedArrivalsActor: ActorRef,
                                       portStateActor: ActorRef,
                                      ) {
