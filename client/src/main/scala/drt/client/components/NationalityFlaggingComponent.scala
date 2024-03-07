@@ -50,15 +50,15 @@ object NationalityFlaggingComponent {
       val clearFlags = flagCount match {
         case 0 => EmptyVdom
         case _ =>
-          <.div(MuiLink(variant = MuiButton.Variant.text, sx = SxProps(Map("minWidth" -> "40px")))(
-            MuiTypography(variant = "body1", sx = SxProps(Map(
-              "fontWeight" -> "bold", "margin-top" -> "16px")))("Clear all"),
-            ^.href := "#",
-            ^.onClick ==> { e => {
-              e.preventDefault()
-              Callback(SPACircuit.dispatch(ClearFlaggedNationalities))
-            }
-            }))
+          <.div(^.style := js.Dictionary("padding-top" -> "22px"),
+            MuiLink(variant = MuiButton.Variant.text, sx = SxProps(Map("minWidth" -> "40px")))(
+              MuiTypography(variant = "body1", sx = SxProps(Map("fontWeight" -> "bold")))("Clear all"),
+              ^.href := "#",
+              ^.onClick ==> { e => {
+                e.preventDefault()
+                Callback(SPACircuit.dispatch(ClearFlaggedNationalities))
+              }
+              }))
       }
       <.div(^.style := js.Dictionary("padding-top" -> "0px"),
         <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
