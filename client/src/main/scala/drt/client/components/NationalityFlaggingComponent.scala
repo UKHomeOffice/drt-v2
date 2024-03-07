@@ -6,7 +6,7 @@ import drt.client.services.SPACircuit
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Flag
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Close, Flag}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.facade.React.Node
 import japgolly.scalajs.react.vdom.html_<^._
@@ -50,9 +50,10 @@ object NationalityFlaggingComponent {
       val clearFlags = flagCount match {
         case 0 => EmptyVdom
         case _ =>
-          <.div(MuiButton(variant = MuiButton.Variant.text, sx = SxProps(Map("minWidth" -> "40px")))(
+          <.div(MuiLink(variant = MuiButton.Variant.text, sx = SxProps(Map("minWidth" -> "40px")))(
             MuiTypography(variant = "body1", sx = SxProps(Map(
-              "fontWeight" -> "bold", "margin-top" -> "0px")))("Clear all"),
+              "fontWeight" -> "bold", "margin-top" -> "16px")))("Clear all"),
+            ^.href := "#",
             ^.onClick ==> { e => {
               e.preventDefault()
               Callback(SPACircuit.dispatch(ClearFlaggedNationalities))
@@ -61,7 +62,7 @@ object NationalityFlaggingComponent {
       }
       <.div(^.style := js.Dictionary("padding-top" -> "0px"),
         <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
-          <.div(^.style := js.Dictionary("padding-right" -> "24px"),
+          <.div(
             MuiTypography(sx = SxProps(Map("font-weight" -> "bold", "padding-bottom" -> "10px")))("Flag flights by pax nationality"),
             MuiAutocomplete[MuiAutocompleteOption](
               options = options,
@@ -86,18 +87,17 @@ object NationalityFlaggingComponent {
                 case _ => Callback.empty
               },
             )(),
-          ),
-          <.div(^.style := js.Dictionary("display" -> "flex", "padding-top" -> "16px", "alignItems" -> "center", "gap" -> "16px"),
-            clearFlags
-          ),
-        ), <.div(^.style := js.Dictionary("margin-top" -> "0px", "padding-top" -> "16px", "display" -> "wrap", "alignItems" -> "center", "gap" -> "16px"),
-          props.flaggedNationalities.toList
-            .sortBy(_.name)
-            .map { c =>
-              val onDelete = (_: ReactEvent) => Callback(SPACircuit.dispatch(RemoveFlaggedNationality(c)))
-              MuiChip(label = s"${c.name} (${c.threeLetterCode})".toVdom, onDelete = onDelete)()
-            }
-            .toTagMod
+          ), clearFlags
+        ),
+        <.div(^.style := js.Dictionary("padding-top" -> "16px", "display" -> "wrap", "alignItems" -> "center"),
+          <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "16px"),
+            props.flaggedNationalities.toList
+              .sortBy(_.name)
+              .map { c =>
+                val onDelete = (_: ReactEvent) => Callback(SPACircuit.dispatch(RemoveFlaggedNationality(c)))
+                MuiChip(label = s"${c.name} (${c.threeLetterCode})".toVdom, onDelete = onDelete)()
+              }
+              .toTagMod)
         ))
     }
     .configure(Reusability.shouldComponentUpdate)
