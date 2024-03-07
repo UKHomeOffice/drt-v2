@@ -23,7 +23,7 @@ object RunnableCrunch {
 
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
 
-  def apply[FR, MS, SAD, RL](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+  def apply[FR, MS, SAD](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
                              forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
                              liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
                              liveArrivalsSource: Source[ArrivalsFeedResponse, FR],

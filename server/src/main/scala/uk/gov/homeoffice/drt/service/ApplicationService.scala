@@ -542,7 +542,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
           .processFilesAfter(processFilesAfter)
           .runWith(Sink.ignore)
 
-        crunchManagerActor ! AddRecalculateArrivalsSubscriber(crunchInputs.flushArrivalsSource)
+//        crunchManagerActor ! AddRecalculateArrivalsSubscriber(crunchInputs.flushArrivalsSource)
 
         setSubscribers(crunchInputs, persistentStateActors.manifestsRouterActor)
 

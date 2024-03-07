@@ -384,7 +384,7 @@ class TestDrtActor extends Actor {
         liveArrivalsInput = crunchInputs.liveArrivalsResponse.feedSource,
         ciriumArrivalsInput = crunchInputs.liveBaseArrivalsResponse.feedSource,
         manifestsLiveInput = crunchInputs.manifestsLiveResponseSource,
-        recalculateArrivalsInput = crunchInputs.flushArrivalsSource,
+//        recalculateArrivalsInput = crunchInputs.flushArrivalsSource,
         shiftsInput = shiftsSequentialWritesActor,
         fixedPointsInput = fixedPointsSequentialWritesActor,
         staffMovementsInput = staffMovementsSequentialWritesActor,

@@ -11,7 +11,7 @@ case class CrunchGraphInputsAndProbes(aclArrivalsInput: SourceQueueWithComplete[
                                       liveArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       ciriumArrivalsInput: SourceQueueWithComplete[ArrivalsFeedResponse],
                                       manifestsLiveInput: SourceQueueWithComplete[ManifestsFeedResponse],
-                                      recalculateArrivalsInput: SourceQueueWithComplete[Boolean],
+//                                      recalculateArrivalsInput: SourceQueueWithComplete[Boolean],
                                       shiftsInput: ActorRef,
                                       fixedPointsInput: ActorRef,
                                       staffMovementsInput: ActorRef,
