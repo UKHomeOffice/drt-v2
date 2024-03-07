@@ -65,11 +65,9 @@ describe('Arrivals page filter', () => {
         .wait(100)
         .get('.egate-queue-pax')
 
-        cy.contains("Flag flights by pax nationality")
+        cy.contains("Enter nationalities or ICAO codes")
         .click({force: true})
         .type("ITA{downArrow}{enter}")
-
-        cy.contains("ITA (1)")
 
         cy.contains("Italy (ITA)")
     })
