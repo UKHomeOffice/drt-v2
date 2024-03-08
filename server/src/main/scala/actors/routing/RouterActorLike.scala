@@ -1,7 +1,7 @@
 package actors.routing
 
 import actors.persistent.QueueLikeActor.UpdatedMillis
-import actors.routing.minutes.MinutesActorLike.{ProcessNextUpdateRequest, QueueUpdateRequest}
+import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
 import akka.NotUsed
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.pattern.{StatusReply, ask, pipe}
@@ -15,7 +15,6 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
 
 trait RouterActorLikeWithSubscriber[U <: Updates, P] extends RouterActorLike[U, P] {
   var updatesSubscribers: List[ActorRef] = List.empty
@@ -173,59 +172,5 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
   }
 }
 
-class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor with ActorLogging {
-  implicit val dispatcher: ExecutionContext = context.dispatcher
-  implicit val mat: Materializer = Materializer.createMaterializer(context)
-  implicit val timeout: Timeout = new Timeout(90.seconds)
 
-  var requestsQueue: List[(ActorRef, U)] = List.empty
-  var processingRequest: Boolean = false
-
-  def handleUpdateAndAck(update: U, replyTo: ActorRef): Any = {
-    processingRequest = true
-    val eventualAck = performUpdate(update)
-    eventualAck
-      .onComplete { tryResponse =>
-        tryResponse match {
-          case Success(_) =>
-            replyTo ! StatusReply.Ack
-          case Failure(exception) =>
-            log.error(exception, s"Failed to handle update $update. Re-queuing ${update.getClass.getSimpleName}")
-            replyTo ! StatusReply.Error(exception)
-            self ! QueueUpdateRequest(update, replyTo)
-        }
-        processingRequest = false
-        self ! ProcessNextUpdateRequest
-      }
-
-    eventualAck
-  }
-
-  override def receive: Receive =
-    receiveProcessRequest orElse
-      receiveUpdates
-
-  private def receiveProcessRequest: Receive = {
-    case ProcessNextUpdateRequest =>
-      if (!processingRequest) {
-        requestsQueue match {
-          case (replyTo, nextUpdate) :: tail =>
-            handleUpdateAndAck(nextUpdate, replyTo)
-            requestsQueue = tail
-          case Nil =>
-            log.debug("Update requests queue is empty. Nothing to do")
-        }
-      }
-  }
-
-  private def receiveUpdates: Receive = {
-    case qur: QueueUpdateRequest[U] =>
-      requestsQueue = (qur.replyTo, qur.update) :: requestsQueue
-      self ! ProcessNextUpdateRequest
-
-    case update: U =>
-      requestsQueue = (sender(), update) :: requestsQueue
-      self ! ProcessNextUpdateRequest
-  }
-}
 

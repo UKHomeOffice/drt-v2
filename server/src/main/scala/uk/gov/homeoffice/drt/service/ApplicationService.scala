@@ -1,13 +1,11 @@
 package uk.gov.homeoffice.drt.service
 
-import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber}
+import actors.CrunchManagerActor.AddQueueCrunchSubscriber
 import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
-import actors.PartitionedPortStateActor.GetFlights
 import actors._
 import actors.daily.{PassengersActor, RequestAndTerminateActor}
 import actors.persistent._
 import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
-import actors.routing.FlightsRouterActor
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
@@ -28,8 +26,7 @@ import play.api.Configuration
 import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
-import services.arrivals.{ArrivalsAdjustments, ArrivalsAdjustmentsLike, MergeArrivals}
-import services.crunch.CrunchManager.queueDaysToReCrunch
+import services.arrivals.{ArrivalsAdjustments, MergeArrivals}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
@@ -45,7 +42,6 @@ import slickdb.Tables
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
-import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
@@ -155,17 +151,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2.minutes)
 
-  private def initialFlightsPortState(actor: ActorRef, forecastMaxDays: Int): Future[Option[PortState]] = {
-    val from = now().getLocalLastMidnight.addDays(-1)
-    val to = from.addDays(forecastMaxDays)
-    val request = GetFlights(from.millisSinceEpoch, to.millisSinceEpoch)
-    FlightsRouterActor.runAndCombine(actor
-        .ask(request)(new Timeout(15.seconds)).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
-      .map { fws =>
-        Option(PortState(fws.flights.values, Iterable(), Iterable()))
-      }
-  }
-
   private def initialStateFuture[A](askableActor: ActorRef): Future[Option[A]] = {
     val actorPath = askableActor.actorRef.path
     feedService.queryActorWithRetry[A](askableActor, GetState)
@@ -239,6 +224,23 @@ case class ApplicationService(journalType: StreamingJournalLike,
   val crunchManagerActor: ActorRef = system.actorOf(Props(new CrunchManagerActor), name = "crunch-manager-actor")
   private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
 
+  val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
+    ArrivalPredictions(
+      (a: Arrival) => Iterable(
+        TerminalOrigin(a.Terminal.toString, a.Origin.iata),
+        TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
+        PredictionModelActor.Terminal(a.Terminal.toString),
+      ),
+      feedService.flightModelPersistence.getModels(enabledPredictionModelNames),
+      Map(
+        OffScheduleModelAndFeatures.targetName -> 45,
+        ToChoxModelAndFeatures.targetName -> 20,
+        WalkTimeModelAndFeatures.targetName -> 30 * 60,
+        PaxCapModelAndFeatures.targetName -> 100,
+      ),
+      15
+    ).addPredictions
+
   val startUpdateGraphs: (
     PersistentStateActors,
       SortedSet[ProcessingRequest],
@@ -286,12 +288,21 @@ case class ApplicationService(journalType: StreamingJournalLike,
         (date: UtcDate) =>
           FlightsProvider(actorService.flightsRouterActor)
             .allTerminals(date, date).map(_._2.map(_.unique).toSet)
-            .runWith(Sink.reduce[Set[UniqueArrival]](_ ++ _))
+            .runWith(Sink.fold(Set[UniqueArrival]())(_ ++ _))
             .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
 
-      val merger = MergeArrivals(existingMergedArrivals, FeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary))
+      val merger = MergeArrivals(
+        existingMergedArrivals,
+        FeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary),
+        ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode),
+      )
 
-      val mergeArrivalsFlow: Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = MergeArrivals.processingRequestToArrivalsDiff(merger)
+      val mergeArrivalsFlow = MergeArrivals.processingRequestToArrivalsDiff(
+        mergeArrivalsForDate = merger,
+        setPcpTimes = setPcpTimes,
+        addArrivalPredictions = addArrivalPredictions,
+        updateAggregatedArrivals = actors.aggregatedArrivalsActor ! _,
+      )
 
       val (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =
         startQueuedRequestProcessingGraph(
@@ -381,10 +392,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       feedService.forecastBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
       feedService.forecastFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
       feedService.liveBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
-      feedService.liveBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
-
-      if (params.recrunchOnStart)
-        queueDaysToReCrunch(crunchRequestQueueActor, portDeskRecs.crunchOffsetMinutes, params.forecastMaxDays, now)
+      feedService.liveFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
 
       (mergeArrivalsRequestQueueActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, mergeArrivalsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
     }
@@ -408,35 +416,10 @@ case class ApplicationService(journalType: StreamingJournalLike,
     PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
 
   def startCrunchSystem(actors: PersistentStateActors,
-                        initialPortState: Option[PortState],
-                        initialForecastBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        initialForecastArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        initialLiveBaseArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        initialLiveArrivals: Option[SortedMap[UniqueArrival, Arrival]],
-                        refreshArrivalsOnStart: Boolean,
                         startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] =
       Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
-    val flushArrivalsSource: Source[Boolean, SourceQueueWithComplete[Boolean]] = Source.queue[Boolean](100, OverflowStrategy.backpressure)
-    val arrivalAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode)
-
-    val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
-      ArrivalPredictions(
-        (a: Arrival) => Iterable(
-          TerminalOrigin(a.Terminal.toString, a.Origin.iata),
-          TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
-          PredictionModelActor.Terminal(a.Terminal.toString),
-        ),
-        feedService.flightModelPersistence.getModels(enabledPredictionModelNames),
-        Map(
-          OffScheduleModelAndFeatures.targetName -> 45,
-          ToChoxModelAndFeatures.targetName -> 20,
-          WalkTimeModelAndFeatures.targetName -> 30 * 60,
-          PaxCapModelAndFeatures.targetName -> 100,
-        ),
-        15
-      ).addPredictions
 
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
@@ -448,24 +431,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
       crunchActors = actors,
       feedActors = feedService.feedActors,
       manifestsRouterActor = persistentStateActors.manifestsRouterActor,
-      initialPortState = initialPortState,
-      initialForecastBaseArrivals = initialForecastBaseArrivals.getOrElse(SortedMap()),
-      initialForecastArrivals = initialForecastArrivals.getOrElse(SortedMap()),
-      initialLiveBaseArrivals = initialLiveBaseArrivals.getOrElse(SortedMap()),
-      initialLiveArrivals = initialLiveArrivals.getOrElse(SortedMap()),
       arrivalsForecastBaseFeed = feedService.baseArrivalsSource(feedService.maybeAclFeed),
       arrivalsForecastFeed = feedService.forecastArrivalsSource(airportConfig.portCode),
       arrivalsLiveBaseFeed = feedService.liveBaseArrivalsSource(airportConfig.portCode),
       arrivalsLiveFeed = feedService.liveArrivalsSource(airportConfig.portCode),
       passengerAdjustments = PaxDeltas.applyAdjustmentsToArrivals(passengersActorProvider, aclPaxAdjustmentDays),
-      refreshArrivalsOnStart = refreshArrivalsOnStart,
       optimiser = optimiser,
       startDeskRecs = startUpdateGraphs,
-      arrivalsAdjustments = arrivalAdjustments,
-      flushArrivalsSource = flushArrivalsSource,
-      addArrivalPredictions = addArrivalPredictions,
       setPcpTimes = setPcpTimes,
-      flushArrivalsOnStart = params.flushArrivalsOnStart,
       system = system,
     ))
   }
@@ -474,10 +447,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
     val actors = persistentStateActors
 
     val futurePortStates: Future[(
-      Option[PortState],
-        Option[SortedMap[UniqueArrival, Arrival]],
-        Option[SortedMap[UniqueArrival, Arrival]],
-        Option[SortedMap[UniqueArrival, Arrival]],
         Option[FeedSourceStatuses],
         SortedSet[ProcessingRequest],
         SortedSet[ProcessingRequest],
@@ -486,33 +455,21 @@ case class ApplicationService(journalType: StreamingJournalLike,
         SortedSet[ProcessingRequest],
       )] = {
       for {
-        lps <- initialFlightsPortState(actorService.portStateActor, params.forecastMaxDays)
-        ba <- initialStateFuture[ArrivalsState](feedService.forecastBaseFeedArrivalsActor).map(_.map(_.arrivals))
-        fa <- initialStateFuture[ArrivalsState](feedService.forecastFeedArrivalsActor).map(_.map(_.arrivals))
-        la <- initialStateFuture[ArrivalsState](feedService.liveFeedArrivalsActor).map(_.map(_.arrivals))
         aclStatus <- feedService.forecastBaseFeedArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
         mergeArrivalsQueue <- actors.mergeArrivalsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         crunchQueue <- actors.crunchQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deskRecsQueue <- actors.deskRecsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deploymentQueue <- actors.deploymentQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         staffingUpdateQueue <- actors.staffingQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
-      } yield (lps, ba, fa, la, aclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
+      } yield (aclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
     }
 
     futurePortStates.onComplete {
-      case Success((maybePortState,
-      maybeBaseArrivals,
-      maybeForecastArrivals, maybeLiveArrivals, maybeAclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
+      case Success((maybeAclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
         val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
           actors,
-          initialPortState = maybePortState,
-          initialForecastBaseArrivals = maybeBaseArrivals,
-          initialForecastArrivals = maybeForecastArrivals,
-          initialLiveBaseArrivals = Option(SortedMap[UniqueArrival, Arrival]()),
-          initialLiveArrivals = maybeLiveArrivals,
-          refreshArrivalsOnStart = params.refreshArrivalsOnStart,
           startUpdateGraphs = startUpdateGraphs(actors, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue),
         )
 

@@ -3,14 +3,12 @@ package services.crunch
 import akka.actor.ActorRef
 import akka.pattern.StatusReply.Ack
 import akka.stream._
-import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
-import drt.chroma.ArrivalsDiffingStage
+import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
 import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
-import services.graphstages.ArrivalsGraphStage
 import services.metrics.Metrics
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
@@ -30,15 +28,6 @@ object RunnableCrunch {
                              manifestsLiveSource: Source[ManifestsFeedResponse, MS],
                              actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
                              //                             flushArrivalsSource: Source[Boolean, RL],
-                             //                             addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
-                             //                             setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
-
-                             //                             arrivalsGraphStage: ArrivalsGraphStage,
-
-                             forecastArrivalsDiffStage: ArrivalsDiffingStage,
-                             liveBaseArrivalsDiffStage: ArrivalsDiffingStage,
-                             liveArrivalsDiffStage: ArrivalsDiffingStage,
-
                              forecastBaseArrivalsActor: ActorRef,
                              forecastArrivalsActor: ActorRef,
                              liveBaseArrivalsActor: ActorRef,
@@ -48,7 +37,6 @@ object RunnableCrunch {
                              manifestsActor: ActorRef,
 
                              portStateActor: ActorRef,
-                             //                             aggregatedArrivalsStateActor: ActorRef,
 
                              forecastMaxMillis: () => MillisSinceEpoch
                             )
@@ -66,7 +54,6 @@ object RunnableCrunch {
       liveArrivalsSource,
       manifestsLiveSource,
       actualDesksAndWaitTimesSource,
-      //      flushArrivalsSource.async,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
     )((_, _, _, _, _, _, _, _)) {
@@ -90,10 +77,6 @@ object RunnableCrunch {
 
           val deskStatsSink = ackingActorSink(portStateActor)
 
-          val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage)
-          val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage)
-          val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage)
-
           val baseArrivalsSink = simpleActorSink(forecastBaseArrivalsActor)
           val fcstArrivalsSink = simpleActorSink(forecastArrivalsActor)
           val liveBaseArrivalsSink = simpleActorSink(liveBaseArrivalsActor)
@@ -113,11 +96,11 @@ object RunnableCrunch {
             case failure => Future.successful(failure)
           } ~> baseArrivalsSink
 
-          forecastArrivalsSourceSync ~> fcstArrivalsDiffing ~> fcstArrivalsSink
+          forecastArrivalsSourceSync ~> fcstArrivalsSink
 
-          liveBaseArrivalsSourceSync ~> liveBaseArrivalsDiffing ~> liveBaseArrivalsSink
+          liveBaseArrivalsSourceSync ~> liveBaseArrivalsSink
 
-          liveArrivalsSourceSync ~> arrivalsKillSwitchSync ~> liveArrivalsDiffing ~> liveArrivalsSink
+          liveArrivalsSourceSync ~> arrivalsKillSwitchSync ~> liveArrivalsSink
 
           manifestsLiveSourceSync.out.collect {
             case ManifestsFeedSuccess(manifests, createdAt) =>

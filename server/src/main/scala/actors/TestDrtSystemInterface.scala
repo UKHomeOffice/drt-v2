@@ -44,12 +44,6 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
   private def startSystem: () => List[KillSwitch] = () => {
     val crunchInputs = applicationService.startCrunchSystem(
       actors = applicationService.persistentStateActors,
-      initialPortState = None,
-      initialForecastBaseArrivals = None,
-      initialForecastArrivals = None,
-      initialLiveBaseArrivals = None,
-      initialLiveArrivals = None,
-      refreshArrivalsOnStart = false,
       startUpdateGraphs = applicationService.startUpdateGraphs(
         applicationService.persistentStateActors,
         SortedSet(),

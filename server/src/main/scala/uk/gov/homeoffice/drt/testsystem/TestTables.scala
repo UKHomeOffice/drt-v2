@@ -96,9 +96,6 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val aclHost: Option[String] = None
   override val aclUsername: Option[String] = None
   override val aclKeyPath: Option[String] = None
-  override val refreshArrivalsOnStart: Boolean = false
-  override val flushArrivalsOnStart: Boolean = false
-  override val recrunchOnStart: Boolean = false
   override val useNationalityBasedProcessingTimes: Boolean = false
   override val isSuperUserMode: Boolean = false
   override val bhxIataEndPointUrl: String = ""

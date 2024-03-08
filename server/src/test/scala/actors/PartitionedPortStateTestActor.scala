@@ -69,6 +69,15 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     case ps: PortState =>
       log.info(s"Setting initial port state")
       state = ps
+      val replyTo = sender()
+      if (ps.flights.nonEmpty) {
+        flightsActor.ask(ArrivalsDiff(ps.flights.map(_._2.apiFlight), Seq()))
+          .flatMap(_ => flightsActor.ask(SplitsForArrivals(ps.flights.map {
+            case (ua, fws) => (ua, fws.splits)
+          })))
+          .map(_ => replyTo ! StatusReply.Ack)
+      }
+      else replyTo ! StatusReply.Ack
   }
 
   override val askThenAck: AckingAsker = (actor: ActorRef, message: Any, replyTo: ActorRef) => {

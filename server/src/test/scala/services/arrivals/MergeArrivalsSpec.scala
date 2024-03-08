@@ -169,7 +169,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         (false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues)),
       )
 
-      val result = MergeArrivals.mergeSets(existingMerged, arrivalSets)
+      val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
 
       val expectedMergedArrival = nextWithAllValues.copy(
         FeedSources = current.FeedSources ++ nextWithAllValues.FeedSources,
@@ -180,6 +180,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         ArrivalsDiff(Map(nextWithAllValues.unique -> expectedMergedArrival), Set.empty)
       )
     }
+
     "not merge an arrival where it only exists on the non-primary source" in {
       val existingMerged = Set.empty[UniqueArrival]
       val arrivalSets = Seq(
@@ -187,7 +188,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         (false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues)),
       )
 
-      val result = MergeArrivals.mergeSets(existingMerged, arrivalSets)
+      val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
 
       result should ===(ArrivalsDiff(Iterable.empty, Set.empty))
     }
@@ -198,7 +199,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         (true, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues)),
       )
 
-      val result = MergeArrivals.mergeSets(existingMerged, arrivalSets)
+      val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
 
       result should ===(
         ArrivalsDiff(Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues), Set.empty)
@@ -210,7 +211,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         (true, Map.empty[UniqueArrival, Arrival]),
       )
 
-      val result = MergeArrivals.mergeSets(existingMerged, arrivalSets)
+      val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
 
       result should ===(
         ArrivalsDiff(Map.empty[UniqueArrival, Arrival], Set(current.unique))
@@ -225,7 +226,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         (_: DateLike) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
       )
 
-      val result = MergeArrivals(existingMerged, arrivalSources)(ExecutionContext.global)
+      val result = MergeArrivals(existingMerged, arrivalSources, identity)(ExecutionContext.global)
 
       val expectedMergedArrival = nextWithAllValues.copy(
         FeedSources = current.FeedSources ++ nextWithAllValues.FeedSources,
@@ -243,7 +244,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         (_: DateLike) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
       )
 
-      val result = MergeArrivals(existingMerged, arrivalSources)(ExecutionContext.global)
+      val result = MergeArrivals(existingMerged, arrivalSources, identity)(ExecutionContext.global)
 
       result(UtcDate(2024, 6, 1)).failed.futureValue.getMessage should ===("Boom")
     }
@@ -254,7 +255,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         (_: DateLike) => Future.successful((false, Map[UniqueArrival, Arrival](nextWithAllValues.unique -> nextWithAllValues))),
       )
 
-      val result = MergeArrivals(existingMerged, arrivalSources)(ExecutionContext.global)
+      val result = MergeArrivals(existingMerged, arrivalSources, identity)(ExecutionContext.global)
 
       result(UtcDate(2024, 6, 1)).failed.futureValue.getMessage should ===("Boom")
     }

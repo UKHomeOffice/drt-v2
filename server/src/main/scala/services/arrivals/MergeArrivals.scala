@@ -11,21 +11,20 @@ import scala.concurrent.{ExecutionContext, Future}
 object MergeArrivals {
   def apply(existingMerged: UtcDate => Future[Set[UniqueArrival]],
             arrivalSources: Seq[DateLike => Future[(Boolean, Map[UniqueArrival, Arrival])]],
+            adjustments: Arrival => Arrival,
            )
            (implicit ec: ExecutionContext): UtcDate => Future[ArrivalsDiff] =
     (date: UtcDate) => {
       for {
         arrivalSets <- Future.sequence(arrivalSources.map(_(date)))
         existing <- existingMerged(date)
-      } yield {
-        val (updates: Map[UniqueArrival, Arrival], removals: Set[UniqueArrival]) = mergeSets(existing, arrivalSets)
-        ArrivalsDiff(updates, removals)
-      }
+      } yield mergeSets(existing, arrivalSets, adjustments)
     }
 
   def mergeSets(existingMerged: Set[UniqueArrival],
                 arrivalSets: Seq[(Boolean, Map[UniqueArrival, Arrival])],
-               ): (Map[UniqueArrival, Arrival], Set[UniqueArrival]) = {
+                adjustments: Arrival => Arrival,
+               ): ArrivalsDiff = {
     val newMerged = arrivalSets.toList match {
       case (_, startSet) :: otherSets =>
         otherSets.foldLeft(startSet) {
@@ -42,8 +41,9 @@ object MergeArrivals {
             }
         }
     }
-    val removed = existingMerged -- newMerged.keySet
-    (newMerged, removed)
+    val mergedAndAdjusted = newMerged.values.map(adjustments).map(a => a.unique -> a).toMap
+    val removed = existingMerged -- mergedAndAdjusted.keySet
+    ArrivalsDiff(mergedAndAdjusted, removed)
   }
 
   def mergeArrivals(current: Arrival, next: Arrival): Arrival =
@@ -68,13 +68,20 @@ object MergeArrivals {
     )
 
   def processingRequestToArrivalsDiff(mergeArrivalsForDate: UtcDate => Future[ArrivalsDiff],
-                                     ): Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = {
+                                      setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
+                                      addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
+                                      updateAggregatedArrivals: ArrivalsDiff => Unit,
+                                     )
+                                     (implicit ec: ExecutionContext): Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = {
     Flow[ProcessingRequest]
       .collect {
         case request: MergeArrivalsRequest => request
       }
       .mapAsync(1) {
         request => mergeArrivalsForDate(request.date)
+          .flatMap(setPcpTimes)
+          .flatMap(addArrivalPredictions)
       }
+      .wireTap(updateAggregatedArrivals)
   }
 }

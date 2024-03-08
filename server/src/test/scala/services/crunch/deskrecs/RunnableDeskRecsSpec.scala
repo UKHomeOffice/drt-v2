@@ -526,31 +526,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     success
   }
-
-  "Given flights for the next 10 days, a max forecast of 2 days, and a recrunch flag set to true " +
-    "When I monitor the port state actor " +
-    "Then I should see crunch minutes arriving for the 2 days " >> {
-    val noonSDate: SDateLike = SDate("2018-01-01T00:00")
-    val arrivalsFor10Days: Seq[ApiFlightWithSplits] = (0 until 10).map { d =>
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA1000", schDt = noonSDate.addDays(d).toISOString, passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))), Set(historicSplits))
-    }
-    val crunch = runCrunchGraph(TestConfig(
-      airportConfig = defaultAirportConfig.copy(minutesToCrunch = 30),
-      now = () => noonSDate,
-      recrunchOnStart = true,
-      initialPortState = Option(PortState(arrivalsFor10Days, List(), List()))
-    ))
-
-    val expectedCrunchDays = Set(SDate("2018-01-01T00:00").toISODateOnly, SDate("2018-01-02T00:00").toISODateOnly)
-
-    crunch.portStateTestProbe.fishForMessage(2.seconds) {
-      case PortState(_, cms, _) =>
-        val crunchDays = cms.map(cm => SDate(cm._1.minute).toISODateOnly).toSet
-        crunchDays == expectedCrunchDays
-    }
-
-    success
-  }
 }
 
 case class SetFlights(flightsToSet: List[ApiFlightWithSplits])
