@@ -3,11 +3,10 @@ package drt.client.components
 import drt.client.actions.Actions._
 import drt.client.components.ArrivalsExportComponent.StringExtended
 import drt.client.services.SPACircuit
-import io.kinoplan.scalajs.react.bridge.WithProps.toVdomNode
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.ExpandMore
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Close, Flag}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.facade.React.Node
 import japgolly.scalajs.react.vdom.html_<^._
@@ -33,9 +32,12 @@ object NationalityFlaggingComponent {
           disabled = params.disabled,
           fullWidth = params.fullWidth,
           InputLabelProps = params.InputLabelProps,
-          InputProps = params.InputProps,
+          InputProps = js.Object.assign(
+            params.InputProps,
+            js.Dynamic.literal("startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Flag)()).rawNode.asInstanceOf[js.Object]),
+          ),
           inputProps = params.inputProps,
-          label = "Nationality or ICAO code".toVdom,
+          label = "Enter nationalities or ICAO codes".toVdom,
         )().rawNode
       }
 
@@ -44,78 +46,59 @@ object NationalityFlaggingComponent {
       }: _*)
 
       val flagCount = props.flaggedNationalities.size
-      val flagCountDisplay = flagCount match {
-        case 0 => ""
-        case n => s" ($n)"
-      }
+
       val clearFlags = flagCount match {
         case 0 => EmptyVdom
         case _ =>
-          <.div(
-            ^.style := js.Dictionary("display" -> "inline"),
-            MuiButton(variant = MuiButton.Variant.text)(
-              MuiTypography(variant = "body1", sx = SxProps(Map("textDecoration" -> "underline", "fontWeight" -> "bold")))(
-                "Clear all"
-              ),
+          <.div(^.style := js.Dictionary("padding-top" -> "22px"),
+            MuiLink(variant = MuiButton.Variant.text, sx = SxProps(Map("minWidth" -> "40px")))(
+              MuiTypography(variant = "body1", sx = SxProps(Map("fontWeight" -> "bold")))("Clear all"),
+              ^.href := "#",
               ^.onClick ==> { e => {
                 e.preventDefault()
                 Callback(SPACircuit.dispatch(ClearFlaggedNationalities))
               }
-              }
-            ),
-          )
+              }))
       }
-      <.div(
-        ^.style := js.Dictionary("display" -> "flex"),
-        MuiAccordion(elevation = 0)(
-          MuiAccordionSummary(expandIcon = toVdomNode(MuiIcons(ExpandMore)()))(
-            <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
-              MuiTypography(variant = "body1", sx = SxProps(Map("textDecoration" -> "underline", "fontWeight" -> "bold")))(
-                s"Flag flights $flagCountDisplay"
-              ),
-              clearFlags
-            )
-          ),
-          MuiAccordionDetails(sx = SxProps(Map("mb" -> "16px")))(
-            <.div(
-              ^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
-              MuiAutocomplete[MuiAutocompleteOption](
-                options = options,
-                renderInput = acTextInput,
-                sx = SxProps(Map("minWidth" -> "250px")),
-                getOptionLabel = (o: MuiAutocompleteOption) => o.label,
-                isOptionEqualToValue = (o1: MuiAutocompleteOption, o2: MuiAutocompleteOption) => {
-                  o1.id == o2.id
-                },
-                inputValue = state.inputValue,
-                onInputChange = (_: ReactEvent, value: String) => scope.modState(_.copy(inputValue = value)),
-                value = null,
-                onChange = (_: ReactEvent, value: MuiAutocompleteOption) => value match {
-                  case option: MuiAutocompleteOption =>
-                    CountryOptions.countries.find(_.id == option.id) match {
-                      case Some(c) =>
-                        scope.modState(_.copy(inputValue = ""))
-                          .map(_ => SPACircuit.dispatch(AddFlaggedNationality(c)))
-                      case None => Callback.empty
-                    }
-
-                  case _ => Callback.empty
-                },
-              )(),
-              <.div(
-                ^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
-                props.flaggedNationalities.toList
-                  .sortBy(_.name)
-                  .map { c =>
-                    val onDelete = (_: ReactEvent) => Callback(SPACircuit.dispatch(RemoveFlaggedNationality(c)))
-                    MuiChip(label = s"${c.name} (${c.threeLetterCode})".toVdom, onDelete = onDelete)()
+      <.div(^.style := js.Dictionary("padding-top" -> "0px"),
+        <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
+          <.div(
+            MuiTypography(sx = SxProps(Map("font-weight" -> "bold", "padding-bottom" -> "10px")))("Flag flights by pax nationality"),
+            MuiAutocomplete[MuiAutocompleteOption](
+              options = options,
+              renderInput = acTextInput,
+              sx = SxProps(Map("minWidth" -> "265px", "backgroundColor" -> "#FFFFFF")),
+              getOptionLabel = (o: MuiAutocompleteOption) => o.label,
+              isOptionEqualToValue = (o1: MuiAutocompleteOption, o2: MuiAutocompleteOption) => {
+                o1.id == o2.id
+              },
+              inputValue = state.inputValue,
+              onInputChange = (_: ReactEvent, value: String) => scope.modState(_.copy(inputValue = value)),
+              value = null,
+              onChange = (_: ReactEvent, value: MuiAutocompleteOption) => value match {
+                case option: MuiAutocompleteOption =>
+                  CountryOptions.countries.find(_.id == option.id) match {
+                    case Some(c) =>
+                      scope.modState(_.copy(inputValue = ""))
+                        .map(_ => SPACircuit.dispatch(AddFlaggedNationality(c)))
+                    case None => Callback.empty
                   }
-                  .toTagMod
-              )
-            )
-          )
-        )
-      )
+
+                case _ => Callback.empty
+              },
+            )(),
+          ), clearFlags
+        ),
+        <.div(^.style := js.Dictionary("padding-top" -> "16px", "display" -> "wrap", "alignItems" -> "center"),
+          <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "16px"),
+            props.flaggedNationalities.toList
+              .sortBy(_.name)
+              .map { c =>
+                val onDelete = (_: ReactEvent) => Callback(SPACircuit.dispatch(RemoveFlaggedNationality(c)))
+                MuiChip(label = s"${c.name} (${c.threeLetterCode})".toVdom, onDelete = onDelete)()
+              }
+              .toTagMod)
+        ))
     }
     .configure(Reusability.shouldComponentUpdate)
     .build

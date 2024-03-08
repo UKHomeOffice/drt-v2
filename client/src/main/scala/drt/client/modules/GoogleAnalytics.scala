@@ -27,7 +27,7 @@ object GoogleEventTracker {
 
   private def runCreateTracker(): Unit = {
     if (!hasCreateTrackerRun && userId.nonEmpty && port.nonEmpty && trackingCode.nonEmpty) {
-      val userUUID = if (userId.contains("@")) Sha256.hashString(userId) else userId
+      val userUUID = Sha256.hashString(userId)
       GoogleAnalytics.gtag("config", trackingCode, js.Dictionary("user_id" -> userUUID, "anonymize_ip" -> true))
       hasCreateTrackerRun = true
     }
