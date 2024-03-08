@@ -3,22 +3,24 @@ package services.crunch.deskrecs
 import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.SortedActorRefSource
+import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply
+import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MillisSinceEpoch, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, PaxForArrivals}
 import drt.shared._
+import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
-import services.crunch.VoyageManifestGenerator.{euPassport, visa}
-import DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.TryCrunchWholePax
+import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
@@ -104,7 +106,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val flexDesks = false
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
-  private def getDeskRecsGraph(mockPortStateActor: ActorRef, historicManifests: HistoricManifestsProvider, historicManifestsPaxProvider: HistoricManifestsPaxProvider, airportConfig: AirportConfig = defaultAirportConfig) = {
+  private def getDeskRecsGraph(mockPortStateActor: ActorRef,
+                               historicManifests: Iterable[Arrival] => Source[ManifestLike, NotUsed],
+                               historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]],
+                               airportConfig: AirportConfig = defaultAirportConfig): (ActorRef, UniqueKillSwitch) = {
     val paxAllocation = PaxTypeQueueAllocation(
       B5JPlusTypeAllocator,
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))

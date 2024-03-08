@@ -9,17 +9,17 @@ import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.SimulationParams
+import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import passengersplits.parsing.VoyageManifestParser
 import queueus.DynamicQueueStatusProvider
 import services.OptimiserWithFlexibleProcessors
 import services.crunch.desklimits.PortDeskLimits
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWaitsProvider, QueuedRequestProcessing}
 import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -37,8 +37,8 @@ object Scenarios {
                        splitsCalculator: SplitsCalculator,
                        flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                        liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
-                       historicManifestsProvider: HistoricManifestsProvider,
-                       historicManifestsPaxProvider: HistoricManifestsPaxProvider,
+                       historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
+                       historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]],
                        flightsActor: ActorRef,
                        portStateActor: ActorRef,
                        redListUpdatesProvider: () => Future[RedListUpdates],

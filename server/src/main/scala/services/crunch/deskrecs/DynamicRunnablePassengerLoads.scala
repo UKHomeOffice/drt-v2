@@ -30,14 +30,10 @@ import scala.concurrent.{ExecutionContext, Future}
 object DynamicRunnablePassengerLoads {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
-  type HistoricManifestsProvider = Iterable[Arrival] => Source[ManifestLike, NotUsed]
-
-  type HistoricManifestsPaxProvider = Arrival => Future[Option[ManifestPaxCount]]
-
   def crunchRequestsToQueueMinutes(arrivalsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                                    liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]],
-                                   historicManifestsProvider: HistoricManifestsProvider,
-                                   historicManifestsPaxProvider: HistoricManifestsPaxProvider,
+                                   historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
+                                   historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]],
                                    splitsCalculator: SplitsCalculator,
                                    splitsSink: ActorRef,
                                    portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,

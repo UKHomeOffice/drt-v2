@@ -18,10 +18,6 @@ import scala.concurrent.{ExecutionContext, Future}
 object DynamicRunnableDeskRecs {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
-  type HistoricManifestsProvider = Iterable[Arrival] => Source[ManifestLike, NotUsed]
-
-  type HistoricManifestsPaxProvider = Arrival => Future[Option[ManifestPaxCount]]
-
   def crunchRequestsToDeskRecs(loadsProvider: ProcessingRequest => Future[Map[TQM, PassengersMinute]],
                                maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                                loadsToQueueMinutes: PassengersToQueueMinutes)

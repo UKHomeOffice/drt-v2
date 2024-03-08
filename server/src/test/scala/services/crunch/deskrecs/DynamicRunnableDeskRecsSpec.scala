@@ -17,7 +17,6 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 import queueus._
 import services.TryCrunchWholePax
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.DynamicRunnablePassengerLoads.addManifests
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
@@ -76,11 +75,11 @@ object OptimiserMocks {
     _ => Future.successful(Source(List()))
   }
 
-  def mockHistoricManifestsProviderNoop: HistoricManifestsProvider = {
+  def mockHistoricManifestsProviderNoop: Iterable[Arrival] => Source[ManifestLike, NotUsed] = {
     _: Iterable[Arrival] => Source(List())
   }
 
-  def mockHistoricManifestsPaxProviderNoop: HistoricManifestsPaxProvider = {
+  def mockHistoricManifestsPaxProviderNoop: Arrival => Future[Option[ManifestPaxCount]] = {
     _: Arrival => Future.successful(None)
   }
 
@@ -94,7 +93,7 @@ object OptimiserMocks {
   }
 
   def mockHistoricManifestsProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
-                                   (implicit ec: ExecutionContext): HistoricManifestsProvider = {
+                                   (implicit ec: ExecutionContext): Iterable[Arrival] => Source[ManifestLike, NotUsed] = {
     val portCode = PortCode("STN")
 
     val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
@@ -109,7 +108,7 @@ object OptimiserMocks {
   }
 
   def mockHistoricManifestsPaxProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
-                                      (implicit ec: ExecutionContext): HistoricManifestsPaxProvider = {
+                                      (implicit ec: ExecutionContext): Arrival => Future[Option[ManifestPaxCount]] = {
     val portCode = PortCode("STN")
     OptimisationProviders.historicManifestsPaxProvider(
       portCode,

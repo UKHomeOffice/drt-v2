@@ -10,10 +10,9 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute, StaffMinute}
 import drt.shared.{ArrivalKey, TM, TQM}
 import manifests.ManifestLookupLike
-import manifests.passengers.ManifestLike
+import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.metrics.Metrics
 import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
@@ -31,7 +30,7 @@ object OptimisationProviders {
                                 cacheLookup: Arrival => Future[Option[ManifestLike]],
                                 cacheStore: (Arrival, ManifestLike) => Future[Any],
                                )
-                               (implicit ec: ExecutionContext): HistoricManifestsProvider = arrivals =>
+                               (implicit ec: ExecutionContext): Iterable[Arrival] => Source[ManifestLike, NotUsed] = arrivals =>
     Source(arrivals.toList)
       .mapAsync(1) { arrival =>
         cacheLookup(arrival).flatMap {
@@ -59,7 +58,7 @@ object OptimisationProviders {
       .collect { case Some(bam) => bam }
 
   def historicManifestsPaxProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
-                                  (implicit ec: ExecutionContext): HistoricManifestsPaxProvider = arrival =>
+                                  (implicit ec: ExecutionContext): Arrival => Future[Option[ManifestPaxCount]] = arrival =>
     manifestLookupService
       .historicManifestPax(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
       .map { case (_, maybeManifest) => maybeManifest }
