@@ -2,8 +2,10 @@ package services.arrivals
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
+import drt.shared.ArrivalKey
 import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.time.{DateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -71,6 +73,7 @@ object MergeArrivals {
                                       setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
                                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                                       updateAggregatedArrivals: ArrivalsDiff => Unit,
+                                      hasApi: UtcDate => Future[Seq[ArrivalKey]],
                                      )
                                      (implicit ec: ExecutionContext): Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = {
     Flow[ProcessingRequest]
@@ -78,9 +81,23 @@ object MergeArrivals {
         case request: MergeArrivalsRequest => request
       }
       .mapAsync(1) {
-        request => mergeArrivalsForDate(request.date)
-          .flatMap(setPcpTimes)
-          .flatMap(addArrivalPredictions)
+        request =>
+          mergeArrivalsForDate(request.date)
+            .flatMap(setPcpTimes)
+            .flatMap(addArrivalPredictions)
+            .flatMap {
+              diff =>
+                hasApi(request.date).map {
+                  case Seq() => diff
+                  case keys =>
+                    diff.copy(
+                      toUpdate = diff.toUpdate.values.map { a =>
+                        if (keys.contains(ArrivalKey(a))) a.copy(FeedSources = a.FeedSources + ApiFeedSource)
+                        else a
+                      }.map(a => a.unique -> a).toMap
+                    )
+                }
+            }
       }
       .wireTap(updateAggregatedArrivals)
   }

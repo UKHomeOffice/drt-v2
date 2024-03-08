@@ -261,7 +261,7 @@ object DynamicRunnablePassengerLoads {
           .map(manifests => (crunchRequest, arrivals, manifests))
       }
       .map { case (crunchRequest, arrivals, manifests) =>
-        val manifestsByKey = arrivalKeysToManifests(manifests.manifests)
+        val manifestsByKey = manifestsByArrivalKey(manifests.manifests)
         val withLiveSplits = addManifests(arrivals, manifestsByKey, splitsCalculator.splitsForArrival)
         withLiveSplits
           .groupBy(f =>
@@ -291,7 +291,7 @@ object DynamicRunnablePassengerLoads {
           }
       }
       .map { case (crunchRequest, flights, manifests) =>
-        val manifestsByKey = arrivalKeysToManifests(manifests)
+        val manifestsByKey = manifestsByArrivalKey(manifests)
         (crunchRequest, addManifests(flights, manifestsByKey, splitsCalculator.splitsForArrival))
       }
       .map {
@@ -311,7 +311,7 @@ object DynamicRunnablePassengerLoads {
           (crunchRequest, allFlightsWithSplits)
       }
 
-  private def arrivalKeysToManifests(manifests: Iterable[ManifestLike]): Map[ArrivalKey, ManifestLike] =
+  private def manifestsByArrivalKey(manifests: Iterable[ManifestLike]): Map[ArrivalKey, ManifestLike] =
     manifests
       .map { manifest =>
         manifest.maybeKey.map(arrivalKey => (arrivalKey, manifest))

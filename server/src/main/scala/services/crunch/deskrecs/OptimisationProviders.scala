@@ -4,10 +4,11 @@ import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
-import akka.stream.scaladsl.Source
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute, StaffMinute}
-import drt.shared.{TM, TQM}
+import drt.shared.{ArrivalKey, TM, TQM}
 import manifests.ManifestLookupLike
 import manifests.passengers.ManifestLike
 import org.slf4j.{Logger, LoggerFactory}
@@ -88,6 +89,18 @@ object OptimisationProviders {
     Future.successful(
       manifestsProvider(processingRequest.start.toUtcDate, processingRequest.end.toUtcDate).map(_._2)
     )
+
+  def liveAPIArrivalKeyProvider(manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
+                               (implicit mat: Materializer, ec: ExecutionContext): UtcDate => Future[Seq[ArrivalKey]] =
+    date =>
+      manifestsProvider(date, date)
+        .map {
+          case (_, vms) => vms.manifests
+            .map(_.maybeKey)
+            .collect { case Some(key) => key }
+        }
+        .runWith(Sink.seq)
+        .map(_.flatten)
 
   def passengersProvider(passengersActor: ActorRef)
                         (processingRequest: ProcessingRequest)
