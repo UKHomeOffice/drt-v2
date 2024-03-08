@@ -2,13 +2,14 @@ package actors.persistent.arrivals
 
 import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.staffing.GetFeedStatuses
+import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.shared.FlightsApi.Flights
 import scalapb.GeneratedMessage
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike, Sizes}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, ArrivalsRestorer, UniqueArrival}
@@ -17,7 +18,7 @@ import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.SortedMap
 
@@ -29,6 +30,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   val restorer = new ArrivalsRestorer[Arrival]
   var state: ArrivalsState = initialState
+  var maybeSubscriber: Option[ActorRef] = None
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
   override def initialState: ArrivalsState = ArrivalsState.empty(feedSource)
@@ -79,7 +81,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
       handleFeedSuccess(incomingArrivals, createdAt)
 
-    case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)
+    case ArrivalsFeedFailure(message, createdAt) =>
+      handleFeedFailure(message, createdAt)
+
+    case AddUpdatesSubscriber(newSubscriber) =>
+      maybeSubscriber = Option(newSubscriber)
 
     case GetState =>
       sender() ! state
@@ -117,6 +123,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
     val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
 
     state = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
+
+    maybeSubscriber.foreach {
+      val updatedDays = updatedArrivals.map(a => SDate(a.Scheduled).toUtcDate)
+      _ ! updatedDays
+    }
 
     persistFeedStatus(newStatus)
     if (updatedArrivals.nonEmpty) persistArrivalUpdates(ArrivalsDiff(updatedArrivals, Seq()))
