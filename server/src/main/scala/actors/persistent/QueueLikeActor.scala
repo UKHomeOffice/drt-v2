@@ -10,8 +10,8 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._
-import uk.gov.homeoffice.drt.protobuf.serialisation.CrunchRequestMessageConversion.{loadProcessingRequestFromMessage, loadProcessingRequestToMessage, mergeArrivalRequestToMessage}
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.protobuf.serialisation.CrunchRequestMessageConversion.{loadProcessingRequestFromMessage, loadProcessingRequestToMessage, mergeArrivalRequestToMessage, mergeArrivalsRequestFromMessage}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
@@ -46,11 +46,16 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
     case CrunchRequestsMessage(requests) =>
       state ++= requests.map(loadProcessingRequestFromMessage)
 
+    case MergeArrivalsRequestsMessage(requests) =>
+      state ++= requests.map(mergeArrivalsRequestFromMessage)
+
     case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day), maybeTerminal) => state.find {
       case TerminalUpdateRequest(terminal, localDate, _, _) =>
         localDate == LocalDate(year, month, day) && Option(terminal) == maybeTerminal.map(Terminal(_))
       case CrunchRequest(localDate, _, _) =>
         localDate == LocalDate(year, month, day)
+      case MergeArrivalsRequest(utcDate) =>
+        utcDate == UtcDate(year, month, day)
     }.foreach(state -= _)
 
     case DaysMessage(days) => state ++= days.map(processingRequest)
@@ -61,6 +66,10 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
     case CrunchRequestsMessage(requests) =>
       log.info(s"Restoring queue to ${requests.size} days")
       state ++= requests.map(loadProcessingRequestFromMessage)
+
+    case MergeArrivalsRequestsMessage(requests) =>
+      log.info(s"Restoring queue to ${requests.size} days")
+      state ++= requests.map(mergeArrivalsRequestFromMessage)
 
     case DaysMessage(days) =>
       log.info(s"Restoring queue to ${days.size} days")
