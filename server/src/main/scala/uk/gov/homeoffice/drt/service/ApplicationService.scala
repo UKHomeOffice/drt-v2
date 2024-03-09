@@ -15,11 +15,13 @@ import akka.{Done, NotUsed}
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
+import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared._
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
+import org.openjdk.jol.info.GraphLayout
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import play.api.Configuration
@@ -79,6 +81,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               actorService: ActorsServiceLike,
                               persistentStateActors: PersistentStateActors)
                              (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
+  val aclfeed = AclFeed("ftp.acl-uk.org", "Homeoffice_OulaB", "/home/rich/.ssh/id_rsa_acl", PortCode("LHR"), AclFeed.aclToPortMapping(PortCode("LHR")))
+
+  println(s"\n\nImporting ACL...")
+  aclfeed.requestArrivals
+  println("\n\nDone\n\n")
+
   val log: Logger = LoggerFactory.getLogger(getClass)
   private val walkTimeProvider: (Terminal, String, String) => Option[Int] = WalkTimeProvider(params.gateWalkTimesFilePath, params.standWalkTimesFilePath)
 
