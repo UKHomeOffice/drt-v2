@@ -74,8 +74,8 @@ class TerminalDayFlightActor(year: Int,
     state = state.copy(flights = restorer.arrivals)
     restorer.finish()
 
-    if (messagesPersistedSinceSnapshotCounter > 10 && lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight) {
-      log.info(s"Creating final snapshot for $terminal for historic day $year-$month%02d-$day%02d")
+    if (maybePointInTime.isEmpty && messagesPersistedSinceSnapshotCounter > 10 && lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight) {
+      log.info(f"Creating final snapshot for $terminal for historic day $year-$month%02d-$day%02d")
       saveSnapshot(stateToMessage)
     }
   }
