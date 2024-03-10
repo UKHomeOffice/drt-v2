@@ -81,12 +81,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               actorService: ActorsServiceLike,
                               persistentStateActors: PersistentStateActors)
                              (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
-  val aclfeed = AclFeed("ftp.acl-uk.org", "Homeoffice_OulaB", "/home/rich/.ssh/id_rsa_acl", PortCode("LHR"), AclFeed.aclToPortMapping(PortCode("LHR")))
-
-  println(s"\n\nImporting ACL...")
-  aclfeed.requestArrivals
-  println("\n\nDone\n\n")
-
   val log: Logger = LoggerFactory.getLogger(getClass)
   private val walkTimeProvider: (Terminal, String, String) => Option[Int] = WalkTimeProvider(params.gateWalkTimesFilePath, params.standWalkTimesFilePath)
 
