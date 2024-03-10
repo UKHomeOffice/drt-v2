@@ -2,10 +2,8 @@ package services.arrivals
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import drt.shared.ArrivalKey
 import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.ApiFeedSource
 import uk.gov.homeoffice.drt.time.{DateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,7 +18,15 @@ object MergeArrivals {
       for {
         arrivalSets <- Future.sequence(arrivalSources.map(_(date)))
         existing <- existingMerged(date)
-      } yield mergeSets(existing, arrivalSets, adjustments)
+      } yield {
+        val nonDomesticArrivalSets = arrivalSets.map {
+          case (isPrimary, arrivals) =>
+            isPrimary -> arrivals.filterNot {
+              case (_, arrival) => arrival.Origin.isDomestic
+            }
+        }
+        mergeSets(existing, nonDomesticArrivalSets, adjustments)
+      }
     }
 
   def mergeSets(existingMerged: Set[UniqueArrival],
