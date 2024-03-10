@@ -89,18 +89,6 @@ object OptimisationProviders {
       manifestsProvider(processingRequest.start.toUtcDate, processingRequest.end.toUtcDate).map(_._2)
     )
 
-  def liveAPIArrivalKeyProvider(manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
-                               (implicit mat: Materializer, ec: ExecutionContext): UtcDate => Future[Seq[ArrivalKey]] =
-    date =>
-      manifestsProvider(date, date)
-        .map {
-          case (_, vms) => vms.manifests
-            .map(_.maybeKey)
-            .collect { case Some(key) => key }
-        }
-        .runWith(Sink.seq)
-        .map(_.flatten)
-
   def passengersProvider(passengersActor: ActorRef)
                         (processingRequest: ProcessingRequest)
                         (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[TQM, PassengersMinute]] =

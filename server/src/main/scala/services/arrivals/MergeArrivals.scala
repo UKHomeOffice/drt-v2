@@ -73,7 +73,6 @@ object MergeArrivals {
                                       setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
                                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                                       updateAggregatedArrivals: ArrivalsDiff => Unit,
-                                      hasApi: UtcDate => Future[Seq[ArrivalKey]],
                                      )
                                      (implicit ec: ExecutionContext): Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = {
     Flow[ProcessingRequest]
@@ -85,19 +84,6 @@ object MergeArrivals {
           mergeArrivalsForDate(request.date)
             .flatMap(setPcpTimes)
             .flatMap(addArrivalPredictions)
-            .flatMap {
-              diff =>
-                hasApi(request.date).map {
-                  case Seq() => diff
-                  case keys =>
-                    diff.copy(
-                      toUpdate = diff.toUpdate.values.map { a =>
-                        if (keys.contains(ArrivalKey(a))) a.copy(FeedSources = a.FeedSources + ApiFeedSource)
-                        else a
-                      }.map(a => a.unique -> a).toMap
-                    )
-                }
-            }
       }
       .wireTap(updateAggregatedArrivals)
   }

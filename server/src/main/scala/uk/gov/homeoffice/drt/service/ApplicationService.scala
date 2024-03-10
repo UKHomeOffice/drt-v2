@@ -310,7 +310,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
         setPcpTimes = setPcpTimes,
         addArrivalPredictions = addArrivalPredictions,
         updateAggregatedArrivals = actors.aggregatedArrivalsActor ! _,
-        hasApi = OptimisationProviders.liveAPIArrivalKeyProvider(manifestsProvider),
       )
 
       val (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =
