@@ -19,13 +19,16 @@ object MergeArrivals {
         arrivalSets <- Future.sequence(arrivalSources.map(_(date)))
         existing <- existingMerged(date)
       } yield {
-        val nonDomesticArrivalSets = arrivalSets.map {
+        val validatedArrivalSets = arrivalSets.map {
           case (isPrimary, arrivals) =>
             isPrimary -> arrivals.filterNot {
-              case (_, arrival) => arrival.Origin.isDomestic
+              case (_, arrival) =>
+                val isInvalidSuffix = arrival.FlightCodeSuffix.exists(fcs => fcs.suffix == "P" || fcs.suffix == "F")
+                val isDomestic = arrival.Origin.isDomestic
+                isInvalidSuffix || isDomestic
             }
         }
-        mergeSets(existing, nonDomesticArrivalSets, adjustments)
+        mergeSets(existing, validatedArrivalSets, adjustments)
       }
     }
 
