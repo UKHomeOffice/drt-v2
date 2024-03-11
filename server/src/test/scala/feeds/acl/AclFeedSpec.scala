@@ -151,7 +151,7 @@ class AclFeedSpec extends CrunchTestLike {
       val arrivals = arrivalsFromCsvContent(csvContent, regularTerminalMapping)
       val expected = List(Arrival(
         Operator = Option(Operator("4U")),
-        Status = ArrivalStatus("ACL Forecast"),
+        Status = ArrivalStatus("Scheduled"),
         Estimated = None,
         Predictions = Predictions(0L, Map()),
         Actual = None,
@@ -162,7 +162,7 @@ class AclFeedSpec extends CrunchTestLike {
         MaxPax = Option(180),
         RunwayID = None,
         BaggageReclaimId = None,
-        AirportID = PortCode("LHR"),
+        AirportID = PortCode(""),
         Terminal = T2,
         rawICAO = "4U0460",
         rawIATA = "4U0460",
@@ -215,7 +215,7 @@ class AclFeedSpec extends CrunchTestLike {
       val expected = List(
         Arrival(
           Operator = Option(Operator("4U")),
-          Status = ArrivalStatus("ACL Forecast"),
+          Status = ArrivalStatus("Scheduled"),
           Estimated = None,
           Predictions = Predictions(0L, Map()),
           Actual = None,
@@ -226,7 +226,7 @@ class AclFeedSpec extends CrunchTestLike {
           MaxPax = Option(0),
           RunwayID = None,
           BaggageReclaimId = None,
-          AirportID = PortCode("LHR"),
+          AirportID = PortCode(""),
           Terminal = T2,
           rawICAO = "4U0460",
           rawIATA = "4U0460",
@@ -251,7 +251,7 @@ class AclFeedSpec extends CrunchTestLike {
       val expected = List(
         Arrival(
           Operator = Option(Operator("4U")),
-          Status = ArrivalStatus("ACL Forecast"),
+          Status = ArrivalStatus("Scheduled"),
           Estimated = None,
           Predictions = Predictions(0L, Map()),
           Actual = None,
@@ -262,7 +262,7 @@ class AclFeedSpec extends CrunchTestLike {
           MaxPax = Option(200),
           RunwayID = None,
           BaggageReclaimId = None,
-          AirportID = PortCode("LHR"),
+          AirportID = PortCode(""),
           Terminal = T2,
           rawICAO = "4U0460",
           rawIATA = "4U0460",
