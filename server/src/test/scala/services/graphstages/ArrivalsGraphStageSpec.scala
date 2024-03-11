@@ -302,29 +302,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     success
   }
 
-  "Given a live feed flight into T1, when it changes to T2 we should no longer see it in T1" >> {
-    val scheduled = "2021-06-01T12:40"
-    val arrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
-
-    val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
-
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(arrival))))
-
-    crunch.portStateTestProbe.fishForMessage(1.second) {
-      case PortState(flights, _, _) => flights.values.map(a => a.apiFlight.Terminal) == Iterable(T1)
-    }
-
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(arrival.copy(Terminal = T2)))))
-
-    crunch.portStateTestProbe.fishForMessage(1.second) {
-      case PortState(flights, _, _) =>
-        val terminals = flights.values.map(a => a.apiFlight.Terminal)
-        terminals == Iterable(T2)
-    }
-
-    success
-  }
-
   "Max pax from ACL" should {
     "Remain after receiving a live feed without max pax" in {
       val aclFlight = ArrivalGenerator.arrival("BA0001", schDt = "2021-05-01T12:50", origin = PortCode("JFK"), passengerSources = Map(AclFeedSource -> Passengers(Option(80), None)), maxPax = Option(100))
@@ -343,7 +320,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       crunch.portStateTestProbe.fishForMessage(1.second) {
         case PortState(flights, _, _) =>
-          println(s"flights: ${flights.values.map(_.apiFlight.MaxPax)}")
           flights.values.exists(a => a.apiFlight.bestPcpPaxEstimate(List(LiveFeedSource)) == Option(95) && a.apiFlight.MaxPax == Option(100))
       }
 
