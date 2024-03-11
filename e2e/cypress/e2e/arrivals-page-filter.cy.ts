@@ -29,7 +29,7 @@ describe('Arrivals page filter', () => {
       .waitForFlightToAppear("TS0123")
       .get('.time-range > :nth-child(1)').select("00")
       .get('.time-range > :nth-child(2)').select("01")
-      .get('#arrivals > div').contains("No flights found")
+      .get('#arrivals > div').contains("No flights to display")
       .get('.time-range > :nth-child(1)').select(scheduledHour)
       .get('.time-range > :nth-child(2)').select(oneHourAfterScheduled)
       .get('.arrivals__table__flight-code').contains("TS0123")
