@@ -400,7 +400,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
       feedService.liveBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
       feedService.liveFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
 
-      (mergeArrivalsRequestQueueActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, mergeArrivalsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+      (mergeArrivalsRequestQueueActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor,
+        mergeArrivalsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
     }
 
 
@@ -422,7 +423,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
     PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
 
   def startCrunchSystem(actors: PersistentStateActors,
-                        startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
+                        startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef,
+                          UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
     val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] =
       Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
