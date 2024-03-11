@@ -85,7 +85,7 @@ describe('View Modes', () => {
         .chooseArrivalsTab()
         .get('#yesterday').click({force: true})
         .wait(100)
-        .get('#arrivals').contains("No flights found")
+        .get('#arrivals').contains("No flights to display")
         .get('#today').click({force: true})
         .wait(100)
         .choose24Hours()
