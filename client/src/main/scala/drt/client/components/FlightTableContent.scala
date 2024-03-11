@@ -77,8 +77,9 @@ object FlightTableContent {
         case _ => DefaultFlightDisplayFilter
       }
 
-      val flights: Seq[ApiFlightWithSplits] = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder)
-        .flights.values.toList.filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(props.filterFlightNumber.toLowerCase))
+      val flightsForWindow = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder)
+      val flights: Seq[ApiFlightWithSplits] = flightsForWindow.flights.values.toList
+        .filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(props.filterFlightNumber.toLowerCase))
       flights
         .groupBy(f =>
           (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
@@ -143,9 +144,15 @@ object FlightTableContent {
                 }.toTagMod)
             )))
         } else <.div(^.style := js.Dictionary("padding-top" -> "16px", "padding-bottom" -> "16px"),
-          <.div(^.style := js.Dictionary("border" -> "1px solid #99001E"),
-            MuiAlert(variant = MuiAlert.Variant.standard, color = "error", severity = "error")(
-              MuiTypography(sx = SxProps(Map("font-weight" -> "bold")))("No flights found."),"Check the flight number or time period."))
+          if (flightsForWindow.flights.isEmpty) {
+            <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
+              MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
+              (MuiTypography(sx = SxProps(Map("font-weight" -> "bold")))("No flights to display.")))
+          } else {
+            <.div(^.style := js.Dictionary("border" -> "1px solid #99001E"),
+              MuiAlert(variant = MuiAlert.Variant.standard, color = "error", severity = "error")(
+                MuiTypography(sx = SxProps(Map("font-weight" -> "bold")))("No flights found."), "Check the flight number or time period."))
+          }
         )
       )
     }.configure(Reusability.shouldComponentUpdate)
