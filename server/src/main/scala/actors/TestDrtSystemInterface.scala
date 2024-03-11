@@ -5,10 +5,11 @@ import akka.stream.KillSwitch
 import drt.server.feeds.FeedPoller.Enable
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
-import uk.gov.homeoffice.drt.crunchsystem.{PersistentStateActors, ActorsServiceLike}
+import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
 import uk.gov.homeoffice.drt.testsystem.RestartActor
 import uk.gov.homeoffice.drt.time.{MilliDate => _}
+
 import scala.collection.SortedSet
 
 trait TestDrtSystemActorsLike {
@@ -30,6 +31,7 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
     feedService.liveFeedArrivalsActor,
     feedService.liveBaseFeedArrivalsActor,
     persistentActors.manifestsRouterActor,
+    persistentActors.mergeArrivalsQueueActor,
     persistentActors.crunchQueueActor,
     persistentActors.deskRecsQueueActor,
     persistentActors.deploymentQueueActor,

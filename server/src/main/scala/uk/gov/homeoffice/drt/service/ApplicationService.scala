@@ -15,13 +15,11 @@ import akka.{Done, NotUsed}
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
-import drt.server.feeds.acl.AclFeed
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared._
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
-import org.openjdk.jol.info.GraphLayout
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import play.api.Configuration
@@ -301,7 +299,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
       val merger = MergeArrivals(
         existingMergedArrivals,
-        FeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary),
+        ProdFeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary),
         ArrivalsAdjustments.adjustmentsForPort(airportConfig.portCode),
       )
 

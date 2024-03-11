@@ -9,7 +9,7 @@ import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.service.ActorsServiceService
+import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
@@ -58,7 +58,19 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     flightLookups = flightLookups,
     minuteLookups = minuteLookups)
 
-  val persistentActors: PersistentStateActors = ProdPersistentStateActors(
+  lazy val feedService: FeedService = ProdFeedService(
+    journalType = journalType,
+    airportConfig = airportConfig,
+    now = now,
+    params = params,
+    config = config,
+    paxFeedSourceOrder = paxFeedSourceOrder,
+    flightLookups = flightLookups,
+    manifestLookups = manifestLookups,
+  )
+
+
+  lazy val persistentActors: PersistentStateActors = ProdPersistentStateActors(
     system,
     now,
     airportConfig.minutesToCrunch,

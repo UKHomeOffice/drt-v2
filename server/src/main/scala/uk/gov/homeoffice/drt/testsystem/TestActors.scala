@@ -73,51 +73,39 @@ object TestActors {
   }
 
   class TestPortForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends PortForecastArrivalsActor(now, expireAfterMillis) {
-
-    private def resetBehaviour: Receive = {
-      case ResetData =>
-        state.clear()
-        sender() ! Ack
-    }
-
-    override def receiveRecover: Receive = {
-      case _ => ()
-    }
+    extends PortForecastArrivalsActor(now, expireAfterMillis) with Resettable {
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestPortLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends PortLiveArrivalsActor(now, expireAfterMillis) with Resettable {
-    override def resetState(): Unit = state.clear()
+    override def resetState(): Unit = {
+      println("\n\n Port live arriavls actor reset state called \n\n")
+      state.clear()
+    }
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestMergeArrivalsQueueActor(now: () => SDateLike, request: Long => MergeArrivalsRequest)
     extends CrunchQueueActor(now, request) with Resettable {
-    override def resetState(): Unit = {
-      state.clear()
-    }
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestCrunchQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
     extends CrunchQueueActor(now, request) with Resettable {
-    override def resetState(): Unit = {
-      state.clear()
-    }
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestDeskRecsQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
     extends DeskRecsQueueActor(now, request) with Resettable {
-    override def resetState(): Unit = {
-      state.clear()
-    }
+    override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }

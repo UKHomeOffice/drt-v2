@@ -39,7 +39,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.service.FeedService
+import uk.gov.homeoffice.drt.service.ProdFeedService
 import uk.gov.homeoffice.drt.testsystem.TestActors.MockAggregatedArrivalsActor
 import uk.gov.homeoffice.drt.time._
 
@@ -126,7 +126,7 @@ class TestDrtActor extends Actor {
 
     override def receiveCommand: Receive = setArrivalCommand orElse super.receiveCommand
   }
-  
+
   class TestAclBaseArrivalsActor(now: () => SDateLike,
                                  expireAfterMillis: Int) extends AclForecastArrivalsActor(now, expireAfterMillis) {
     private def setArrivalCommand: Receive = {
@@ -285,7 +285,7 @@ class TestDrtActor extends Actor {
               .runWith(Sink.fold(Set[UniqueArrival]())(_ ++ _))
               .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
 
-        val feedProviders = FeedService.arrivalFeedProvidersInOrder(Seq(
+        val feedProviders = ProdFeedService.arrivalFeedProvidersInOrder(Seq(
           (true, None, forecastBaseFeedArrivalsActor),
           (false, None, forecastFeedArrivalsActor),
           (false, Option(5.minutes), liveBaseFeedArrivalsActor),
