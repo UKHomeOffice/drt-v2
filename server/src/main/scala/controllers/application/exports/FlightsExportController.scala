@@ -1,7 +1,7 @@
 package controllers.application.exports
 
 import actors.PartitionedPortStateActor.PointInTimeQuery
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
@@ -165,7 +165,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
                              feedSourceString: String): Action[AnyContent] = authByRole(ArrivalSource) {
 
     val feedSourceToPersistenceId: Map[FeedSource, String] = Map(
-      LiveBaseFeedSource -> CirriumLiveArrivalsActor.persistenceId,
+      LiveBaseFeedSource -> CiriumLiveArrivalsActor.persistenceId,
       LiveFeedSource -> PortLiveArrivalsActor.persistenceId,
       AclFeedSource -> AclForecastArrivalsActor.persistenceId,
       ForecastFeedSource -> PortForecastArrivalsActor.persistenceId

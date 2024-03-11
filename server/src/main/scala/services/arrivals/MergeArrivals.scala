@@ -6,11 +6,14 @@ import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, ProcessingReq
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.time.{DateLike, UtcDate}
 
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 object MergeArrivals {
+  case class FeedArrivalSet(isPrimary: Boolean, maybeScheduleTolerance: Option[FiniteDuration], arrivals: Map[UniqueArrival, Arrival])
+
   def apply(existingMerged: UtcDate => Future[Set[UniqueArrival]],
-            arrivalSources: Seq[DateLike => Future[(Boolean, Map[UniqueArrival, Arrival])]],
+            arrivalSources: Seq[DateLike => Future[FeedArrivalSet]],
             adjustments: Arrival => Arrival,
            )
            (implicit ec: ExecutionContext): UtcDate => Future[ArrivalsDiff] =
@@ -20,38 +23,73 @@ object MergeArrivals {
         existing <- existingMerged(date)
       } yield {
         val validatedArrivalSets = arrivalSets.map {
-          case (isPrimary, arrivals) =>
-            isPrimary -> arrivals.filterNot {
+          case fas@FeedArrivalSet(_, _, arrivals) =>
+            val filtered = arrivals.filterNot {
               case (_, arrival) =>
                 val isInvalidSuffix = arrival.FlightCodeSuffix.exists(fcs => fcs.suffix == "P" || fcs.suffix == "F")
                 val isDomestic = arrival.Origin.isDomestic
                 isInvalidSuffix || isDomestic
             }
+            fas.copy(arrivals = filtered)
         }
         mergeSets(existing, validatedArrivalSets, adjustments)
       }
     }
 
   def mergeSets(existingMerged: Set[UniqueArrival],
-                arrivalSets: Seq[(Boolean, Map[UniqueArrival, Arrival])],
+                arrivalSets: Seq[FeedArrivalSet],
                 adjustments: Arrival => Arrival,
                ): ArrivalsDiff = {
-    val newMerged = arrivalSets.toList match {
-      case (_, startSet) :: otherSets =>
-        otherSets.foldLeft(startSet) {
-          case (acc, (isPrimary, arrivals)) =>
-            arrivals.foldLeft(acc) {
-              case (acc, (uniqueArrival, nextArrival)) =>
-                acc.get(uniqueArrival) match {
-                  case Some(existingArrival) =>
-                    acc + (uniqueArrival -> mergeArrivals(existingArrival, nextArrival))
-                  case None =>
-                    if (isPrimary) acc + (uniqueArrival -> nextArrival)
-                    else acc
+    def existsInPrimary(uniqueArrival: UniqueArrival): Boolean = arrivalSets
+      .filter {
+        case FeedArrivalSet(isPrimary, _, _) => isPrimary
+      }
+      .exists {
+        case FeedArrivalSet(isPrimary, _, arrivals) => isPrimary && arrivals.contains(uniqueArrival)
+      }
+
+    def findFuzzyInPrimary(maybeTolerance: Option[FiniteDuration], uniqueArrival: UniqueArrival): Option[UniqueArrival] =
+      maybeTolerance.flatMap { tolerance =>
+        arrivalSets
+          .filter {
+            case FeedArrivalSet(isPrimary, _, _) => isPrimary
+          }
+          .map {
+            case FeedArrivalSet(_, _, arrivals) =>
+              arrivals.keys.find { case UniqueArrival(n, t, s, o) =>
+                def fuzzyScheduleMatches: Boolean = uniqueArrival.scheduled - tolerance.toMillis <= s && s <= uniqueArrival.scheduled + tolerance.toMillis
+
+                val isFuzzyMatch = uniqueArrival.number == n && uniqueArrival.terminal == t && uniqueArrival.origin == o && fuzzyScheduleMatches
+                isFuzzyMatch
+              }
+          }
+          .find(_.isDefined)
+          .flatten
+      }
+
+    val newMerged = arrivalSets.foldLeft(Map.empty[UniqueArrival, Arrival]) {
+      case (acc, FeedArrivalSet(isPrimary, maybeTolerance, arrivals)) =>
+        arrivals.foldLeft(acc) {
+          case (acc, (uniqueArrival, nextArrival)) =>
+            acc.get(uniqueArrival) match {
+              case Some(existingArrival) =>
+                acc + (uniqueArrival -> mergeArrivals(existingArrival, nextArrival))
+              case None =>
+                if (isPrimary || existsInPrimary(uniqueArrival)) {
+                  acc + (uniqueArrival -> nextArrival)
+                }
+                else {
+                  findFuzzyInPrimary(maybeTolerance, uniqueArrival) match {
+                    case Some(primaryUniqueArrival) =>
+                      acc + (primaryUniqueArrival -> nextArrival.copy(Scheduled = primaryUniqueArrival.scheduled))
+                    case None =>
+                      acc
+                  }
                 }
             }
         }
     }
+
     val mergedAndAdjusted = newMerged.values.map(adjustments).map(a => a.unique -> a).toMap
     val removed = existingMerged -- mergedAndAdjusted.keySet
     ArrivalsDiff(mergedAndAdjusted, removed)

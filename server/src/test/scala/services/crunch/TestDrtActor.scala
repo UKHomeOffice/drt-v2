@@ -4,7 +4,7 @@ import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
 import akka.NotUsed
@@ -126,7 +126,7 @@ class TestDrtActor extends Actor {
 
     override def receiveCommand: Receive = setArrivalCommand orElse super.receiveCommand
   }
-
+  
   class TestAclBaseArrivalsActor(now: () => SDateLike,
                                  expireAfterMillis: Int) extends AclForecastArrivalsActor(now, expireAfterMillis) {
     private def setArrivalCommand: Receive = {
@@ -164,7 +164,7 @@ class TestDrtActor extends Actor {
         liveFeedArrivalsActor ! TestArrivalActor.SetArrivals(tc.initialLiveArrivals)
 
       val liveBaseFeedArrivalsActor: ActorRef =
-        system.actorOf(Props(new CirriumLiveArrivalsActor(tc.now, tc.expireAfterMillis)), name = "live-base-arrivals-actor")
+        system.actorOf(Props(new CiriumLiveArrivalsActor(tc.now, tc.expireAfterMillis)), name = "live-base-arrivals-actor")
 
       val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
         journalType, tc.airportConfig.minutesToCrunch, tc.now), name = "shifts-read-actor")
@@ -286,10 +286,10 @@ class TestDrtActor extends Actor {
               .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
 
         val feedProviders = FeedService.arrivalFeedProvidersInOrder(Seq(
-          (true, forecastBaseFeedArrivalsActor),
-          (false, forecastFeedArrivalsActor),
-          (false, liveBaseFeedArrivalsActor),
-          (true, liveFeedArrivalsActor)
+          (true, None, forecastBaseFeedArrivalsActor),
+          (false, None, forecastFeedArrivalsActor),
+          (false, Option(5.minutes), liveBaseFeedArrivalsActor),
+          (true, None, liveFeedArrivalsActor)
         ))
         val merger = MergeArrivals(existingMergedArrivals, feedProviders, tc.arrivalsAdjustments.adjust)
 

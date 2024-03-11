@@ -110,7 +110,7 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
     }
 
   private val arrivalActorPersistenceIds = Seq(
-    (CirriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
+    (CiriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
     (PortLiveArrivalsActor.persistenceId, LiveFeedSource),
     (AclForecastArrivalsActor.persistenceId, AclFeedSource),
     (PortForecastArrivalsActor.persistenceId, ForecastFeedSource)
