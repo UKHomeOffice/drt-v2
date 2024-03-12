@@ -23,7 +23,6 @@ import scala.concurrent.duration.DurationInt
 
 
 class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
-
   def getCrunch: Action[AnyContent] = authByRole(DesksAndQueuesView) {
     Action.async { request: Request[AnyContent] =>
       val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)

@@ -1,10 +1,12 @@
 package uk.gov.homeoffice.drt.testsystem
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Status}
+import akka.actor.{Actor, ActorLogging, ActorRef, Status, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.persistence.testkit.scaladsl.PersistenceTestKit
 import akka.stream.KillSwitch
 import akka.util.Timeout
+import drt.server.feeds.Feed.FeedTick
+import services.crunch.CrunchSystem
 import uk.gov.homeoffice.drt.testsystem.RestartActor.{AddResetActors, StartTestSystem}
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 
@@ -17,7 +19,7 @@ object RestartActor {
   case class AddResetActors(actors: Iterable[ActorRef])
 }
 
-class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with ActorLogging {
+class RestartActor(startSystem: () => Future[Option[CrunchSystem[typed.ActorRef[FeedTick]]]]) extends Actor with ActorLogging {
 
   private lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(context.system)
 
@@ -62,13 +64,20 @@ class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with Actor
       log.error(s"Got a failure message: ${t.getMessage}")
 
     case StartTestSystem =>
-      startTestSystem()
+      val replyTo = sender()
+      startTestSystem().foreach (replyTo ! _)
 
     case u =>
       log.error(s"Received unexpected message: ${u.getClass}")
   }
 
-  private def startTestSystem(): Unit = currentKillSwitches = startSystem()
+  private def startTestSystem(): Future[Option[CrunchSystem[typed.ActorRef[FeedTick]]]] =
+    startSystem().map { cs =>
+      cs.foreach { c =>
+        currentKillSwitches = c.killSwitches
+      }
+      cs
+    }
 
   private def resetInMemoryData(): Unit = persistenceTestKit.clearAll()
 }

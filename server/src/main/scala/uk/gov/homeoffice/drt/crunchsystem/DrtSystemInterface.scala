@@ -1,14 +1,16 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors._
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, typed}
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
+import drt.server.feeds.Feed.FeedTick
 import manifests.ManifestLookupLike
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
+import services.crunch.CrunchSystem
 import slickdb.Tables
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
@@ -19,7 +21,7 @@ import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
 import uk.gov.homeoffice.drt.time._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 trait DrtSystemInterface extends UserRoleProviderLike
   with FeatureGuideProviderLike
@@ -93,6 +95,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
     actorService = actorService,
     persistentStateActors = persistentActors
   )
-  def run(): Unit
 
+  val run: Future[Option[CrunchSystem[typed.ActorRef[FeedTick]]]]
 }

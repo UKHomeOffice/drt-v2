@@ -2,13 +2,16 @@
 package uk.gov.homeoffice.drt.testsystem
 
 import actors._
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, typed}
+import akka.pattern.ask
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.Inject
+import drt.server.feeds.Feed.FeedTick
 import manifests.ManifestLookupLike
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
+import services.crunch.CrunchSystem
 import slickdb._
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, DrtSystemInterface}
@@ -20,7 +23,7 @@ import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 
 @Singleton
@@ -81,8 +84,9 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
 
   val testDrtSystemActor: TestDrtSystemActorsLike = TestDrtSystemActors(applicationService, feedService, actorService, persistentActors, config)
 
-  override def run(): Unit = {
-    testDrtSystemActor.restartActor ! StartTestSystem
+  override lazy val run: Future[Option[CrunchSystem[typed.ActorRef[FeedTick]]]] = {
+    testDrtSystemActor.restartActor.ask(StartTestSystem)
+      .mapTo[Option[CrunchSystem[typed.ActorRef[FeedTick]]]]
   }
 
 }

@@ -1,11 +1,13 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors._
-import akka.actor.ActorSystem
+import akka.actor.{ActorSystem, typed}
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.Inject
+import drt.server.feeds.Feed.FeedTick
 import manifests.{ManifestLookup, ManifestLookupLike}
+import services.crunch.CrunchSystem
 import slickdb._
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -13,7 +15,7 @@ import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFee
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters, now: () => SDateLike)
@@ -69,7 +71,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     manifestLookups = manifestLookups,
   )
 
-
   lazy val persistentActors: PersistentStateActors = ProdPersistentStateActors(
     system,
     now,
@@ -79,8 +80,8 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     airportConfig.portCode,
     feedService.paxFeedSourceOrder)
 
-  override def run(): Unit = {
-    applicationService.run()
+  override lazy val run: Future[Option[CrunchSystem[typed.ActorRef[FeedTick]]]] = {
+    applicationService.run
   }
 
 }

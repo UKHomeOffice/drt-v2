@@ -79,11 +79,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               actorService: ActorsServiceLike,
                               persistentStateActors: PersistentStateActors)
                              (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
-//  val aclfeed = AclFeed("ftp.acl-uk.org", "Homeoffice_OulaB", "/home/rich/.ssh/id_rsa_acl", PortCode("LHR"), AclFeed.aclToPortMapping(PortCode("LHR")))
+  //  val aclfeed = AclFeed("ftp.acl-uk.org", "Homeoffice_OulaB", "/home/rich/.ssh/id_rsa_acl", PortCode("LHR"), AclFeed.aclToPortMapping(PortCode("LHR")))
 
-//  println(s"\n\nImporting ACL...")
-//  aclfeed.requestArrivals
-//  println("\n\nDone\n\n")
+  //  println(s"\n\nImporting ACL...")
+  //  aclfeed.requestArrivals
+  //  println("\n\nDone\n\n")
 
   val log: Logger = LoggerFactory.getLogger(getClass)
   private val walkTimeProvider: (Terminal, String, String) => Option[Int] = WalkTimeProvider(params.gateWalkTimesFilePath, params.standWalkTimesFilePath)
@@ -451,11 +451,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
     ))
   }
 
-  def run(): Unit = {
+  lazy val run: Future[Option[CrunchSystem[typed.ActorRef[FeedTick]]]] = {
     val actors = persistentStateActors
 
     val futurePortStates: Future[(
-        Option[FeedSourceStatuses],
+      Option[FeedSourceStatuses],
         SortedSet[ProcessingRequest],
         SortedSet[ProcessingRequest],
         SortedSet[ProcessingRequest],
@@ -472,62 +472,66 @@ case class ApplicationService(journalType: StreamingJournalLike,
       } yield (aclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
     }
 
-    futurePortStates.onComplete {
-      case Success((maybeAclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
-        system.log.info(s"Successfully restored initial state for App")
+    futurePortStates
+      .map {
+        case (maybeAclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue) =>
+          system.log.info(s"Successfully restored initial state for App")
 
-        val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
-          actors,
-          startUpdateGraphs = startUpdateGraphs(actors, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue),
-        )
+          val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
+            actors,
+            startUpdateGraphs = startUpdateGraphs(actors, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue),
+          )
 
-        feedService.fcstBaseFeedPollingActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
-        feedService.fcstFeedPollingActor ! Enable(crunchInputs.forecastArrivalsResponse)
-        feedService.liveBaseFeedPollingActor ! Enable(crunchInputs.liveBaseArrivalsResponse)
-        feedService.liveFeedPollingActor ! Enable(crunchInputs.liveArrivalsResponse)
+          feedService.fcstBaseFeedPollingActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
+          feedService.fcstFeedPollingActor ! Enable(crunchInputs.forecastArrivalsResponse)
+          feedService.liveBaseFeedPollingActor ! Enable(crunchInputs.liveBaseArrivalsResponse)
+          feedService.liveFeedPollingActor ! Enable(crunchInputs.liveArrivalsResponse)
 
-        for {
-          aclStatus <- maybeAclStatus
-          lastSuccess <- aclStatus.feedStatuses.lastSuccessAt
-        } yield {
-          val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
-          if (lastSuccess < twelveHoursAgo) {
-            val minutesToNextCheck = (Math.random() * 90).toInt.minutes
-            log.info(s"Last ACL check was more than 12 hours ago. Will check in ${minutesToNextCheck.toMinutes} minutes")
-            system.scheduler.scheduleOnce(minutesToNextCheck) {
-              feedService.fcstBaseFeedPollingActor ! AdhocCheck
+          for {
+            aclStatus <- maybeAclStatus
+            lastSuccess <- aclStatus.feedStatuses.lastSuccessAt
+          } yield {
+            val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
+            if (lastSuccess < twelveHoursAgo) {
+              val minutesToNextCheck = (Math.random() * 90).toInt.minutes
+              log.info(s"Last ACL check was more than 12 hours ago. Will check in ${minutesToNextCheck.toMinutes} minutes")
+              system.scheduler.scheduleOnce(minutesToNextCheck) {
+                feedService.fcstBaseFeedPollingActor ! AdhocCheck
+              }
             }
           }
-        }
-        val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] =
-          if (refetchApiData) None
-          else initialState[ApiFeedState](persistentStateActors.manifestsRouterActor).map(_.lastProcessedMarker)
-        system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
+          val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] =
+            if (refetchApiData) None
+            else initialState[ApiFeedState](persistentStateActors.manifestsRouterActor).map(_.lastProcessedMarker)
+          system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
 
-        val arrivalKeysProvider = DbManifestArrivalKeys(AggregateDb, airportConfig.portCode)
-        val manifestProcessor = DbManifestProcessor(AggregateDb, airportConfig.portCode, crunchInputs.manifestsLiveResponseSource)
-        val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
-        log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
-        ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 1.second)
-          .processFilesAfter(processFilesAfter)
-          .runWith(Sink.ignore)
+          val arrivalKeysProvider = DbManifestArrivalKeys(AggregateDb, airportConfig.portCode)
+          val manifestProcessor = DbManifestProcessor(AggregateDb, airportConfig.portCode, crunchInputs.manifestsLiveResponseSource)
+          val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
+          log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
+          ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 1.second)
+            .processFilesAfter(processFilesAfter)
+            .runWith(Sink.ignore)
 
-//        crunchManagerActor ! AddRecalculateArrivalsSubscriber(crunchInputs.flushArrivalsSource)
+          //        crunchManagerActor ! AddRecalculateArrivalsSubscriber(crunchInputs.flushArrivalsSource)
 
-        setSubscribers(crunchInputs, persistentStateActors.manifestsRouterActor)
+          setSubscribers(crunchInputs, persistentStateActors.manifestsRouterActor)
 
-        system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
-
-      case Failure(error) =>
-        system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")
-        system.terminate().onComplete {
-          case Success(_) =>
-            log.info("Actor system successfully shut down. Exiting")
-            System.exit(1)
-          case Failure(exception) =>
-            log.warn("Failed to shut down actor system", exception)
-            System.exit(1)
-        }
-    }
+          system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
+          Option(crunchInputs)
+      }
+      .recover {
+        case error =>
+          system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")
+          system.terminate().onComplete {
+            case Success(_) =>
+              log.info("Actor system successfully shut down. Exiting")
+              System.exit(1)
+            case Failure(exception) =>
+              log.warn("Failed to shut down actor system", exception)
+              System.exit(1)
+          }
+          None
+      }
   }
 }
