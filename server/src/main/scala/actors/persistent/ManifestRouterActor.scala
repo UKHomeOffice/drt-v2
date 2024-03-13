@@ -191,7 +191,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     case _: UniqueArrival =>
       sender() ! None
 
-    case unexpected => log.warn(s"Got an unexpected message: $unexpected")
+    case unexpected => log.error(s"Got an unexpected message: $unexpected")
   }
 
   def handleUpdatesAndAck(updates: VoyageManifests,

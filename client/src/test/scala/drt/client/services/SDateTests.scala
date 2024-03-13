@@ -44,11 +44,7 @@ object SDateTests extends TestSuite {
 
       "a new js date takes the time and assumes it is in the system locale timezone" - {
         val d = new Date(2017, 2, 28, 11, 23)
-
-        println(s"date 1: ${d.toISOString()}")
-
         val d2 = new Date(1490708453000d)
-        println(s"date 2: ${d2.toISOString()}")
       }
 
       "When calling getDayOfWeek" - {
@@ -86,8 +82,7 @@ object SDateTests extends TestSuite {
           result match {
             case Some(sd) =>
               assert(sd.millisSinceEpoch == expected.millisSinceEpoch)
-            case other =>
-              println(s"expected $expected but got $other" )
+            case _ =>
               assert(false)
           }
         }

@@ -101,7 +101,6 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
 
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
         case ps: PortState =>
-          println(s"${ps.flights.values.map(_.apiFlight.Terminal)}")
           ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
       }
 
@@ -222,7 +221,6 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
         case ps: PortState =>
           val tuples = ps.flights.values.map(a => (a.apiFlight.flightCodeString, a.apiFlight.Terminal)).toSet
-          println(s"tuples1: $tuples")
           tuples == Set(("BA0001", A1))
       }
 
@@ -232,7 +230,6 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
         case ps: PortState =>
           val tuples = ps.flights.values.map(a => (a.apiFlight.flightCodeString, a.apiFlight.Terminal)).toSet
-          println(s"tuples2: $tuples")
           tuples == Set(("BA0001", A1), ("BA0011", A2))
       }
 
@@ -243,7 +240,6 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for BA0001 at A1, BA0002 at A2 & BA0003 at A1") {
         case ps: PortState =>
           val tuples = ps.flights.values.map(a => (a.apiFlight.flightCodeString, a.apiFlight.Terminal)).toSet
-          println(s"tuples3: $tuples")
           tuples == Set(("BA0001", A1), ("BA0011", A2), ("BA0002", A2), ("BA0003", A1))
       }
 
@@ -254,7 +250,6 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for BA0001 at A1, BA0002 at A2 & BA0003 at A1") {
         case ps: PortState =>
           val tuples = ps.flights.values.map(a => (a.apiFlight.flightCodeString, a.apiFlight.Terminal)).toSet
-          println(s"tuples3: $tuples")
           tuples == Set(("BA0001", A1), ("BA0011", A2), ("BA0002", A2), ("BA0003", A1))
       }
 
@@ -265,7 +260,6 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for BA0001 at A1, BA0002 at A2 & BA0003 at A1") {
         case ps: PortState =>
           val tuples = ps.flights.values.map(a => (a.apiFlight.flightCodeString, a.apiFlight.Terminal)).toSet
-          println(s"tuples4: $tuples")
           tuples == Set(("BA0001", A1), ("BA0011", A2), ("BA0002", A2), ("BA0003", A1))
       }
 

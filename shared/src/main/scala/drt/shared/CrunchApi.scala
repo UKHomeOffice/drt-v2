@@ -345,7 +345,9 @@ object CrunchApi {
 
   case class CrunchMinutes(minutes: Iterable[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
 
-  case class PortStateUpdates(latest: MillisSinceEpoch,
+  case class PortStateUpdates(lastFlightsUpdate: MillisSinceEpoch,
+                              lastQueuesUpdate: MillisSinceEpoch,
+                              lastStaffUpdate: MillisSinceEpoch,
                               updatesAndRemovals: FlightUpdatesAndRemovals,
                               queueMinutes: Iterable[CrunchMinute],
                               staffMinutes: Iterable[StaffMinute])

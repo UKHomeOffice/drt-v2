@@ -61,7 +61,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     case _: SaveSnapshotSuccess =>
       ackIfRequired()
 
-    case m => log.warn(s"Got unexpected message: $m")
+    case m => log.error(s"Got unexpected message: $m")
   }
 
   private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =

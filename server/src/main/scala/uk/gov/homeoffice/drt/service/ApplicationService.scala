@@ -143,7 +143,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
     PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
-
   private def ensureDefaultSlaConfig(): Unit =
     slasActor.ask(GetState).mapTo[SlaConfigs].foreach { slasUpdate =>
       if (slasUpdate.configs.isEmpty) {
@@ -153,7 +152,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
         log.info("SLAs: " + slasUpdate)
       }
     }
-
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2.minutes)
 
@@ -174,7 +172,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
           Future(None)
       }
   }
-
 
   private val defaultEgates: Map[Terminal, EgateBanksUpdates] = airportConfig.eGateBankSizes.view.mapValues { banks =>
     val effectiveFrom = SDate("2020-01-01T00:00").millisSinceEpoch

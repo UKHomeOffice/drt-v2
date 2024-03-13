@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.PartitionedPortStateActor.GetUpdatesSince
+import actors.PartitionedPortStateActor.{GetFlightUpdatesSince, GetUpdatesSince}
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
@@ -75,7 +75,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
         case _ =>
       }
 
-    case GetUpdatesSince(sinceMillis, fromMillis, toMillis) =>
+    case GetFlightUpdatesSince(sinceMillis, fromMillis, toMillis) =>
       val replyTo = sender()
       val terminalDays = terminalDaysForPeriod(fromMillis, toMillis)
 

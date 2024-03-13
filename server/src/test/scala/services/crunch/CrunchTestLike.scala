@@ -275,7 +275,6 @@ class CrunchTestLike
   def expectArrivals(arrivalsToExpect: Iterable[Arrival])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
     crunch.portStateTestProbe.fishForMessage(1.seconds) {
       case PortState(flights, _, _) =>
-        println(s"got ${flights.values.map(_.apiFlight)}")
         flights.values.map(_.apiFlight) == arrivalsToExpect
     }
 

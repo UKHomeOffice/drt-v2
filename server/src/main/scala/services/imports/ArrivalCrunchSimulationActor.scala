@@ -41,6 +41,6 @@ class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with Ac
       self ! PoisonPill
 
     case unexpected =>
-      log.warning(s"Got and unexpected message $unexpected")
+      log.error(s"Got and unexpected message $unexpected")
   }
 }

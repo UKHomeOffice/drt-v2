@@ -1,6 +1,8 @@
 package uk.gov.homeoffice.drt.testsystem
 
+import actors.PartitionedPortStateActor.GetFlights
 import actors._
+import actors.daily.StreamingUpdatesLike.StopUpdates
 import actors.daily._
 import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
@@ -10,11 +12,12 @@ import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply.Ack
-import akka.pattern.{ask, pipe}
+import akka.pattern.{StatusReply, ask, pipe}
 import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.Logger
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, MergeArrivalsRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.FeedSource
@@ -43,6 +46,7 @@ object TestActors {
       case ResetData =>
         replyTo = Option(sender())
         log.warn("Received ResetData request. Deleting all messages & snapshots")
+        resetState()
         deleteMessages(Long.MaxValue)
         deleteSnapshots(SnapshotSelectionCriteria(minSequenceNr = 0L, maxSequenceNr = Long.MaxValue))
       case _: DeleteMessagesSuccess =>
@@ -55,7 +59,7 @@ object TestActors {
 
     private def ackIfDeletionFinished(): Unit = replyTo.foreach { r =>
       if (deletionFinished) {
-        log.info("Finished deletions")
+        log.info("Finished message & snapshot deletions")
         resetState()
         deletedMessages = false
         deletedSnapshots = false
@@ -74,17 +78,14 @@ object TestActors {
 
   class TestPortForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends PortForecastArrivalsActor(now, expireAfterMillis) with Resettable {
-    override def resetState(): Unit = state.clear()
+    override def resetState(): Unit = state = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestPortLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
     extends PortLiveArrivalsActor(now, expireAfterMillis) with Resettable {
-    override def resetState(): Unit = {
-      println("\n\n Port live arriavls actor reset state called \n\n")
-      state.clear()
-    }
+    override def resetState(): Unit = state = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
@@ -308,6 +309,7 @@ object TestActors {
         handleUpdatesAndAck(container, replyTo)
 
       case ResetData =>
+        val replyTo = sender()
         Future
           .sequence(terminalDaysUpdated.map { case (t, d) =>
             resetData(t, d)
@@ -316,7 +318,7 @@ object TestActors {
             terminalDaysUpdated = Set()
             Ack
           }
-          .pipeTo(sender())
+          .pipeTo(replyTo)
     }
   }
 
@@ -412,11 +414,10 @@ object TestActors {
       case PurgeAll =>
         val replyTo = sender()
         log.info(s"Received PurgeAll")
-        Future.sequence(streamingUpdateActors.values.map(actor => killActor.ask(Terminate(actor)))).foreach { _ =>
-          streamingUpdateActors = Map()
-          lastRequests = Map()
-          replyTo ! Ack
-        }
+        streamingUpdateActors.values.foreach(_ ! StopUpdates)
+        streamingUpdateActors = Map()
+        lastRequests = Map()
+        replyTo ! Ack
     }
 
     override def receive: Receive = testReceive orElse super.receive
@@ -431,11 +432,10 @@ object TestActors {
       case PurgeAll =>
         val replyTo = sender()
         log.info(s"Received PurgeAll")
-        Future.sequence(streamingUpdateActors.values.map(actor => killActor.ask(Terminate(actor)))).foreach { _ =>
-          streamingUpdateActors = Map()
-          lastRequests = Map()
-          replyTo ! Ack
-        }
+        streamingUpdateActors.values.foreach(_ ! StopUpdates)
+        streamingUpdateActors = Map()
+        lastRequests = Map()
+        replyTo ! Ack
     }
 
     override def receive: Receive = testReceive orElse super.receive

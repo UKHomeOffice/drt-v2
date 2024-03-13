@@ -64,7 +64,7 @@ final class SortedActorRefSource(persistentActor: ActorRef,
           }
 
         case unexpected =>
-          log.warning(s"[$graphName] Ignoring unexpected message: $unexpected")
+          log.error(s"[$graphName] Ignoring unexpected message: $unexpected")
       }.ref
 
       private def tryPushElement(): Unit = {

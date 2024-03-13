@@ -146,12 +146,12 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
       log.info(s"Successfully deleted snapshot")
 
     case u =>
-      log.warn(s"Unexpected message: ${u.getClass}")
+      log.error(s"Unexpected message: ${u.getClass}")
   }
 
   def updateState(days: Iterable[ProcessingRequest]): Unit = {
     state ++= days
-    log.info(s"Adding ${days.size} $days days to queue. Queue now contains ${state.size} days")
+    log.info(s"Adding ${days.size} days to queue. Queue now contains ${state.size} days")
   }
 
 }

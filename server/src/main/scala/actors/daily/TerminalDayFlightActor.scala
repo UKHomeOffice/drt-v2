@@ -134,36 +134,39 @@ class TerminalDayFlightActor(year: Int,
     case _: SaveSnapshotSuccess =>
       ackIfRequired()
 
-    case m => log.warn(s"Got unexpected message: $m")
+    case m => log.error(s"Got unexpected message: $m")
   }
 
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =
     if (diff.nonEmpty) {
-      val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch, paxFeedSourceOrder)
+      val timestamp = now().millisSinceEpoch
+      val (updatedState, minutesToUpdate) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
       state = updatedState
 
       val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
-      val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
+      val message = flightWithSplitsDiffToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
     } else sender() ! UpdatedMillis.empty
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
-      val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch, paxFeedSourceOrder)
+      val timestamp = now().millisSinceEpoch
+      val (updatedState, minutesToUpdate) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
       state = updatedState
 
       val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
-      val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
+      val message = arrivalsDiffToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
     } else sender() ! UpdatedMillis.empty
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {
-      val (updatedState, minutesToUpdate) = diff.applyTo(state, now().millisSinceEpoch, paxFeedSourceOrder)
+      val timestamp = now().millisSinceEpoch
+      val (updatedState, minutesToUpdate) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
       state = updatedState
 
       val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
-      val message = splitsForArrivalsToMessage(diff, now().millisSinceEpoch)
+      val message = splitsForArrivalsToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
     } else sender() ! UpdatedMillis.empty
 

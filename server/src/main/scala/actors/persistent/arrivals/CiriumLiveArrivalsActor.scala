@@ -57,7 +57,7 @@ class CiriumLiveArrivalsActor(val now: () => SDateLike,
 
     case StreamCompleted => log.warn("Received shutdown")
 
-    case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")
+    case unexpected => log.error(s"Received unexpected message ${unexpected.getClass}")
   }
 
 }

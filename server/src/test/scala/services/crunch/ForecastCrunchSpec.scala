@@ -375,7 +375,6 @@ class ForecastCrunchSpec extends CrunchTestLike {
       case PortState(flightsWithSplits, _, _) =>
         if (flightsWithSplits.nonEmpty) {
           val actPax = flightsWithSplits.values.head.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual
-          println(s"actPax: $actPax, expectedActPax: $expectedActPax")
           actPax == expectedActPax
         } else false
     }

@@ -55,7 +55,7 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
     case StopUpdates =>
       stopUpdatesStream()
 
-    case x => log.warn(s"Received unexpected message ${x.getClass}")
+    case x => log.error(s"Received unexpected message ${x.getClass}")
   }
 
   private def stopUpdatesStream(): Unit = {

@@ -124,7 +124,7 @@ trait RouterActorLike[U <: Updates, P] extends Actor with ActorLogging {
   }
 
   private def receiveUnexpected: Receive = {
-    case unexpected => log.warning(s"Got an unexpected message: ${unexpected.getClass}")
+    case unexpected => log.error(s"Got an unexpected message: ${unexpected.getClass}")
   }
 }
 
@@ -168,7 +168,7 @@ trait RouterActorLike2[U <: Updates, P] extends Actor with ActorLogging {
 
   private def receiveUnexpected: Receive = {
     case unexpected =>
-      log.warning(s"Got an unexpected message: ${unexpected.getClass}")
+      log.error(s"Got an unexpected message: ${unexpected.getClass}")
   }
 }
 

@@ -136,8 +136,6 @@ object AclFeed {
     if (arrivals.nonEmpty) {
       val latestArrival = arrivals.maxBy(_.Scheduled)
       log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString} (${latestArrival.flightCodeString})")
-//      println(s"\n\nAcl arrivals memory:${GraphLayout.parseInstance(aclArrivals).toFootprint()}\n\n")
-//      println(s"\n\nArrivals memory:${GraphLayout.parseInstance(arrivals).toFootprint()}\n\n")
     }
     arrivals
   }

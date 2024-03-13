@@ -14,8 +14,6 @@ class LhrLiveSpec extends Specification {
     val password = config.getString("feeds.lhr.sftp.live.password")
     val content: String = LhrSftpLiveContentProvider(host, username, password).latestContent.getOrElse("")
 
-    println(s"content:\n$content")
-
     content.nonEmpty
   }
 }

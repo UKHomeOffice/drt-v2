@@ -47,7 +47,7 @@ object PartitionedPortStateActor {
 
   private type FlightUpdatesRequester = PortStateRequest => Future[FlightUpdatesAndRemovals]
 
-  type PortStateUpdatesRequester = (MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, ActorRef) => Future[Option[PortStateUpdates]]
+  type PortStateUpdatesRequester = (MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, ActorRef) => Future[Option[PortStateUpdates]]
 
   type PortStateRequester = (ActorRef, PortStateRequest) => Future[PortState]
 
@@ -77,12 +77,11 @@ object PartitionedPortStateActor {
 
   def replyWithUpdatesFn(flights: FlightUpdatesRequester, queueMins: QueueMinutesRequester, staffMins: StaffMinutesRequester)
                         (implicit ec: ExecutionContext): PortStateUpdatesRequester =
-    (since: MillisSinceEpoch, start: MillisSinceEpoch, end: MillisSinceEpoch, replyTo: ActorRef) => {
-      val request = GetUpdatesSince(since, start, end)
+    (flightsSince: MillisSinceEpoch, queuesSince: MillisSinceEpoch, staffSince: MillisSinceEpoch, start: MillisSinceEpoch, end: MillisSinceEpoch, replyTo: ActorRef) => {
       combineToPortStateUpdates(
-        flights(request),
-        queueMins(request),
-        staffMins(request)
+        flights(GetFlightUpdatesSince(flightsSince, start, end)),
+        queueMins(GetMinuteUpdatesSince(queuesSince, start, end)),
+        staffMins(GetMinuteUpdatesSince(staffSince, start, end)),
       ).pipeTo(replyTo)
     }
 
@@ -109,9 +108,8 @@ object PartitionedPortStateActor {
     } yield {
       val cms = queueMinutes.minutes.map(_.toMinute)
       val sms = staffMinutes.minutes.map(_.toMinute)
-      val latestMillis = Seq(flightsDiff.latestUpdateMillis, queueMinutes.latestUpdateMillis, staffMinutes.latestUpdateMillis).max
       if (flightsDiff.nonEmpty || cms.nonEmpty || sms.nonEmpty)
-        Option(PortStateUpdates(latestMillis, flightsDiff, cms, sms))
+        Option(PortStateUpdates(flightsDiff.latestUpdateMillis, queueMinutes.latestUpdateMillis, staffMinutes.latestUpdateMillis, flightsDiff, cms, sms))
       else None
     }
 
@@ -151,7 +149,10 @@ object PartitionedPortStateActor {
     val terminal: Terminal
   }
 
-  case class GetUpdatesSince(millis: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest
+  case class GetFlightUpdatesSince(since: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest
+  case class GetMinuteUpdatesSince(since: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest
+
+  case class GetUpdatesSince(flights: MillisSinceEpoch, queues: MillisSinceEpoch, staff: MillisSinceEpoch, from: MillisSinceEpoch, to: MillisSinceEpoch) extends PortStateRequest
 
   case class PointInTimeQuery(pointInTime: MillisSinceEpoch, query: DateRangeMillisLike) extends PortStateRequest {
     override val from: MillisSinceEpoch = query.from
@@ -230,7 +231,7 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
       val replyTo = sender()
       askThenAck(staffRouterActor, someStaffUpdates, replyTo)
 
-    case GetUpdatesSince(since, from, to) => replyWithUpdates(since, from, to, sender())
+    case GetUpdatesSince(flights, queues, staff, from, to) => replyWithUpdates(flights, queues, staff, from, to, sender())
 
     case pitRequest@PointInTimeQuery(_, _: GetStateForDateRange) =>
       replyWithPortState(sender(), pitRequest)
