@@ -8,6 +8,7 @@ import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
 import akka.actor.ActorRef
+import akka.pattern.StatusReply
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -199,6 +200,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       .map(updatedMillis => maybeUpdatesSubscriber.foreach(_ ! updatedMillis))
       .onComplete { _ =>
         processingRequest = false
+        replyTo ! StatusReply.Ack
         self ! ProcessNextUpdateRequest
       }
     eventualEffects
