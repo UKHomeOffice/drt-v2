@@ -24,7 +24,6 @@ case class CrunchSystem[FT](forecastBaseArrivalsResponse: EnabledFeedWithFrequen
                             liveArrivalsResponse: EnabledFeedWithFrequency[FT],
                             manifestsLiveResponseSource: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStatsSource: SourceQueueWithComplete[ActualDeskStats],
-//                            flushArrivalsSource: SourceQueueWithComplete[Boolean],
                             mergeArrivalsRequestActor: ActorRef,
                             crunchRequestActor: ActorRef,
                             deskRecsRequestActor: ActorRef,

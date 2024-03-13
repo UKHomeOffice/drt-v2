@@ -97,9 +97,8 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
     case GetState =>
       sender() ! state
 
-    case cr: CrunchRequest =>
-      updateState(Seq(cr))
-      persistAndMaybeSnapshot(CrunchRequestsMessage(List(loadProcessingRequestToMessage(cr))))
+    case cr: ProcessingRequest =>
+      self ! Seq(cr)
 
     case requests: Iterable[ProcessingRequest] =>
       updateState(requests)
@@ -113,22 +112,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
             case r: MergeArrivalsRequest => mergeArrivalRequestToMessage(r)
           }.toList))
       }
-
-    case cr: Iterable[CrunchRequest] =>
-      updateState(cr)
-      persistAndMaybeSnapshot(CrunchRequestsMessage(cr.map(loadProcessingRequestToMessage).toList))
-
-    case tur: TerminalUpdateRequest =>
-      updateState(Seq(tur))
-      persistAndMaybeSnapshot(CrunchRequestsMessage(List(loadProcessingRequestToMessage(tur))))
-
-    case tur: Iterable[TerminalUpdateRequest] =>
-      updateState(tur)
-      persistAndMaybeSnapshot(CrunchRequestsMessage(tur.map(loadProcessingRequestToMessage).toList))
-
-    case tur: Iterable[TerminalUpdateRequest] =>
-      updateState(tur)
-      persistAndMaybeSnapshot(CrunchRequestsMessage(tur.map(loadProcessingRequestToMessage).toList))
 
     case RemoveProcessingRequest(cr) =>
       log.info(s"Removing ${cr.date} from queue. Queue now contains ${state.size} days")

@@ -125,11 +125,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     state = newState
 
-    maybeSubscriber.foreach {
+    maybeSubscriber.foreach { subscriber =>
       val daysFromUpdates = diff.toUpdate.values.map(a => MergeArrivalsRequest(SDate(a.Scheduled).toUtcDate)).toSet
       val daysFromRemovals = diff.toRemove.map(ua => MergeArrivalsRequest(SDate(ua.scheduled).toUtcDate)).toSet
       val updatedDays = daysFromUpdates ++ daysFromRemovals
-      _ ! updatedDays
+      if (updatedDays.nonEmpty) subscriber ! updatedDays
     }
 
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) persistArrivalUpdates(diff)

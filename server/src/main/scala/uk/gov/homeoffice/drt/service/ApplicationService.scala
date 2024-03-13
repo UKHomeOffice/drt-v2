@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.service
 
-import actors.CrunchManagerActor.AddQueueCrunchSubscriber
+import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber}
 import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors._
 import actors.daily.{PassengersActor, RequestAndTerminateActor}
@@ -391,6 +391,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       egateBanksUpdatesActor ! AddUpdatesSubscriber(crunchRequestQueueActor)
 
       crunchManagerActor ! AddQueueCrunchSubscriber(crunchRequestQueueActor)
+      crunchManagerActor ! AddRecalculateArrivalsSubscriber(mergeArrivalsRequestQueueActor)
 
       feedService.forecastBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
       feedService.forecastFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
@@ -508,8 +509,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
         ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 1.second)
           .processFilesAfter(processFilesAfter)
           .runWith(Sink.ignore)
-
-//        crunchManagerActor ! AddRecalculateArrivalsSubscriber(crunchInputs.flushArrivalsSource)
 
         setSubscribers(crunchInputs, persistentStateActors.manifestsRouterActor)
 

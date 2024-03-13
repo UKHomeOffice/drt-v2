@@ -104,7 +104,7 @@ trait FeedService {
     AclFeedSource -> (true, None, forecastBaseFeedArrivalsActor),
     ForecastFeedSource -> (false, None, forecastFeedArrivalsActor),
     LiveBaseFeedSource -> (ciriumIsPrimary, Option(5.minutes), liveBaseFeedArrivalsActor),
-    LiveFeedSource -> (true, None, liveFeedArrivalsActor)
+    LiveFeedSource -> (true, None,  liveFeedArrivalsActor)
   )
     .collect {
       case (fs, (isPrimary, maybeFuzzyThreshold, actor)) if airportConfig.feedSources.contains(fs) => (isPrimary, maybeFuzzyThreshold, actor)

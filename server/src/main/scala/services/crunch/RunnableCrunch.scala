@@ -27,7 +27,6 @@ object RunnableCrunch {
                              liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
                              manifestsLiveSource: Source[ManifestsFeedResponse, MS],
                              actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
-                             //                             flushArrivalsSource: Source[Boolean, RL],
                              forecastBaseArrivalsActor: ActorRef,
                              forecastArrivalsActor: ActorRef,
                              liveBaseArrivalsActor: ActorRef,

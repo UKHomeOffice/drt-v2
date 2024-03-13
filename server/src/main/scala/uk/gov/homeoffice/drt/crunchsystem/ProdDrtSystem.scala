@@ -79,8 +79,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     airportConfig.portCode,
     feedService.paxFeedSourceOrder)
 
-  override def run(): Unit = {
-    applicationService.run()
-  }
+  override def run(): Unit = applicationService.run()
 
 }

@@ -1,6 +1,6 @@
 package controllers.application
 
-import actors.CrunchManagerActor.RecalculateArrivals
+import actors.CrunchManagerActor.{RecalculateArrivals, Recrunch}
 import actors.DateRange
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
 import actors.persistent.QueueLikeActor.UpdatedMillis
@@ -10,7 +10,7 @@ import com.google.inject.Inject
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import services.crunch.CrunchManager.{queueDaysToReCrunch, queueDaysToReCrunchWithUpdatedSplits}
+import services.crunch.CrunchManager.{queueDaysToReCrunchWithUpdatedSplits, queueDaysToReProcess}
 import services.exports.Forecast
 import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -145,7 +145,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
             ctrl.params.forecastMaxDays, ctrl.now)
           Future.successful(Ok("Re-crunching with updated splits"))
         case _ =>
-          queueDaysToReCrunch(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now)
+          queueDaysToReProcess(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now, m => Recrunch(m))
           Future.successful(Ok("Re-crunching without updating splits"))
       }
     }
@@ -153,7 +153,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
   def reCalculateArrivals: Action[AnyContent] = authByRole(SuperAdmin) {
     Action.async { _ =>
-      ctrl.applicationService.crunchManagerActor ! RecalculateArrivals
+      queueDaysToReProcess(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now, m => RecalculateArrivals(m))
       Future.successful(Ok("Re-calculating arrivals"))
     }
   }

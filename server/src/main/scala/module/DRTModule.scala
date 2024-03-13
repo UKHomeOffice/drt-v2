@@ -77,7 +77,6 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
     ActorSystem("DRT-Module")
   }
 
-
   @Provides
   @Singleton
   def provideDrtSystemInterface: DrtSystemInterface = {

@@ -8,7 +8,6 @@ import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
 import akka.actor.ActorRef
-import akka.pattern.StatusReply
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
@@ -136,7 +135,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
       persistFeedStatus(newStatus)
-      sender() ! StatusReply.Ack
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
@@ -194,15 +192,13 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     case unexpected => log.error(s"Got an unexpected message: $unexpected")
   }
 
-  def handleUpdatesAndAck(updates: VoyageManifests,
-                          replyTo: ActorRef): Future[UpdatedMillis] = {
+  def handleUpdatesAndAck(updates: VoyageManifests, replyTo: ActorRef): Future[UpdatedMillis] = {
     processingRequest = true
     val eventualEffects = sendUpdates(updates)
     eventualEffects
       .map(updatedMillis => maybeUpdatesSubscriber.foreach(_ ! updatedMillis))
       .onComplete { _ =>
         processingRequest = false
-        replyTo ! StatusReply.Ack
         self ! ProcessNextUpdateRequest
       }
     eventualEffects
