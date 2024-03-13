@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import akka.pattern.StatusReply.Ack
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
-import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse, ManifestsFeedSuccess}
+import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedArrival, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
@@ -31,7 +31,7 @@ object RunnableCrunch {
                              forecastArrivalsActor: ActorRef,
                              liveBaseArrivalsActor: ActorRef,
                              liveArrivalsActor: ActorRef,
-                             applyPaxDeltas: List[Arrival] => Future[List[Arrival]],
+                             applyPaxDeltas: List[FeedArrival] => Future[List[FeedArrival]],
 
                              manifestsActor: ActorRef,
 
@@ -84,14 +84,14 @@ object RunnableCrunch {
 
           // @formatter:off
           forecastBaseArrivalsSourceSync.out.map {
-            case ArrivalsFeedSuccess(Flights(as), ca) =>
+            case ArrivalsFeedSuccess(as, ca) =>
               val maxScheduledMillis = forecastMaxMillis()
-              ArrivalsFeedSuccess(Flights(as.filter(_.Scheduled < maxScheduledMillis)), ca)
+              ArrivalsFeedSuccess(as.filter(_.scheduled < maxScheduledMillis), ca)
             case failure => failure
           }.mapAsync(1) {
-            case ArrivalsFeedSuccess(Flights(as), _) =>
+            case ArrivalsFeedSuccess(as, _) =>
               applyPaxDeltas(as.toList)
-                .map(updated => ArrivalsFeedSuccess(Flights(updated), SDate.now()))
+                .map(updated => ArrivalsFeedSuccess(updated, SDate.now()))
             case failure => Future.successful(failure)
           } ~> baseArrivalsSink
 

@@ -4,7 +4,7 @@ import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.staffing.GetFeedStatuses
 import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedArrival}
 import drt.shared.FlightsApi.Flights
 import scalapb.GeneratedMessage
 import services.graphstages.Crunch
@@ -80,7 +80,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
-    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
+    case ArrivalsFeedSuccess(incomingArrivals, createdAt) =>
       handleFeedSuccess(incomingArrivals, createdAt)
 
     case ArrivalsFeedFailure(message, createdAt) =>
@@ -118,7 +118,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
   }
 
-  def handleFeedSuccess(incomingArrivals: Iterable[Arrival], createdAt: SDateLike): Unit = {
+  def handleFeedSuccess(incomingArrivals: Iterable[FeedArrival], createdAt: SDateLike): Unit = {
     log.info(s"Received ${incomingArrivals.size} arrivals ${state.feedSource.displayName}")
 
     val (diff, newStatus, newState) = processIncoming(incomingArrivals, createdAt)
@@ -136,7 +136,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
     persistFeedStatus(newStatus)
   }
 
-  protected def processIncoming(incomingArrivals: Iterable[Arrival],
+  protected def processIncoming(incomingArrivals: Iterable[FeedArrival],
                                 createdAt: SDateLike,
                                ): (ArrivalsDiff, FeedStatusSuccess, ArrivalsState) = {
     val updatedArrivals = incomingArrivals

@@ -17,8 +17,6 @@ object FlightsApi {
     val empty: Flights = Flights(Seq())
   }
 
-  case object NoFlightUpdates extends FlightUpdates
-
   object PaxForArrivals {
     val empty: PaxForArrivals = PaxForArrivals(Map())
 
