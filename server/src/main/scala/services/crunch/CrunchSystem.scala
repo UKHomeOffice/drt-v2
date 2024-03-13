@@ -13,6 +13,7 @@ import services.TryCrunchWholePax
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
 import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.service.FeedService
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,7 +30,8 @@ case class CrunchSystem[FT](forecastBaseArrivalsResponse: EnabledFeedWithFrequen
                             crunchRequestActor: ActorRef,
                             deskRecsRequestActor: ActorRef,
                             deploymentRequestActor: ActorRef,
-                            killSwitches: List[UniqueKillSwitch]
+                            killSwitches: List[UniqueKillSwitch],
+                            feedService: FeedService,
                            )
 
 case class CrunchProps[FT](airportConfig: AirportConfig,
@@ -39,7 +41,7 @@ case class CrunchProps[FT](airportConfig: AirportConfig,
                            now: () => SDateLike = () => SDate.now(),
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            crunchActors: PersistentStateActors,
-                           feedActors: Map[FeedSource, ActorRef],
+                           feedService: FeedService,
                            manifestsRouterActor: ActorRef,
                            arrivalsForecastBaseFeed: Feed[FT],
                            arrivalsForecastFeed: Feed[FT],
@@ -81,10 +83,10 @@ object CrunchSystem {
       liveArrivalsSource = props.arrivalsLiveFeed.source,
       manifestsLiveSource = props.manifestsLiveSource,
       actualDesksAndWaitTimesSource = actualDesksAndQueuesSource,
-      forecastBaseArrivalsActor = props.feedActors(AclFeedSource),
-      forecastArrivalsActor = props.feedActors(ForecastFeedSource),
-      liveBaseArrivalsActor = props.feedActors(LiveBaseFeedSource),
-      liveArrivalsActor = props.feedActors(LiveFeedSource),
+      forecastBaseArrivalsActor = props.feedService.feedActors(AclFeedSource),
+      forecastArrivalsActor = props.feedService.feedActors(ForecastFeedSource),
+      liveBaseArrivalsActor = props.feedService.feedActors(LiveBaseFeedSource),
+      liveArrivalsActor = props.feedService.feedActors(LiveFeedSource),
       applyPaxDeltas = props.passengerAdjustments,
       manifestsActor = props.manifestsRouterActor,
       portStateActor = props.portStateActor,
@@ -126,7 +128,8 @@ object CrunchSystem {
       crunchRequestActor = crunchQueueActor,
       deskRecsRequestActor = deskRecsQueueActor,
       deploymentRequestActor = deploymentQueueActor,
-      killSwitches,
+      killSwitches = killSwitches,
+      feedService = props.feedService
     )
   }
 
