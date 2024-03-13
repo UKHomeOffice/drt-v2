@@ -117,6 +117,6 @@ class TestDrtSystemSpec extends CrunchTestLike {
     val lastMidnight = drtSystem.now().getLocalLastMidnight
     val nextMidnight = lastMidnight.addDays(1)
     val sinceMillis = drtSystem.now().addMinutes(-1).millisSinceEpoch
-    Await.result(drtSystem.actorService.portStateActor.ask(GetUpdatesSince(sinceMillis, lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortStateUpdates]], 1.second)
+    Await.result(drtSystem.actorService.portStateActor.ask(GetUpdatesSince(sinceMillis, sinceMillis, sinceMillis, lastMidnight.millisSinceEpoch, nextMidnight.millisSinceEpoch)).mapTo[Option[PortStateUpdates]], 1.second)
   }
 }

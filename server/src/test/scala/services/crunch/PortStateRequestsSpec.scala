@@ -141,7 +141,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
         val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1.second)
         val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
-        result === Option(PortStateUpdates(myNow().millisSinceEpoch, FlightUpdatesAndRemovals(Map(), Map()), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), Seq()))
+        result === Option(PortStateUpdates(myNow().millisSinceEpoch, myNow().millisSinceEpoch, myNow().millisSinceEpoch, FlightUpdatesAndRemovals(Map(), Map()), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), Seq()))
       }
     }
 
@@ -311,7 +311,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
                                sinceMillis: MillisSinceEpoch): Future[Option[PortStateUpdates]] = eventualAck.flatMap { _ =>
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
-    ps.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis)).mapTo[Option[PortStateUpdates]]
+    ps.ask(GetUpdatesSince(sinceMillis, sinceMillis, sinceMillis, startMillis, endMillis)).mapTo[Option[PortStateUpdates]]
   }
 
   def setLastUpdated(now: () => SDateLike,
