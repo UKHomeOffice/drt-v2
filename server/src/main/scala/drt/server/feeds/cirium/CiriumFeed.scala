@@ -3,7 +3,6 @@ package drt.server.feeds.cirium
 import akka.actor.{ActorSystem, typed}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.Accept
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
@@ -27,13 +26,14 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
 
   import CiriumFeed._
 
-  private val requestUrl = s"$endpoint/statuses/$portCode"
-
   def source(source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
     source
       .mapAsync(1) { _ =>
-        requestFeed(requestUrl)
-          .map(_.map(a => toArrival(a, portCode)))
+        makeRequest()
+          .map(fs => {
+            log.info(s"\n\n**Got ${fs.size} arrivals from Cirium")
+            fs.map(a => toArrival(a, portCode))
+          })
           .map(as => ArrivalsFeedSuccess(Flights(as)))
           .recover {
             case throwable: Throwable =>
@@ -42,6 +42,8 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
           }
       }
   }
+
+  def makeRequest(): Future[List[CiriumFlightStatus]] = requestFeed(s"$endpoint/statuses/$portCode")
 }
 
 object CiriumFeed {
@@ -102,7 +104,7 @@ object CiriumFeed {
     .singleRequest(HttpRequest(
       method = HttpMethods.GET,
       uri = Uri(endpoint),
-      entity = HttpEntity.Empty,
+      entity = HttpEntity.Empty
     ))
     .map { res =>
       Unmarshal[HttpResponse](res).to[List[CiriumFlightStatus]]
