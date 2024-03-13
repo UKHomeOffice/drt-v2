@@ -8,9 +8,8 @@ import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
-import org.openjdk.jol.info.GraphLayout
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
@@ -236,7 +235,7 @@ object AclFeed {
     )
   }
 
-  private def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[AclArrival] = {
+  private def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[AclArrival] =
     Try {
       val operator: String = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
@@ -253,32 +252,7 @@ object AclFeed {
         origin = fields(AclColIndex.Origin),
         scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
       )
-
-//      Arrival(
-//        Operator = operator,
-//        Status = "ACL Forecast",
-//        Estimated = None,
-//        Predictions = Predictions(0L, Map()),
-//        Actual = None,
-//        EstimatedChox = None,
-//        ActualChox = None,
-//        Gate = None,
-//        Stand = None,
-//        MaxPax = Option(maxPax),
-//        RunwayID = None,
-//        BaggageReclaimId = None,
-//        AirportID = fields(AclColIndex.Airport),
-//        Terminal = portTerminal,
-//        rawICAO = fields(AclColIndex.FlightNumber),
-//        rawIATA = fields(AclColIndex.FlightNumber),
-//        Origin = fields(AclColIndex.Origin),
-//        Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
-//        PcpTime = None,
-//        FeedSources = Set(AclFeedSource),
-//        PassengerSources = Map(AclFeedSource -> Passengers(Option(actPax), None))
-//      )
     }
-  }
 
   private object AclColIndex {
     private val allFields: Map[String, Int] = List(
