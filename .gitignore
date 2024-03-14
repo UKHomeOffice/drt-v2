@@ -18,6 +18,8 @@ project/plugins/project/
 notebooks/*.csv
 .bsp
 
+run-*
+
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
