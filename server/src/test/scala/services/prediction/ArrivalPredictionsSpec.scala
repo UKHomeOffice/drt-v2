@@ -113,7 +113,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
 
         val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduledStr),
-          addTouchdownPredictions = arrivalPredictions.addPredictions
+          addArrivalPredictions = arrivalPredictions.addPredictions
         ))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival))))

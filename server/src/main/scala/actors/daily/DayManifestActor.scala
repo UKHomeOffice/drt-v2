@@ -56,7 +56,7 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
     case _: SaveSnapshotSuccess =>
       ackIfRequired()
 
-    case m => log.warn(s"Got unexpected message: $m")
+    case m => log.error(s"Got unexpected message: $m")
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {

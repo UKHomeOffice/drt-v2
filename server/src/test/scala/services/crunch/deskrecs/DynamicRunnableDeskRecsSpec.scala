@@ -4,11 +4,10 @@ import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply
-import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
@@ -16,9 +15,9 @@ import manifests.queues.SplitsCalculator.SplitsForArrival
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus._
+import services.TryCrunchWholePax
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
-import DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
-import DynamicRunnablePassengerLoads.addManifests
+import services.crunch.deskrecs.DynamicRunnablePassengerLoads.addManifests
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
@@ -33,7 +32,6 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import services.TryCrunchWholePax
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.collection.{SortedSet, immutable}
@@ -77,11 +75,11 @@ object OptimiserMocks {
     _ => Future.successful(Source(List()))
   }
 
-  def mockHistoricManifestsProviderNoop: HistoricManifestsProvider = {
+  def mockHistoricManifestsProviderNoop: Iterable[Arrival] => Source[ManifestLike, NotUsed] = {
     _: Iterable[Arrival] => Source(List())
   }
 
-  def mockHistoricManifestsPaxProviderNoop: HistoricManifestsPaxProvider = {
+  def mockHistoricManifestsPaxProviderNoop: Arrival => Future[Option[ManifestPaxCount]] = {
     _: Arrival => Future.successful(None)
   }
 
@@ -95,7 +93,7 @@ object OptimiserMocks {
   }
 
   def mockHistoricManifestsProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
-                                   (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsProvider = {
+                                   (implicit ec: ExecutionContext): Iterable[Arrival] => Source[ManifestLike, NotUsed] = {
     val portCode = PortCode("STN")
 
     val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
@@ -110,7 +108,7 @@ object OptimiserMocks {
   }
 
   def mockHistoricManifestsPaxProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
-                                      (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsPaxProvider = {
+                                      (implicit ec: ExecutionContext): Arrival => Future[Option[ManifestPaxCount]] = {
     val portCode = PortCode("STN")
     OptimisationProviders.historicManifestsPaxProvider(
       portCode,
@@ -119,7 +117,9 @@ object OptimiserMocks {
   }
 }
 
-case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], historicManifestsPax: Map[UniqueArrivalKey, Option[ManifestPaxCount]], destinationPort: PortCode)
+case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]],
+                                     historicManifestsPax: Map[UniqueArrivalKey, Option[ManifestPaxCount]],
+                                     destinationPort: PortCode)
   extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
@@ -129,11 +129,14 @@ case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKe
     Future.successful((key, bestAvailableManifests.get(key).flatten))
   }
 
-  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
+  override def historicManifestPax(arrivalPort: PortCode,
+                                   departurePort: PortCode,
+                                   voyageNumber: VoyageNumber,
+                                   scheduled: SDateLike,
+                                  ): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
     Future.successful((key, historicManifestsPax.get(key).flatten))
   }
-
 }
 
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
@@ -172,10 +175,11 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
     )
+    val crunchRequest: MillisSinceEpoch => CrunchRequest =
+      (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "passenger-loads")
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "passenger-loads")
-
-    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, queueMinutesProducer, "passenger-loads").run()
+    val (queue, _) = QueuedRequestProcessing.createGraph(crunchGraphSource, sink, queueMinutesProducer, "passenger-loads").run()
     queue ! request
 
     probe.fishForMessage(5.second) {

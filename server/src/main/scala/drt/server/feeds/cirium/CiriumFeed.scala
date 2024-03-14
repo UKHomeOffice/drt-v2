@@ -31,7 +31,7 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
       .mapAsync(1) { _ =>
         makeRequest()
           .map(fs => {
-            log.debug(s"Got ${fs.size} arrivals from Cirium")
+            log.info(s"Got ${fs.size} arrivals from Cirium")
             fs.map(a => toArrival(a, portCode))
           })
           .map(as => ArrivalsFeedSuccess(Flights(as)))
@@ -99,7 +99,8 @@ object CiriumFeed {
     )
   }
 
-  def requestFeed(endpoint: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[List[CiriumFlightStatus]] = Http()
+  def requestFeed(endpoint: String)
+                 (implicit actorSystem: ActorSystem, materializer: Materializer): Future[List[CiriumFlightStatus]] = Http()
     .singleRequest(HttpRequest(
       method = HttpMethods.GET,
       uri = Uri(endpoint),

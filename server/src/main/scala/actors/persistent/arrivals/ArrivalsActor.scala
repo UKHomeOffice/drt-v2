@@ -1,13 +1,16 @@
 package actors.persistent.arrivals
 
+import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.staffing.GetFeedStatuses
+import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.shared.FlightsApi.Flights
 import scalapb.GeneratedMessage
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
+import uk.gov.homeoffice.drt.actor.commands.MergeArrivalsRequest
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike, Sizes}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, ArrivalsRestorer, UniqueArrival}
@@ -16,19 +19,22 @@ import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.SortedMap
 
 
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
-                             feedSource: FeedSource) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
+                             feedSource: FeedSource,
+                            ) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
   val restorer = new ArrivalsRestorer[Arrival]
   var state: ArrivalsState = initialState
+  var maybeSubscriber: Option[ActorRef] = None
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
+
   override def initialState: ArrivalsState = ArrivalsState.empty(feedSource)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
@@ -77,14 +83,21 @@ abstract class ArrivalsActor(now: () => SDateLike,
     case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
       handleFeedSuccess(incomingArrivals, createdAt)
 
-    case ArrivalsFeedFailure(message, createdAt) => handleFeedFailure(message, createdAt)
+    case ArrivalsFeedFailure(message, createdAt) =>
+      handleFeedFailure(message, createdAt)
+
+    case AddUpdatesSubscriber(newSubscriber) =>
+      maybeSubscriber = Option(newSubscriber)
 
     case GetState =>
-      log.debug(s"Received GetState request. Sending ArrivalsState with ${state.arrivals.size} arrivals")
       sender() ! state
 
+    case GetFlights(from, to) =>
+      sender() ! state.arrivals.filter { case (ua, _) =>
+        ua.scheduled >= from && ua.scheduled <= to
+      }
+
     case GetFeedStatuses =>
-      log.debug(s"Received GetFeedStatuses request")
       sender() ! state.maybeSourceStatuses
 
     case SaveSnapshotSuccess(md) =>
@@ -95,7 +108,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
     case StreamCompleted => log.warn("Received shutdown")
 
-    case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")
+    case unexpected => log.error(s"Received unexpected message ${unexpected.getClass}")
   }
 
   def handleFeedFailure(message: String, createdAt: SDateLike): Unit = {
@@ -106,15 +119,35 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   def handleFeedSuccess(incomingArrivals: Iterable[Arrival], createdAt: SDateLike): Unit = {
-    log.info(s"Received arrivals")
+    log.info(s"Received ${incomingArrivals.size} arrivals ${state.feedSource.displayName}")
 
-    val updatedArrivals = incomingArrivals.toSet
-    val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
+    val (diff, newStatus, newState) = processIncoming(incomingArrivals, createdAt)
 
-    state = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
+    state = newState
 
+    maybeSubscriber.foreach { subscriber =>
+      val daysFromUpdates = diff.toUpdate.values.map(a => MergeArrivalsRequest(SDate(a.Scheduled).toUtcDate)).toSet
+      val daysFromRemovals = diff.toRemove.map(ua => MergeArrivalsRequest(SDate(ua.scheduled).toUtcDate)).toSet
+      val updatedDays = daysFromUpdates ++ daysFromRemovals
+      if (updatedDays.nonEmpty) subscriber ! updatedDays
+    }
+
+    if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) persistArrivalUpdates(diff)
     persistFeedStatus(newStatus)
-    if (updatedArrivals.nonEmpty) persistArrivalUpdates(ArrivalsDiff(updatedArrivals, Seq()))
+  }
+
+  protected def processIncoming(incomingArrivals: Iterable[Arrival],
+                                createdAt: SDateLike,
+                               ): (ArrivalsDiff, FeedStatusSuccess, ArrivalsState) = {
+    val updatedArrivals = incomingArrivals
+      .map(a => a.unique -> a).toMap
+      .filterNot {
+        case (ua, a) => state.arrivals.get(ua).exists(_.isEqualTo(a))
+      }
+    val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, updatedArrivals.size)
+    val newState = state ++ (incomingArrivals, Option(state.addStatus(newStatus)))
+
+    (ArrivalsDiff(updatedArrivals, Seq()), newStatus, newState)
   }
 
   def persistArrivalUpdates(arrivalsDiff: ArrivalsDiff): Unit = {

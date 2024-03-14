@@ -4,19 +4,16 @@ import actors.persistent.staffing.UpdateShifts
 import akka.actor.Actor
 import akka.pattern.after
 import controllers.ArrivalGenerator
-import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, Passengers, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Passengers}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource, Queues}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -116,37 +113,6 @@ class PortStateSpec extends CrunchTestLike {
     val windowedFlights = portState.window(SDate("2019-01-02T00:00"), SDate("2019-01-02T23:59"), paxFeedSourceOrder).flights.values.toSet
 
     windowedFlights === Set(flight)
-  }
-
-  "Given a PortState with an existing arrival" >> {
-    "When I start the system with the refresh arrivals flag turned on" >> {
-      "I should see that arrival get removed" >> {
-        val scheduled = "2020-04-23T12:00"
-        val now = () => SDate(scheduled)
-        val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduled, terminal = T1)
-        val fws = ApiFlightWithSplits(arrival, Set())
-        val existingPortState = PortState(Iterable(fws), Iterable(), Iterable())
-        val initialLiveArrivals = SortedMap[UniqueArrival, Arrival]() ++ Seq(arrival).map(a => (a.unique, a)).toMap
-        val crunch = runCrunchGraph(TestConfig(
-          now = now,
-          refreshArrivalsOnStart = true,
-          initialPortState = Option(existingPortState),
-          initialLiveArrivals = initialLiveArrivals,
-        ))
-
-        val newArrival = ArrivalGenerator.arrival("BA0010", schDt = scheduled, terminal = T2,
-          passengerSources = Map(AclFeedSource -> Passengers(Option(100), None)))
-
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(newArrival))))
-
-        val expected = newArrival.copy(FeedSources = Set(AclFeedSource), PassengerSources = newArrival.PassengerSources)
-        crunch.portStateTestProbe.fishForMessage(1.seconds) {
-          case PortState(flights, _, _) =>
-            flights.size == 1 && flights.values.head.apiFlight == expected
-        }
-        success
-      }
-    }
   }
 }
 

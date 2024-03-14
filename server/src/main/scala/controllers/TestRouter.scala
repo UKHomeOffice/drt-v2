@@ -29,7 +29,7 @@ class TestRouter @Inject()(cc: ControllerComponents, testController: TestControl
   }
 
 
-  override def routes = router.routes
+  override def routes: Router.Routes = router.routes
 
 }
 

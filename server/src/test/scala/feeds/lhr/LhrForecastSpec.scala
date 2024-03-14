@@ -80,9 +80,7 @@ class LhrForecastSpec extends Specification {
     val arrivals = arrivalTries
       .filter {
         case Success(_) => true
-        case Failure(t) =>
-          println(s"failed: $t")
-          false
+        case Failure(_) => false
       }
       .collect {
         case Success(a) => a
@@ -91,8 +89,6 @@ class LhrForecastSpec extends Specification {
     fileSource.close()
 
     val totalArrivals = arrivals.length
-
-    println(s"parsed $totalArrivals from $totalEntries")
 
     true
   }

@@ -25,7 +25,7 @@ object FeedPoller {
     Behaviors.withTimers { timers =>
       Behaviors.receiveMessage {
         case Enable(feed) =>
-          log.info(s"Received feed. Starting polling at ${feed.interval.toSeconds}s")
+          log.info(s"Received feed. Will poll every ${feed.interval.toSeconds}s, starting in ${feed.initialDelay.toSeconds}s")
           timers.startTimerAtFixedRate("polling", ScheduledCheck, feed.initialDelay, feed.interval)
           enabled(feed, timers)
 

@@ -27,7 +27,9 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           val scheduled = "2017-01-01T00:00Z"
 
           val flights = Flights(Seq(
-            ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, passengerSources =  Map(LiveFeedSource -> Passengers(Option(15),None)))
+            ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1,
+              feedSources = Set(LiveFeedSource),
+              passengerSources =  Map(LiveFeedSource -> Passengers(Option(15),None)))
             ))
 
           val fiveMinutes = 600d / 60
@@ -51,7 +53,6 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           crunch.portStateTestProbe.fishForMessage(1.seconds) {
             case ps: PortState =>
               val resultSummary = paxLoadsFromPortState(ps, 1).flatMap(_._2.keys).toSet
-              println(s"resultSummary: $resultSummary")
               resultSummary == expected
           }
 

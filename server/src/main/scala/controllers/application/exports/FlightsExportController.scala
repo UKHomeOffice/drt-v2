@@ -1,7 +1,7 @@
 package controllers.application.exports
 
 import actors.PartitionedPortStateActor.PointInTimeQuery
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
@@ -44,7 +44,8 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
   private def doExportForPointInTime(localDateString: String,
                                      pointInTime: MillisSinceEpoch,
                                      terminalName: String,
-                                     `export`: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] =
+                                     exportTerminalDateRange: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport,
+                                    ): Action[AnyContent] =
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -54,7 +55,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
             val start = SDate(localDate)
             val end = start.addDays(1).addMinutes(-1)
             ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
-              flightsRequestToCsv(pointInTime, export(user, airportConfig.portCode, redListUpdates)(start, end, Terminal(terminalName)))
+              flightsRequestToCsv(Option(pointInTime), exportTerminalDateRange(user, airportConfig.portCode, redListUpdates)(start, end, Terminal(terminalName)))
             }
           case _ =>
             Future(BadRequest("Invalid date format for export day."))
@@ -98,8 +99,9 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
   private def doExportForDateRange(startLocalDateString: String,
                                    endLocalDateString: String,
                                    terminalName: String,
-                                   `export`: (LoggedInUser, PortCode, RedListUpdates)
-                                     => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] = {
+                                   exportTerminalDateRange: (LoggedInUser, PortCode, RedListUpdates)
+                                     => (SDateLike, SDateLike, Terminal) => FlightsExport,
+                                  ): Action[AnyContent] = {
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -108,7 +110,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
             val startDate = SDate(start)
             val endDate = SDate(end).addDays(1).addMinutes(-1)
             ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
-              flightsRequestToCsv(ctrl.now().millisSinceEpoch, export(user, airportConfig.portCode, redListUpdates)(startDate, endDate, Terminal(terminalName)))
+              flightsRequestToCsv(None, exportTerminalDateRange(user, airportConfig.portCode, redListUpdates)(startDate, endDate, Terminal(terminalName)))
             }
           case _ =>
             Future(BadRequest("Invalid date format for start or end date"))
@@ -116,9 +118,11 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     }
   }
 
-  private def flightsRequestToCsv(pointInTime: MillisSinceEpoch, `export`: FlightsExport): Future[Result] = {
-    val pitRequest = PointInTimeQuery(pointInTime, export.request)
-    ctrl.actorService.flightsRouterActor.ask(pitRequest).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].map {
+  private def flightsRequestToCsv(maybePointInTime: Option[MillisSinceEpoch],
+                                  `export`: FlightsExport,
+                                 ): Future[Result] = {
+    val request = maybePointInTime.map(PointInTimeQuery(_, export.request)).getOrElse(export.request)
+    ctrl.actorService.flightsRouterActor.ask(request).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].map {
       flightsStream =>
         val flightsAndManifestsStream = flightsStream.mapAsync(1) { case (d, fws) =>
           ctrl.applicationService.manifestsProvider(d, d).map(_._2).runFold(VoyageManifests.empty)(_ ++ _).map(m => (fws, m))
@@ -161,7 +165,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
                              feedSourceString: String): Action[AnyContent] = authByRole(ArrivalSource) {
 
     val feedSourceToPersistenceId: Map[FeedSource, String] = Map(
-      LiveBaseFeedSource -> CirriumLiveArrivalsActor.persistenceId,
+      LiveBaseFeedSource -> CiriumLiveArrivalsActor.persistenceId,
       LiveFeedSource -> PortLiveArrivalsActor.persistenceId,
       AclFeedSource -> AclForecastArrivalsActor.persistenceId,
       ForecastFeedSource -> PortForecastArrivalsActor.persistenceId

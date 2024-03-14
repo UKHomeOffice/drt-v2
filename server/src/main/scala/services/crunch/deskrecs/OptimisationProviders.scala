@@ -4,15 +4,15 @@ import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
-import akka.stream.scaladsl.Source
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute, StaffMinute}
-import drt.shared.{TM, TQM}
+import drt.shared.{ArrivalKey, TM, TQM}
 import manifests.ManifestLookupLike
-import manifests.passengers.ManifestLike
+import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.metrics.Metrics
 import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
@@ -30,7 +30,7 @@ object OptimisationProviders {
                                 cacheLookup: Arrival => Future[Option[ManifestLike]],
                                 cacheStore: (Arrival, ManifestLike) => Future[Any],
                                )
-                               (implicit ec: ExecutionContext): HistoricManifestsProvider = arrivals =>
+                               (implicit ec: ExecutionContext): Iterable[Arrival] => Source[ManifestLike, NotUsed] = arrivals =>
     Source(arrivals.toList)
       .mapAsync(1) { arrival =>
         cacheLookup(arrival).flatMap {
@@ -58,7 +58,7 @@ object OptimisationProviders {
       .collect { case Some(bam) => bam }
 
   def historicManifestsPaxProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
-                                  (implicit ec: ExecutionContext): HistoricManifestsPaxProvider = arrival =>
+                                  (implicit ec: ExecutionContext): Arrival => Future[Option[ManifestPaxCount]] = arrival =>
     manifestLookupService
       .historicManifestPax(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
       .map { case (_, maybeManifest) => maybeManifest }
@@ -69,32 +69,31 @@ object OptimisationProviders {
       }
 
   def arrivalsProvider(arrivalsActor: ActorRef)
-                      (crunchRequest: ProcessingRequest)
+                      (processingRequest: ProcessingRequest)
                       (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[List[Arrival], NotUsed]] =
     arrivalsActor
-      .ask(GetFlights(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
+      .ask(GetFlights(processingRequest.start.millisSinceEpoch, processingRequest.end.millisSinceEpoch))
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       .map(_.map(_._2.flights.map(_._2.apiFlight).toList))
 
   def flightsWithSplitsProvider(arrivalsActor: ActorRef)
-                               (crunchRequest: ProcessingRequest)
-                               (implicit timeout: Timeout, ec: ExecutionContext): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
-    arrivalsActor
-      .ask(GetFlights(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
+                               (implicit timeout: Timeout, ec: ExecutionContext): ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+    request => arrivalsActor
+      .ask(GetFlights(request.start.millisSinceEpoch, request.end.millisSinceEpoch))
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       .map(_.map(_._2.flights.values.toList))
 
   def liveManifestsProvider(manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
-                           (crunchRequest: ProcessingRequest): Future[Source[VoyageManifests, NotUsed]] =
+                           (processingRequest: ProcessingRequest): Future[Source[VoyageManifests, NotUsed]] =
     Future.successful(
-      manifestsProvider(crunchRequest.start.toUtcDate, crunchRequest.end.toUtcDate).map(_._2)
+      manifestsProvider(processingRequest.start.toUtcDate, processingRequest.end.toUtcDate).map(_._2)
     )
 
   def passengersProvider(passengersActor: ActorRef)
-                        (crunchRequest: ProcessingRequest)
+                        (processingRequest: ProcessingRequest)
                         (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[TQM, PassengersMinute]] =
     passengersActor
-      .ask(GetStateForDateRange(crunchRequest.start.millisSinceEpoch, crunchRequest.end.millisSinceEpoch))
+      .ask(GetStateForDateRange(processingRequest.start.millisSinceEpoch, processingRequest.end.millisSinceEpoch))
       .mapTo[MinutesContainer[PassengersMinute, TQM]]
       .map(
         _.minutes.map(_.toMinute)
@@ -103,10 +102,10 @@ object OptimisationProviders {
       )
 
   def staffMinutesProvider(staffActor: ActorRef, terminals: Iterable[Terminal])
-                          (crunchRequest: ProcessingRequest)
+                          (processingRequest: ProcessingRequest)
                           (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[Terminal, List[Int]]] = {
-    val start = crunchRequest.start.millisSinceEpoch
-    val end = crunchRequest.end.millisSinceEpoch
+    val start = processingRequest.start.millisSinceEpoch
+    val end = processingRequest.end.millisSinceEpoch
     staffActor
       .ask(GetStateForDateRange(start, end))
       .mapTo[MinutesContainer[StaffMinute, TM]]

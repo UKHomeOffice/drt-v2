@@ -105,9 +105,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     probe.fishForMessage(1.seconds) {
       case ArrivalsFeedFailure(_, _) => true
-      case o =>
-        println(s"got $o")
-        false
+      case _ => false
     }
 
     success

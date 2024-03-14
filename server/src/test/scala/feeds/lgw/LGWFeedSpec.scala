@@ -116,8 +116,7 @@ class LGWFeedSpec extends CrunchTestLike with Mockito {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(5.seconds) {
-      case x => println(x)
-        false
+      case _ => false
     }
 
     true

@@ -218,6 +218,10 @@ sealed trait PortStateLike {
     List(latestFlights, latestCrunch, latestStaff).max
   }
 
+  lazy val flightsLatest: MillisSinceEpoch = if (flights.nonEmpty) flights.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
+  lazy val crunchMinutesLatest: MillisSinceEpoch = if (crunchMinutes.nonEmpty) crunchMinutes.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
+  lazy val staffMinutesLatest: MillisSinceEpoch = if (staffMinutes.nonEmpty) staffMinutes.map(_._2.lastUpdated.getOrElse(0L)).max else 0L
+
   def window(start: SDateLike, end: SDateLike, sourceOrderPreference: List[FeedSource]): PortState
 
   def windowWithTerminalFilter(start: SDateLike, end: SDateLike, portQueues: IMap[Terminal, Seq[Queue]], sourceOrderPreference: List[FeedSource]): PortState

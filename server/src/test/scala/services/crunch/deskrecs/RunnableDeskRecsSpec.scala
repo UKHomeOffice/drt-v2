@@ -3,22 +3,24 @@ package services.crunch.deskrecs
 import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.SortedActorRefSource
+import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply
+import akka.stream.UniqueKillSwitch
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinutes, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.{Flights, PaxForArrivals}
 import drt.shared._
+import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
-import services.crunch.VoyageManifestGenerator.{euPassport, visa}
-import DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.TryCrunchWholePax
+import services.crunch.VoyageManifestGenerator.{euPassport, visa}
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
@@ -104,7 +106,10 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val flexDesks = false
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
-  private def getDeskRecsGraph(mockPortStateActor: ActorRef, historicManifests: HistoricManifestsProvider, historicManifestsPaxProvider: HistoricManifestsPaxProvider, airportConfig: AirportConfig = defaultAirportConfig) = {
+  private def getDeskRecsGraph(mockPortStateActor: ActorRef,
+                               historicManifests: Iterable[Arrival] => Source[ManifestLike, NotUsed],
+                               historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]],
+                               airportConfig: AirportConfig = defaultAirportConfig): (ActorRef, UniqueKillSwitch) = {
     val paxAllocation = PaxTypeQueueAllocation(
       B5JPlusTypeAllocator,
       TerminalQueueAllocator(airportConfig.terminalPaxTypeQueueAllocation))
@@ -127,10 +132,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
     )
+    val crunchRequest: MillisSinceEpoch => CrunchRequest =
+      (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "desk-recs")
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "desk-recs")
-
-    RunnableOptimisation.createGraph(crunchGraphSource, mockPortStateActor, deskRecsProducer, "desk-recs").run()
+    QueuedRequestProcessing.createGraph(crunchGraphSource, mockPortStateActor, deskRecsProducer, "desk-recs").run()
   }
 
   private def crunchRequest(midnight20190101: SDateLike, airportConfig: AirportConfig = defaultAirportConfig): CrunchRequest = {
@@ -521,31 +527,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     portStateProbe.fishForMessage(2.seconds) {
       case mins: MinutesContainer[CrunchMinute, TQM] => mins.minutes.size === defaultAirportConfig.queuesByTerminal.flatMap(_._2).size * minsInADay
       case _ => false
-    }
-
-    success
-  }
-
-  "Given flights for the next 10 days, a max forecast of 2 days, and a recrunch flag set to true " +
-    "When I monitor the port state actor " +
-    "Then I should see crunch minutes arriving for the 2 days " >> {
-    val noonSDate: SDateLike = SDate("2018-01-01T00:00")
-    val arrivalsFor10Days: Seq[ApiFlightWithSplits] = (0 until 10).map { d =>
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA1000", schDt = noonSDate.addDays(d).toISOString, passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))), Set(historicSplits))
-    }
-    val crunch = runCrunchGraph(TestConfig(
-      airportConfig = defaultAirportConfig.copy(minutesToCrunch = 30),
-      now = () => noonSDate,
-      recrunchOnStart = true,
-      initialPortState = Option(PortState(arrivalsFor10Days, List(), List()))
-    ))
-
-    val expectedCrunchDays = Set(SDate("2018-01-01T00:00").toISODateOnly, SDate("2018-01-02T00:00").toISODateOnly)
-
-    crunch.portStateTestProbe.fishForMessage(2.seconds) {
-      case PortState(_, cms, _) =>
-        val crunchDays = cms.map(cm => SDate(cm._1.minute).toISODateOnly).toSet
-        crunchDays == expectedCrunchDays
     }
 
     success

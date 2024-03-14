@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpda
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, LiveFeedSource, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}

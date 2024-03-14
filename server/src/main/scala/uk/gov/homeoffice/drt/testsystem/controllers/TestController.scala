@@ -43,15 +43,15 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def saveArrival(arrival: Arrival): Future[Any] = {
+  private def saveArrival(arrival: Arrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    ctrl.persistentActors.liveArrivalsActor ! ArrivalsFeedSuccess(Flights(List(arrival)))
+    ctrl.feedService.liveFeedArrivalsActor ! ArrivalsFeedSuccess(Flights(List(arrival)))
     ctrl.actorService.portStateActor.ask(ArrivalsDiff(List(arrival), List())).map { _ =>
-      ctrl.feedService.liveActor ! AdhocCheck
+      ctrl.feedService.liveFeedPollingActor ! AdhocCheck
     }
   }
 
-  def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
+  private def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
     log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
     ctrl.persistentActors.manifestsRouterActor
       .ask(ManifestsFeedSuccess(DqManifests(0, VoyageManifests(Set(voyageManifest)).manifests)))

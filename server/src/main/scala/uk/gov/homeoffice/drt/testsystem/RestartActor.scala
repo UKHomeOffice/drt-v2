@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.testsystem.RestartActor.{AddResetActors, StartTestS
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 object RestartActor {
   case object StartTestSystem
@@ -25,7 +25,7 @@ class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with Actor
   private var actorsToReset: Seq[ActorRef] = Seq.empty
   private var maybeReplyTo: Option[ActorRef] = None
 
-  implicit val ec: ExecutionContextExecutor = context.dispatcher
+  implicit val ec: ExecutionContext = context.dispatcher
 
   override def receive: Receive = {
     case AddResetActors(actors) =>
@@ -43,7 +43,11 @@ class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with Actor
       resetInMemoryData()
 
       val resetFutures = actorsToReset
-        .map(_.ask(ResetData)(new Timeout(3.second)))
+        .map(_.ask(ResetData)(new Timeout(3.second)).recover {
+          case t =>
+            log.error(s"Failed to reset actor: ${t.getMessage}")
+            Status.Failure(t)
+        })
 
       Future.sequence(resetFutures).onComplete { _ =>
         log.info(s"Restarting system")

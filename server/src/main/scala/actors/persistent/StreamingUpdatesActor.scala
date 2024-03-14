@@ -89,7 +89,7 @@ class StreamingUpdatesActor[T, S](val persistenceId: String,
   val receiveQuery: Receive = query(() => state, sender)
 
   private val receiveUnknown: Receive = {
-    case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")
+    case unexpected => log.error(s"Received unexpected message ${unexpected.getClass}")
   }
 
   override def receiveCommand: Receive =

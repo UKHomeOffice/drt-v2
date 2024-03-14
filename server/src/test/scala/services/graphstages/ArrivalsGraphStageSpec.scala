@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.TerminalAverage
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3}
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
 import uk.gov.homeoffice.drt.time.{MilliDate, SDate, SDateLike}
@@ -209,9 +209,9 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       "When they have matching number, schedule, terminal and origin" >> {
         "I should see the live arrival with the cirium arrival's status merged" >> {
           val liveArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"),
-            feedSources = Set(LiveFeedSource),passengerSources = Map(LiveFeedSource -> Passengers(None, None)))
+            feedSources = Set(LiveFeedSource), passengerSources = Map(LiveFeedSource -> Passengers(None, None)))
           val ciriumArrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), estDt = scheduled,
-            feedSources = Set(LiveBaseFeedSource),passengerSources = Map(LiveBaseFeedSource -> Passengers(None, None)))
+            feedSources = Set(LiveBaseFeedSource), passengerSources = Map(LiveBaseFeedSource -> Passengers(None, None)))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
           expectUniqueArrival(liveArrival.unique)
@@ -230,8 +230,10 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       "When they have matching number, schedule, terminal but different origins" >> {
         "I should see the live arrival without the cirium arrival's status merged" >> {
-          val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
-          val ciriumArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("BBB"), estDt = scheduled)
+          val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"),
+            feedSources = Set(LiveFeedSource), passengerSources = Map(LiveFeedSource -> Passengers(None, None)))
+          val ciriumArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("BBB"),
+            feedSources = Set(LiveFeedSource), passengerSources = Map(LiveFeedSource -> Passengers(None, None)), estDt = scheduled)
           val updatedArrival = liveArrival.copy(ActualChox = Option(SDate(scheduled).millisSinceEpoch), PassengerSources = Map(LiveFeedSource -> Passengers(None, None)))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(liveArrival))))
@@ -275,39 +277,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
         success
       }
     }
-
-    "When they have matching number, terminal & origin and are scheduled further than 24 hours ahead" >> {
-      "I should not see the cirium arrival's data merged because we only look for fuzzy matches for the next 24 hours of flights" >> {
-        val now = "2021-06-01T12:00"
-        val aclScheduled = "2021-06-02T11:00"
-        val ciriumScheduled = "2021-06-02T12:05"
-        val aclArrival = ArrivalGenerator.arrival("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"), passengerSources = Map(AclFeedSource -> Passengers(Option(100), None)))
-        val ciriumArrival = ArrivalGenerator.arrival("AA0001", schDt = ciriumScheduled, terminal = T1, origin = PortCode("AAA"), estDt = ciriumScheduled)
-        val forecastArrival = ArrivalGenerator.arrival("AA0001", schDt = aclScheduled, terminal = T1, origin = PortCode("AAA"), passengerSources = Map(ForecastFeedSource -> Passengers(Option(101), None)))
-
-        val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(now)))
-
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(aclArrival))))
-
-        crunch.portStateTestProbe.fishForMessage(1.second) {
-          case PortState(flights, _, _) => flights.nonEmpty
-        }
-
-        offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Flights(List(ciriumArrival))))
-        offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(Flights(List(forecastArrival))))
-
-        val expected = forecastArrival.copy(
-          FeedSources = Set(AclFeedSource, ForecastFeedSource),
-          PassengerSources = aclArrival.PassengerSources ++ forecastArrival.PassengerSources)
-
-        crunch.portStateTestProbe.fishForMessage(1.second) {
-          case PortState(flights, _, _) =>
-            flights.values.exists(_.apiFlight == expected)
-        }
-
-        success
-      }
-    }
   }
 
   "Given an ACL flight into T1, when it changes to T2 we should no longer see it in T1" >> {
@@ -333,80 +302,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
     success
   }
 
-  "Given a live feed flight into T1, when it changes to T2 we should no longer see it in T1" >> {
-    val scheduled = "2021-06-01T12:40"
-    val arrival = ArrivalGenerator.arrival("AA0001", schDt = scheduled, terminal = T1, origin = PortCode("AAA"))
-
-    val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
-
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(arrival))))
-
-    crunch.portStateTestProbe.fishForMessage(1.second) {
-      case PortState(flights, _, _) => flights.values.map(a => a.apiFlight.Terminal) == Iterable(T1)
-    }
-
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(List(arrival.copy(Terminal = T2)))))
-
-    crunch.portStateTestProbe.fishForMessage(1.second) {
-      case PortState(flights, _, _) =>
-        val terminals = flights.values.map(a => a.apiFlight.Terminal)
-        terminals == Iterable(T2)
-    }
-
-    success
-  }
-
-  "terminalRemovals" should {
-    val arrivalT1 = ArrivalGenerator.arrival("BA0001", terminal = T1, schDt = "2021-05-01T12:50", origin = PortCode("JFK"))
-    val arrivalT2 = arrivalT1.copy(Terminal = T2)
-    "give no removals given no arrivals" >> {
-      val removals = ArrivalsGraphStage.terminalRemovals(Seq(), Seq())
-      removals === Iterable.empty
-    }
-    "give no removals given a new arrival" >> {
-      val removals = ArrivalsGraphStage.terminalRemovals(Seq(arrivalT1), Seq())
-      removals === Iterable.empty
-    }
-    "give no removals given no incoming, but one existing arrival" >> {
-      val removals = ArrivalsGraphStage.terminalRemovals(Seq(), Seq(arrivalT1))
-      removals === Iterable.empty
-    }
-    "give no removals given no changes" >> {
-      val removals = ArrivalsGraphStage.terminalRemovals(Seq(arrivalT1), Seq(arrivalT1))
-      removals === Iterable.empty
-    }
-    "give 1 removal given an arrival at T1 which was previously at T2" >> {
-      val removals = ArrivalsGraphStage.terminalRemovals(Seq(arrivalT1), Seq(arrivalT2))
-      removals === Iterable(arrivalT2)
-    }
-    "give 1 removal given an arrival at T2 which was previously at T1" >> {
-      val removals = ArrivalsGraphStage.terminalRemovals(Seq(arrivalT2), Seq(arrivalT1))
-      removals === Iterable(arrivalT1)
-    }
-  }
-
-  "Unmatched arrivals" >> {
-    "Given 3 incoming arrivals, and 2 matching existing arrivals" >> {
-      "The percentage unmatched should be 33 when rounded" >> {
-        val incoming = Seq(
-          ArrivalGenerator.arrival(iata = "BA001", schDt = "2022-06-01T00:00", terminal = T1, origin = PortCode("JFK")),
-          ArrivalGenerator.arrival(iata = "BA002", schDt = "2022-06-01T00:05", terminal = T2, origin = PortCode("ABC")),
-          ArrivalGenerator.arrival(iata = "BA003", schDt = "2022-06-01T00:30", terminal = T3, origin = PortCode("ZYX")),
-        ).map(a => a.unique)
-
-        val existing = incoming.take(2)
-
-        ArrivalsGraphStage.unmatchedArrivalsPercentage(incoming, existing).toInt === 33
-      }
-    }
-
-    "Given 0 incoming arrivals, and 0 matching existing arrivals" >> {
-      "The percentage unmatched should be 0" >> {
-        ArrivalsGraphStage.unmatchedArrivalsPercentage(Seq(), Seq()).toInt === 0
-      }
-    }
-  }
-
   "Max pax from ACL" should {
     "Remain after receiving a live feed without max pax" in {
       val aclFlight = ArrivalGenerator.arrival("BA0001", schDt = "2021-05-01T12:50", origin = PortCode("JFK"), passengerSources = Map(AclFeedSource -> Passengers(Option(80), None)), maxPax = Option(100))
@@ -425,7 +320,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
 
       crunch.portStateTestProbe.fishForMessage(1.second) {
         case PortState(flights, _, _) =>
-          println(s"flights: ${flights.values.map(_.apiFlight.MaxPax)}")
           flights.values.exists(a => a.apiFlight.bestPcpPaxEstimate(List(LiveFeedSource)) == Option(95) && a.apiFlight.MaxPax == Option(100))
       }
 

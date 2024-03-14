@@ -16,9 +16,6 @@ trait DrtParameters {
   val aclHost: Option[String]
   val aclUsername: Option[String]
   val aclKeyPath: Option[String]
-  val refreshArrivalsOnStart: Boolean
-  val flushArrivalsOnStart: Boolean
-  val recrunchOnStart: Boolean
 
   val useNationalityBasedProcessingTimes: Boolean
 
@@ -72,9 +69,6 @@ case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParamete
   override val aclHost: Option[String] = config.getOptional[String]("acl.host")
   override val aclUsername: Option[String] = config.getOptional[String]("acl.username")
   override val aclKeyPath: Option[String] = config.getOptional[String]("acl.keypath")
-  override val refreshArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.refresh-arrivals-on-start").getOrElse(false)
-  override val flushArrivalsOnStart: Boolean = config.getOptional[Boolean]("crunch.flush-arrivals-on-start").getOrElse(false)
-  override val recrunchOnStart: Boolean = config.getOptional[Boolean]("crunch.recrunch-on-start").getOrElse(false)
 
   override val useNationalityBasedProcessingTimes: Boolean = config.getOptional[String]("feature-flags.nationality-based-processing-times").isDefined
 

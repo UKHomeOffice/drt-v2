@@ -90,7 +90,7 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
       val replyWithUpdates = makeReplyWithUpdates(emptyFlights, emptyQueues, emptyStaff)
 
       "Then I should see a None being sent" >> {
-        replyWithUpdates(0L, 0L, 0L, self)
+        replyWithUpdates(0L, 0L, 0L, 0L, 0L, self)
         expectMsg(None)
         success
       }
@@ -107,9 +107,9 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
       val replyWithUpdates = makeReplyWithUpdates(updates, emptyQueues, emptyStaff)
 
       "Then I should see an Option of PortStateUpdates send with the update and the latest updated millis" >> {
-        replyWithUpdates(0L, 0L, 0L, self)
+        replyWithUpdates(0L, 0L, 0L, 0L, 0L, self)
         val updatesAndRemovals = FlightUpdatesAndRemovals(Map(updatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
-        expectMsg(Option(PortStateUpdates(updatedMillis, updatesAndRemovals, Seq(), Seq())))
+        expectMsg(Option(PortStateUpdates(updatedMillis, 0L, 0L, updatesAndRemovals, Seq(), Seq())))
         success
       }
     }
@@ -127,9 +127,9 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
       val replyWithUpdates = makeReplyWithUpdates(updates, updatedQueues, emptyStaff)
 
       "Then I should see an Option of PortStateUpdates send with both updates and the latest updated millis" >> {
-        replyWithUpdates(0L, 0L, 0L, self)
+        replyWithUpdates(0L, 0L, 0L, 0L, 0L, self)
         val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
-        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, updatesAndRemovals, Seq(updatedQueueMinute), Seq())))
+        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, maxUpdatedMillis, 0L, updatesAndRemovals, Seq(updatedQueueMinute), Seq())))
         success
       }
     }
@@ -148,9 +148,9 @@ class PartitionedPortStateFunctionsSpec extends CrunchTestLike with ImplicitSend
       val replyWithUpdates = makeReplyWithUpdates(updates, updatedQueues, updatedStaff)
 
       "Then I should see an Option of PortStateUpdates send with both updates and the latest updated millis" >> {
-        replyWithUpdates(0L, 0L, 0L, self)
+        replyWithUpdates(0L, 0L, 0L, 0L, 0L, self)
         val updatesAndRemovals = FlightUpdatesAndRemovals(Map(maxUpdatedMillis -> ArrivalsDiff(Seq(arrival), Seq())), Map())
-        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, updatesAndRemovals, Seq(updatedQueueMinute), Seq(updatedStaffMinute))))
+        expectMsg(Option(PortStateUpdates(maxUpdatedMillis, 50L, maxUpdatedMillis, updatesAndRemovals, Seq(updatedQueueMinute), Seq(updatedStaffMinute))))
         success
       }
     }

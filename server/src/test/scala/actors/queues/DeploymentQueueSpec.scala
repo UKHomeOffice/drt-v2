@@ -10,7 +10,7 @@ import akka.stream.{ClosedShape, Materializer}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.actor.commands.CrunchRequest
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
@@ -22,7 +22,8 @@ class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
   val durationMinutes = 60
 
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int): ActorRef = {
-    val source = new SortedActorRefSource(TestProbe().ref, crunchOffsetMinutes, durationMinutes, SortedSet(), "deployments")
+    val request = (millis: MillisSinceEpoch) => CrunchRequest(millis, crunchOffsetMinutes, durationMinutes)
+    val source = new SortedActorRefSource(TestProbe().ref, request, SortedSet.empty[ProcessingRequest], "deployments")
     val graph = GraphDSL.create(source) {
       implicit builder =>
         crunchRequests =>

@@ -44,9 +44,11 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
   val noopUpdates: ManifestsUpdate = (_: UtcDate, _: VoyageManifests) => Future(UpdatedMillis.empty)
 
+  private val probe = TestProbe("")
+
   "When sending an ApiFeedResponse" >> {
     "Given a Success response with 1 manifest" >> {
-      val mockLookup = MockManifestsLookup()
+      val mockLookup = MockManifestsLookup(probe.ref)
       val manifestRouterActor: ActorRef = manifestRouterActorWithMock(mockLookup)
       val creationDate = SDate("2020-11-20T12:00Z")
 
@@ -56,14 +58,15 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
 
       "Then it should be sent to the actor for the correct day" >> {
 
-        Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1.second)
-        val expected = List((UtcDate(2020, 11, 20), VoyageManifests(Set(manifest))))
-        mockLookup.paramsUpdate === expected
+        manifestRouterActor ! manifestFeedSuccess
+        val expected = (UtcDate(2020, 11, 20), VoyageManifests(Set(manifest)))
+        probe.expectMsg(expected)
+        success
       }
     }
 
     "Given a Success response with 1 manifest" >> {
-      val mockLookup = MockManifestsLookup()
+      val mockLookup = MockManifestsLookup(probe.ref)
       val manifestRouterActor: ActorRef = manifestRouterActorWithMock(mockLookup)
       val creationDate = SDate("2020-11-20T12:00Z")
 
@@ -72,7 +75,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifestFeedSuccess = ManifestsFeedSuccess(DqManifests(0, Set(manifest)), creationDate)
 
       "Then it should update the last processed marker" >> {
-        Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1.second)
+        manifestRouterActor ! manifestFeedSuccess
 
         val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1.second)
 
@@ -80,7 +83,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       }
 
       "Then it should record the successful response" >> {
-        Await.result(manifestRouterActor.ask(manifestFeedSuccess), 1.second)
+        manifestRouterActor ! manifestFeedSuccess
 
         val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 1.second)
 
@@ -99,7 +102,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     }
 
     "Given a Failure response" >> {
-      val mockLookup = MockManifestsLookup()
+      val mockLookup = MockManifestsLookup(probe.ref)
       val manifestRouterActor: ActorRef = manifestRouterActorWithMock(mockLookup)
 
       val creationDate = SDate("2020-11-20T12:00Z")
@@ -107,7 +110,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifestFeedFailure = ManifestsFeedFailure("Failed", creationDate)
 
       "Then it should record the failure response" >> {
-        Await.result(manifestRouterActor.ask(manifestFeedFailure), 1.second)
+        manifestRouterActor ! manifestFeedFailure
 
         val result: ApiFeedState = Await.result(manifestRouterActor.ask(GetState).mapTo[ApiFeedState], 2.seconds)
 
@@ -124,7 +127,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
         )
       }
       "Then it should respond with the feed statuses when asked" >> {
-        Await.result(manifestRouterActor.ask(manifestFeedFailure), 1.second)
+        manifestRouterActor ! manifestFeedFailure
 
         val result: Option[FeedSourceStatuses] = Await.result(manifestRouterActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]], 1.second)
 
@@ -190,7 +193,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifest1 = manifestForDate("2020-11-01")
       val manifest2 = manifestForDate("2020-11-02")
       val manifest3 = manifestForDate("2020-11-03")
-      val manifestsLookup = MockManifestsLookup()
+      val manifestsLookup = MockManifestsLookup(probe.ref)
       val testManifests = VoyageManifests(Set(manifest1, manifest2, manifest3))
       val manifestRouterActor = system.actorOf(
         Props(new ManifestRouterActor(manifestsLookup.lookup(testManifests), noopUpdates))

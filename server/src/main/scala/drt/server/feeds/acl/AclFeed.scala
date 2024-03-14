@@ -9,7 +9,7 @@ import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
@@ -119,16 +119,18 @@ object AclFeed {
     val arrivalEntries = flightEntries
       .map(_.split(",").toList)
       .filter(_.length == 30)
-      .filter(_ (AclColIndex.ArrDep) == "A")
+      .filter(_(AclColIndex.ArrDep) == "A")
       .filter(f => f(AclColIndex.FlightNumber) match {
         case Arrival.flightCodeRegex(_, _, suffix) => !(suffix == "P" || suffix == "F")
         case _ => true
       })
 
-    val arrivals = arrivalEntries
+    val aclArrivals = arrivalEntries
       .map(fields => aclFieldsToArrival(fields, terminalMapping))
       .collect { case Success(a) => a }
       .toList
+
+    val arrivals = aclArrivals.map(_.arrival)
 
     if (arrivals.nonEmpty) {
       val latestArrival = arrivals.maxBy(_.Scheduled)
@@ -200,7 +202,40 @@ object AclFeed {
     case (hour, minute) => s"$hour:$minute:00Z"
   }
 
-  private def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[Arrival] = {
+  case class AclArrival(operator: String,
+                        maxPax: Int,
+                        totalPax: Int,
+                        terminal: String,
+                        flightNumber: String,
+                        origin: String,
+                        scheduled: Long,
+                       ) {
+    def arrival: Arrival = Arrival(
+      Operator = Option(Operator(operator)),
+      Status = ArrivalStatus("Scheduled"),
+      Estimated = None,
+      Predictions = Predictions(0L, Map()),
+      Actual = None,
+      EstimatedChox = None,
+      ActualChox = None,
+      Gate = None,
+      Stand = None,
+      MaxPax = Option(maxPax),
+      RunwayID = None,
+      BaggageReclaimId = None,
+      AirportID = "",
+      Terminal = Terminal(terminal),
+      rawICAO = flightNumber,
+      rawIATA = flightNumber,
+      Origin = PortCode(origin),
+      Scheduled = scheduled,
+      PcpTime = None,
+      FeedSources = Set(AclFeedSource),
+      PassengerSources = Map(AclFeedSource -> Passengers(Option(totalPax), None))
+    )
+  }
+
+  private def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[AclArrival] =
     Try {
       val operator: String = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
@@ -208,31 +243,16 @@ object AclFeed {
       val aclTerminal = Terminals.Terminal(fields(AclColIndex.Terminal))
       val portTerminal = aclToPortTerminal(aclTerminal)
 
-      Arrival(
-        Operator = operator,
-        Status = "ACL Forecast",
-        Estimated = None,
-        Predictions = Predictions(0L, Map()),
-        Actual = None,
-        EstimatedChox = None,
-        ActualChox = None,
-        Gate = None,
-        Stand = None,
-        MaxPax = Option(maxPax),
-        RunwayID = None,
-        BaggageReclaimId = None,
-        AirportID = fields(AclColIndex.Airport),
-        Terminal = portTerminal,
-        rawICAO = fields(AclColIndex.FlightNumber),
-        rawIATA = fields(AclColIndex.FlightNumber),
-        Origin = fields(AclColIndex.Origin),
-        Scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
-        PcpTime = None,
-        FeedSources = Set(AclFeedSource),
-        PassengerSources = Map(AclFeedSource -> Passengers(Option(actPax),None))
+      AclArrival(
+        operator = operator,
+        maxPax = maxPax,
+        totalPax = actPax,
+        terminal = portTerminal.toString,
+        flightNumber = fields(AclColIndex.FlightNumber),
+        origin = fields(AclColIndex.Origin),
+        scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
       )
     }
-  }
 
   private object AclColIndex {
     private val allFields: Map[String, Int] = List(

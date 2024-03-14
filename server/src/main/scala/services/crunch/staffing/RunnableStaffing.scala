@@ -24,7 +24,7 @@ object RunnableStaffing {
                       )
                       (implicit ec: ExecutionContext): Flow[ProcessingRequest, MinutesContainer[StaffMinute, TM], NotUsed] =
     Flow[ProcessingRequest]
-      .wireTap(processingRequest => log.info(s"${processingRequest.localDate} staffing crunch request started"))
+      .wireTap(processingRequest => log.info(s"${processingRequest.date} staffing crunch request started"))
       .mapAsync(1)(cr => shiftsProvider(cr).map(sa => (cr, sa)))
       .mapAsync(1) { case (cr, sa) => fixedPointsProvider(cr).map(fp => (cr, sa, fp)) }
       .mapAsync(1) { case (cr, sa, fp) => movementsProvider(cr).map(sm => (cr, sa, fp, sm)) }

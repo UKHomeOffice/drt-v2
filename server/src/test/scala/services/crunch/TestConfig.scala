@@ -17,8 +17,6 @@ import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 
 case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
-                      initialForecastArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
-                      initialLiveBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
                       initialPortState: Option[PortState] = None,
                       airportConfig: AirportConfig = TestDefaults.airportConfig,
@@ -33,13 +31,11 @@ case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arri
                       maybeAggregatedArrivalsActor: Option[ActorRef] = None,
                       useLegacyManifests: Boolean = false,
                       forecastMaxDays: Int = 2,
-                      refreshArrivalsOnStart: Boolean = false,
-                      recrunchOnStart: Boolean = false,
                       flexDesks: Boolean = false,
                       arrivalsAdjustments: ArrivalsAdjustmentsLike = ArrivalsAdjustmentsNoop,
                       maybeEgatesProvider: Option[() => Future[PortEgateBanksUpdates]] = None,
                       setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = TestDefaults.setPcpFromSch,
-                      addTouchdownPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff),
-                      passengerAdjustments: List[Arrival]=> Future[List[Arrival]] = arrivals => Future.successful(arrivals),
+                      addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff),
+                      passengerAdjustments: List[Arrival] => Future[List[Arrival]] = arrivals => Future.successful(arrivals),
                       historicManifestLookup: Option[ManifestLookupLike] = None,
                      )

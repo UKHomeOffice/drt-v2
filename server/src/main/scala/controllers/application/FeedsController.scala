@@ -49,16 +49,16 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
           read[FeedSource](text) match {
             case AclFeedSource =>
               log.info(s"Sending adhoc feed request to the base forecast feed actor")
-              ctrl.feedService.fcstBaseActor ! AdhocCheck
+              ctrl.feedService.fcstBaseFeedPollingActor ! AdhocCheck
             case ForecastFeedSource =>
               log.info(s"Sending adhoc feed request to the forecast feed actor")
-              ctrl.feedService.fcstActor ! AdhocCheck
+              ctrl.feedService.fcstFeedPollingActor ! AdhocCheck
             case LiveBaseFeedSource =>
               log.info(s"Sending adhoc feed request to the base live feed actor")
-              ctrl.feedService.liveBaseActor ! AdhocCheck
+              ctrl.feedService.liveBaseFeedPollingActor ! AdhocCheck
             case LiveFeedSource =>
               log.info(s"Sending adhoc feed request to the live feed actor")
-              ctrl.feedService.liveActor ! AdhocCheck
+              ctrl.feedService.liveFeedPollingActor ! AdhocCheck
             case unexpected =>
               log.info(s"Feed check not supported for $unexpected")
           }
@@ -110,7 +110,7 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
     }
 
   private val arrivalActorPersistenceIds = Seq(
-    (CirriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
+    (CiriumLiveArrivalsActor.persistenceId, LiveBaseFeedSource),
     (PortLiveArrivalsActor.persistenceId, LiveFeedSource),
     (AclForecastArrivalsActor.persistenceId, AclFeedSource),
     (PortForecastArrivalsActor.persistenceId, ForecastFeedSource)

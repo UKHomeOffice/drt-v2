@@ -7,7 +7,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
-import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
+import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -52,7 +52,7 @@ object DynamicRunnableDeployments {
         case Some(requestWithData) => requestWithData
       }
       .mapAsync(1) {
-        case (request, loads, deskLimitsByTerminal) =>
+        case (request: LoadProcessingRequest, loads, deskLimitsByTerminal) =>
           val started = SDate.now().millisSinceEpoch
           log.info(s"[deployments] Optimising ${request.durationMinutes} minutes (${request.start.toISOString} to ${request.end.toISOString})")
           loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal)
@@ -65,6 +65,9 @@ object DynamicRunnableDeployments {
                 log.error(s"Failed to fetch staff", t)
                 None
             }
+        case unexpected =>
+          log.warn(s"Ignoring unexpected request type: $unexpected")
+          Future.successful(None)
       }
       .collect {
         case Some(minutes) => minutes.asContainer

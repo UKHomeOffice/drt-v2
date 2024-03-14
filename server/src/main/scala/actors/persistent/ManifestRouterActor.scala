@@ -136,7 +136,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
       persistFeedStatus(newStatus)
-      sender() ! StatusReply.Ack
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
@@ -191,11 +190,10 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     case _: UniqueArrival =>
       sender() ! None
 
-    case unexpected => log.warn(s"Got an unexpected message: $unexpected")
+    case unexpected => log.error(s"Got an unexpected message: $unexpected")
   }
 
-  def handleUpdatesAndAck(updates: VoyageManifests,
-                          replyTo: ActorRef): Future[UpdatedMillis] = {
+  def handleUpdatesAndAck(updates: VoyageManifests, replyTo: ActorRef): Future[UpdatedMillis] = {
     processingRequest = true
     val eventualEffects = sendUpdates(updates)
     eventualEffects

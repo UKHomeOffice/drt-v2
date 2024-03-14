@@ -40,6 +40,15 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   private val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
   private val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
 
+  override def postRecoveryComplete(): Unit = {
+    super.postRecoveryComplete()
+    val lastMinuteOfDay = SDate(lastMinuteMillis)
+    if (maybePointInTime.isEmpty && messagesPersistedSinceSnapshotCounter > 10 && lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight) {
+      log.info(f"Creating final snapshot for $terminal for historic day $year-$month%02d-$day%02d")
+      saveSnapshot(stateToMessage)
+    }
+  }
+
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
       log.debug(s"Received MinutesContainer for persistence")
@@ -52,7 +61,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     case _: SaveSnapshotSuccess =>
       ackIfRequired()
 
-    case m => log.warn(s"Got unexpected message: $m")
+    case m => log.error(s"Got unexpected message: $m")
   }
 
   private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =

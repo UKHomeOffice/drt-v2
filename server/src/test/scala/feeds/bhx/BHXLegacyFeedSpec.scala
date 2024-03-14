@@ -165,8 +165,6 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         }
       val feed = BHXFeed(soapService)
       val arrivals: List[Arrival] = feed.getLiveArrivals
-      println(s"We got ${arrivals.size} Arrivals.")
-      arrivals.foreach(println)
       ok
     }.pendingUntilFixed("used to test if the BHX feed is working locally given you can ssh into a whitelisted IP address")
   }

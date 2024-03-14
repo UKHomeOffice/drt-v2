@@ -1,6 +1,6 @@
 package controllers.application
 
-import actors.CrunchManagerActor.RecalculateArrivals
+import actors.CrunchManagerActor.{RecalculateArrivals, Recrunch}
 import actors.DateRange
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
 import actors.persistent.QueueLikeActor.UpdatedMillis
@@ -10,7 +10,7 @@ import com.google.inject.Inject
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import services.crunch.CrunchManager.{queueDaysToReCrunch, queueDaysToReCrunchWithUpdatedSplits}
+import services.crunch.CrunchManager.{queueDaysToReCrunchWithUpdatedSplits, queueDaysToReProcess}
 import services.exports.Forecast
 import uk.gov.homeoffice.drt.auth.Roles.{DesksAndQueuesView, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -29,13 +29,18 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val startMillis = request.queryString.get("start").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
       val endMillis = request.queryString.get("end").flatMap(_.headOption.map(_.toLong)).getOrElse(0L)
 
-      val maybeSinceMillis = request.queryString.get("since").flatMap(_.headOption.map(_.toLong))
+      val maybeSinceMillis =
+        for {
+          flightsSince <- request.queryString.get("flights-since").flatMap(_.headOption.map(_.toLong))
+          queuesSince <- request.queryString.get("queues-since").flatMap(_.headOption.map(_.toLong))
+          staffSince <- request.queryString.get("staff-since").flatMap(_.headOption.map(_.toLong))
+        } yield (flightsSince, queuesSince, staffSince)
 
       val eventualUpdates = maybeSinceMillis match {
         case None =>
           portStateForDates(startMillis, endMillis).map(r => Ok(write(r)))
-        case Some(sinceMillis) =>
-          portStateUpdatesForRange(startMillis, endMillis, sinceMillis).map(r => Ok(write(r)))
+        case Some((flights, queues, staff)) =>
+          portStateUpdatesForRange(startMillis, endMillis, flights, queues, staff).map(r => Ok(write(r)))
       }
 
       eventualUpdates
@@ -51,7 +56,8 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     val startOfWeekMidnight = SDate(startDay).getLocalLastMidnight
     val endOfForecast = startOfWeekMidnight.addDays(numberOfDays)
 
-    (startOfWeekMidnight, endOfForecast)}
+    (startOfWeekMidnight, endOfForecast)
+  }
 
   def forecastWeekSummary(terminalName: String, startDay: MillisSinceEpoch): Action[AnyContent] = authByRole(DesksAndQueuesView) {
     Action.async {
@@ -83,9 +89,12 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
   private def portStateUpdatesForRange(startMillis: MillisSinceEpoch,
                                        endMillis: MillisSinceEpoch,
-                                       sinceMillis: MillisSinceEpoch): Future[Option[PortStateUpdates]] =
+                                       flightsSince: MillisSinceEpoch,
+                                       queuesSince: MillisSinceEpoch,
+                                       staffSince: MillisSinceEpoch,
+                                      ): Future[Option[PortStateUpdates]] =
     ctrl.actorService.portStateActor
-      .ask(GetUpdatesSince(sinceMillis, startMillis, endMillis))
+      .ask(GetUpdatesSince(flightsSince, queuesSince, staffSince, startMillis, endMillis))
       .mapTo[Option[PortStateUpdates]]
 
   private def portStateForDates(startMillis: MillisSinceEpoch, endMillis: MillisSinceEpoch): Future[PortState] =
@@ -118,7 +127,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         from <- LocalDate.parse(fromStr)
         to <- LocalDate.parse(toStr)
       } yield {
-        val datesToReCrunch = DateRange(from, to).map { localDate => SDate(localDate).millisSinceEpoch}.toSet
+        val datesToReCrunch = DateRange(from, to).map { localDate => SDate(localDate).millisSinceEpoch }.toSet
         ctrl.applicationService.crunchManagerActor ! UpdatedMillis(datesToReCrunch)
         Ok(s"Queued dates $from to $to for re-crunch")
       }
@@ -136,7 +145,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
             ctrl.params.forecastMaxDays, ctrl.now)
           Future.successful(Ok("Re-crunching with updated splits"))
         case _ =>
-          queueDaysToReCrunch(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now)
+          queueDaysToReProcess(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now, m => Recrunch(m))
           Future.successful(Ok("Re-crunching without updating splits"))
       }
     }
@@ -144,7 +153,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
   def reCalculateArrivals: Action[AnyContent] = authByRole(SuperAdmin) {
     Action.async { _ =>
-      ctrl.applicationService.crunchManagerActor ! RecalculateArrivals
+      queueDaysToReProcess(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, ctrl.params.forecastMaxDays, ctrl.now, m => RecalculateArrivals(m))
       Future.successful(Ok("Re-calculating arrivals"))
     }
   }

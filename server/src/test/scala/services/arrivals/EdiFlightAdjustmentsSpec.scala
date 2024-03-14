@@ -31,13 +31,13 @@ class EdiFlightAdjustmentsSpec extends Specification {
 
 
   "Given incoming arrivals with baggage ids 1, 2 & 3, they should be assigned terminal A1" >> {
-    val result = EdiArrivalsTerminalAdjustments.apply(a1BaggageArrivals)
+    val result = a1BaggageArrivals.map(EdiArrivalsTerminalAdjustments.adjust)
 
     result === a1BaggageArrivals
   }
 
   "Given incoming arrivals with baggage ids 7 & 8, they should be assigned terminal A2" >> {
-    val result = EdiArrivalsTerminalAdjustments.apply(a2BaggageArrivals)
+    val result = a2BaggageArrivals.map(EdiArrivalsTerminalAdjustments.adjust)
 
     result === a2BaggageArrivals.map(_.copy(Terminal = A2))
   }

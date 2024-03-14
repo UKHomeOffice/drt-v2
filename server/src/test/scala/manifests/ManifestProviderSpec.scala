@@ -7,7 +7,6 @@ import controllers.ArrivalGenerator
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import services.crunch.VoyageManifestGenerator.euPassport
 import services.crunch.deskrecs.OptimisationProviders
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode
@@ -40,7 +39,7 @@ class ManifestProviderSpec extends CrunchTestLike {
   val probe: TestProbe = TestProbe("manifests")
 
   "Given a mock lookup returning a BestAvailableManifest" >> {
-    val lookup: HistoricManifestsProvider = OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockLookupService, mockCacheLookup, mockCacheStore)
+    val lookup = OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockLookupService, mockCacheLookup, mockCacheStore)
 
     lookup(Seq(arrival)).runWith(Sink.seq).map(probe.ref ! _)
 

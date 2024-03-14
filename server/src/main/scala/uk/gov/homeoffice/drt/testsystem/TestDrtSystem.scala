@@ -14,6 +14,7 @@ import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, DrtSystemInterface}
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.service.FeedService
 import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
@@ -65,6 +66,17 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
     airportConfig.minutesToCrunch,
     airportConfig.crunchOffsetMinutes,
     manifestLookups,
+  )
+
+  lazy val feedService: FeedService = TestFeedService(
+    journalType = journalType,
+    airportConfig = airportConfig,
+    now = now,
+    params = params,
+    config = config,
+    paxFeedSourceOrder = paxFeedSourceOrder,
+    flightLookups = flightLookups,
+    manifestLookups = manifestLookups,
   )
 
   val testDrtSystemActor: TestDrtSystemActorsLike = TestDrtSystemActors(applicationService, feedService, actorService, persistentActors, config)
