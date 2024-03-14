@@ -137,7 +137,6 @@ object Settings {
 
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
-    "org.openjdk.jol" % "jol-core" % "0.15",
     "com.github.gphat" %% "censorinus" % censorinus,
     "com.github.jwt-scala" %% "jwt-core" % jwtCore,
     "com.hierynomus" % "sshj" % sshJ,
