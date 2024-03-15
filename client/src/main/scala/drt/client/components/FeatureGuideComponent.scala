@@ -95,7 +95,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                       "padding-right" -> "16px",
                       "padding-bottom" -> "16px"
                     )))
-                    (TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
+                    (Markdown(data.markdownContent))
                   )
                 ))
             })
