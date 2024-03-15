@@ -210,8 +210,10 @@ object AclFeed {
         operator = operator,
         maxPax = maxPax,
         totalPax = actPax,
-        terminal = portTerminal.toString,
-        voyageNumber = fields(AclColIndex.FlightNumber),
+        terminal = Terminal(portTerminal.toString),
+        voyageNumber = fields(AclColIndex.FlightNumber).toInt,
+        carrierCode = fields(AclColIndex.Operator),
+        flightCodeSuffix = None,
         origin = fields(AclColIndex.Origin),
         scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
       )

@@ -3,7 +3,7 @@ package drt.server.feeds
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi.Flights
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.arrivals.{UniqueArrival, _}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -22,7 +22,7 @@ case class StoreFeedImportArrivals(arrivals: Flights)
 
 case object GetFeedImportArrivals
 
-sealed trait FeedArrival {
+sealed trait FeedArrival extends WithUnique[UniqueArrival] with Updatable[FeedArrival] {
   val operator: String
   val maxPax: Int
   val totalPax: Int
@@ -35,6 +35,8 @@ sealed trait FeedArrival {
   lazy val unique: UniqueArrival = UniqueArrival(voyageNumber, terminal, scheduled, PortCode(origin))
 
   def toArrival(feedSource: FeedSource): Arrival
+
+  def update(feedArrival: FeedArrival): FeedArrival
 }
 
 case class ForecastArrival(operator: String,
@@ -47,6 +49,13 @@ case class ForecastArrival(operator: String,
                            origin: String,
                            scheduled: Long,
                           ) extends FeedArrival {
+  override def update(incoming: FeedArrival): FeedArrival = incoming match {
+    case fa: ForecastArrival => fa
+    case la: LiveArrival => la.copy(
+      carrierCode = carrierCode,
+    )
+  }
+
   override def toArrival(feedSource: FeedSource): Arrival = Arrival(
     Operator = Option(Operator(operator)),
     CarrierCode = CarrierCode(carrierCode),
@@ -95,6 +104,24 @@ case class LiveArrival(operator: String,
                        runway: Option[String],
                        baggageReclaim: Option[String],
                       ) extends FeedArrival {
+  override def update(incoming: FeedArrival): FeedArrival = incoming match {
+    case fa: ForecastArrival => fa.copy(
+      carrierCode = carrierCode,
+    )
+    case la: LiveArrival => la.copy(
+      carrierCode = carrierCode,
+      flightCodeSuffix = la.flightCodeSuffix.orElse(flightCodeSuffix),
+      estimated = la.estimated.orElse(estimated),
+      touchdown = la.touchdown.orElse(touchdown),
+      estChox = la.estChox.orElse(estChox),
+      actChox = la.actChox.orElse(actChox),
+      gate = la.gate.orElse(gate),
+      stand = la.stand.orElse(stand),
+      runway = la.runway.orElse(runway),
+      baggageReclaim = la.baggageReclaim.orElse(baggageReclaim),
+    )
+  }
+
   override def toArrival(feedSource: FeedSource): Arrival = Arrival(
     Operator = Option(Operator(operator)),
     CarrierCode = CarrierCode(carrierCode),

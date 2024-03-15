@@ -5,13 +5,11 @@ import actors.persistent.staffing.GetFeedStatuses
 import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, FeedArrival}
-import drt.shared.FlightsApi.Flights
 import scalapb.GeneratedMessage
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.MergeArrivalsRequest
-import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike, Sizes}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, ArrivalsRestorer, UniqueArrival}
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
@@ -23,19 +21,26 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable.SortedMap
 
+object FeedArrivalConversion {
+  def restoreArrivalsFromSnapshot(restorer: ArrivalsRestorer[FeedArrival],
+                                  snMessage: FlightStateSnapshotMessage): Unit = {
+    restorer.applyUpdates(snMessage.flightMessages.map(flightMessageToApiFlight))
+  }
+
+}
 
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
                              feedSource: FeedSource,
-                            ) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
+                            ) extends RecoveryActorLike with PersistentDrtActor[FeedArrivalsState] {
 
-  val restorer = new ArrivalsRestorer[Arrival]
-  var state: ArrivalsState = initialState
+  val restorer = new ArrivalsRestorer[FeedArrival]
+  var state: FeedArrivalsState = initialState
   var maybeSubscriber: Option[ActorRef] = None
 
   override val snapshotBytesThreshold: Int = Sizes.oneMegaByte
 
-  override def initialState: ArrivalsState = ArrivalsState.empty(feedSource)
+  override def initialState: FeedArrivalsState = FeedArrivalsState.empty(feedSource)
 
   def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case stateMessage: FlightStateSnapshotMessage =>
@@ -56,7 +61,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def postRecoveryComplete(): Unit = {
-    val arrivals = SortedMap[UniqueArrival, Arrival]() ++ restorer.arrivals
+    val arrivals = SortedMap[UniqueArrival, FeedArrival]() ++ restorer.arrivals
     restorer.finish()
 
     state = state.copy(arrivals = Crunch.purgeExpired(arrivals, UniqueArrival.atTime, now, expireAfterMillis))
@@ -138,7 +143,7 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   protected def processIncoming(incomingArrivals: Iterable[FeedArrival],
                                 createdAt: SDateLike,
-                               ): (ArrivalsDiff, FeedStatusSuccess, ArrivalsState) = {
+                               ): (ArrivalsDiff, FeedStatusSuccess, FeedArrivalsState) = {
     val updatedArrivals = incomingArrivals
       .map(a => a.unique -> a).toMap
       .filterNot {
