@@ -96,6 +96,7 @@ object Settings {
     "@mui/lab" -> "5.0.0-alpha.119",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
+    "react-markdown" -> "9.0.1"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
