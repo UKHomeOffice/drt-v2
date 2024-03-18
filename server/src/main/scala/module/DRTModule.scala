@@ -34,7 +34,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config), now)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val timeout: Timeout = new Timeout(4.seconds)
+  implicit val timeout: Timeout = new Timeout(15.seconds)
 
   override def configure(): Unit = {
     if (isTestEnvironment) {
