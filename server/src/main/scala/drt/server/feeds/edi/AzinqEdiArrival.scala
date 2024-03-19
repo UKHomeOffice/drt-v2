@@ -5,7 +5,6 @@ import drt.server.feeds.Arriveable
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.A2
-import uk.gov.homeoffice.drt.ports.{FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
 
@@ -33,41 +32,33 @@ case class AzinqEdiArrival(AIBT: Option[String],
 
   override val isValid: Boolean = isArrival && isNotFreight && isNotSecondaryCodeShare
 
-  def toArrival: Arrival = {
-    val feedSources: Set[FeedSource] = Set(LiveFeedSource)
-    val passengerSources: Map[FeedSource, Passengers] = Map(LiveFeedSource -> Passengers(TotalPassengerCount, None))
+  override def toArrival: FeedArrival = {
     val flightCode = AirlineIATA + FlightNumber
     val (carrierCode, voyageNumberLike, maybeSuffix) = FlightCode.flightCodeToParts(flightCode)
     val voyageNumber = voyageNumberLike match {
       case vn: VoyageNumber => vn
       case _ => throw new Exception(s"Failed to parse voyage number from $flightCode")
     }
-    Arrival(
-      Operator = None,
-      CarrierCode = carrierCode,
-      VoyageNumber = voyageNumber,
-      FlightCodeSuffix = maybeSuffix,
-      Status = ArrivalStatus(FlightStatus),
-      Estimated = EstimatedDateTime.map(SDate(_).millisSinceEpoch),
-      Predictions = Predictions(0L, Map()),
-      Actual = ALDT.map(SDate(_).millisSinceEpoch),
-      EstimatedChox = None,
-      ActualChox = AIBT.map(SDate(_).millisSinceEpoch),
-      Gate = GateCode,
-      Stand = StandCode,
-      MaxPax = MaxPax,
-      RunwayID = None,
-      BaggageReclaimId = CarouselCode,
-      AirportID = PortCode("EMA"),
-      Terminal = A2,
-      Origin = PortCode(OriginDestAirportIATA),
-      Scheduled = SDate(ScheduledDateTime).millisSinceEpoch,
-      PcpTime = None,
-      FeedSources = feedSources,
-      CarrierScheduled = None,
-      ScheduledDeparture = None,
-      RedListPax = None,
-      PassengerSources = passengerSources,
+    LiveArrival(
+      operator = None,
+      maxPax = MaxPax,
+      totalPax = TotalPassengerCount,
+      transPax = None,
+      terminal = A2,
+      voyageNumber = voyageNumber.numeric,
+      carrierCode = carrierCode.code,
+      flightCodeSuffix = maybeSuffix.map(_.suffix),
+      origin = OriginDestAirportIATA,
+      scheduled = SDate(ScheduledDateTime).millisSinceEpoch,
+      estimated = EstimatedDateTime.map(SDate(_).millisSinceEpoch),
+      touchdown = ALDT.map(SDate(_).millisSinceEpoch),
+      estimatedChox = None,
+      actualChox = AIBT.map(SDate(_).millisSinceEpoch),
+      status = FlightStatus,
+      gate = GateCode,
+      stand = StandCode,
+      runway = None,
+      baggageReclaim = CarouselCode,
     )
   }
 }

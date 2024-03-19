@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetS
 import uk.gov.homeoffice.drt.actor.commands.MergeArrivalsRequest
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike, Sizes}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, ArrivalsRestorer, Arrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, ArrivalsRestorer, UniqueArrival}
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatus, FeedStatusFailure, FeedStatusSuccess}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
@@ -79,6 +79,12 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
+    case ArrivalsFeedSuccess(incomingArrivals, createdAt) =>
+      handleFeedSuccess(incomingArrivals.size, createdAt)
+
+    case ArrivalsFeedFailure(message, createdAt) =>
+      handleFeedFailure(message, createdAt)
+
     case AddUpdatesSubscriber(newSubscriber) =>
       maybeSubscriber = Option(newSubscriber)
 
@@ -111,21 +117,20 @@ abstract class ArrivalsActor(now: () => SDateLike,
     persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
   }
 
-  def handleFeedSuccess(incomingArrivals: Iterable[Arrival], createdAt: SDateLike): Unit = {
-    log.info(s"Received ${incomingArrivals.size} arrivals ${state.feedSource.displayName}")
+  def handleFeedSuccess(arrivalCount: Int, createdAt: SDateLike): Unit = {
+    log.info(s"Received ${arrivalCount} arrivals ${state.feedSource.displayName}")
 
-    val (diff, newStatus, newState) = processIncoming(incomingArrivals, createdAt)
+    val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, arrivalCount)
 
-    state = newState
+    state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
-    maybeSubscriber.foreach { subscriber =>
-      val daysFromUpdates = diff.toUpdate.values.map(a => MergeArrivalsRequest(SDate(a.Scheduled).toUtcDate)).toSet
-      val daysFromRemovals = diff.toRemove.map(ua => MergeArrivalsRequest(SDate(ua.scheduled).toUtcDate)).toSet
-      val updatedDays = daysFromUpdates ++ daysFromRemovals
-      if (updatedDays.nonEmpty) subscriber ! updatedDays
-    }
+//    maybeSubscriber.foreach { subscriber =>
+//      val daysFromUpdates = diff.toUpdate.values.map(a => MergeArrivalsRequest(SDate(a.Scheduled).toUtcDate)).toSet
+//      val daysFromRemovals = diff.toRemove.map(ua => MergeArrivalsRequest(SDate(ua.scheduled).toUtcDate)).toSet
+//      val updatedDays = daysFromUpdates ++ daysFromRemovals
+//      if (updatedDays.nonEmpty) subscriber ! updatedDays
+//    }
 
-    if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) persistArrivalUpdates(diff)
     persistFeedStatus(newStatus)
   }
 

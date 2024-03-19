@@ -84,7 +84,7 @@ trait ProdLcyClientSupport extends LcyClientSupport with ScalaXmlSupport {
 
         lcyResponse.map {
           case s: LCYFlightsResponseSuccess =>
-            ArrivalsFeedSuccess(Flights(s.flights.map(fs => LCYFlightTransform.lcyFlightToArrival(fs))))
+            ArrivalsFeedSuccess(s.flights.map(fs => LCYFlightTransform.lcyFlightToArrival(fs)))
 
           case f: LCYFlightsResponseFailure =>
             ArrivalsFeedFailure(f.message)

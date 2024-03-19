@@ -7,7 +7,7 @@ import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival, LiveArrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -164,8 +164,9 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
     case _ => None
   }
 
-  def lcyFlightToArrival(f: LCYFlight): Arrival = Arrival(
-    Operator = f.airline,
+  def lcyFlightToArrival(f: LCYFlight): FeedArrival = LiveArrival(
+    operator = f.airline,
+    maxPax = f.seatCapacity,
     Status = FlightStatus(f.status),
     Estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
     Predictions = Predictions(0L, Map()),
@@ -174,7 +175,6 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
     ActualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),
     Gate = f.passengerGate,
     Stand = f.aircraftParkingPosition,
-    MaxPax = f.seatCapacity,
     RunwayID = None,
     BaggageReclaimId = None,
     AirportID = f.arrivalAirport,

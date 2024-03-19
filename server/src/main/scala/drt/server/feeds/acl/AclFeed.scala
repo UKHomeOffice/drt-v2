@@ -1,13 +1,13 @@
 package drt.server.feeds.acl
 
 import drt.server.feeds.acl.AclFeed._
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, ForecastArrival}
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ForecastArrival}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
@@ -207,9 +207,10 @@ object AclFeed {
       val portTerminal = aclToPortTerminal(aclTerminal)
 
       ForecastArrival(
-        operator = operator,
-        maxPax = maxPax,
-        totalPax = actPax,
+        operator = Option(operator),
+        maxPax = Option(maxPax),
+        totalPax = Option(actPax),
+        transPax = None,
         terminal = Terminal(portTerminal.toString),
         voyageNumber = fields(AclColIndex.FlightNumber).toInt,
         carrierCode = fields(AclColIndex.Operator),

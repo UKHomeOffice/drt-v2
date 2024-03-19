@@ -2,11 +2,9 @@ package actors.routing
 
 import actors.DateRange
 import actors.PartitionedPortStateActor._
-import actors.daily.RequestAndTerminateActor
 import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import akka.NotUsed
-import akka.actor.{ActorRef, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.model.RedListCounts
@@ -16,7 +14,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SourceUtils
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FlightsWithSplits, SplitsForArrivals, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
@@ -88,8 +86,6 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
                          updateFlights: FlightsUpdate,
                          paxFeedSourceOrder: List[FeedSource],
                         ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate)] {
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), "flights-router-actor-kill-actor")
-
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), allTerminals, Option(pit), paxFeedSourceOrder)

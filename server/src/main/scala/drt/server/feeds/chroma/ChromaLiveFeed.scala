@@ -16,6 +16,6 @@ case class ChromaLiveFeed(chromaFetcher: ChromaFetcher[ChromaLiveFlight]) {
 
   def chromaVanillaFlights(source: Source[FeedTick, typed.ActorRef[FeedTick]])
                           (implicit ec: ExecutionContext): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] = {
-    StreamingChromaFlow.chromaPollingSource(chromaFetcher, StreamingChromaFlow.liveChromaToArrival, source)
+    StreamingChromaFlow.chromaPollingSource(chromaFetcher, StreamingChromaFlow.liveChromaToFeedArrival, source)
   }
 }
