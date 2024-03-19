@@ -24,10 +24,10 @@ case class CrunchSystem[FT](forecastBaseArrivalsResponse: EnabledFeedWithFrequen
                             liveArrivalsResponse: EnabledFeedWithFrequency[FT],
                             manifestsLiveResponseSource: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStatsSource: SourceQueueWithComplete[ActualDeskStats],
-                            mergeArrivalsRequestActor: ActorRef,
-                            crunchRequestActor: ActorRef,
-                            deskRecsRequestActor: ActorRef,
-                            deploymentRequestActor: ActorRef,
+                            mergeArrivalsRequestQueueActor: ActorRef,
+                            crunchRequestQueueActor: ActorRef,
+                            deskRecsRequestQueueActor: ActorRef,
+                            deploymentRequestQueueActor: ActorRef,
                             killSwitches: List[UniqueKillSwitch]
                            )
 
@@ -64,10 +64,10 @@ object CrunchSystem {
     val forecastMaxMillis: () => MillisSinceEpoch = () => props.now().addDays(props.maxDaysToCrunch).millisSinceEpoch
 
     val (
-      mergeArrivalsQueueActor,
-      crunchQueueActor,
-      deskRecsQueueActor,
-      deploymentQueueActor,
+      mergeArrivalsRequestQueueActor,
+      crunchRequestQueueActor,
+      deskRecsRequestQueueActor,
+      deploymentRequestQueueActor,
       mergeArrivalsKillSwitch,
       deskRecsKillSwitch,
       deploymentsKillSwitch,
@@ -121,10 +121,10 @@ object CrunchSystem {
         EnabledFeedWithFrequency(liveIn, props.arrivalsLiveFeed.initialDelay, props.arrivalsLiveFeed.interval),
       manifestsLiveResponseSource = manifestsLiveIn,
       actualDeskStatsSource = actDesksIn,
-      mergeArrivalsRequestActor = mergeArrivalsQueueActor,
-      crunchRequestActor = crunchQueueActor,
-      deskRecsRequestActor = deskRecsQueueActor,
-      deploymentRequestActor = deploymentQueueActor,
+      mergeArrivalsRequestQueueActor = mergeArrivalsRequestQueueActor,
+      crunchRequestQueueActor = crunchRequestQueueActor,
+      deskRecsRequestQueueActor = deskRecsRequestQueueActor,
+      deploymentRequestQueueActor = deploymentRequestQueueActor,
       killSwitches,
     )
   }

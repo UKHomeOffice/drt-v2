@@ -404,12 +404,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
 
   def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]], manifestsRouterActor: ActorRef): Unit = {
-    actorService.flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-    manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
-    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
-    actorService.staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
-    slasActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
+    actorService.flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestQueueActor)
+    manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestQueueActor)
+    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestQueueActor)
+    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestQueueActor)
+    actorService.staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestQueueActor)
+    slasActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestQueueActor)
   }
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
