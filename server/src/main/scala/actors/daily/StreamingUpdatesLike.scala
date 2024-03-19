@@ -75,6 +75,7 @@ trait StreamingUpdatesLike[A <: MinuteLike[A, B], B <: WithTimeAccessor] extends
 
   def updateState(minuteMessages: Seq[GeneratedMessage]): Unit = {
     updates = updates ++ updatesFromMessages(minuteMessages).map(cm => (cm.key, cm))
+    println(s"$persistenceId: contains ${updates.size} updates")
     purgeOldUpdates()
   }
 
