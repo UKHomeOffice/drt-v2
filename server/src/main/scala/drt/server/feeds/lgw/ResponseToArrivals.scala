@@ -1,11 +1,10 @@
 package drt.server.feeds.lgw
 
-import drt.server.feeds.Implicits._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, N, S}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Terminals}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.language.postfixOps
@@ -15,55 +14,51 @@ import scala.xml.Node
 case class ResponseToArrivals(data: String) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def getArrivals: List[Arrival] = Try {
+  def getArrivals: List[LiveArrival] = Try {
     scala.xml.Utility
       .trimProper(scala.xml.XML.loadString(data))
       .map(nodeToArrival)
-
   } match {
-    case Success(arrivalsAndLocation) => arrivalsAndLocation.toList
+    case Success(arrivals) => arrivals.toList
     case Failure(t) =>
       log.error(s"Failed to get an Arrival from the Gatwick XML.", t)
-      List.empty[Arrival]
+      List.empty[LiveArrival]
   }
 
-  def nodeToArrival: Node => Arrival = (n: Node) => {
+  private def nodeToArrival: Node => LiveArrival = (n: Node) => {
     val operator = (n \ "AirlineIATA") text
-    val actPax = parsePaxCount(n, "70A").orElse(None)
+    val totalPax = parsePaxCount(n, "70A").orElse(None)
     val transPax = parsePaxCount(n, "TIP")
-    val arrival = new Arrival(
-      Operator = if (operator.isEmpty) None else Option(Operator(operator)),
-      Status = parseStatus(n),
-      Estimated = parseDateTime(n, operationQualifier = "TDN", timeType = "EST"),
-      Predictions = Predictions(0L, Map()),
-      Actual = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
-      EstimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST"),
-      ActualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),
-      Gate = (n \\ "PassengerGate").headOption.map(n => n text).filterNot(_.isBlank),
-      Stand = (n \\ "ArrivalStand").headOption.map(n => n text).filterNot(_.isBlank),
-      MaxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt),
-      RunwayID = parseRunwayId(n).filterNot(_.isBlank),
-      BaggageReclaimId = Try(n \\ "BaggageClaimUnit" text).toOption.filterNot(_.isBlank),
-      AirportID = "LGW",
-      Terminal = parseTerminal(n),
-      CarrierCode = CarrierCode(n \\ "AirlineIATA" text),
-      VoyageNumber = VoyageNumber(parseFlightNumber(n)),
-      FlightCodeSuffix = None,
-      Origin = parseOrigin(n),
-      Scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime").find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT")).map(n => SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
-      PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      CarrierScheduled = None,
-      ScheduledDeparture = None,
-      RedListPax = None,
-      PassengerSources = Map(LiveFeedSource -> Passengers(actPax, if (actPax.isEmpty) None else transPax)),
+    val arrival = LiveArrival(
+      operator = if (operator.isEmpty) None else Option(operator),
+      maxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt),
+      totalPax = totalPax,
+      transPax = transPax,
+      terminal = parseTerminal(n),
+      voyageNumber = parseFlightNumber(n),
+      carrierCode = n \\ "AirlineIATA" text,
+      flightCodeSuffix = None,
+      origin = parseOrigin(n),
+      scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime")
+        .find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT"))
+        .map(n => SDate.parseString(n text).millisSinceEpoch).getOrElse(0),
+      estimated = parseDateTime(n, operationQualifier = "TDN", timeType = "EST"),
+      touchdown = parseDateTime(n, operationQualifier = "TDN", timeType = "ACT"),
+      estimatedChox = parseDateTime(n, operationQualifier = "ONB", timeType = "EST"),
+      actualChox = parseDateTime(n, operationQualifier = "ONB", timeType = "ACT"),
+      status = parseStatus(n),
+      gate = (n \\ "PassengerGate").headOption.map(n => n text).filterNot(_.isBlank),
+      stand = (n \\ "ArrivalStand").headOption.map(n => n text).filterNot(_.isBlank),
+      runway = parseRunwayId(n).filterNot(_.isBlank),
+      baggageReclaim = Try(n \\ "BaggageClaimUnit" text).toOption.filterNot(_.isBlank),
     )
     log.debug(s"parsed arrival: $arrival")
     arrival
   }
 
   private def parseTerminal(n: Node): Terminals.Terminal = {
-    val terminal = (n \\ "AirportResources" \ "Resource").find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map(n => n \\ "AircraftTerminal" text).getOrElse("")
+    val terminal = (n \\ "AirportResources" \ "Resource")
+      .find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map(n => n \\ "AircraftTerminal" text).getOrElse("")
     val mappedTerminal = terminal match {
       case "1" => S
       case "2" => N
@@ -76,7 +71,7 @@ case class ResponseToArrivals(data: String) {
     (((n \ "FlightLeg").head \ "LegIdentifier").head \ "FlightNumber" text).toInt
   }
 
-  def parseStatus(n: Node): String = {
+  private def parseStatus(n: Node): String = {
     val aidxCodeOrIdahoCode = ((n \ "FlightLeg").head \ "LegData").head \ "OperationalStatus" text
 
     aidxCodeOrIdahoCode match {
@@ -106,15 +101,15 @@ case class ResponseToArrivals(data: String) {
     }
   }
 
-  def parseOrigin(n: Node): String = {
+  private def parseOrigin(n: Node): String = {
     ((n \ "FlightLeg").head \ "LegIdentifier").head \ "DepartureAirport" text
   }
 
-  def parseRunwayId(n: Node): Option[String] = {
+  private def parseRunwayId(n: Node): Option[String] = {
     (n \\ "AirportResources" \ "Resource").find(n => (n \ "@DepartureOrArrival" text).equals("Arrival")).map(n => n \\ "Runway" text)
   }
 
-  def parsePaxCount(n: Node, qualifier: String): Option[Int] = {
+  private def parsePaxCount(n: Node, qualifier: String): Option[Int] = {
     (n \\ "CabinClass").find(n => (n \ "@Class").isEmpty).flatMap(n => (n \ "PaxCount").find(n => (n \ "@Qualifier" text).equals(qualifier)).map(n => (n text).toInt))
   }
 

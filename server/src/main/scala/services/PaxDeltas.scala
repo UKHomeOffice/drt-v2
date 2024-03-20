@@ -8,7 +8,8 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
+import uk.gov.homeoffice.drt.arrivals.{FeedArrival, ForecastArrival, LiveArrival}
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration._
@@ -73,12 +74,12 @@ object PaxDeltas {
   }
 
   def applyAdjustmentsToArrivals(passengersActorProvider: () => ActorRef, numDaysInAverage: Int)
-                                (arrivals: List[Arrival])
-                                (implicit mat: Materializer, ec: ExecutionContext): Future[List[Arrival]] = {
+                                (arrivals: List[FeedArrival])
+                                (implicit mat: Materializer, ec: ExecutionContext): Future[List[FeedArrival]] = {
     val paxActor = passengersActorProvider()
     val updatedArrivalsSource = Source(arrivals)
       .mapAsync(1) { arrival =>
-        val request = GetAverageAdjustment(OriginAndTerminal(arrival.Origin, arrival.Terminal), numDaysInAverage)
+        val request = GetAverageAdjustment(OriginAndTerminal(PortCode(arrival.origin), arrival.terminal), numDaysInAverage)
         lookupAndApplyAdjustment(paxActor, request, arrival)
       }
 
@@ -94,7 +95,9 @@ object PaxDeltas {
 
   private def lookupAndApplyAdjustment(paxActor: ActorRef,
                                        request: GetAverageAdjustment,
-                                       arrival: Arrival)(implicit ec: ExecutionContext): Future[Arrival] =
+                                       arrival: FeedArrival,
+                                      )
+                                      (implicit ec: ExecutionContext): Future[FeedArrival] =
     paxActor.ask(request)(new Timeout(15 second))
       .asInstanceOf[Future[Option[Double]]]
       .map {
@@ -106,18 +109,19 @@ object PaxDeltas {
         arrival
       }
 
-  def applyAdjustment(arrival: Arrival, delta: Double): Arrival = {
+  def applyAdjustment(arrival: FeedArrival, delta: Double): FeedArrival = {
     val saneDelta = delta match {
       case negative if negative < 0 => 0
       case over100pc if over100pc > 1 => 1
       case normal => normal
     }
 
-    val updatedPax = arrival.PassengerSources.map { case (k, v) =>
-      k -> Passengers(v.actual.map(pax => (pax * saneDelta).round.toInt), v.transit.map(pax => (pax * saneDelta).round.toInt))
+    val newTotalPax = arrival.totalPax.map(pax => (pax * saneDelta).round.toInt)
+    val newTransPax = arrival.transPax.map(pax => (pax * saneDelta).round.toInt)
+
+    arrival match {
+      case a: LiveArrival => a.copy(totalPax = newTotalPax, transPax = newTransPax)
+      case a: ForecastArrival => a.copy(totalPax = newTotalPax, transPax = newTransPax)
     }
-
-    arrival.copy(PassengerSources = updatedPax)
-
   }
 }

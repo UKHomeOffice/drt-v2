@@ -3,7 +3,6 @@ package drt.server.feeds.lgw
 import org.apache.commons.csv.{CSVFormat, CSVParser}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival, VoyageNumber}
-import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
@@ -36,7 +35,7 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
           val (carrierCode, voyageNumber, maybeSuffix) = FlightCode.flightCodeToParts(record.get("Flight Number"))
           (record.get("ArrDep"), voyageNumber) match {
             case ("Arrival", vn: VoyageNumber) =>
-              val origin = PortCode(record.get("Airport Code"))
+              val origin = record.get("Airport Code")
               val terminal = Terminal(record.get("Terminal") match {
                 case "North" => "N"
                 case "South" => "S"
@@ -57,7 +56,18 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
               val totalPax = Option(record.get("POA PAX").toInt)
               val transPax = None
               val maxPax = Option(record.get("Seats").toInt)
-              Option(ForecastArrival(carrierCode, vn, maybeSuffix, origin, terminal, scheduled, totalPax, transPax, maxPax))
+              Option(ForecastArrival(
+                operator = None,
+                maxPax = maxPax,
+                totalPax = totalPax,
+                transPax = transPax,
+                terminal = terminal,
+                voyageNumber = vn.numeric,
+                carrierCode = carrierCode.code,
+                flightCodeSuffix = maybeSuffix.map(_.suffix),
+                origin = origin,
+                scheduled = scheduled,
+              ))
             case _ => None
           }
         }

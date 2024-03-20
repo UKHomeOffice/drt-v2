@@ -4,14 +4,13 @@ import akka.actor.ActorRef
 import akka.pattern.StatusReply.Ack
 import akka.stream._
 import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
-import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, FeedArrival, ManifestsFeedResponse, ManifestsFeedSuccess}
+import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import services.metrics.Metrics
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
+import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FeedArrival}
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}

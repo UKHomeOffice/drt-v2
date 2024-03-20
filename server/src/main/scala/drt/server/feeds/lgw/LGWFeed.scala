@@ -5,11 +5,10 @@ import akka.stream.scaladsl.Source
 import akka.stream.{ActorAttributes, Supervision}
 import bluebus.client.ServiceBusClient
 import bluebus.configuration.SBusConfig
-import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Feed.FeedTick
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.LiveArrival
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -33,7 +32,7 @@ case class LGWFeed(lGWAzureClient: LGWAzureClient)(val system: ActorSystem) {
 
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
 
-  def requestArrivals(): Future[List[Arrival]] = lGWAzureClient.receive.map(xmlString => {
+  def requestArrivals(): Future[Seq[LiveArrival]] = lGWAzureClient.receive.map(xmlString => {
     if (xmlString.trim().nonEmpty)
       ResponseToArrivals(xmlString).getArrivals
     else
@@ -48,5 +47,5 @@ case class LGWFeed(lGWAzureClient: LGWAzureClient)(val system: ActorSystem) {
         List()
       })
       .filter(_.nonEmpty)
-      .map(arrivals => ArrivalsFeedSuccess(Flights(arrivals)))
+      .map(ArrivalsFeedSuccess(_))
 }

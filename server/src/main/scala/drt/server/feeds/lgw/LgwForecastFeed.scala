@@ -26,9 +26,8 @@ object LgwForecastFeed {
       .map { _ =>
         log.info("Tick - Fetching LGW forecast feed")
         csvParser.parseLatestContent() match {
-          case Some(flights) =>
-            val arrivals = flights.map(_.asArrival)
-            ArrivalsFeedSuccess(Flights(arrivals))
+          case Some(arrivals) =>
+            ArrivalsFeedSuccess(arrivals)
           case None =>
             ArrivalsFeedFailure("Failed to fetch LGW forecast feed")
         }

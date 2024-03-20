@@ -55,7 +55,7 @@ class CrunchTimezoneSpec extends CrunchTestLike {
             val scheduledDuringBst = "2017-06-01T00:00Z"
 
             val flights = Flights(List(
-              ArrivalGenerator.arrival(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(1),None)))
+              FeedArrivalGenerator.arrival(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(1),None)))
             ))
 
             val fiveMinutes = 600d / 60

@@ -2,10 +2,9 @@ package drt.server.feeds.gla
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import drt.server.feeds.Arriveable
-import drt.server.feeds.Implicits._
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.arrivals
+import uk.gov.homeoffice.drt.arrivals.LiveArrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -32,28 +31,26 @@ case class AzinqGlaArrival(AIBT: Option[String],
 
   override val isValid: Boolean = DepartureArrivalType == "A"
 
-  override def toArrival: Arrival = Arrival(
-    None,
-    Status = FlightStatusDesc,
-    Estimated = AODBProbableDateTime.map(SDate(_).millisSinceEpoch),
-    Predictions = Predictions(0L, Map()),
-    Actual = ALDT.map(SDate(_).millisSinceEpoch),
-    EstimatedChox = EIBT.map(SDate(_).millisSinceEpoch),
-    ActualChox = AIBT.map(SDate(_).millisSinceEpoch),
-    Gate = GateCode,
-    Stand = StandCode,
-    MaxPax = MaxPax,
-    RunwayID = Runway,
-    BaggageReclaimId = CarouselCode,
-    AirportID = "GLA",
-    Terminal = Terminal(TerminalCode),
-    rawIATA = AirlineIATA + FlightNumber,
-    rawICAO = AirlineICAO + FlightNumber,
-    Origin = OriginDestAirportIATA,
-    Scheduled = SDate(ScheduledDateTime).millisSinceEpoch,
-    PcpTime = None,
-    FeedSources = Set(LiveFeedSource),
-    PassengerSources = Map(LiveFeedSource -> Passengers(TotalPassengerCount, None))
+  override def toArrival: LiveArrival = arrivals.LiveArrival(
+    operator = None,
+    maxPax = MaxPax,
+    totalPax = TotalPassengerCount,
+    transPax = None,
+    terminal = Terminal(TerminalCode),
+    voyageNumber = FlightNumber.toInt,
+    carrierCode = AirlineIATA,
+    flightCodeSuffix = None,
+    origin = OriginDestAirportIATA,
+    scheduled = SDate(ScheduledDateTime).millisSinceEpoch,
+    estimated = AODBProbableDateTime.map(SDate(_).millisSinceEpoch),
+    touchdown = ALDT.map(SDate(_).millisSinceEpoch),
+    estimatedChox = EIBT.map(SDate(_).millisSinceEpoch),
+    actualChox = AIBT.map(SDate(_).millisSinceEpoch),
+    status = FlightStatusDesc,
+    gate = GateCode,
+    stand = StandCode,
+    runway = Runway,
+    baggageReclaim = CarouselCode,
   )
 }
 
