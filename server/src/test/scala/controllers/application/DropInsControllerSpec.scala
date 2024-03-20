@@ -66,7 +66,6 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAft
   }
 
   private def dropInSessionsController = {
-    implicit val timeout = new Timeout(1.second)
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
     }

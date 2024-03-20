@@ -235,7 +235,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
     probe.fishForMessage(2.seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
+      case s: ArrivalsFeedSuccess if s.arrivals.head.scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
       case _ => false
     }
     timer.cancel()
@@ -253,7 +253,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     val timer = system.scheduler.scheduleAtFixedRate(0.millis, 100.millis)(() => actorSource ! Feed.Tick)
 
     probe.fishForMessage(2.seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.flights.nonEmpty && s.arrivals.flights.head.Scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
+      case s: ArrivalsFeedSuccess if s.arrivals.nonEmpty && s.arrivals.head.scheduled == SDate("2019-07-15T11:05:00.000Z").millisSinceEpoch => true
       case _ => false
     }
     timer.cancel()
@@ -273,7 +273,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       )
 
     val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
-    val result = arrival.EstimatedChox
+    val result = arrival.estimatedChox
     val expected = None
 
     result === expected
@@ -291,7 +291,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       )
 
     val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
-    val result = arrival.EstimatedChox
+    val result = arrival.estimatedChox
     val expected = None
 
     result === expected
@@ -309,7 +309,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       )
 
     val arrival = CiriumFeed.toArrival(ciriumFlight, PortCode("STN"))
-    val result = arrival.Estimated
+    val result = arrival.estimated
     val expected = Option(SDate(estimatedChoxTime).addMinutes(-5).millisSinceEpoch)
 
     result === expected

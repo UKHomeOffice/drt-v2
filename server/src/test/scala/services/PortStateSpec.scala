@@ -8,7 +8,7 @@ import drt.shared.CrunchApi._
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Passengers}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, Queues}
@@ -93,7 +93,7 @@ class PortStateSpec extends CrunchTestLike {
     "When I ask for a window containing the period immediately after midnight " +
     "Then the flight should be in the returned PortState" >> {
     val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00",
-      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)), pcpDt = "2019-01-02T00:01"), Set())
+      totalPax = Option(100)).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2019-01-02T00:01").millisSinceEpoch)), Set())
 
     val portState = PortState(Seq(flight), Seq(), Seq())
 
@@ -106,7 +106,7 @@ class PortStateSpec extends CrunchTestLike {
     "When I ask for a window containing the period immediately before midnight " +
     "Then the flight should be in the returned PortState" >> {
     val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-03T12:00",
-      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)), pcpDt = "2019-01-02T14:00"), Set())
+      totalPax = Option(100)).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2019-01-02T14:00").millisSinceEpoch)), Set())
 
     val portState = PortState(Seq(flight), Seq(), Seq())
 

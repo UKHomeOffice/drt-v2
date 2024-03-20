@@ -3,7 +3,7 @@ package services.arrivals
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, ProcessingRequest}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FeedArrival, UniqueArrival}
 import uk.gov.homeoffice.drt.time.{DateLike, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration

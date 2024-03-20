@@ -5,7 +5,7 @@ import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 
 trait ArrivalsAdjustmentsLike {
-  def adjust(arrival: FeedArrival): FeedArrival
+  def adjust(arrival: Arrival): Arrival
 }
 
 object ArrivalsAdjustments {

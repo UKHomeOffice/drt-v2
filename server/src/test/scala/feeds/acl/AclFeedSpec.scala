@@ -323,7 +323,7 @@ class AclFeedSpec extends CrunchTestLike {
       val expected = Set(liveFlight.toArrival(LiveFeedSource).copy(
         CarrierCode = CarrierCode(aclFlight.carrierCode),
         FeedSources = Set(AclFeedSource, LiveFeedSource),
-        PassengerSources = liveFlight.toArrival(LiveFeedSource).PassengerSources ++ aclFlight.toArrival(AclFeedSource)))
+        PassengerSources = liveFlight.toArrival(LiveFeedSource).PassengerSources ++ aclFlight.toArrival(AclFeedSource).PassengerSources))
 
       crunch.portStateTestProbe.fishForMessage(3.seconds) {
         case ps: PortState =>
@@ -353,8 +353,8 @@ class AclFeedSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduledLive),
-        initialLiveArrivals = SortedMap[UniqueArrival, Arrival]() ++ initialLive.map(a => (a.unique, a)).toMap,
-        initialForecastBaseArrivals = SortedMap[UniqueArrival, Arrival]() ++ initialAcl.map(a => (a.unique, a)).toMap,
+        initialLiveArrivals = SortedMap[UniqueArrival, Arrival]() ++ initialLive.map(a => (a.unique, a.toArrival(LiveFeedSource))).toMap,
+        initialForecastBaseArrivals = SortedMap[UniqueArrival, Arrival]() ++ initialAcl.map(a => (a.unique, a.toArrival(AclFeedSource))).toMap,
         initialPortState = Option(PortState((aclWithSource ++ liveWithSource).map(a => ApiFlightWithSplits(a, Set())), Seq(), Seq()))
       ))
 

@@ -8,12 +8,11 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.FlightsApi.Flights
 import org.specs2.specification.BeforeEach
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.testsystem.feeds.test.GetArrivals
@@ -86,8 +85,8 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
 
         val scheduled = "2017-01-01T00:00Z"
 
-        val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
-        val liveFlights = Flights(List(liveArrival))
+        val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(21))
+        val liveFlights = List(liveArrival)
 
         val testProbe = TestProbe("arrivals-probe")
 
@@ -104,7 +103,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
           case ag: AggregatedArrivals => ag
         }
 
-        val expected = AggregatedArrival(liveArrival, defaultAirportConfig.portCode.iata)
+        val expected = AggregatedArrival(liveArrival.toArrival(LiveFeedSource), defaultAirportConfig.portCode.iata)
 
         arrivalsResult === AggregatedArrivals(Seq(expected))
       }
@@ -118,12 +117,12 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
         val scheduledExpired = "2017-01-05T00:00Z"
         val scheduled = "2017-01-05T00:01Z"
 
-        val expiredArrival = ArrivalGenerator.arrival(schDt = scheduledExpired, iata = "BA0022", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
+        val expiredArrival = ArrivalGenerator.arrival(schDt = scheduledExpired, iata = "BA0022", terminal = T1, totalPax = Option(21)).toArrival(LiveFeedSource)
 
         table.insertOrUpdateArrival(expiredArrival)
 
-        val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
-        val liveFlights = Flights(List(liveArrival))
+        val liveArrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(21))
+        val liveFlights = List(liveArrival)
 
         val testProbe = TestProbe("arrivals-probe")
 
@@ -142,7 +141,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
         }
 
         val expected = Set(
-          AggregatedArrival(liveArrival, defaultAirportConfig.portCode.iata),
+          AggregatedArrival(liveArrival.toArrival(LiveFeedSource), defaultAirportConfig.portCode.iata),
           AggregatedArrival(expiredArrival, defaultAirportConfig.portCode.iata)
         )
 
@@ -158,9 +157,9 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
         val scheduledDescheduled = "2017-01-10T00:00Z"
         val scheduled = "2017-01-05T00:00Z"
 
-        val descheduledArrival = ArrivalGenerator.arrival(schDt = scheduledDescheduled, iata = "BA0022", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
+        val descheduledArrival = ArrivalGenerator.arrival(schDt = scheduledDescheduled, iata = "BA0022", terminal = T1, totalPax = Option(21))
 
-        table.insertOrUpdateArrival(descheduledArrival)
+        table.insertOrUpdateArrival(descheduledArrival.toArrival(LiveFeedSource))
 
         val testProbe = TestProbe("arrivals-probe")
 
@@ -171,14 +170,14 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
           forecastMaxDays = 10
         ))
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List(descheduledArrival))))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List(descheduledArrival)))
         testProbe.expectMsg(UpdateHandled)
 
         val arrivalsResult1 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {
           case ag: AggregatedArrivals => ag.arrivals.toSet
         }
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(List())))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(List()))
         testProbe.expectMsg(RemovalHandled)
 
         val arrivalsResult2 = Await.result(crunch.aggregatedArrivalsActor.ask(GetArrivals)(new Timeout(5.seconds)), 5.seconds) match {

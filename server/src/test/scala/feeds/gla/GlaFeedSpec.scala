@@ -69,7 +69,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-11-13T12:34:00Z").millisSinceEpoch => true
+      case s: ArrivalsFeedSuccess if s.arrivals.head.scheduled == SDate("2019-11-13T12:34:00Z").millisSinceEpoch => true
       case _ => false
     }
 

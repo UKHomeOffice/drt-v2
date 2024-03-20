@@ -63,7 +63,7 @@ object CiriumFeed {
     case _ => date
   }
 
-  def toArrival(f: CiriumFlightStatus, portCode: PortCode): FeedArrival = {
+  def toArrival(f: CiriumFlightStatus, portCode: PortCode): LiveArrival = {
     val carrierScheduledTime = f.arrivalDate.millis
     val scheduledToNearest5Mins = timeToNearest5Minutes(SDate(carrierScheduledTime)).millisSinceEpoch
 

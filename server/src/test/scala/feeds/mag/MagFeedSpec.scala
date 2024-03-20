@@ -68,7 +68,7 @@ class MagFeedSpec extends CrunchTestLike {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrival))
 
     val result = Await.result(feed.requestArrivals(SDate.now()), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrivals), _) => arrivals
+      case ArrivalsFeedSuccess(arrivals, _) => arrivals
       case _ => List()
     }
 

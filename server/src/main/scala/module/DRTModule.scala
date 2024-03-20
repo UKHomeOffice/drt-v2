@@ -88,5 +88,4 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(config.get[String]("notifications.gov-notify-api-key"))
-
 }
