@@ -27,10 +27,10 @@ object Layout {
   case class Props(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]) extends UseValueEq
 
   case class LayoutModelItems(user: Pot[LoggedInUser],
-    airportConfig: Pot[AirportConfig],
-    abFeatures: Pot[Seq[ABFeature]],
-    showFeedbackBanner: Pot[Boolean]
-  ) extends UseValueEq
+                              airportConfig: Pot[AirportConfig],
+                              abFeatures: Pot[Seq[ABFeature]],
+                              showFeedbackBanner: Pot[Boolean]
+                             ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
@@ -83,7 +83,16 @@ object Layout {
               } else EmptyVdom,
               <.div(^.className := "topbar",
                 <.div(^.className := "main-logo"),
-                <.div(^.className := "alerts", AlertsComponent())
+                MuiGrid(container = true)(
+                  MuiGrid(item = true, xs = 12)(
+                    <.div(^.className := "alerts", AlertsComponent(),
+                    )),
+                  MuiGrid(item = true, xs = 12)(
+                    <.div(^.className := "contact",
+                      <.span("Contact: ", <.a(^.href := s"mailto:drtpoiseteam@homeoffice.gov.uk", "drtpoiseteam@homeoffice.gov.uk"))
+                    )
+                  )
+                )
               ),
               <.div(
                 <.div(
