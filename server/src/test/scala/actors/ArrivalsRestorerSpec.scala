@@ -2,18 +2,18 @@ package actors
 
 import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsRestorer}
+import uk.gov.homeoffice.drt.arrivals.{ArrivalsRestorer, FeedArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 
 import scala.collection.mutable
 
 class ArrivalsRestorerSpec extends Specification {
-  def newRestorer = new ArrivalsRestorer[Arrival]
+  def newRestorer = new ArrivalsRestorer[FeedArrival]
 
-  val arrivalT1: Arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = "2021-05-01T10:20")
-  val arrivalT2JFK: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T2, schDt = "2021-05-02T07:40", origin = PortCode("JFK"))
-  val arrivalT2TFF: Arrival = ArrivalGenerator.arrival(iata = "BA0002", terminal = T2, schDt = "2021-05-02T07:40", origin = PortCode("TFF"))
+  val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = "2021-05-01T10:20")
+  val arrivalT2JFK = ArrivalGenerator.arrival(iata = "BA0002", terminal = T2, schDt = "2021-05-02T07:40", origin = PortCode("JFK"))
+  val arrivalT2TFF = ArrivalGenerator.arrival(iata = "BA0002", terminal = T2, schDt = "2021-05-02T07:40", origin = PortCode("TFF"))
 
   "Given an arrivals restorer " >> {
     "When I give it one updated arrival and no arrivals to remove" >> {

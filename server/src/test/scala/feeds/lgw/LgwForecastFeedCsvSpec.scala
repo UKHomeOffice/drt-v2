@@ -2,8 +2,7 @@ package feeds.lgw
 
 import drt.server.feeds.lgw.{LgwForecastFeedCsvParser, LgwForecastSftpService}
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, ForecastArrival, VoyageNumber}
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.arrivals.ForecastArrival
 import uk.gov.homeoffice.drt.ports.Terminals.S
 
 import scala.io.{BufferedSource, Source}
@@ -31,6 +30,17 @@ class LgwForecastFeedCsvSpec extends Specification {
     source.close()
 
     flights._1.size === 3
-    flights._1.head === ForecastArrival(CarrierCode("AC"), VoyageNumber(1234), None, PortCode("ALC"), S, 1675427700000L, Option(114), None, Some(218))
+    flights._1.head === ForecastArrival(
+      operator = None,
+      voyageNumber = 1234,
+      carrierCode = "AC",
+      flightCodeSuffix = None,
+      maxPax = Some(218),
+      totalPax = Option(114),
+      transPax = None,
+      origin = "ALC",
+      terminal = S,
+      scheduled = 1675427700000L,
+    )
   }
 }

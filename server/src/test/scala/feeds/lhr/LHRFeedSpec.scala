@@ -6,16 +6,15 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds.lhr.{LHRFlightFeed, LHRLiveFlight}
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDate
 
-import scala.collection.JavaConverters._
-import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 class LHRFeedSpec extends CrunchTestLike {
 
@@ -31,9 +30,9 @@ class LHRFeedSpec extends CrunchTestLike {
 
       val probe = TestProbe()
 
-      val flightsSource: Source[List[Arrival], NotUsed] = Source(List(lhrFeed.copiedToApiFlights))
+      val flightsSource = Source(List(lhrFeed.copiedToApiFlights))
 
-      val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+      val futureFlightsSeq = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
       val flights = Await.result(futureFlightsSeq, 3.seconds).asInstanceOf[Vector[Arrival]]
 
@@ -68,9 +67,9 @@ class LHRFeedSpec extends CrunchTestLike {
 
       val probe = TestProbe()
 
-      val flightsSource: Source[List[Arrival], NotUsed] = Source(List(lhrFeed.copiedToApiFlights))
+      val flightsSource = Source(List(lhrFeed.copiedToApiFlights))
 
-      val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+      val futureFlightsSeq = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
       val flights = Await.result(futureFlightsSeq, 3.seconds).asInstanceOf[Vector[Arrival]]
 
@@ -115,13 +114,13 @@ class LHRFeedSpec extends CrunchTestLike {
 
 
       val probe = TestProbe()
-      val flightsSource: Source[List[Arrival], NotUsed] = Source(List(lhrFeed.copiedToApiFlights))
-      val futureFlightsSeq: Future[Seq[List[Arrival]]] = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
+      val flightsSource = Source(List(lhrFeed.copiedToApiFlights))
+      val futureFlightsSeq = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
       val flights = Await.result(futureFlightsSeq, 3.seconds)
 
       flights match {
-        case Vector(List(_: Arrival)) =>
+        case Vector(List(_: FeedArrival)) =>
           true
         case _ =>
           false

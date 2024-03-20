@@ -9,6 +9,7 @@ import drt.shared.FlightsApi.RemoveSplits
 import drt.shared.TQM
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits, Splits, SplitsForArrivals}
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
@@ -33,7 +34,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
   "Given a terminal-day flight actor for a day which does not have any data" >> {
 
     "When I send a flight to persist which lies within the day, and then ask for its state I should see the flight" >> {
-      val arrival = arrivalForDayAndTerminal(date)
+      val arrival = arrivalForDayAndTerminal(date).toArrival(LiveFeedSource)
       val flightsWithSplits = ArrivalsDiff(List(arrival), List())
 
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
@@ -46,7 +47,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
 
     "When I send a flight which lies outside the day, and then ask for its state I should see None" >> {
       val otherDate = SDate("2020-01-02T00:00")
-      val arrival = arrivalForDayAndTerminal(otherDate)
+      val arrival = arrivalForDayAndTerminal(otherDate).toArrival(LiveFeedSource)
       val flightsWithSplits = ArrivalsDiff(List(arrival), List())
 
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
@@ -60,8 +61,8 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
     "When I send flights to persist which lie both inside and outside the day, " +
       "and then ask for its state I should see only the flights inside the actor's day" >> {
       val otherDate = SDate("2020-01-02T00:00")
-      val inside = arrivalForDayAndTerminal(date)
-      val outside = arrivalForDayAndTerminal(otherDate)
+      val inside = arrivalForDayAndTerminal(date).toArrival(LiveFeedSource)
+      val outside = arrivalForDayAndTerminal(otherDate).toArrival(LiveFeedSource)
       val flightsWithSplits = ArrivalsDiff(List(inside, outside), List())
 
       val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
@@ -76,8 +77,8 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
     "When I send flights to persist for the right and wrong terminal " +
       "and then ask for its state I should see only the flights for the correct terminal" >> {
 
-      val correctTerminal = arrivalForDayAndTerminal(date, T1)
-      val wrongTerminal = arrivalForDayAndTerminal(date, T2)
+      val correctTerminal = arrivalForDayAndTerminal(date, T1).toArrival(LiveFeedSource)
+      val wrongTerminal = arrivalForDayAndTerminal(date, T2).toArrival(LiveFeedSource)
 
       val flightsWithSplits = ArrivalsDiff(List(correctTerminal, wrongTerminal), List())
 
@@ -95,7 +96,7 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
     "When I send it a message to remove splits" >> {
       "I should see that the flight no longer has splits" >> {
         val terminalDayActor: ActorRef = actorForTerminalAndDate(terminal, date.toUtcDate)
-        val arrival = arrivalForDayAndTerminal(date, terminal)
+        val arrival = arrivalForDayAndTerminal(date, terminal).toArrival(LiveFeedSource)
         val splits = Set(Splits(Set(), Historical, None))
         val eventualFlights = terminalDayActor.ask(ArrivalsDiff(Seq(arrival), Seq())).flatMap { _ =>
           terminalDayActor.ask(SplitsForArrivals(Map(arrival.unique -> splits))).flatMap { _ =>

@@ -8,7 +8,6 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds.common.HttpClient
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
-import drt.shared.FlightsApi.Flights
 import org.mockito.Mockito.{times, verify}
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
@@ -16,8 +15,7 @@ import services.crunch.CrunchTestLike
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-case class MockHttpClient(probeActor: ActorRef)
-                         (implicit system: ActorSystem) extends HttpClient {
+case class MockHttpClient(probeActor: ActorRef) extends HttpClient {
   def sendRequest(httpRequest: HttpRequest): Future[HttpResponse] = {
     probeActor ! httpRequest
     Future.successful(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, "")))
@@ -47,7 +45,7 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
   "Given a request for a full refresh of all flights success , it keeps polling for update" >> {
     val lcyClient = mock[LCYClient]
 
-    val arrivalsSuccess = ArrivalsFeedSuccess(Flights(List()))
+    val arrivalsSuccess = ArrivalsFeedSuccess(List())
 
     lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)
     lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)

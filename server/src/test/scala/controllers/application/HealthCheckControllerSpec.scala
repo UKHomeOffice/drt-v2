@@ -17,7 +17,7 @@ import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -37,10 +37,10 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
   val splits: Splits = Splits(Set(), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC), Percentage)
   val flights: Seq[(UtcDate, FlightsWithSplits)] = Seq(
     (UtcDate(2024, 6, 26), FlightsWithSplits(Seq(
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0001", schDt = "2024-06-26T11:30"), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:40"), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0011", schDt = "2024-06-26T12:30"), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0015", schDt = "2024-06-26T12:35", actDt = "2024-06-26T12:45"), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0001", schDt = "2024-06-26T11:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:40").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0011", schDt = "2024-06-26T12:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0015", schDt = "2024-06-26T12:35", actDt = "2024-06-26T12:45").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
     ))),
   )
 

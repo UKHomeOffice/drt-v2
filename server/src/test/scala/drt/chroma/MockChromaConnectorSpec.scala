@@ -8,14 +8,14 @@ import com.typesafe.config.{Config, ConfigFactory}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}
 import drt.http.WithSendAndReceive
-import drt.server.feeds.{ArrivalsFeedFailure, Feed}
 import drt.server.feeds.chroma.ChromaLiveFeed
+import drt.server.feeds.{ArrivalsFeedFailure, Feed}
 import org.specs2.matcher.MatchResult
 import services.crunch.CrunchTestLike
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.jdk.CollectionConverters.MapHasAsJava
 import scala.language.reflectiveCalls
 import scala.util.{Success, Try}
 
@@ -45,7 +45,7 @@ class MockChromaConnectorSpec extends CrunchTestLike {
         pipeline(HttpRequest(method = HttpMethods.POST, uri = tokenUrl, entity = chromaTokenRequestCredentials.toEntity))
       }
 
-      def await: MatchResult[ChromaToken] = Await.result(response, 10 seconds) must equalTo(ChromaToken(
+      def await: MatchResult[ChromaToken] = Await.result(response, 1.second) must equalTo(ChromaToken(
         "LIk79Cj6NLssRcWePFxkJMIhpmSbe5gBGqOOxNIuxWNVd7JWsWtoOqAZDnM5zADvkbdIJ0BHkJgaya2pYyu8yH2qb8zwXA4TxZ0Jq0JwhgqulMgcv1ottnrUA1U61pu1TNFN5Bm08nvqZpYtwCWfGNGbxdrol-leZry_UD8tgxyZLfj45rgzmxm2u2DBN8TFpB_uG6Pb1B2XHM3py6HgYAmqSTjTK060PyNWTp_czsU",
         "bearer", 86399))
     }
@@ -145,7 +145,7 @@ class MockChromaConnectorSpec extends CrunchTestLike {
         pipeline
       }
 
-      def await: MatchResult[Try[Seq[ChromaLiveFlight]]] = Await.result(response, 10 seconds) must equalTo(Success(Seq(
+      def await: MatchResult[Try[Seq[ChromaLiveFlight]]] = Await.result(response, 1.second) must equalTo(Success(Seq(
         SampleData.flight1,
         SampleData.flight2
       )))

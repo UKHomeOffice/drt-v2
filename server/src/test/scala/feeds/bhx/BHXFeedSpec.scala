@@ -8,11 +8,10 @@ import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
 import drt.server.feeds.bhx._
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
@@ -171,12 +170,12 @@ class BHXFeedSpec extends CrunchTestLike {
   "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" >> {
     val client = BHXMockClient(bhxSoapResponse2FlightsXml)
 
-    val result: Flights = Await
+    val result = Await
       .result(client.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
-    val expected = Flights(List(
+    val expected = List(
       BHXFlight.bhxFlightToArrival(flight1),
       BHXFlight.bhxFlightToArrival(flight2)
-    ))
+    )
 
     result === expected
   }
@@ -230,7 +229,7 @@ class BHXFeedSpec extends CrunchTestLike {
   "Given a request for a full refresh of all flights fails, we should poll for a full request until it succeeds" >> {
     val firstFailure = ArrivalsFeedFailure("First Failure")
     val secondFailure = ArrivalsFeedFailure("Second Failure")
-    val finallySuccess = ArrivalsFeedSuccess(Flights(List()))
+    val finallySuccess = ArrivalsFeedSuccess(List())
 
     val initialResponses = List(firstFailure, secondFailure, finallySuccess)
     val updateResponses = List(finallySuccess)
@@ -251,7 +250,7 @@ class BHXFeedSpec extends CrunchTestLike {
   "Given a successful initial request, followed by a failed update, we should continue to poll for updates" >> {
 
     val failure = ArrivalsFeedFailure("First Failure")
-    val finallySuccess = ArrivalsFeedSuccess(Flights(List()))
+    val finallySuccess = ArrivalsFeedSuccess(List())
 
     val initialResponses = List(finallySuccess)
     val updateResponses = List(failure, finallySuccess)
@@ -416,11 +415,11 @@ class BHXFeedSpec extends CrunchTestLike {
   "Given a BHXFlight with 0 for passenger fields, I should see 0 pax, 0 max pax and 0 transfer pax." >> {
     val client = BHXMockClient(bhxSoapResponseWith0PaxXml)
 
-    val result: Flights = Await
+    val result = Await
       .result(client.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
     val actMax = result match {
-      case Flights(f :: _) => (f.PassengerSources.get(LiveFeedSource).flatMap(_.actual), f.MaxPax)
+      case f :: _ => (f.totalPax, f.maxPax)
     }
 
     val expected = (Some(0), Some(0))

@@ -46,7 +46,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       LiveFeedSource -> Passengers(Option(liveArrivalPax), None),
       ForecastFeedSource -> Passengers(Option(forecastArrivalPax), Option(forecastArrivalTransPax))
     )
-    val arrival = ArrivalGenerator.arrival(maxPax = Option(maxPax), passengerSources = paxSources)
+    val arrival = ArrivalGenerator.arrival(maxPax = Option(maxPax)).toArrival(LiveFeedSource).copy(PassengerSources = paxSources)
     val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
     val controller: ForecastAccuracyController = forecastAccuracyController(forecastTotalPax, mlFeedPax, liveFeedPax, mlPredCapPct, flights)
     "get forecast accuracy percentage" in {
@@ -126,20 +126,19 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
             _ => Future.successful(Map(Terminal("T1") -> liveFeedPax))
 
           override val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (_, _) => Future.successful(
-            Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
-              schDt = "2023-10-20T12:25",
-              terminal = T1,
-              passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
-                MlFeedSource -> Passengers(Some(mlFeedPax), None))))))
+            Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1).toArrival(ForecastFeedSource).copy(
+              PassengerSources = Map(
+                ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
+                MlFeedSource -> Passengers(Some(mlFeedPax), None)
+              )))))
 
           override val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = _ => Future.successful(
-            Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
-              schDt = "2023-10-20T12:25",
-              terminal = T1,
-              passengerSources = Map(LiveFeedSource -> Passengers(Some(liveFeedPax), None),
+            Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1).toArrival(ForecastFeedSource).copy(
+              PassengerSources = Map(
+                LiveFeedSource -> Passengers(Some(liveFeedPax), None),
                 ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
-                MlFeedSource -> Passengers(Some(mlFeedPax), None))
-            )))
+                MlFeedSource -> Passengers(Some(mlFeedPax), None)
+              ))))
           )
 
           override val flightModelPersistence: ModelPersistence = MockModelPersistence(mlPred)

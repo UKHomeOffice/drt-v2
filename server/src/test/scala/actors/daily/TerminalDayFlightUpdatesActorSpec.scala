@@ -45,8 +45,7 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
         iata = "BA0001",
         sch = SDate("2023-08-08T12:00").millisSinceEpoch,
         origin = PortCode("JFK"),
-        passengerSources = Map(UnknownFeedSource -> Passengers(None, None))
-      )
+      ).toArrival(LiveFeedSource)
 
       TimeControl.now = SDate(1000L)
       val eventual = flightRoutesActor.ask(ArrivalsDiff(List(arrival), Set()))
@@ -68,8 +67,7 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
         iata = "BA0001",
         sch = SDate("2023-08-08T12:00").millisSinceEpoch,
         origin = PortCode("JFK"),
-        passengerSources = Map(UnknownFeedSource -> Passengers(None, None))
-      )
+      ).toArrival(LiveFeedSource)
 
       TimeControl.now = SDate(1000L)
       val newSplits = splits(10, ApiSplitsWithHistoricalEGateAndFTPercentages)

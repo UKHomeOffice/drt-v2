@@ -4,7 +4,7 @@ import drt.client.services.JSDateConversions.SDate
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Passengers, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -16,14 +16,10 @@ class ApiFeedStatusTest extends AnyWordSpec with Matchers {
     val beforeNow = "2022-05-31T11:30"
     val afterNow = "2022-05-31T12:30"
 
-    val landedWithNoSources = ArrivalGenerator.apiFlight(schDt = beforeNow,
-      passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(100), transit = None)))
-    val landedWithNoPax = ArrivalGenerator.apiFlight(schDt = beforeNow,
-      passengerSources = Map(ApiFeedSource -> Passengers(actual = None, transit = None)))
-    val landedWithLiveSource = ArrivalGenerator.apiFlight(schDt = beforeNow,
-      passengerSources = Map(LiveFeedSource -> Passengers(actual = Option(100), transit = None)), feedSources = Set(LiveFeedSource))
-    val notLanded = ApiFlightWithSplits(ArrivalGenerator.apiFlight(schDt = afterNow,
-      passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(100), transit = None))), Set())
+    val landedWithNoSources = ArrivalGenerator.arrival(schDt = beforeNow, totalPax= Option(100), transPax = None).toArrival(LiveFeedSource)
+    val landedWithNoPax = ArrivalGenerator.arrival(schDt = beforeNow, totalPax= None, transPax = None).toArrival(LiveFeedSource)
+    val landedWithLiveSource = ArrivalGenerator.arrival(schDt = beforeNow, totalPax= Option(100), transPax = None).toArrival(LiveFeedSource)
+    val notLanded = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = afterNow, totalPax= Option(100), transPax = None).toArrival(LiveFeedSource), Set())
     val ctaLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("ORK")), Set())
     val domesticLanded = ApiFlightWithSplits(landedWithLiveSource.copy(Origin = PortCode("EMA")), Set())
     val landedWithValidApi = ApiFlightWithSplits(landedWithNoSources,

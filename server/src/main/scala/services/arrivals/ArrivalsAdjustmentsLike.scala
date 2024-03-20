@@ -1,11 +1,11 @@
 package services.arrivals
 
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 
 trait ArrivalsAdjustmentsLike {
-  def adjust(arrival: Arrival): Arrival
+  def adjust(arrival: FeedArrival): FeedArrival
 }
 
 object ArrivalsAdjustments {

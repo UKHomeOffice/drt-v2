@@ -1,10 +1,9 @@
 package controllers
 
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalStatus, FlightCode, LiveArrival, Operator, Passengers, Prediction, Predictions}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 object ArrivalGenerator {
   def arrival(iata: String = "",
@@ -38,10 +37,10 @@ object ArrivalGenerator {
       flightCodeSuffix = suffix.map(_.suffix),
       origin = origin.iata,
       scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
-      estimated = if (estDt.nonEmpty) Option(SDate.parseString(estDt).millisSinceEpoch) else None,
-      touchdown = if (actDt.nonEmpty) Option(SDate.parseString(actDt).millisSinceEpoch) else None,
-      estimatedChox = if (estChoxDt.nonEmpty) Option(SDate.parseString(estChoxDt).millisSinceEpoch) else None,
-      actualChox = if (actChoxDt.nonEmpty) Option(SDate.parseString(actChoxDt).millisSinceEpoch) else None,
+      estimated = if (estDt.nonEmpty) Option(SDate(estDt).millisSinceEpoch) else None,
+      touchdown = if (actDt.nonEmpty) Option(SDate(actDt).millisSinceEpoch) else None,
+      estimatedChox = if (estChoxDt.nonEmpty) Option(SDate(estChoxDt).millisSinceEpoch) else None,
+      actualChox = if (actChoxDt.nonEmpty) Option(SDate(actChoxDt).millisSinceEpoch) else None,
       status = status.description,
       gate = gate,
       stand = stand,

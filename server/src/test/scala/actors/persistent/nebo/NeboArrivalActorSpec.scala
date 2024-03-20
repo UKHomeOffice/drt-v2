@@ -20,7 +20,6 @@ import scala.concurrent.duration.DurationInt
 
 
 object NeboArrivalActorTest {
-
   def props(redListPassengers: RedListPassengers, testProbeRef: ActorRef): Props =
     Props(new NeboArrivalActor(redListPassengers, () => SDate("2017-10-25T00:00:00Z"), None) {
       override val maybeSnapshotInterval: Option[Int] = Option(1)

@@ -9,23 +9,22 @@ import uk.gov.homeoffice.drt.ports._
 class PaxForArrivalsTest extends Specification {
   "When I ask to extract the historic api nos" >> {
     "Given an arrival with no passenger totals" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC"), passengerSources = Map())
+      val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC")).toArrival(LiveFeedSource)
       "I should get an empty PaxForArrivals" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals.empty
       }
     }
 
     "Given an arrival with live api passenger totals" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC"),
-        passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None)))
+      val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC"), totalPax = Option(100)).toArrival(LiveFeedSource)
       "I should get an empty PaxForArrivals" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals.empty
       }
     }
 
     "Given an arrival with live & historic api passenger totals" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC"),
-        passengerSources = Map(ApiFeedSource -> Passengers(Option(100), None), HistoricApiFeedSource -> Passengers(Option(100), None)))
+      val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("ABC")).toArrival(LiveFeedSource).copy(
+        PassengerSources = Map(ApiFeedSource -> Passengers(Option(100), None), HistoricApiFeedSource -> Passengers(Option(100), None)))
       "I should get a PaxForArrivals with HistoricApiFeedSource with 100 passengers" >> {
         PaxForArrivals.from(Seq(arrival), HistoricApiFeedSource) === PaxForArrivals(Map(
           arrival.unique -> Map[FeedSource, Passengers](HistoricApiFeedSource -> Passengers(Option(100), None))
@@ -48,7 +47,7 @@ class PaxForArrivalsTest extends Specification {
       }
 
       "One existing flight" >> {
-        val arrival = ArrivalGenerator.arrival(iata = "BA0001")
+        val arrival = ArrivalGenerator.arrival(iata = "BA0001").toArrival(LiveFeedSource)
         val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
 
         "Then I should get an empty FlightsWithSplits" >> {
@@ -59,7 +58,7 @@ class PaxForArrivalsTest extends Specification {
     }
 
     "Given one new passenger" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001")
+      val arrival = ArrivalGenerator.arrival(iata = "BA0001").toArrival(LiveFeedSource)
       val livePax: Map[FeedSource, Passengers] = Map(LiveFeedSource -> Passengers(Option(1), None))
       val paxForArrivals = PaxForArrivals(Map(arrival.unique -> livePax))
 

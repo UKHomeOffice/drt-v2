@@ -1,7 +1,6 @@
 package drt.client.components
 
 import diode.data.Ready
-import drt.client.components.ArrivalGenerator.apiFlight
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.RootModel
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -41,9 +40,9 @@ object BigSummaryBoxTests extends TestSuite {
         }
         "Given 3 flights" - {
 
-          val apiFlight1 = apiFlight(schDt = "2017-05-01T12:05Z", terminal = T1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(200), transit = None)))
-          val apiFlight2 = apiFlight(schDt = "2017-05-01T13:05Z", terminal = T1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(300), transit = None)))
-          val apiFlight3 = apiFlight(schDt = "2017-05-01T13:20Z", terminal = T1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(40), transit = None)))
+          val apiFlight1 = ArrivalGenerator.arrival(schDt = "2017-05-01T12:05Z", terminal = T1, totalPax = Option(200)).toArrival(AclFeedSource)
+          val apiFlight2 = ArrivalGenerator.arrival(schDt = "2017-05-01T13:05Z", terminal = T1, totalPax = Option(300)).toArrival(AclFeedSource)
+          val apiFlight3 = ArrivalGenerator.arrival(schDt = "2017-05-01T13:20Z", terminal = T1, totalPax = Option(40)).toArrival(AclFeedSource)
 
           val rootModel = RootModel(portStatePot = Ready(PortState(
             List(
@@ -69,11 +68,11 @@ object BigSummaryBoxTests extends TestSuite {
           }
         }
         "Given 3 flights with a nonZero PcpTime we use the pcpTime " - {
-          val apiFlightPcpBeforeNow = apiFlight(schDt = "2017-05-01T11:40Z", terminal = T1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(7), transit = None)), pcpTime = Option(mkMillis("2017-05-01T11:40Z")))
-          val apiFlight0aPcpAfterNow = apiFlight(schDt = "2017-05-01T11:40Z", terminal = T1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(11), transit = None)), pcpTime = Option(mkMillis("2017-05-01T12:05Z")))
-          val apiFlight1 = apiFlight(schDt = "2017-05-01T12:05Z", terminal = T1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(200), transit = None)), pcpTime = Option(mkMillis("2017-05-01T12:05Z")))
-          val apiFlight2 = apiFlight(schDt = "2017-05-01T13:05Z", terminal = T1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(300), transit = None)), pcpTime = Option(mkMillis("2017-05-01T13:15Z")))
-          val apiFlight3 = apiFlight(schDt = "2017-05-01T13:20Z", terminal = T1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(40), transit = None)), pcpTime = Option(mkMillis("2017-05-01T13:22Z")))
+          val apiFlightPcpBeforeNow = ArrivalGenerator.arrival(schDt = "2017-05-01T11:40Z", terminal = T1, totalPax = Option(7)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T11:40Z")))
+          val apiFlight0aPcpAfterNow = ArrivalGenerator.arrival(schDt = "2017-05-01T11:40Z", terminal = T1, totalPax = Option(11)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T12:05Z")))
+          val apiFlight1 = ArrivalGenerator.arrival(schDt = "2017-05-01T12:05Z", terminal = T1, totalPax = Option(200)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T12:05Z")))
+          val apiFlight2 = ArrivalGenerator.arrival(schDt = "2017-05-01T13:05Z", terminal = T1, totalPax = Option(300)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T13:15Z")))
+          val apiFlight3 = ArrivalGenerator.arrival(schDt = "2017-05-01T13:20Z", terminal = T1, totalPax = Option(40)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T13:22Z")))
 
 
           val rootModel = RootModel(portStatePot = Ready(PortState(
@@ -108,9 +107,9 @@ object BigSummaryBoxTests extends TestSuite {
           "AND we can filter by Terminal - we're interested in T1" - {
             val ourTerminal = terminal1
 
-            val apiFlight1 = apiFlight(schDt = "2017-05-01T12:05Z", terminal = terminal1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(200), transit = None)), pcpTime = Option(mkMillis("2017-05-01T12:05Z")))
-            val apiFlight2 = apiFlight(schDt = "2017-05-01T13:05Z", terminal = terminal1, passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(300), transit = None)), pcpTime = Option(mkMillis("2017-05-01T13:15Z")))
-            val notOurTerminal = apiFlight(schDt = "2017-05-01T13:20Z", terminal = Terminal("T4"), passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(40), transit = None)), pcpTime = Option(mkMillis("2017-05-01T13:22Z")))
+            val apiFlight1 = ArrivalGenerator.arrival(schDt = "2017-05-01T12:05Z", terminal = terminal1, totalPax = Option(200)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T12:05Z")))
+            val apiFlight2 = ArrivalGenerator.arrival(schDt = "2017-05-01T13:05Z", terminal = terminal1, totalPax = Option(300)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T13:15Z")))
+            val notOurTerminal = ArrivalGenerator.arrival(schDt = "2017-05-01T13:20Z", terminal = Terminal("T4"), totalPax = Option(40)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T13:22Z")))
 
             val flights = List(
               ApiFlightWithSplits(apiFlight1, Set()),
@@ -134,10 +133,10 @@ object BigSummaryBoxTests extends TestSuite {
         "Given 3 flights " - {
           "And they have splits" - {
             "Then we can aggregate the splits for a graph" - {
-              val apiFlight1 = apiFlight(schDt = "2017-05-01T12:05Z", terminal = terminal1,
-                passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(200), transit = None)), pcpTime = Option(mkMillis("2017-05-01T12:05Z")))
-              val apiFlight2 = apiFlight(schDt = "2017-05-01T13:05Z", terminal = terminal1,
-                passengerSources = Map(ApiFeedSource -> Passengers(actual = Option(300), transit = None)), pcpTime = Option(mkMillis("2017-05-01T13:15Z")))
+              val apiFlight1 = ArrivalGenerator.arrival(schDt = "2017-05-01T12:05Z", terminal = terminal1,
+                totalPax = Option(200)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T12:05Z")))
+              val apiFlight2 = ArrivalGenerator.arrival(schDt = "2017-05-01T13:05Z", terminal = terminal1,
+                totalPax = Option(300)).toArrival(AclFeedSource).copy(PcpTime= Option(mkMillis("2017-05-01T13:15Z")))
 
               val splits1 = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 41, None, None),
                 ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 23, None, None)),
@@ -166,14 +165,14 @@ object BigSummaryBoxTests extends TestSuite {
           "And they have percentage splits" - {
             "Then we can aggregate the splits by multiply the % against the bestPax so that we can show them in a graph" - {
               val flights = List(
-                ApiFlightWithSplits(apiFlight(schDt = "2017-05-01T12:05Z", terminal = terminal1,
-                  passengerSources = Map(LiveFeedSource -> Passengers(actual = Option(100), transit = None)), pcpTime = Option(mkMillis("2017-05-01T12:05Z"))),
+                ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-05-01T12:05Z", terminal = terminal1,
+                  totalPax = Option(100)).toArrival(AclFeedSource).copy(PcpTime = Option(mkMillis("2017-05-01T12:05Z"))),
                   Set(Splits(Set(
                     ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 30, None, None),
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 70, None, None)),
                     SplitSources.Historical, None, Percentage))),
-                ApiFlightWithSplits(apiFlight(schDt = "2017-05-01T13:05Z", terminal = terminal1,
-                  passengerSources = Map(LiveFeedSource -> Passengers(actual = Option(100), transit = None)), pcpTime = Option(mkMillis("2017-05-01T13:15Z"))),
+                ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-05-01T13:05Z", terminal = terminal1,
+                  totalPax = Option(100)).toArrival(AclFeedSource).copy(PcpTime = Option(mkMillis("2017-05-01T13:15Z"))),
                   Set(Splits(Set(
                     ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 40, None, None),
                     ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 60, None, None)),
@@ -195,8 +194,8 @@ object BigSummaryBoxTests extends TestSuite {
               "And they have tranpax" - {
                 "Then we can aggregate the splits by adding them up - we also filter out the transfer split" - {
                   val flights = List(
-                    ApiFlightWithSplits(apiFlight(schDt = "2017-05-01T12:05Z", terminal = terminal1,
-                      passengerSources = Map(LiveFeedSource -> Passengers(actual = Option(300), transit = Option(100))), pcpTime = Option(mkMillis("2017-05-01T12:05Z"))),
+                    ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-05-01T12:05Z", terminal = terminal1,
+                      totalPax = Option(300), transPax = Option(100)).toArrival(AclFeedSource).copy(PcpTime = Option(mkMillis("2017-05-01T12:05Z"))),
                       Set(Splits(Set(
                         ApiPaxTypeAndQueueCount(PaxTypes.NonVisaNational, Queues.NonEeaDesk, 60, None, None),
                         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, Queues.EeaDesk, 120, None, None),
