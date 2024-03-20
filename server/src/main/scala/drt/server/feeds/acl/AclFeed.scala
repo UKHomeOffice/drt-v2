@@ -238,7 +238,6 @@ object AclFeed {
     val Time: Int = allFields("Time")
     val Operator: Int = allFields("Ope")
     val Origin: Int = allFields("OrigDest")
-    val Airport: Int = allFields("Airport")
     val Terminal: Int = allFields("Term")
     val ArrDep: Int = allFields("ArrDep")
   }

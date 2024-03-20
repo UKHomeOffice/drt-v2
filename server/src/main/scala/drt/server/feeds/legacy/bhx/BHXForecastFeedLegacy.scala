@@ -22,7 +22,7 @@ object BHXForecastFeedLegacy extends BHXFeedConfig {
       } match {
         case Success(arrivals) =>
           log.info(s"Got ${arrivals.size} BHX forecast arrivals.")
-          ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
+          ArrivalsFeedSuccess(arrivals, SDate.now())
         case Failure(t) =>
           log.info(s"Failed to fetch BHX forecast arrivals.", t)
           ArrivalsFeedFailure(t.toString, SDate.now())

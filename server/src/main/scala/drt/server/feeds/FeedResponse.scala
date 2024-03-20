@@ -1,11 +1,8 @@
 package drt.server.feeds
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.Flights
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import uk.gov.homeoffice.drt.arrivals.{UniqueArrival, _}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 sealed trait FeedResponse {
@@ -18,7 +15,7 @@ sealed trait ArrivalsFeedResponse extends FeedResponse
 
 sealed trait ManifestsFeedResponse extends FeedResponse
 
-case class StoreFeedImportArrivals(arrivals: Flights)
+case class StoreFeedImportArrivals(arrivals: Seq[FeedArrival])
 
 case object GetFeedImportArrivals
 

@@ -3,14 +3,14 @@ package actors
 import akka.actor.Actor
 import akka.persistence.SaveSnapshotFailure
 import drt.server.feeds.{GetFeedImportArrivals, StoreFeedImportArrivals}
-import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
+import uk.gov.homeoffice.drt.arrivals.FeedArrival
 
-class ArrivalsImportActor() extends Actor {
+class ArrivalsImportActor extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  var maybeArrivalsFromImport: Option[Flights] = None
+  private var maybeArrivalsFromImport: Option[Seq[FeedArrival]] = None
 
   override def receive: Receive = {
     case StoreFeedImportArrivals(incomingArrivals) =>
