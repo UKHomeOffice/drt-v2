@@ -9,6 +9,8 @@
 .cache/
 .history/
 .lib/
+run-docker-*
+run-sbt-*
 dist/*
 target/
 lib_managed/

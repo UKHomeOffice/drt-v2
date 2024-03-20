@@ -12,14 +12,14 @@ import controllers.{Application, DrtActorSystem}
 import email.GovNotifyEmail
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
-import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem, ProdPersistentStateActors}
+import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
 import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
+import javax.inject.Singleton
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
-import javax.inject.Singleton
 class DRTModule extends AbstractModule with AkkaGuiceSupport {
   val config: Configuration = new Configuration(ConfigFactory.load)
 

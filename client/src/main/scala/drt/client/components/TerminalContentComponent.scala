@@ -71,6 +71,8 @@ object TerminalContentComponent {
 
   def airportWrapper(portCode: PortCode): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
+  val flightFilterRCP: ReactConnectProxy[String] = SPACircuit.connect(_.filterFlightNumber)
+
   def originMapper(portCode: PortCode): VdomElement = airportWrapper(portCode) {
     proxy: ModelProxy[Pot[AirportInfo]] =>
       <.span(^.className := "flight-origin",
@@ -193,27 +195,29 @@ object TerminalContentComponent {
                   redListUpdates <- props.redListUpdates
                   walkTimes <- props.walkTimes
                 } yield {
-                  arrivalsTableComponent(
-                    FlightTable.Props(
-                      queueOrder = queueOrder,
-                      hasEstChox = props.airportConfig.hasEstChox,
-                      loggedInUser = props.loggedInUser,
-                      viewMode = props.viewMode,
-                      defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
-                      hasTransfer = props.airportConfig.hasTransfer,
-                      displayRedListInfo = features.displayRedListInfo,
-                      redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
-                      terminal = terminal,
-                      portCode = props.airportConfig.portCode,
-                      redListPorts = redListPorts,
-                      airportConfig = props.airportConfig,
-                      redListUpdates = redListUpdates,
-                      walkTimes = walkTimes,
-                      viewStart = viewStart,
-                      viewEnd = viewEnd,
-                      showFlagger = true,
-                      paxFeedSourceOrder = props.paxFeedSourceOrder,
-                    )
+                  flightFilterRCP((flightFilterProxy: ModelProxy[String]) =>
+                    arrivalsTableComponent(
+                      FlightTable.Props(
+                        queueOrder = queueOrder,
+                        hasEstChox = props.airportConfig.hasEstChox,
+                        loggedInUser = props.loggedInUser,
+                        viewMode = props.viewMode,
+                        defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
+                        hasTransfer = props.airportConfig.hasTransfer,
+                        displayRedListInfo = features.displayRedListInfo,
+                        redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                        terminal = terminal,
+                        portCode = props.airportConfig.portCode,
+                        redListPorts = redListPorts,
+                        airportConfig = props.airportConfig,
+                        redListUpdates = redListUpdates,
+                        walkTimes = walkTimes,
+                        viewStart = viewStart,
+                        viewEnd = viewEnd,
+                        showFlagger = true,
+                        paxFeedSourceOrder = props.paxFeedSourceOrder,
+                        filterFlightNumber = flightFilterProxy()
+                      ))
                   )
                 }
                 maybeArrivalsComp.render(x => x)

@@ -355,7 +355,7 @@ class AclFeedSpec extends CrunchTestLike {
       val initialLive = Set(
         arrival(iata = "BA0003", schDt = "2017-01-01T00:10Z",
           feedSources = Set(LiveFeedSource),
-          passengerSources = Map(AclFeedSource -> Passengers(Option(99), None)),
+          passengerSources = Map(LiveFeedSource -> Passengers(Option(99), None)),
           status = ArrivalStatus("scheduled")))
 
       val newAcl = Set(

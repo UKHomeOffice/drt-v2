@@ -1,5 +1,5 @@
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
-import sbt.*
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
+import sbt._
 
 /**
  * Application settings. Configure the build for your application here.
@@ -65,7 +65,7 @@ object Settings {
     val slick = "3.4.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
-    val scalaJsReactMaterialUi = "0.1.15"
+    val scalaJsReactMaterialUi = "0.1.16"
     val scalaTestVersion = "3.2.17"
     val twirlApi = "1.6.3"
     val mockitoVersion = "4.11.0"
@@ -76,7 +76,7 @@ object Settings {
     val jwtCore = "9.4.5"
   }
 
-  import versions.*
+  import versions._
 
   val clientNpmDependencies: Seq[(String, String)] = Seq(
     "react" -> react,
@@ -96,6 +96,7 @@ object Settings {
     "@mui/lab" -> "5.0.0-alpha.119",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
+    "react-markdown" -> "9.0.1"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -137,7 +138,6 @@ object Settings {
 
   /** Dependencies only used by the JVM project */
   val jvmDependencies = Def.setting(List(
-    "org.openjdk.jol" % "jol-core" % "0.15",
     "com.github.gphat" %% "censorinus" % censorinus,
     "com.github.jwt-scala" %% "jwt-core" % jwtCore,
     "com.hierynomus" % "sshj" % sshJ,

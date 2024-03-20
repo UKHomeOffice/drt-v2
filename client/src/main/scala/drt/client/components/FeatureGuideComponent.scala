@@ -15,7 +15,7 @@ import upickle.default.write
 import scala.language.postfixOps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiDialog, MuiDialogContent, MuiDialogTitle}
 import uk.gov.homeoffice.drt.training.FeatureGuide
-
+import scala.scalajs.js
 
 object FeatureGuideModalComponent extends WithScalaCssImplicits {
 
@@ -64,12 +64,20 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                   "backgroundColor" -> "#C0C7DE",
                   "border" -> "16px solid #C0C7DE"
                 )))(
-                  <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"feature-guide-video/${data.fileName.getOrElse("")}"),
-                    VdomAttr("autoPlay") := false,
-                    VdomAttr("controls") := true,
-                    VdomAttr("width") := "100%",
-                    VdomAttr("height") := "100%",
-                    ^.onPlay ==> recordFeatureGuideView(data.fileName.getOrElse("")))),
+                  if (data.fileName.exists(_.contains("webm"))) {
+                    <.video(VdomAttr("src") := SPAMain.absoluteUrl(s"feature-guide-video/${data.fileName.getOrElse("")}"),
+                      VdomAttr("autoPlay") := false,
+                      VdomAttr("controls") := true,
+                      VdomAttr("width") := "100%",
+                      VdomAttr("height") := "100%",
+                      ^.onPlay ==> recordFeatureGuideView(data.fileName.getOrElse("")))
+                  } else {
+                    <.img(VdomAttr("src") := SPAMain.absoluteUrl(s"feature-guide-video/${data.fileName.getOrElse("")}"),
+                      VdomAttr("width") := "100%",
+                      VdomAttr("height") := "100%",
+                      ^.onLoad ==> recordFeatureGuideView(data.fileName.getOrElse("")))
+                  }
+                ),
                 MuiGrid(item = true, xs = 4, sx = SxProps(Map(
                   "backgroundColor" -> "#FFFFFF",
                   "margin-top" -> "16px",
@@ -78,19 +86,18 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                   "border-bottom" -> "16px solid #C0C7DE",
                   "border-left" -> "0px solid #C0C7DE",
                 )))(
-                  MuiGrid(container = true, spacing = 2 , sx = SxProps(Map("overflow" -> "auto","height" -> "400px")))(
-                    MuiGrid(item = true, xs = 12, sx = SxProps(Map(
+                  <.div(^.style := js.Dictionary("height" -> "400px", "overflow" -> "auto"),
+                    <.div(^.style := js.Dictionary(
                       "font-size" -> DrtTheme.theme.typography.h3.fontSize,
                       "font-weight" -> DrtTheme.theme.typography.h3.fontWeight,
+                      "padding-right" -> "16px"),
+                      <.span(data.title)),
+                    <.div(^.style := js.Dictionary(
                       "padding-top" -> "16px",
-                    )))(<.span(data.title)),
-                    MuiGrid(item = true, xs = 12, sx = SxProps(Map(
                       "padding-right" -> "16px",
-                      "padding-bottom" -> "16px"
-                    )))
-                    (TagMod(data.markdownContent.replaceAll("\r", " ").split("\n").map(<.div(_)): _*))
-                  )
-                ))
+                      "padding-bottom" -> "16px"),
+                      Markdown(data.markdownContent)),
+                  )))
             })
             )))
       carouselItems

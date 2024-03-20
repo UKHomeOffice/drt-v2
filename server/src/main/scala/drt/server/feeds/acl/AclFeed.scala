@@ -198,7 +198,7 @@ object AclFeed {
     case (hour, minute) => s"$hour:$minute:00Z"
   }
 
-  private def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[ForecastArrival] = {
+  private def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[ForecastArrival] =
     Try {
       val operator: String = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
@@ -219,7 +219,6 @@ object AclFeed {
         scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
       )
     }
-  }
 
   private object AclColIndex {
     private val allFields: Map[String, Int] = List(
