@@ -19,7 +19,7 @@ object QueueMinutesRouterActor {
 
 class QueueMinutesRouterActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[CrunchMinute, TQM],
-                              updateMinutes: MinutesUpdate[CrunchMinute, TQM])
+                              updateMinutes: MinutesUpdate[CrunchMinute, TQM, Long])
   extends MinutesActorLike2(terminals, lookup, updateMinutes, QueueMinutesRouterActor.splitByResource, QueueMinutesRouterActor.sendIfDeskRec)
-    with RouterActorLikeWithSubscriber2[MinutesContainer[CrunchMinute, TQM], (Terminal, UtcDate)] {
+    with RouterActorLikeWithSubscriber2[MinutesContainer[CrunchMinute, TQM], (Terminal, UtcDate), Long] {
 }

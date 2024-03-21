@@ -1,11 +1,11 @@
 package uk.gov.homeoffice.drt.service
 
-import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.{GetFlights, GetStateForDateRange, PointInTimeQuery}
 import actors._
 import actors.persistent.ManifestRouterActor
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.GetFeedStatuses
+import actors.routing.FeedArrivalsRouterActor
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
 import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown, Props, Scheduler, typed}
 import akka.pattern.ask
@@ -32,13 +32,15 @@ import drt.server.feeds.lhr.sftp.LhrSftpLiveContentProvider
 import drt.server.feeds.ltn.{LtnFeedRequester, LtnLiveFeed}
 import drt.server.feeds.mag.{MagFeed, ProdFeedRequester}
 import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed, FeedPoller}
-import drt.shared.FlightsApi.Flights
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import services.{Retry, RetryDelays, StreamSupervision}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -104,7 +106,7 @@ trait FeedService {
     AclFeedSource -> (true, None, forecastBaseFeedArrivalsActor),
     ForecastFeedSource -> (false, None, forecastFeedArrivalsActor),
     LiveBaseFeedSource -> (ciriumIsPrimary, Option(5.minutes), liveBaseFeedArrivalsActor),
-    LiveFeedSource -> (true, None,  liveFeedArrivalsActor)
+    LiveFeedSource -> (true, None, liveFeedArrivalsActor)
   )
     .collect {
       case (fs, (isPrimary, maybeFuzzyThreshold, actor)) if airportConfig.feedSources.contains(fs) => (isPrimary, maybeFuzzyThreshold, actor)
@@ -267,21 +269,53 @@ case class ProdFeedService(journalType: StreamingJournalLike,
                            paxFeedSourceOrder: List[FeedSource],
                            flightLookups: FlightLookupsLike,
                            manifestLookups: ManifestLookupsLike,
+                           requestAndTerminateActor: ActorRef,
                           )
                           (implicit
                            val system: ActorSystem,
                            val ec: ExecutionContext,
                            val timeout: Timeout,
                           ) extends FeedService {
+  private val nowMillis = () => now().millisSinceEpoch
 
-  override val forecastBaseFeedArrivalsActor: ActorRef =
-    system.actorOf(Props(new AclForecastArrivalsActor(now, expireAfterMillis)), name = "base-arrivals-actor")
-  override val forecastFeedArrivalsActor: ActorRef =
-    system.actorOf(Props(new PortForecastArrivalsActor(now, expireAfterMillis)), name = "forecast-arrivals-actor")
-  override val liveFeedArrivalsActor: ActorRef =
-    system.actorOf(Props(new PortLiveArrivalsActor(now, expireAfterMillis)), name = "live-arrivals-actor")
-  override val liveBaseFeedArrivalsActor: ActorRef =
-    system.actorOf(Props(new CiriumLiveArrivalsActor(now, expireAfterMillis)), name = "live-base-arrivals-actor")
+  private def getFeedArrivalsLookup(source: FeedSource,
+                                    props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,
+                                   ): Option[MillisSinceEpoch] => UtcDate => Terminal => Future[Seq[FeedArrival]] = {
+    FeedArrivalsRouterActor.feedArrivalsDayLookup(
+      now = nowMillis,
+      requestAndTerminateActor = requestAndTerminateActor,
+      props = (d, t, mp, n) => props(d.year, d.month, d.day, t, source, mp, n, 250)
+    )
+  }
+
+  private def updateForecastBaseArrivals(source: FeedSource,
+                                         props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,
+                                        ): ((Terminal, UtcDate), FlightUpdates) => Future[Boolean] =
+    FeedArrivalsRouterActor.updateFlights(
+      requestAndTerminateActor,
+      (d, t) => props(d.year, d.month, d.day, t, source, None, nowMillis, 250),
+    )
+
+  override val forecastBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
+    airportConfig.terminals,
+    getFeedArrivalsLookup(AclFeedSource, TerminalDayFeedArrivalActor.forecast),
+    updateForecastBaseArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast),
+  )), name = "forecast-base-arrivals-actor")
+  override val forecastFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
+    airportConfig.terminals,
+    getFeedArrivalsLookup(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast),
+    updateForecastBaseArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast),
+  )), name = "forecast-arrivals-actor")
+  override val liveFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
+    airportConfig.terminals,
+    getFeedArrivalsLookup(LiveFeedSource, TerminalDayFeedArrivalActor.live),
+    updateForecastBaseArrivals(LiveFeedSource, TerminalDayFeedArrivalActor.live),
+  )), name = "live-arrivals-actor")
+  override val liveBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
+    airportConfig.terminals,
+    getFeedArrivalsLookup(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live),
+    updateForecastBaseArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live),
+  )), name = "live-base-arrivals-actor")
 
   override val maybeAclFeed: Option[AclFeed] =
     if (params.aclDisabled) None

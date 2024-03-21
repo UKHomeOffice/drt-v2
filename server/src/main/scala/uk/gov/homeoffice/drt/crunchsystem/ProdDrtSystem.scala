@@ -67,6 +67,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     paxFeedSourceOrder = paxFeedSourceOrder,
     flightLookups = flightLookups,
     manifestLookups = manifestLookups,
+    requestAndTerminateActor = applicationService.requestAndTerminateActor,
   )
 
 

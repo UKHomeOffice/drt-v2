@@ -24,7 +24,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 object FlightsRouterActor {
-  val log: Logger = LoggerFactory.getLogger(getClass)
+  private val log: Logger = LoggerFactory.getLogger(getClass)
 
   def scheduledInRange(start: SDateLike, end: SDateLike, scheduled: MillisSinceEpoch): Boolean = {
     val scheduledDate = SDate(scheduled)
@@ -85,7 +85,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
                          updateFlights: FlightsUpdate,
                          paxFeedSourceOrder: List[FeedSource],
-                        ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate)] {
+                        ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate), Long] {
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), allTerminals, Option(pit), paxFeedSourceOrder)
@@ -167,7 +167,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
       allTerminals.flatMap(t => dates.map(d => ((t, d), RemoveSplits))).toMap
   }
 
-  def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[UpdatedMillis] =
+  def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[Set[Long]] =
     updateFlights(partition, updates)
 
   override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = {

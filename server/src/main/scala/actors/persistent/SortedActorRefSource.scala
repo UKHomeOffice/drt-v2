@@ -45,23 +45,32 @@ final class SortedActorRefSource(persistentActor: ActorRef,
         inheritedAttributes.get[Attributes.Name].map(_.n).getOrElse(super.stageActorName)
 
       val ref: ActorRef = getEagerStageActor(eagerMaterializer) {
-        case (_, m: Iterable[ProcessingRequest @unchecked]) =>
-          buffer ++= m
-          persistentActor ! m
-          tryPushElement()
+        case (_, m: Iterable[_]) =>
+          m.headOption
+            .map {
+              case _: ProcessingRequest =>
+                m.collect { case r: ProcessingRequest => r }
+              case _: Long =>
+                m.collect { case l: Long => processingRequest(l) }
+            }
+            .map { requests =>
+              buffer ++= requests
+              persistentActor ! m
+              tryPushElement()
+            }
 
         case (_, m: ProcessingRequest @unchecked) =>
           buffer += m
           persistentActor ! m
           tryPushElement()
 
-        case (_, UpdatedMillis(millis)) =>
-          val requests = millis.map(processingRequest)
-          if (requests.nonEmpty) {
-            requests.foreach(persistentActor ! _)
-            buffer ++= requests
-            tryPushElement()
-          }
+        //        case (_, UpdatedMillis(millis)) =>
+        //          val requests = millis.map(processingRequest)
+        //          if (requests.nonEmpty) {
+        //            requests.foreach(persistentActor ! _)
+        //            buffer ++= requests
+        //            tryPushElement()
+        //          }
 
         case unexpected =>
           log.error(s"[$graphName] Ignoring unexpected message: $unexpected")

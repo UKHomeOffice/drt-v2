@@ -9,10 +9,10 @@ import uk.gov.homeoffice.drt.time.UtcDate
 
 class StaffMinutesRouterActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[StaffMinute, TM],
-                              updateMinutes: MinutesUpdate[StaffMinute, TM]
+                              updateMinutes: MinutesUpdate[StaffMinute, TM, Long]
                        )
   extends MinutesActorLike(terminals, lookup, updateMinutes)
-    with RouterActorLikeWithSubscriber[MinutesContainer[StaffMinute, TM], (Terminal, UtcDate)] {
+    with RouterActorLikeWithSubscriber[MinutesContainer[StaffMinute, TM], (Terminal, UtcDate), Long] {
   override def shouldSendEffectsToSubscriber: MinutesContainer[StaffMinute, TM] => Boolean =
     _.contains(classOf[StaffMinute])
 }

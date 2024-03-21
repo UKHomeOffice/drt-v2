@@ -1,6 +1,5 @@
 package actors.daily
 
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.Props
 import akka.persistence.SaveSnapshotSuccess
 import controllers.model.RedListCounts
@@ -143,10 +142,10 @@ class TerminalDayFlightActor(year: Int,
       val (updatedState, _) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
       state = updatedState
 
-      val replyToAndMessage = List((sender(), UpdatedMillis.empty))
+      val replyToAndMessage = List((sender(), Set.empty))
       val message = flightWithSplitsDiffToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
-    } else sender() ! UpdatedMillis.empty
+    } else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
@@ -154,10 +153,10 @@ class TerminalDayFlightActor(year: Int,
       val (updatedState, minutesToUpdate) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
       state = updatedState
 
-      val replyToAndMessage = List((sender(), UpdatedMillis(minutesToUpdate)))
+      val replyToAndMessage = List((sender(), minutesToUpdate))
       val message = arrivalsDiffToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
-    } else sender() ! UpdatedMillis.empty
+    } else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {
@@ -165,10 +164,10 @@ class TerminalDayFlightActor(year: Int,
       val (updatedState, _) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
       state = updatedState
 
-      val replyToAndMessage = List((sender(), UpdatedMillis.empty))
+      val replyToAndMessage = List((sender(), Set.empty))
       val message = splitsForArrivalsToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
-    } else sender() ! UpdatedMillis.empty
+    } else sender() ! Set.empty
 
   private def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {
     case Some(removalsCutoffTimestamp) => timestamp < removalsCutoffTimestamp
