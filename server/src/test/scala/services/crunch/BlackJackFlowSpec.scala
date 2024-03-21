@@ -3,10 +3,7 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
-import drt.shared.FlightsApi.Flights
 import drt.shared.PortState
-import uk.gov.homeoffice.drt.arrivals.{Passengers}
-import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -28,7 +25,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
         schDt = scheduled,
         iata = "BA0001",
         terminal = T1,
-        passengerSources = Map(AclFeedSource -> Passengers(Option(21),None)),
+        totalPax = Option(21)
       )
       val initialBaseArrivals = Set(flight)
       val deskStats = ActualDeskStats(Map(
@@ -47,7 +44,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
           queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)))
       ))
 
-      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(initialBaseArrivals.toSeq))
       Thread.sleep(1500)
       offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 
@@ -74,8 +71,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
 
       val scheduled = "2017-01-01T00:00Z"
 
-      val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1,
-        passengerSources = Map(AclFeedSource ->Passengers(Option(21),None)))
+      val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(21))
       val initialBaseArrivals = Set(flight)
       val deskStats = ActualDeskStats(Map(
         T1 -> Map(
@@ -94,7 +90,7 @@ class BlackJackFlowSpec extends CrunchTestLike {
           queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)))
       ))
 
-      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(initialBaseArrivals.toSeq)))
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(initialBaseArrivals.toSeq))
       Thread.sleep(1500)
       offerAndWait(crunch.actualDesksAndQueuesInput, deskStats)
 

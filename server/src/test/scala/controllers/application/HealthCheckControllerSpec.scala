@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.TQM
 import module.DRTModule
 import org.scalatest.BeforeAndAfterEach
@@ -17,11 +17,11 @@ import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.config.Lhr
+import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}
 import uk.gov.homeoffice.drt.service.ApplicationService
 import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}

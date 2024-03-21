@@ -6,12 +6,11 @@ import org.joda.time.DateTimeZone
 import org.mockito.Mockito.verify
 import org.specs2.matcher.Scope
 import org.specs2.mock.Mockito
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.co.bhx.online.flightinformation._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightCode, ForecastArrival, LiveArrival, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival, LiveArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDate
 
 import java.util.{Calendar, GregorianCalendar, TimeZone}
 import javax.xml.datatype.DatatypeFactory

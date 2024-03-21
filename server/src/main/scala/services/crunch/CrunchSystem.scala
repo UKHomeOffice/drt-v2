@@ -10,7 +10,7 @@ import drt.shared.CrunchApi._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import services.TryCrunchWholePax
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FeedArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival}
 import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -47,7 +47,7 @@ case class CrunchProps[FT](airportConfig: AirportConfig,
                            optimiser: TryCrunchWholePax,
                            startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch,
                              UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
-                           setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
+                           setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
                            passengerAdjustments: List[FeedArrival] => Future[List[FeedArrival]],
                            system: ActorSystem,
                           )

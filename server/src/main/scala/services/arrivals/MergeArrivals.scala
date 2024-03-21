@@ -3,7 +3,7 @@ package services.arrivals
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, ProcessingRequest}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FeedArrival, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.time.{DateLike, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration
@@ -117,7 +117,7 @@ object MergeArrivals {
     )
 
   def processingRequestToArrivalsDiff(mergeArrivalsForDate: UtcDate => Future[ArrivalsDiff],
-                                      setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
+                                      setPcpTime: Seq[Arrival] => Future[Seq[Arrival]],
                                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                                       updateAggregatedArrivals: ArrivalsDiff => Unit,
                                      )
@@ -129,8 +129,11 @@ object MergeArrivals {
       .mapAsync(1) {
         request =>
           mergeArrivalsForDate(request.date)
-            .flatMap(setPcpTimes)
             .flatMap(addArrivalPredictions)
+            .flatMap { diff =>
+              setPcpTime(diff.toUpdate.values.toSeq)
+                .map(arrivals => diff.copy(toUpdate = arrivals.map(a => a.unique -> a).toMap))
+            }
       }
       .wireTap(updateAggregatedArrivals)
   }

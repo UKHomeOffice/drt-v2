@@ -1,6 +1,5 @@
 package feeds.lhr
 
-import akka.NotUsed
 import akka.pattern.pipe
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
@@ -12,8 +11,8 @@ import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
+import scala.concurrent.Await
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 class LHRFeedSpec extends CrunchTestLike {

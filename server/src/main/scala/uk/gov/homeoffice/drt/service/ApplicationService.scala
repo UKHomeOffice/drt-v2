@@ -118,12 +118,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val pcpArrivalTimeCalculator: Arrival => MilliDate =
     pcpFrom(airportConfig.firstPaxOffMillis, walkTimeProviderWithFallback)
 
-  val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff =>
-    Future.successful {
-      val updates = SortedMap[UniqueArrival, Arrival]() ++
-        diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpArrivalTimeCalculator(arrival).millisSinceEpoch)))
-      diff.copy(toUpdate = updates)
-    }
+  val setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]] = arrivals =>
+    Future.successful(arrivals.map(a => a.copy(PcpTime = Option(pcpArrivalTimeCalculator(a).millisSinceEpoch))))
 
   private val manifestsRouterActorReadOnly: ActorRef =
     system.actorOf(
@@ -296,7 +292,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
       val mergeArrivalsFlow = MergeArrivals.processingRequestToArrivalsDiff(
         mergeArrivalsForDate = merger,
-        setPcpTimes = setPcpTimes,
+        setPcpTime = setPcpTimes,
         addArrivalPredictions = addArrivalPredictions,
         updateAggregatedArrivals = actors.aggregatedArrivalsActor ! _,
       )
@@ -447,7 +443,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     val actors = persistentStateActors
 
     val futurePortStates: Future[(
-        Option[FeedSourceStatuses],
+      Option[FeedSourceStatuses],
         SortedSet[ProcessingRequest],
         SortedSet[ProcessingRequest],
         SortedSet[ProcessingRequest],

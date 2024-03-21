@@ -4,14 +4,13 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.FlightsApi.Flights
 import drt.shared.PortState
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
 import uk.gov.homeoffice.drt.actor.PredictionModelActor._
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
-import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.prediction._
 import uk.gov.homeoffice.drt.prediction.arrival.OffScheduleModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.arrival.features.FeatureColumnsV1.{DayOfWeek, PartOfDay}
@@ -65,7 +64,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
       val bhxT1 = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("BHX"), terminal = T1)
       val jfkT2 = ArrivalGenerator.arrival("BA0002", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
       val bhxT2 = ArrivalGenerator.arrival("BA0003", schDt = scheduledStr, origin = PortCode("BHX"), terminal = T2)
-      val arrivals = List(jfkT1, bhxT1, jfkT2, bhxT2)
+      val arrivals = List(jfkT1, bhxT1, jfkT2, bhxT2).map(_.toArrival(LiveFeedSource))
       val modelKeys: Arrival => Iterable[WithId] = arrival =>
         List(
           TerminalOrigin(arrival.Terminal.toString, arrival.Origin.iata),
@@ -85,7 +84,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
 
   "Given an arrival and an actor containing a prediction model for that arrival" >> {
     "I should be able to update the arrival with an predicted touchdown time" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
+      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
       val keysWithArrival = modelKeysForArrival(arrival).map(k => (k, List(arrival.unique))).toList
       val arrivalsMap = List(arrival).map(a => (a.unique, a)).toMap
       val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(arrivalsMap, keysWithArrival), 5.second)
@@ -96,7 +95,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
 
   "Given an ArrivalsDiff and an actor containing touchdown prediction models" >> {
     "I should be able to update the arrival with an predicted touchdown time" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
+      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
 
       val diff = ArrivalsDiff(Seq(arrival), Seq())
 
@@ -116,7 +115,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
           addArrivalPredictions = arrivalPredictions.addPredictions
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Iterable(arrival))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(arrival)))
 
         crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for a predicted time") {
           case ps: PortState => ps.flights.values.exists(_.apiFlight.predictedTouchdown.nonEmpty)

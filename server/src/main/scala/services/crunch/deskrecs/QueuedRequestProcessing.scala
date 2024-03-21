@@ -22,7 +22,7 @@ object QueuedRequestProcessing {
     val deskRecsSink = Sink.actorRefWithAck(sinkActor, StreamInitialized, StatusReply.Ack, StreamCompleted, StreamFailure)
     val ks = KillSwitches.single[A]
 
-    val graph = GraphDSL.create(processingRequestSource, ks)((_, _)) {
+    val graph = GraphDSL.createGraph(processingRequestSource, ks)((_, _)) {
       implicit builder =>
         (requests, killSwitch) =>
           requests.out.collect {

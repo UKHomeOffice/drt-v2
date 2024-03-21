@@ -27,16 +27,16 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   val flightWithAllTypesOfAPISplit: ApiFlightWithSplits = ApiFlightWithSplits(
     arrival(
       iata = "SA324",
-      icao = "SA0324",
       schDt = "2017-01-01T20:00:00Z",
       maxPax = Option(100),
       terminal = T1,
       origin = PortCode("JHB"),
       operator = Option(Operator("SA")),
       status = ArrivalStatus("UNK"),
-      estDt = "2017-01-01T20:00:00Z",
-      feedSources = Set(LiveFeedSource),
-      passengerSources = Map(
+      estDt = "2017-01-01T20:00:00Z"
+    ).toArrival(LiveFeedSource).copy(
+      FeedSources = Set(LiveFeedSource),
+      PassengerSources = Map(
         LiveFeedSource -> Passengers(Option(98), None),
         ApiFeedSource -> Passengers(Option(100), None),
       )
@@ -66,16 +66,16 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   val flightWithAllTypesOfAPISplitAndNoLiveNos: ApiFlightWithSplits = ApiFlightWithSplits(
     arrival(
       iata = "SA324",
-      icao = "SA0324",
       schDt = "2017-01-01T20:00:00Z",
       maxPax = Option(100),
       terminal = T1,
       origin = PortCode("JHB"),
       operator = Option(Operator("SA")),
       status = ArrivalStatus("UNK"),
-      estDt = "2017-01-01T20:00:00Z",
-      feedSources = Set(ApiFeedSource),
-      passengerSources = Map(ApiFeedSource -> Passengers(Option(28), None))
+      estDt = "2017-01-01T20:00:00Z"
+    ).toArrival(LiveFeedSource).copy(
+      FeedSources = Set(ApiFeedSource),
+      PassengerSources = Map(ApiFeedSource -> Passengers(Option(28), None))
     ),
     Set(Splits(
       Set(
@@ -102,16 +102,16 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   val flightWithoutFastTrackApiSplits: ApiFlightWithSplits = ApiFlightWithSplits(
     arrival(
       iata = "SA325",
-      icao = "SA0325",
       schDt = "2017-01-01T20:00:00Z",
       maxPax = Option(100),
       terminal = T1,
       origin = PortCode("JHC"),
       operator = Option(Operator("SA")),
       status = ArrivalStatus("UNK"),
-      estDt = "2017-01-01T20:00:00Z",
-      feedSources = Set(LiveFeedSource),
-      passengerSources = Map(
+      estDt = "2017-01-01T20:00:00Z"
+    ).toArrival(LiveFeedSource).copy(
+      FeedSources = Set(LiveFeedSource),
+      PassengerSources = Map(
         LiveFeedSource -> Passengers(Option(100), None),
         ApiFeedSource -> Passengers(Option(100), None),
       )
@@ -131,15 +131,15 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     ApiFlightWithSplits(
       arrival(
         iata = "SA326",
-        icao = "SA0326",
         schDt = "2017-01-01T20:00:00Z",
         maxPax = Option(100),
         terminal = T1,
         origin = PortCode("JHD"),
         operator = Option(Operator("SA")),
         status = ArrivalStatus("UNK"),
-        estDt = "2017-01-01T20:00:00Z",
-        passengerSources = Map(AclFeedSource -> Passengers(Option(100), None))
+        estDt = "2017-01-01T20:00:00Z"
+      ).toArrival(LiveFeedSource).copy(
+        PassengerSources = Map(AclFeedSource -> Passengers(Option(100), None))
       ),
 
       Set(Splits(
@@ -158,16 +158,16 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     ApiFlightWithSplits(
       arrival(
         iata = "SA326",
-        icao = "SA0326",
         schDt = "2017-01-01T20:00:00Z",
         maxPax = Option(100),
         terminal = T1,
         origin = PortCode("JHD"),
         operator = Option(Operator("SA")),
         status = ArrivalStatus("UNK"),
-        estDt = "2017-01-01T20:00:00Z",
-        feedSources = Set(LiveFeedSource),
-        passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))
+        estDt = "2017-01-01T20:00:00Z"
+      ).toArrival(LiveFeedSource).copy(
+        FeedSources = Set(LiveFeedSource),
+        PassengerSources = Map(LiveFeedSource -> Passengers(Option(100), None))
       ),
       Set(Splits(
         Set(
@@ -185,16 +185,16 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     ApiFlightWithSplits(
       arrival(
         iata = "SA326",
-        icao = "SA0326",
         schDt = "2017-01-01T20:00:00Z",
         maxPax = Option(105),
         terminal = T1,
         origin = PortCode("JHB"),
         operator = Option(Operator("SA")),
         status = ArrivalStatus("UNK"),
-        estDt = "2017-01-01T20:00:00Z",
-        feedSources = Set(LiveFeedSource),
-        passengerSources = Map(
+        estDt = "2017-01-01T20:00:00Z"
+      ).toArrival(LiveFeedSource).copy(
+        FeedSources = Set(LiveFeedSource),
+        PassengerSources = Map(
           LiveFeedSource -> Passengers(Option(105), None),
           ApiFeedSource -> Passengers(Option(105), None),
         )
@@ -240,15 +240,18 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val flightsWithPcpTimes: Seq[ApiFlightWithSplits] = List(
       ApiFlightWithSplits(
-        arrival(iata = "SA326", schDt = "2017-01-01T20:00:00Z", terminal = T1, origin = PortCode("JHD"), pcpDt = "2017-01-01T20:00:00Z"),
+        arrival(iata = "SA326", schDt = "2017-01-01T20:00:00Z", terminal = T1, origin = PortCode("JHD")).toArrival(LiveFeedSource)
+          .copy(PcpTime = Option(SDate("2017-01-01T20:00:00Z").millisSinceEpoch)),
         Set()
       ),
       ApiFlightWithSplits(
-        arrival(iata = "SA328", schDt = "2017-01-01T22:00:00Z", terminal = T1, origin = PortCode("JHD"), pcpDt = "2017-01-01T22:00:00Z"),
+        arrival(iata = "SA328", schDt = "2017-01-01T22:00:00Z", terminal = T1, origin = PortCode("JHD")).toArrival(LiveFeedSource)
+          .copy(PcpTime = Option(SDate("2017-01-01T22:00:00Z").millisSinceEpoch)),
         Set()
       ),
       ApiFlightWithSplits(
-        arrival(iata = "SA327", schDt = "2017-01-01T21:00:00Z", terminal = T1, origin = PortCode("JHD"), pcpDt = "2017-01-01T21:00:00Z"),
+        arrival(iata = "SA327", schDt = "2017-01-01T21:00:00Z", terminal = T1, origin = PortCode("JHD")).toArrival(LiveFeedSource)
+          .copy(PcpTime = Option(SDate("2017-01-01T21:00:00Z").millisSinceEpoch)),
         Set()
       )
     )
@@ -412,7 +415,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   }
 
   private def invalidApiFieldValue(feedSources: Set[FeedSource], passengerSources: Map[FeedSource, Passengers]): String = {
-    val arrival = ArrivalGenerator.arrival(feedSources = feedSources, passengerSources = passengerSources)
+    val arrival = ArrivalGenerator.arrival().toArrival(LiveFeedSource).copy(FeedSources = feedSources, PassengerSources = passengerSources)
     val splits = Splits(Set(
       ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable,
         Queues.EGate,

@@ -241,7 +241,7 @@ class BHXFeedSpec extends CrunchTestLike {
 
     val probe = TestProbe()
     val expected = Seq(firstFailure, secondFailure, finallySuccess, finallySuccess)
-    val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run
+    val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run()
     Source(1 to 4).map(_ => actorSource ! Feed.Tick).run()
 
     probe.receiveN(4, 1.second) === expected
@@ -262,7 +262,7 @@ class BHXFeedSpec extends CrunchTestLike {
 
     val expected = Seq(finallySuccess, failure, finallySuccess)
     val probe = TestProbe()
-    val actorSource = feed.take(3).to(Sink.actorRef(probe.ref, NotUsed)).run
+    val actorSource = feed.take(3).to(Sink.actorRef(probe.ref, NotUsed)).run()
     Source(1 to 3).map(_ => actorSource ! Feed.Tick).run()
 
     probe.receiveN(3, 1.second) === expected

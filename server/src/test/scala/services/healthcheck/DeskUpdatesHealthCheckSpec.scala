@@ -6,7 +6,8 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.CrunchMinute
 import org.specs2.matcher.MatchResult
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
@@ -52,7 +53,7 @@ class DeskUpdatesHealthCheckSpec extends CrunchTestLike {
     }
   }
 
-  private val t1Arrival: Arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1)
+  private val t1Arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1).toArrival(LiveFeedSource)
 
   "Given one T1 flight and no crunch minutes" >> {
     "desk updates should be None" >> {

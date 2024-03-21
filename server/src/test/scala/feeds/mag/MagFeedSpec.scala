@@ -3,12 +3,11 @@ package feeds.mag
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import com.typesafe.config.{Config, ConfigFactory}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed, ProdFeedRequester}
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import pdi.jwt.JwtAlgorithm
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
@@ -80,7 +79,7 @@ class MagFeedSpec extends CrunchTestLike {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrivalWith0Pax))
 
     val actMax = Await.result(feed.requestArrivals(SDate.now()), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrivals), _) => (arrivals.head.PassengerSources.get(LiveFeedSource).flatMap(_.actual), arrivals.head.MaxPax)
+      case ArrivalsFeedSuccess(arrival :: _, _) => (arrival.totalPax, arrival.maxPax)
       case _ => List()
     }
 
@@ -104,7 +103,7 @@ class MagFeedSpec extends CrunchTestLike {
 
   "Given a mock feed requester that throws an exception " +
     "I should get an ArrivalsFeedFailure response" >> {
-    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(() => new Exception("I'm throwing an exception")))
+    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(() => throw new Exception("I'm throwing an exception")))
 
     val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1.second) match {
       case ArrivalsFeedFailure(_, _) => true

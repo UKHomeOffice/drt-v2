@@ -3,14 +3,12 @@ package services.crunch
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.crunch.deskrecs.DeskRecs
-import uk.gov.homeoffice.drt.arrivals.Passengers
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, PaxTypeAndQueue, Queues}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
@@ -54,9 +52,9 @@ class CrunchTimezoneSpec extends CrunchTestLike {
 
             val scheduledDuringBst = "2017-06-01T00:00Z"
 
-            val flights = Flights(List(
-              FeedArrivalGenerator.arrival(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(Option(1),None)))
-            ))
+            val flights = List(
+              ArrivalGenerator.arrival(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, totalPax = Option(1))
+            )
 
             val fiveMinutes = 600d / 60
             val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))

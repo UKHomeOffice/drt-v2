@@ -6,7 +6,6 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds._
 import drt.server.feeds.gla.GlaFeed
-import drt.shared.FlightsApi.Flights
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
@@ -87,7 +86,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(a), _) if a.size == 1 && !a.exists(_.Scheduled == SDate(dsd).millisSinceEpoch) => true
+      case ArrivalsFeedSuccess(a, _) if a.size == 1 && !a.exists(_.scheduled == SDate(dsd).millisSinceEpoch) => true
       case _ => false
     }
 
@@ -168,7 +167,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+      case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
       case _ => false
     }
 
@@ -208,7 +207,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+      case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
       case _ => false
     }
 
@@ -224,8 +223,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) =>
-        (arrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual), arrival.MaxPax) === ((Some(0), Some(0)))
+      case ArrivalsFeedSuccess(arrival :: Nil, _) => (arrival.totalPax, arrival.maxPax) === ((Some(0), Some(0)))
       case _ => false
     }
 
@@ -266,7 +264,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+      case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
       case _ => false
     }
 

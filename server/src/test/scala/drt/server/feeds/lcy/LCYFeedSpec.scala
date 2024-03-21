@@ -33,7 +33,7 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
     val feed = LCYFeed(lcyClient, Feed.actorRefSource)
 
     val feedProbe = TestProbe()
-    val actorSource = feed.take(2).to(Sink.actorRef(feedProbe.ref, NotUsed)).run
+    val actorSource = feed.take(2).to(Sink.actorRef(feedProbe.ref, NotUsed)).run()
     Source(1 to 2).map(_ => actorSource ! Feed.Tick).run()
 
     callProbe.receiveN(2)
@@ -53,7 +53,7 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
     val feed = LCYFeed(lcyClient, Feed.actorRefSource)
 
     val probe = TestProbe()
-    val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run
+    val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run()
     Source(1 to 4).map(_ => actorSource ! Feed.Tick).run().foreach { _ =>
       verify(lcyClient, times(1)).initialFlights(anyObject[ActorSystem], anyObject[Materializer])
       verify(lcyClient, times(3)).updateFlights(anyObject[ActorSystem], anyObject[Materializer])

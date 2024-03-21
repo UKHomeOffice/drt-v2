@@ -296,7 +296,7 @@ class TestDrtActor extends Actor {
         val mergeArrivalsFlow: Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = MergeArrivals
           .processingRequestToArrivalsDiff(
             mergeArrivalsForDate = merger,
-            setPcpTimes = tc.setPcpTimes,
+            setPcpTime = tc.setPcpTimes,
             addArrivalPredictions = tc.addArrivalPredictions,
             updateAggregatedArrivals = crunchActors.aggregatedArrivalsActor ! _,
           )

@@ -1,6 +1,6 @@
 package actors.serializers
 
-import drt.shared.CrunchApi.{PassengersMinute, PassengersMinutes}
+import drt.shared.CrunchApi.PassengersMinute
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1

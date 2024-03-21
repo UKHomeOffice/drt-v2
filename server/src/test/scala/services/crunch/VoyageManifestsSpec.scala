@@ -2,7 +2,6 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
@@ -36,7 +35,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val scheduled = "2017-01-01T00:00Z"
 
-    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(1), None)))
+    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, totalPax = Option(1))
     val inputManifestsCi = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.CI, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
         List(
@@ -62,7 +61,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       )
     ))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
     offerAndWait(crunch.manifestsLiveInput, inputManifestsCi)
     Thread.sleep(1000)
     offerAndWait(crunch.manifestsLiveInput, inputManifestsDc)
@@ -85,7 +84,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T00:00Z"
         val portCode = PortCode("LHR")
 
-        val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)))
+        val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, totalPax = Option(100))
         val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
           VoyageManifest(EventTypes.DC, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
             manifestPax(101, euPassport))
@@ -106,7 +105,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           )
         ))
 
-        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
         val expected = Map(Queues.EeaDesk -> 4.0, Queues.EGate -> 16.0)
@@ -132,7 +131,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
         val scheduled = "2017-01-01T00:00Z"
         val portCode = PortCode("LHR")
-        val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(10), Option(5))))
+        val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, totalPax = Option(10), transPax = Option(5))
         val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
           VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
             manifestPax(5, euPassport) ++ manifestPax(2, inTransitFlag) ++ manifestPax(3, inTransitCountry)
@@ -156,7 +155,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           )
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
         val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0, Queues.NonEeaDesk -> 0.0)
@@ -248,7 +247,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T00:00Z"
         val portCode = PortCode("LHR")
 
-        val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(10), Option(6))))
+        val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, totalPax = Option(10), transPax = Option(6))
         val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
           VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
             inTransitFlag,
@@ -279,7 +278,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
           )
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
         val expected = Map(Queues.EeaDesk -> 1, Queues.EGate -> 1, Queues.NonEeaDesk -> 2.0)
@@ -330,7 +329,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       )
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 2
@@ -355,7 +354,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = PortCode("LHR")
 
-    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, passengerSources = Map(AclFeedSource -> Passengers(None, Option(6))))
+    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, totalPax = Option(6))
     val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
         euPassport,
@@ -378,7 +377,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       )
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 3
@@ -402,7 +401,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
     val portCode = PortCode("LHR")
 
-    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, passengerSources = Map(ApiFeedSource -> Passengers(None, Option(6))))
+    val flight = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1, transPax = Option(6))
     val inputManifests = ManifestsFeedSuccess(DqManifests(0, Set(
       VoyageManifest(EventTypes.CI, portCode, PortCode("JFK"), VoyageNumber(1), CarrierCode("TS"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"), List(
         euPassportWithIdentifier("Id1"),
@@ -426,7 +425,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
       )
     ))
 
-    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(flight))))
+    offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 2

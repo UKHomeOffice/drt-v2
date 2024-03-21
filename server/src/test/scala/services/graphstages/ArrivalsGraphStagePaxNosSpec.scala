@@ -4,11 +4,10 @@ import akka.stream.QueueOfferResult
 import akka.stream.scaladsl.SourceQueueWithComplete
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import org.specs2.execute.Success
 import services.crunch.{CrunchTestLike, TestConfig}
-import uk.gov.homeoffice.drt.arrivals.{ArrivalStatus, Passengers}
+import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, ForecastFeedSource, LiveFeedSource}
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -142,7 +141,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     }
 
     "Given an arrival with a zero pax, undefined trans pax, and max pax of 100" >> {
-      val arrival = ArrivalGenerator.arrival(maxPax = Option(100), passengerSources = Map(AclFeedSource -> Passengers(Option(0), None)))
+      val arrival = ArrivalGenerator.arrival(maxPax = Option(100), totalPax = Option(0)).toArrival(LiveFeedSource)
       "When I ask for the best pax" >> {
         val bestPax = arrival.bestPcpPaxEstimate(paxFeedSourceOrder)
         "I should see 0" >> {
@@ -169,7 +168,7 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
                           status: String = "",
                           actChoxDt: String = "",
                           feedSource: FeedSource): QueueOfferResult = {
-    val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, passengerSources = Map(feedSource -> Passengers(actPax, tranPax)), maxPax = maxPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
-    offerAndWait(input, ArrivalsFeedSuccess(Flights(Seq(arrivalLive))))
+    val arrivalLive = ArrivalGenerator.arrival("BA0001", schDt = scheduled, totalPax = actPax, transPax = tranPax, maxPax = maxPax, status = ArrivalStatus(status), actChoxDt = actChoxDt)
+    offerAndWait(input, ArrivalsFeedSuccess(Seq(arrivalLive)))
   }
 }

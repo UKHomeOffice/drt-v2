@@ -2,13 +2,12 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser._
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, Passengers, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, LiveArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaChildToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource, PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -23,13 +22,14 @@ class PCPPaxNosSpec extends CrunchTestLike {
 
   val scheduled = "2019-11-20T00:00Z"
 
-  val flights: Flights = Flights(List(
-    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, passengerSources = Map(LiveFeedSource -> Passengers(Option(101), None)), origin = PortCode("JFK"))
-  ))
+  val flights: Seq[LiveArrival] = List(
+    ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, totalPax = Option(101), origin = PortCode("JFK"))
+  )
 
   val manifests: ManifestsFeedResponse =
     ManifestsFeedSuccess(DqManifests(0, Set(
-      VoyageManifest(EventTypes.DC, defaultAirportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2019-11-20"), ManifestTimeOfArrival("00:00"),
+      VoyageManifest(EventTypes.DC, defaultAirportConfig.portCode, PortCode("JFK"), VoyageNumber("0001"),
+        CarrierCode("BA"), ManifestDateOfArrival("2019-11-20"), ManifestTimeOfArrival("00:00"),
         VoyageManifestGenerator.xOfPaxType(100, VoyageManifestGenerator.euPassport))
     )))
 

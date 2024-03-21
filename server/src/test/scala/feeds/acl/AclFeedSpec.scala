@@ -34,7 +34,10 @@ class AclFeedSpec extends CrunchTestLike {
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduledLive),
         passengerAdjustments = arrivals => Future.successful(
-          arrivals.map(a => a.copy(PassengerSources = a.PassengerSources.view.mapValues(a => Passengers(a.actual.map(_ + adjustment), a.transit)).toMap))
+          arrivals.map {
+            case a: LiveArrival => a.copy(totalPax = a.totalPax.map(_ + adjustment))
+            case a: ForecastArrival => a.copy(totalPax = a.totalPax.map(_ + adjustment))
+          }
         )))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlights))
@@ -375,7 +378,7 @@ class AclFeedSpec extends CrunchTestLike {
       "Then I should only see the initial arrivals updated with the live arrival" >> {
       val scheduledLive = "2017-01-01T00:00Z"
 
-      val live = arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", status = ArrivalStatus("scheduled"), totalPax = Option(99))
+//      val live = arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", status = ArrivalStatus("scheduled"), totalPax = Option(99))
       val initialAcl1 = arrival(iata = "BA0001", schDt = "2017-01-01T00:05Z", status = ArrivalStatus("forecast"), totalPax = Option(150))
       val initialAcl2 = arrival(iata = "BA0002", schDt = "2017-01-01T00:15Z", status = ArrivalStatus("forecast"), totalPax = Option(151))
 

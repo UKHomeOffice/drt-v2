@@ -3,11 +3,10 @@ package services.crunch
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.FlightsApi.Flights
 import drt.shared.PortState
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration._
@@ -27,22 +26,22 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     val saturdayMidnight30 = "2019-01-05T00:30"
 
     val futureArrival = ArrivalGenerator
-      .arrival(iata = "BA0001", origin = PortCode("JFK"), schDt = fridayMidnight30, terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(100),None)))
+      .arrival(iata = "BA0001", origin = PortCode("JFK"), schDt = fridayMidnight30, terminal = T1, totalPax = Option(100))
     val futureArrival2 = ArrivalGenerator
-      .arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = saturdayMidnight30, terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(200),None)))
+      .arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = saturdayMidnight30, terminal = T1, totalPax = Option(200))
 
     nowDate = SDate(tuesday)
 
     val crunch = runCrunchGraph(TestConfig(now = myNow, forecastMaxDays = 5))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(futureArrival)))
 
-    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
+    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival.toArrival(LiveFeedSource)))
 
     nowDate = SDate(wednesday)
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(futureArrival2)))
 
-    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
+    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2).map(_.toArrival(LiveFeedSource)))
 
     success
   }
@@ -56,20 +55,20 @@ class LiveStateRollingForwardSpec extends CrunchTestLike {
     val fridayMidnight30 = "2019-01-04T00:30"
     val saturdayMidnight30 = "2019-01-05T00:30"
 
-    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", origin = PortCode("JFK"), schDt = fridayMidnight30, terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(100),None)))
-    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = saturdayMidnight30, terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(200),None)))
+    val futureArrival = ArrivalGenerator.arrival(iata = "BA0001", origin = PortCode("JFK"), schDt = fridayMidnight30, terminal = T1, totalPax = Option(100))
+    val futureArrival2 = ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), schDt = saturdayMidnight30, terminal = T1, totalPax = Option(200))
 
     nowDate = SDate(tuesday)
 
     val crunch = runCrunchGraph(TestConfig(now = myNow, forecastMaxDays = 5))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(futureArrival)))
 
-    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival))
+    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival.toArrival(LiveFeedSource)))
 
-    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(futureArrival2))))
+    offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(futureArrival2)))
 
-    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2))
+    stateContainsArrivals(crunch.portStateTestProbe, Seq(futureArrival, futureArrival2).map(_.toArrival(LiveFeedSource)))
 
     success
   }

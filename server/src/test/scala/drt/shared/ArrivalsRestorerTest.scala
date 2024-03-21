@@ -1,7 +1,7 @@
 package drt.shared
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsRestorer, FeedArrival}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsRestorer, FeedArrival}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 

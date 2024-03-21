@@ -24,7 +24,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int, initialQueue: SortedSet[ProcessingRequest]): ActorRef = {
     val request = (millis: MillisSinceEpoch) => CrunchRequest(millis, crunchOffsetMinutes, durationMinutes)
     val source = new SortedActorRefSource(TestProbe().ref, request, initialQueue, "desk-recs")
-    val graph = GraphDSL.create(source) {
+    val graph = GraphDSL.createGraph(source) {
       implicit builder =>
         crunchRequests =>
           crunchRequests ~> Sink.actorRef(probe.ref, "complete")

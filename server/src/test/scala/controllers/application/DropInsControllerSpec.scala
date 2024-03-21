@@ -2,7 +2,6 @@ package controllers.application
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import akka.util.Timeout
 import email.GovNotifyEmail
 import module.DRTModule
 import org.scalatest.BeforeAndAfterAll
@@ -14,7 +13,6 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
 
 class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAfterAll {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test")
