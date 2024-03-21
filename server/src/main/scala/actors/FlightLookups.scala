@@ -32,7 +32,7 @@ trait FlightLookupsLike {
   def updateFlights(removalMessageCutOff: Option[FiniteDuration]): FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
     val (terminal, date) = partition
     val actor = system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, removalMessageCutOff, paxFeedSourceOrder))
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[UpdatedMillis]
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Set[Long]]
   }
 
   def flightsByDayLookup(removalMessageCutOff: Option[FiniteDuration]): FlightsLookup =

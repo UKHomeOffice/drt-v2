@@ -2,7 +2,6 @@ package actors.routing
 
 import actors.FlightLookups
 import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, PointInTimeQuery}
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.nebo.NeboArrivalActor
 import actors.routing.FlightsRouterActor.runAndCombine
 import actors.routing.minutes.MockFlightsLookup
@@ -41,8 +40,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
   val testProbe: TestProbe = TestProbe()
 
-  val noopUpdates: ((Terminal, UtcDate), FlightUpdates) => Future[UpdatedMillis] =
-    (_, _: FlightUpdates) => Future(UpdatedMillis(Set()))
+  val noopUpdates: ((Terminal, UtcDate), FlightUpdates) => Future[Set[Long]] =
+    (_, _: FlightUpdates) => Future(Set())
 
   "Concerning visibility of flights (scheduled & pcp range)" >> {
     "Given a flight that is scheduled within the range of dates" >> {

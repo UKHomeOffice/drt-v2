@@ -18,14 +18,15 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
 
 class SequentialAccessActorSpec extends CrunchTestLike {
-  def callResource(probeRefs: Map[String, ActorRef]): (String, String) => Future[Strings] = (resource: String, request: String) => {
-    probeRefs.get(resource).foreach(_ ! ((resource, request)))
-    Future({
-      Thread.sleep(100)
-      probeRefs.get(resource).foreach(_ ! ((resource, s"$request done")))
-      Strings(List(s"$resource <- $request"))
-    })
-  }
+  def callResource(probeRefs: Map[String, ActorRef]): (String, String) => Future[Set[String]] =
+    (resource: String, request: String) => {
+      probeRefs.get(resource).foreach(_ ! ((resource, request)))
+      Future({
+        Thread.sleep(100)
+        probeRefs.get(resource).foreach(_ ! ((resource, s"$request done")))
+        Set(s"$resource <- $request")
+      })
+    }
 
   val splitByResource: String => Iterable[(String, String)] = (request: String) =>
     request
@@ -38,7 +39,7 @@ class SequentialAccessActorSpec extends CrunchTestLike {
 
   "A control actor should send a request" >> {
     val probe = TestProbe()
-    val actor = system.actorOf(Props(new SequentialAccessActor[String, String, Strings](callResource(Map("A" -> probe.ref)), splitByResource)))
+    val actor = system.actorOf(Props(new SequentialAccessActor[String, String, String](callResource(Map("A" -> probe.ref)), splitByResource)))
 
     actor ! "A1,A2"
 
@@ -53,7 +54,7 @@ class SequentialAccessActorSpec extends CrunchTestLike {
   "A control actor should send a requests sequentially in the order they were received" >> {
     val probeA = TestProbe()
     val probeB = TestProbe()
-    val actor = system.actorOf(Props(new SequentialAccessActor[String, String, Strings](callResource(Map(
+    val actor = system.actorOf(Props(new SequentialAccessActor[String, String, String](callResource(Map(
       "A" -> probeA.ref,
       "B" -> probeB.ref,
     )), splitByResource)))
@@ -77,7 +78,7 @@ class SequentialAccessActorSpec extends CrunchTestLike {
   "A control actor should send updates to subscribers, and an Ack to the caller" >> {
     val probeA = TestProbe()
     val probeB = TestProbe()
-    val actor = system.actorOf(Props(new SequentialAccessActor[String, String, Strings](callResource(Map()), splitByResource)))
+    val actor = system.actorOf(Props(new SequentialAccessActor[String, String, String](callResource(Map()), splitByResource)))
 
     actor ! AddUpdatesSubscriber(probeA.ref)
     actor ! AddUpdatesSubscriber(probeB.ref)
@@ -96,13 +97,13 @@ class SequentialAccessActorSpec extends CrunchTestLike {
     val probeA = TestProbe()
     val probeB = TestProbe()
 
-    def callResource(probeRefs: Map[(Terminal, UtcDate), ActorRef]): ((Terminal, UtcDate), PaxMinutes) => Future[UpdatedMillis] =
+    def callResource(probeRefs: Map[(Terminal, UtcDate), ActorRef]): ((Terminal, UtcDate), PaxMinutes) => Future[Set[Long]] =
       (resource: (Terminal, UtcDate), request: PaxMinutes) => {
         probeRefs.get(resource).foreach(_ ! ((resource, request)))
         Future({
           Thread.sleep(100)
           probeRefs.get(resource).foreach(_ ! ((resource, s"$request done")))
-          UpdatedMillis(Set(0, 1))
+          Set(0, 1)
         })
       }
 
@@ -112,7 +113,7 @@ class SequentialAccessActorSpec extends CrunchTestLike {
       }
     }
 
-    val props = Props(new SequentialAccessActor[(Terminal, UtcDate), PaxMinutes, UpdatedMillis](
+    val props = Props(new SequentialAccessActor[(Terminal, UtcDate), PaxMinutes, Long](
       callResource(Map()), splitByResource))
     val actor = system.actorOf(props)
 
@@ -138,12 +139,12 @@ class SequentialAccessActorSpec extends CrunchTestLike {
     val probeA = TestProbe()
     val probeB = TestProbe()
 
-    def callResource[RES, REQ](probeRefs: Map[RES, ActorRef]): (RES, REQ) => Future[UpdatedMillis] =
+    def callResource[RES, REQ](probeRefs: Map[RES, ActorRef]): (RES, REQ) => Future[Set[Long]] =
       (resource: RES, request: REQ) => {
         probeRefs.get(resource).foreach(_ ! ((resource, request)))
         Future({
           probeRefs.get(resource).foreach(_ ! ((resource, s"$request done")))
-          UpdatedMillis(Set(0, 1))
+          Set(0, 1)
         })
       }
 
@@ -153,7 +154,7 @@ class SequentialAccessActorSpec extends CrunchTestLike {
       }
     }
 
-    val props = Props(new SequentialAccessActor[(Terminal, UtcDate), CrunchMinutes, UpdatedMillis](
+    val props = Props(new SequentialAccessActor[(Terminal, UtcDate), CrunchMinutes, Long](
       callResource(Map()), splitByResource) {
       override def shouldSendEffectsToSubscribers(request: CrunchMinutes): Boolean = request.minutes.exists(_.isInstanceOf[DeskRecMinute])
     })
