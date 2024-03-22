@@ -7,7 +7,7 @@ import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ForecastArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightCode, ForecastArrival}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
@@ -206,18 +206,25 @@ object AclFeed {
       val aclTerminal = Terminals.Terminal(fields(AclColIndex.Terminal))
       val portTerminal = aclToPortTerminal(aclTerminal)
 
+      val (_, voyageNumber, suffix) = FlightCode.flightCodeToParts(fields(AclColIndex.FlightNumber))
+
       ForecastArrival(
         operator = Option(operator),
         maxPax = Option(maxPax),
         totalPax = Option(actPax),
         transPax = None,
         terminal = Terminal(portTerminal.toString),
-        voyageNumber = fields(AclColIndex.FlightNumber).toInt,
+        voyageNumber = voyageNumber.numeric,
         carrierCode = fields(AclColIndex.Operator),
-        flightCodeSuffix = None,
+        flightCodeSuffix = suffix.map(_.suffix),
         origin = fields(AclColIndex.Origin),
         scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
       )
+    } match {
+      case Success(a) => Success(a)
+      case Failure(t) =>
+        log.error(s"Failed to parse ACL line: ${fields.mkString(", ")}: ${t.getMessage}")
+        Failure(t)
     }
 
   private object AclColIndex {

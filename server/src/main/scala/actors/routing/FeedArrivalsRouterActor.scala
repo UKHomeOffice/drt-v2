@@ -55,12 +55,14 @@ object FeedArrivalsRouterActor {
                            (implicit
                             system: ActorSystem,
                             timeout: Timeout,
+                            ec: ExecutionContext,
                            ): Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]] =
     (maybePit: Option[MillisSinceEpoch]) => (date: UtcDate) => (terminal: Terminal) => {
       val actor = system.actorOf(props(date, terminal, maybePit, now))
       requestAndTerminateActor
         .ask(RequestAndTerminate(actor, TerminalDayFeedArrivalActor.GetState))
-        .mapTo[Seq[FeedArrival]]
+        .mapTo[Map[UniqueArrival, FeedArrival]]
+        .map(_.values.toSeq)
     }
 
   def multiTerminalFlightsByDaySource(flightsLookupByDayAndTerminal: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]])

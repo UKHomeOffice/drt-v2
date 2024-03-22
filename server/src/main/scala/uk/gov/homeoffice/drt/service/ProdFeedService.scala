@@ -53,12 +53,12 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 object ProdFeedService {
-  def arrivalFeedProvidersInOrder(feedActorsWithPrimary: Seq[(Boolean, Option[FiniteDuration], ActorRef)],
+  def arrivalFeedProvidersInOrder(feedActorsWithPrimary: Seq[(FeedSource, Boolean, Option[FiniteDuration], ActorRef)],
                                  )
                                  (implicit timeout: Timeout, ec: ExecutionContext, mat: Materializer): Seq[DateLike => Future[FeedArrivalSet]] =
     feedActorsWithPrimary
       .map {
-        case (isPrimary, maybeFuzzyThreshold, actor) =>
+        case (feedSource, isPrimary, maybeFuzzyThreshold, actor) =>
           val arrivalsForDate = (date: DateLike) => {
             val start = SDate(date)
             val end = start.addDays(1).addMinutes(-1)
@@ -66,11 +66,10 @@ object ProdFeedService {
               .ask(FeedArrivalsRouterActor.GetStateForDateRange(start.toUtcDate, end.toUtcDate))
               .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
               .flatMap(s => s.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
-              .map(f => FeedArrivalSet(isPrimary, maybeFuzzyThreshold, f.map(fa => (fa.unique -> fa.toArrival())))
+              .map(f => FeedArrivalSet(isPrimary, maybeFuzzyThreshold, f.map(fa => fa.unique -> fa.toArrival(feedSource)).toMap))
           }
           arrivalsForDate
       }
-
 }
 
 trait FeedService {
@@ -103,14 +102,14 @@ trait FeedService {
 
   private val ciriumIsPrimary: Boolean = !airportConfig.feedSources.contains(LiveFeedSource)
 
-  lazy val activeFeedActorsWithPrimary: Seq[(Boolean, Option[FiniteDuration], ActorRef)] = Seq(
+  lazy val activeFeedActorsWithPrimary: Seq[(FeedSource, Boolean, Option[FiniteDuration], ActorRef)] = Seq(
     AclFeedSource -> (true, None, forecastBaseFeedArrivalsActor),
     ForecastFeedSource -> (false, None, forecastFeedArrivalsActor),
     LiveBaseFeedSource -> (ciriumIsPrimary, Option(5.minutes), liveBaseFeedArrivalsActor),
     LiveFeedSource -> (true, None, liveFeedArrivalsActor)
   )
     .collect {
-      case (fs, (isPrimary, maybeFuzzyThreshold, actor)) if airportConfig.feedSources.contains(fs) => (isPrimary, maybeFuzzyThreshold, actor)
+      case (fs, (isPrimary, maybeFuzzyThreshold, actor)) if airportConfig.feedSources.contains(fs) => (fs, isPrimary, maybeFuzzyThreshold, actor)
     }
 
   lazy val feedActors: Map[FeedSource, ActorRef] = Map(
