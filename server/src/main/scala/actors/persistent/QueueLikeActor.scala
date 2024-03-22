@@ -4,7 +4,6 @@ import akka.persistence._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.DataUpdates.Combinable
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands._
@@ -21,16 +20,16 @@ object QueueLikeActor {
 
   case object Tick
 
-  object UpdatedMillis {
-    val empty: UpdatedMillis = UpdatedMillis(Set())
-  }
+  //  object UpdatedMillis {
+  //    val empty: UpdatedMillis = UpdatedMillis(Set())
+  //  }
 
-  case class UpdatedMillis(effects: Set[MillisSinceEpoch]) extends Combinable[UpdatedMillis] {
-    def ++(other: UpdatedMillis): UpdatedMillis = other match {
-      case UpdatedMillis(toAdd) => UpdatedMillis(effects ++ toAdd)
-      case _ => this
-    }
-  }
+  //  case class UpdatedMillis(effects: Set[MillisSinceEpoch]) extends Combinable[UpdatedMillis] {
+  //    def ++(other: UpdatedMillis): UpdatedMillis = other match {
+  //      case UpdatedMillis(toAdd) => UpdatedMillis(effects ++ toAdd)
+  //      case _ => this
+  //    }
+  //  }
 }
 
 abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: MillisSinceEpoch => ProcessingRequest) extends RecoveryActorLike {
@@ -100,18 +99,35 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
     case cr: ProcessingRequest =>
       self ! Seq(cr)
 
-    case requests: Iterable[ProcessingRequest] =>
-      updateState(requests)
-      requests.headOption.map {
-        case _: LoadProcessingRequest =>
-          persistAndMaybeSnapshot(CrunchRequestsMessage(requests.collect {
-            case r: LoadProcessingRequest => loadProcessingRequestToMessage(r)
-          }.toList))
-        case _: MergeArrivalsRequest =>
-          persistAndMaybeSnapshot(MergeArrivalsRequestsMessage(requests.collect {
-            case r: MergeArrivalsRequest => mergeArrivalRequestToMessage(r)
-          }.toList))
-      }
+    case requests: Iterable[_] =>
+      requests.headOption
+        .map {
+          case _: Long =>
+            requests
+              .collect { case l: MillisSinceEpoch => processingRequest(l) }
+              .filterNot(state.contains)
+          case _: ProcessingRequest =>
+            requests.collect { case r: ProcessingRequest => r }
+              .filterNot(state.contains)
+        }
+        .map { processingRequests =>
+          val maybeMessage = processingRequests.headOption.map {
+            case _: LoadProcessingRequest =>
+              CrunchRequestsMessage(processingRequests.collect {
+                case r: LoadProcessingRequest => loadProcessingRequestToMessage(r)
+              }.toList)
+            case _: MergeArrivalsRequest =>
+              MergeArrivalsRequestsMessage(processingRequests.collect {
+                case r: MergeArrivalsRequest => mergeArrivalRequestToMessage(r)
+              }.toList)
+          }
+          maybeMessage.foreach { msg =>
+            println(s"Persisting ${processingRequests.size} days to queue. Queue now contains ${state.size} days")
+            persistAndMaybeSnapshot(msg)
+            updateState(processingRequests)
+          }
+
+        }
 
     case RemoveProcessingRequest(cr) =>
       log.info(s"Removing ${cr.date} from queue. Queue now contains ${state.size} days")
@@ -120,7 +136,8 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
         year = Option(cr.date.year),
         month = Option(cr.date.month),
         day = Option(cr.date.day),
-        terminalName = None))
+        terminalName = None,
+      ))
 
     case _: SaveSnapshotSuccess =>
       log.info(s"Successfully saved snapshot")

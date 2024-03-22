@@ -1,6 +1,5 @@
 package actors.routing
 
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{ActorRef, Props}
 import akka.pattern.{StatusReply, ask}
 import akka.testkit.TestProbe
@@ -127,8 +126,8 @@ class SequentialAccessActorSpec extends CrunchTestLike {
       PassengersMinute(Terminal("T2"), EeaDesk, SDate("2022-09-04T08:00").millisSinceEpoch, Seq(10, 11, 12), None),
     ))), 1.second) === StatusReply.Ack
 
-    probeA.expectMsg(UpdatedMillis(Set(0, 1)))
-    probeB.expectMsg(UpdatedMillis(Set(0, 1)))
+    probeA.expectMsg(Set(0, 1))
+    probeB.expectMsg(Set(0, 1))
 
     ackReceived
   }
@@ -173,8 +172,8 @@ class SequentialAccessActorSpec extends CrunchTestLike {
 
     val ack2Received = Await.result(actor.ask(MinutesContainer(Seq(deskRecMinute))), 1.second) === StatusReply.Ack
 
-    probeA.expectMsg(UpdatedMillis(Set(0, 1)))
-    probeB.expectMsg(UpdatedMillis(Set(0, 1)))
+    probeA.expectMsg(Set(0, 1))
+    probeB.expectMsg(Set(0, 1))
 
     ack1Received && ack2Received
   }

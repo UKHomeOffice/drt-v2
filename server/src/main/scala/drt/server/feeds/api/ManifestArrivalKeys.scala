@@ -76,3 +76,4 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
         }
       }
 }
+

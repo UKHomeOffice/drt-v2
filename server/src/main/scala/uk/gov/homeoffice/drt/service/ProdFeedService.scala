@@ -9,6 +9,7 @@ import actors.routing.FeedArrivalsRouterActor
 import akka.actor.typed.scaladsl.adapter.ClassicActorSystemOps
 import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown, Props, Scheduler, typed}
 import akka.pattern.ask
+import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
@@ -38,7 +39,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import services.{Retry, RetryDelays, StreamSupervision}
-import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
@@ -55,7 +55,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object ProdFeedService {
   def arrivalFeedProvidersInOrder(feedActorsWithPrimary: Seq[(Boolean, Option[FiniteDuration], ActorRef)],
                                  )
-                                 (implicit timeout: Timeout, ec: ExecutionContext): Seq[DateLike => Future[FeedArrivalSet]] =
+                                 (implicit timeout: Timeout, ec: ExecutionContext, mat: Materializer): Seq[DateLike => Future[FeedArrivalSet]] =
     feedActorsWithPrimary
       .map {
         case (isPrimary, maybeFuzzyThreshold, actor) =>
@@ -63,9 +63,10 @@ object ProdFeedService {
             val start = SDate(date)
             val end = start.addDays(1).addMinutes(-1)
             actor
-              .ask(GetFlights(start.millisSinceEpoch, end.millisSinceEpoch))
-              .mapTo[Map[UniqueArrival, Arrival]]
-              .map(f => FeedArrivalSet(isPrimary, maybeFuzzyThreshold, f))
+              .ask(FeedArrivalsRouterActor.GetStateForDateRange(start.toUtcDate, end.toUtcDate))
+              .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
+              .flatMap(s => s.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
+              .map(f => FeedArrivalSet(isPrimary, maybeFuzzyThreshold, f.map(fa => (fa.unique -> fa.toArrival())))
           }
           arrivalsForDate
       }
@@ -121,15 +122,15 @@ trait FeedService {
 
   val flightModelPersistence: ModelPersistence = Flight()
 
-  private val liveArrivalsFeedStatusActor: ActorRef =
+  val liveArrivalsFeedStatusActor: ActorRef =
     system.actorOf(PortLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-arrivals-feed-status")
-  private val liveBaseArrivalsFeedStatusActor: ActorRef =
+  val liveBaseArrivalsFeedStatusActor: ActorRef =
     system.actorOf(CiriumLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-base-arrivals-feed-status")
-  private val forecastArrivalsFeedStatusActor: ActorRef =
+  val forecastArrivalsFeedStatusActor: ActorRef =
     system.actorOf(PortForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-arrivals-feed-status")
-  private val forecastBaseArrivalsFeedStatusActor: ActorRef =
+  val forecastBaseArrivalsFeedStatusActor: ActorRef =
     system.actorOf(AclForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-base-arrivals-feed-status")
-  private val manifestsFeedStatusActor: ActorRef =
+  val manifestsFeedStatusActor: ActorRef =
     system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
 
   private val feedStatusActors: Map[FeedSource, ActorRef] = Map(
@@ -290,7 +291,7 @@ case class ProdFeedService(journalType: StreamingJournalLike,
 
   private def updateForecastBaseArrivals(source: FeedSource,
                                          props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,
-                                        ): ((Terminal, UtcDate), FlightUpdates) => Future[Boolean] =
+                                        ): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
     FeedArrivalsRouterActor.updateFlights(
       requestAndTerminateActor,
       (d, t) => props(d.year, d.month, d.day, t, source, None, nowMillis, 250),
@@ -298,13 +299,13 @@ case class ProdFeedService(journalType: StreamingJournalLike,
 
   override val forecastBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
     airportConfig.terminals,
-    getFeedArrivalsLookup(AclFeedSource, TerminalDayFeedArrivalActor.forecast),
-    updateForecastBaseArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast),
+    getFeedArrivalsLookup(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true)),
+    updateForecastBaseArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true)),
   )), name = "forecast-base-arrivals-actor")
   override val forecastFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
     airportConfig.terminals,
-    getFeedArrivalsLookup(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast),
-    updateForecastBaseArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast),
+    getFeedArrivalsLookup(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false)),
+    updateForecastBaseArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false)),
   )), name = "forecast-arrivals-actor")
   override val liveFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
     airportConfig.terminals,

@@ -1,6 +1,5 @@
 package actors.persistent
 
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.stage._

@@ -2,7 +2,6 @@ package actors.routing.minutes
 
 import actors.DateRange
 import actors.PartitionedPortStateActor._
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.routing.{RouterActorLike, RouterActorLike2, SequentialAccessActor}
 import akka.NotUsed
@@ -33,7 +32,7 @@ object MinutesActorLike {
 
   type MinutesUpdate[A, B <: WithTimeAccessor, U] = ((Terminals.Terminal, UtcDate), MinutesContainer[A, B]) => Future[Set[U]]
   type FlightsUpdate = ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[Set[Long]]
-  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[UpdatedMillis]
+  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Set[Long]]
 
   case object ProcessNextUpdateRequest
 

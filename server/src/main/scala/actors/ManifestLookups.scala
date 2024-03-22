@@ -1,7 +1,6 @@
 package actors
 
 import actors.daily.{DayManifestActor, RequestAndTerminate, RequestAndTerminateActor}
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -25,7 +24,7 @@ trait ManifestLookupsLike {
   val updateManifests: ManifestsUpdate = (date: UtcDate, vms: VoyageManifests) => {
     val actor = system.actorOf(DayManifestActor.props(date))
     system.log.info(s"About to update $date with ${vms.manifests.size} manifests")
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, vms)).mapTo[UpdatedMillis]
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, vms)).mapTo[Set[Long]]
   }
 
   val manifestsByDayLookup: ManifestLookup = (date: UtcDate, maybePit: Option[MillisSinceEpoch]) => {

@@ -5,7 +5,7 @@ import drt.server.feeds.common.XlsExtractorUtil._
 import drt.server.feeds.lhr.LHRForecastFeed
 import org.apache.poi.ss.usermodel.DateUtil
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ForecastArrival}
+import uk.gov.homeoffice.drt.arrivals.ForecastArrival
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonId
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 

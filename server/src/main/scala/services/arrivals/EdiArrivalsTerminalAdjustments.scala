@@ -1,7 +1,7 @@
 package services.arrivals
 
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival, LiveArrival}
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2}
 
 object EdiArrivalsTerminalAdjustments extends ArrivalsAdjustmentsLike {

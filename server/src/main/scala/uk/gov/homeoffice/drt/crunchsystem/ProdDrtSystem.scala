@@ -51,12 +51,14 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb.db)
 
-  lazy override val actorService: ActorsServiceLike = ActorsServiceService(journalType = StreamingJournal.forConfig(config),
+  lazy override val actorService: ActorsServiceLike = ActorsServiceService(
+    journalType = StreamingJournal.forConfig(config),
     airportConfig = airportConfig,
     now = now,
     forecastMaxDays = params.forecastMaxDays,
     flightLookups = flightLookups,
-    minuteLookups = minuteLookups)
+    minuteLookups = minuteLookups,
+  )
 
   lazy val feedService: FeedService = ProdFeedService(
     journalType = journalType,
@@ -67,7 +69,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     paxFeedSourceOrder = paxFeedSourceOrder,
     flightLookups = flightLookups,
     manifestLookups = manifestLookups,
-    requestAndTerminateActor = applicationService.requestAndTerminateActor,
+    requestAndTerminateActor = actorService.requestAndTerminateActor,
   )
 
 

@@ -1,7 +1,6 @@
 package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetFlights
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
@@ -86,9 +85,9 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Ac
 
 class MockSplitsSinkActor() extends Actor {
   override def receive: Receive = {
-    case _: SplitsForArrivals => sender() ! UpdatedMillis.empty
-    case _: PaxForArrivals => sender() ! UpdatedMillis.empty
-    case _: ArrivalsDiff => sender() ! UpdatedMillis.empty
+    case _: SplitsForArrivals => sender() ! Set.empty[Long]
+    case _: PaxForArrivals => sender() ! Set.empty[Long]
+    case _: ArrivalsDiff => sender() ! Set.empty[Long]
   }
 }
 

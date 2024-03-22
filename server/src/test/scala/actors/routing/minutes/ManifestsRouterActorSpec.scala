@@ -2,7 +2,6 @@ package actors.routing.minutes
 
 import actors.ManifestLookupsLike
 import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.GetFeedStatuses
 import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
@@ -42,7 +41,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     }
   }
 
-  val noopUpdates: ManifestsUpdate = (_: UtcDate, _: VoyageManifests) => Future(UpdatedMillis.empty)
+  val noopUpdates: ManifestsUpdate = (_: UtcDate, _: VoyageManifests) => Future(Set.empty[Long])
 
   private val probe = TestProbe("")
 

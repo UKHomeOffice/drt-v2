@@ -8,10 +8,9 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Feed.FeedTick
-import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival}
+import uk.gov.homeoffice.drt.arrivals.FeedArrival
 
 import scala.concurrent.{ExecutionContext, Future}
 

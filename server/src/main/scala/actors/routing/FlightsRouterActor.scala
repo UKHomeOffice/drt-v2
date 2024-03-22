@@ -2,7 +2,6 @@ package actors.routing
 
 import actors.DateRange
 import actors.PartitionedPortStateActor._
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import akka.NotUsed
 import akka.stream.Materializer

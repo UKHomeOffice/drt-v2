@@ -1,9 +1,9 @@
 package drt.server.feeds.legacy.bhx
 
 import uk.co.bhx.online.flightinformation.FlightInformationSoap
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ForecastArrival, LiveArrival}
+import uk.gov.homeoffice.drt.arrivals.{ForecastArrival, LiveArrival}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class BHXFeed(serviceSoap: FlightInformationSoap) extends BHXLiveArrivals with BHXForecastArrivals {
 

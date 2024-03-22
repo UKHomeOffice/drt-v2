@@ -4,7 +4,6 @@ import akka.actor.ActorSystem
 import akka.actor.typed.ActorRef
 import akka.stream.scaladsl.Source
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
-import drt.shared.FlightsApi.Flights
 
 object LgwForecastFeed {
   private val log = org.slf4j.LoggerFactory.getLogger(getClass)

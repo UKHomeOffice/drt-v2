@@ -1,7 +1,6 @@
 package actors
 
 import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber, RecalculateArrivals, Recrunch}
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.{Actor, ActorRef}
 
 object CrunchManagerActor {
@@ -10,12 +9,12 @@ object CrunchManagerActor {
   case class AddRecalculateArrivalsSubscriber(subscriber: ActorRef)
 
   trait ReProcessDates {
-    val updatedMillis: UpdatedMillis
+    val updatedMillis: Set[Long]
   }
 
-  case class RecalculateArrivals(updatedMillis: UpdatedMillis) extends ReProcessDates
+  case class RecalculateArrivals(updatedMillis: Set[Long]) extends ReProcessDates
 
-  case class Recrunch(updatedMillis: UpdatedMillis) extends ReProcessDates
+  case class Recrunch(updatedMillis: Set[Long]) extends ReProcessDates
 }
 
 class CrunchManagerActor extends Actor {

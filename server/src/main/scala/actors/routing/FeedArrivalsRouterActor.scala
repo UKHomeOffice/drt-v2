@@ -3,6 +3,7 @@ package actors.routing
 import actors.DateRange
 import actors.PartitionedPortStateActor.{DateRangeMillisLike, PointInTimeQuery}
 import actors.daily.RequestAndTerminate
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import akka.NotUsed
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
@@ -13,7 +14,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SourceUtils
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
-import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor.FeedArrivalsDiff
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -23,6 +23,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object FeedArrivalsRouterActor {
   private val log: Logger = LoggerFactory.getLogger(getClass)
+
+  case class FeedArrivals(arrivals: Seq[FeedArrival]) extends FlightUpdates
 
   sealed trait query
 
@@ -39,11 +41,11 @@ object FeedArrivalsRouterActor {
   def updateFlights(requestAndTerminateActor: ActorRef,
                     props: (UtcDate, Terminal) => Props,
                    )
-                   (implicit system: ActorSystem, timeout: Timeout): ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[Boolean] =
-    (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
+                   (implicit system: ActorSystem, timeout: Timeout): ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
+    (partition: (Terminal, UtcDate), arrivals: Seq[FeedArrival]) => {
       val (terminal, date) = partition
       val actor = system.actorOf(props(date, terminal))
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Boolean]
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, arrivals)).mapTo[Boolean]
     }
 
   def feedArrivalsDayLookup(now: () => Long,
@@ -86,8 +88,8 @@ object FeedArrivalsRouterActor {
 
 class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
                               arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
-                              updateArrivals: ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[Boolean],
-                             ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate), Long] {
+                              updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
+                             ) extends RouterActorLikeWithSubscriber[FeedArrivals, (Terminal, UtcDate), Long] {
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, FeedArrivalsRouterActor.GetStateForDateRange(start, end)) =>
       sender() ! flightsLookupService(start, end, allTerminals, Option(pit))
@@ -105,28 +107,25 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
   private val flightsLookupService: (UtcDate, UtcDate, Iterable[Terminal], Option[MillisSinceEpoch]) => Source[(UtcDate, Seq[FeedArrival]), NotUsed] =
     FeedArrivalsRouterActor.multiTerminalFlightsByDaySource(arrivalsByDayLookup)
 
-  override def partitionUpdates: PartialFunction[FlightUpdates, Map[(Terminal, UtcDate), FlightUpdates]] = {
-    case container: FeedArrivalsDiff[FeedArrival] =>
-      val updates: Map[(Terminal, UtcDate), Iterable[FeedArrival]] = container.updates
+  override def partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]] = {
+    case arrivals =>
+      println(s"**received ${arrivals.arrivals.size} arrivals to partition")
+      arrivals.arrivals
         .groupBy(arrivals => (arrivals.terminal, SDate(arrivals.scheduled).toUtcDate))
-      val removals: Map[(Terminal, UtcDate), Iterable[UniqueArrival]] = container.removals
-        .groupBy(arrival => (arrival.terminal, SDate(arrival.scheduled).toUtcDate))
-
-      val keys = updates.keys ++ removals.keys
-      keys
-        .map { terminalDay =>
-          val terminalUpdates = updates.getOrElse(terminalDay, List())
-          val terminalRemovals = removals.getOrElse(terminalDay, List())
-          val diff = FeedArrivalsDiff(terminalUpdates, terminalRemovals)
-          (terminalDay, diff)
-        }
-        .toMap
+        .view.mapValues(a => FeedArrivals(a.toSeq)).toMap
   }
 
-  def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[Set[Long]] =
-    updateArrivals(partition, updates).map {
-      case true => Set(SDate(partition._2).millisSinceEpoch)
+  override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[Long]] = {
+    println(s"**sending ${updates.arrivals.size} arrivals to ${partition._1} on ${partition._2}")
+    updateArrivals(partition, updates.arrivals).map {
+      case true =>
+        println(s"** responding with updated millis for ${partition._1} on ${partition._2}")
+        Set(SDate(partition._2).millisSinceEpoch)
+      case false =>
+        println(s"** responding with no updates for ${partition._1} on ${partition._2}")
+        Set.empty
     }
+  }
 
-  override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = _ => true
+  override def shouldSendEffectsToSubscriber: FeedArrivals => Boolean = _ => true
 }
