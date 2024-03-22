@@ -7,6 +7,7 @@ import drt.client.SPAMain._
 import drt.client.components.styles.DrtTheme.buttonTheme
 import drt.client.services.SPACircuit
 import drt.client.services.handlers._
+import drt.shared.ContactDetails
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react._
@@ -19,7 +20,6 @@ import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-
 import scala.scalajs.js
 
 object Layout {
@@ -29,24 +29,27 @@ object Layout {
   case class LayoutModelItems(user: Pot[LoggedInUser],
                               airportConfig: Pot[AirportConfig],
                               abFeatures: Pot[Seq[ABFeature]],
-                              showFeedbackBanner: Pot[Boolean]
+                              showFeedbackBanner: Pot[Boolean],
+                              contactDetails: Pot[ContactDetails]
                              ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
       val layoutModelItemsRCP = SPACircuit.connect { m =>
-        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner)
+        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails)
       }
       layoutModelItemsRCP { modelProxy =>
         console.log("rendering layout")
         <.div({
           val model = modelProxy()
           val content = for {
+            contactDetails <- model.contactDetails
             airportConfig <- model.airportConfig
             user <- model.user
             abFeatures <- model.abFeatures
             showFeedbackBanner <- model.showFeedbackBanner
           } yield {
+            val email = contactDetails.supportEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk")
             val aORbTest = abFeatures.headOption.map(_.abVersion).getOrElse("B")
             val (bannerHead, gridItem1, gridItem2, gridItem3) = aORbTest match {
               case "A" => ("Your feedback improves DRT for everyone", 4, 2, 5)
@@ -89,7 +92,7 @@ object Layout {
                     )),
                   MuiGrid(item = true, xs = 12)(
                     <.div(^.className := "contact",
-                      <.span("Contact: ", <.a(^.href := s"mailto:drtpoiseteam@homeoffice.gov.uk", "drtpoiseteam@homeoffice.gov.uk"))
+                      <.span("Contact: ", <.a(^.href := s"mailto:$email", email)),
                     )
                   )
                 )
