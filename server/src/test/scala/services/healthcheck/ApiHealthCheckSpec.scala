@@ -42,7 +42,7 @@ class ApiHealthCheckSpec extends CrunchTestLike {
   "Given one flight that landed in the last 30 minutes and it has API data" >> {
     "the missing percentage for the last 30 minutes should be 0" >> {
       val flights = flightsStream(Seq(
-        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35").toArrival(LiveFeedSource), Set(apiSplits), None)
+        ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35").toArrival(LiveFeedSource), Set(apiSplits), None)
       ))
       check(flights, Option(100d))
     }
@@ -51,8 +51,8 @@ class ApiHealthCheckSpec extends CrunchTestLike {
   "Given two flights landed in the last 30 minutes and only one has API data" >> {
     "the missing percentage for the last 30 minutes should be 0.5" >> {
       val flights = flightsStream(Seq(
-        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35").toArrival(LiveFeedSource), Set(apiSplits), None),
-        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", actDt = "2023-10-20T11:45", schDt = "2023-10-20T11:45").toArrival(LiveFeedSource), Set(), None)
+        ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35").toArrival(LiveFeedSource), Set(apiSplits), None),
+        ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0011", actDt = "2023-10-20T11:45", schDt = "2023-10-20T11:45").toArrival(LiveFeedSource), Set(), None)
       ))
       check(flights, Option(50d))
     }
@@ -61,8 +61,8 @@ class ApiHealthCheckSpec extends CrunchTestLike {
   "Given two flights landed in the last 30 minutes and neither has API data" >> {
     "the missing percentage for the last 30 minutes should be 1" >> {
       val flights = flightsStream(Seq(
-        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35").toArrival(LiveFeedSource), Set(), None),
-        ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0011", actDt = "2023-10-20T11:45", schDt = "2023-10-20T11:45").toArrival(LiveFeedSource), Set(), None),
+        ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0001", actDt = "2023-10-20T11:35", schDt = "2023-10-20T11:35").toArrival(LiveFeedSource), Set(), None),
+        ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0011", actDt = "2023-10-20T11:45", schDt = "2023-10-20T11:45").toArrival(LiveFeedSource), Set(), None),
       ))
       check(flights, Option(0d))
     }

@@ -48,7 +48,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Seq(
-        ArrivalGenerator.arrival(
+        ArrivalGenerator.live(
           schDt = scheduled,
           iata = "BA0001",
           terminal = T1,
@@ -86,11 +86,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Seq(
-        ArrivalGenerator.arrival(
-          origin = PortCode("JFK"),
-          schDt = scheduled,
-          iata = "TST001",
-          terminal = T1)
+        ArrivalGenerator.forecast(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1)
       )
 
       val portCode = PortCode("LHR")

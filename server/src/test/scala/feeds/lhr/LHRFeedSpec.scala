@@ -8,7 +8,6 @@ import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T4}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.Await
@@ -16,7 +15,6 @@ import scala.concurrent.duration._
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 class LHRFeedSpec extends CrunchTestLike {
-
   "lhrCsvToApiFlights" should {
     "Produce an Arrival source with one flight based on a line from the LHR csv" in {
       val csvString =
@@ -33,23 +31,30 @@ class LHRFeedSpec extends CrunchTestLike {
 
       val futureFlightsSeq = flightsSource.runWith(Sink.seq).pipeTo(probe.ref)
 
-      val flights = Await.result(futureFlightsSeq, 3.seconds).asInstanceOf[Vector[Arrival]]
+      val flights = Await.result(futureFlightsSeq, 3.seconds).asInstanceOf[Vector[LiveArrival]]
 
       flights.toList === List(
         List(
-          Arrival(
-            Operator = Option(Operator("Qatar Airways")),
-            Status = ArrivalStatus("UNK"),
-            Estimated = Option(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
-            Predictions = Predictions(0L, Map()),
-            Actual = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
-            EstimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
-            ActualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
-            Gate = None, Stand = Option("10"), MaxPax = Option(795), RunwayID = None, BaggageReclaimId = None,
-            AirportID = PortCode("LHR"), Terminal = T4, rawICAO = "QR005", rawIATA = "QR005", Origin = PortCode("DOH"),
-            Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
-            PcpTime = Option(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch), FeedSources = Set(LiveFeedSource),
-            PassengerSources = Map(LiveFeedSource -> Passengers(actual = Option(142), transit = Option(1)))
+          LiveArrival(
+            operator = Option("Qatar Airways"),
+            totalPax = Option(142),
+            transPax = Option(1),
+            terminal = T4,
+            voyageNumber = 5,
+            carrierCode = "QR",
+            flightCodeSuffix = None,
+            origin = "DOH",
+            scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
+            estimated = Option(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
+            touchdown = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
+            estimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
+            actualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
+            status = "",
+            gate = None,
+            stand = Option("10"),
+            maxPax = Option(795),
+            runway = None,
+            baggageReclaim = None,
           )
         )
       )
@@ -74,28 +79,26 @@ class LHRFeedSpec extends CrunchTestLike {
 
       flights.toList === List(
         List(
-          Arrival(
-            Operator = Option(Operator("Qatar Airways")),
-            Status = ArrivalStatus("UNK"),
-            Estimated = Option(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
-            Predictions = Predictions(0L, Map()),
-            Actual = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
-            EstimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
-            ActualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
-            Gate = None,
-            Stand = Option("10"),
-            MaxPax = Option(0),
-            RunwayID = None,
-            BaggageReclaimId = None,
-            AirportID = PortCode("LHR"),
-            Terminal = T4,
-            rawICAO = "QR005",
-            rawIATA = "QR005",
-            Origin = PortCode("DOH"),
-            Scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
-            PcpTime = Option(SDate("2017-03-09T22:04:00.000Z").millisSinceEpoch),
-            FeedSources = Set(LiveFeedSource),
-            PassengerSources = Map(LiveFeedSource -> Passengers(actual = Option(0), transit = Option(0)))
+          LiveArrival(
+            operator = Option("Qatar Airways"),
+            totalPax = Option(0),
+            transPax = Option(0),
+            terminal = T4,
+            voyageNumber = 5,
+            carrierCode = "QR",
+            flightCodeSuffix = None,
+            origin = "DOH",
+            scheduled = SDate("2017-03-09T22:00:00.000Z").millisSinceEpoch,
+            estimated = Option(SDate("2017-03-09T21:32:00.000Z").millisSinceEpoch),
+            touchdown = Option(SDate("2017-03-09T21:33:00.000Z").millisSinceEpoch),
+            estimatedChox = Option(SDate("2017-03-09T21:43:00.000Z").millisSinceEpoch),
+            actualChox = Option(SDate("2017-03-09T21:45:00.000Z").millisSinceEpoch),
+            status = "",
+            gate = None,
+            stand = Option("10"),
+            maxPax = Option(0),
+            runway = None,
+            baggageReclaim = None,
           )
         )
       )

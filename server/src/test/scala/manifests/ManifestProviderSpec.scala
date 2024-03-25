@@ -28,7 +28,7 @@ case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifes
 }
 
 class ManifestProviderSpec extends CrunchTestLike {
-  val arrival: Arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2021-06-01T12:00Z").toArrival(LiveFeedSource)
+  val arrival: Arrival = ArrivalGenerator.live(iata = "BA0001", schDt = "2021-06-01T12:00Z").toArrival(LiveFeedSource)
   val manifestForArrival: BestAvailableManifest = BestAvailableManifest(VoyageManifestGenerator.manifestForArrival(arrival, List(euPassport)))
   val manifestHistoricForArrival: ManifestPaxCount = ManifestPaxCount(VoyageManifestGenerator.manifestForArrival(arrival, List(euPassport)),
     SplitSources.Historical)

@@ -4,9 +4,10 @@ import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
+import actors.routing.FeedArrivalsRouterActor
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
@@ -30,6 +31,7 @@ import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.graphstages.FlightFilter
+import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival, VoyageNumber}
@@ -40,11 +42,11 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.ProdFeedService
+import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateForecastBaseArrivals}
 import uk.gov.homeoffice.drt.testsystem.TestActors.MockAggregatedArrivalsActor
 import uk.gov.homeoffice.drt.time._
 
 import scala.collection.SortedSet
-import scala.collection.immutable.SortedMap
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
@@ -116,27 +118,27 @@ class TestDrtActor extends Actor {
     case class SetArrivals(arrivals: Map[UniqueArrival, Arrival])
   }
 
-  class TestPortLiveArrivalsActor(now: () => SDateLike,
-                                  expireAfterMillis: Int) extends PortLiveArrivalsActor(now, expireAfterMillis) {
-    private def setArrivalCommand: Receive = {
-      case TestArrivalActor.SetArrivals(arrivals) =>
-        state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ arrivals)
-        persistArrivalUpdates(ArrivalsDiff(arrivals, Seq()))
-    }
+//  class TestPortLiveArrivalsActor(now: () => SDateLike,
+//                                  expireAfterMillis: Int) extends PortLiveArrivalsActor(now, expireAfterMillis) {
+//    private def setArrivalCommand: Receive = {
+//      case TestArrivalActor.SetArrivals(arrivals) =>
+//        state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ arrivals)
+//        persistArrivalUpdates(ArrivalsDiff(arrivals, Seq()))
+//    }
+//
+//    override def receiveCommand: Receive = setArrivalCommand orElse super.receiveCommand
+//  }
 
-    override def receiveCommand: Receive = setArrivalCommand orElse super.receiveCommand
-  }
-
-  class TestAclBaseArrivalsActor(now: () => SDateLike,
-                                 expireAfterMillis: Int) extends AclForecastArrivalsActor(now, expireAfterMillis) {
-    private def setArrivalCommand: Receive = {
-      case TestArrivalActor.SetArrivals(arrivals) =>
-        state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ arrivals)
-        persistArrivalUpdates(ArrivalsDiff(arrivals, Seq()))
-    }
-
-    override def receiveCommand: Receive = setArrivalCommand orElse super.receiveCommand
-  }
+//  class TestAclBaseArrivalsActor(now: () => SDateLike,
+//                                 expireAfterMillis: Int) extends AclForecastArrivalsActor(now, expireAfterMillis) {
+//    private def setArrivalCommand: Receive = {
+//      case TestArrivalActor.SetArrivals(arrivals) =>
+//        state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ arrivals)
+//        persistArrivalUpdates(ArrivalsDiff(arrivals, Seq()))
+//    }
+//
+//    override def receiveCommand: Receive = setArrivalCommand orElse super.receiveCommand
+//  }
 
   override def receive: Receive = {
     case Stop =>
@@ -149,22 +151,40 @@ class TestDrtActor extends Actor {
       tc.airportConfig.assertValid()
 
       val portStateProbe = testProbe("portstate")
+      val nowMillis = () => tc.now().millisSinceEpoch
+      val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
-      val forecastBaseFeedArrivalsActor: ActorRef =
-        system.actorOf(Props(new TestAclBaseArrivalsActor(tc.now, tc.expireAfterMillis)), name = "base-arrivals-actor")
+      val forecastBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
+        tc.airportConfig.terminals,
+        getFeedArrivalsLookup(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
+        updateForecastBaseArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
+        partitionUpdatesBase(tc.airportConfig.terminals, tc.now, tc.forecastMaxDays)
+      )), name = "forecast-base-arrivals-actor")
       if (tc.initialForecastBaseArrivals.nonEmpty)
-        forecastBaseFeedArrivalsActor ! TestArrivalActor.SetArrivals(tc.initialForecastBaseArrivals)
+        forecastBaseFeedArrivalsActor ! FeedArrivals(tc.initialForecastBaseArrivals)
 
-      val forecastFeedArrivalsActor: ActorRef =
-        system.actorOf(Props(new PortForecastArrivalsActor(tc.now, tc.expireAfterMillis)), name = "forecast-arrivals-actor")
+      val forecastFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
+        tc.airportConfig.terminals,
+        getFeedArrivalsLookup(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
+        updateForecastBaseArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
+        partitionUpdates,
+      )), name = "forecast-arrivals-actor")
 
-      val liveFeedArrivalsActor: ActorRef =
-        system.actorOf(Props(new TestPortLiveArrivalsActor(tc.now, tc.expireAfterMillis)), name = "live-arrivals-actor")
+      val liveFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
+        tc.airportConfig.terminals,
+        getFeedArrivalsLookup(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
+        updateForecastBaseArrivals(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
+        partitionUpdates,
+      )), name = "live-arrivals-actor")
       if (tc.initialLiveArrivals.nonEmpty)
-        liveFeedArrivalsActor ! TestArrivalActor.SetArrivals(tc.initialLiveArrivals)
+        liveFeedArrivalsActor ! FeedArrivals(tc.initialLiveArrivals)
 
-      val liveBaseFeedArrivalsActor: ActorRef =
-        system.actorOf(Props(new CiriumLiveArrivalsActor(tc.now, tc.expireAfterMillis)), name = "live-base-arrivals-actor")
+      val liveBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
+        tc.airportConfig.terminals,
+        getFeedArrivalsLookup(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
+        updateForecastBaseArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
+        partitionUpdates,
+      )), name = "live-base-arrivals-actor")
 
       val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
         journalType, tc.airportConfig.minutesToCrunch, tc.now), name = "shifts-read-actor")
@@ -172,8 +192,6 @@ class TestDrtActor extends Actor {
         journalType, tc.now, tc.forecastMaxDays, tc.airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
       val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
         journalType, tc.airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
-
-      val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
       val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
         tc.now, startOfTheMonth(tc.now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
@@ -286,10 +304,10 @@ class TestDrtActor extends Actor {
               .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
 
         val feedProviders = ProdFeedService.arrivalFeedProvidersInOrder(Seq(
-          (true, None, forecastBaseFeedArrivalsActor),
-          (false, None, forecastFeedArrivalsActor),
-          (false, Option(5.minutes), liveBaseFeedArrivalsActor),
-          (true, None, liveFeedArrivalsActor)
+          (AclFeedSource, true, None, forecastBaseFeedArrivalsActor),
+          (ForecastFeedSource, false, None, forecastFeedArrivalsActor),
+          (LiveBaseFeedSource, false, Option(5.minutes), liveBaseFeedArrivalsActor),
+          (LiveFeedSource, true, None, liveFeedArrivalsActor)
         ))
         val merger = MergeArrivals(existingMergedArrivals, feedProviders, tc.arrivalsAdjustments.adjust)
 

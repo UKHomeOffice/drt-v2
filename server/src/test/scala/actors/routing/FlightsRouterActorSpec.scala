@@ -123,7 +123,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
     "Given a flight scheduled before the range and a PCP time within the range" >> {
       val fws1 = ApiFlightWithSplits(
-        ArrivalGenerator.arrival(schDt = "2020-09-22T23:00").toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-09-23T00:30").millisSinceEpoch)),
+        ArrivalGenerator.live(schDt = "2020-09-22T23:00").toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-09-23T00:30").millisSinceEpoch)),
         Set()
       )
 
@@ -152,7 +152,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
     "Given a flight scheduled in the range and a PCP time outside the range" >> {
       val fws1 = ApiFlightWithSplits(
-        ArrivalGenerator.arrival(schDt = "2020-09-22T23:00").toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-09-23T00:30").millisSinceEpoch)),
+        ArrivalGenerator.live(schDt = "2020-09-22T23:00").toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-09-23T00:30").millisSinceEpoch)),
         Set()
       )
 
@@ -181,7 +181,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
     "Given a flight scheduled 2 days before the requested range and a PCP time in the range" >> {
       val fws1 = ApiFlightWithSplits(
-        ArrivalGenerator.arrival(schDt = "2020-09-21T23:00").toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-09-23T00:30").millisSinceEpoch)),
+        ArrivalGenerator.live(schDt = "2020-09-21T23:00").toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-09-23T00:30").millisSinceEpoch)),
         Set()
       )
 
@@ -210,7 +210,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
     "Given a flight scheduled 1 day after the requested range and a PCP time in the range" >> {
       val fws1 = ApiFlightWithSplits(
-        ArrivalGenerator.arrival(schDt = "2020-09-24T23:00").toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-09-23T00:30").millisSinceEpoch)),
+        ArrivalGenerator.live(schDt = "2020-09-24T23:00").toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-09-23T00:30").millisSinceEpoch)),
         Set()
       )
 
@@ -272,7 +272,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
       val router = lookups.flightsRouterActor
 
       val scheduled = "2021-06-01T00:00"
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, terminal = T1).toArrival(LiveFeedSource)
+      val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = scheduled, terminal = T1).toArrival(LiveFeedSource)
       val requestForFlights = GetFlights(SDate(scheduled).millisSinceEpoch, SDate(scheduled).addHours(6).millisSinceEpoch)
 
       "When I send it a flight with no splits" >> {
@@ -317,7 +317,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None, paxFeedSourceOrder)
         val redListPassengers = RedListPassengers("BA0001", PortCode("LHR"), SDate(scheduled), redListPax)
         val neboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => redListNow))
-        val arrival = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled).toArrival(LiveFeedSource)
+        val arrival = ArrivalGenerator.live(iata = "BA0001", terminal = T1, schDt = scheduled).toArrival(LiveFeedSource)
         val flightsRouter = lookups.flightsRouterActor
 
         Await.ready(neboArrivalActor ? redListPassengers, 10.second)
@@ -337,8 +337,8 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None, paxFeedSourceOrder)
         val flightsRouter = lookups.flightsRouterActor
         val scheduled2 = "2021-06-24T15:05"
-        val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled).toArrival(LiveFeedSource)
-        val arrivalT2 = ArrivalGenerator.arrival(iata = "AB1234", terminal = T2, schDt = scheduled2).toArrival(LiveFeedSource)
+        val arrivalT1 = ArrivalGenerator.live(iata = "BA0001", terminal = T1, schDt = scheduled).toArrival(LiveFeedSource)
+        val arrivalT2 = ArrivalGenerator.live(iata = "AB1234", terminal = T2, schDt = scheduled2).toArrival(LiveFeedSource)
         Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrivalT1, arrivalT2), Seq()), 1.second)
         val redListPax = util.RandomString.getNRandomString(10, 10)
         val redListPassengers = Seq(
@@ -366,7 +366,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
         val redListNow = SDate("2021-06-24T12:10:00")
         val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None, paxFeedSourceOrder)
         val flightsRouter = lookups.flightsRouterActor
-        val arrivalT1 = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, schDt = scheduled).toArrival(LiveFeedSource)
+        val arrivalT1 = ArrivalGenerator.live(iata = "BA0001", terminal = T1, schDt = scheduled).toArrival(LiveFeedSource)
         val redListPax = util.RandomString.getNRandomString(10, 10)
         val redListPassengers = RedListPassengers("BA0001", PortCode("LHR"), SDate(scheduled), redListPax)
         Await.ready(flightsRouter ? ArrivalsDiff(Seq(arrivalT1), Seq()), 1.second)
@@ -395,21 +395,21 @@ class FlightsRouterActorSpec extends CrunchTestLike {
   "Concerning multi-terminal queries" >> {
     val terminals: Seq[Terminal] = List(T2, T3, T4, T5)
 
-    val t21015 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", origin = PortCode("JFK"), terminal = T2)
+    val t21015 = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0001", origin = PortCode("JFK"), terminal = T2)
       .toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2021-07-10T15:00").millisSinceEpoch)), Set())
-    val t21013 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0002", origin = PortCode("JFK"), terminal = T2)
+    val t21013 = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0002", origin = PortCode("JFK"), terminal = T2)
       .toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2021-07-10T13:00").millisSinceEpoch)), Set())
-    val t31015 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("JFK"), terminal = T3)
+    val t31015 = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0003", origin = PortCode("JFK"), terminal = T3)
       .toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2021-07-10T15:00").millisSinceEpoch)), Set())
-    val t31013 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0004", origin = PortCode("JFK"), terminal = T3)
+    val t31013 = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0004", origin = PortCode("JFK"), terminal = T3)
       .toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2021-07-10T13:00").millisSinceEpoch)), Set())
-    val t21115 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0005", origin = PortCode("JFK"), terminal = T2)
+    val t21115 = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0005", origin = PortCode("JFK"), terminal = T2)
       .toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2021-07-10T15:00").millisSinceEpoch)), Set())
-    val t21113 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0006", origin = PortCode("JFK"), terminal = T2)
+    val t21113 = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0006", origin = PortCode("JFK"), terminal = T2)
       .toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2021-07-10T13:00").millisSinceEpoch)), Set())
-    val t31115 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0007", origin = PortCode("JFK"), terminal = T3)
+    val t31115 = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0007", origin = PortCode("JFK"), terminal = T3)
       .toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2021-07-10T15:00").millisSinceEpoch)), Set())
-    val t31113 = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0008", origin = PortCode("JFK"), terminal = T3)
+    val t31113 = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0008", origin = PortCode("JFK"), terminal = T3)
       .toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2021-07-10T13:00").millisSinceEpoch)), Set())
     val flights: Map[(Terminal, UtcDate), FlightsWithSplits] = Map(
       (T2, UtcDate(2021, 7, 10)) -> FlightsWithSplits(List(t21015, t21013)),

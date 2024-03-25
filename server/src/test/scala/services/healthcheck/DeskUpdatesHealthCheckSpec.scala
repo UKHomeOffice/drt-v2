@@ -53,7 +53,7 @@ class DeskUpdatesHealthCheckSpec extends CrunchTestLike {
     }
   }
 
-  private val t1Arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1).toArrival(LiveFeedSource)
+  private val t1Arrival = ArrivalGenerator.live(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1).toArrival(LiveFeedSource)
 
   "Given one T1 flight and no crunch minutes" >> {
     "desk updates should be None" >> {

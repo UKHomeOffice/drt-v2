@@ -107,7 +107,12 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
               .collect { case l: MillisSinceEpoch => processingRequest(l) }
               .filterNot(state.contains)
           case _: ProcessingRequest =>
-            requests.collect { case r: ProcessingRequest => r }
+            requests
+              .collect {
+                case r: ProcessingRequest =>
+                  println(s"Received $r: ${r.date}: ${r.start.toISOString} ${r.end.toISOString}")
+                  r
+              }
               .filterNot(state.contains)
         }
         .map { processingRequests =>

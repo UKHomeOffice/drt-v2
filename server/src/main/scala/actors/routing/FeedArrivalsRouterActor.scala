@@ -91,6 +91,7 @@ object FeedArrivalsRouterActor {
 class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
                               arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
                               updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
+                              override val partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                              ) extends RouterActorLikeWithSubscriber[FeedArrivals, (Terminal, UtcDate), Long] {
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, FeedArrivalsRouterActor.GetStateForDateRange(start, end)) =>
@@ -109,22 +110,11 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
   private val flightsLookupService: (UtcDate, UtcDate, Iterable[Terminal], Option[MillisSinceEpoch]) => Source[(UtcDate, Seq[FeedArrival]), NotUsed] =
     FeedArrivalsRouterActor.multiTerminalFlightsByDaySource(arrivalsByDayLookup)
 
-  override def partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]] = {
-    case arrivals =>
-      println(s"**received ${arrivals.arrivals.size} arrivals to partition")
-      arrivals.arrivals
-        .groupBy(arrivals => (arrivals.terminal, SDate(arrivals.scheduled).toUtcDate))
-        .view.mapValues(a => FeedArrivals(a.toSeq)).toMap
-  }
-
   override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[Long]] = {
-    println(s"**sending ${updates.arrivals.size} arrivals to ${partition._1} on ${partition._2}")
     updateArrivals(partition, updates.arrivals).map {
       case true =>
-        println(s"** responding with updated millis for ${partition._1} on ${partition._2}")
         Set(SDate(partition._2).millisSinceEpoch)
       case false =>
-        println(s"** responding with no updates for ${partition._1} on ${partition._2}")
         Set.empty
     }
   }

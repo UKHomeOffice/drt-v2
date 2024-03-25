@@ -1,6 +1,6 @@
 package manifests.queues
 
-import controllers.ArrivalGenerator.arrival
+import controllers.ArrivalGenerator.live
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import passengersplits.core.PassengerTypeCalculatorValues.{CountryCodes, DocumentType}
 import passengersplits.parsing.VoyageManifestParser._
@@ -54,7 +54,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       bestManifest
     }
 
-    val testArrival = arrival(iata = "SA0234", schDt = "2019-06-22T06:24:00Z", totalPax = Option(100), terminal = T2, origin = PortCode("USA")).toArrival(LiveFeedSource)
+    val testArrival = live(iata = "SA0234", schDt = "2019-06-22T06:24:00Z", totalPax = Option(100), terminal = T2, origin = PortCode("USA")).toArrival(LiveFeedSource)
 
     "When adjusting adult EGate use based on under age pax in API Data using an eGate split of 50%" >> {
       val terminalQueueAllocationMap: Map[Terminal, Map[PaxType, List[(Queue, Double)]]] = Map(T2 -> Map(
@@ -414,7 +414,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
       DisembarkationPortCode = None,
       PassengerIdentifier = None)
 
-    val testArrival = arrival(iata = "SA0234", schDt = "2019-06-22T06:24:00Z", totalPax = Option(100), terminal = T2, origin = PortCode("USA")).toArrival(LiveFeedSource)
+    val testArrival = live(iata = "SA0234", schDt = "2019-06-22T06:24:00Z", totalPax = Option(100), terminal = T2, origin = PortCode("USA")).toArrival(LiveFeedSource)
 
     "When adjusting adult EGate use based on under age pax in API Data using an eGate split of 50%" >> {
       val terminalQueueAllocationMap: Map[Terminal, Map[PaxType, List[(Queue, Double)]]] = Map(T2 -> Map(

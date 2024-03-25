@@ -132,7 +132,7 @@ object DynamicRunnablePassengerLoads {
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (procRequest: LoadProcessingRequest, flights) =>
-          log.info(s"Passenger load calculation starting: ${flights.size} flights, ${procRequest.durationMinutes} minutes (${procRequest.start.toISOString} to ${procRequest.end.toISOString})")
+          log.info(s"Passenger load calculation starting: ${flights.size} flights, ${procRequest.durationMinutes} minutes (${procRequest.start.millisSinceEpoch} to ${procRequest.end.millisSinceEpoch})")
           val eventualDeskRecs = for {
             redListUpdates <- redListUpdatesProvider()
             statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(procRequest.minutesInMillis)

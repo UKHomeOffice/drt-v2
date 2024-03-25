@@ -11,7 +11,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.LocalDate
 
 class SimulationParamsSpec extends Specification {
-  val paxFeedSourceOrder = TestDefaults.paxFeedSourceOrder
+  val paxFeedSourceOrder: Seq[FeedSource] = TestDefaults.paxFeedSourceOrder
 
   val testConfig: AirportConfig = DrtPortConfigs.confByPort(PortCode("TEST"))
 
@@ -119,7 +119,7 @@ class SimulationParamsSpec extends Specification {
   "Given I am applying a passenger weighting of 1 to some flights then the passenger numbers should be the same" >> {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
-    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(totalPax = Option(100),transPax = Option(50)).toArrival(LiveFeedSource), Set())
+    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100),transPax = Option(50)).toArrival(LiveFeedSource), Set())
     val flights = FlightsWithSplits(List(
       flightWithSplits
     ).map(a => a.apiFlight.unique -> a).toMap)
@@ -133,21 +133,21 @@ class SimulationParamsSpec extends Specification {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
     val flights = FlightsWithSplits(
-      List(ApiFlightWithSplits(ArrivalGenerator.arrival(totalPax = None).toArrival(LiveFeedSource), Set())).map(a => a.apiFlight.unique -> a).toMap)
+      List(ApiFlightWithSplits(ArrivalGenerator.live(totalPax = None).toArrival(LiveFeedSource), Set())).map(a => a.apiFlight.unique -> a).toMap)
 
     val result = weightingOfOne.applyPassengerWeighting(flights)
 
-    result.flights.values.head.apiFlight.FeedSources === Set(ScenarioSimulationSource)
+    result.flights.values.head.apiFlight.FeedSources === Set(LiveFeedSource, ScenarioSimulationSource)
   }
 
   "Given I am applying a passenger weighting of 2 to some flights then passenger numbers and trans numbers shoudl be doubled" >> {
     val weightingOfTwo = simulation.copy(passengerWeighting = 2.0)
 
     val fws = FlightsWithSplits(List(
-      ApiFlightWithSplits(ArrivalGenerator.arrival(totalPax = Option(100), transPax = Option(50)).toArrival(LiveFeedSource), Set())
+      ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100), transPax = Option(50)).toArrival(LiveFeedSource), Set())
     ).map(a => a.apiFlight.unique -> a).toMap)
 
-    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.arrival(totalPax = Option(200), transPax = Option(100)).toArrival(LiveFeedSource),Set())
+    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(200), transPax = Option(100)).toArrival(LiveFeedSource),Set())
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 
     result.flights.values.head.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder) === flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder)

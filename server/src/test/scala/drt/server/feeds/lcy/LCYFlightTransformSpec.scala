@@ -6,7 +6,6 @@ import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.Await
@@ -212,28 +211,26 @@ class LCYFlightTransformSpec extends CrunchTestLike {
 
     val result = LCYFlightTransform.lcyFlightToArrival(lcyFlight)
 
-    val expected = Arrival(
-      Operator = Option(Operator("SA")),
-      Status = ArrivalStatus("ARRIVED ON STAND"),
-      Estimated = Option(SDate(estimatedTouchDownTimeString).millisSinceEpoch),
-      Predictions = Predictions(0L, Map()),
-      Actual = Option(SDate(actualTouchDownTimeString).millisSinceEpoch),
-      EstimatedChox = None,
-      ActualChox = Option(SDate(actualOnBlocksTimeString).millisSinceEpoch),
-      Gate = Option("6"),
-      Stand = Option("55"),
-      MaxPax = Option(175),
-      RunwayID = None,
-      BaggageReclaimId = None,
-      AirportID = PortCode("LCY"),
-      Terminal = T1,
-      rawICAO = "SA123",
-      rawIATA = "SA123",
-      Origin = PortCode("JNB"),
-      Scheduled = SDate(scheduledTimeString).millisSinceEpoch,
-      PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      PassengerSources = Map(LiveFeedSource -> Passengers(Option(65), None))
+    val expected = LiveArrival(
+      operator = Option("SA"),
+      maxPax = Option(175),
+      totalPax = Option(65),
+      transPax = None,
+      terminal = T1,
+      voyageNumber = 123,
+      carrierCode = "SA",
+      flightCodeSuffix = None,
+      origin = "JNB",
+      scheduled = SDate(scheduledTimeString).millisSinceEpoch,
+      estimated = Option(SDate(estimatedTouchDownTimeString).millisSinceEpoch),
+      touchdown = Option(SDate(actualTouchDownTimeString).millisSinceEpoch),
+      estimatedChox = None,
+      actualChox = Option(SDate(actualOnBlocksTimeString).millisSinceEpoch),
+      status = "ARR",
+      gate = Option("6"),
+      stand = Option("55"),
+      runway = None,
+      baggageReclaim = None,
     )
 
     result === expected

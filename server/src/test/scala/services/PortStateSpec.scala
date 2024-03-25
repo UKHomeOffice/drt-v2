@@ -92,7 +92,7 @@ class PortStateSpec extends CrunchTestLike {
   "Given a PortState with a flight scheduled before midnight and pax arriving after midnight " +
     "When I ask for a window containing the period immediately after midnight " +
     "Then the flight should be in the returned PortState" >> {
-    val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-01T12:00",
+    val flight = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0001", schDt = "2019-01-01T12:00",
       totalPax = Option(100)).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2019-01-02T00:01").millisSinceEpoch)), Set())
 
     val portState = PortState(Seq(flight), Seq(), Seq())
@@ -105,7 +105,7 @@ class PortStateSpec extends CrunchTestLike {
   "Given a PortState with a flight scheduled after next midnight and pax arriving before next midnight " +
     "When I ask for a window containing the period immediately before midnight " +
     "Then the flight should be in the returned PortState" >> {
-    val flight = ApiFlightWithSplits(ArrivalGenerator.arrival(iata = "BA0001", schDt = "2019-01-03T12:00",
+    val flight = ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0001", schDt = "2019-01-03T12:00",
       totalPax = Option(100)).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2019-01-02T14:00").millisSinceEpoch)), Set())
 
     val portState = PortState(Seq(flight), Seq(), Seq())

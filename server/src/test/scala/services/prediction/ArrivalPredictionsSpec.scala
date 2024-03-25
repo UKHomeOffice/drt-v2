@@ -60,10 +60,10 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
 
   "arrivalsByKey should" >> {
     "take some arrivals and a function to create their keys and return a list of keys to arrivals" >> {
-      val jfkT1 = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T1)
-      val bhxT1 = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("BHX"), terminal = T1)
-      val jfkT2 = ArrivalGenerator.arrival("BA0002", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
-      val bhxT2 = ArrivalGenerator.arrival("BA0003", schDt = scheduledStr, origin = PortCode("BHX"), terminal = T2)
+      val jfkT1 = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T1)
+      val bhxT1 = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("BHX"), terminal = T1)
+      val jfkT2 = ArrivalGenerator.live("BA0002", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
+      val bhxT2 = ArrivalGenerator.live("BA0003", schDt = scheduledStr, origin = PortCode("BHX"), terminal = T2)
       val arrivals = List(jfkT1, bhxT1, jfkT2, bhxT2).map(_.toArrival(LiveFeedSource))
       val modelKeys: Arrival => Iterable[WithId] = arrival =>
         List(
@@ -84,7 +84,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
 
   "Given an arrival and an actor containing a prediction model for that arrival" >> {
     "I should be able to update the arrival with an predicted touchdown time" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
+      val arrival = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
       val keysWithArrival = modelKeysForArrival(arrival).map(k => (k, List(arrival.unique))).toList
       val arrivalsMap = List(arrival).map(a => (a.unique, a)).toMap
       val maybePredictedTouchdown = Await.result(arrivalPredictions.applyPredictionsByKey(arrivalsMap, keysWithArrival), 5.second)
@@ -95,7 +95,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
 
   "Given an ArrivalsDiff and an actor containing touchdown prediction models" >> {
     "I should be able to update the arrival with an predicted touchdown time" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
+      val arrival = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2).toArrival(LiveFeedSource)
 
       val diff = ArrivalsDiff(Seq(arrival), Seq())
 
@@ -108,7 +108,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
   "Within CrunchSystem" >> {
     "An Arrivals Graph Stage configured to use predicted times" should {
       "set the correct pcp time given an arrival with a predicted touchdown time" >> {
-        val arrival = ArrivalGenerator.arrival("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
+        val arrival = ArrivalGenerator.live("BA0001", schDt = scheduledStr, origin = PortCode("JFK"), terminal = T2)
 
         val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduledStr),

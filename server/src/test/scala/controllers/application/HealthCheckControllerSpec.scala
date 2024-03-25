@@ -37,10 +37,10 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
   val splits: Splits = Splits(Set(), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC), Percentage)
   val flights: Seq[(UtcDate, FlightsWithSplits)] = Seq(
     (UtcDate(2024, 6, 26), FlightsWithSplits(Seq(
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0001", schDt = "2024-06-26T11:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:40").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0011", schDt = "2024-06-26T12:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0015", schDt = "2024-06-26T12:35", actDt = "2024-06-26T12:45").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0001", schDt = "2024-06-26T11:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:40").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0011", schDt = "2024-06-26T12:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0015", schDt = "2024-06-26T12:35", actDt = "2024-06-26T12:45").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
     ))),
   )
 
@@ -125,7 +125,8 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
         manifestLookupService = manifestLookupService,
         minuteLookups = minuteLookups,
         actorService = actorService,
-        persistentStateActors = persistentActors
+        persistentStateActors = persistentActors,
+        requestAndTerminateActor = actorService.requestAndTerminateActor,
       )(system, ec, mat, timeout) {
         override lazy val flightsProvider: FlightsProvider = FlightsProvider(system.actorOf(Props(new MockFlightsRouterActor(flights))))(timeout)
       }
@@ -136,7 +137,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
         params.forecastMaxDays,
         flightLookups,
         minuteLookups,
-      ) {
+      )(system, timeout) {
         override val queuesRouterActor: ActorRef = system.actorOf(Props(new MockQueuesRouterActor(minutes)))
       }
 

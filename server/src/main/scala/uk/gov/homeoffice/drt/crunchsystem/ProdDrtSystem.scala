@@ -70,6 +70,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     flightLookups = flightLookups,
     manifestLookups = manifestLookups,
     requestAndTerminateActor = actorService.requestAndTerminateActor,
+    params.forecastMaxDays,
   )
 
 

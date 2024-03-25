@@ -34,35 +34,35 @@ class FlightFilterSpec extends Specification {
   }
   "Not cancelled filter" >> {
     "Given a flight with a scheduled status, the filter should return true to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(status = ArrivalStatus("scheduled")).toArrival(LiveFeedSource), Set())
+      val fws = ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("scheduled")).toArrival(LiveFeedSource), Set())
       FlightFilter.notCancelledFilter.apply(fws, redListedZimbabwe) === true
     }
     "Given a flight with a cancelled status, the filter should return false to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(status = ArrivalStatus("cancelled")).toArrival(LiveFeedSource), Set())
+      val fws = ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("cancelled")).toArrival(LiveFeedSource), Set())
       FlightFilter.notCancelledFilter.apply(fws, redListedZimbabwe) === false
     }
   }
   "Outside CTA filter" >> {
     "Given a flight from JFK (outside the CTA), the filter should return true to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(origin = PortCode("JFK")).toArrival(LiveFeedSource), Set())
+      val fws = ApiFlightWithSplits(ArrivalGenerator.live(origin = PortCode("JFK")).toArrival(LiveFeedSource), Set())
       FlightFilter.outsideCtaFilter.apply(fws, redListedZimbabwe) === true
     }
     "Given a flight from DUB (inside the CTA), the filter should return false to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(origin = PortCode("DUB")).toArrival(LiveFeedSource), Set())
+      val fws = ApiFlightWithSplits(ArrivalGenerator.live(origin = PortCode("DUB")).toArrival(LiveFeedSource), Set())
       FlightFilter.outsideCtaFilter.apply(fws, redListedZimbabwe) === false
     }
   }
   "Valid terminal filter" >> {
     "Given a flight to T1 when the port only has T1, the filter should return true to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(terminal = T1).toArrival(LiveFeedSource), Set())
+      val fws = ApiFlightWithSplits(ArrivalGenerator.live(terminal = T1).toArrival(LiveFeedSource), Set())
       FlightFilter.validTerminalFilter(List(T1)).apply(fws, redListedZimbabwe) === true
     }
     "Given a flight to T2 when the port only has T1, the filter should return true to keep it" >> {
-      val fws = ApiFlightWithSplits(ArrivalGenerator.arrival(terminal = T2).toArrival(LiveFeedSource), Set())
+      val fws = ApiFlightWithSplits(ArrivalGenerator.live(terminal = T2).toArrival(LiveFeedSource), Set())
       FlightFilter.validTerminalFilter(List(T1)).apply(fws, redListedZimbabwe) === false
     }
   }
 
   private def fws(origin: PortCode, terminal: Terminal): ApiFlightWithSplits =
-    ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2021-06-01T12:00", totalPax = Option(10), origin = origin, terminal = terminal).toArrival(LiveFeedSource), Set())
+    ApiFlightWithSplits(ArrivalGenerator.live(schDt = "2021-06-01T12:00", totalPax = Option(10), origin = origin, terminal = terminal).toArrival(LiveFeedSource), Set())
 }

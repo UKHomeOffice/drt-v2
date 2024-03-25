@@ -25,7 +25,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     val drtSystem = TestDrtSystem(defaultAirportConfig, MockDrtParameters(), () => SDate.now())
 
     "When I send its port state actor an arrival" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly).toArrival(LiveFeedSource)
+      val arrival = ArrivalGenerator.live("BA0001", schDt = drtSystem.now().toISODateOnly).toArrival(LiveFeedSource)
       Await.ready(drtSystem.actorService.portStateActor.ask(ArrivalsDiff(List(arrival), List())), 1.second)
 
       "Then I should see the arrival when I check its port state" >> {

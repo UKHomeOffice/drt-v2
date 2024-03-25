@@ -9,8 +9,8 @@ import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.cirium.services.entities._
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.Future
@@ -70,7 +70,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       publishedDepartureTime
     )
 
-    val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime, publishedDepartureTime)
+    val expected = drtArrival(publishedArrivalTime, estRunwayArrival, actRunwayArrival, estGateArrivalTime, actGateArrivalTime)
 
 
     val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
@@ -79,7 +79,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
   }
 
   "Given a CiriumFlightStatus with a non round scheduled time " +
-    "Then I should get a rounded scheduled time back and the cirium scheduled time should be in CarrierScheduled" >> {
+    "Then I should get a rounded scheduled time back" >> {
     val publishedArrivalTime = "2019-07-15T11:06:00.000Z"
     val publishedArrivalTimeRounded = "2019-07-15T11:05:00.000Z"
     val estRunwayArrival = "2019-07-15T11:07:00.000Z"
@@ -104,38 +104,34 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       actRunwayArrival,
       estGateArrivalTime,
       actGateArrivalTime,
-      publishedDepartureTime
-    ).copy(CarrierScheduled = Option(SDate(publishedArrivalTime).millisSinceEpoch))
+    )
 
     val result = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
 
     result === expected
   }
 
-  private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String, publishedDepartureTime: String) = {
-    Arrival(
-      Operator = Option(Operator("TST")),
-      Status = ArrivalStatus("Active"),
-      Estimated = Option(SDate(estRunwayArrival).millisSinceEpoch),
-      Predictions = Predictions(0L, Map()),
-      Actual = Option(SDate(actRunwayArrival).millisSinceEpoch),
-      EstimatedChox = Option(SDate(estGateArrivalTime).millisSinceEpoch),
-      ActualChox = Option(SDate(actGateArrivalTime).millisSinceEpoch),
-      Gate = Option("22"),
-      Stand = None,
-      MaxPax = None,
-      RunwayID = None,
-      BaggageReclaimId = Option("12"),
-      AirportID = PortCode("LHR"),
-      Terminal = T1,
-      rawICAO = "TST1000",
-      rawIATA = "TST1000",
-      Origin = PortCode("JFK"),
-      Scheduled = SDate(publishedArrivalTime).millisSinceEpoch,
-      PcpTime = None,
-      FeedSources = Set(LiveBaseFeedSource),
-      ScheduledDeparture = Option(SDate(publishedDepartureTime).millisSinceEpoch),
-      PassengerSources = Map(LiveBaseFeedSource -> Passengers(None, None))
+  private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String): LiveArrival = {
+    LiveArrival(
+      operator = Option("TST"),
+      maxPax = None,
+      totalPax = None,
+      transPax = None,
+      terminal = T1,
+      voyageNumber = 1000,
+      carrierCode = "TST",
+      flightCodeSuffix = None,
+      origin = "JFK",
+      scheduled = SDate(publishedArrivalTime).millisSinceEpoch,
+      estimated = Option(SDate(estRunwayArrival).millisSinceEpoch),
+      touchdown = Option(SDate(actRunwayArrival).millisSinceEpoch),
+      estimatedChox = Option(SDate(estGateArrivalTime).millisSinceEpoch),
+      actualChox = Option(SDate(actGateArrivalTime).millisSinceEpoch),
+      status = "Active",
+      gate = Option("22"),
+      stand = None,
+      runway = None,
+      baggageReclaim = Option("12"),
     )
   }
 

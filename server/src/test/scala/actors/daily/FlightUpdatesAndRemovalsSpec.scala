@@ -12,15 +12,15 @@ class FlightUpdatesAndRemovalsSpec extends Specification {
   private val update1000 = 1000L
   private val update1500 = 1500L
   private val update2000 = 2000L
-  private val arrival1 = ArrivalGenerator.arrival(iata = "BA0001", totalPax = Option(10), schDt = "2022-05-01T00:25").toArrival(LiveFeedSource)
+  private val arrival1 = ArrivalGenerator.live(iata = "BA0001", totalPax = Option(10), schDt = "2022-05-01T00:25").toArrival(LiveFeedSource)
   private def splits(paxCount: Int, source: SplitSource): Set[Splits] = Set(Splits(
     splits = Set(ApiPaxTypeAndQueueCount(PaxTypes.GBRNational, Queues.EGate, paxCount, None, None)),
     source = source,
     maybeEventType = None,
     splitStyle = SplitStyle.Percentage,
   ))
-  private val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", totalPax = Option(10), schDt = "2022-05-01T12:40").toArrival(LiveFeedSource)
-  private val arrival3 = ArrivalGenerator.arrival(iata = "BA0003", totalPax = Option(10), schDt = "2022-05-01T20:15").toArrival(LiveFeedSource)
+  private val arrival2 = ArrivalGenerator.live(iata = "BA0002", totalPax = Option(10), schDt = "2022-05-01T12:40").toArrival(LiveFeedSource)
+  private val arrival3 = ArrivalGenerator.live(iata = "BA0003", totalPax = Option(10), schDt = "2022-05-01T20:15").toArrival(LiveFeedSource)
   "Concerning FlightsWithSplitsDiffs" >> {
     "Given an empty FlightUpdatesAndRemovals" >> {
       "When I add an update it should retain it in its updates Map" >> {

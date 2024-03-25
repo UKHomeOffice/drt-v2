@@ -41,7 +41,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
   )
   val scheduled = "2017-01-01T00:00Z"
   val flights = List(
-    ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(20))
+    ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(20))
   )
 
   "Egate banks handling " >> {

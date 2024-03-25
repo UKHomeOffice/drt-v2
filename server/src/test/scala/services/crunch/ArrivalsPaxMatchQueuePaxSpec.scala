@@ -48,7 +48,7 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T23:58Z"
 
         val arrivalPax = 112
-        val arrival = ArrivalGenerator.arrival(schDt = scheduled,
+        val arrival = ArrivalGenerator.live(schDt = scheduled,
           iata = "BA0001",
           terminal = T1,
           totalPax = Option(arrivalPax))

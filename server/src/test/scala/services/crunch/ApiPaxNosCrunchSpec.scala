@@ -24,7 +24,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
 
   val scheduled = "2019-11-20T00:00Z"
 
-  val flights: Seq[LiveArrival] = List(ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, origin = PortCode("JFK")))
+  val flights = List(ArrivalGenerator.forecast(iata = "BA0001", schDt = scheduled, origin = PortCode("JFK")))
 
   val manifests: ManifestsFeedResponse =
     ManifestsFeedSuccess(DqManifests(0, Set(

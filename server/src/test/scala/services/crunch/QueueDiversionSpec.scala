@@ -28,7 +28,7 @@ class QueueDiversionSpec extends CrunchTestLike {
 
     "Given an arrival" >> {
       val pax = 100
-      val liveArrival = ArrivalGenerator.arrival("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), totalPax = Option(pax))
+      val liveArrival = ArrivalGenerator.live("AA0002", schDt = scheduled, terminal = T1, origin = PortCode("AAA"), totalPax = Option(pax))
 
       "When all queues are open I should see pax headed to all queues in the default splits" >> {
         implicit val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(

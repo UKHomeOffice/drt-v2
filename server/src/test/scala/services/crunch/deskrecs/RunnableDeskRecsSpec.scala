@@ -182,7 +182,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   "Given a flight with splits, when I ask for the workload" >> {
     "Then I should see the workload associated with the best splits for that flight" >> {
       val scheduled = "2019-10-10T23:05:00Z"
-      val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, totalPax = Option(25)).toArrival(LiveFeedSource)
+      val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = scheduled, totalPax = Option(25)).toArrival(LiveFeedSource)
 
       val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
@@ -217,7 +217,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "When I ask for the workload " +
     "Then I should see the workload associated with the best splits for that flight" >> {
     val scheduled = "2019-10-10T23:05:00Z"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, totalPax = Option(75), transPax = Option(50)).toArrival(LiveFeedSource)
+    val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = scheduled, totalPax = Option(75), transPax = Option(50)).toArrival(LiveFeedSource)
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None))
 
@@ -253,8 +253,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "Then I should see the combined workload for those flights" >> {
     val scheduled = "2018-01-01T00:05"
     val scheduled2 = "2018-01-01T00:06"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, totalPax = Option(25)).toArrival(LiveFeedSource)
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = scheduled2, totalPax = Option(25)).toArrival(LiveFeedSource)
+    val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = scheduled, totalPax = Option(25)).toArrival(LiveFeedSource)
+    val arrival2 = ArrivalGenerator.live(iata = "BA0002", schDt = scheduled2, totalPax = Option(25)).toArrival(LiveFeedSource)
 
     val flight = List(ApiFlightWithSplits(arrival, Set(historicSplits), None), ApiFlightWithSplits(arrival2, Set(historicSplits), None))
 
@@ -298,7 +298,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val pcpOne = "2018-01-01T00:15"
     val pcpUpdated = "2018-01-01T00:05"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = pcpOne, totalPax = Option(25)).toArrival(LiveFeedSource)
+    val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = pcpOne, totalPax = Option(25)).toArrival(LiveFeedSource)
 
     val historicSplits = Splits(
       Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None, None)),
@@ -352,7 +352,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val noon = "2018-01-01T00:00"
     val noon30 = "2018-01-01T00:30"
     val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> 30d / 60))
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, totalPax = Option(25))
+    val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = noon, totalPax = Option(25))
 
     val historicSplits = Splits(
       Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100, None, None)),
@@ -419,8 +419,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       setPcpTimes = TestDefaults.setPcpFromBest
     ))
 
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, totalPax = Option(25), origin = PortCode("JFK"))
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, totalPax = Option(25), origin = PortCode("AAA"))
+    val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = noon, totalPax = Option(25), origin = PortCode("JFK"))
+    val arrival2 = ArrivalGenerator.live(iata = "BA0002", schDt = noon, totalPax = Option(25), origin = PortCode("AAA"))
 
     val noonMillis = SDate(noon).millisSinceEpoch
     val noon30Millis = SDate(noon30).millisSinceEpoch
@@ -469,8 +469,8 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       setPcpTimes = TestDefaults.setPcpFromBest
     ))
 
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = noon, totalPax = Option(25), origin = PortCode("JFK"))
-    val arrival2 = ArrivalGenerator.arrival(iata = "BA0002", schDt = noon, totalPax = Option(25), origin = PortCode("AAA"))
+    val arrival = ArrivalGenerator.forecast(iata = "BA0001", schDt = noon, totalPax = Option(25), origin = PortCode("JFK"))
+    val arrival2 = ArrivalGenerator.forecast(iata = "BA0002", schDt = noon, totalPax = Option(25), origin = PortCode("AAA"))
 
     val noonMillis = SDate(noon).millisSinceEpoch
 
@@ -503,7 +503,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "When I ask for crunch result " +
     "Then I should see a full day's worth (1440) of crunch minutes per queue crunched - a total of 5760" >> {
     val scheduled = "2018-01-01T00:05"
-    val arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = scheduled, totalPax = Option(25))
+    val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = scheduled, totalPax = Option(25))
     val flight = List(ApiFlightWithSplits(arrival.toArrival(LiveFeedSource), Set(historicSplits), None))
 
     val portStateProbe = TestProbe("port-state")

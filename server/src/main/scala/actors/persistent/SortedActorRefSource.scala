@@ -48,7 +48,11 @@ final class SortedActorRefSource(persistentActor: ActorRef,
           m.headOption
             .map {
               case _: ProcessingRequest =>
-                m.collect { case r: ProcessingRequest => r }
+                m.collect {
+                  case r: ProcessingRequest =>
+                    println(s"[$graphName] Received ProcessingRequest: ${r.date}: ${r.start.toISOString} ${r.end.toISOString}")
+                    r
+                }
               case _: Long =>
                 m.collect { case l: Long => processingRequest(l) }
             }
@@ -58,9 +62,10 @@ final class SortedActorRefSource(persistentActor: ActorRef,
               tryPushElement()
             }
 
-        case (_, m: ProcessingRequest @unchecked) =>
-          buffer += m
-          persistentActor ! m
+        case (_, r: ProcessingRequest) =>
+          println(s"[$graphName] Received ProcessingRequest: ${r.date}: ${r.start.toISOString} ${r.end.toISOString}")
+          buffer += r
+          persistentActor ! r
           tryPushElement()
 
         //        case (_, UpdatedMillis(millis)) =>

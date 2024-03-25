@@ -24,9 +24,9 @@ class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
       queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate), T2 -> Seq())
     )
   ))
-  val arrivalOne = ArrivalGenerator.arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", totalPax = Option(100))
+  val arrivalOne = ArrivalGenerator.live(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:00", totalPax = Option(100))
 
-  val arrivalTwo = ArrivalGenerator.arrival(iata = "BA0002", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05", totalPax = Option(117))
+  val arrivalTwo = ArrivalGenerator.live(iata = "BA0002", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05", totalPax = Option(117))
 
   "Given crunch inputs and an arrival" >> {
 

@@ -31,7 +31,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           val egSplit = 0.75
 
           val flights = List(
-            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(21))
+            ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(21))
           )
 
           val airportConfigWithEgates = defaultAirportConfig.copy(
@@ -74,8 +74,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           val scheduled2 = "2017-01-01T00:01Z"
 
           val flights = List(
-            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(1)),
-            ArrivalGenerator.arrival(schDt = scheduled2, iata = "SA123", terminal = T1, totalPax = Option(1))
+            ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(1)),
+            ArrivalGenerator.live(schDt = scheduled2, iata = "SA123", terminal = T1, totalPax = Option(1))
           )
 
           val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
@@ -107,7 +107,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           val scheduled = "2017-01-01T00:00Z"
 
           val flights = List(
-            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(100))
+            ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(100))
           )
 
           val crunch = runCrunchGraph(TestConfig(
@@ -151,7 +151,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           "Then I should see a pax load of 20 - ie 100% of the passengers as there is only one split" >> {
             val scheduled = "2017-01-01T00:00Z"
 
-            val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(20))
+            val flight = ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(20))
             val flights = List(flight)
 
             val crunch = runCrunchGraph(TestConfig(
@@ -197,7 +197,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             val scheduled = "2017-01-01T00:00Z"
 
-            val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(10))
+            val arrival = ArrivalGenerator.live(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(10))
 
             val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduled),

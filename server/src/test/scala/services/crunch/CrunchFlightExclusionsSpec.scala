@@ -25,8 +25,8 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = List(
-      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, totalPax = Option(15)),
-      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = InvalidTerminal, totalPax = Option(10)),
+      ArrivalGenerator.live(schDt = scheduled00, iata = "BA0001", terminal = T1, totalPax = Option(15)),
+      ArrivalGenerator.live(schDt = scheduled01, iata = "FR8819", terminal = InvalidTerminal, totalPax = Option(10)),
     )
 
     val fiveMinutes = 600d / 60
@@ -66,10 +66,10 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
     val scheduled = "2017-01-01T00:00Z"
 
     val flights = List(
-      ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1, totalPax = Option(15), status = ArrivalStatus("On time")),
-      ArrivalGenerator.arrival(schDt = scheduled01, iata = "FR8819", terminal = T1, totalPax = Option(10), status = ArrivalStatus("xx cancelled xx")),
-      ArrivalGenerator.arrival(schDt = scheduled02, iata = "BA1000", terminal = T1, totalPax = Option(10), status = ArrivalStatus("xx canceled xx")),
-      ArrivalGenerator.arrival(schDt = scheduled03, iata = "ZX0888", terminal = T1, totalPax = Option(10), status = ArrivalStatus("xx deleted xx"))
+      ArrivalGenerator.live(schDt = scheduled00, iata = "BA0001", terminal = T1, totalPax = Option(15), status = ArrivalStatus("On time")),
+      ArrivalGenerator.live(schDt = scheduled01, iata = "FR8819", terminal = T1, totalPax = Option(10), status = ArrivalStatus("xx cancelled xx")),
+      ArrivalGenerator.live(schDt = scheduled02, iata = "BA1000", terminal = T1, totalPax = Option(10), status = ArrivalStatus("xx canceled xx")),
+      ArrivalGenerator.live(schDt = scheduled03, iata = "ZX0888", terminal = T1, totalPax = Option(10), status = ArrivalStatus("xx deleted xx"))
     )
 
     val fiveMinutes = 600d / 60

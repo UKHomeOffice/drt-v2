@@ -4,20 +4,19 @@ import actors.DrtStaticParameters
 import akka.actor.ActorRef
 import drt.shared._
 import manifests.ManifestLookupLike
-import services.{TryCrunchWholePax, TrySimulator}
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FeedArrival, UniqueArrival}
+import services.{TryCrunchWholePax, TrySimulator}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FeedArrival, ForecastArrival, LiveArrival}
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.immutable.SortedMap
 import scala.concurrent.Future
 
-case class TestConfig(initialForecastBaseArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
-                      initialLiveArrivals: SortedMap[UniqueArrival, Arrival] = SortedMap(),
+case class TestConfig(initialForecastBaseArrivals: Seq[ForecastArrival] = Seq.empty,
+                      initialLiveArrivals: Seq[LiveArrival] = Seq.empty,
                       initialPortState: Option[PortState] = None,
                       airportConfig: AirportConfig = TestDefaults.airportConfig,
                       expireAfterMillis: Int = DrtStaticParameters.expireAfterMillis,

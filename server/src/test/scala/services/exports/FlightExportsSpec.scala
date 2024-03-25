@@ -28,19 +28,19 @@ class FlightExportsSpec extends CrunchTestLike {
     val utcFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] = (_, _) =>
       Source(List(
         (UtcDate(2020, 6, 1), Seq(
-          ApiFlightWithSplits(ArrivalGenerator.arrival(
+          ApiFlightWithSplits(ArrivalGenerator.live(
             iata = "BA0001", schDt = "2020-06-01T20:00", totalPax = Option(95)).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-06-02T01:30").millisSinceEpoch)), Set()),
         )),
         (UtcDate(2020, 6, 2), Seq(
-          ApiFlightWithSplits(ArrivalGenerator.arrival(
+          ApiFlightWithSplits(ArrivalGenerator.live(
             iata = "BA0002", schDt = "2020-06-02T00:05", totalPax = Option(95)).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-06-02T00:30").millisSinceEpoch)), Set()),
         )),
         (UtcDate(2020, 6, 3), Seq(
-          ApiFlightWithSplits(ArrivalGenerator.arrival(
+          ApiFlightWithSplits(ArrivalGenerator.live(
             iata = "BA0003", schDt = "2020-06-03T00:05", totalPax = Option(95)).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-06-02T22:55").millisSinceEpoch)), Set()),
         )),
         (UtcDate(2020, 6, 4), Seq(
-          ApiFlightWithSplits(ArrivalGenerator.arrival(
+          ApiFlightWithSplits(ArrivalGenerator.live(
             iata = "BA0004", schDt = "2020-06-03T02:30", totalPax = Option(95)).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-06-03T01:55").millisSinceEpoch)), Set()),
         )),
       ))
@@ -78,12 +78,12 @@ class FlightExportsSpec extends CrunchTestLike {
     }
   }
 
-  val arrival: Arrival = ArrivalGenerator.arrival(
+  val arrival: Arrival = ArrivalGenerator.live(
     iata = "BA0001", schDt = "2020-01-01T20:05", totalPax = Option(95), origin = PortCode("JER")).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-01-02T01:30").millisSinceEpoch))
-  val ctaArrival: Arrival = ArrivalGenerator.arrival(
+  val ctaArrival: Arrival = ArrivalGenerator.live(
     iata = "BA0002", schDt = "2020-01-01T20:10", totalPax = Option(95), origin = PortCode("LHR")).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-01-02T01:30").millisSinceEpoch))
-  val domesticArrival: Arrival = ArrivalGenerator.arrival(
+  val domesticArrival: Arrival = ArrivalGenerator.live(
     iata = "BA0003", schDt = "2020-01-01T20:15", totalPax = Option(95)).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-01-02T01:30").millisSinceEpoch))
-  val cancelledArrival: Arrival = ArrivalGenerator.arrival(
+  val cancelledArrival: Arrival = ArrivalGenerator.live(
     iata = "BA0004", schDt = "2020-01-01T20:20", totalPax = Option(95), status = ArrivalStatus("cancelled")).toArrival(LiveFeedSource).copy(PcpTime = Option(SDate("2020-01-02T01:30").millisSinceEpoch))
 }

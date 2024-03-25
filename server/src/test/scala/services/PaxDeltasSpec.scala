@@ -73,7 +73,7 @@ class PaxDeltasSpec extends Specification {
   }
 
   "When I ask for an arrival with 100 pax to have its pax adjusted" >> {
-    val arrival = ArrivalGenerator.arrival(totalPax = Option(100))
+    val arrival = ArrivalGenerator.live(totalPax = Option(100))
 
     "Given a delta of 0.5, I should get an arrival with 50 pax" >> {
       val delta = 0.5
