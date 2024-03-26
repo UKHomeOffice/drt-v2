@@ -50,7 +50,7 @@ final class SortedActorRefSource(persistentActor: ActorRef,
               case _: ProcessingRequest =>
                 m.collect {
                   case r: ProcessingRequest =>
-                    println(s"[$graphName] Received ProcessingRequest: ${r.date}: ${r.start.toISOString} ${r.end.toISOString}")
+                    println(s"[$graphName] Received ProcessingRequest: ${r.date}: ${r.start.millisSinceEpoch} ${r.end.millisSinceEpoch}")
                     r
                 }
               case _: Long =>
@@ -63,7 +63,7 @@ final class SortedActorRefSource(persistentActor: ActorRef,
             }
 
         case (_, r: ProcessingRequest) =>
-          println(s"[$graphName] Received ProcessingRequest: ${r.date}: ${r.start.toISOString} ${r.end.toISOString}")
+          println(s"[$graphName] Received ProcessingRequest: ${r.date}: ${r.start.millisSinceEpoch} ${r.end.millisSinceEpoch}")
           buffer += r
           persistentActor ! r
           tryPushElement()

@@ -6,6 +6,33 @@ import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 object ArrivalGenerator {
+  def arrival(iata: String = "",
+              schDt: String = "",
+              maxPax: Option[Int] = None,
+              terminal: Terminal = T1,
+              origin: PortCode = PortCode("JFK"),
+              operator: Option[Operator] = None,
+              status: ArrivalStatus = ArrivalStatus(""),
+              estDt: String = "",
+              actDt: String = "",
+              estChoxDt: String = "",
+              actChoxDt: String = "",
+              gate: Option[String] = None,
+              stand: Option[String] = None,
+              runwayId: Option[String] = None,
+              baggageReclaimId: Option[String] = None,
+              totalPax: Option[Int] = None,
+              transPax: Option[Int] = None,
+              feedSource: FeedSource,
+             ): Arrival = {
+    val actualArrival = live(
+      iata, schDt, maxPax, terminal, origin, operator, status, estDt, actDt, estChoxDt,
+      actChoxDt, gate, stand, runwayId, baggageReclaimId, totalPax, transPax
+    )
+      .toArrival(feedSource)
+    actualArrival.copy(PcpTime = Option(actualArrival.bestArrivalTime(true)))
+  }
+
   def live(iata: String = "",
            schDt: String = "",
            maxPax: Option[Int] = None,
@@ -23,7 +50,7 @@ object ArrivalGenerator {
            baggageReclaimId: Option[String] = None,
            totalPax: Option[Int] = None,
            transPax: Option[Int] = None,
-             ): LiveArrival = {
+          ): LiveArrival = {
     val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(iata)
 
     LiveArrival(

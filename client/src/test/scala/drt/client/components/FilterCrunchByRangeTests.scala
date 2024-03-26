@@ -19,7 +19,7 @@ object FilterCrunchByRangeTests extends TestSuite {
       val range = CustomWindow(10, 14)
       val dateWithinRange = SDate("2017-01-01T11:00:00Z")
       val dateOutsideRange = SDate("2017-01-01T09:00:00Z")
-      val arrival = ArrivalGenerator.arrival(terminal = T1, schDt = dateWithinRange.toISOString).toArrival(LiveFeedSource)
+      val arrival = ArrivalGenerator.live(terminal = T1, schDt = dateWithinRange.toISOString).toArrival(LiveFeedSource)
 
       test("When a PortState contains minutes within the range, then they should remain after the filter") - {
         val crunchMinuteWithinRange = CrunchMinute(T1, Queues.EeaDesk, dateWithinRange.millisSinceEpoch, 0, 0, 0, 0, None)
@@ -37,7 +37,7 @@ object FilterCrunchByRangeTests extends TestSuite {
       test("When a PortState contains nothing within the range then it should have empty sets for all values") - {
         val crunchMinuteNotWithinRange = CrunchMinute(T1, Queues.EeaDesk, dateOutsideRange.millisSinceEpoch, 0, 0, 0, 0, None)
         val staffMinuteNotWithinRange = StaffMinute(T1, dateOutsideRange.millisSinceEpoch, 0, 0, 0)
-        val flightNotWithinRange = ApiFlightWithSplits(arrival.copy(PcpTime = Option(dateOutsideRange.millisSinceEpoch)), Set())
+        val flightNotWithinRange = ApiFlightWithSplits(arrival.copy(Scheduled = dateOutsideRange.millisSinceEpoch, PcpTime = Option(dateOutsideRange.millisSinceEpoch)), Set())
 
         val state = PortState(List(flightNotWithinRange), List(crunchMinuteNotWithinRange), List(staffMinuteNotWithinRange))
         val (start, end) = viewStartAndEnd(dateWithinRange.toLocalDate, range)

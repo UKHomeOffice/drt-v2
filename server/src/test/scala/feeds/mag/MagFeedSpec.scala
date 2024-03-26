@@ -17,10 +17,10 @@ object MockFeedRequester extends FeedRequesterLike {
   private val defaultResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]"))
   var mockResponse: HttpResponse = defaultResponse
 
-  override def sendTokenRequest(header: String,
-                                claim: String,
-                                key: String,
-                                algorithm: JwtAlgorithm): String = "Fake token"
+  override def createToken(header: String,
+                           claim: String,
+                           key: String,
+                           algorithm: JwtAlgorithm): String = "Fake token"
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
@@ -28,17 +28,15 @@ object MockFeedRequester extends FeedRequesterLike {
 }
 
 case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extends FeedRequesterLike {
-  override def sendTokenRequest(header: String,
-                                claim: String,
-                                key: String,
-                                algorithm: JwtAlgorithm): String = "Fake token"
+  override def createToken(header: String,
+                           claim: String,
+                           key: String,
+                           algorithm: JwtAlgorithm): String = "Fake token"
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = {
-    causeException()
-    Future(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]")))
-  }
+  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] =
+    Future(causeException()).map(_ => HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]")))
 }
 
 class MagFeedSpec extends CrunchTestLike {
@@ -103,7 +101,8 @@ class MagFeedSpec extends CrunchTestLike {
 
   "Given a mock feed requester that throws an exception " +
     "I should get an ArrivalsFeedFailure response" >> {
-    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(() => throw new Exception("I'm throwing an exception")))
+    val requester = MockExceptionThrowingFeedRequester(() => throw new Exception("I'm throwing an exception"))
+    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), requester)
 
     val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1.second) match {
       case ArrivalsFeedFailure(_, _) => true

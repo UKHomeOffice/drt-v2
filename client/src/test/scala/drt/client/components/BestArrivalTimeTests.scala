@@ -11,7 +11,7 @@ object BestArrivalTimeTests extends TestSuite {
       val minutesToChox = 5
       test("When testing for best arrival time") - {
         test("Given a flight with only Scheduled time then we should get back the Scheduled time") - {
-          val arrival = ArrivalGenerator.arrival(schDt = scheduled).toArrival(LiveFeedSource)
+          val arrival = ArrivalGenerator.live(schDt = scheduled).toArrival(LiveFeedSource)
 
           val expected = SDate(scheduled).addMinutes(minutesToChox).millisSinceEpoch
 
@@ -23,7 +23,7 @@ object BestArrivalTimeTests extends TestSuite {
 
       val estimated = "2017-11-17T12:30"
       test("Given a flight with Scheduled time and Est Arrival then we should get back the Est Arrival") - {
-        val arrival = ArrivalGenerator.arrival(schDt = scheduled, estDt = estimated).toArrival(LiveFeedSource)
+        val arrival = ArrivalGenerator.live(schDt = scheduled, estDt = estimated).toArrival(LiveFeedSource)
 
         val expected = SDate(estimated).addMinutes(minutesToChox).millisSinceEpoch
 
@@ -34,7 +34,7 @@ object BestArrivalTimeTests extends TestSuite {
 
       test("Given a flight with Scheduled time and Est Arrival and Act Arrival then we should get back the Act Arrival") - {
         val touchdown = "2017-11-17T12:35"
-        val arrival = ArrivalGenerator.arrival(
+        val arrival = ArrivalGenerator.live(
           schDt = scheduled,
           estDt = estimated,
           actDt = touchdown).toArrival(LiveFeedSource)

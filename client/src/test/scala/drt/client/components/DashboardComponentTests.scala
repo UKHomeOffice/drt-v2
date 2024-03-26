@@ -119,12 +119,12 @@ object DashboardComponentTests extends TestSuite {
 
     "Given a list of flights spanning a 3 hour period when I group by hour I should a list of touples of hour to list " +
       "of flights ordered by hour" - {
-      val flight1 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T09:52:00").toArrival(LiveFeedSource), Set())
-      val flight2 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T09:45:00").toArrival(LiveFeedSource), Set())
-      val flight3 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T10:55:00").toArrival(LiveFeedSource), Set())
-      val flight4 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T11:00:00").toArrival(LiveFeedSource), Set())
-      val flight5 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T12:05:00").toArrival(LiveFeedSource), Set())
-      val flight6 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T13:00:00").toArrival(LiveFeedSource), Set())
+      val flight1 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T09:52:00", feedSource = LiveFeedSource), Set())
+      val flight2 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T09:45:00", feedSource = LiveFeedSource), Set())
+      val flight3 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T10:55:00", feedSource = LiveFeedSource), Set())
+      val flight4 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T11:00:00", feedSource = LiveFeedSource), Set())
+      val flight5 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T12:05:00", feedSource = LiveFeedSource), Set())
+      val flight6 = ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-11-01T13:00:00", feedSource = LiveFeedSource), Set())
 
       val flights = List(flight1, flight2, flight3, flight4, flight5, flight6)
 
@@ -175,7 +175,7 @@ object DashboardComponentTests extends TestSuite {
     "When I ask for a break down of flights and queues per hour" - {
       "Given 1 flight and 1 Crunch Minute for the same period" - {
         val startDate = SDate("2017-10-30T00:00:00Z")
-        val flights = List(ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-10-30T00:00:00Z", totalPax = Option(15)).toArrival(LiveFeedSource), Set()))
+        val flights = List(ApiFlightWithSplits(ArrivalGenerator.arrival(schDt = "2017-10-30T00:00:00Z", totalPax = Option(15), feedSource = LiveFeedSource), Set()))
         val cms = List(CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
 
         val result = hourSummary(flights, cms, startDate)
@@ -192,10 +192,10 @@ object DashboardComponentTests extends TestSuite {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(
           ApiFlightWithSplits(
-            ArrivalGenerator.arrival(schDt = "2017-10-30T00:00:00Z", totalPax = Option(15)).toArrival(LiveFeedSource), Set()
+            ArrivalGenerator.arrival(schDt = "2017-10-30T00:00:00Z", totalPax = Option(15), feedSource = LiveFeedSource), Set()
           ),
           ApiFlightWithSplits(
-            ArrivalGenerator.arrival(schDt = "2017-10-30T00:01:00Z", totalPax = Option(15)).toArrival(LiveFeedSource), Set()
+            ArrivalGenerator.arrival(schDt = "2017-10-30T00:01:00Z", totalPax = Option(15), feedSource = LiveFeedSource), Set()
           )
         )
         val cms = List(CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
@@ -213,10 +213,10 @@ object DashboardComponentTests extends TestSuite {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(
           ApiFlightWithSplits(
-            ArrivalGenerator.arrival(schDt = "2017-10-30T00:00:00Z", totalPax = Option(15)).toArrival(LiveFeedSource), Set()
+            ArrivalGenerator.arrival(schDt = "2017-10-30T00:00:00Z", totalPax = Option(15), feedSource = LiveFeedSource), Set()
           ),
           ApiFlightWithSplits(
-            ArrivalGenerator.arrival(schDt = "2017-10-30T01:00:00Z", totalPax = Option(15)).toArrival(LiveFeedSource), Set()
+            ArrivalGenerator.arrival(schDt = "2017-10-30T01:00:00Z", totalPax = Option(15), feedSource = LiveFeedSource), Set()
           )
         )
         val cms = List(CrunchMinute(T1, Queues.EeaDesk, startDate.millisSinceEpoch, 20, 0, 0, 0, None, None, None))
@@ -234,10 +234,10 @@ object DashboardComponentTests extends TestSuite {
         val startDate = SDate("2017-10-30T00:00:00Z")
         val flights = List(
           ApiFlightWithSplits(
-            ArrivalGenerator.arrival(schDt = "2017-10-30T00:00:00Z", totalPax = Option(15)).toArrival(LiveFeedSource), Set()
+            ArrivalGenerator.arrival(schDt = "2017-10-30T00:00:00Z", totalPax = Option(15), feedSource = LiveFeedSource), Set()
           ),
           ApiFlightWithSplits(
-            ArrivalGenerator.arrival(schDt = "2017-10-30T01:00:00Z", totalPax = Option(15)).toArrival(LiveFeedSource), Set()
+            ArrivalGenerator.arrival(schDt = "2017-10-30T01:00:00Z", totalPax = Option(15), feedSource = LiveFeedSource), Set()
           )
         )
         val cms = List(

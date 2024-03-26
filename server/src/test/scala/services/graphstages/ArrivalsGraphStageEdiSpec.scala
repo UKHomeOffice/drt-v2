@@ -1,5 +1,6 @@
 package services.graphstages
 
+import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared._
@@ -27,10 +28,6 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
   val estmated = s"${date}T00:37Z"
 
   val dateNow: SDateLike = SDate(date + "T00:00Z")
-//  val arrival_v1_with_no_chox_time = arrival(iata = "BA0001", schDt = scheduled, totalPax = Option(100), origin = PortCode("JFK"))
-
-//  val arrival_v2_with_chox_time = arrival_v1_with_no_chox_time.copy(
-//    Stand = Option("Stand1"), EstimatedChox = Option(SDate(scheduled).millisSinceEpoch))
 
   val terminalSplits: Splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage)
 
@@ -63,18 +60,16 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
     "Reassign the terminal to A1 for an incoming arrival with A2 but with an A1 baggage belt" in {
       val live = ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, baggageReclaimId = Option("1"))
       val fcBase = ArrivalGenerator.forecast(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2)
-      val merged = ApiFlightWithSplits(fcBase.toArrival(AclFeedSource), Set())
 
-      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(fcBase), Seq(merged))
+      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(), Seq())
+
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(fcBase)))
+
+      assertTerminals(crunch.portStateTestProbe, List(A2))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(live)))
 
-      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
-        case ps: PortState =>
-          val terminals = ps.flights.values.map(_.apiFlight.Terminal)
-          println(s"terminals: $terminals")
-          terminals == List(A1)
-      }
+      assertTerminals(crunch.portStateTestProbe, List(A1))
 
       crunch.shutdown()
 
@@ -84,72 +79,49 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
     "Reassign the terminal to A1 for an existing incoming arrival with A2 but with an A1 baggage belt, and remain in A1 with further ACL updates" in {
       val live = ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, baggageReclaimId = Option("1"))
       val fcBase = ArrivalGenerator.forecast(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2)
-      val merged = ApiFlightWithSplits(fcBase.toArrival(AclFeedSource), Set())
 
-      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(fcBase), Seq(merged))
+      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(), Seq())
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(live)))
 
-      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
-        case ps: PortState =>
-          ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
-      }
+      assertTerminals(crunch.portStateTestProbe, List(A1))
 
       val updated = fcBase.copy(totalPax = Option(200))
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(updated)))
 
-      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
-        case ps: PortState =>
-          ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
-      }
+      assertTerminals(crunch.portStateTestProbe, List(A1))
 
       success
     }
 
     "Reassign the terminal to A1 for an existing incoming arrival with A2 but with an A1 baggage belt, and remain in A1 with further live updates" in {
       val live = ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, baggageReclaimId = Option("1"))
-      val fcBase = ArrivalGenerator.forecast(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2)
-      val merged = ApiFlightWithSplits(fcBase.toArrival(AclFeedSource), Set())
 
-      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(fcBase), Seq(merged))
+      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(), Seq())
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(live)))
 
-      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
-        case ps: PortState =>
-          ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
-      }
+      assertTerminals(crunch.portStateTestProbe, List(A1))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(live.copy(totalPax = Option(200)))))
 
-      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
-        case ps: PortState =>
-          ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
-      }
+      assertTerminals(crunch.portStateTestProbe, List(A1))
 
       success
     }
 
     "Reassign the terminal to A1 for an existing incoming arrival with A2 but with an A1 baggage belt, and remain in A1 with cirium updates" in {
       val live = ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, baggageReclaimId = Option("1"))
-      val fcBase = ArrivalGenerator.forecast(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2)
-      val merged = ApiFlightWithSplits(fcBase.toArrival(AclFeedSource), Set())
 
-      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(fcBase), Seq(merged))
+      val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(), Seq())
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(live)))
 
-      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
-        case ps: PortState =>
-          ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
-      }
+      assertTerminals(crunch.portStateTestProbe, List(A1))
 
       offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(Seq(live.copy(estimated = Option(SDate(scheduled).millisSinceEpoch)))))
 
-      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
-        case ps: PortState =>
-          ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
-      }
+      assertTerminals(crunch.portStateTestProbe, List(A1))
 
       success
     }
@@ -158,20 +130,19 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
       val live = ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, baggageReclaimId = Option("1"))
       val fcBase = ArrivalGenerator.forecast(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2)
       val mergedA1 = ApiFlightWithSplits(
-        ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A1, baggageReclaimId = Option("1")).toArrival(AclFeedSource),
+        withPcpTime(ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A1, baggageReclaimId = Option("1"))
+          .toArrival(AclFeedSource)),
         Set())
       val mergedA2 = ApiFlightWithSplits(
-        ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, baggageReclaimId = Option("1")).toArrival(AclFeedSource),
+        withPcpTime(ArrivalGenerator.live(iata = "BA1111", schDt = scheduled, origin = PortCode("JFK"), terminal = A2, baggageReclaimId = Option("1"))
+          .toArrival(AclFeedSource)),
         Set())
 
       val crunch: CrunchGraphInputsAndProbes = newCrunch(Seq(), Seq(fcBase), Seq(mergedA1, mergedA2))
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(live)))
 
-      crunch.portStateTestProbe.fishForMessage(1.seconds, s"looking for arrival at A1") {
-        case ps: PortState =>
-          ps.flights.values.map(a => a.apiFlight.Terminal) == List(A1)
-      }
+      assertTerminals(crunch.portStateTestProbe, List(A1))
 
       success
     }
@@ -263,6 +234,12 @@ class ArrivalsGraphStageEdiSpec extends CrunchTestLike {
       }
 
       success
+    }
+  }
+
+  private def assertTerminals(probe: TestProbe, terminals: List[Terminal]) = {
+    probe.fishForMessage(1.seconds, s"looking for arrival at $terminals") {
+      case PortState(fs, _, _) => fs.values.map(_.apiFlight.Terminal) == terminals
     }
   }
 }

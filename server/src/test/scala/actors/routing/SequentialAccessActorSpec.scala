@@ -84,8 +84,8 @@ class SequentialAccessActorSpec extends CrunchTestLike {
 
     val ackReceived = Await.result(actor.ask("A1,A2,B1"), 1.second) === StatusReply.Ack
 
-    probeA.expectMsg(Strings(List("A <- 1", "A <- 2", "B <- 1")))
-    probeB.expectMsg(Strings(List("A <- 1", "A <- 2", "B <- 1")))
+    probeA.expectMsg(Set("A <- 1", "A <- 2", "B <- 1"))
+    probeB.expectMsg(Set("A <- 1", "A <- 2", "B <- 1"))
 
     ackReceived
   }

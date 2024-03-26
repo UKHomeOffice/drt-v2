@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.daily.RequestAndTerminateActor
 import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
@@ -117,7 +116,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
 
       override def provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(airportConfig, mockDrtParameters, now)(mat, ec, system, timeout) {
         lazy override val feedService: ProdFeedService = new ProdFeedService(journalType, airportConfig, now, params,
-          config, paxFeedSourceOrder, flightLookups, manifestLookups, applicationService.requestAndTerminateActor,
+          config, paxFeedSourceOrder, flightLookups, manifestLookups, actorService.requestAndTerminateActor,
           mockDrtParameters.forecastMaxDays)(this.system, ec, timeout) {
 
           override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =

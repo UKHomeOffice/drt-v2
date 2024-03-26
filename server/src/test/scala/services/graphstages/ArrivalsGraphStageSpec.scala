@@ -175,7 +175,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       "Given 3 international live arrivals, one with suffix F, another with P, and another with no suffix" >> {
         val aclFlight = List(withSuffixP, withSuffixF, withoutSuffix)
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(aclFlight))
+        offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
         expectUniqueArrival(withoutSuffix.unique)
 
         success
@@ -213,7 +213,7 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
           expectUniqueArrival(liveArrival.unique)
 
           offerAndWait(crunch.ciriumArrivalsInput, ArrivalsFeedSuccess(List(ciriumArrival)))
-          expectArrivals(Iterable(withPcpTime(liveArrival.toArrival(LiveBaseFeedSource))))
+          expectArrivals(Iterable(withPcpTime(liveArrival.toArrival(LiveFeedSource))))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(updatedArrival)))
           expectArrivals(Iterable(withPcpTime(updatedArrival.toArrival(LiveFeedSource))))

@@ -25,13 +25,13 @@ import scala.util.{Failure, Success, Try}
 trait FeedRequesterLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String
+  def createToken(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String
 
   def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse]
 }
 
 object ProdFeedRequester extends FeedRequesterLike {
-  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String =
+  override def createToken(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String =
     Try(Jwt.encode(header: String, claim: String, key: String, algorithm: JwtAlgorithm)).getOrElse("")
 
   override def send(request: HttpRequest)
@@ -65,7 +65,7 @@ case class MagFeed(key: String,
     new org.bouncycastle.jce.provider.BouncyCastleProvider()
   )
 
-  def newToken: String = feedRequester.sendTokenRequest(header = header, claim = claim, key = key, algorithm = JwtAlgorithm.RS256)
+  def newToken: String = feedRequester.createToken(header = header, claim = claim, key = key, algorithm = JwtAlgorithm.RS256)
 
   private def makeUri(start: SDateLike, end: SDateLike, from: Int, size: Int): String =
     s"https://$claimSub/v1/flight/$portCode/arrival?startDate=${start.toISOString}&endDate=${end.toISOString}&from=$from&size=$size"
