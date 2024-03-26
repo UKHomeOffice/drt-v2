@@ -87,12 +87,10 @@ object Layout {
               <.div(^.className := "topbar",
                 <.div(^.className := "main-logo"),
                 MuiGrid(container = true)(
-                  MuiGrid(item = true, xs = 12)(
-                    <.div(^.className := "alerts", AlertsComponent(),
-                    )),
-                  MuiGrid(item = true, xs = 12)(
+                  MuiGrid(item = true, xs = 12)(AlertsComponent()),
+                  MuiGrid(item = true, xs = 12, sx = SxProps(Map("display" -> "flex", "align-items" -> "center", "justifyContent" -> "right")))(
                     <.div(^.className := "contact",
-                      <.span("Contact: ", <.a(^.href := s"mailto:$email", email)),
+                      <.span("Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)),
                     )
                   )
                 )
