@@ -42,7 +42,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.ProdFeedService
-import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateForecastBaseArrivals}
+import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
 import uk.gov.homeoffice.drt.testsystem.TestActors.MockAggregatedArrivalsActor
 import uk.gov.homeoffice.drt.time._
 
@@ -157,7 +157,7 @@ class TestDrtActor extends Actor {
       val forecastBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
         tc.airportConfig.terminals,
         getFeedArrivalsLookup(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
-        updateForecastBaseArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
+        updateFeedArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
         partitionUpdatesBase(tc.airportConfig.terminals, tc.now, tc.forecastMaxDays)
       )), name = "forecast-base-arrivals-actor")
       if (tc.initialForecastBaseArrivals.nonEmpty)
@@ -166,14 +166,14 @@ class TestDrtActor extends Actor {
       val forecastFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
         tc.airportConfig.terminals,
         getFeedArrivalsLookup(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
-        updateForecastBaseArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
+        updateFeedArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
         partitionUpdates,
       )), name = "forecast-arrivals-actor")
 
       val liveFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
         tc.airportConfig.terminals,
         getFeedArrivalsLookup(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-        updateForecastBaseArrivals(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
+        updateFeedArrivals(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
         partitionUpdates,
       )), name = "live-arrivals-actor")
       if (tc.initialLiveArrivals.nonEmpty)
@@ -182,7 +182,7 @@ class TestDrtActor extends Actor {
       val liveBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
         tc.airportConfig.terminals,
         getFeedArrivalsLookup(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-        updateForecastBaseArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
+        updateFeedArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
         partitionUpdates,
       )), name = "live-base-arrivals-actor")
 

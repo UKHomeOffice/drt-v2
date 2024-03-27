@@ -47,7 +47,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.ModelPersistence
 import uk.gov.homeoffice.drt.prediction.persistence.Flight
-import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateForecastBaseArrivals}
+import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
 import uk.gov.homeoffice.drt.time._
 
 import javax.inject.Singleton
@@ -85,12 +85,12 @@ object ProdFeedService {
       props = (d, t, mp, n) => props(d.year, d.month, d.day, t, source, mp, n, 250)
     )
 
-  def updateForecastBaseArrivals(source: FeedSource,
-                                 props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,
-                                 nowMillis: () => Long,
-                                 requestAndTerminateActor: ActorRef,
-                                )
-                                (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
+  def updateFeedArrivals(source: FeedSource,
+                         props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,
+                         nowMillis: () => Long,
+                         requestAndTerminateActor: ActorRef,
+                        )
+                        (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
     FeedArrivalsRouterActor.updateFlights(
       requestAndTerminateActor,
       (d, t) => props(d.year, d.month, d.day, t, source, None, nowMillis, 250),
@@ -328,25 +328,25 @@ case class ProdFeedService(journalType: StreamingJournalLike,
   override val forecastBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
     airportConfig.terminals,
     getFeedArrivalsLookup(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
-    updateForecastBaseArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
+    updateFeedArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
     partitionUpdatesBase(airportConfig.terminals, now, forecastMaxDays),
   )), name = "forecast-base-arrivals-actor")
   override val forecastFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
     airportConfig.terminals,
     getFeedArrivalsLookup(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
-    updateForecastBaseArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
+    updateFeedArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
     partitionUpdates,
   )), name = "forecast-arrivals-actor")
   override val liveFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
     airportConfig.terminals,
     getFeedArrivalsLookup(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    updateForecastBaseArrivals(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
+    updateFeedArrivals(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
     partitionUpdates,
   )), name = "live-arrivals-actor")
   override val liveBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
     airportConfig.terminals,
     getFeedArrivalsLookup(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    updateForecastBaseArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
+    updateFeedArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
     partitionUpdates,
   )), name = "live-base-arrivals-actor")
 

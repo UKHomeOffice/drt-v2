@@ -6,7 +6,8 @@ import actors.daily._
 import actors.persistent._
 import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActorLike, ShiftsActorLike, StaffMovementsActorLike, StaffMovementsState}
-import actors.routing.FlightsRouterActor
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
+import actors.routing.{FeedArrivalsRouterActor, FlightsRouterActor}
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
 import akka.actor.{Actor, ActorRef, Props}
@@ -16,9 +17,11 @@ import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, Persiste
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.Logger
+import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, MergeArrivalsRequest, TerminalUpdateRequest}
-import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, WithTimeAccessor}
-import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FeedArrival, FlightsWithSplits, UniqueArrival, WithTimeAccessor}
+import uk.gov.homeoffice.drt.ports.{FeedSource, Terminals}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
@@ -287,7 +290,7 @@ object TestActors {
   class TestFlightsRouterActor(terminals: Iterable[Terminal],
                                byDayLookup: FlightsLookup,
                                updateMinutes: FlightsUpdate,
-                               val resetData: (Terminal, UtcDate) => Future[Any],
+                               resetData: (Terminal, UtcDate) => Future[Any],
                                paxFeedSourceOrder: List[FeedSource])
     extends FlightsRouterActor(terminals, byDayLookup, updateMinutes, paxFeedSourceOrder) {
     override def receive: Receive = resetReceive orElse super.receive
@@ -302,6 +305,41 @@ object TestActors {
 
     private def resetReceive: Receive = {
       case container: ArrivalsDiff =>
+        val replyTo = sender()
+        addToTerminalDays(container)
+        handleUpdatesAndAck(container, replyTo)
+
+      case ResetData =>
+        val replyTo = sender()
+        Future
+          .sequence(terminalDaysUpdated.map { case (t, d) =>
+            resetData(t, d)
+          })
+          .map { _ =>
+            terminalDaysUpdated = Set()
+            Ack
+          }
+          .pipeTo(replyTo)
+    }
+  }
+
+  class TestFeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
+                                    partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
+                                    resetData: (Terminal, UtcDate) => Future[Any],
+                                   )
+    extends FeedArrivalsRouterActor(allTerminals, _ => _ => _ => Future.successful(Seq.empty), (_, _) => Future.successful(false), partitionUpdates) {
+    override def receive: Receive = resetReceive orElse super.receive
+
+    private var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
+
+    private def addToTerminalDays(container: FeedArrivals): Unit = {
+      partitionUpdates(container).keys.foreach {
+        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date))
+      }
+    }
+
+    private def resetReceive: Receive = {
+      case container: FeedArrivals =>
         val replyTo = sender()
         addToTerminalDays(container)
         handleUpdatesAndAck(container, replyTo)
@@ -360,6 +398,23 @@ object TestActors {
     }
 
     override def receive: Receive = myReceive orElse super.receive
+  }
+
+  class TestTerminalDayFeedArrivalActor[A <: FeedArrival](year: Int,
+                                                          month: Int,
+                                                          day: Int,
+                                                          terminal: Terminal,
+                                                          feedSource: FeedSource,
+                                                          mpit: Option[Long],
+                                                          etm: PartialFunction[(Any, Map[UniqueArrival, A]), Option[GeneratedMessage]],
+                                                          mts: (GeneratedMessage, Map[UniqueArrival, A]) => Map[UniqueArrival, A],
+                                                          stm: Map[UniqueArrival, A] => GeneratedMessage,
+                                                          sfm: GeneratedMessage => Map[UniqueArrival, A],
+                                                          msi: Int = 250,
+                                                         ) extends TerminalDayFeedArrivalActor(year, month, day, terminal, feedSource, mpit, etm, mts, stm, sfm, msi) with Resettable {
+    override def resetState(): Unit = state = emptyState
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestTerminalDayQueuesActor(year: Int,
