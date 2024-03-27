@@ -50,11 +50,6 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
       .as[(String, Long)]
       .map(_.headOption)
 
-  def zipsQuery(ts: String): SqlStreamingAction[Vector[(String, MillisSinceEpoch)], (String, MillisSinceEpoch), Effect] =
-    sql"""SELECT pz.zip_file_name, EXTRACT(EPOCH FROM pz.processed_at) * 1000 FROM processed_zip pz WHERE pz.processed_at > TIMESTAMP '#$ts' ORDER BY pz.processed_at
-         |""".stripMargin
-      .as[(String, Long)]
-
   def jsonQuery(zipFileName: String): DBIOAction[Vector[String], NoStream, Effect] =
     sql"""SELECT pj.json_file_name FROM processed_json pj WHERE pj.zip_file_name=$zipFileName
          |""".stripMargin
