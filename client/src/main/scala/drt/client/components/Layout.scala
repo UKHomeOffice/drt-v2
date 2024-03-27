@@ -7,7 +7,7 @@ import drt.client.SPAMain._
 import drt.client.components.styles.DrtTheme.buttonTheme
 import drt.client.services.SPACircuit
 import drt.client.services.handlers._
-import drt.shared.ContactDetails
+import drt.shared.{Alert, ContactDetails}
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react._
@@ -20,6 +20,7 @@ import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+
 import scala.scalajs.js
 
 object Layout {
@@ -30,13 +31,13 @@ object Layout {
                               airportConfig: Pot[AirportConfig],
                               abFeatures: Pot[Seq[ABFeature]],
                               showFeedbackBanner: Pot[Boolean],
-                              contactDetails: Pot[ContactDetails]
-                             ) extends UseValueEq
+                              contactDetails: Pot[ContactDetails],
+                              alerts: Pot[List[Alert]]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
       val layoutModelItemsRCP = SPACircuit.connect { m =>
-        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails)
+        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails, m.alerts)
       }
       layoutModelItemsRCP { modelProxy =>
         console.log("rendering layout")
@@ -87,7 +88,9 @@ object Layout {
               <.div(^.className := "topbar",
                 <.div(^.className := "main-logo"),
                 MuiGrid(container = true)(
-                  MuiGrid(item = true, xs = 12)(AlertsComponent()),
+                  model.alerts.renderReady { alerts =>
+                    if (alerts.nonEmpty) MuiGrid(item = false, xs = 12)(AlertsComponent()) else EmptyVdom
+                  },
                   MuiGrid(item = true, xs = 12, sx = SxProps(Map("display" -> "flex", "align-items" -> "center", "justifyContent" -> "right")))(
                     <.div(^.className := "contact",
                       <.span("Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)),
