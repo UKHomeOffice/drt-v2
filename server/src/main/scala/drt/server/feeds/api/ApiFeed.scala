@@ -7,7 +7,7 @@ import manifests.UniqueArrivalKey
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -34,6 +34,7 @@ case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
         if (keys.isEmpty) manifestProcessor.reportNoNewData(marker)
         keys
       }
+      .throttle(1, 250.millis)
       .mapConcat(identity)
       .throttle(1, throttle)
       .mapAsync(1) {
