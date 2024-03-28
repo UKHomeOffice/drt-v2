@@ -5,7 +5,7 @@ import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors._
 import actors.daily.PassengersActor
 import actors.persistent._
-import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
@@ -47,7 +47,6 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -425,6 +424,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       manifestsLiveSource = voyageManifestsLiveSource,
       crunchActors = actors,
       feedActors = feedService.feedActors,
+      updateFeedStatus = feedService.updateFeedStatus,
       manifestsRouterActor = persistentStateActors.manifestsRouterActor,
       arrivalsForecastBaseFeed = feedService.baseArrivalsSource(feedService.maybeAclFeed),
       arrivalsForecastFeed = feedService.forecastArrivalsSource(airportConfig.portCode),
@@ -472,22 +472,16 @@ case class ApplicationService(journalType: StreamingJournalLike,
         feedService.liveFeedPollingActor ! Enable(crunchInputs.liveArrivalsResponse)
 
         if (!airportConfig.aclDisabled) {
-          feedService.forecastBaseArrivalsFeedStatusActor
-            .ask(GetFeedStatuses).mapTo[FeedSourceStatuses]
-            .map { aclStatus =>
-              for {
-                lastSuccess <- aclStatus.feedStatuses.lastSuccessAt
-              } yield {
-                val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
-                if (lastSuccess < twelveHoursAgo) {
-                  val minutesToNextCheck = (Math.random() * 90).toInt.minutes
-                  log.info(s"Last ACL check was more than 12 hours ago. Will check in ${minutesToNextCheck.toMinutes} minutes")
-                  system.scheduler.scheduleOnce(minutesToNextCheck) {
-                    feedService.fcstBaseFeedPollingActor ! AdhocCheck
-                  }
-                }
+          feedService.aclLastCheckedAt().map { lastSuccess =>
+            val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
+            if (lastSuccess < twelveHoursAgo) {
+              val minutesToNextCheck = (Math.random() * 90).toInt.minutes
+              log.info(s"Last ACL check was more than 12 hours ago. Will check in ${minutesToNextCheck.toMinutes} minutes")
+              system.scheduler.scheduleOnce(minutesToNextCheck) {
+                feedService.fcstBaseFeedPollingActor ! AdhocCheck
               }
             }
+          }
         }
         val lastProcessedLiveApiMarker: Option[MillisSinceEpoch] =
           if (refetchApiData) None
@@ -506,7 +500,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
 
-      case Failure(error) =>
+      case Failure(error)
+      =>
         system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")
         system.terminate().onComplete {
           case Success(_) =>

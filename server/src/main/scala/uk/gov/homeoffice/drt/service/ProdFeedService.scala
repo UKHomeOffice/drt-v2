@@ -3,7 +3,7 @@ package uk.gov.homeoffice.drt.service
 import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import actors._
 import actors.persistent.ManifestRouterActor
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.arrivals._
 import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
@@ -90,7 +90,7 @@ object ProdFeedService {
                          nowMillis: () => Long,
                          requestAndTerminateActor: ActorRef,
                         )
-                        (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
+                        (implicit system: ActorSystem, timeout: Timeout): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
     FeedArrivalsRouterActor.updateFlights(
       requestAndTerminateActor,
       (d, t) => props(d.year, d.month, d.day, t, source, None, nowMillis, 250),
@@ -139,6 +139,32 @@ trait FeedService {
   val liveFeedArrivalsActor: ActorRef
   val liveBaseFeedArrivalsActor: ActorRef
 
+  private val forecastBaseFeedStatusWriteActor: ActorRef =
+    system.actorOf(Props(new ArrivalFeedStatusActor(AclFeedSource, AclForecastArrivalsActor.persistenceId)))
+  private val forecastFeedStatusWriteActor: ActorRef =
+    system.actorOf(Props(new ArrivalFeedStatusActor(ForecastFeedSource, PortForecastArrivalsActor.persistenceId)))
+  private val liveFeedStatusWriteActor: ActorRef =
+    system.actorOf(Props(new ArrivalFeedStatusActor(LiveFeedSource, PortLiveArrivalsActor.persistenceId)))
+  private val liveBaseFeedStatusWriteActor: ActorRef =
+    system.actorOf(Props(new ArrivalFeedStatusActor(LiveBaseFeedSource, CiriumLiveArrivalsActor.persistenceId)))
+
+  private val feedStatusWriteActors: Map[FeedSource, ActorRef] = Map(
+    LiveFeedSource -> liveFeedStatusWriteActor,
+    LiveBaseFeedSource -> liveBaseFeedStatusWriteActor,
+    ForecastFeedSource -> forecastFeedStatusWriteActor,
+    AclFeedSource -> forecastBaseFeedStatusWriteActor,
+  )
+
+  val updateFeedStatus: (FeedSource, ArrivalsFeedResponse) => Unit =
+    (feedSource: FeedSource, feedResponse: ArrivalsFeedResponse) => feedStatusWriteActors(feedSource) ! feedResponse
+
+  val aclLastCheckedAt: () => Future[MillisSinceEpoch] =
+    () => feedStatusWriteActors(AclFeedSource)
+      .ask(GetFeedStatuses).mapTo[FeedSourceStatuses]
+      .map {
+        _.feedStatuses.lastSuccessAt.getOrElse(0L)
+      }
+
   val maybeAclFeed: Option[AclFeed]
 
   val fcstBaseFeedPollingActor: typed.ActorRef[FeedPoller.Command] = system.spawn(FeedPoller(), "arrival-feed-forecast-base")
@@ -167,18 +193,18 @@ trait FeedService {
 
   val flightModelPersistence: ModelPersistence = Flight()
 
-  val liveArrivalsFeedStatusActor: ActorRef =
+  private val liveArrivalsFeedStatusActor: ActorRef =
     system.actorOf(PortLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-arrivals-feed-status")
-  val liveBaseArrivalsFeedStatusActor: ActorRef =
+  private val liveBaseArrivalsFeedStatusActor: ActorRef =
     system.actorOf(CiriumLiveArrivalsActor.streamingUpdatesProps(journalType), name = "live-base-arrivals-feed-status")
-  val forecastArrivalsFeedStatusActor: ActorRef =
+  private val forecastArrivalsFeedStatusActor: ActorRef =
     system.actorOf(PortForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-arrivals-feed-status")
-  val forecastBaseArrivalsFeedStatusActor: ActorRef =
+  private val forecastBaseArrivalsFeedStatusActor: ActorRef =
     system.actorOf(AclForecastArrivalsActor.streamingUpdatesProps(journalType), name = "forecast-base-arrivals-feed-status")
-  val manifestsFeedStatusActor: ActorRef =
+  private val manifestsFeedStatusActor: ActorRef =
     system.actorOf(ManifestRouterActor.streamingUpdatesProps(journalType), name = "manifests-feed-status")
 
-  private val feedStatusActors: Map[FeedSource, ActorRef] = Map(
+  private val feedStatusReadActors: Map[FeedSource, ActorRef] = Map(
     LiveFeedSource -> liveArrivalsFeedStatusActor,
     LiveBaseFeedSource -> liveBaseArrivalsFeedStatusActor,
     ForecastFeedSource -> forecastArrivalsFeedStatusActor,
@@ -256,7 +282,7 @@ trait FeedService {
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
-  lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedStatusActors.filter {
+  private lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedStatusReadActors.filter {
     case (feedSource: FeedSource, _) => isValidFeedSource(feedSource)
   }
 

@@ -4,6 +4,7 @@ import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalFeedStatusActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
 import actors.routing.FeedArrivalsRouterActor
@@ -185,6 +186,22 @@ class TestDrtActor extends Actor {
         updateFeedArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
         partitionUpdates,
       )), name = "live-base-arrivals-actor")
+
+      val forecastBaseFeedStatusWriteActor: ActorRef =
+        system.actorOf(Props(new ArrivalFeedStatusActor(AclFeedSource, AclForecastArrivalsActor.persistenceId)))
+      val forecastFeedStatusWriteActor: ActorRef =
+        system.actorOf(Props(new ArrivalFeedStatusActor(ForecastFeedSource, PortForecastArrivalsActor.persistenceId)))
+      val liveFeedStatusWriteActor: ActorRef =
+        system.actorOf(Props(new ArrivalFeedStatusActor(LiveFeedSource, PortLiveArrivalsActor.persistenceId)))
+      val liveBaseFeedStatusWriteActor: ActorRef =
+        system.actorOf(Props(new ArrivalFeedStatusActor(LiveBaseFeedSource, CiriumLiveArrivalsActor.persistenceId)))
+
+      val feedStatusWriteActors: Map[FeedSource, ActorRef] = Map(
+        LiveFeedSource -> liveFeedStatusWriteActor,
+        LiveBaseFeedSource -> liveBaseFeedStatusWriteActor,
+        ForecastFeedSource -> forecastFeedStatusWriteActor,
+        AclFeedSource -> forecastBaseFeedStatusWriteActor,
+      )
 
       val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
         journalType, tc.airportConfig.minutesToCrunch, tc.now), name = "shifts-read-actor")
@@ -410,6 +427,7 @@ class TestDrtActor extends Actor {
         setPcpTimes = tc.setPcpTimes,
         passengerAdjustments = tc.passengerAdjustments,
         system = system,
+        feedStatusActors = feedStatusWriteActors,
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(

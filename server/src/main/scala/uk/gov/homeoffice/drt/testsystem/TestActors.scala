@@ -4,12 +4,11 @@ import actors._
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import actors.daily._
 import actors.persistent._
-import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActorLike, ShiftsActorLike, StaffMovementsActorLike, StaffMovementsState}
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
-import actors.routing.{FeedArrivalsRouterActor, FlightsRouterActor}
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
+import actors.routing.{FeedArrivalsRouterActor, FlightsRouterActor}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply.Ack
 import akka.pattern.{ask, pipe}
@@ -20,10 +19,10 @@ import org.slf4j.Logger
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, MergeArrivalsRequest, TerminalUpdateRequest}
-import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FeedArrival, FlightsWithSplits, UniqueArrival, WithTimeAccessor}
-import uk.gov.homeoffice.drt.ports.{FeedSource, Terminals}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{FeedSource, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.Future
@@ -68,27 +67,6 @@ object TestActors {
         r ! Ack
       }
     }
-  }
-
-  class TestAclForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends AclForecastArrivalsActor(now, expireAfterMillis) with Resettable {
-    override def resetState(): Unit = state = state.clear()
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
-  class TestPortForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends PortForecastArrivalsActor(now, expireAfterMillis) with Resettable {
-    override def resetState(): Unit = state = state.clear()
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
-  class TestPortLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends PortLiveArrivalsActor(now, expireAfterMillis) with Resettable {
-    override def resetState(): Unit = state = state.clear()
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestMergeArrivalsQueueActor(now: () => SDateLike, request: Long => MergeArrivalsRequest)

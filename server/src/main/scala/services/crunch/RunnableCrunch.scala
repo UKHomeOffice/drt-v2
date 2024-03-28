@@ -11,6 +11,8 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.FeedArrival
+import uk.gov.homeoffice.drt.feeds.FeedStatus
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -29,12 +31,10 @@ object RunnableCrunch {
                          forecastArrivalsActor: ActorRef,
                          liveBaseArrivalsActor: ActorRef,
                          liveArrivalsActor: ActorRef,
+                         updateFeedStatus: (FeedSource, ArrivalsFeedResponse) => Unit,
                          applyPaxDeltas: List[FeedArrival] => Future[List[FeedArrival]],
-
                          manifestsActor: ActorRef,
-
                          portStateActor: ActorRef,
-
                          forecastMaxMillis: () => MillisSinceEpoch
                         )
                         (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, MS, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
@@ -81,31 +81,40 @@ object RunnableCrunch {
           val manifestsSink = simpleActorSink(manifestsActor)
 
           // @formatter:off
-          forecastBaseArrivalsSourceSync.out.map {
-            case ArrivalsFeedSuccess(as, _) =>
-              val maxScheduledMillis = forecastMaxMillis()
-              FeedArrivals(as.filter(_.scheduled < maxScheduledMillis))
-            case _ =>
-              FeedArrivals(List())
-          }.mapAsync(1) {
-            case FeedArrivals(as) =>
-              applyPaxDeltas(as.toList).map(FeedArrivals(_))
-          } ~> baseArrivalsSink
+          forecastBaseArrivalsSourceSync.out
+            .wireTap(updateFeedStatus(AclFeedSource, _))
+            .map {
+              case ArrivalsFeedSuccess(as, _) =>
+                val maxScheduledMillis = forecastMaxMillis()
+                FeedArrivals(as.filter(_.scheduled < maxScheduledMillis))
+              case _ =>
+                FeedArrivals(List())
+            }
+            .mapAsync(1) {
+              case FeedArrivals(as) =>
+                applyPaxDeltas(as.toList).map(FeedArrivals(_))
+            } ~> baseArrivalsSink
 
-          forecastArrivalsSourceSync.out.map {
-            case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
-            case _ => FeedArrivals(List())
-          } ~> fcstArrivalsSink
+          forecastArrivalsSourceSync.out
+            .wireTap(updateFeedStatus(ForecastFeedSource, _))
+            .map {
+              case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
+              case _ => FeedArrivals(List())
+            } ~> fcstArrivalsSink
 
-          liveBaseArrivalsSourceSync.out.map {
-            case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
-            case _ => FeedArrivals(List())
-          } ~> liveBaseArrivalsSink
+          liveBaseArrivalsSourceSync.out
+            .wireTap(updateFeedStatus(LiveBaseFeedSource, _))
+            .map {
+              case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
+              case _ => FeedArrivals(List())
+            } ~> liveBaseArrivalsSink
 
-          liveArrivalsSourceSync.out.map {
-            case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
-            case _ => FeedArrivals(List())
-          } ~> arrivalsKillSwitchSync ~> liveArrivalsSink
+          liveArrivalsSourceSync.out
+            .wireTap(updateFeedStatus(LiveFeedSource, _))
+            .map {
+              case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
+              case _ => FeedArrivals(List())
+            } ~> arrivalsKillSwitchSync ~> liveArrivalsSink
 
           manifestsLiveSourceSync.out.collect {
             case ManifestsFeedSuccess(manifests, createdAt) =>

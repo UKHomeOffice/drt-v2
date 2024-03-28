@@ -5,7 +5,7 @@ import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.server.feeds.Feed.EnabledFeedWithFrequency
-import drt.server.feeds.{Feed, ManifestsFeedResponse}
+import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
 import drt.shared.CrunchApi._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
@@ -39,6 +39,7 @@ case class CrunchProps[FT](airportConfig: AirportConfig,
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            crunchActors: PersistentStateActors,
                            feedActors: Map[FeedSource, ActorRef],
+                           updateFeedStatus: (FeedSource, ArrivalsFeedResponse) => Unit,
                            manifestsRouterActor: ActorRef,
                            arrivalsForecastBaseFeed: Feed[FT],
                            arrivalsForecastFeed: Feed[FT],
@@ -71,7 +72,8 @@ object CrunchSystem {
       mergeArrivalsKillSwitch,
       deskRecsKillSwitch,
       deploymentsKillSwitch,
-      staffingUpdateKillSwitch) = props.startDeskRecs()
+      staffingUpdateKillSwitch,
+      ) = props.startDeskRecs()
 
     val runnableCrunch = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseFeed.source,
@@ -84,6 +86,7 @@ object CrunchSystem {
       forecastArrivalsActor = props.feedActors(ForecastFeedSource),
       liveBaseArrivalsActor = props.feedActors(LiveBaseFeedSource),
       liveArrivalsActor = props.feedActors(LiveFeedSource),
+      updateFeedStatus = props.updateFeedStatus,
       applyPaxDeltas = props.passengerAdjustments,
       manifestsActor = props.manifestsRouterActor,
       portStateActor = props.portStateActor,
