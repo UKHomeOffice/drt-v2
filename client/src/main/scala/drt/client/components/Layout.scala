@@ -88,7 +88,7 @@ object Layout {
                 <.div(^.className := "main-logo"),
                 AlertsComponent(),
                 <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "width" -> "320px", "justifyContent" -> "flex-end"),
-                  <.span(^.style := js.Dictionary("padding-right" -> "20px"),
+                  <.span(^.id := "contact", ^.style := js.Dictionary("padding-right" -> "20px"),
                     "Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)))
               ),
               <.div(
