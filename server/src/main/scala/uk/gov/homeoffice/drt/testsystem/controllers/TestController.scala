@@ -46,9 +46,13 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
   private def saveArrival(arrival: LiveArrival): Future[Any] = {
     log.info(s"Incoming test arrival")
     ctrl.feedService.liveFeedArrivalsActor ! ArrivalsFeedSuccess(List(arrival))
-    ctrl.actorService.portStateActor.ask(ArrivalsDiff(List(arrival.toArrival(LiveFeedSource)), List())).map { _ =>
-      ctrl.feedService.liveFeedPollingActor ! AdhocCheck
-    }
+    ctrl.applicationService
+      .setPcpTimes(Seq(arrival.toArrival(LiveFeedSource)))
+      .flatMap { arrivals =>
+        ctrl.actorService.portStateActor.ask(ArrivalsDiff(arrivals, List())).map { _ =>
+          ctrl.feedService.liveFeedPollingActor ! AdhocCheck
+        }
+      }
   }
 
   private def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {

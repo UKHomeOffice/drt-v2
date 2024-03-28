@@ -34,7 +34,7 @@ object TestActors {
   case object ResetData
 
   trait Resettable extends PersistentActor {
-    val log: Logger
+    protected val log: Logger
     var replyTo: Option[ActorRef] = None
     private var deletedMessages: Boolean = false
     private var deletedSnapshots: Boolean = false
@@ -324,10 +324,12 @@ object TestActors {
   }
 
   class TestFeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
+                                    arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
+                                    updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
                                     partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                                     resetData: (Terminal, UtcDate) => Future[Any],
                                    )
-    extends FeedArrivalsRouterActor(allTerminals, _ => _ => _ => Future.successful(Seq.empty), (_, _) => Future.successful(false), partitionUpdates) {
+    extends FeedArrivalsRouterActor(allTerminals, arrivalsByDayLookup, updateArrivals, partitionUpdates) {
     override def receive: Receive = resetReceive orElse super.receive
 
     private var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
