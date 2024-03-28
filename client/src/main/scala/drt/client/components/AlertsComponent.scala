@@ -23,7 +23,7 @@ object AlertsComponent {
 
       modelRCP { modelMP =>
         <.div(^.id := "alerts",
-          ^.style := js.Dictionary("display" -> "flex", "flexGrow" -> "1"),
+          ^.style := js.Dictionary("display" -> "flex", "flexGrow" -> "1", "overflow" -> "hidden"),
           renderAlerts(modelMP().getOrElse(List())))
       }
     }
