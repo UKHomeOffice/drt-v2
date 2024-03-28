@@ -31,13 +31,12 @@ object Layout {
                               airportConfig: Pot[AirportConfig],
                               abFeatures: Pot[Seq[ABFeature]],
                               showFeedbackBanner: Pot[Boolean],
-                              contactDetails: Pot[ContactDetails],
-                              alerts: Pot[List[Alert]]) extends UseValueEq
+                              contactDetails: Pot[ContactDetails]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
       val layoutModelItemsRCP = SPACircuit.connect { m =>
-        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails, m.alerts)
+        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails)
       }
       layoutModelItemsRCP { modelProxy =>
         console.log("rendering layout")
@@ -87,14 +86,11 @@ object Layout {
               } else EmptyVdom,
               <.div(^.className := "topbar",
                 <.div(^.className := "main-logo"),
-                MuiGrid(container = true)(
-                  model.alerts.renderReady { alerts =>
-                    if (alerts.nonEmpty) MuiGrid(item = false, xs = 12)(AlertsComponent()) else EmptyVdom
-                  },
-                  MuiGrid(item = true, xs = 12, sx = SxProps(Map("display" -> "flex", "align-items" -> "center", "justifyContent" -> "right")))(
-                    <.div(^.className := "contact",
-                      <.span("Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)),
-                    )
+                <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "width" -> "100%", "justifyContent" -> "center"),
+                  AlertsComponent(),
+                  <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "justifyContent" -> "flex-end"),
+                    <.span(^.style := js.Dictionary("float" -> "right", "padding-right" -> "20px"),
+                      "Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)),
                   )
                 )
               ),
