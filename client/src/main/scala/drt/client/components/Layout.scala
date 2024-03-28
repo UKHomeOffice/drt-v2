@@ -86,13 +86,10 @@ object Layout {
               } else EmptyVdom,
               <.div(^.className := "topbar",
                 <.div(^.className := "main-logo"),
-                <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "width" -> "100%", "justifyContent" -> "center"),
-                  AlertsComponent(),
-                  <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "justifyContent" -> "flex-end"),
-                    <.span(^.style := js.Dictionary("float" -> "right", "padding-right" -> "20px"),
-                      "Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)),
-                  )
-                )
+                AlertsComponent(),
+                <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "width" -> "320px", "justifyContent" -> "flex-end"),
+                  <.span(^.style := js.Dictionary("padding-right" -> "20px"),
+                    "Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)))
               ),
               <.div(
                 <.div(
