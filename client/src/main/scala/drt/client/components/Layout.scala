@@ -7,7 +7,7 @@ import drt.client.SPAMain._
 import drt.client.components.styles.DrtTheme.buttonTheme
 import drt.client.services.SPACircuit
 import drt.client.services.handlers._
-import drt.shared.{Alert, ContactDetails}
+import drt.shared.ContactDetails
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react._
@@ -87,9 +87,8 @@ object Layout {
               <.div(^.className := "topbar",
                 <.div(^.className := "main-logo"),
                 AlertsComponent(),
-                <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "width" -> "320px", "justifyContent" -> "flex-end"),
-                  <.span(^.className := "contact", ^.style := js.Dictionary("padding-right" -> "20px"),
-                    "Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)))
+                <.div(^.className := "contact", ^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "padding-right" -> "20px"),
+                  "Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email))
               ),
               <.div(
                 <.div(
