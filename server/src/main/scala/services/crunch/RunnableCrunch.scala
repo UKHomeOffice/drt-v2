@@ -4,15 +4,14 @@ import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import akka.actor.ActorRef
 import akka.pattern.StatusReply.Ack
 import akka.stream._
-import akka.stream.scaladsl.{GraphDSL, RunnableGraph, Sink, Source}
+import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared.CrunchApi._
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.FeedArrival
-import uk.gov.homeoffice.drt.feeds.FeedStatus
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -80,9 +79,20 @@ object RunnableCrunch {
           val liveArrivalsSink = simpleActorSink(liveArrivalsActor)
           val manifestsSink = simpleActorSink(manifestsActor)
 
+          val forecastBaseBroadcast = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val forecastBroadcast = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val liveBaseBroadcast = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val liveBroadcast = builder.add(Broadcast[ArrivalsFeedResponse](2))
+
+          val forecastBaseStatusSink = builder.add(Sink.foreach(updateFeedStatus(AclFeedSource, _)))
+          val forecastStatusSink = builder.add(Sink.foreach(updateFeedStatus(ForecastFeedSource, _)))
+          val liveBaseStatusSink = builder.add(Sink.foreach(updateFeedStatus(LiveBaseFeedSource, _)))
+          val liveStatusSink = builder.add(Sink.foreach(updateFeedStatus(LiveFeedSource, _)))
+
           // @formatter:off
-          forecastBaseArrivalsSourceSync.out
-            .wireTap(updateFeedStatus(AclFeedSource, _))
+          forecastBaseArrivalsSourceSync ~> forecastBaseBroadcast
+          forecastBaseBroadcast ~> forecastBaseStatusSink
+          forecastBaseBroadcast
             .map {
               case ArrivalsFeedSuccess(as, _) =>
                 val maxScheduledMillis = forecastMaxMillis()
@@ -95,22 +105,25 @@ object RunnableCrunch {
                 applyPaxDeltas(as.toList).map(FeedArrivals(_))
             } ~> baseArrivalsSink
 
-          forecastArrivalsSourceSync.out
-            .wireTap(updateFeedStatus(ForecastFeedSource, _))
+          forecastArrivalsSourceSync ~> forecastBroadcast
+          forecastBroadcast ~> forecastStatusSink
+          forecastBroadcast
             .map {
               case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
               case _ => FeedArrivals(List())
             } ~> fcstArrivalsSink
 
-          liveBaseArrivalsSourceSync.out
-            .wireTap(updateFeedStatus(LiveBaseFeedSource, _))
+          liveBaseArrivalsSourceSync ~> liveBaseBroadcast
+          liveBaseBroadcast ~> liveBaseStatusSink
+          liveBaseBroadcast
             .map {
               case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
               case _ => FeedArrivals(List())
             } ~> liveBaseArrivalsSink
 
-          liveArrivalsSourceSync.out
-            .wireTap(updateFeedStatus(LiveFeedSource, _))
+          liveArrivalsSourceSync ~> liveBroadcast
+          liveBroadcast ~> liveStatusSink
+          liveBroadcast
             .map {
               case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
               case _ => FeedArrivals(List())

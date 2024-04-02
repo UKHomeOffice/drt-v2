@@ -1,6 +1,7 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
 import actors.persistent.staffing.ReplaceAllShifts
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
@@ -45,7 +46,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
 
   private def saveArrival(arrival: LiveArrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    ctrl.feedService.liveFeedArrivalsActor ! ArrivalsFeedSuccess(List(arrival))
+    ctrl.feedService.liveFeedArrivalsActor ! FeedArrivals(List(arrival))
     ctrl.applicationService
       .setPcpTimes(Seq(arrival.toArrival(LiveFeedSource)))
       .flatMap { arrivals =>

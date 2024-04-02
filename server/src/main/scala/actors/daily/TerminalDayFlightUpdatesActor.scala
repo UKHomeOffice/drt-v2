@@ -103,8 +103,6 @@ class TerminalDayFlightUpdatesActor(year: Int,
     updatesAndRemovals = updatesAndRemovals
       .add(diff, diffMessage.createdAt.getOrElse(now().millisSinceEpoch))
       .purgeOldUpdates(expireBeforeMillis)
-
-    print(s"$persistenceId contains ${updatesAndRemovals.arrivalUpdates.map(_._2.toUpdate.size).sum} updates")
   }
 
   private def applySplitsUpdate(diffMessage: SplitsForArrivalsMessage): Unit = {

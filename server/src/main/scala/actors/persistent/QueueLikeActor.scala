@@ -127,7 +127,6 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
               }.toList)
           }
           maybeMessage.foreach { msg =>
-            println(s"Persisting ${processingRequests.size} days to queue. Queue now contains ${state.size} days")
             persistAndMaybeSnapshot(msg)
             updateState(processingRequests)
           }

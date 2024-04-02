@@ -282,7 +282,7 @@ trait FeedService {
 
   def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
-  private lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedStatusReadActors.filter {
+  lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedStatusReadActors.filter {
     case (feedSource: FeedSource, _) => isValidFeedSource(feedSource)
   }
 
