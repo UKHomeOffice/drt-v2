@@ -427,7 +427,7 @@ class TestDrtActor extends Actor {
         setPcpTimes = tc.setPcpTimes,
         passengerAdjustments = tc.passengerAdjustments,
         system = system,
-        feedStatusActors = feedStatusWriteActors,
+        updateFeedStatus = (feedSource: FeedSource, response: ArrivalsFeedResponse) => feedStatusWriteActors(feedSource) ! response,
       ))
 
       replyTo ! CrunchGraphInputsAndProbes(
