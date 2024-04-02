@@ -8,6 +8,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import org.scalajs.dom
 import org.scalajs.dom.html.Div
+import scala.scalajs.js
 
 
 object AlertsComponent {
@@ -21,7 +22,9 @@ object AlertsComponent {
       val modelRCP = SPACircuit.connect(_.alerts)
 
       modelRCP { modelMP =>
-        <.div(^.id := "alerts", renderAlerts(modelMP().getOrElse(List())))
+        <.div(^.id := "alerts",
+          ^.style := js.Dictionary("display" -> "flex", "flexGrow" -> "1", "overflow" -> "hidden"),
+          renderAlerts(modelMP().getOrElse(List())))
       }
     }
     .build
