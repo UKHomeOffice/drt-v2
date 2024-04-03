@@ -44,8 +44,6 @@ RUN echo keytool $KEYTOOL_PASSWORD
 RUN keytool -noprompt -storepass changeit -import -alias rds-root-deprecated -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-combined-ca-bundle.der
 RUN keytool -noprompt -storepass changeit -import -alias rds-root -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-ca-2019-root.der
 
-EXPOSE 9010
-
 USER 1000:0
 ENTRYPOINT ["/opt/docker/bin/drt", "-Duser.timezone=UTC"]
 CMD []
