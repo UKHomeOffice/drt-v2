@@ -155,37 +155,27 @@ class TestDrtActor extends Actor {
       val nowMillis = () => tc.now().millisSinceEpoch
       val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
-      val forecastBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
-        tc.airportConfig.terminals,
-        getFeedArrivalsLookup(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
-        updateFeedArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
-        partitionUpdatesBase(tc.airportConfig.terminals, tc.now, tc.forecastMaxDays)
-      )), name = "forecast-base-arrivals-actor")
+      def feedArrivalsRouter(source: FeedSource,
+                                     partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
+                                     name: String): ActorRef =
+        system.actorOf(Props(new FeedArrivalsRouterActor(
+          tc.airportConfig.terminals,
+          getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+          updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+          partitionUpdates,
+        )), name = name)
+
+      val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(AclFeedSource,
+        partitionUpdatesBase(tc.airportConfig.terminals, tc.now, tc.forecastMaxDays),
+        "forecast-base-arrivals-actor")
+      val forecastFeedArrivalsActor: ActorRef = feedArrivalsRouter(ForecastFeedSource, partitionUpdates, "forecast-arrivals-actor")
+      val liveBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveBaseFeedSource, partitionUpdates, "live-base-arrivals-actor")
+      val liveFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveFeedSource, partitionUpdates, "live-arrivals-actor")
+
       if (tc.initialForecastBaseArrivals.nonEmpty)
         forecastBaseFeedArrivalsActor ! FeedArrivals(tc.initialForecastBaseArrivals)
-
-      val forecastFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
-        tc.airportConfig.terminals,
-        getFeedArrivalsLookup(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
-        updateFeedArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
-        partitionUpdates,
-      )), name = "forecast-arrivals-actor")
-
-      val liveFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
-        tc.airportConfig.terminals,
-        getFeedArrivalsLookup(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-        updateFeedArrivals(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-        partitionUpdates,
-      )), name = "live-arrivals-actor")
       if (tc.initialLiveArrivals.nonEmpty)
         liveFeedArrivalsActor ! FeedArrivals(tc.initialLiveArrivals)
-
-      val liveBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
-        tc.airportConfig.terminals,
-        getFeedArrivalsLookup(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-        updateFeedArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-        partitionUpdates,
-      )), name = "live-base-arrivals-actor")
 
       val forecastBaseFeedStatusWriteActor: ActorRef =
         system.actorOf(Props(new ArrivalFeedStatusActor(AclFeedSource, AclForecastArrivalsActor.persistenceId)))

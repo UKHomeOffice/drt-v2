@@ -351,30 +351,22 @@ case class ProdFeedService(journalType: StreamingJournalLike,
                           ) extends FeedService {
   private val nowMillis = () => now().millisSinceEpoch
 
-  override val forecastBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
-    airportConfig.terminals,
-    getFeedArrivalsLookup(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
-    updateFeedArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
+  private def feedArrivalsRouter(source: FeedSource,
+                                 partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
+                                 name: String): ActorRef =
+    system.actorOf(Props(new FeedArrivalsRouterActor(
+      airportConfig.terminals,
+      getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+      updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+      partitionUpdates,
+    )), name = name)
+
+  override val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(AclFeedSource,
     partitionUpdatesBase(airportConfig.terminals, now, forecastMaxDays),
-  )), name = "forecast-base-arrivals-actor")
-  override val forecastFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
-    airportConfig.terminals,
-    getFeedArrivalsLookup(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
-    updateFeedArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
-    partitionUpdates,
-  )), name = "forecast-arrivals-actor")
-  override val liveFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
-    airportConfig.terminals,
-    getFeedArrivalsLookup(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    updateFeedArrivals(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    partitionUpdates,
-  )), name = "live-arrivals-actor")
-  override val liveBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new FeedArrivalsRouterActor(
-    airportConfig.terminals,
-    getFeedArrivalsLookup(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    updateFeedArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    partitionUpdates,
-  )), name = "live-base-arrivals-actor")
+    "forecast-base-arrivals-actor")
+  override val forecastFeedArrivalsActor: ActorRef = feedArrivalsRouter(ForecastFeedSource, partitionUpdates, "forecast-arrivals-actor")
+  override val liveBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveBaseFeedSource, partitionUpdates, "live-base-arrivals-actor")
+  override val liveFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveFeedSource, partitionUpdates, "live-arrivals-actor")
 
   override val maybeAclFeed: Option[AclFeed] =
     if (params.aclDisabled) None

@@ -2,6 +2,7 @@ package uk.gov.homeoffice.drt.testsystem
 
 import actors.DrtStaticParameters.expireAfterMillis
 import actors.daily.RequestAndTerminate
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.{DrtParameters, FlightLookupsLike, ManifestLookupsLike, StreamingJournalLike}
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.ask
@@ -44,34 +45,23 @@ case class TestFeedService(journalType: StreamingJournalLike,
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
-  override val forecastBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new TestFeedArrivalsRouterActor(
-    airportConfig.terminals,
-    getFeedArrivalsLookup(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
-    updateFeedArrivals(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true), nowMillis, requestAndTerminateActor),
+  private def feedArrivalsRouter(source: FeedSource,
+                                 partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
+                                 name: String): ActorRef =
+    system.actorOf(Props(new TestFeedArrivalsRouterActor(
+      airportConfig.terminals,
+      getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+      updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+      partitionUpdates,
+      resetFlightsData(AclFeedSource, TerminalDayFeedArrivalActor.props)
+    )), name = name)
+
+  override val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(AclFeedSource,
     partitionUpdatesBase(airportConfig.terminals, now, forecastMaxDays),
-    resetFlightsData(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = true))
-  )), name = "forecast-base-arrivals-actor")
-  override val forecastFeedArrivalsActor: ActorRef = system.actorOf(Props(new TestFeedArrivalsRouterActor(
-    airportConfig.terminals,
-    getFeedArrivalsLookup(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
-    updateFeedArrivals(ForecastFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false), nowMillis, requestAndTerminateActor),
-    partitionUpdates,
-    resetFlightsData(AclFeedSource, TerminalDayFeedArrivalActor.forecast(processRemovals = false))
-  )), name = "forecast-arrivals-actor")
-  override val liveFeedArrivalsActor: ActorRef = system.actorOf(Props(new TestFeedArrivalsRouterActor(
-    airportConfig.terminals,
-    getFeedArrivalsLookup(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    updateFeedArrivals(LiveFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    partitionUpdates,
-    resetFlightsData(AclFeedSource, TerminalDayFeedArrivalActor.live)
-  )), name = "live-arrivals-actor")
-  override val liveBaseFeedArrivalsActor: ActorRef = system.actorOf(Props(new TestFeedArrivalsRouterActor(
-    airportConfig.terminals,
-    getFeedArrivalsLookup(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    updateFeedArrivals(LiveBaseFeedSource, TerminalDayFeedArrivalActor.live, nowMillis, requestAndTerminateActor),
-    partitionUpdates,
-    resetFlightsData(AclFeedSource, TerminalDayFeedArrivalActor.live)
-  )), name = "live-base-arrivals-actor")
+    "forecast-base-arrivals-actor")
+  override val forecastFeedArrivalsActor: ActorRef = feedArrivalsRouter(ForecastFeedSource, partitionUpdates, "forecast-arrivals-actor")
+  override val liveBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveBaseFeedSource, partitionUpdates, "live-base-arrivals-actor")
+  override val liveFeedArrivalsActor: ActorRef = feedArrivalsRouter(LiveFeedSource, partitionUpdates, "live-arrivals-actor")
 
   override val maybeAclFeed: Option[AclFeed] = None
 
