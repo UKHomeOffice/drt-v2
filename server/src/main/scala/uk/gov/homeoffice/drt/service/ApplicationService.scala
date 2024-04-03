@@ -441,21 +441,15 @@ case class ApplicationService(journalType: StreamingJournalLike,
   def run(): Unit = {
     val actors = persistentStateActors
 
-    val futurePortStates: Future[(
-      SortedSet[ProcessingRequest],
-        SortedSet[ProcessingRequest],
-        SortedSet[ProcessingRequest],
-        SortedSet[ProcessingRequest],
-        SortedSet[ProcessingRequest],
-      )] = {
+    val futurePortStates =
       for {
+        _ <- feedService.populateFeedArrivals()
         mergeArrivalsQueue <- actors.mergeArrivalsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         crunchQueue <- actors.crunchQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deskRecsQueue <- actors.deskRecsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deploymentQueue <- actors.deploymentQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         staffingUpdateQueue <- actors.staffingQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
       } yield (mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
-    }
 
     futurePortStates.onComplete {
       case Success((mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
@@ -500,8 +494,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
 
-      case Failure(error)
-      =>
+      case Failure(error) =>
         system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")
         system.terminate().onComplete {
           case Success(_) =>
