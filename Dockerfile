@@ -28,12 +28,9 @@ RUN apt-get install -y openssh-client ca-certificates
 RUN rm -rf /var/cache/apt/*
 
 RUN mkdir -p /home/drt/.ssh
-#RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt/.ssh/known_hosts
-RUN echo "gateway.heathrow.com ssh-rsa AAAAB3NzaC1yc2EAAAABEQAAAQEAqwEoEEu/HL1/sNqIDacVO+xUOgB4NrblPGknRwfb6nrPSlX9V9ftv+atNiik+3HVExqt3dUa1wriGNTEbQ3xrkrmjTXxalC79f4vFEvNVkd1LvHJE9b6WJ6qKT0AWT4kHfqdpaHqLYG26XSovp+fU/JXaZKw190Ftb97IUqdwZRyTGfI3hpSJw4HE/d1UQ/6OUUCkDS7YNJZGgI9LgdP+GXxDEs+q/09tE5uuBGeGCi6h/72g9OBpxHjGVNu7KSSYuGP1dav7w10nFvDPBe4W4EQnuWgEg+5OVJq06bd40BwCDJJeR3wr2f+qWlWfomFDdt/sZYGciHcZsDvJgAScQ==" >> /home/drt/.ssh/known_hosts
-RUN echo "ftp.acl-uk.org ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBOWX4J3RCMTVoyEsWzIu3rTkcq8evd9pMwLbF+fQHfzQPfma7Wd+cnrFCFWc+GHfZBXCcO25LdONwMI9O/54Mt0=" >> /home/drt/.ssh/known_hosts
-#RUN ssh-keyscan -T 60 gateway.heathrow.com >> /home/drt/.ssh/known_hosts
-RUN echo "gateway.heathrow.com ssh-rsa AAAAB3NzaC1yc2EAAAABEQAAAQEAqwEoEEu/HL1/sNqIDacVO+xUOgB4NrblPGknRwfb6nrPSlX9V9ftv+atNiik+3HVExqt3dUa1wriGNTEbQ3xrkrmjTXxalC79f4vFEvNVkd1LvHJE9b6WJ6qKT0AWT4kHfqdpaHqLYG26XSovp+fU/JXaZKw190Ftb97IUqdwZRyTGfI3hpSJw4HE/d1UQ/6OUUCkDS7YNJZGgI9LgdP+GXxDEs+q/09tE5uuBGeGCi6h/72g9OBpxHjGVNu7KSSYuGP1dav7w10nFvDPBe4W4EQnuWgEg+5OVJq06bd40BwCDJJeR3wr2f+qWlWfomFDdt/sZYGciHcZsDvJgAScQ==" >> /home/drt/.ssh/known_hosts
-#RUN ssh-keyscan -T 60 -p 1022 galtransfer.gatwickairport.com >> /home/drt/.ssh/known_hosts
+RUN ssh-keyscan -T 60 ftp.acl-uk.org >> /home/drt/.ssh/known_hosts
+RUN ssh-keyscan -T 60 gateway.heathrow.com >> /home/drt/.ssh/known_hosts
+RUN ssh-keyscan -T 60 -p 1022 galtransfer.gatwickairport.com >> /home/drt/.ssh/known_hosts
 RUN echo "[galtransfer.gatwickairport.com]:1022 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCe84ySHGHdFFp7cvyukRIZCE/khNOZxlkB38KDQpw6y7cjSr4NLtA6azgyNm42bSTLh8dAxzhm5FNYP++URPshcW26RGXOGRc6qmbWTLRVVT0oH/MpDCNe1W8KtJCAbaXMuAxN90jhZtdNK2JRuljlZjLlGeP8GfJyMzg0D3CORqBC0yhXC2w7HXirPDid8LeH9oMIKpcrJcHDTYnvyAniUdomeU4sFqO8BoTbNyHFz8XSlEl1bA3LG6hJ1oe8sLei/E1iJ90U/oE6HVMfWomNiuqcifLAv6WjpnoJ54x1FaWdSdqoGsviAqE8/a2Pv8n0aPaUrGir5/2emKO/ZIml" >> /home/drt/.ssh/known_hosts
 RUN chown -R 1000:1000 /home/drt/.ssh
 
