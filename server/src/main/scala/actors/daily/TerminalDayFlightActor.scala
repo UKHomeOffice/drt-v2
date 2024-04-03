@@ -103,7 +103,7 @@ class TerminalDayFlightActor(year: Int,
 
   override def receiveCommand: Receive = {
     case redListCounts: RedListCounts =>
-      val diff: FlightsWithSplitsDiff = redListCountDiffWith(redListCounts.passengers).forTerminal(terminal)
+      val diff = redListCountDiffWith(redListCounts.passengers).forTerminal(terminal)
         .window(firstMinuteOfDay.millisSinceEpoch, lastMinuteOfDay.millisSinceEpoch)
       updateAndPersistDiffAndAck(diff)
 
