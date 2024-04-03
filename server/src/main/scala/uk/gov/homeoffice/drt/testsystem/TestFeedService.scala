@@ -19,7 +19,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.service.FeedService
 import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
 import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestFeedArrivalsRouterActor}
-import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -37,6 +37,8 @@ case class TestFeedService(journalType: StreamingJournalLike,
                           (implicit val system: ActorSystem, val ec: ExecutionContext, val mat: Materializer, val timeout: Timeout,
                           ) extends FeedService {
   private val nowMillis = () => now().millisSinceEpoch
+
+  override val legacyFeedArrivalsBeforeDate: SDateLike = SDate("2024-04-03")
 
   def resetFlightsData(source: FeedSource,
                        props: (Int, Int, Int, Terminal, FeedSource, Option[MillisSinceEpoch], () => MillisSinceEpoch, Int) => Props,

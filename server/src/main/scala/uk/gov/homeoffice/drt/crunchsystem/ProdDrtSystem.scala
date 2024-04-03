@@ -71,6 +71,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     manifestLookups = manifestLookups,
     requestAndTerminateActor = actorService.requestAndTerminateActor,
     params.forecastMaxDays,
+    params.legacyFeedArrivalsBeforeDate,
   )
 
 

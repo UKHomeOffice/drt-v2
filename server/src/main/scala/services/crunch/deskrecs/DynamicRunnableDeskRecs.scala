@@ -36,7 +36,7 @@ object DynamicRunnableDeskRecs {
       .mapAsync(1) {
         case (request: ProcessingRequest, loads) =>
           log.info(s"[desk-recs] Optimising ${request.duration.toMinutes} minutes (${request.start.toISOString} to ${request.end.toISOString})")
-          loadsToQueueMinutes(request.minutesInMillis, loads, maxDesksProviders)
+          loadsToQueueMinutes(request.minutesInMillis, loads, maxDesksProviders, "desk-recs")
             .map(minutes => Option(minutes))
             .recover {
               case t =>

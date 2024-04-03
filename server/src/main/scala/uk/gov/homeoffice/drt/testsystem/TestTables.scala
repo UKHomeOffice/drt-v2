@@ -6,14 +6,11 @@ import com.google.inject.Inject
 import drt.shared.DropIn
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
-import slickdb.{
-  DropInRow,
-  DropInTableLike, DropInsRegistrationRow, DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike
-}
+import slickdb.{DropInRow, DropInTableLike, DropInsRegistrationRow, DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.{ABFeatureRow, IABFeatureDao, IUserFeedbackDao, UserFeedbackRow}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.sql.Timestamp
 import scala.concurrent.{ExecutionContext, Future}
@@ -122,6 +119,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val lcyLivePassword: String = ""
   override val maybeRemovalCutOffSeconds: Option[FiniteDuration] = None
   override val usePassengerPredictions: Boolean = true
+  override val legacyFeedArrivalsBeforeDate: SDateLike = SDate("2024-04-03")
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {

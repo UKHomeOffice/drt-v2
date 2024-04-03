@@ -3,6 +3,7 @@ package actors
 import com.google.inject.Inject
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.nio.file.{Files, Paths}
 import scala.concurrent.duration._
@@ -54,6 +55,8 @@ trait DrtParameters {
   val maybeRemovalCutOffSeconds: Option[FiniteDuration]
 
   val usePassengerPredictions: Boolean
+
+  val legacyFeedArrivalsBeforeDate: SDateLike
 }
 
 case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParameters {
@@ -108,4 +111,6 @@ case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParamete
   override val maybeRemovalCutOffSeconds: Option[FiniteDuration] = config.getOptional[Int]("acl.removal-cutoff-seconds").map(s => s.seconds)
 
   override val usePassengerPredictions: Boolean = config.get[Boolean]("feature-flags.use-passenger-predictions")
+
+  override val legacyFeedArrivalsBeforeDate: SDateLike = SDate(config.get[String]("feeds.legacy-feed-arrivals-before-datetime"))
 }

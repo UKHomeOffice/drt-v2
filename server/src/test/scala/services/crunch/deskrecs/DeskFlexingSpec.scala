@@ -85,7 +85,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks, Set(EeaDesk, NonEeaDesk), minDesks, maxDesks.view.mapValues(d => DeskCapacityProvider(d)).toMap)
 
-        val eventualDesksAndWaits = services.crunch.deskrecs.TerminalDesksAndWaitsProvider((_: LocalDate, q: Queue) => Future.successful(ac.slaByQueue(q)), queuePriority, observer.mockDeskRecs)
+        val eventualDesksAndWaits = services.crunch.deskrecs.TerminalDesksAndWaitsProvider(T1, (_: LocalDate, q: Queue) => Future.successful(ac.slaByQueue(q)), queuePriority, observer.mockDeskRecs, "test")
           .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         Await.result(eventualDesksAndWaits, 1.second)
@@ -112,7 +112,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.view.mapValues(d => DeskCapacityProvider(d)).toMap)
 
-        val eventualDesksAndWaits = services.crunch.deskrecs.TerminalDesksAndWaitsProvider((_: LocalDate, q: Queue) => Future.successful(ac.slaByQueue(q)), queuePriority, observer.mockDeskRecs)
+        val eventualDesksAndWaits = services.crunch.deskrecs.TerminalDesksAndWaitsProvider(T1, (_: LocalDate, q: Queue) => Future.successful(ac.slaByQueue(q)), queuePriority, observer.mockDeskRecs, "test")
           .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         Await.result(eventualDesksAndWaits, 1.second)
@@ -143,7 +143,7 @@ class DeskFlexingSpec extends CrunchTestLike {
 
         val maxDeskProvider = FlexedTerminalDeskLimits(totalDesks, Set(EeaDesk, NonEeaDesk, FastTrack), minDesks, maxDesks.view.mapValues(d => DeskCapacityProvider(d)).toMap)
 
-        val eventualDesksAndWaits = services.crunch.deskrecs.TerminalDesksAndWaitsProvider((_: LocalDate, q: Queue) => Future.successful(ac.slaByQueue(q)), queuePriority, observer.mockDeskRecs)
+        val eventualDesksAndWaits = services.crunch.deskrecs.TerminalDesksAndWaitsProvider(T1, (_: LocalDate, q: Queue) => Future.successful(ac.slaByQueue(q)), queuePriority, observer.mockDeskRecs, "test")
           .desksAndWaits(minuteMillis, mockLoads(queues), maxDeskProvider)
 
         Await.result(eventualDesksAndWaits, 1.second)

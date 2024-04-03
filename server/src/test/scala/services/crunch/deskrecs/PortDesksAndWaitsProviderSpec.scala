@@ -107,7 +107,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     provider.loadsToDesks(
       minuteMillis = start to end by MilliTimes.oneMinuteMillis,
       loads,
-      Map(T1 -> MockTerminalDeskLimits)
+      Map(T1 -> MockTerminalDeskLimits),
+      "test"
     )
   }
 

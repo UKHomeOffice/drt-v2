@@ -43,6 +43,7 @@ import play.api.Configuration
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import services.{Retry, RetryDelays, StreamSupervision}
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
@@ -144,6 +145,8 @@ trait FeedService {
 
   val requestAndTerminateActor: ActorRef
 
+  val legacyFeedArrivalsBeforeDate: SDateLike
+
   private val forecastBaseFeedStatusWriteActor: ActorRef =
     system.actorOf(Props(new ArrivalFeedStatusActor(AclFeedSource, AclForecastArrivalsActor.persistenceId)))
   private val forecastFeedStatusWriteActor: ActorRef =
@@ -202,9 +205,10 @@ trait FeedService {
       .mapAsync(1) {
         case (source, actor) =>
           actor.ask(FeedArrivalsRouterActor.GetStateForDateRange(now().toUtcDate, now().toUtcDate))
-            .mapTo[Map[UniqueArrival, FeedArrival]]
+            .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
+            .flatMap(_.runWith(Sink.headOption))
             .flatMap {
-              case state if state.nonEmpty =>
+              case Some((_, state)) if state.nonEmpty =>
                 log.info(s"Current $source feed is not empty. Skipping population of feed $source")
                 Future.successful(Done)
               case _ =>
@@ -218,11 +222,14 @@ trait FeedService {
                 }
                 val legacyActor = system.actorOf(legacyProps, "legacy-arrivals")
                 requestAndTerminateActor
-                  .ask(RequestAndTerminate(legacyActor, TerminalDayFeedArrivalActor.GetState))
+                  .ask(RequestAndTerminate(legacyActor, GetState))
                   .mapTo[ArrivalsState]
                   .flatMap { state =>
+                    log.info(s"Populating $source feed with ${state.arrivals.size} arrivals")
+                    val feedArrivals = FeedArrivals(state.arrivals.values.map(ArrivalToFeedArrival.toFeedArrival(_, source)).toSeq)
+                    log.info(s"Converted arrivals to feed arrivals for $source")
                     feedActors(source)
-                      .ask(FeedArrivals(state.arrivals.values.map(ArrivalToFeedArrival.toFeedArrival(_, source)).toSeq))(new Timeout(1.minute))
+                      .ask(feedArrivals)(new Timeout(5.minutes))
                       .map { _ =>
                         val took = now().millisSinceEpoch - startTime
                         log.info(s"Finished populating $source feed. Took ${took.millis.toSeconds}s")
@@ -323,7 +330,7 @@ trait FeedService {
 
   val arrivalsImportActor: ActorRef = system.actorOf(Props(new ArrivalsImportActor()), name = "arrivals-import-actor")
 
-  def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
+  private def isValidFeedSource(fs: FeedSource): Boolean = airportConfig.feedSources.contains(fs)
 
   lazy val feedActorsForPort: Map[FeedSource, ActorRef] = feedStatusReadActors.filter {
     case (feedSource: FeedSource, _) => isValidFeedSource(feedSource)
@@ -386,6 +393,7 @@ case class ProdFeedService(journalType: StreamingJournalLike,
                            manifestLookups: ManifestLookupsLike,
                            requestAndTerminateActor: ActorRef,
                            forecastMaxDays: Int,
+                           override val legacyFeedArrivalsBeforeDate: SDateLike
                           )
                           (implicit
                            val system: ActorSystem,

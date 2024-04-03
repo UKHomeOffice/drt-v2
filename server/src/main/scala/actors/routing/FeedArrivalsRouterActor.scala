@@ -111,6 +111,7 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
     FeedArrivalsRouterActor.multiTerminalArrivalsByDaySource(arrivalsByDayLookup)
 
   override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[Long]] = {
+    log.info(s"FeedArrivalsRouterActor updating $partition")
     updateArrivals(partition, updates.arrivals).map {
       case true =>
         Set(SDate(partition._2).millisSinceEpoch)

@@ -87,7 +87,7 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
                                        number: Int,
                                        terminal: String,
                                        scheduled: MillisSinceEpoch,
-                                       origin: String) =
+                                       origin: String): Action[AnyContent] =
     Action.async { _ =>
       getArrivalSources(pointInTime, UniqueArrival(number, terminal, scheduled, origin))
         .map(maybeFeedSources => Ok(write(maybeFeedSources)))
@@ -99,8 +99,6 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
     (AclForecastArrivalsActor.persistenceId, AclFeedSource),
     (PortForecastArrivalsActor.persistenceId, ForecastFeedSource)
   )
-
-  private val legacyFeedArrivalsBeforeDate = SDate("2024-04-02T00:00")
 
   private def getArrivalSources(pit: Long, ua: UniqueArrival): Future[Seq[Option[FeedSourceArrival]]] =
     Future.sequence(arrivalActorPersistenceIds.map {
@@ -126,7 +124,7 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
             case m if m.nonEmpty =>
               val maybeSourceArrival = m.get(ua).map(fa => FeedSourceArrival(source, fa.toArrival(source)))
               Future.successful(maybeSourceArrival)
-            case _ if SDate(ua.scheduled) < legacyFeedArrivalsBeforeDate =>
+            case _ if SDate(ua.scheduled) < ctrl.feedService.legacyFeedArrivalsBeforeDate =>
               log.info(s"Using legacy feed for $source")
               val legacyActor = actorSystem.actorOf(
                 ArrivalLookupActor.props(airportConfig.portCode, SDate(pit), ua, id, source),
@@ -135,7 +133,7 @@ class FeedsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
               ctrl.actorService.requestAndTerminateActor
                 .ask(RequestAndTerminate(legacyActor, Commands.GetState))
                 .mapTo[Option[FeedSourceArrival]]
-            case notFound =>
+            case _ =>
               Future.successful(None)
           }
     })
