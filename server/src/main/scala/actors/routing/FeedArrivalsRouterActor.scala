@@ -38,10 +38,10 @@ object FeedArrivalsRouterActor {
     override val to: MillisSinceEpoch = SDate(end).millisSinceEpoch
   }
 
-  def updateFlights(requestAndTerminateActor: ActorRef,
-                    props: (UtcDate, Terminal) => Props,
+  def updateArrivals(requestAndTerminateActor: ActorRef,
+                     props: (UtcDate, Terminal) => Props,
                    )
-                   (implicit system: ActorSystem, timeout: Timeout): ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
+                    (implicit system: ActorSystem, timeout: Timeout): ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
     (partition: (Terminal, UtcDate), arrivals: Seq[FeedArrival]) => {
       val (terminal, date) = partition
       val actor = system.actorOf(props(date, terminal))
@@ -65,13 +65,13 @@ object FeedArrivalsRouterActor {
         .map(_.values.toSeq)
     }
 
-  def multiTerminalFlightsByDaySource(flightsLookupByDayAndTerminal: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]])
-                                     (start: UtcDate,
+  def multiTerminalArrivalsByDaySource(flightsLookupByDayAndTerminal: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]])
+                                      (start: UtcDate,
                                       end: UtcDate,
                                       terminals: Iterable[Terminal],
                                       maybePit: Option[MillisSinceEpoch],
                                      )
-                                     (implicit ec: ExecutionContext): Source[(UtcDate, Seq[FeedArrival]), NotUsed] = {
+                                      (implicit ec: ExecutionContext): Source[(UtcDate, Seq[FeedArrival]), NotUsed] = {
     val dates: Seq[UtcDate] = DateRange(start, end)
 
     val reduceAndSort = SourceUtils.reduceFutureIterables(terminals, (s: Iterable[Seq[FeedArrival]]) => s.reduce(_ ++ _))
@@ -108,7 +108,7 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
   }
 
   private val flightsLookupService: (UtcDate, UtcDate, Iterable[Terminal], Option[MillisSinceEpoch]) => Source[(UtcDate, Seq[FeedArrival]), NotUsed] =
-    FeedArrivalsRouterActor.multiTerminalFlightsByDaySource(arrivalsByDayLookup)
+    FeedArrivalsRouterActor.multiTerminalArrivalsByDaySource(arrivalsByDayLookup)
 
   override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[Long]] = {
     updateArrivals(partition, updates.arrivals).map {

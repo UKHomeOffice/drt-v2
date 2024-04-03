@@ -35,7 +35,7 @@ import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -248,7 +248,14 @@ class TestDrtActor extends Actor {
       val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
       val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal, paxFeedSourceOrder)))
       tc.initialPortState match {
-        case Some(ps) => Await.ready(portStateActor.ask(ps), 1 second)
+        case Some(ps) =>
+          val withPcpTimes = ps.flights.view.mapValues {
+            case fws@ApiFlightWithSplits(apiFlight, _, _) =>
+              fws.copy(apiFlight = apiFlight.copy(PcpTime = Option(apiFlight.PcpTime.getOrElse(apiFlight.Scheduled))))
+          }
+          val updated = ps.copy(flights = withPcpTimes.toMap)
+
+          Await.ready(portStateActor.ask(updated), 1 second)
         case _ =>
       }
 

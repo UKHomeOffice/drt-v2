@@ -140,7 +140,6 @@ class AclFeedSpec extends CrunchTestLike {
   }
 
   "ACL feed parsing" >> {
-
     "Given ACL csv content containing a header line and one arrival line " +
       "When I ask for the arrivals " +
       "Then I should see a list containing the appropriate Arrival" >> {
@@ -314,20 +313,22 @@ class AclFeedSpec extends CrunchTestLike {
       val aclWithSource = initialAcl.map(_.toArrival(AclFeedSource))
       val liveWithSource = initialLive.map(_.toArrival(LiveFeedSource))
 
+      val existing = (aclWithSource ++ liveWithSource).map(a => ApiFlightWithSplits(a, Set()))
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduledLive),
         initialLiveArrivals = initialLive,
         initialForecastBaseArrivals = initialAcl,
-        initialPortState = Option(PortState((aclWithSource ++ liveWithSource).map(a => ApiFlightWithSplits(a, Set())), Seq(), Seq()))
+        initialPortState = Option(PortState(existing, Seq(), Seq()))
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(newAcl))
 
-      val expected = newAcl.map(_.unique).toSet
+      val expected = Set(newAcl.head.unique, initialLive.head.unique)
 
       crunch.portStateTestProbe.fishForMessage(3.seconds) {
         case ps: PortState =>
-          ps.flights.values.map(_.apiFlight.unique).toSet == expected
+          val uniques = ps.flights.values.map(_.apiFlight.unique).toSet
+          uniques == expected
       }
 
       success
