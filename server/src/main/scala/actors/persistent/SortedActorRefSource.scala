@@ -68,14 +68,6 @@ final class SortedActorRefSource(persistentActor: ActorRef,
           persistentActor ! r
           tryPushElement()
 
-        //        case (_, UpdatedMillis(millis)) =>
-        //          val requests = millis.map(processingRequest)
-        //          if (requests.nonEmpty) {
-        //            requests.foreach(persistentActor ! _)
-        //            buffer ++= requests
-        //            tryPushElement()
-        //          }
-
         case unexpected =>
           log.error(s"[$graphName] Ignoring unexpected message: $unexpected")
       }.ref

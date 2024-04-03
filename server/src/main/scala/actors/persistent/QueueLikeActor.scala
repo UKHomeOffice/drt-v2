@@ -17,19 +17,7 @@ import scala.concurrent.ExecutionContextExecutor
 
 
 object QueueLikeActor {
-
   case object Tick
-
-  //  object UpdatedMillis {
-  //    val empty: UpdatedMillis = UpdatedMillis(Set())
-  //  }
-
-  //  case class UpdatedMillis(effects: Set[MillisSinceEpoch]) extends Combinable[UpdatedMillis] {
-  //    def ++(other: UpdatedMillis): UpdatedMillis = other match {
-  //      case UpdatedMillis(toAdd) => UpdatedMillis(effects ++ toAdd)
-  //      case _ => this
-  //    }
-  //  }
 }
 
 abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: MillisSinceEpoch => ProcessingRequest) extends RecoveryActorLike {
