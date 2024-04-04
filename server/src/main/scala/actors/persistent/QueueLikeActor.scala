@@ -16,6 +16,7 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContextExecutor
 
 
+case object GetArrivals
 object QueueLikeActor {
   case object Tick
 }
@@ -96,11 +97,7 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
               .filterNot(state.contains)
           case _: ProcessingRequest =>
             requests
-              .collect {
-                case r: ProcessingRequest =>
-                  println(s"Received $r: ${r.date}: ${r.start.toISOString} ${r.end.toISOString}")
-                  r
-              }
+              .collect { case r: ProcessingRequest => r }
               .filterNot(state.contains)
         }
         .map { processingRequests =>

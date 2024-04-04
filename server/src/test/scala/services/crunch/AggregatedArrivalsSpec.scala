@@ -9,13 +9,13 @@ import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import org.specs2.specification.BeforeEach
+import services.crunch.TestAggregatedArrivalsActor.GetArrivals
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTableLike}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.testsystem.feeds.test.GetArrivals
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq}
@@ -27,6 +27,10 @@ import scala.util.Try
 object UpdateHandled
 
 object RemovalHandled
+
+object TestAggregatedArrivalsActor {
+  case object GetArrivals
+}
 
 class TestAggregatedArrivalsActor(arrivalTable: ArrivalTableLike, probe: ActorRef) extends AggregatedArrivalsActor(arrivalTable) {
   def testReceive: Receive = {

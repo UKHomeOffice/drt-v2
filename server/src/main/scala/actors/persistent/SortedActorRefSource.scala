@@ -48,11 +48,7 @@ final class SortedActorRefSource(persistentActor: ActorRef,
           m.headOption
             .map {
               case _: ProcessingRequest =>
-                m.collect {
-                  case r: ProcessingRequest =>
-                    println(s"[$graphName] Received ProcessingRequest: ${r.date}: ${r.start.millisSinceEpoch} ${r.end.millisSinceEpoch}")
-                    r
-                }
+                m.collect { case r: ProcessingRequest => r }
               case _: Long =>
                 m.collect { case l: Long => processingRequest(l) }
             }
@@ -63,7 +59,6 @@ final class SortedActorRefSource(persistentActor: ActorRef,
             }
 
         case (_, r: ProcessingRequest) =>
-          println(s"[$graphName] Received ProcessingRequest: ${r.date}: ${r.start.millisSinceEpoch} ${r.end.millisSinceEpoch}")
           buffer += r
           persistentActor ! r
           tryPushElement()
