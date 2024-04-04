@@ -74,8 +74,8 @@ case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
         val took = requestEnd - requestStart.millisSinceEpoch
         val isWithingThreshold = took < healthyResponseTimeMillis
 
-        val message = s"Health check: Port state request took ${took}ms"
-        if (isWithingThreshold) log.info(message) else log.warn(message)
+        if (isWithingThreshold) log.info(s"Health check passed: Port state request took ${took}ms (<${healthyResponseTimeMillis}ms)")
+        else log.error(s"Health check failed: Port state request took ${took}ms (>${healthyResponseTimeMillis}ms)")
 
         isWithingThreshold
       }

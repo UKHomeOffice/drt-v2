@@ -1,5 +1,5 @@
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
-import sbt._
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
+import sbt.*
 
 /**
  * Application settings. Configure the build for your application here.
@@ -76,7 +76,7 @@ object Settings {
     val jwtCore = "9.4.5"
   }
 
-  import versions._
+  import versions.*
 
   val clientNpmDependencies: Seq[(String, String)] = Seq(
     "react" -> react,
