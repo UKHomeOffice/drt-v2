@@ -120,12 +120,10 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
         crunch.portStateTestProbe.fishForMessage(1.seconds) {
           case PortState(_, cms, _) if cms.nonEmpty =>
-            println(s"hmm")
             val nonZeroPax = cms.values.map(_.paxLoad).max == 0
             val nonZeroWorkload = cms.values.map(_.workLoad).max == 0
             nonZeroPax && nonZeroWorkload
           case _ =>
-            println(s"hmm2")
             false
         }
 

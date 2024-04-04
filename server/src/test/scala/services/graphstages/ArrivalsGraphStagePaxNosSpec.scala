@@ -3,13 +3,11 @@ package services.graphstages
 import akka.stream.QueueOfferResult
 import akka.stream.scaladsl.SourceQueueWithComplete
 import controllers.ArrivalGenerator
-import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared._
 import org.specs2.execute.Success
 import services.crunch.{CrunchTestLike, TestConfig}
-import uk.gov.homeoffice.drt.arrivals.ArrivalStatus
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, FeedSource, ForecastFeedSource, LiveBaseFeedSource, LiveFeedSource}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
@@ -23,7 +21,6 @@ class ArrivalsGraphStagePaxNosSpec extends CrunchTestLike {
     def fishForArrivalWithActPax(actPax: Option[Int], feedSource: FeedSource): Success = {
       crunch.portStateTestProbe.fishForMessage(1.second) {
         case PortState(flights, _, _) =>
-          println(s"got flights: ${flights.map(f => s"${f._2.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual} - ${f._2.apiFlight.FeedSources}")}")
           flights.values.toList.exists(fws => fws.apiFlight.flightCodeString == "BA0001" && fws.apiFlight.bestPaxEstimate(paxFeedSourceOrder).passengers.actual == actPax && fws.apiFlight.FeedSources.contains(feedSource))
       }
 

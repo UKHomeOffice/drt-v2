@@ -180,7 +180,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "passenger-loads")
 
     val (queue, _) = QueuedRequestProcessing.createGraph(crunchGraphSource, sink, queueMinutesProducer, "passenger-loads").run()
-    println(s"sending $request to queue")
     queue ! request
 
     probe.fishForMessage(5.second) {
@@ -194,7 +193,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
           .collect {
             case (tq, pax) if pax > 0 => (tq, pax)
           }
-        println(s"tqPax: $tqPax")
         tqPax == expectedQueuePax
     }
   }

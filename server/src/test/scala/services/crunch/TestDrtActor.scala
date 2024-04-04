@@ -119,28 +119,6 @@ class TestDrtActor extends Actor {
     case class SetArrivals(arrivals: Map[UniqueArrival, Arrival])
   }
 
-//  class TestPortLiveArrivalsActor(now: () => SDateLike,
-//                                  expireAfterMillis: Int) extends PortLiveArrivalsActor(now, expireAfterMillis) {
-//    private def setArrivalCommand: Receive = {
-//      case TestArrivalActor.SetArrivals(arrivals) =>
-//        state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ arrivals)
-//        persistArrivalUpdates(ArrivalsDiff(arrivals, Seq()))
-//    }
-//
-//    override def receiveCommand: Receive = setArrivalCommand orElse super.receiveCommand
-//  }
-
-//  class TestAclBaseArrivalsActor(now: () => SDateLike,
-//                                 expireAfterMillis: Int) extends AclForecastArrivalsActor(now, expireAfterMillis) {
-//    private def setArrivalCommand: Receive = {
-//      case TestArrivalActor.SetArrivals(arrivals) =>
-//        state = state.copy(arrivals = SortedMap[UniqueArrival, Arrival]() ++ arrivals)
-//        persistArrivalUpdates(ArrivalsDiff(arrivals, Seq()))
-//    }
-//
-//    override def receiveCommand: Receive = setArrivalCommand orElse super.receiveCommand
-//  }
-
   override def receive: Receive = {
     case Stop =>
       maybeCrunchQueueActor.foreach(_ ! Stop)
