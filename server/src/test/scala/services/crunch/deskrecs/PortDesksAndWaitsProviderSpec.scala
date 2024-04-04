@@ -2,11 +2,11 @@ package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, PassengersMinute}
 import drt.shared.{ArrivalGenerator, CrunchApi, TQM}
-import services.{OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Passengers, Splits}
+import services.{OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.egates.Desk
 import uk.gov.homeoffice.drt.ports.PaxTypes.GBRNational
 import uk.gov.homeoffice.drt.ports.Queues._
@@ -58,8 +58,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       val pax = 2
       val flights = List(
         (pax, Set(
-          ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax / 2, None, None),
-          ApiPaxTypeAndQueueCount(GBRNational, EGate, pax / 2, None, None),
+          ApiPaxTypeAndQueueCount(GBRNational, EeaDesk, pax.toDouble / 2, None, None),
+          ApiPaxTypeAndQueueCount(GBRNational, EGate, pax.toDouble / 2, None, None),
         )),
       )
       val loads = getFlightLoads(scheduled, flights, getProvider)
@@ -107,7 +107,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     provider.loadsToDesks(
       minuteMillis = start to end by MilliTimes.oneMinuteMillis,
       loads,
-      Map(T1 -> MockTerminalDeskLimits)
+      Map(T1 -> MockTerminalDeskLimits),
+      "test"
     )
   }
 
@@ -121,9 +122,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
         val arrival = ArrivalGenerator.arrival(iata = s"BA${idx.toString}",
           origin = PortCode(idx.toString),
           terminal = T1, sch = scheduled.millisSinceEpoch,
-          feedSources = Set(LiveFeedSource),
-          pcpTime = Option(scheduled.millisSinceEpoch),
-          passengerSources = Map(LiveFeedSource -> Passengers(Option(pax), None)))
+          totalPax = Option(pax),
+        ).toArrival(LiveFeedSource).copy(PcpTime = Option(scheduled.millisSinceEpoch))
         ApiFlightWithSplits(
           arrival,
           Set(Splits(splits, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, None))

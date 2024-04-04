@@ -3,6 +3,7 @@ package uk.gov.homeoffice.drt.crunchsystem
 import akka.actor.ActorRef
 
 trait ActorsServiceLike {
+  val requestAndTerminateActor: ActorRef
   val portStateActor: ActorRef
   val liveShiftsReadActor: ActorRef
   val liveFixedPointsReadActor: ActorRef

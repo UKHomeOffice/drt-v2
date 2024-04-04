@@ -1,6 +1,5 @@
 package actors.daily
 
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.persistence.SaveSnapshotSuccess
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import org.slf4j.{Logger, LoggerFactory}
@@ -84,13 +83,13 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   private def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
     diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty => sender() ! UpdatedMillis.empty
+      case noDifferences if noDifferences.isEmpty => sender() ! Set.empty[Long]
       case differences =>
         updateStateFromDiff(differences)
         val messageToPersist = containerToMessage(differences)
         val updatedMillis = if (shouldSendEffectsToSubscriber(container))
-          UpdatedMillis(differences.map(_.minute).toSet)
-        else UpdatedMillis.empty
+          differences.map(_.minute).toSet
+        else Set.empty[Long]
         val replyToAndMessage = List((sender(), updatedMillis))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
     }

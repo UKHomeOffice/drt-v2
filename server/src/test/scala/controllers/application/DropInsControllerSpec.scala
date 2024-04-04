@@ -1,16 +1,17 @@
 package controllers.application
 
 import akka.actor.ActorSystem
+import akka.stream.Materializer
 import email.GovNotifyEmail
 import module.DRTModule
+import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
 import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
-import akka.stream.Materializer
-import org.scalatest.BeforeAndAfterAll
+
 import scala.concurrent.ExecutionContext
 
 class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAfterAll {

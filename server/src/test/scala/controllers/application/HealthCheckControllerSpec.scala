@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, MinutesContainer}
+import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.TQM
 import module.DRTModule
 import org.scalatest.BeforeAndAfterEach
@@ -17,11 +17,11 @@ import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.config.Lhr
+import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}
 import uk.gov.homeoffice.drt.service.ApplicationService
 import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
@@ -37,10 +37,10 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
   val splits: Splits = Splits(Set(), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC), Percentage)
   val flights: Seq[(UtcDate, FlightsWithSplits)] = Seq(
     (UtcDate(2024, 6, 26), FlightsWithSplits(Seq(
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0001", schDt = "2024-06-26T11:30"), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:40"), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0011", schDt = "2024-06-26T12:30"), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.arrival(iata= "BA0015", schDt = "2024-06-26T12:35", actDt = "2024-06-26T12:45"), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0001", schDt = "2024-06-26T11:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:40").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0011", schDt = "2024-06-26T12:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0015", schDt = "2024-06-26T12:35", actDt = "2024-06-26T12:45").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
     ))),
   )
 
@@ -125,7 +125,8 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
         manifestLookupService = manifestLookupService,
         minuteLookups = minuteLookups,
         actorService = actorService,
-        persistentStateActors = persistentActors
+        persistentStateActors = persistentActors,
+        requestAndTerminateActor = actorService.requestAndTerminateActor,
       )(system, ec, mat, timeout) {
         override lazy val flightsProvider: FlightsProvider = FlightsProvider(system.actorOf(Props(new MockFlightsRouterActor(flights))))(timeout)
       }
@@ -136,7 +137,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
         params.forecastMaxDays,
         flightLookups,
         minuteLookups,
-      ) {
+      )(system, timeout) {
         override val queuesRouterActor: ActorRef = system.actorOf(Props(new MockQueuesRouterActor(minutes)))
       }
 

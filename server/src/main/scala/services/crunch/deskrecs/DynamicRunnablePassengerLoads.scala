@@ -62,7 +62,7 @@ object DynamicRunnablePassengerLoads {
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - splits persisted"))
       .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal))
       .wireTap { crWithPax =>
-        log.info(s"${crWithPax._1.date} crunch request - ${crWithPax._2.minutes.size} minutes of passenger loads with ${crWithPax._2.minutes.map(_.toMinute.passengers.size).sum} passengers")
+        log.info(s"${crWithPax._1} crunch request - ${crWithPax._2.minutes.size} minutes of passenger loads with ${crWithPax._2.minutes.map(_.toMinute.passengers.size).sum} passengers")
         updateLiveView(crWithPax._2)
       }
       .via(Flow[(ProcessingRequest, MinutesContainer[PassengersMinute, TQM])].map {
@@ -132,7 +132,7 @@ object DynamicRunnablePassengerLoads {
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (procRequest: LoadProcessingRequest, flights) =>
-          log.info(s"Passenger load calculation starting: ${flights.size} flights, ${procRequest.durationMinutes} minutes (${procRequest.start.toISOString} to ${procRequest.end.toISOString})")
+          log.info(s"Passenger load calculation starting: ${flights.size} flights, ${procRequest.durationMinutes} minutes (${procRequest.start.millisSinceEpoch} to ${procRequest.end.millisSinceEpoch})")
           val eventualDeskRecs = for {
             redListUpdates <- redListUpdatesProvider()
             statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(procRequest.minutesInMillis)

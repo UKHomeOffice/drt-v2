@@ -117,7 +117,7 @@ object MergeArrivals {
     )
 
   def processingRequestToArrivalsDiff(mergeArrivalsForDate: UtcDate => Future[ArrivalsDiff],
-                                      setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
+                                      setPcpTime: Seq[Arrival] => Future[Seq[Arrival]],
                                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                                       updateAggregatedArrivals: ArrivalsDiff => Unit,
                                      )
@@ -129,8 +129,11 @@ object MergeArrivals {
       .mapAsync(1) {
         request =>
           mergeArrivalsForDate(request.date)
-            .flatMap(setPcpTimes)
             .flatMap(addArrivalPredictions)
+            .flatMap { diff =>
+              setPcpTime(diff.toUpdate.values.toSeq)
+                .map(arrivals => diff.copy(toUpdate = arrivals.map(a => a.unique -> a).toMap))
+            }
       }
       .wireTap(updateAggregatedArrivals)
   }

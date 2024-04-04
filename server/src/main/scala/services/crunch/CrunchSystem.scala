@@ -5,12 +5,12 @@ import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.server.feeds.Feed.EnabledFeedWithFrequency
-import drt.server.feeds.{Feed, ManifestsFeedResponse}
+import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
 import drt.shared.CrunchApi._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import services.TryCrunchWholePax
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival}
 import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -24,10 +24,10 @@ case class CrunchSystem[FT](forecastBaseArrivalsResponse: EnabledFeedWithFrequen
                             liveArrivalsResponse: EnabledFeedWithFrequency[FT],
                             manifestsLiveResponseSource: SourceQueueWithComplete[ManifestsFeedResponse],
                             actualDeskStatsSource: SourceQueueWithComplete[ActualDeskStats],
-                            mergeArrivalsRequestActor: ActorRef,
-                            crunchRequestActor: ActorRef,
-                            deskRecsRequestActor: ActorRef,
-                            deploymentRequestActor: ActorRef,
+                            mergeArrivalsRequestQueueActor: ActorRef,
+                            crunchRequestQueueActor: ActorRef,
+                            deskRecsRequestQueueActor: ActorRef,
+                            deploymentRequestQueueActor: ActorRef,
                             killSwitches: List[UniqueKillSwitch]
                            )
 
@@ -39,6 +39,7 @@ case class CrunchProps[FT](airportConfig: AirportConfig,
                            manifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]],
                            crunchActors: PersistentStateActors,
                            feedActors: Map[FeedSource, ActorRef],
+                           updateFeedStatus: (FeedSource, ArrivalsFeedResponse) => Unit,
                            manifestsRouterActor: ActorRef,
                            arrivalsForecastBaseFeed: Feed[FT],
                            arrivalsForecastFeed: Feed[FT],
@@ -47,8 +48,8 @@ case class CrunchProps[FT](airportConfig: AirportConfig,
                            optimiser: TryCrunchWholePax,
                            startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch,
                              UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
-                           setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
-                           passengerAdjustments: List[Arrival] => Future[List[Arrival]],
+                           setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
+                           passengerAdjustments: List[FeedArrival] => Future[List[FeedArrival]],
                            system: ActorSystem,
                           )
 
@@ -64,14 +65,15 @@ object CrunchSystem {
     val forecastMaxMillis: () => MillisSinceEpoch = () => props.now().addDays(props.maxDaysToCrunch).millisSinceEpoch
 
     val (
-      mergeArrivalsQueueActor,
-      crunchQueueActor,
-      deskRecsQueueActor,
-      deploymentQueueActor,
+      mergeArrivalsRequestQueueActor,
+      crunchRequestQueueActor,
+      deskRecsRequestQueueActor,
+      deploymentRequestQueueActor,
       mergeArrivalsKillSwitch,
       deskRecsKillSwitch,
       deploymentsKillSwitch,
-      staffingUpdateKillSwitch) = props.startDeskRecs()
+      staffingUpdateKillSwitch,
+      ) = props.startDeskRecs()
 
     val runnableCrunch = RunnableCrunch(
       forecastBaseArrivalsSource = props.arrivalsForecastBaseFeed.source,
@@ -84,6 +86,7 @@ object CrunchSystem {
       forecastArrivalsActor = props.feedActors(ForecastFeedSource),
       liveBaseArrivalsActor = props.feedActors(LiveBaseFeedSource),
       liveArrivalsActor = props.feedActors(LiveFeedSource),
+      updateFeedStatus = props.updateFeedStatus,
       applyPaxDeltas = props.passengerAdjustments,
       manifestsActor = props.manifestsRouterActor,
       portStateActor = props.portStateActor,
@@ -121,10 +124,10 @@ object CrunchSystem {
         EnabledFeedWithFrequency(liveIn, props.arrivalsLiveFeed.initialDelay, props.arrivalsLiveFeed.interval),
       manifestsLiveResponseSource = manifestsLiveIn,
       actualDeskStatsSource = actDesksIn,
-      mergeArrivalsRequestActor = mergeArrivalsQueueActor,
-      crunchRequestActor = crunchQueueActor,
-      deskRecsRequestActor = deskRecsQueueActor,
-      deploymentRequestActor = deploymentQueueActor,
+      mergeArrivalsRequestQueueActor = mergeArrivalsRequestQueueActor,
+      crunchRequestQueueActor = crunchRequestQueueActor,
+      deskRecsRequestQueueActor = deskRecsRequestQueueActor,
+      deploymentRequestQueueActor = deploymentRequestQueueActor,
       killSwitches,
     )
   }

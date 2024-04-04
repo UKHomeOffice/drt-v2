@@ -1,16 +1,14 @@
 package actors.daily
 
-import actors.persistent.QueueLikeActor.UpdatedMillis
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
 import drt.shared.TQM
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -28,11 +26,11 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
 
     "When I send it a DeskRecMinute" >> {
       val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None)
-      val eventualContainer = queuesActor.ask(MinutesContainer(Seq(drm))).mapTo[UpdatedMillis]
+      val eventualContainer = queuesActor.ask(MinutesContainer(Seq(drm))).mapTo[Set[Long]]
 
       "I should get back the merged CrunchMinute" >> {
         val result = Await.result(eventualContainer, 1.second)
-        result === UpdatedMillis(Set(drm.minute))
+        result === Set(drm.minute)
       }
     }
   }

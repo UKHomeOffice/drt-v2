@@ -3,7 +3,7 @@ package drt.server.feeds.lhr.forecast
 import drt.server.feeds.lhr.LHRForecastFeed
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter, ISODateTimeFormat}
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.arrivals.Arrival
+import uk.gov.homeoffice.drt.arrivals.ForecastArrival
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -13,7 +13,7 @@ import scala.util.{Failure, Success, Try}
 object LHRForecastCSVExtractor {
   private val log = LoggerFactory.getLogger(getClass)
 
-  object FieldIndex {
+  private object FieldIndex {
     val terminal = 0
     val scheduleDate = 1
     val flightCode = 2
@@ -23,7 +23,7 @@ object LHRForecastCSVExtractor {
     val transferPax = 7
   }
 
-  def apply(filePath: String): Seq[Arrival] = {
+  def apply(filePath: String): Seq[ForecastArrival] = {
     val source = Source.fromFile(filePath)
     val file = source.getLines().mkString("\n")
     source.close()
@@ -61,18 +61,11 @@ object LHRForecastCSVExtractor {
     }.toList
   }
 
-  def asString(stringField: String): String = stringField.replace("\"", "").trim()
+  private def asString(stringField: String): String = stringField.replace("\"", "").trim()
 
-  def asNumber(intField: String): Int = Try(asString(intField).toInt) match {
-    case Success(number) => number
-    case Failure(exception) =>
-      log.warn(s"Invalid number value for numeric CSV field: $intField", exception)
-      0
-  }
+  private val yyyyMMddHHmmssFormat: DateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
 
-  val yyyyMMddHHmmssFormat: DateTimeFormatter = DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss")
-
-  def asDate(dateField: String): SDateLike = {
+  private def asDate(dateField: String): SDateLike = {
     val dateWithoutTZ = yyyyMMddHHmmssFormat
       .parseDateTime(asString(dateField))
       .toString(ISODateTimeFormat.dateHourMinuteSecond)

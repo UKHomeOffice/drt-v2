@@ -19,7 +19,7 @@ import org.specs2.specification.{AfterAll, AfterEach}
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.JdbcProfile
 import slickdb.Tables
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.STN
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
@@ -195,20 +195,20 @@ object TestDefaults {
     )
   }
 
-  val setPcpFromSch: ArrivalsDiff => Future[ArrivalsDiff] =
-    diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.view.mapValues(a => a.copy(PcpTime = Option(SDate(a.Scheduled).millisSinceEpoch))).to(SortedMap)))
+  val setPcpFromSch: Seq[Arrival] => Future[Seq[Arrival]] =
+    arrivals => Future.successful(arrivals.map(a => a.copy(PcpTime = Option(SDate(a.Scheduled).millisSinceEpoch))))
 
-  val setPcpFromBest: ArrivalsDiff => Future[ArrivalsDiff] =
-    diff => Future.successful(
-      diff.copy(toUpdate = diff.toUpdate.view.mapValues { a =>
+  val setPcpFromBest: Seq[Arrival] => Future[Seq[Arrival]] =
+    arrivals => Future.successful(
+      arrivals.map { a =>
         val pcp = if (a.ActualChox.isDefined) SDate(a.ActualChox.get).millisSinceEpoch
         else if (a.EstimatedChox.isDefined) SDate(a.EstimatedChox.get).millisSinceEpoch
         else if (a.Actual.isDefined) SDate(a.Actual.get).millisSinceEpoch
         else if (a.Estimated.isDefined) SDate(a.Estimated.get).millisSinceEpoch
         else SDate(a.Scheduled).millisSinceEpoch
         a.copy(PcpTime = Option(pcp))
-      }.to(SortedMap)
-    ))
+      }
+    )
 
   def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
 
@@ -221,7 +221,6 @@ object TestDefaults {
     HistoricApiFeedSource,
     AclFeedSource,
   )
-
 }
 
 class CrunchTestLike
@@ -238,7 +237,7 @@ class CrunchTestLike
 
   var maybeDrtActor: Option[ActorRef] = None
 
-  override def afterAll: Unit = {
+  override def afterAll(): Unit = {
     log.info("Final cleanup: Shutting down drt actor")
     maybeDrtActor.foreach(shutDownDrtActor)
   }

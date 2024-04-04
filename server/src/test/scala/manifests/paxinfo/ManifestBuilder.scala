@@ -1,13 +1,10 @@
 package manifests.paxinfo
 
-import drt.shared._
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
-
-import scala.collection.immutable.List
 
 object ManifestBuilder {
 

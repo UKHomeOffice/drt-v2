@@ -5,13 +5,12 @@ import actors.persistent.StreamingFeedStatusUpdates
 import actors.persistent.staffing.GetFeedStatuses
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import drt.shared.FlightsApi.Flights
-import uk.gov.homeoffice.drt.time.SDateLike
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
-import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.ports.{FeedSource, LiveBaseFeedSource}
+import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object CiriumLiveArrivalsActor extends StreamingFeedStatusUpdates {
   val persistenceId = "actors.LiveBaseArrivalsActor-live-base"
@@ -29,8 +28,8 @@ class CiriumLiveArrivalsActor(val now: () => SDateLike,
   def consumeDiffsMessage(diffsMessage: FlightsDiffMessage): Unit = consumeUpdates(diffsMessage)
 
   override def receiveCommand: Receive = {
-    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
-      handleFeedSuccess(incomingArrivals, createdAt)
+    case ArrivalsFeedSuccess(incomingArrivals, createdAt) =>
+      handleFeedSuccess(incomingArrivals.size, createdAt)
 
     case ArrivalsFeedFailure(message, createdAt) =>
       handleFeedFailure(message, createdAt)

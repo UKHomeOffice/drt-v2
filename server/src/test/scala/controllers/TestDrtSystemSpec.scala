@@ -6,10 +6,10 @@ import akka.pattern.ask
 import drt.shared.CrunchApi._
 import drt.shared.PortState
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, Passengers}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.UnknownFeedSource
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.SDate
@@ -25,7 +25,7 @@ class TestDrtSystemSpec extends CrunchTestLike {
     val drtSystem = TestDrtSystem(defaultAirportConfig, MockDrtParameters(), () => SDate.now())
 
     "When I send its port state actor an arrival" >> {
-      val arrival = ArrivalGenerator.arrival("BA0001", schDt = drtSystem.now().toISODateOnly, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
+      val arrival = ArrivalGenerator.live("BA0001", schDt = drtSystem.now().toISODateOnly).toArrival(LiveFeedSource)
       Await.ready(drtSystem.actorService.portStateActor.ask(ArrivalsDiff(List(arrival), List())), 1.second)
 
       "Then I should see the arrival when I check its port state" >> {

@@ -2,11 +2,8 @@ package actors.routing
 
 import actors.DateRange
 import actors.PartitionedPortStateActor._
-import actors.daily.RequestAndTerminateActor
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import akka.NotUsed
-import akka.actor.{ActorRef, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import controllers.model.RedListCounts
@@ -16,7 +13,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.SourceUtils
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FlightsWithSplits, SplitsForArrivals, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
@@ -26,7 +23,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 object FlightsRouterActor {
-  val log: Logger = LoggerFactory.getLogger(getClass)
+  private val log: Logger = LoggerFactory.getLogger(getClass)
 
   def scheduledInRange(start: SDateLike, end: SDateLike, scheduled: MillisSinceEpoch): Boolean = {
     val scheduledDate = SDate(scheduled)
@@ -87,9 +84,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
                          updateFlights: FlightsUpdate,
                          paxFeedSourceOrder: List[FeedSource],
-                        ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate)] {
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), "flights-router-actor-kill-actor")
-
+                        ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate), Long] {
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), allTerminals, Option(pit), paxFeedSourceOrder)
@@ -171,7 +166,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
       allTerminals.flatMap(t => dates.map(d => ((t, d), RemoveSplits))).toMap
   }
 
-  def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[UpdatedMillis] =
+  def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[Set[Long]] =
     updateFlights(partition, updates)
 
   override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = {

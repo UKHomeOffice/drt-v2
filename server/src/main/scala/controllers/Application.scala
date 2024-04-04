@@ -11,20 +11,19 @@ import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
-import services.graphstages.Crunch
 import slickdb._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.db.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import java.sql.Timestamp
 import java.util.{Calendar, TimeZone}
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import uk.gov.homeoffice.drt.db.{IABFeatureDao, IUserFeedbackDao}
-import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 
 trait AirportConfiguration {
@@ -74,7 +73,6 @@ trait ABFeatureProviderLike {
 class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)
   extends AuthController(cc, ctrl) {
 
-
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
   private val systemStartGracePeriod: FiniteDuration = config.get[Int]("start-up-grace-period-seconds").seconds
@@ -108,7 +106,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   def shouldUserViewBanner: Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-    val oneEightyDaysInMillis: Long = 180L * 24 * 60 * 60 * 1000 // 180 days in milliseconds
+    val oneEightyDaysInMillis: Long = 180.days.toMillis
     val cutoffTime = new Timestamp(ctrl.now().millisSinceEpoch - oneEightyDaysInMillis)
     val feedbackExistF = ctrl.userFeedbackService.selectByEmail(userEmail)
       .map(_.sortBy(_.createdAt)(Ordering[Timestamp].reverse).headOption)
@@ -124,7 +122,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       bannerClosedAt <- bannerClosedAtF
     } yield (feedbackExist, bannerClosedAt) match {
       case (false, Some(closedDate)) =>
-        val thirtyDays = 1000L * 60 * 60 * 24 * 30 // 30 days in milliseconds
+        val thirtyDays = 30.days.toMillis
         Ok(closedDate.before(new Timestamp(ctrl.now().millisSinceEpoch - thirtyDays)).toString)
       case (true, _) =>
         Ok(false.toString)

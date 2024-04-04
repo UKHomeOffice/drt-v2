@@ -7,18 +7,15 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers.RawHeader
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.Implicits._
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.Flights
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.arrivals.LiveArrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -76,7 +73,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
     entity.toStrict(10.seconds).map {
       case Strict(_, data) =>
         Try(data.utf8String.parseJson.convertTo[Seq[LtnLiveFlight]].filter(_.DepartureArrivalType == Option("A"))) match {
-          case Success(flights) => ArrivalsFeedSuccess(Flights(flights.map(toArrival)))
+          case Success(flights) => ArrivalsFeedSuccess(flights.map(toArrival))
           case Failure(t) =>
             log.warn(s"Failed to parse ltn arrivals response", t)
             ArrivalsFeedFailure(t.getMessage)
@@ -84,38 +81,34 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
     }
   }
 
-  def toArrival(ltnFeedFlight: LtnLiveFlight): Arrival = {
+  def toArrival(ltnFeedFlight: LtnLiveFlight): LiveArrival = {
     val operator: String = ltnFeedFlight.AirlineDesc.getOrElse("")
     val status: String = ltnFeedFlight.FlightStatusDesc.getOrElse("Scheduled")
 
-    Arrival(
-      Operator = operator,
-      Status = status,
-      Estimated = ltnFeedFlight.EstimatedDateTime.map(sdateWithTimeZoneApplied),
-      Predictions = Predictions(0L, Map()),
-      Actual = ltnFeedFlight.ALDT.map(sdateWithTimeZoneApplied),
-      EstimatedChox = None,
-      ActualChox = ltnFeedFlight.AIBT.map(sdateWithTimeZoneApplied),
-      Gate = ltnFeedFlight.GateCode,
-      Stand = ltnFeedFlight.StandCode,
-      MaxPax = ltnFeedFlight.MaxPax,
-      RunwayID = ltnFeedFlight.Runway,
-      BaggageReclaimId = ltnFeedFlight.BaggageClaimUnit,
-      AirportID = "LTN",
-      Terminal = Terminal(ltnFeedFlight.TerminalCode.getOrElse(throw new Exception("Missing terminal"))),
-      rawICAO = ltnFeedFlight.AirlineICAO.getOrElse(throw new Exception("Missing ICAO carrier code")) +
-        ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
-      rawIATA = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing IATA carrier code")) +
-        ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")),
-      Origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
-      Scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
-      PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      PassengerSources = Map(LiveFeedSource -> Passengers(ltnFeedFlight.TotalPassengerCount, None))
+    LiveArrival(
+      operator = Option(operator),
+      maxPax = ltnFeedFlight.MaxPax,
+      totalPax = ltnFeedFlight.TotalPassengerCount,
+      transPax = None,
+      terminal = Terminal(ltnFeedFlight.TerminalCode.getOrElse(throw new Exception("Missing terminal"))),
+      voyageNumber = ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")).toInt,
+      carrierCode = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing carrier code")),
+      flightCodeSuffix = None,
+      origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
+      scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
+      estimated = ltnFeedFlight.EstimatedDateTime.map(sdateWithTimeZoneApplied),
+      touchdown = ltnFeedFlight.ALDT.map(sdateWithTimeZoneApplied),
+      estimatedChox = None,
+      actualChox = ltnFeedFlight.AIBT.map(sdateWithTimeZoneApplied),
+      status = status,
+      gate = ltnFeedFlight.GateCode,
+      stand = ltnFeedFlight.StandCode,
+      runway = ltnFeedFlight.Runway,
+      baggageReclaim = ltnFeedFlight.BaggageClaimUnit,
     )
   }
 
-  def sdateWithTimeZoneApplied(dt: String): MillisSinceEpoch = {
+  private def sdateWithTimeZoneApplied(dt: String): MillisSinceEpoch = {
     val rawDate = SDate(dt)
     val offsetMillis = timeZone.getOffset(rawDate.millisSinceEpoch)
     rawDate.millisSinceEpoch - offsetMillis

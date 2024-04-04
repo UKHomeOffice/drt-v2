@@ -77,6 +77,8 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
     paxFeedSourceOrder = paxFeedSourceOrder,
     flightLookups = flightLookups,
     manifestLookups = manifestLookups,
+    requestAndTerminateActor = actorService.requestAndTerminateActor,
+    forecastMaxDays = params.forecastMaxDays,
   )
 
   val testDrtSystemActor: TestDrtSystemActorsLike = TestDrtSystemActors(applicationService, feedService, actorService, persistentActors, config)

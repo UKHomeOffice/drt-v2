@@ -4,21 +4,18 @@ import controllers.ArrivalGenerator
 import org.specs2.mutable.Specification
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode}
 
 import scala.collection.immutable.SortedMap
 
 class ArrivalsActorSpec extends Specification {
   val arrival1: Arrival = ArrivalGenerator
-    .arrival(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05",
-      passengerSources = Map(AclFeedSource -> Passengers(Option(100),None)))
+    .live(iata = "BA0001", terminal = T1, origin = PortCode("JFK"), schDt = "2019-01-01T00:05", totalPax = Option(100)).toArrival(AclFeedSource)
   val arrival2: Arrival = ArrivalGenerator
-    .arrival(iata = "BA0002", terminal = T1, origin = PortCode("ABC"), schDt = "2019-01-01T00:35",
-      passengerSources = Map(AclFeedSource -> Passengers(Option(200),None)))
+    .live(iata = "BA0002", terminal = T1, origin = PortCode("ABC"), schDt = "2019-01-01T00:35", totalPax = Option(200)).toArrival(AclFeedSource)
   val arrival3: Arrival = ArrivalGenerator
-    .arrival(iata = "BA0003", terminal = T1, origin = PortCode("ZZZ"), schDt = "2019-01-01T00:55",
-      passengerSources = Map(AclFeedSource -> Passengers(Option(250),None)))
+    .live(iata = "BA0003", terminal = T1, origin = PortCode("ZZZ"), schDt = "2019-01-01T00:55", totalPax = Option(250)).toArrival(AclFeedSource)
 
   "Given no existing arrivals and one incoming " +
   "When I ask for removals and updates " +

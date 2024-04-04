@@ -8,7 +8,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.T1
 class CrunchMinuteSpec extends Specification {
   "Given a existing CrunchMinute, I should know a new CrunchMinute is an update" >> {
     val paxLoad = 10.0
-    val maybePassengers = Option(Seq(1.0, 2.0))
     val workLoad = 20.0
     val deskRec = 1
     val waitTime = 2

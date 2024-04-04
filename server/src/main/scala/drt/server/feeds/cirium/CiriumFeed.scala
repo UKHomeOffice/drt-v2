@@ -6,16 +6,14 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.Implicits._
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.LiveArrival
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{LiveBaseFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -34,7 +32,7 @@ case class CiriumFeed(endpoint: String, portCode: PortCode)(implicit actorSystem
             log.info(s"Got ${fs.size} arrivals from Cirium")
             fs.map(a => toArrival(a, portCode))
           })
-          .map(as => ArrivalsFeedSuccess(Flights(as)))
+          .map(as => ArrivalsFeedSuccess(as))
           .recover {
             case throwable: Throwable =>
               log.error("Failed to connect to Cirium", throwable)
@@ -65,37 +63,30 @@ object CiriumFeed {
     case _ => date
   }
 
-  def toArrival(f: CiriumFlightStatus, portCode: PortCode): Arrival = {
+  def toArrival(f: CiriumFlightStatus, portCode: PortCode): LiveArrival = {
     val carrierScheduledTime = f.arrivalDate.millis
     val scheduledToNearest5Mins = timeToNearest5Minutes(SDate(carrierScheduledTime)).millisSinceEpoch
 
-    Arrival(
-      Operator = f.carrierFsCode,
-      Status = ciriumStatusCodeToStatus(f.status),
-      Predictions = Predictions(0L, Map()),
-      Estimated = f.estimated,
-      Actual = f.actualTouchdown,
-      EstimatedChox = f.estimatedChox,
-      ActualChox = f.actualChox,
-      Gate = f.airportResources.flatMap(_.arrivalGate),
-      Stand = None,
-      MaxPax = None,
-      RunwayID = None,
-      BaggageReclaimId = f.airportResources.flatMap(_.baggage),
-      AirportID = f.arrivalAirportFsCode,
-      Terminal = terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
-      rawICAO = f.operatingCarrierFsCode + f.flightNumber,
-      rawIATA = f.operatingCarrierFsCode + f.flightNumber,
-      Origin = f.departureAirportFsCode,
-      Scheduled = scheduledToNearest5Mins,
-      PcpTime = None,
-      FeedSources = Set(LiveBaseFeedSource),
-      CarrierScheduled = if (scheduledToNearest5Mins == carrierScheduledTime)
-        None
-      else
-        Option(carrierScheduledTime),
-      ScheduledDeparture = Some(f.departureDate).map(_.millis),
-      PassengerSources = Map(LiveBaseFeedSource -> Passengers(None, None))
+    LiveArrival(
+      operator = Option(f.carrierFsCode),
+      maxPax = None,
+      totalPax = None,
+      transPax = None,
+      terminal = terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
+      voyageNumber = f.flightNumber.toInt,
+      carrierCode = f.operatingCarrierFsCode,
+      flightCodeSuffix = None,
+      origin = f.departureAirportFsCode,
+      scheduled = scheduledToNearest5Mins,
+      estimated = f.estimated,
+      touchdown = f.actualTouchdown,
+      estimatedChox = f.estimatedChox,
+      actualChox = f.actualChox,
+      status = ciriumStatusCodeToStatus(f.status),
+      gate = f.airportResources.flatMap(_.arrivalGate),
+      stand = None,
+      runway = None,
+      baggageReclaim = f.airportResources.flatMap(_.baggage),
     )
   }
 

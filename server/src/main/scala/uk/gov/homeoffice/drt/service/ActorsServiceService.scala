@@ -2,9 +2,10 @@ package uk.gov.homeoffice.drt.service
 
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
-import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
+import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.util.Timeout
 import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -17,8 +18,10 @@ case class ActorsServiceService(journalType: StreamingJournalLike,
                                 now: () => SDateLike,
                                 forecastMaxDays: Int,
                                 flightLookups: FlightLookupsLike,
-                                minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ActorsServiceLike {
-
+                                minuteLookups: MinuteLookupsLike,
+                               )
+                               (implicit system: ActorSystem, timeout: Timeout) extends ActorsServiceLike {
+  override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "request-and-terminate-actor")
   override val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
   override val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(

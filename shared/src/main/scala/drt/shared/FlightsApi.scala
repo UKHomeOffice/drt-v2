@@ -17,8 +17,6 @@ object FlightsApi {
     val empty: Flights = Flights(Seq())
   }
 
-  case object NoFlightUpdates extends FlightUpdates
-
   object PaxForArrivals {
     val empty: PaxForArrivals = PaxForArrivals(Map())
 
@@ -34,7 +32,7 @@ object FlightsApi {
   }
 
   case class PaxForArrivals(pax: Map[UniqueArrival, Map[FeedSource, Passengers]]) extends FlightUpdates {
-    def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): FlightsWithSplitsDiff = {
+    def diff(flights: FlightsWithSplits, nowMillis: MillisSinceEpoch): ArrivalsDiff = {
       val updatedFlights = pax.map {
         case (key, newPax) =>
           flights.flights.get(key)
@@ -49,12 +47,11 @@ object FlightsApi {
             .collect {
               case (fws, updatedPax) if updatedPax.nonEmpty =>
                 val mergedPax = fws.apiFlight.PassengerSources ++ updatedPax
-                val updatedArrival = fws.apiFlight.copy(PassengerSources = mergedPax)
-                fws.copy(apiFlight = updatedArrival, lastUpdated = Option(nowMillis))
+                fws.apiFlight.copy(PassengerSources = mergedPax)
             }
       }.collect { case Some(flight) => flight }
 
-      FlightsWithSplitsDiff(updatedFlights, List())
+      ArrivalsDiff(updatedFlights, List())
     }
   }
 

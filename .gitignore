@@ -3,6 +3,7 @@
 .~*
 .#*
 *.DS_Store
+*.local
 
 # sbt specific
 .sbtopts
@@ -19,6 +20,8 @@ project/boot/
 project/plugins/project/
 notebooks/*.csv
 .bsp
+
+run-*
 
 # Scala-IDE specific
 .scala_dependencies

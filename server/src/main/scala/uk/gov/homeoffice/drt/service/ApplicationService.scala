@@ -3,9 +3,9 @@ package uk.gov.homeoffice.drt.service
 import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber}
 import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors._
-import actors.daily.{PassengersActor, RequestAndTerminateActor}
+import actors.daily.PassengersActor
 import actors.persistent._
-import actors.persistent.staffing.{FixedPointsActor, GetFeedStatuses, ShiftsActor, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
@@ -47,7 +47,6 @@ import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -60,7 +59,6 @@ import uk.gov.homeoffice.drt.time._
 
 import javax.inject.Singleton
 import scala.collection.SortedSet
-import scala.collection.immutable.SortedMap
 import scala.concurrent.duration.{DurationInt, DurationLong}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -77,7 +75,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               manifestLookupService: ManifestLookupLike,
                               minuteLookups: MinuteLookupsLike,
                               actorService: ActorsServiceLike,
-                              persistentStateActors: PersistentStateActors)
+                              persistentStateActors: PersistentStateActors,
+                              requestAndTerminateActor: ActorRef,
+                             )
                              (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
   val log: Logger = LoggerFactory.getLogger(getClass)
   private val walkTimeProvider: (Terminal, String, String) => Option[Int] = WalkTimeProvider(params.gateWalkTimesFilePath, params.standWalkTimesFilePath)
@@ -118,12 +118,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val pcpArrivalTimeCalculator: Arrival => MilliDate =
     pcpFrom(airportConfig.firstPaxOffMillis, walkTimeProviderWithFallback)
 
-  val setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff] = diff =>
-    Future.successful {
-      val updates = SortedMap[UniqueArrival, Arrival]() ++
-        diff.toUpdate.view.mapValues(arrival => arrival.copy(PcpTime = Option(pcpArrivalTimeCalculator(arrival).millisSinceEpoch)))
-      diff.copy(toUpdate = updates)
-    }
+  val setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]] = arrivals =>
+    Future.successful(arrivals.map(a => a.copy(PcpTime = Option(pcpArrivalTimeCalculator(a).millisSinceEpoch))))
 
   private val manifestsRouterActorReadOnly: ActorRef =
     system.actorOf(
@@ -179,8 +175,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
     airportConfig.crunchOffsetMinutes,
     airportConfig.minutesToCrunch,
     params.forecastMaxDays)), "egate-banks-updates-actor")
-
-  val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
   val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
     now, startOfTheMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
@@ -296,7 +290,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
       val mergeArrivalsFlow = MergeArrivals.processingRequestToArrivalsDiff(
         mergeArrivalsForDate = merger,
-        setPcpTimes = setPcpTimes,
+        setPcpTime = setPcpTimes,
         addArrivalPredictions = addArrivalPredictions,
         updateAggregatedArrivals = actors.aggregatedArrivalsActor ! _,
       )
@@ -398,12 +392,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
 
   def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]], manifestsRouterActor: ActorRef): Unit = {
-    actorService.flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-    manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestActor)
-    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
-    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
-    actorService.staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestActor)
-    slasActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestActor)
+    actorService.flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestQueueActor)
+    manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestQueueActor)
+    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestQueueActor)
+    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestQueueActor)
+    actorService.staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestQueueActor)
+    slasActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestQueueActor)
   }
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
@@ -430,6 +424,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       manifestsLiveSource = voyageManifestsLiveSource,
       crunchActors = actors,
       feedActors = feedService.feedActors,
+      updateFeedStatus = feedService.updateFeedStatus,
       manifestsRouterActor = persistentStateActors.manifestsRouterActor,
       arrivalsForecastBaseFeed = feedService.baseArrivalsSource(feedService.maybeAclFeed),
       arrivalsForecastFeed = feedService.forecastArrivalsSource(airportConfig.portCode),
@@ -446,26 +441,18 @@ case class ApplicationService(journalType: StreamingJournalLike,
   def run(): Unit = {
     val actors = persistentStateActors
 
-    val futurePortStates: Future[(
-        Option[FeedSourceStatuses],
-        SortedSet[ProcessingRequest],
-        SortedSet[ProcessingRequest],
-        SortedSet[ProcessingRequest],
-        SortedSet[ProcessingRequest],
-        SortedSet[ProcessingRequest],
-      )] = {
+    val futurePortStates =
       for {
-        aclStatus <- feedService.forecastBaseFeedArrivalsActor.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
+        _ <- feedService.populateFeedArrivals()
         mergeArrivalsQueue <- actors.mergeArrivalsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         crunchQueue <- actors.crunchQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deskRecsQueue <- actors.deskRecsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deploymentQueue <- actors.deploymentQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         staffingUpdateQueue <- actors.staffingQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
-      } yield (aclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
-    }
+      } yield (mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
 
     futurePortStates.onComplete {
-      case Success((maybeAclStatus, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
+      case Success((mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
         val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
@@ -478,16 +465,15 @@ case class ApplicationService(journalType: StreamingJournalLike,
         feedService.liveBaseFeedPollingActor ! Enable(crunchInputs.liveBaseArrivalsResponse)
         feedService.liveFeedPollingActor ! Enable(crunchInputs.liveArrivalsResponse)
 
-        for {
-          aclStatus <- maybeAclStatus
-          lastSuccess <- aclStatus.feedStatuses.lastSuccessAt
-        } yield {
-          val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
-          if (lastSuccess < twelveHoursAgo) {
-            val minutesToNextCheck = (Math.random() * 90).toInt.minutes
-            log.info(s"Last ACL check was more than 12 hours ago. Will check in ${minutesToNextCheck.toMinutes} minutes")
-            system.scheduler.scheduleOnce(minutesToNextCheck) {
-              feedService.fcstBaseFeedPollingActor ! AdhocCheck
+        if (!airportConfig.aclDisabled) {
+          feedService.aclLastCheckedAt().map { lastSuccess =>
+            val twelveHoursAgo = SDate.now().addHours(-12).millisSinceEpoch
+            if (lastSuccess < twelveHoursAgo) {
+              val minutesToNextCheck = (Math.random() * 90).toInt.minutes
+              log.info(s"Last ACL check was more than 12 hours ago. Will check in ${minutesToNextCheck.toMinutes} minutes")
+              system.scheduler.scheduleOnce(minutesToNextCheck) {
+                feedService.fcstBaseFeedPollingActor ! AdhocCheck
+              }
             }
           }
         }

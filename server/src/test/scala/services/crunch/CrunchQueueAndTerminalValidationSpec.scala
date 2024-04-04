@@ -2,14 +2,12 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.FlightsApi.Flights
 import drt.shared._
-import uk.gov.homeoffice.drt.arrivals.Passengers
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{InvalidTerminal, T1}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PaxTypeAndQueue, PaxTypes, Queues}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PaxTypes, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -26,11 +24,9 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           val scheduled00 = "2017-01-01T00:00Z"
           val scheduled = "2017-01-01T00:00Z"
 
-          val flights = Flights(Seq(
-            ArrivalGenerator.arrival(schDt = scheduled00, iata = "BA0001", terminal = T1,
-              feedSources = Set(LiveFeedSource),
-              passengerSources =  Map(LiveFeedSource -> Passengers(Option(15),None)))
-            ))
+          val flights = Seq(
+            ArrivalGenerator.live(schDt = scheduled00, iata = "BA0001", terminal = T1, totalPax = Option(15))
+          )
 
           val fiveMinutes = 600d / 60
 
@@ -41,10 +37,10 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
                 SplitSources.TerminalAverage,
                 SplitRatio(eeaMachineReadableToDesk, 1),
                 SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
-                )),
+              )),
               terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
               queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
-              )))
+            )))
 
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
@@ -68,10 +64,10 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
 
         val scheduled = "2017-01-01T00:00Z"
 
-        val flights = Flights(Seq(
-          ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources =  Map(LiveFeedSource -> Passengers(Option(15),None))),
-          ArrivalGenerator.arrival(schDt = scheduled, iata = "FR8819", terminal = InvalidTerminal, passengerSources =  Map(LiveFeedSource -> Passengers(Option(10),None)))
-        ))
+        val flights = Seq(
+          ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(15)),
+          ArrivalGenerator.live(schDt = scheduled, iata = "FR8819", terminal = InvalidTerminal, totalPax = Option(10))
+        )
 
         val fiveMinutes = 600d / 60
 

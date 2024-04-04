@@ -19,7 +19,7 @@ object DynamicRunnableDeployments {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   type PassengersToQueueMinutes =
-    (NumericRange[MillisSinceEpoch], Map[TQM, PassengersMinute], Map[Terminal, TerminalDeskLimitsLike]) => Future[PortStateQueueMinutes]
+    (NumericRange[MillisSinceEpoch], Map[TQM, PassengersMinute], Map[Terminal, TerminalDeskLimitsLike], String) => Future[PortStateQueueMinutes]
 
   def crunchRequestsToDeployments(loadsProvider: ProcessingRequest => Future[Map[TQM, PassengersMinute]],
                                   staffProvider: ProcessingRequest => Future[Map[Terminal, List[Int]]],
@@ -55,7 +55,7 @@ object DynamicRunnableDeployments {
         case (request: LoadProcessingRequest, loads, deskLimitsByTerminal) =>
           val started = SDate.now().millisSinceEpoch
           log.info(s"[deployments] Optimising ${request.durationMinutes} minutes (${request.start.toISOString} to ${request.end.toISOString})")
-          loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal)
+          loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal, "deployments")
             .map { minutes =>
               log.info(s"[deployments] Optimising complete. Took ${SDate.now().millisSinceEpoch - started}ms")
               Option(minutes)

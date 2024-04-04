@@ -1,6 +1,7 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
 import actors.persistent.staffing.ReplaceAllShifts
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
@@ -20,7 +21,7 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import play.api.http.HeaderNames
 import play.api.mvc._
 import spray.json._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FlightCode, LiveArrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
@@ -43,12 +44,16 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  private def saveArrival(arrival: Arrival): Future[Any] = {
+  private def saveArrival(arrival: LiveArrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    ctrl.feedService.liveFeedArrivalsActor ! ArrivalsFeedSuccess(Flights(List(arrival)))
-    ctrl.actorService.portStateActor.ask(ArrivalsDiff(List(arrival), List())).map { _ =>
-      ctrl.feedService.liveFeedPollingActor ! AdhocCheck
-    }
+    ctrl.feedService.liveFeedArrivalsActor ! FeedArrivals(List(arrival))
+    ctrl.applicationService
+      .setPcpTimes(Seq(arrival.toArrival(LiveFeedSource)))
+      .flatMap { arrivals =>
+        ctrl.actorService.portStateActor.ask(ArrivalsDiff(arrivals, List())).map { _ =>
+          ctrl.feedService.liveFeedPollingActor ! AdhocCheck
+        }
+      }
   }
 
   private def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
@@ -66,32 +71,29 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
     request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
         case Some(flight) =>
-          val walkTimeMinutes = 13
           val actPax: Option[Int] = Option(flight.ActPax).filter(_ != 0)
-          val pcpTime: Long = actPax.map(_ => org.joda.time.DateTime.parse(flight.ActChoxDT).plusMinutes(walkTimeMinutes).getMillis)
-            .getOrElse(org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis)
-          val arrival = Arrival(
-            Operator = flight.Operator,
-            Status = flight.Status,
-            Estimated = Option(SDate(flight.EstDT).millisSinceEpoch),
-            Actual = Option(SDate(flight.ActDT).millisSinceEpoch),
-            EstimatedChox = Option(SDate(flight.EstChoxDT).millisSinceEpoch),
-            Predictions = Predictions(0L, Map()),
-            ActualChox = Option(SDate(flight.ActChoxDT).millisSinceEpoch),
-            Gate = Option(flight.Gate),
-            Stand = Option(flight.Stand),
-            MaxPax = Option(flight.MaxPax).filter(_ != 0),
-            RunwayID = Option(flight.RunwayID),
-            BaggageReclaimId = Option(flight.BaggageReclaimId),
-            AirportID = PortCode(flight.AirportID),
-            Terminal = Terminal(flight.Terminal),
-            rawICAO = flight.ICAO,
-            rawIATA = flight.IATA,
-            Origin = PortCode(flight.Origin),
-            PcpTime = Option(pcpTime),
-            FeedSources = Set(LiveFeedSource),
-            PassengerSources = Map(LiveFeedSource -> Passengers(actPax, if (actPax.isEmpty) None else Option(flight.TranPax))),
-            Scheduled = SDate(flight.SchDT).millisSinceEpoch
+          val transPax = if (actPax.isEmpty) None else Option(flight.TranPax)
+          val (carrierCode, voyageNumber, maybeSuffix) = FlightCode.flightCodeToParts(flight.IATA)
+          val arrival = LiveArrival(
+            operator = Option(flight.Operator),
+            maxPax = Option(flight.MaxPax).filter(_ != 0),
+            totalPax = actPax,
+            transPax = transPax,
+            terminal = Terminal(flight.Terminal),
+            voyageNumber = voyageNumber.numeric,
+            carrierCode = carrierCode.code,
+            flightCodeSuffix = maybeSuffix.map(_.suffix),
+            origin = flight.Origin,
+            scheduled = SDate(flight.SchDT).millisSinceEpoch,
+            estimated = Option(SDate(flight.EstDT).millisSinceEpoch),
+            touchdown = Option(SDate(flight.ActDT).millisSinceEpoch),
+            estimatedChox = Option(SDate(flight.EstChoxDT).millisSinceEpoch),
+            actualChox = Option(SDate(flight.ActChoxDT).millisSinceEpoch),
+            status = flight.Status,
+            gate = Option(flight.Gate),
+            stand = Option(flight.Stand),
+            runway = Option(flight.RunwayID),
+            baggageReclaim = Option(flight.BaggageReclaimId),
           )
           saveArrival(arrival).map(_ => Created)
         case None =>

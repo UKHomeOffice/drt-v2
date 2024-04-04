@@ -1,17 +1,15 @@
 package drt.server.feeds.acl
 
-import drt.server.feeds.Implicits._
 import drt.server.feeds.acl.AclFeed._
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import drt.shared.FlightsApi.Flights
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.transport.verification.PromiscuousVerifier
 import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightCode, ForecastArrival}
 import uk.gov.homeoffice.drt.ports.Terminals._
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode, Terminals}
+import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -43,7 +41,7 @@ case class AclFeed(ftpServer: String, username: String, path: String, portCode: 
           val latestFilePath = s"$directoryName/$latestFile"
           log.info(s"Latest ACL file: $latestFilePath")
           val feedResponseTry = Try(
-            Flights(arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFilePath), terminalMapping))
+            arrivalsFromCsvContent(contentFromFileName(sftpClient, latestFilePath), terminalMapping)
           )
 
           feedResponseTry match {
@@ -111,7 +109,7 @@ object AclFeed {
       .find(_.isDefined)
       .flatten
 
-  def arrivalsFromCsvContent(csvContent: String, terminalMapping: Terminal => Terminal): List[Arrival] = {
+  def arrivalsFromCsvContent(csvContent: String, terminalMapping: Terminal => Terminal): List[ForecastArrival] = {
     val flightEntries = csvContent
       .split("\n")
       .drop(1)
@@ -125,16 +123,14 @@ object AclFeed {
         case _ => true
       })
 
-    val aclArrivals = arrivalEntries
+    val arrivals = arrivalEntries
       .map(fields => aclFieldsToArrival(fields, terminalMapping))
       .collect { case Success(a) => a }
       .toList
 
-    val arrivals = aclArrivals.map(_.arrival)
-
     if (arrivals.nonEmpty) {
-      val latestArrival = arrivals.maxBy(_.Scheduled)
-      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.Scheduled).toLocalDateTimeString} (${latestArrival.flightCodeString})")
+      val latestArrival = arrivals.maxBy(_.scheduled)
+      log.info(s"ACL: ${arrivals.length} arrivals. Latest scheduled arrival: ${SDate(latestArrival.scheduled).toLocalDateTimeString} (${latestArrival.voyageNumber})")
     }
     arrivals
   }
@@ -202,40 +198,7 @@ object AclFeed {
     case (hour, minute) => s"$hour:$minute:00Z"
   }
 
-  case class AclArrival(operator: String,
-                        maxPax: Int,
-                        totalPax: Int,
-                        terminal: String,
-                        flightNumber: String,
-                        origin: String,
-                        scheduled: Long,
-                       ) {
-    def arrival: Arrival = Arrival(
-      Operator = Option(Operator(operator)),
-      Status = ArrivalStatus("Scheduled"),
-      Estimated = None,
-      Predictions = Predictions(0L, Map()),
-      Actual = None,
-      EstimatedChox = None,
-      ActualChox = None,
-      Gate = None,
-      Stand = None,
-      MaxPax = Option(maxPax),
-      RunwayID = None,
-      BaggageReclaimId = None,
-      AirportID = "",
-      Terminal = Terminal(terminal),
-      rawICAO = flightNumber,
-      rawIATA = flightNumber,
-      Origin = PortCode(origin),
-      Scheduled = scheduled,
-      PcpTime = None,
-      FeedSources = Set(AclFeedSource),
-      PassengerSources = Map(AclFeedSource -> Passengers(Option(totalPax), None))
-    )
-  }
-
-  private def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[AclArrival] =
+  private def aclFieldsToArrival(fields: List[String], aclToPortTerminal: Terminal => Terminal): Try[ForecastArrival] =
     Try {
       val operator: String = fields(AclColIndex.Operator)
       val maxPax = fields(AclColIndex.MaxPax).toInt
@@ -243,15 +206,25 @@ object AclFeed {
       val aclTerminal = Terminals.Terminal(fields(AclColIndex.Terminal))
       val portTerminal = aclToPortTerminal(aclTerminal)
 
-      AclArrival(
-        operator = operator,
-        maxPax = maxPax,
-        totalPax = actPax,
-        terminal = portTerminal.toString,
-        flightNumber = fields(AclColIndex.FlightNumber),
+      val (_, voyageNumber, suffix) = FlightCode.flightCodeToParts(fields(AclColIndex.FlightNumber))
+
+      ForecastArrival(
+        operator = Option(operator),
+        maxPax = Option(maxPax),
+        totalPax = Option(actPax),
+        transPax = None,
+        terminal = Terminal(portTerminal.toString),
+        voyageNumber = voyageNumber.numeric,
+        carrierCode = fields(AclColIndex.Operator),
+        flightCodeSuffix = suffix.map(_.suffix),
         origin = fields(AclColIndex.Origin),
         scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
       )
+    } match {
+      case Success(a) => Success(a)
+      case Failure(t) =>
+        log.error(s"Failed to parse ACL line: ${fields.mkString(", ")}: ${t.getMessage}")
+        Failure(t)
     }
 
   private object AclColIndex {
@@ -271,7 +244,6 @@ object AclFeed {
     val Time: Int = allFields("Time")
     val Operator: Int = allFields("Ope")
     val Origin: Int = allFields("OrigDest")
-    val Airport: Int = allFields("Airport")
     val Terminal: Int = allFields("Term")
     val ArrDep: Int = allFields("ArrDep")
   }

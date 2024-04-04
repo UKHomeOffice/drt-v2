@@ -3,12 +3,11 @@ package feeds.mag
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model._
 import com.typesafe.config.{Config, ConfigFactory}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed, ProdFeedRequester}
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import pdi.jwt.JwtAlgorithm
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
@@ -18,10 +17,10 @@ object MockFeedRequester extends FeedRequesterLike {
   private val defaultResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]"))
   var mockResponse: HttpResponse = defaultResponse
 
-  override def sendTokenRequest(header: String,
-                                claim: String,
-                                key: String,
-                                algorithm: JwtAlgorithm): String = "Fake token"
+  override def createToken(header: String,
+                           claim: String,
+                           key: String,
+                           algorithm: JwtAlgorithm): String = "Fake token"
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
@@ -29,17 +28,15 @@ object MockFeedRequester extends FeedRequesterLike {
 }
 
 case class MockExceptionThrowingFeedRequester(causeException: () => Unit) extends FeedRequesterLike {
-  override def sendTokenRequest(header: String,
-                                claim: String,
-                                key: String,
-                                algorithm: JwtAlgorithm): String = "Fake token"
+  override def createToken(header: String,
+                           claim: String,
+                           key: String,
+                           algorithm: JwtAlgorithm): String = "Fake token"
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
-  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] = {
-    causeException()
-    Future(HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]")))
-  }
+  def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse] =
+    Future(causeException()).map(_ => HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, "[]")))
 }
 
 class MagFeedSpec extends CrunchTestLike {
@@ -68,7 +65,7 @@ class MagFeedSpec extends CrunchTestLike {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrival))
 
     val result = Await.result(feed.requestArrivals(SDate.now()), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrivals), _) => arrivals
+      case ArrivalsFeedSuccess(arrivals, _) => arrivals
       case _ => List()
     }
 
@@ -80,7 +77,7 @@ class MagFeedSpec extends CrunchTestLike {
     MockFeedRequester.mockResponse = HttpResponse(entity = HttpEntity(ContentTypes.`application/json`, jsonResponseSingleArrivalWith0Pax))
 
     val actMax = Await.result(feed.requestArrivals(SDate.now()), 1.second) match {
-      case ArrivalsFeedSuccess(Flights(arrivals), _) => (arrivals.head.PassengerSources.get(LiveFeedSource).flatMap(_.actual), arrivals.head.MaxPax)
+      case ArrivalsFeedSuccess(arrival :: _, _) => (arrival.totalPax, arrival.maxPax)
       case _ => List()
     }
 
@@ -104,7 +101,8 @@ class MagFeedSpec extends CrunchTestLike {
 
   "Given a mock feed requester that throws an exception " +
     "I should get an ArrivalsFeedFailure response" >> {
-    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), MockExceptionThrowingFeedRequester(() => new Exception("I'm throwing an exception")))
+    val requester = MockExceptionThrowingFeedRequester(() => throw new Exception("I'm throwing an exception"))
+    val exceptionFeed = MagFeed(privateKey, claimIss, claimRole, claimSub, () => SDate.now(), PortCode("MAN"), requester)
 
     val isFeedFailure = Await.result(exceptionFeed.requestArrivals(SDate.now()), 1.second) match {
       case ArrivalsFeedFailure(_, _) => true

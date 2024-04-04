@@ -91,7 +91,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
     manifestLookupService = manifestLookupService,
     minuteLookups = minuteLookups,
     actorService = actorService,
-    persistentStateActors = persistentActors
+    persistentStateActors = persistentActors,
+    requestAndTerminateActor = actorService.requestAndTerminateActor,
   )
   def run(): Unit
 

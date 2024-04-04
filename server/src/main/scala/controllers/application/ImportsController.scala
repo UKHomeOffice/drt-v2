@@ -83,7 +83,7 @@ class ImportsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
 
           if (extractedArrivals.nonEmpty) {
             log.info(s"${extractedArrivals.length} arrivals found to import")
-            ctrl.feedService.arrivalsImportActor ! StoreFeedImportArrivals(Flights(extractedArrivals))
+            ctrl.feedService.arrivalsImportActor ! StoreFeedImportArrivals(extractedArrivals)
             Accepted(toJson(ApiResponseBody("Arrivals have been queued for processing")))
           } else BadRequest(toJson(ApiResponseBody("No arrivals found")))
         } else {

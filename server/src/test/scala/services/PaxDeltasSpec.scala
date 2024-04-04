@@ -4,8 +4,6 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.specs2.mutable.Specification
 import services.PaxDeltas.maybePctDeltas
-import uk.gov.homeoffice.drt.arrivals.Passengers
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -75,24 +73,24 @@ class PaxDeltasSpec extends Specification {
   }
 
   "When I ask for an arrival with 100 pax to have its pax adjusted" >> {
-    val arrival = ArrivalGenerator.arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)))
+    val arrival = ArrivalGenerator.live(totalPax = Option(100))
 
     "Given a delta of 0.5, I should get an arrival with 50 pax" >> {
       val delta = 0.5
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(50)
+      adjustedArrival.totalPax === Option(50)
     }
 
     "Given a delta of -0.5, I should get an arrival with pax capped at 0" >> {
       val delta = -0.5
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(0)
+      adjustedArrival.totalPax === Option(0)
     }
 
     "Given a delta of 2, I should get an arrival with pax capped at 100" >> {
       val delta = 2
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(100)
+      adjustedArrival.totalPax === Option(100)
     }
   }
 }

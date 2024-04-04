@@ -3,7 +3,6 @@ package controllers.application
 import actors.CrunchManagerActor.{RecalculateArrivals, Recrunch}
 import actors.DateRange
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -128,7 +127,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         to <- LocalDate.parse(toStr)
       } yield {
         val datesToReCrunch = DateRange(from, to).map { localDate => SDate(localDate).millisSinceEpoch }.toSet
-        ctrl.applicationService.crunchManagerActor ! UpdatedMillis(datesToReCrunch)
+        ctrl.applicationService.crunchManagerActor ! datesToReCrunch
         Ok(s"Queued dates $from to $to for re-crunch")
       }
       maybeFuture.getOrElse(BadRequest(s"Unable to parse dates '$fromStr' or '$toStr'"))

@@ -1,5 +1,5 @@
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
-import sbt._
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
+import sbt.*
 
 /**
  * Application settings. Configure the build for your application here.
@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v775"
+    val drtLib = "v808"
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
@@ -76,7 +76,7 @@ object Settings {
     val jwtCore = "9.4.5"
   }
 
-  import versions._
+  import versions.*
 
   val clientNpmDependencies: Seq[(String, String)] = Seq(
     "react" -> react,

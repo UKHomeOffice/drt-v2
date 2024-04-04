@@ -2,10 +2,9 @@ package feeds.lhr.forecast
 
 import drt.server.feeds.lhr.forecast.{LHRForecastCSVExtractor, LHRForecastFlightRow}
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.ForecastArrival
 import uk.gov.homeoffice.drt.ports.Terminals.T2
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.SDate
 
 class LHRForecastCSVSpec extends Specification {
   "Given a CSV containing a flight for T1 " +
@@ -118,52 +117,30 @@ class LHRForecastCSVSpec extends Specification {
     val result = LHRForecastCSVExtractor(filePath)
 
     val expected = Seq(
-      Arrival(
-        Operator = None,
-        Status = ArrivalStatus("Port Forecast"),
-        Estimated = None,
-        Predictions = Predictions(0L, Map()),
-        Actual = None,
-        EstimatedChox = None,
-        ActualChox = None,
-        Gate = None,
-        Stand = None,
-        MaxPax = None,
-        RunwayID = None,
-        BaggageReclaimId = None,
-        AirportID = PortCode("LHR"),
-        Terminal = T2,
-        rawICAO = "TS0001",
-        rawIATA = "TS0001",
-        Origin = PortCode("TST"),
-        Scheduled = SDate("2019-04-04T05:00Z").millisSinceEpoch,
-        PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
-        PassengerSources = Map(ForecastFeedSource -> Passengers(Option(290), Option(90)))
+      ForecastArrival(
+        operator = None,
+        maxPax = None,
+        totalPax = Option(290),
+        transPax = Option(90),
+        terminal = T2,
+        voyageNumber = 1,
+        carrierCode = "TS",
+        flightCodeSuffix = None,
+        origin = "TST",
+        scheduled = SDate("2019-04-04T05:00Z").millisSinceEpoch,
       ),
 
-      Arrival(
-        Operator = None,
-        Status = ArrivalStatus("Port Forecast"),
-        Estimated = None,
-        Predictions = Predictions(0L, Map()),
-        Actual = None,
-        EstimatedChox = None,
-        ActualChox = None,
-        Gate = None,
-        Stand = None,
-        MaxPax = None,
-        RunwayID = None,
-        BaggageReclaimId = None,
-        AirportID = PortCode("LHR"),
-        Terminal = T2,
-        rawICAO = "TS0002",
-        rawIATA = "TS0002",
-        Origin = PortCode("TST"),
-        Scheduled = SDate("2019-05-04T05:00Z").millisSinceEpoch,
-        PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
-        PassengerSources = Map(ForecastFeedSource -> Passengers(Option(290), Option(90)))
+      ForecastArrival(
+        operator = None,
+        maxPax = None,
+        totalPax = Option(290),
+        transPax = Option(90),
+        terminal = T2,
+        voyageNumber = 2,
+        carrierCode = "TS",
+        flightCodeSuffix = None,
+        origin = "TST",
+        scheduled = SDate("2019-05-04T05:00Z").millisSinceEpoch,
       )
     )
 

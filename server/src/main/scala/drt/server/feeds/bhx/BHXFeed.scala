@@ -8,17 +8,13 @@ import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.Implicits._
-import drt.server.feeds.common.FlightStatus
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.arrivals.{FeedArrival, LiveArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -119,7 +115,7 @@ trait BHXClientLike extends ScalaXmlSupport {
 
         bhxResponse.map {
           case s: BHXFlightsResponseSuccess =>
-            ArrivalsFeedSuccess(Flights(s.flights.map(fs => BHXFlight.bhxFlightToArrival(fs))))
+            ArrivalsFeedSuccess(s.flights.map(fs => BHXFlight.bhxFlightToArrival(fs)))
 
           case f: BHXFlightsResponseFailure =>
             ArrivalsFeedFailure(f.message)
@@ -278,7 +274,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
   }
 
   def maybeNodeText(n: NodeSeq): Option[String] = n.text match {
-    case t if t.length > 0 => Option(t)
+    case t if t.nonEmpty => Option(t)
     case _ => None
   }
 
@@ -287,31 +283,28 @@ object BHXFlight extends NodeSeqUnmarshaller {
     case _ => None
   }
 
-  def bhxFlightToArrival(f: BHXFlight): Arrival = {
-    Arrival(
-      Operator = f.airline,
-      Status = FlightStatus(f.status),
-      Predictions = Predictions(0L, Map()),
-      Estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
-      Actual = maybeTimeStringToMaybeMillis(f.actualTouchDown),
-      EstimatedChox = None,
-      ActualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),
-      Gate = f.passengerGate,
-      Stand = f.aircraftParkingPosition,
-      MaxPax = f.seatCapacity,
-      RunwayID = None,
-      BaggageReclaimId = None,
-      AirportID = f.arrivalAirport,
-      Terminal = Terminal(s"T${f.aircraftTerminal}"),
-      rawICAO = f.airline + f.flightNumber,
-      rawIATA = f.airline + f.flightNumber,
-      Origin = f.departureAirport,
-      Scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
-      PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      PassengerSources = Map(LiveFeedSource -> Passengers(f.paxCount, None))
+  def bhxFlightToArrival(f: BHXFlight): FeedArrival =
+    LiveArrival(
+      operator = Option(f.airline),
+      maxPax = f.seatCapacity,
+      totalPax = f.paxCount,
+      transPax = None,
+      terminal = Terminal(s"T${f.aircraftTerminal}"),
+      voyageNumber = f.flightNumber.toInt,
+      carrierCode = f.airline,
+      flightCodeSuffix = None,
+      origin = f.departureAirport,
+      scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
+      estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
+      touchdown = maybeTimeStringToMaybeMillis(f.actualTouchDown),
+      estimatedChox = None,
+      actualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),
+      status = f.status,
+      gate = f.passengerGate,
+      stand = f.aircraftParkingPosition,
+      runway = None,
+      baggageReclaim = None,
     )
-  }
 
   def maybeTimeStringToMaybeMillis(t: Option[String]): Option[MillisSinceEpoch] = t.flatMap(
     SDate.tryParseString(_).toOption.map(_.millisSinceEpoch)

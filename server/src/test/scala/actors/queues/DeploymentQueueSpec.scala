@@ -1,6 +1,5 @@
 package actors.queues
 
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.SortedActorRefSource
 import akka.actor.ActorRef
 import akka.stream.javadsl.RunnableGraph
@@ -24,7 +23,7 @@ class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int): ActorRef = {
     val request = (millis: MillisSinceEpoch) => CrunchRequest(millis, crunchOffsetMinutes, durationMinutes)
     val source = new SortedActorRefSource(TestProbe().ref, request, SortedSet.empty[ProcessingRequest], "deployments")
-    val graph = GraphDSL.create(source) {
+    val graph = GraphDSL.createGraph(source) {
       implicit builder =>
         crunchRequests =>
           crunchRequests ~> Sink.actorRef(probe.ref, "complete")
@@ -43,7 +42,7 @@ class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
       "Then I should see a CrunchRequest for the same day (midnight BST is 23:00 the day before in UTC, but LocalDate should stay the same)" >> {
         val daysSourceProbe: TestProbe = TestProbe()
         val actor = startQueueActor(daysSourceProbe, zeroOffset)
-        actor ! UpdatedMillis(Set(day))
+        actor ! Set(day)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 6), zeroOffset, durationMinutes))
         success
       }
@@ -53,7 +52,7 @@ class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
       "Then I should see a CrunchRequest for the day before as the offset pushes that day to cover the following midnight" >> {
         val daysSourceProbe: TestProbe = TestProbe()
         val actor = startQueueActor(daysSourceProbe, twoHourOffset)
-        actor ! UpdatedMillis(Set(day))
+        actor ! Set(day)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 5), twoHourOffset, durationMinutes))
         success
       }
@@ -66,7 +65,7 @@ class DeploymentQueueSpec extends CrunchTestLike with ImplicitSender {
         val today = myNow().millisSinceEpoch
         val tomorrow = myNow().addDays(1).millisSinceEpoch
         watch(actor)
-        actor ! UpdatedMillis(Set(today, tomorrow))
+        actor ! Set(today, tomorrow)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 5), 120, durationMinutes))
         Thread.sleep(200)
         startQueueActor(daysSourceProbe, defaultAirportConfig.crunchOffsetMinutes)

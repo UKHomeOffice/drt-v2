@@ -1,30 +1,30 @@
 package drt.server.feeds
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.FlightsApi.Flights
-import manifests.passengers.BestAvailableManifest
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 sealed trait FeedResponse {
   val createdAt: SDateLike
+
   def length: Int
 }
 
 sealed trait ArrivalsFeedResponse extends FeedResponse
+
 sealed trait ManifestsFeedResponse extends FeedResponse
 
-case class StoreFeedImportArrivals(arrivals: Flights)
+case class StoreFeedImportArrivals(arrivals: Seq[FeedArrival])
+
 case object GetFeedImportArrivals
 
-case class ArrivalsFeedSuccess(arrivals: Flights, createdAt: SDateLike) extends ArrivalsFeedResponse {
-  override val length: Int = arrivals.flights.size
+case class ArrivalsFeedSuccess(arrivals: Seq[FeedArrival], createdAt: SDateLike) extends ArrivalsFeedResponse {
+  override val length: Int = arrivals.size
 }
-case object ArrivalsFeedSuccessAck
 
 object ArrivalsFeedSuccess {
-  def apply(arrivals: Flights): ArrivalsFeedResponse = ArrivalsFeedSuccess(arrivals, SDate.now())
+  def apply(arrivals: Seq[FeedArrival]): ArrivalsFeedResponse = ArrivalsFeedSuccess(arrivals, SDate.now())
 }
 
 case class ArrivalsFeedFailure(responseMessage: String, createdAt: SDateLike) extends ArrivalsFeedResponse {
@@ -49,10 +49,6 @@ case class ManifestsFeedFailure(responseMessage: String, createdAt: SDateLike) e
 
 object ManifestsFeedFailure {
   def apply(responseMessage: String): ManifestsFeedResponse = ManifestsFeedFailure(responseMessage, SDate.now())
-}
-
-case class BestManifestsFeedSuccess(manifests: Seq[BestAvailableManifest], createdAt: SDateLike) extends ManifestsFeedResponse {
-  override val length: Int = manifests.length
 }
 
 case class DqManifests(lastProcessedMarker: MillisSinceEpoch, manifests: Iterable[VoyageManifest]) {

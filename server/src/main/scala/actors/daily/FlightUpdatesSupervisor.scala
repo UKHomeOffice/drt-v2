@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.PartitionedPortStateActor.{GetFlightUpdatesSince, GetUpdatesSince}
+import actors.PartitionedPortStateActor.GetFlightUpdatesSince
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, Props}

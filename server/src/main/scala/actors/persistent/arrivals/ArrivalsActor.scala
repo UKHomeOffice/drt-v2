@@ -5,12 +5,10 @@ import actors.persistent.staffing.GetFeedStatuses
 import akka.actor.ActorRef
 import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
-import drt.shared.FlightsApi.Flights
 import scalapb.GeneratedMessage
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
-import uk.gov.homeoffice.drt.actor.commands.MergeArrivalsRequest
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike, Sizes}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, ArrivalsRestorer, UniqueArrival}
@@ -19,7 +17,7 @@ import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage, FlightsDiffMessage}
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.SortedMap
 
@@ -80,8 +78,8 @@ abstract class ArrivalsActor(now: () => SDateLike,
   }
 
   override def receiveCommand: Receive = {
-    case ArrivalsFeedSuccess(Flights(incomingArrivals), createdAt) =>
-      handleFeedSuccess(incomingArrivals, createdAt)
+    case ArrivalsFeedSuccess(incomingArrivals, createdAt) =>
+      handleFeedSuccess(incomingArrivals.size, createdAt)
 
     case ArrivalsFeedFailure(message, createdAt) =>
       handleFeedFailure(message, createdAt)
@@ -118,21 +116,13 @@ abstract class ArrivalsActor(now: () => SDateLike,
     persistFeedStatus(FeedStatusFailure(createdAt.millisSinceEpoch, message))
   }
 
-  def handleFeedSuccess(incomingArrivals: Iterable[Arrival], createdAt: SDateLike): Unit = {
-    log.info(s"Received ${incomingArrivals.size} arrivals ${state.feedSource.displayName}")
+  def handleFeedSuccess(arrivalCount: Int, createdAt: SDateLike): Unit = {
+    log.info(s"Received ${arrivalCount} arrivals ${state.feedSource.displayName}")
 
-    val (diff, newStatus, newState) = processIncoming(incomingArrivals, createdAt)
+    val newStatus = FeedStatusSuccess(createdAt.millisSinceEpoch, arrivalCount)
 
-    state = newState
+    state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
-    maybeSubscriber.foreach { subscriber =>
-      val daysFromUpdates = diff.toUpdate.values.map(a => MergeArrivalsRequest(SDate(a.Scheduled).toUtcDate)).toSet
-      val daysFromRemovals = diff.toRemove.map(ua => MergeArrivalsRequest(SDate(ua.scheduled).toUtcDate)).toSet
-      val updatedDays = daysFromUpdates ++ daysFromRemovals
-      if (updatedDays.nonEmpty) subscriber ! updatedDays
-    }
-
-    if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) persistArrivalUpdates(diff)
     persistFeedStatus(newStatus)
   }
 

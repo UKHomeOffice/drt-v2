@@ -88,7 +88,7 @@ object Scenarios {
 
     val desksProducer: Flow[LoadProcessingRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
       .mapAsync(1) { loads =>
-        portDesksAndWaitsProvider.loadsToDesks(request.minutesInMillis, loads.indexed, terminalDeskLimits)
+        portDesksAndWaitsProvider.loadsToDesks(request.minutesInMillis, loads.indexed, terminalDeskLimits, "scenarios")
       }
 
     val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))

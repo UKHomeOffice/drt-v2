@@ -46,7 +46,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       LiveFeedSource -> Passengers(Option(liveArrivalPax), None),
       ForecastFeedSource -> Passengers(Option(forecastArrivalPax), Option(forecastArrivalTransPax))
     )
-    val arrival = ArrivalGenerator.arrival(maxPax = Option(maxPax), passengerSources = paxSources)
+    val arrival = ArrivalGenerator.live(maxPax = Option(maxPax)).toArrival(LiveFeedSource).copy(PassengerSources = paxSources)
     val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
     val controller: ForecastAccuracyController = forecastAccuracyController(forecastTotalPax, mlFeedPax, liveFeedPax, mlPredCapPct, flights)
     "get forecast accuracy percentage" in {
@@ -115,9 +115,9 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       override val now: () => SDateLike = () => SDate("2023-02-01T00:00")
 
       override def provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(airportConfig, mockDrtParameters, now)(mat, ec, system, timeout) {
-
-        lazy override val feedService: ProdFeedService = new ProdFeedService(journalType,
-          airportConfig, now, params, config, paxFeedSourceOrder, flightLookups, manifestLookups)(this.system, ec, timeout) {
+        lazy override val feedService: ProdFeedService = new ProdFeedService(journalType, airportConfig, now, params,
+          config, paxFeedSourceOrder, flightLookups, manifestLookups, actorService.requestAndTerminateActor,
+          mockDrtParameters.forecastMaxDays, SDate("2024-04-03"))(this.system, ec, timeout) {
 
           override val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] =
             (_, _) => Future.successful(Map(Terminal("T1") -> forecastTotalPax))
@@ -126,20 +126,19 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
             _ => Future.successful(Map(Terminal("T1") -> liveFeedPax))
 
           override val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (_, _) => Future.successful(
-            Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
-              schDt = "2023-10-20T12:25",
-              terminal = T1,
-              passengerSources = Map(ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
-                MlFeedSource -> Passengers(Some(mlFeedPax), None))))))
+            Map(T1 -> Seq(ArrivalGenerator.live(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1).toArrival(ForecastFeedSource).copy(
+              PassengerSources = Map(
+                ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
+                MlFeedSource -> Passengers(Some(mlFeedPax), None)
+              )))))
 
           override val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = _ => Future.successful(
-            Map(T1 -> Seq(ArrivalGenerator.arrival(iata = "BA0001",
-              schDt = "2023-10-20T12:25",
-              terminal = T1,
-              passengerSources = Map(LiveFeedSource -> Passengers(Some(liveFeedPax), None),
+            Map(T1 -> Seq(ArrivalGenerator.live(iata = "BA0001", schDt = "2023-10-20T12:25", terminal = T1).toArrival(ForecastFeedSource).copy(
+              PassengerSources = Map(
+                LiveFeedSource -> Passengers(Some(liveFeedPax), None),
                 ForecastFeedSource -> Passengers(Some(forecastTotalPax), None),
-                MlFeedSource -> Passengers(Some(mlFeedPax), None))
-            )))
+                MlFeedSource -> Passengers(Some(mlFeedPax), None)
+              ))))
           )
 
           override val flightModelPersistence: ModelPersistence = MockModelPersistence(mlPred)
@@ -150,7 +149,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
           now,
           params.forecastMaxDays,
           flightLookups,
-          minuteLookups)(system) {
+          minuteLookups)(system, timeout) {
           override val flightsRouterActor: ActorRef = system.actorOf(Props(new MockFlightsRouter(flights)))
         }
       }

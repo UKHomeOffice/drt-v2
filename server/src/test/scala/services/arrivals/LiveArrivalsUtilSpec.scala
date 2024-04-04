@@ -1,10 +1,10 @@
 package services.arrivals
 
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Prediction, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Predictions}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.time.SDate
 
 class LiveArrivalsUtilSpec extends Specification {
 

@@ -2,10 +2,9 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Passengers, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues._
@@ -38,19 +37,21 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
         val scheduled = "2017-01-01T00:00Z"
 
-        val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1,
-          feedSources = Set(LiveFeedSource),
-          passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
-        val inputFlightsBefore = Flights(List(flight))
-        val updatedArrival = flight.copy(PassengerSources = Map(LiveFeedSource -> Passengers(Option(50), None)))
-        val inputFlightsAfter = Flights(List(updatedArrival))
+        val flight = ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1,totalPax = Option(21))
+        val inputFlightsBefore = List(flight)
+        val updatedArrival = flight.copy(totalPax = Option(50))
+        val inputFlightsAfter = List(updatedArrival)
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
+        crunch.portStateTestProbe.fishForMessage(1.second) {
+          case PortState(flights, _, _) => flights.nonEmpty
+        }
+
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
         val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.copy(FeedSources = Set(LiveFeedSource), PassengerSources = updatedArrival.PassengerSources),
+          updatedArrival.toArrival(LiveFeedSource).copy(PcpTime = Option(SDate(scheduled).millisSinceEpoch)),
           Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
@@ -70,18 +71,17 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
 
         val scheduled = "2017-01-01T00:00Z"
 
-        val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1,
-          feedSources = Set(LiveFeedSource), passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
-        val inputFlightsBefore = Flights(List(flight))
-        val updatedArrival = flight.copy(PassengerSources = Map(LiveFeedSource -> Passengers(Option(50), None)))
-        val inputFlightsAfter = Flights(List(updatedArrival))
+        val flight = ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(21))
+        val inputFlightsBefore = List(flight)
+        val updatedArrival = flight.copy(totalPax = Option(50))
+        val inputFlightsAfter = List(updatedArrival)
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
 
         val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.copy(FeedSources = Set(LiveFeedSource), PassengerSources = updatedArrival.PassengerSources),
+          updatedArrival.toArrival(LiveFeedSource).copy(PcpTime = Option(SDate(scheduled).millisSinceEpoch)),
           Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
@@ -100,10 +100,9 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
       "Then I should see the pax nos and workloads fall to zero for the flight that was removed" >> {
         val scheduled = "2017-01-01T00:00Z"
 
-        val flight = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1,
-          feedSources = Set(AclFeedSource), passengerSources = Map(AclFeedSource -> Passengers(Option(21), None)))
-        val oneFlight = Flights(List(flight))
-        val zeroFlights = Flights(List())
+        val flight = ArrivalGenerator.forecast(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(21))
+        val oneFlight = List(flight)
+        val zeroFlights = List()
 
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
@@ -124,7 +123,8 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
             val nonZeroPax = cms.values.map(_.paxLoad).max == 0
             val nonZeroWorkload = cms.values.map(_.workLoad).max == 0
             nonZeroPax && nonZeroWorkload
-          case _ => false
+          case _ =>
+            false
         }
 
         success

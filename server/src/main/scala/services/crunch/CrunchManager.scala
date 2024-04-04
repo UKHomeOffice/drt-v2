@@ -1,7 +1,6 @@
 package services.crunch
 
 import actors.CrunchManagerActor.{ReProcessDates, Recrunch}
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.actor.ActorRef
 import akka.pattern.ask
 import akka.util.Timeout
@@ -15,13 +14,13 @@ import scala.concurrent.ExecutionContext
 object CrunchManager {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def queueDaysToReProcess(crunchManager: ActorRef, offsetMinutes: Int, forecastMaxDays: Int, now: () => SDateLike, message: UpdatedMillis => ReProcessDates): Unit = {
+  def queueDaysToReProcess(crunchManager: ActorRef, offsetMinutes: Int, forecastMaxDays: Int, now: () => SDateLike, message: Set[Long] => ReProcessDates): Unit = {
     val today = now()
     val millisToCrunchStart = Crunch.crunchStartWithOffset(offsetMinutes) _
     val daysToReCrunch = (0 until forecastMaxDays).map(d => {
       millisToCrunchStart(today.addDays(d)).millisSinceEpoch
     }).toSet
-    crunchManager ! message(UpdatedMillis(daysToReCrunch))
+    crunchManager ! message(daysToReCrunch)
   }
 
   def queueDaysToReCrunchWithUpdatedSplits(flightsActor: ActorRef, crunchManager: ActorRef, offsetMinutes: Int, forecastMaxDays: Int, now: () => SDateLike)

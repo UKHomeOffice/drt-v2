@@ -1,7 +1,9 @@
 package uk.gov.homeoffice.drt.testsystem
 
 import actors._
+import actors.daily.RequestAndTerminateActor
 import akka.actor.{ActorRef, ActorSystem, Props}
+import akka.util.Timeout
 import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.testsystem.TestActors._
@@ -12,8 +14,10 @@ case class TestActorService(journalType: StreamingJournalLike,
                             now: () => SDateLike,
                             forecastMaxDays: Int,
                             flightLookups: FlightLookupsLike,
-                            minuteLookups: MinuteLookupsLike)(implicit system: ActorSystem) extends ActorsServiceLike {
-
+                            minuteLookups: MinuteLookupsLike,
+                           )
+                           (implicit system: ActorSystem, timeout: Timeout) extends ActorsServiceLike {
+  override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "request-and-terminate-actor")
   override val liveShiftsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
   override val liveFixedPointsReadActor: ActorRef = system.actorOf(TestFixedPointsActor.streamingUpdatesProps(

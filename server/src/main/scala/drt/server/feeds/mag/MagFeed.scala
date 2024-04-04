@@ -8,18 +8,15 @@ import akka.http.scaladsl.model.headers.RawHeader
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.Implicits._
 import drt.server.feeds.mag.MagFeed.MagArrival
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
-import uk.gov.homeoffice.drt.time.SDate
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.arrivals.LiveArrival
+import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -28,13 +25,13 @@ import scala.util.{Failure, Success, Try}
 trait FeedRequesterLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String
+  def createToken(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String
 
   def send(request: HttpRequest)(implicit actorSystem: ActorSystem): Future[HttpResponse]
 }
 
 object ProdFeedRequester extends FeedRequesterLike {
-  override def sendTokenRequest(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String =
+  override def createToken(header: String, claim: String, key: String, algorithm: JwtAlgorithm): String =
     Try(Jwt.encode(header: String, claim: String, key: String, algorithm: JwtAlgorithm)).getOrElse("")
 
   override def send(request: HttpRequest)
@@ -68,7 +65,7 @@ case class MagFeed(key: String,
     new org.bouncycastle.jce.provider.BouncyCastleProvider()
   )
 
-  def newToken: String = feedRequester.sendTokenRequest(header = header, claim = claim, key = key, algorithm = JwtAlgorithm.RS256)
+  def newToken: String = feedRequester.createToken(header = header, claim = claim, key = key, algorithm = JwtAlgorithm.RS256)
 
   private def makeUri(start: SDateLike, end: SDateLike, from: Int, size: Int): String =
     s"https://$claimSub/v1/flight/$portCode/arrival?startDate=${start.toISOString}&endDate=${end.toISOString}&from=$from&size=$size"
@@ -98,12 +95,12 @@ case class MagFeed(key: String,
         case as if as.nonEmpty =>
           val uniqueArrivals = as.map(a => (a.unique, a)).toMap.values.toSeq
           log.info(s"Sending ${uniqueArrivals.length} arrivals")
-          ArrivalsFeedSuccess(Flights(uniqueArrivals), now())
+          ArrivalsFeedSuccess(uniqueArrivals, now())
         case as if as.isEmpty =>
           ArrivalsFeedFailure("No arrivals records received", now())
       }
 
-  def requestArrivalsPage(start: SDateLike, from: Int, size: Int): Future[Try[List[MagArrival]]] = {
+  private def requestArrivalsPage(start: SDateLike, from: Int, size: Int): Future[Try[List[MagArrival]]] = {
     val end = start.addHours(hoursToAdd = 24)
     val uri = makeUri(start, end, from, size)
 
@@ -143,14 +140,11 @@ case class MagFeed(key: String,
 
 
 object MagFeed {
-
-  def unmarshalResponse(httpResponse: HttpResponse)(implicit materializer: Materializer): Future[List[MagArrival]] = {
+  private def unmarshalResponse(httpResponse: HttpResponse)(implicit materializer: Materializer): Future[List[MagArrival]] = {
     import JsonSupport._
 
     Unmarshal(httpResponse).to[List[MagArrival]]
   }
-
-  case class MagArrivals(arrivals: Seq[MagArrival])
 
   case class MagArrival(uri: String,
                         operatingAirline: IataIcao,
@@ -168,33 +162,26 @@ object MagFeed {
                         arrivalDate: String,
                         arrival: ArrivalDetails,
                         flightStatus: String)
-
-  private def icao(magArrival: MagArrival) = f"${magArrival.operatingAirline.icao}${magArrival.flightNumber.trackNumber.map(_.toInt).getOrElse(0)}%04d"
-
-  private def iata(magArrival: MagArrival) = f"${magArrival.operatingAirline.iata}${magArrival.flightNumber.trackNumber.map(_.toInt).getOrElse(0)}%04d"
-
-  def toArrival(ma: MagArrival): Arrival = Arrival(
-    Operator = ma.operatingAirline.iata,
-    Status = if (ma.onBlockTime.actual.isDefined) "On Chocks" else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
-    Estimated = ma.arrival.estimated.map(str => SDate(str).millisSinceEpoch),
-    Predictions = Predictions(0L, Map()),
-    Actual = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),
-    EstimatedChox = ma.onBlockTime.estimated.map(str => SDate(str).millisSinceEpoch),
-    ActualChox = ma.onBlockTime.actual.map(str => SDate(str).millisSinceEpoch),
-    Gate = ma.gate.map(_.name.replace("Gate ", "")),
-    Stand = ma.stand.flatMap(_.name.map(_.replace("Stand ", ""))),
-    MaxPax = ma.passenger.maximum,
-    RunwayID = None,
-    BaggageReclaimId = None,
-    AirportID = ma.arrivalAirport.iata,
-    Terminal = Terminals.Terminal(ma.arrival.terminal.getOrElse("")),
-    rawICAO = icao(ma),
-    rawIATA = iata(ma),
-    Origin = ma.departureAirport.iata,
-    Scheduled = SDate(ma.arrival.scheduled).millisSinceEpoch,
-    PcpTime = None,
-    FeedSources = Set(LiveFeedSource),
-    PassengerSources = Map(LiveFeedSource -> Passengers(ma.passenger.count, ma.passenger.transferCount))
+  def toArrival(ma: MagArrival): LiveArrival = LiveArrival(
+    operator = Option(ma.operatingAirline.iata),
+    maxPax = ma.passenger.maximum,
+    totalPax = ma.passenger.count,
+    transPax = ma.passenger.transferCount,
+    terminal = Terminals.Terminal(ma.arrival.terminal.getOrElse("")),
+    voyageNumber = ma.flightNumber.trackNumber.map(_.toInt).getOrElse(0),
+    carrierCode = ma.operatingAirline.iata,
+    flightCodeSuffix = None,
+    origin = ma.departureAirport.iata,
+    scheduled = SDate(ma.arrival.scheduled).millisSinceEpoch,
+    estimated = ma.arrival.estimated.map(str => SDate(str).millisSinceEpoch),
+    touchdown = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),
+    estimatedChox = ma.onBlockTime.estimated.map(str => SDate(str).millisSinceEpoch),
+    actualChox = ma.onBlockTime.actual.map(str => SDate(str).millisSinceEpoch),
+    status = if (ma.onBlockTime.actual.isDefined) "On Chocks" else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
+    gate = ma.gate.map(_.name.replace("Gate ", "")),
+    stand = ma.stand.flatMap(_.name.map(_.replace("Stand ", ""))),
+    runway = None,
+    baggageReclaim = None,
   )
 
   case class IataIcao(iata: String, icao: String)

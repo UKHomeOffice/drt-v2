@@ -1,9 +1,7 @@
 package actors.routing.minutes
 
 import actors.DateRange
-import actors.PartitionedPortStateActor.{DateRangeMillisLike, GetStateForDateRange, PointInTimeQuery, TerminalRequest, UtcDateRangeLike}
-import actors.persistent.QueueLikeActor
-import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.PartitionedPortStateActor._
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.routing.{RouterActorLike, RouterActorLike2, SequentialAccessActor}
 import akka.NotUsed
@@ -32,11 +30,12 @@ object MinutesActorLike {
   type FlightsLookup = Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[FlightsWithSplits]
   type ManifestLookup = (UtcDate, Option[MillisSinceEpoch]) => Future[VoyageManifests]
 
-  type MinutesUpdate[A, B <: WithTimeAccessor] = ((Terminals.Terminal, UtcDate), MinutesContainer[A, B]) => Future[UpdatedMillis]
-  type FlightsUpdate = ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[UpdatedMillis]
-  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[UpdatedMillis]
+  type MinutesUpdate[A, B <: WithTimeAccessor, U] = ((Terminals.Terminal, UtcDate), MinutesContainer[A, B]) => Future[Set[U]]
+  type FlightsUpdate = ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[Set[Long]]
+  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Set[Long]]
 
   case object ProcessNextUpdateRequest
+
   case class QueueUpdateRequest[U](update: U, replyTo: ActorRef)
 
 }
@@ -159,10 +158,10 @@ object MinutesActorLikeCommon {
       }
 }
 
-abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Terminal],
-                                                          lookup: MinutesLookup[A, B],
-                                                          updateMinutes: MinutesUpdate[A, B]
-                                                         ) extends RouterActorLike[MinutesContainer[A, B], (Terminal, UtcDate)] {
+abstract class MinutesActorLike[A, B <: WithTimeAccessor, U](terminals: Iterable[Terminal],
+                                                             lookup: MinutesLookup[A, B],
+                                                             updateMinutes: MinutesUpdate[A, B, U]
+                                                            ) extends RouterActorLike[MinutesContainer[A, B], (Terminal, UtcDate), U] {
   def splitByResource(request: MinutesContainer[A, B]): Map[(Terminal, UtcDate), MinutesContainer[A, B]] = {
     request.minutes.groupBy(m => (m.terminal, SDate(m.minute).toUtcDate)).map {
       case ((terminal, date), minutes) => ((terminal, date), MinutesContainer(minutes))
@@ -201,17 +200,17 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor](terminals: Iterable[Te
       .view.mapValues(MinutesContainer(_)).toMap
   }
 
-  override def updatePartition(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[QueueLikeActor.UpdatedMillis] =
+  override def updatePartition(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[Set[U]] =
     updateMinutes(partition, updates)
 
 }
 
-abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[Terminal],
+abstract class MinutesActorLike2[A, B <: WithTimeAccessor, U](terminals: Iterable[Terminal],
                                                            lookup: MinutesLookup[A, B],
-                                                           updateMinutes: MinutesUpdate[A, B],
+                                                           updateMinutes: MinutesUpdate[A, B, U],
                                                            splitByResource: MinutesContainer[A, B] => Map[(Terminal, UtcDate), MinutesContainer[A, B]],
                                                            shouldSendEffects: MinutesContainer[A, B] => Boolean,
-                                                          ) extends RouterActorLike2[MinutesContainer[A, B], (Terminal, UtcDate)] {
+                                                          ) extends RouterActorLike2[MinutesContainer[A, B], (Terminal, UtcDate), U] {
   override val sequentialUpdatesActor: ActorRef = context.actorOf(Props(new SequentialAccessActor(updateMinutes, splitByResource) {
     override def shouldSendEffectsToSubscribers(request: MinutesContainer[A, B]): Boolean = {
       shouldSendEffects(request)
@@ -245,7 +244,7 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor](terminals: Iterable[T
       .view.mapValues(MinutesContainer(_)).toMap
   }
 
-  override def updatePartition(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[QueueLikeActor.UpdatedMillis] =
+  override def updatePartition(partition: (Terminal, UtcDate), updates: MinutesContainer[A, B]): Future[Set[U]] =
     updateMinutes(partition, updates)
 
 }
