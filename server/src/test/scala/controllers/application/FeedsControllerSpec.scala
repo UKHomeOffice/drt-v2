@@ -13,7 +13,7 @@ class FeedsControllerSpec extends PlaySpec {
     "get feed status" in {
 
       val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
+        override val isTestEnvironment: Boolean = true
       }
 
       val drtSystemInterface = module.provideDrtSystemInterface

@@ -1,18 +1,15 @@
 package module
 
-import actors.{ProdDrtParameters, TestDrtSystemInterface}
+import actors.{DrtParameters, ProdDrtParameters, TestDrtSystemInterface}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
-import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
-import controllers.{Application, DrtActorSystem}
-import controllers.DrtActorSystem.airportConfig
+import controllers.{Application, DrtConfigSystem}
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController, SummariesExportController}
 import email.GovNotifyEmail
-import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
@@ -22,12 +19,14 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class DRTModule extends AbstractModule with AkkaGuiceSupport {
-  val config: Configuration = new Configuration(ConfigFactory.load)
 
-  val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
+  lazy val drtConfigSystem: DrtConfigSystem = new DrtConfigSystem()
 
-  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, MockDrtParameters())
-  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, ProdDrtParameters(config))
+  val isTestEnvironment: Boolean = drtConfigSystem.isTestEnvironment
+
+  val drtParameter : DrtParameters = if (isTestEnvironment) MockDrtParameters() else ProdDrtParameters(drtConfigSystem.config)
+  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(drtConfigSystem.airportConfig, drtParameter)
+  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(drtConfigSystem.airportConfig, drtParameter)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(4.seconds)
@@ -80,6 +79,6 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
       drtProdSystem
 
   @Provides
-  def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(config.get[String]("notifications.gov-notify-api-key"))
+  def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtConfigSystem.govNotifyApiKey)
 
 }

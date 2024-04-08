@@ -6,6 +6,7 @@ import play.api.http.Status.OK
 import play.api.test.{FakeRequest, Helpers}
 import play.api.test.Helpers.{contentAsString, status}
 import play.api.test.Helpers._
+import uk.gov.homeoffice.drt.testsystem.MockDrtParameters
 
 class FeatureFlagsControllerSpec extends PlaySpec {
 
@@ -14,7 +15,12 @@ class FeatureFlagsControllerSpec extends PlaySpec {
     "get list of feature flag" in {
 
       val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
+        override val isTestEnvironment: Boolean = true
+        override val drtParameter = new MockDrtParameters {
+          override val useApiPaxNos = true
+          override val enableToggleDisplayWaitTimes = true
+          override val displayRedListInfo = true
+        }
       }
 
       val drtSystemInterface = module.provideDrtSystemInterface
@@ -29,7 +35,7 @@ class FeatureFlagsControllerSpec extends PlaySpec {
       status(result) mustBe OK
 
       val resultExpected =
-        s"""{"useApiPaxNos":true,"displayWaitTimesToggle":false,"displayRedListInfo":false}"""
+        s"""{"useApiPaxNos":true,"displayWaitTimesToggle":true,"displayRedListInfo":true}"""
           .stripMargin
 
       contentAsString(result) must include(resultExpected)

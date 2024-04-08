@@ -21,7 +21,7 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
     "get loggedIn User" in {
 
       val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
+        override val isTestEnvironment: Boolean = true
       }
 
       val drtSystemInterface = module.provideDrtSystemInterface
@@ -48,7 +48,7 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
 
     "get user details" in {
       val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
+        override val isTestEnvironment: Boolean = true
       }
 
       val drtSystemInterface = module.provideDrtSystemInterface
@@ -87,7 +87,7 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
 
     "authByRole" in {
       val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
+        override val isTestEnvironment: Boolean = true
       }
 
       val drtSystemInterface = module.provideDrtSystemInterface
@@ -121,7 +121,7 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
 
     "trackUser" in {
       val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
+        override val isTestEnvironment: Boolean = true
       }
 
       val drtSystemInterface = module.provideDrtSystemInterface

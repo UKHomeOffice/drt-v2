@@ -13,7 +13,7 @@ class AlertsControllerSpec extends PlaySpec with MockitoSugar {
   "AlertsController" should {
 
     val module = new DRTModule() {
-      override lazy val isTestEnvironment: Boolean = true
+      override val isTestEnvironment: Boolean = true
     }
 
     "get alerts created after the given time" in {

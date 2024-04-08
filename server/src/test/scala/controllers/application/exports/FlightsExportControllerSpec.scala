@@ -26,12 +26,11 @@ class FlightsExportControllerSpec extends PlaySpec {
     "get flights for a date in " in {
 
       val module = new DRTModule() {
-        override lazy val isTestEnvironment: Boolean = true
+        override val isTestEnvironment: Boolean = true
       }
 
       val drtSystemInterface = module.provideDrtSystemInterface
-      implicit val mat: Materializer = module.mat
-      implicit val ec = module.ec
+      implicit val mat: Materializer = drtSystemInterface.materializer
 
       val controller = new FlightsExportController(Helpers.stubControllerComponents(), drtSystemInterface)
 
@@ -75,7 +74,7 @@ class FlightsExportControllerSpec extends PlaySpec {
 
       val manifestFeedSuccess = ManifestsFeedSuccess(DqManifests(0, Set(manifest)), creationDate)
 
-      drtSystemInterface.manifestsRouterActor ! manifestFeedSuccess
+      drtSystemInterface.manifestsRouterActorReadOnly ! manifestFeedSuccess
 
       val result = Await.ready(controller.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString = "2023-11-06",
         pointInTime = SDate("2023-11-06T00:00").millisSinceEpoch,

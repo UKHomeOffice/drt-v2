@@ -347,7 +347,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val manifestLookups: ManifestLookups = ManifestLookups(system)
 
-  private val manifestsRouterActorReadOnly: ActorRef =
+  val manifestsRouterActorReadOnly: ActorRef =
     system.actorOf(
       Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
       name = "voyage-manifests-router-actor-read-only")
