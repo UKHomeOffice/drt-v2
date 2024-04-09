@@ -3,10 +3,9 @@ package drt.server.feeds.stn
 import drt.server.feeds.common.XlsExtractorUtil._
 import org.apache.poi.ss.usermodel.{CellType, DateUtil}
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.util.TimeZone
@@ -24,7 +23,7 @@ object STNForecastXLSExtractor {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(xlsFilePath: String): List[Arrival] = rows(xlsFilePath)
+  def apply(xlsFilePath: String): List[ForecastArrival] = rows(xlsFilePath)
     .map(stnFieldsToArrival)
     .collect {
       case Success(arrival) => arrival
@@ -68,7 +67,7 @@ object STNForecastXLSExtractor {
 
     val arrivalRows = arrivalRowsTry.zipWithIndex.toList.flatMap {
       case (Success(a), _) =>
-        val inLondonEuropeTz = a.copy(scheduledDate = SDate(s"${a.scheduledDate.toISODateOnly}T${a.scheduledDate.toHoursAndMinutes}", Crunch.europeLondonTimeZone))
+        val inLondonEuropeTz = a.copy(scheduledDate = SDate(s"${a.scheduledDate.toISODateOnly}T${a.scheduledDate.toHoursAndMinutes}", europeLondonTimeZone))
         Some(inLondonEuropeTz)
       case (Failure(e), i) => log.warn(s"Invalid data on row ${i + 3} ${e.getMessage}", e)
         None
@@ -80,31 +79,21 @@ object STNForecastXLSExtractor {
   }
 
 
-  def stnFieldsToArrival(flightRow: STNForecastFlightRow): Try[Arrival] = {
+  private def stnFieldsToArrival(flightRow: STNForecastFlightRow): Try[ForecastArrival] = {
     val totalPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax)
+    val (carrierCode, voyageNumber, _) = FlightCode.flightCodeToParts(flightRow.flightCode.replace(" ", ""))
     Try {
-      Arrival(
-        Operator = None,
-        Status = ArrivalStatus("Port Forecast"),
-        Estimated = None,
-        Predictions = Predictions(0L, Map()),
-        Actual = None,
-        EstimatedChox = None,
-        ActualChox = None,
-        Gate = None,
-        Stand = None,
-        MaxPax = Some(flightRow.maxPax),
-        RunwayID = None,
-        BaggageReclaimId = None,
-        AirportID = PortCode("STN"),
-        Terminal = Terminal("T1"),
-        rawICAO = flightRow.flightCode.replace(" ", ""),
-        rawIATA = flightRow.flightCode.replace(" ", ""),
-        Origin = PortCode(flightRow.origin),
-        Scheduled = flightRow.scheduledDate.millisSinceEpoch,
-        PcpTime = None,
-        FeedSources = Set(ForecastFeedSource),
-        PassengerSources = Map(ForecastFeedSource -> Passengers(totalPax, Some(0)))
+      ForecastArrival(
+        operator = None,
+        maxPax = Some(flightRow.maxPax),
+        totalPax = totalPax,
+        transPax = None,
+        terminal = Terminal("T1"),
+        voyageNumber = voyageNumber.numeric,
+        carrierCode = carrierCode.code,
+        flightCodeSuffix = None,
+        origin = flightRow.origin,
+        scheduled = flightRow.scheduledDate.millisSinceEpoch,
       )
     }
   }

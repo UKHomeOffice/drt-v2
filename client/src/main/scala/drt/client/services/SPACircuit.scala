@@ -125,7 +125,9 @@ case class LoadingState(isLoading: Boolean = false)
 case class ClientServerVersions(client: String, server: String)
 
 case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
-                     latestUpdateMillis: MillisSinceEpoch = 0L,
+                     latestFlightUpdateMillis: MillisSinceEpoch = 0L,
+                     latestQueueUpdateMillis: MillisSinceEpoch = 0L,
+                     latestStaffUpdateMillis: MillisSinceEpoch = 0L,
                      portStatePot: Pot[PortState] = Empty,
                      forecastPeriodPot: Pot[ForecastPeriodWithHeadlines] = Empty,
                      airportInfos: Map[PortCode, Pot[AirportInfo]] = Map(),
@@ -161,6 +163,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureGuides: Pot[Seq[FeatureGuide]] = Empty,
                      maybeTimeMachineDate: Option[SDateLike] = None,
                      flaggedNationalities: Set[Country] = Set(),
+                     filterFlightNumber: String = "",
                      flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary] = Map(),
                      paxFeedSourceOrder: List[FeedSource] = List(),
                      showNewFeatureGuideOnLogin: Pot[Boolean] = Empty,
@@ -192,12 +195,15 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
     val composedHandlers: HandlerFunction = composeHandlers(
       new InitialPortStateHandler(
         currentViewMode,
-        zoomRW(m => (m.portStatePot, m.latestUpdateMillis, m.redListPorts))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2, redListPorts = v._3)),
-        zoom(_.flightManifestSummaries),
+        zoomRW(m => (m.portStatePot, m.latestFlightUpdateMillis, m.latestQueueUpdateMillis, m.latestStaffUpdateMillis, m.redListPorts))(
+          (m, v) => m.copy(portStatePot = v._1, latestFlightUpdateMillis = v._2, latestQueueUpdateMillis = v._3, latestStaffUpdateMillis = v._4, redListPorts = v._5)
+        ),
       ),
       new PortStateUpdatesHandler(
         currentViewMode,
-        zoomRW(m => (m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(portStatePot = v._1, latestUpdateMillis = v._2)),
+        zoomRW(m => (m.portStatePot, m.latestFlightUpdateMillis, m.latestQueueUpdateMillis, m.latestStaffUpdateMillis))(
+          (m, v) => m.copy(portStatePot = v._1, latestFlightUpdateMillis = v._2, latestQueueUpdateMillis = v._3, latestStaffUpdateMillis = v._4)
+        ),
         zoom(_.flightManifestSummaries),
         zoom(_.paxFeedSourceOrder),
       ),
@@ -215,7 +221,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestUpdateMillis = v._3))),
+      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new RetryHandler(zoomRW(identity)((m, _) => m)),
@@ -238,6 +244,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AppControlHandler(zoomRW(identity)((m, _) => m)),
       new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
       new FlaggedNationalitiesHandler(zoomRW(_.flaggedNationalities)((m, v) => m.copy(flaggedNationalities = v))),
+      new FlightFilterHandler(zoomRW(_.filterFlightNumber)((m, v) => m.copy(filterFlightNumber = v))),
       new FeatureGuidesHandler(zoomRW(_.featureGuides)((m, v) => m.copy(featureGuides = v))),
       new FeatureGuideDialogHandler(zoomRW(_.showNewFeatureGuideOnLogin)((m, v) => m.copy(showNewFeatureGuideOnLogin = v))),
       new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),

@@ -201,9 +201,7 @@ class OptimiserSpec extends Specification {
     sTimer.report("scala crunch")
 
     val diffs = sResult.zip(rResult).zipWithIndex.grouped(15).map(_.head).collect {
-      case ((s, r), i) if s != r =>
-        println(s"minute $i: $s != $r")
-        (i, s, r)
+      case ((s, r), i) if s != r => (i, s, r)
     }.toList
 
     diffs.length < 2 === true

@@ -8,7 +8,7 @@ import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 
-import java.io.{ByteArrayOutputStream, OutputStream}
+import java.io.ByteArrayOutputStream
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.util.{Failure, Success, Try}
 

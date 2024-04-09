@@ -3,10 +3,10 @@ package drt.staff
 import drt.shared.{ShiftAssignments, StaffAssignment}
 import org.joda.time.DateTime
 import play.api.libs.json._
-import uk.gov.homeoffice.drt.time.SDate.implicits._
-import services.graphstages.Crunch.europeLondonTimeZone
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDate.implicits._
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 case class StaffShift(port_code: String, terminal: Terminal, staff: String, shift_start: String)
 

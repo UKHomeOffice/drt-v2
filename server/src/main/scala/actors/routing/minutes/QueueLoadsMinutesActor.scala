@@ -19,11 +19,11 @@ object QueueLoadsMinutesActor {
 
 class QueueLoadsMinutesActor(terminals: Iterable[Terminal],
                              lookup: MinutesLookup[PassengersMinute, TQM],
-                             updateMinutes: MinutesUpdate[PassengersMinute, TQM])
+                             updateMinutes: MinutesUpdate[PassengersMinute, TQM, Long])
   extends MinutesActorLike2(
     terminals,
     lookup,
     updateMinutes,
     QueueLoadsMinutesActor.splitByResource,
     QueueLoadsMinutesActor.alwaysSend,
-  ) with RouterActorLikeWithSubscriber2[MinutesContainer[PassengersMinute, TQM], (Terminal, UtcDate)]
+  ) with RouterActorLikeWithSubscriber2[MinutesContainer[PassengersMinute, TQM], (Terminal, UtcDate), Long]

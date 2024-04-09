@@ -1,21 +1,25 @@
 package actors
 
-import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber, RecalculateArrivals}
-import actors.persistent.QueueLikeActor.UpdatedMillis
+import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber, RecalculateArrivals, Recrunch}
 import akka.actor.{Actor, ActorRef}
-import akka.stream.scaladsl.SourceQueueWithComplete
 
 object CrunchManagerActor {
   case class AddQueueCrunchSubscriber(subscriber: ActorRef)
 
-  case class AddRecalculateArrivalsSubscriber(subscribeResponseQueue: SourceQueueWithComplete[Boolean])
+  case class AddRecalculateArrivalsSubscriber(subscriber: ActorRef)
 
-  case object RecalculateArrivals
+  trait ReProcessDates {
+    val updatedMillis: Set[Long]
+  }
+
+  case class RecalculateArrivals(updatedMillis: Set[Long]) extends ReProcessDates
+
+  case class Recrunch(updatedMillis: Set[Long]) extends ReProcessDates
 }
 
 class CrunchManagerActor extends Actor {
   private var maybeQueueCrunchSubscriber: Option[ActorRef] = None
-  private var maybeRecalculateArrivalsSubscriber: Option[SourceQueueWithComplete[Boolean]] = None
+  private var maybeRecalculateArrivalsSubscriber: Option[ActorRef] = None
 
   override def receive: Receive = {
     case AddQueueCrunchSubscriber(subscriber) =>
@@ -24,10 +28,10 @@ class CrunchManagerActor extends Actor {
     case AddRecalculateArrivalsSubscriber(subscriber) =>
       maybeRecalculateArrivalsSubscriber = Option(subscriber)
 
-    case um: UpdatedMillis =>
+    case Recrunch(um) =>
       maybeQueueCrunchSubscriber.foreach(_ ! um)
 
-    case RecalculateArrivals =>
-      maybeRecalculateArrivalsSubscriber.foreach(_.offer(true))
+    case RecalculateArrivals(um) =>
+      maybeRecalculateArrivalsSubscriber.foreach(_ ! um)
   }
 }

@@ -2,18 +2,16 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.{Passengers, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -50,7 +48,10 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T23:58Z"
 
         val arrivalPax = 112
-        val arrival = ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(arrivalPax), None)))
+        val arrival = ArrivalGenerator.live(schDt = scheduled,
+          iata = "BA0001",
+          terminal = T1,
+          totalPax = Option(arrivalPax))
 
         val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduled),
@@ -59,7 +60,7 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
           )
         ))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(arrival)))
 
         crunch.portStateTestProbe.fishForMessage(5.seconds) {
           case ps: PortState =>
@@ -69,7 +70,7 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
             paxInQueues == arrivalPax
         }
 
-        val apiManifest = VoyageManifestGenerator.manifestForArrival(arrival,
+        val apiManifest = VoyageManifestGenerator.manifestForArrival(arrival.toArrival(LiveFeedSource),
           List.fill(45)(PassengerInfoGenerator.passengerInfoJson(Nationality("GBR"), DocumentType("P"), Nationality("GBR"))) ++
             List.fill(17)(PassengerInfoGenerator.passengerInfoJson(Nationality("FRA"), DocumentType("P"), Nationality("FRA"))) ++
             List.fill(19)(PassengerInfoGenerator.passengerInfoJson(Nationality("USA"), DocumentType("P"), Nationality("USA"))) ++
@@ -78,8 +79,8 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
             List.fill(13)(PassengerInfoGenerator.passengerInfoJson(Nationality("IND"), DocumentType("P"), Nationality("IND")))
         )
 
-        val arrivalv2 = arrival.copy(PassengerSources = arrival.PassengerSources + (LiveFeedSource -> Passengers(Option(110), None)))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalv2))))
+        val arrivalv2 = arrival.copy(totalPax = Option(110))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(arrivalv2)))
 
         offerAndWait(crunch.manifestsLiveInput, ManifestsFeedSuccess(DqManifests(1L, Seq(apiManifest))))
 
@@ -94,10 +95,10 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
         }
 
         val arrivalv3 = arrivalv2.copy(
-          PcpTime = Option(SDate(scheduled).addMinutes(10).millisSinceEpoch),
-          PassengerSources = arrival.PassengerSources + (LiveFeedSource -> Passengers(Option(111), None)),
+          estimated = Option(SDate(scheduled).addMinutes(5).millisSinceEpoch),
+          totalPax = Option(111),
         )
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrivalv3))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(arrivalv3)))
 
         crunch.portStateTestProbe.fishForMessage(10.seconds) {
           case ps: PortState =>

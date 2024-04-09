@@ -124,7 +124,7 @@ class RouteHistoricManifestActor(origin: String,
     case _: SaveSnapshotSuccess =>
       ackIfRequired()
 
-    case m => log.warn(s"Got unexpected message: $m")
+    case m => log.error(s"Got unexpected message: $m")
   }
 
   def updateAndPersist(vms: ManifestLike): Unit = {

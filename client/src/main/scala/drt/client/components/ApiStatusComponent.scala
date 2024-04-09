@@ -20,12 +20,11 @@ case class ApiFeedStatus(totalLanded: Int, withApi: Int, withValidApi: Int) {
 object ApiFeedStatus {
   def apply(flights: Iterable[ApiFlightWithSplits],
             nowMillis: MillisSinceEpoch,
-            considerPredictions: Boolean,
             hasLiveFeed: Boolean,
             paxFeedSourceOrder: List[FeedSource],
            ): ApiFeedStatus = {
-    val landed = flights.filter(fws => fws.apiFlight.bestArrivalTime(considerPredictions) <= nowMillis)
-    val international: Iterable[ApiFlightWithSplits] = landed.filterNot(fws => fws.apiFlight.Origin.isDomesticOrCta)
+    val landed = flights.filter(fws => fws.apiFlight.bestArrivalTime(considerPredictions = true) <= nowMillis)
+    val international = landed.filterNot(fws => fws.apiFlight.Origin.isDomesticOrCta)
     val withNonZeroPax = international.filter(fws => fws.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).exists(_ > 0) || !hasLiveFeed)
     val apiFlightCount = withNonZeroPax.count(_.hasApi)
     val validApiCount = withNonZeroPax.count(_.hasValidApi)
@@ -37,7 +36,7 @@ object ApiStatusComponent {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(canValidate: Boolean, considerPredictions: Boolean, terminal: Terminal)
+  case class Props(canValidate: Boolean, terminal: Terminal)
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ApiStatus")
     .render_P { props =>
@@ -49,7 +48,7 @@ object ApiStatusComponent {
       terminalFlightsProxy { terminalFlightsPot =>
         <.div(
           terminalFlightsPot().flights.renderReady { flights =>
-            val apiFeedStatus = ApiFeedStatus(flights, SDate.now().millisSinceEpoch, props.considerPredictions, props.canValidate, terminalFlightsPot().paxFeedSourceOrder)
+            val apiFeedStatus = ApiFeedStatus(flights, SDate.now().millisSinceEpoch, props.canValidate, terminalFlightsPot().paxFeedSourceOrder)
 
             def ragClass(pct: Option[Double]): String = pct match {
               case Some(red) if red < 80 => "red"

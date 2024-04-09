@@ -152,6 +152,8 @@ class JsonSerializationSpec extends Specification {
       )
       val cu = PortStateUpdates(
         0L,
+        0L,
+        0L,
         updatesAndRemovals,
         Seq(CrunchMinute(T1, Queues.NonEeaDesk, 0L, 2.0, 2.0, 1, 1, None, None, None, None, Some(0))),
         Seq(StaffMinute(T1, 0L, 1, 1,1,None))

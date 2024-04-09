@@ -1,6 +1,5 @@
 package actors.queues
 
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.SortedActorRefSource
 import akka.actor.ActorRef
 import akka.stream.javadsl.RunnableGraph
@@ -10,20 +9,21 @@ import akka.stream.{ClosedShape, Materializer}
 import akka.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.CrunchTestLike
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.collection.SortedSet
 
 
 class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
-  val myNow: () => SDateLike = () => SDate("2020-05-06", Crunch.europeLondonTimeZone)
+  val myNow: () => SDateLike = () => SDate("2020-05-06", europeLondonTimeZone)
 
   val durationMinutes = 60
   def startQueueActor(probe: TestProbe, crunchOffsetMinutes: Int, initialQueue: SortedSet[ProcessingRequest]): ActorRef = {
-    val source = new SortedActorRefSource(TestProbe().ref, crunchOffsetMinutes, durationMinutes, initialQueue, "desk-recs")
-    val graph = GraphDSL.create(source) {
+    val request = (millis: MillisSinceEpoch) => CrunchRequest(millis, crunchOffsetMinutes, durationMinutes)
+    val source = new SortedActorRefSource(TestProbe().ref, request, initialQueue, "desk-recs")
+    val graph = GraphDSL.createGraph(source) {
       implicit builder =>
         crunchRequests =>
           crunchRequests ~> Sink.actorRef(probe.ref, "complete")
@@ -52,7 +52,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
       "Then I should see a CrunchRequest for the day before in UTC (midnight BST is 23:00 the day before in UTC)" >> {
         val daysSourceProbe: TestProbe = TestProbe()
         val actor = startQueueActor(daysSourceProbe, zeroOffset, SortedSet())
-        actor ! UpdatedMillis(Set(day))
+        actor ! Set(day)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 6), zeroOffset, durationMinutes))
         success
       }
@@ -62,7 +62,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
       "Then I should see a CrunchRequest for the day before as the offset pushes that day to cover the following midnight" >> {
         val daysSourceProbe: TestProbe = TestProbe()
         val actor = startQueueActor(daysSourceProbe, twoHourOffset, SortedSet())
-        actor ! UpdatedMillis(Set(day))
+        actor ! Set(day)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 5), twoHourOffset, durationMinutes))
         success
       }
@@ -75,7 +75,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
         val today = myNow().millisSinceEpoch
         val tomorrow = myNow().addDays(1).millisSinceEpoch
         watch(actor)
-        actor ! UpdatedMillis(Set(today, tomorrow))
+        actor ! Set(today, tomorrow)
         daysSourceProbe.expectMsg(CrunchRequest(LocalDate(2020, 5, 5), twoHourOffset, durationMinutes))
         Thread.sleep(200)
         startQueueActor(daysSourceProbe, defaultAirportConfig.crunchOffsetMinutes, SortedSet())

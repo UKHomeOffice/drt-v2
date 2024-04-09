@@ -2,16 +2,15 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import services.crunch.VoyageManifestGenerator.{euPassport, inTransitFlag}
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, Passengers, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiFeedSource, LiveFeedSource, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{Seq, SortedMap}
@@ -48,14 +47,15 @@ class TransferPaxInApiSpec extends CrunchTestLike {
 
       val scheduled = "2017-01-01T00:00Z"
 
-      val flights = Flights(Seq(
-        ArrivalGenerator.arrival(
+      val flights = Seq(
+        ArrivalGenerator.live(
           schDt = scheduled,
           iata = "BA0001",
           terminal = T1,
-          passengerSources = Map(LiveFeedSource -> Passengers(Option(2), Option(1)))
+          totalPax = Option(2),
+          transPax = Option(1))
         )
-      ))
+
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
@@ -70,7 +70,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
         case ps: PortState =>
           val totalPaxAtPCP = paxLoadsFromPortState(ps, 60, 0)
             .values
-            .flatMap((_.values))
+            .flatMap(_.values)
             .flatten
             .sum
           totalPaxAtPCP == expected
@@ -85,13 +85,9 @@ class TransferPaxInApiSpec extends CrunchTestLike {
 
       val scheduled = "2017-01-01T00:00Z"
 
-      val flights = Flights(Seq(
-        ArrivalGenerator.arrival(
-          origin = PortCode("JFK"),
-          schDt = scheduled,
-          iata = "TST001",
-          terminal = T1)
-      ))
+      val flights = Seq(
+        ArrivalGenerator.forecast(origin = PortCode("JFK"), schDt = scheduled, iata = "TST001", terminal = T1)
+      )
 
       val portCode = PortCode("LHR")
 

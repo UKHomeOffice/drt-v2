@@ -3,7 +3,6 @@ package actors.persistent
 import actors.DateRange
 import actors.PartitionedPortStateActor._
 import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
 import akka.NotUsed
@@ -136,7 +135,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
       state = state.copy(maybeSourceStatuses = Option(state.addStatus(newStatus)))
 
       persistFeedStatus(newStatus)
-      sender() ! StatusReply.Ack
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
@@ -191,11 +189,10 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     case _: UniqueArrival =>
       sender() ! None
 
-    case unexpected => log.warn(s"Got an unexpected message: $unexpected")
+    case unexpected => log.error(s"Got an unexpected message: $unexpected")
   }
 
-  def handleUpdatesAndAck(updates: VoyageManifests,
-                          replyTo: ActorRef): Future[UpdatedMillis] = {
+  def handleUpdatesAndAck(updates: VoyageManifests, replyTo: ActorRef): Future[Set[Long]] = {
     processingRequest = true
     val eventualEffects = sendUpdates(updates)
     eventualEffects
@@ -208,23 +205,23 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     eventualEffects
   }
 
-  private def sendUpdates(updates: VoyageManifests): Future[UpdatedMillis] = {
-    val eventualUpdatedMinutesDiff: Source[UpdatedMillis, NotUsed] =
+  private def sendUpdates(updates: VoyageManifests): Future[Set[Long]] = {
+    val eventualUpdatedMinutesDiff: Source[Set[Long], NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => manifestsUpdate(partition, updates)
       }
     combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
   }
 
-  private def combineUpdateEffectsStream(effects: Source[UpdatedMillis, NotUsed]): Future[UpdatedMillis] =
+  private def combineUpdateEffectsStream(effects: Source[Set[Long], NotUsed]): Future[Set[Long]] =
     effects
-      .fold[UpdatedMillis](UpdatedMillis.empty)(_ ++ _)
+      .fold[Set[Long]](Set.empty[Long])(_ ++ _)
       .log(getClass.getName)
       .runWith(Sink.seq)
-      .map(_.foldLeft[UpdatedMillis](UpdatedMillis.empty)(_ ++ _))
+      .map(_.foldLeft[Set[Long]](Set.empty[Long])(_ ++ _))
       .recover { case t =>
         log.error("Failed to combine update effects", t)
-        UpdatedMillis.empty
+        Set.empty[Long]
       }
 
   private def persistLastSeenFileName(lastProcessedMarker: MillisSinceEpoch): Unit =

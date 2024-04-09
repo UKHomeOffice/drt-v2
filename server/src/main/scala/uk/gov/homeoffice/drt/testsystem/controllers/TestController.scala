@@ -1,6 +1,8 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
-import actors.TestDrtSystemInterface
+import actors.persistent.staffing.ReplaceAllShifts
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
+import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.util.Timeout
 import com.google.inject.Inject
@@ -8,6 +10,10 @@ import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.server.feeds.Implicits._
+import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
+import drt.shared.FlightsApi.Flights
+import drt.shared.ShiftAssignments
+import drt.staff.ImportStaff
 import module.NoCSRFAction
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.FlightPassengerInfoProtocol._
@@ -15,13 +21,13 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import play.api.http.HeaderNames
 import play.api.mvc._
 import spray.json._
-import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
-import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FlightCode, LiveArrival, Passengers, Predictions}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
-import uk.gov.homeoffice.drt.testsystem.MockRoles
+import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
+import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.testsystem.feeds.test.CSVFixtures
+import uk.gov.homeoffice.drt.testsystem.{MockRoles, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration._
@@ -29,63 +35,65 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.Success
 
-class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInterface, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
+class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, noCSRFAction: NoCSRFAction) extends AbstractController(cc) {
   lazy implicit val timeout: Timeout = Timeout(5 second)
 
   lazy implicit val ec: ExecutionContext = ctrl.ec
 
+  lazy implicit val system: ActorSystem = ctrl.system
+
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def saveArrival(arrival: Arrival): Future[Any] = {
+  private def saveArrival(arrival: LiveArrival): Future[Any] = {
     log.info(s"Incoming test arrival")
-    ctrl.testArrivalActor.ask(arrival).map { _ =>
-      ctrl.liveActor ! AdhocCheck
-    }
+    ctrl.feedService.liveFeedArrivalsActor ! FeedArrivals(List(arrival))
+    ctrl.applicationService
+      .setPcpTimes(Seq(arrival.toArrival(LiveFeedSource)))
+      .flatMap { arrivals =>
+        ctrl.actorService.portStateActor.ask(ArrivalsDiff(arrivals, List())).map { _ =>
+          ctrl.feedService.liveFeedPollingActor ! AdhocCheck
+        }
+      }
   }
 
-  def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
+  private def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
     log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
-    ctrl.testManifestsActor.ask(VoyageManifests(Set(voyageManifest)))
+    ctrl.persistentActors.manifestsRouterActor
+      .ask(ManifestsFeedSuccess(DqManifests(0, VoyageManifests(Set(voyageManifest)).manifests)))
   }
 
   def resetData: Future[Any] = {
     log.info(s"Sending reset message")
-    ctrl.restartActor.ask(ResetData)
-  }
-
-  def hello = Action {
-    Ok("Hello")
+    ctrl.testDrtSystemActor.restartActor.ask(ResetData)
   }
 
   def addArrival: Action[AnyContent] = noCSRFAction.async {
     request =>
       request.body.asJson.map(s => s.toString.parseJson.convertTo[ChromaLiveFlight]) match {
         case Some(flight) =>
-          val walkTimeMinutes = 4
-          val pcpTime: Long = org.joda.time.DateTime.parse(flight.SchDT).plusMinutes(walkTimeMinutes).getMillis
-          val actPax = Option(flight.ActPax).filter(_ != 0)
-          val arrival = Arrival(
-            Operator = flight.Operator,
-            Status = flight.Status,
-            Estimated = Option(SDate(flight.EstDT).millisSinceEpoch),
-            Actual = Option(SDate(flight.ActDT).millisSinceEpoch),
-            EstimatedChox = Option(SDate(flight.EstChoxDT).millisSinceEpoch),
-            Predictions = Predictions(0L, Map()),
-            ActualChox = Option(SDate(flight.ActChoxDT).millisSinceEpoch),
-            Gate = Option(flight.Gate),
-            Stand = Option(flight.Stand),
-            MaxPax = Option(flight.MaxPax).filter(_ != 0),
-            RunwayID = Option(flight.RunwayID),
-            BaggageReclaimId = Option(flight.BaggageReclaimId),
-            AirportID = PortCode(flight.AirportID),
-            Terminal = Terminal(flight.Terminal),
-            rawICAO = flight.ICAO,
-            rawIATA = flight.IATA,
-            Origin = PortCode(flight.Origin),
-            PcpTime = Option(pcpTime),
-            FeedSources = Set(LiveFeedSource),
-            PassengerSources = Map(LiveFeedSource -> Passengers(actPax, if (actPax.isEmpty) None else Option(flight.TranPax))),
-            Scheduled = SDate(flight.SchDT).millisSinceEpoch
+          val actPax: Option[Int] = Option(flight.ActPax).filter(_ != 0)
+          val transPax = if (actPax.isEmpty) None else Option(flight.TranPax)
+          val (carrierCode, voyageNumber, maybeSuffix) = FlightCode.flightCodeToParts(flight.IATA)
+          val arrival = LiveArrival(
+            operator = Option(flight.Operator),
+            maxPax = Option(flight.MaxPax).filter(_ != 0),
+            totalPax = actPax,
+            transPax = transPax,
+            terminal = Terminal(flight.Terminal),
+            voyageNumber = voyageNumber.numeric,
+            carrierCode = carrierCode.code,
+            flightCodeSuffix = maybeSuffix.map(_.suffix),
+            origin = flight.Origin,
+            scheduled = SDate(flight.SchDT).millisSinceEpoch,
+            estimated = Option(SDate(flight.EstDT).millisSinceEpoch),
+            touchdown = Option(SDate(flight.ActDT).millisSinceEpoch),
+            estimatedChox = Option(SDate(flight.EstChoxDT).millisSinceEpoch),
+            actualChox = Option(SDate(flight.ActChoxDT).millisSinceEpoch),
+            status = flight.Status,
+            gate = Option(flight.Gate),
+            stand = Option(flight.Stand),
+            runway = Option(flight.RunwayID),
+            baggageReclaim = Option(flight.BaggageReclaimId),
           )
           saveArrival(arrival).map(_ => Created)
         case None =>
@@ -150,4 +158,19 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystemInte
   def deleteAllData: Action[AnyContent] = noCSRFAction.async { _ =>
     resetData.map(_ => Accepted)
   }
+
+  def replaceAllShifts: Action[AnyContent] =
+    Action {
+      implicit request =>
+        val maybeShifts: Option[ShiftAssignments] = request.body.asJson.flatMap(ImportStaff.staffJsonToShifts)
+
+        maybeShifts match {
+          case Some(shifts) =>
+            log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
+            ctrl.applicationService.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
+            Created
+          case _ =>
+            BadRequest("{\"error\": \"Unable to parse data\"}")
+        }
+    }
 }

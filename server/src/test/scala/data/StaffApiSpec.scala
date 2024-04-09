@@ -2,9 +2,9 @@ package data
 
 import drt.shared.{ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.SpecificationLike
-import uk.gov.homeoffice.drt.time.SDate
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 class StaffApiSpec extends SpecificationLike {
 
@@ -28,7 +28,7 @@ class StaffApiSpec extends SpecificationLike {
 
         val shifts = staffJsonToShifts(Json.parse(staffJson))
 
-        val baseDateTime = SDate("2017-06-28T01:00", Crunch.europeLondonTimeZone)
+        val baseDateTime = SDate("2017-06-28T01:00", europeLondonTimeZone)
         val assignments = 0 to 3 map(i => {
           val offset = i * 15
           val startDate = baseDateTime.addMinutes(offset).millisSinceEpoch
@@ -61,7 +61,7 @@ class StaffApiSpec extends SpecificationLike {
 
         val shifts = staffJsonToShifts(Json.parse(staffJson))
 
-        val baseDateTime = SDate("2017-06-28T01:00", Crunch.europeLondonTimeZone)
+        val baseDateTime = SDate("2017-06-28T01:00", europeLondonTimeZone)
         val assignments = 0 to 3 map(i => {
           val offset = i * 15
           val startDate = baseDateTime.addMinutes(offset).millisSinceEpoch

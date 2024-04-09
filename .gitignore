@@ -3,12 +3,15 @@
 .~*
 .#*
 *.DS_Store
+*.local
 
 # sbt specific
 .sbtopts
 .cache/
 .history/
 .lib/
+run-docker-*
+run-sbt-*
 dist/*
 target/
 lib_managed/
@@ -17,6 +20,8 @@ project/boot/
 project/plugins/project/
 notebooks/*.csv
 .bsp
+
+run-*
 
 # Scala-IDE specific
 .scala_dependencies

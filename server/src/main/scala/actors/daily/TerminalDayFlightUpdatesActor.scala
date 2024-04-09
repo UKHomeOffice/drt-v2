@@ -44,13 +44,12 @@ class TerminalDayFlightUpdatesActor(year: Int,
       self ! PoisonPill
 
     case GetAllUpdatesSince(sinceMillis) =>
-      val updatesToSend = updatesAndRemovals.updatesSince(sinceMillis)
-      sender() ! updatesToSend
+      sender() ! updatesAndRemovals.updatesSince(sinceMillis)
 
     case StopUpdates =>
       stopUpdatesStream()
 
-    case x => log.warn(s"Received unexpected message ${x.getClass}")
+    case x => log.error(s"Received unexpected message ${x.getClass}")
   }
 
   private def stopUpdatesStream(): Unit = {
@@ -59,7 +58,7 @@ class TerminalDayFlightUpdatesActor(year: Int,
 
   def streamingUpdatesReceiveRecover: Receive = {
     case RecoveryCompleted =>
-      log.info(s"Recovered. Starting updates stream")
+      log.info(s"Recovered. Starting updates stream from sequence number: $lastSequenceNr")
       val killSwitch = startUpdatesStream(lastSequenceNr)
       maybeKillSwitch = Option(killSwitch)
 

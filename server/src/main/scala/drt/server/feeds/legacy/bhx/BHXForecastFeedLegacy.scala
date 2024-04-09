@@ -2,9 +2,8 @@ package drt.server.feeds.legacy.bhx
 
 import akka.actor.typed
 import akka.stream.scaladsl.Source
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Feed.FeedTick
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -22,7 +21,7 @@ object BHXForecastFeedLegacy extends BHXFeedConfig {
       } match {
         case Success(arrivals) =>
           log.info(s"Got ${arrivals.size} BHX forecast arrivals.")
-          ArrivalsFeedSuccess(Flights(arrivals), SDate.now())
+          ArrivalsFeedSuccess(arrivals, SDate.now())
         case Failure(t) =>
           log.info(s"Failed to fetch BHX forecast arrivals.", t)
           ArrivalsFeedFailure(t.toString, SDate.now())

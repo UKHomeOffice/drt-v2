@@ -4,13 +4,10 @@ import akka.stream.scaladsl.Source
 import akka.stream.testkit.scaladsl.TestSink
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
-import drt.server.feeds.{ArrivalsFeedSuccess, FeedResponse}
-import drt.shared.FlightsApi.Flights
 import services.crunch.CrunchTestLike
 import spray.json._
-import uk.gov.homeoffice.drt.time.SDate
 
-import scala.collection.immutable.{Seq, SortedMap}
+import scala.collection.immutable.Seq
 
 class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
 
@@ -55,60 +52,6 @@ class DiffingAkkaStreamSpec extends CrunchTestLike with SampleData {
             "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
             1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
           ), flight2))
-        .expectComplete()
-    }
-  }
-
-  "Given two pollings where the second drt.http response has two entries we should emit both flights a single time" >> {
-    val source = Source(Seq(response0, response1))
-
-    "we really can diff it and parse it" in {
-      val date = SDate.now()
-      source
-        .map(content => content.parseJson.convertTo[List[ChromaLiveFlight]])
-        .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(SortedMap(), () => SDate.now().millisSinceEpoch))
-        .runWith(TestSink.probe[FeedResponse])
-        .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
-          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
-            "2016-08-04T04:40:00Z",
-            "2016-08-04T04:37:00Z",
-            "",
-            "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
-            1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          )))), date))
-        .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(flight2))), date))
-        .expectComplete()
-    }
-  }
-
-  "Given two polls where a flight details changes on the second we emit the change details" >> {
-    val date = SDate.now()
-    val source = Source(Seq(
-      List(flight1),
-      List(flight1.copy(ActDT = "2016-08-04T09:11:00Z", ActChoxDT = "2016-08-04T04:54:00Z"))))
-
-    "we really can diff it and parse it" in {
-      source
-        .map(chromaArrivals => ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(chromaArrivals)), date))
-        .via(new ArrivalsDiffingStage(SortedMap(), () => SDate.now().millisSinceEpoch))
-        .runWith(TestSink.probe[FeedResponse])
-        .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
-          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
-            "2016-08-04T04:40:00Z",
-            "2016-08-04T04:37:00Z",
-            "",
-            "2016-08-04T04:53:00Z", "", "207", 0, 0, 0, "24", "",
-            1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          )))), date))
-        .requestNext(ArrivalsFeedSuccess(Flights(StreamingChromaFlow.liveChromaToArrival(List(
-          ChromaLiveFlight("Tnt Airways Sa", "On Chocks",
-            "2016-08-04T04:40:00Z",
-            "2016-08-04T09:11:00Z",
-            "",
-            "2016-08-04T04:54:00Z", "", "207", 0, 0, 0, "24", "",
-            1200980, "EDI", "FRT", "TAY025N", "3V025N", "LGG", "2016-08-04T04:35:00Z"
-          )))), date))
         .expectComplete()
     }
   }

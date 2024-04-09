@@ -7,9 +7,9 @@
 POST          /report-to                                                              controllers.CSPReportController.report
 GET           /                                                                       controllers.Application.index
 GET           /health-check                                                           controllers.Application.healthCheck
-GET           /health-check/received-api/:windowMinutes/:minimumToConsider            controllers.application.HealthCheckController.receivedLiveApiData(windowMinutes: Int, minimumToConsider: Int)
-GET           /health-check/received-landing-times/:windowMinutes/:minimumToConsider  controllers.application.HealthCheckController.receivedLandingTimes(windowMinutes: Int, minimumToConsider: Int)
-GET           /health-check/received-arrival-updates/:windowMinutes/:minimumToConsider  controllers.application.HealthCheckController.receivedUpdates(windowMinutes: Int, minimumToConsider: Int)
+GET           /health-check/received-api/:from/:to/:minimumToConsider                 controllers.application.HealthCheckController.receivedLiveApiData(from: String, to: String, minimumToConsider: Int)
+GET           /health-check/received-landing-times/:from/:to/:minimumToConsider       controllers.application.HealthCheckController.receivedLandingTimes(from: String, to: String, minimumToConsider: Int)
+GET           /health-check/received-arrival-updates/:from/:to/:minimumToConsider/:lastUpdatedMinutes  controllers.application.HealthCheckController.receivedUpdates(from: String, to: String, minimumToConsider: Int, lastUpdatedMinutes: Int)
 GET           /health-check/calculated-desk-updates                                   controllers.application.HealthCheckController.deskUpdates()
 
 GET           /airport-config                                                         controllers.application.ConfigController.getAirportConfig
@@ -31,7 +31,10 @@ DELETE        /alerts                                                           
 GET           /version                                                                controllers.application.ApplicationInfoController.getApplicationVersion
 
 GET           /crunch                                                                 controllers.application.PortStateController.getCrunch
-POST          /control/crunch/recalculate                                             controllers.application.PortStateController.reCrunch
++ nocsrf
+POST          /control/crunch/recalculate                                             controllers.application.PortStateController.reCrunchFullForecast
++ nocsrf
+POST          /control/crunch/recalculate/:startLocalDate/:endLocalDate               controllers.application.PortStateController.reCrunch(startLocalDate: String, endLocalDate: String)
 POST          /control/arrivals/recalculate                                           controllers.application.PortStateController.reCalculateArrivals
 GET           /crunch-snapshot/:pit                                                   controllers.application.PortStateController.getCrunchSnapshot(pit: Long)
 
@@ -76,9 +79,11 @@ GET           /export/planning/:weekStarting/:terminalName                      
 GET           /export/headlines/:weekStarting/:terminalName                           controllers.application.ExportsController.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 GET           /export/users                                                           controllers.application.ExportsController.exportUsers
 GET           /export/staff-movements/:date/:terminal                                 controllers.application.StaffingController.exportStaffMovements(terminal: String, date: String)
+GET           /export/port-config                                                     controllers.application.ExportPortConfigController.exportConfig
 GET           /export/desk-rec-simulation                                             controllers.application.SimulationsController.simulationExport
 GET           /desk-rec-simulation                                                    controllers.application.SimulationsController.simulation
 
+GET           /forecast-accuracy/compare/:modelNames/:terminalName/:startDate/:endDate  controllers.application.ForecastAccuracyController.forecastModelComparison(modelNames: String, terminalName: String, startDate: String, endDate: String)
 GET           /forecast-accuracy/:date                                                controllers.application.ForecastAccuracyController.getForecastAccuracy(date: String)
 GET           /export/forecast-accuracy/:daysForComparison/:daysAhead                 controllers.application.ForecastAccuracyController.forecastAccuracyExport(daysForComparison: Int, daysAhead: Int)
 
@@ -107,8 +112,11 @@ GET           /data/user/has-port-access                                        
 GET           /data/actor-tree                                                        controllers.application.DebugController.getActorTree
 
 # v2 exports
-GET           /api/arrivals/:startLocalDay/:endLocalDay/:terminalName                 controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeApi(startLocalDay: String, endLocalDay: String, terminalName: String)
-GET           /api/passengers/:startLocalDay/:endLocalDay/:terminalName               controllers.application.exports.SummariesExportController.exportDailyPassengersForDateRangeApi(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /api/arrivals/:startLocalDate/:endLocalDate/:terminalName               controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)
+GET           /api/passengers/:startLocalDate/:endLocalDate                           controllers.application.SummariesController.exportPassengersByPortForDateRangeApi(startLocalDate: String, endLocalDate: String)
+GET           /api/passengers/:startLocalDate/:endLocalDate/:terminalName             controllers.application.SummariesController.exportPassengersByTerminalForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)
++ nocsrf
+PUT           /api/passengers/:localDate                                              controllers.application.SummariesController.populatePassengersForDate(localDate: String)
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)
@@ -116,7 +124,6 @@ POST          /email/feedback/:feedback                                         
 + nocsrf
 POST          /logging                                                                controllers.Application.logging
 
-POST          /data/staff                                                             controllers.application.StaffingController.saveStaff
 GET           /staff-movements/:date                                                  controllers.application.StaffingController.getStaffMovements(date: String)
 POST          /staff-movements                                                        controllers.application.StaffingController.addStaffMovements
 DELETE        /staff-movements/:uuid                                                  controllers.application.StaffingController.removeStaffMovements(uuid: String)
@@ -128,7 +135,6 @@ POST          /data/feed/:feedType/:portCode                                    
 # Training
 GET           /feature-guide-video/:filename                                          controllers.S3FileController.getFile(filename:String)
 
-GET           /feature-guides                                                         controllers.Application.featureGuides
 GET           /drop-ins                                                               controllers.application.DropInsController.dropIns()
 + nocsrf
 POST          /drop-in-registrations                                                  controllers.application.DropInsController.createDropInRegistration()

@@ -34,9 +34,9 @@ class FlightsExportControllerSpec extends PlaySpec {
 
       val controller = new FlightsExportController(Helpers.stubControllerComponents(), drtSystemInterface)
 
-      val flightsRouter = drtSystemInterface.flightsRouterActor
+      val flightsRouter = drtSystemInterface.actorService.flightsRouterActor
       val arrivalT1 = ArrivalGenerator
-        .arrival(iata = "BA0001", terminal = T1, schDt = "2023-11-06T05:00Z", passengerSources = Map(AclFeedSource -> Passengers(Some(100), None)))
+        .arrival(iata = "BA0001", terminal = T1, schDt = "2023-11-06T05:00Z", feedSource = AclFeedSource , totalPax= Some(100), transPax = None)
 
       flightsRouter ! ArrivalsDiff(Seq(arrivalT1), Seq())
 
@@ -74,7 +74,7 @@ class FlightsExportControllerSpec extends PlaySpec {
 
       val manifestFeedSuccess = ManifestsFeedSuccess(DqManifests(0, Set(manifest)), creationDate)
 
-      drtSystemInterface.manifestsRouterActorReadOnly ! manifestFeedSuccess
+      drtSystemInterface.applicationService.manifestsRouterActorReadOnly ! manifestFeedSuccess
 
       val result = Await.ready(controller.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString = "2023-11-06",
         pointInTime = SDate("2023-11-06T00:00").millisSinceEpoch,

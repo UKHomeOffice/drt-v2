@@ -4,17 +4,13 @@ import actors.PartitionedPortStateActor.FlightsRequest
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import drt.shared.{ArrivalKey, CodeShares}
-import org.joda.time.DateTimeZone
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
 trait FlightsExport {
-
-  val timeZone: DateTimeZone = Crunch.europeLondonTimeZone
 
   def headings: String
 

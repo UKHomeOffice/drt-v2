@@ -1,6 +1,5 @@
 package actors.daily
 
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.serializers.ManifestMessageConversion
 import akka.actor.Props
 import akka.persistence.SaveSnapshotSuccess
@@ -56,7 +55,7 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
     case _: SaveSnapshotSuccess =>
       ackIfRequired()
 
-    case m => log.warn(s"Got unexpected message: $m")
+    case m => log.error(s"Got unexpected message: $m")
   }
 
   override def processRecoveryMessage: PartialFunction[Any, Unit] = {
@@ -80,7 +79,7 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
   def updateAndPersist(vms: VoyageManifests): Unit = {
     state = state ++ vms.toMap
 
-    val replyToAndMessage = List((sender(), UpdatedMillis(vms.manifests.map(_.scheduled.millisSinceEpoch).toSet)))
+    val replyToAndMessage = List((sender(), vms.manifests.map(_.scheduled.millisSinceEpoch).toSet))
     persistAndMaybeSnapshotWithAck(ManifestMessageConversion.voyageManifestsToMessage(vms), replyToAndMessage)
   }
 

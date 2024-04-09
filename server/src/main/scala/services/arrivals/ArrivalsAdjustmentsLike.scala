@@ -5,16 +5,16 @@ import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.PortCode
 
 trait ArrivalsAdjustmentsLike {
-  def apply(arrivals: Iterable[Arrival]): Iterable[Arrival]
+  def adjust(arrival: Arrival): Arrival
 }
 
 object ArrivalsAdjustments {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def adjustmentsForPort(portCode: PortCode): ArrivalsAdjustmentsLike =
+  def adjustmentsForPort(portCode: PortCode): Arrival => Arrival =
     if (portCode == PortCode("EDI"))
-      EdiArrivalsTerminalAdjustments
+      EdiArrivalsTerminalAdjustments.adjust
     else {
-      ArrivalsAdjustmentsNoop
+      ArrivalsAdjustmentsNoop.adjust
     }
 }

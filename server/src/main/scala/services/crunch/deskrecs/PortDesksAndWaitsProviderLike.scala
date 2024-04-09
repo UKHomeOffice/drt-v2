@@ -24,11 +24,15 @@ trait PortDesksAndWaitsProviderLike {
 
   def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
                    loads: Map[TQM, PassengersMinute],
-                   deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike])
+                   deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike],
+                   description: String,
+                  )
                   (implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes]
 
   def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
                          passengersByQueue: Map[TQM, PassengersMinute],
-                         deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike])
+                         deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike],
+                         description: String,
+                        )
                         (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes]
 }

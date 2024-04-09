@@ -6,12 +6,10 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds._
 import drt.server.feeds.gla.GlaFeed
-import drt.shared.FlightsApi.Flights
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.LiveArrival
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -69,7 +67,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case s: ArrivalsFeedSuccess if s.arrivals.flights.head.Scheduled == SDate("2019-11-13T12:34:00Z").millisSinceEpoch => true
+      case s: ArrivalsFeedSuccess if s.arrivals.head.scheduled == SDate("2019-11-13T12:34:00Z").millisSinceEpoch => true
       case _ => false
     }
 
@@ -87,7 +85,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(a), _) if a.size == 1 && !a.exists(_.Scheduled == SDate(dsd).millisSinceEpoch) => true
+      case ArrivalsFeedSuccess(a, _) if a.size == 1 && !a.exists(_.scheduled == SDate(dsd).millisSinceEpoch) => true
       case _ => false
     }
 
@@ -105,9 +103,7 @@ class GlaFeedSpec extends CrunchTestLike {
 
     probe.fishForMessage(1.seconds) {
       case ArrivalsFeedFailure(_, _) => true
-      case o =>
-        println(s"got $o")
-        false
+      case _ => false
     }
 
     success
@@ -141,36 +137,33 @@ class GlaFeedSpec extends CrunchTestLike {
   "Given some valid GLA Feed Json I should get back a valid Arrival object" >> {
     val mockFeed = mockFeedWithResponse(firstJsonExample)
 
-    val expected = Arrival(
-      Operator = None,
-      Status = ArrivalStatus("Flight is on schedule"),
-      Estimated = Some(SDate("2019-11-13T13:32:00Z").millisSinceEpoch),
-      Predictions = Predictions(0L, Map()),
-      Actual = Some(SDate("2019-11-13T13:31:00Z").millisSinceEpoch),
-      EstimatedChox = Some(SDate("2019-11-13T12:33:00Z").millisSinceEpoch),
-      ActualChox = Some(SDate("2019-11-13T13:30:00Z").millisSinceEpoch),
-      Gate = Some("G"),
-      Stand = Some("ST"),
-      MaxPax = Some(50),
-      RunwayID = Some("3"),
-      BaggageReclaimId = Some("2"),
-      AirportID = PortCode("GLA"),
-      Terminal = T1,
-      rawICAO = "TST234",
-      rawIATA = "TS234",
-      Origin = PortCode("TST"),
-      Scheduled = SDate("2019-11-13T12:34:00Z").millisSinceEpoch,
-      PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      CarrierScheduled = None,
-      PassengerSources = Map(LiveFeedSource -> Passengers(Some(20), None))
+    val expected = LiveArrival(
+      operator = None,
+      maxPax = Some(50),
+      totalPax = Option(20),
+      transPax = None,
+      terminal = T1,
+      voyageNumber = 234,
+      carrierCode = "TS",
+      flightCodeSuffix = None,
+      origin = "TST",
+      scheduled = SDate("2019-11-13T12:34:00Z").millisSinceEpoch,
+      estimated = Some(SDate("2019-11-13T13:32:00Z").millisSinceEpoch),
+      touchdown = Some(SDate("2019-11-13T13:31:00Z").millisSinceEpoch),
+      estimatedChox = Some(SDate("2019-11-13T12:33:00Z").millisSinceEpoch),
+      actualChox = Some(SDate("2019-11-13T13:30:00Z").millisSinceEpoch),
+      status = "Flight is on schedule",
+      gate = Some("G"),
+      stand = Some("ST"),
+      runway = Some("3"),
+      baggageReclaim = Some("2"),
     )
     val probe = TestProbe()
     val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+      case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
       case _ => false
     }
 
@@ -180,29 +173,26 @@ class GlaFeedSpec extends CrunchTestLike {
   "Given a different arrival with valid GLA Feed Json I should get back a valid Arrival object" >> {
     val mockFeed = mockFeedWithResponse(secondJsonExample)
 
-    val expected = Arrival(
-      Operator = None,
-      Status = ArrivalStatus("Flight is cancelled"),
-      Estimated = None,
-      Predictions = Predictions(0L, Map()),
-      Actual = Some(SDate("2019-11-14T14:41:00Z").millisSinceEpoch),
-      EstimatedChox = Some(SDate("2019-11-14T12:44:00Z").millisSinceEpoch),
-      ActualChox = Some(SDate("2019-11-14T14:40:00Z").millisSinceEpoch),
-      Gate = Some("GATE"),
-      Stand = Some("STAND"),
-      MaxPax = Some(75),
-      RunwayID = Some("4"),
-      BaggageReclaimId = Some("2"),
-      AirportID = PortCode("GLA"),
-      Terminal = T1,
-      rawICAO = "TTT244",
-      rawIATA = "TT244",
-      Origin = PortCode("TTT"),
-      Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
-      PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      CarrierScheduled = None,
-      PassengerSources = Map(LiveFeedSource -> Passengers(Some(55), None))
+    val expected = LiveArrival(
+      operator = None,
+      maxPax = Some(75),
+      totalPax = Option(55),
+      transPax = None,
+      terminal = T1,
+      voyageNumber = 244,
+      carrierCode = "TT",
+      flightCodeSuffix = None,
+      origin = "TTT",
+      scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
+      estimated = None,
+      touchdown = Some(SDate("2019-11-14T14:41:00Z").millisSinceEpoch),
+      estimatedChox = Some(SDate("2019-11-14T12:44:00Z").millisSinceEpoch),
+      actualChox = Some(SDate("2019-11-14T14:40:00Z").millisSinceEpoch),
+      status = "Flight is cancelled",
+      gate = Some("GATE"),
+      stand = Some("STAND"),
+      runway = Some("4"),
+      baggageReclaim = Some("2"),
     )
 
     val probe = TestProbe()
@@ -210,7 +200,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+      case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
       case _ => false
     }
 
@@ -226,8 +216,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) =>
-        (arrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual), arrival.MaxPax) === ((Some(0), Some(0)))
+      case ArrivalsFeedSuccess(arrival :: Nil, _) => (arrival.totalPax, arrival.maxPax) === ((Some(0), Some(0)))
       case _ => false
     }
 
@@ -238,29 +227,26 @@ class GlaFeedSpec extends CrunchTestLike {
   "Given a different arrival with only required JSON fields then I should still get an arrival object with those fields" >> {
     val mockFeed = mockFeedWithResponse(requiredFieldsOnlyJson)
 
-    val expected = Arrival(
-      Operator = None,
-      Status = ArrivalStatus("Flight is cancelled"),
-      Estimated = None,
-      Predictions = Predictions(0L, Map()),
-      Actual = None,
-      EstimatedChox = None,
-      ActualChox = None,
-      Gate = None,
-      Stand = None,
-      MaxPax = None,
-      RunwayID = None,
-      BaggageReclaimId = None,
-      AirportID = PortCode("GLA"),
-      Terminal = T1,
-      rawICAO = "TTT244",
-      rawIATA = "TT244",
-      Origin = PortCode("TTT"),
-      Scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
-      PcpTime = None,
-      FeedSources = Set(LiveFeedSource),
-      CarrierScheduled = None,
-      PassengerSources = Map(LiveFeedSource -> Passengers(None, None))
+    val expected = LiveArrival(
+      operator = None,
+      maxPax = None,
+      totalPax = None,
+      transPax = None,
+      terminal = T1,
+      voyageNumber = 244,
+      carrierCode = "TT",
+      flightCodeSuffix = None,
+      origin = "TTT",
+      scheduled = SDate("2019-11-14T12:44:00Z").millisSinceEpoch,
+      estimated = None,
+      touchdown = None,
+      estimatedChox = None,
+      actualChox = None,
+      status = "Flight is cancelled",
+      gate = None,
+      stand = None,
+      runway = None,
+      baggageReclaim = None,
     )
 
     val probe = TestProbe()
@@ -268,7 +254,7 @@ class GlaFeedSpec extends CrunchTestLike {
     actorSource ! Feed.Tick
 
     probe.fishForMessage(1.seconds) {
-      case ArrivalsFeedSuccess(Flights(arrival :: Nil), _) => arrival === expected
+      case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
       case _ => false
     }
 

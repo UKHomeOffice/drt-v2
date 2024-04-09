@@ -8,8 +8,8 @@ import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToC
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.ErrorResponse
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import uk.gov.homeoffice.drt.time.SDate
 import services.exports.StreamingDesksExport
+import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.auth.Roles.DesksAndQueuesView
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -124,7 +124,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     val exportSource: Source[String, NotUsed] = exportSourceFn(start, end, Terminal(terminalName))
     log.info(s"Exporting between $start and $end")
 
-    val fileName = makeFileName(filePrefix, Terminal(terminalName), start.toLocalDate, end.toLocalDate, airportConfig.portCode)
+    val fileName = makeFileName(filePrefix, Option(Terminal(terminalName)), start.toLocalDate, end.toLocalDate, airportConfig.portCode)
 
     Try(sourceToCsvResponse(exportSource, fileName)) match {
       case Success(value) => Future(value)

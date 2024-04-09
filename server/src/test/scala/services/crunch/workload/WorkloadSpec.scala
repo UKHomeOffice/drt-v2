@@ -55,16 +55,16 @@ class WorkloadSpec extends CrunchTestLike {
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time provided" >> {
 
-    val arrival = ArrivalGenerator.arrival(passengerSources = Map(AclFeedSource -> Passengers(Option(1), None)))
+    val arrival = ArrivalGenerator.live(totalPax = Option(1))
     val splits = generateSplits(1, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
 
-    val workloads = workloadForFlight(arrival, splits, FlightFilter.regular(List(T1)))
+    val workloads = workloadForFlight(arrival.toArrival(LiveFeedSource), splits, FlightFilter.regular(List(T1)))
 
     workloads === procTime
   }
 
   "Given an arrival with a PCP time that has seconds, then these seconds should be ignored for workload calculations" >> {
-    val arrival = ArrivalGenerator.arrival(passengerSources = Map(AclFeedSource -> Passengers(Option(1), None)))
+    val arrival = ArrivalGenerator.live(totalPax = Option(1)).toArrival(LiveFeedSource)
       .copy(PcpTime = Some(SDate("2018-08-28T17:07:05").millisSinceEpoch))
 
     val splits = generateSplits(1, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
@@ -88,9 +88,9 @@ class WorkloadSpec extends CrunchTestLike {
     "When I ask for the workload for this arrival " +
     "Then I see the 6x the proc time provided" >> {
 
-    val arrival = ArrivalGenerator.arrival(passengerSources = Map(ApiFeedSource -> Passengers(Option(6), None)))
+    val arrival = ArrivalGenerator.live(totalPax = Option(6))
     val splits = generateSplits(6, SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
-    val workloads = workloadForFlight(arrival, splits, FlightFilter.regular(List(T1)))
+    val workloads = workloadForFlight(arrival.toArrival(AclFeedSource), splits, FlightFilter.regular(List(T1)))
 
     workloads === procTime * 6
   }
@@ -99,10 +99,9 @@ class WorkloadSpec extends CrunchTestLike {
     "When I ask for the workload for this arrival " +
     "Then I see the 1x the proc time provided" >> {
 
-    val arrival = ArrivalGenerator.arrival(
-      feedSources = Set(LiveFeedSource),
-      passengerSources = Map(LiveFeedSource -> Passengers(Option(1), None),
-        HistoricApiFeedSource -> Passengers(Option(6), None))
+    val arrival = ArrivalGenerator.live().toArrival(LiveFeedSource).copy(
+      FeedSources = Set(LiveFeedSource),
+      PassengerSources = Map(LiveFeedSource -> Passengers(Option(1), None), HistoricApiFeedSource -> Passengers(Option(6), None))
     )
     val splits = generateSplits(6, SplitSources.Historical, None)
     val workloads = workloadForFlight(arrival, splits, FlightFilter.regular(List(T1)))
@@ -139,12 +138,12 @@ class WorkloadSpec extends CrunchTestLike {
   }
 
   def workloadForFlightFromTo(origin: PortCode, config: AirportConfig, terminal: Terminal, paxCount: Int): Double = {
-    val arrival = ArrivalGenerator.arrival(
+    val arrival = ArrivalGenerator.live(
       schDt = "2021-06-01T12:00",
       terminal = terminal,
       origin = origin,
-      passengerSources = Map(AclFeedSource -> Passengers(Option(paxCount), None))
-    )
+      totalPax = Option(paxCount)
+    ).toArrival(LiveFeedSource)
     val splits = generateSplits(paxCount, SplitSources.Historical, None)
     workloadForFlight(arrival, splits, FlightFilter.forPortConfig(config))
   }

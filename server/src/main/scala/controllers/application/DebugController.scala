@@ -1,7 +1,7 @@
 package controllers.application
 
 import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import akka.actor.Props
 import akka.pattern.ask
 import com.google.inject.Inject
@@ -30,7 +30,7 @@ class DebugController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
       val persistenceIds = SortedMap(
         "ACL" -> AclForecastArrivalsActor.persistenceId,
         "Port Forecast" -> PortForecastArrivalsActor.persistenceId,
-        "Cirium Live" -> CirriumLiveArrivalsActor.persistenceId,
+        "Cirium Live" -> CiriumLiveArrivalsActor.persistenceId,
         "Port Live" -> PortLiveArrivalsActor.persistenceId,
         "Crunch State" -> "crunch-state",
         "Flight State" -> "flight-state",

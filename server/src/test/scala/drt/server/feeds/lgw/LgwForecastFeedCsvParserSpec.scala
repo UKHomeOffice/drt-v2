@@ -1,11 +1,10 @@
 package drt.server.feeds.lgw
 
 import org.specs2.mutable.Specification
-import services.graphstages.Crunch.europeLondonTimeZone
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, ForecastArrival, VoyageNumber}
-import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
+import uk.gov.homeoffice.drt.arrivals.ForecastArrival
+import uk.gov.homeoffice.drt.ports.Terminals.S
 import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 class LgwForecastFeedCsvParserSpec extends Specification {
   val pax = 155
@@ -23,8 +22,18 @@ class LgwForecastFeedCsvParserSpec extends Specification {
     "I should be able to parse it into a list of ForecastArrivals" >> {
       val parser = LgwForecastFeedCsvParser(() => Option(content))
       parser.parseCsv(content) === (List(
-        ForecastArrival(CarrierCode(carrierCode), VoyageNumber(flightNumber), None, PortCode(origin), S, scheduled.millisSinceEpoch, Some(pax), None, Some(174)),
-      ), 0)
+        ForecastArrival(
+          operator = None,
+          maxPax = Some(174),
+          totalPax = Some(pax),
+          transPax = None,
+          terminal = S,
+          voyageNumber = flightNumber,
+          carrierCode = carrierCode,
+          flightCodeSuffix = None,
+          origin = origin,
+          scheduled = scheduled.millisSinceEpoch,
+        )), 0)
     }
   }
 
@@ -38,7 +47,18 @@ class LgwForecastFeedCsvParserSpec extends Specification {
     "I should be able to parse it into a list of ForecastArrivals" >> {
       val parser = LgwForecastFeedCsvParser(() => Option(content))
       parser.parseCsv(content) === (List(
-        ForecastArrival(CarrierCode(carrierCode), VoyageNumber(flightNumber), None, PortCode(origin), S, scheduled.millisSinceEpoch, Some(pax), None, Some(174)),
+        ForecastArrival(
+          operator = None,
+          maxPax = Some(174),
+          totalPax = Some(pax),
+          transPax = None,
+          terminal = S,
+          voyageNumber = flightNumber,
+          carrierCode = carrierCode,
+          flightCodeSuffix = None,
+          origin = origin,
+          scheduled = scheduled.millisSinceEpoch,
+        ),
       ), 0)
     }
   }

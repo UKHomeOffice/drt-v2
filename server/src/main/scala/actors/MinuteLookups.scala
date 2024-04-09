@@ -1,7 +1,6 @@
 package actors
 
 import actors.daily._
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesRouterActor, StaffMinutesRouterActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -29,25 +28,25 @@ trait MinuteLookupsLike {
   val queuesByTerminal: Map[Terminal, Seq[Queue]]
   val requestAndTerminateActor: ActorRef
 
-  val updatePassengerMinutes: ((Terminal, UtcDate), MinutesContainer[PassengersMinute, TQM]) => Future[UpdatedMillis] =
+  val updatePassengerMinutes: ((Terminal, UtcDate), MinutesContainer[PassengersMinute, TQM]) => Future[Set[Long]] =
     (terminalDate: (Terminal, UtcDate), container: MinutesContainer[PassengersMinute, TQM]) => {
       val (terminal, date) = terminalDate
       val actor = system.actorOf(TerminalDayQueueLoadsActor.props(terminal, date, now))
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[UpdatedMillis]
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[Set[Long]]
     }
 
-  val updateCrunchMinutes: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[UpdatedMillis] =
+  val updateCrunchMinutes: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[Long]] =
     (terminalDate: (Terminal, UtcDate), container: MinutesContainer[CrunchMinute, TQM]) => {
       val (terminal, date) = terminalDate
       val actor = system.actorOf(TerminalDayQueuesActor.props(terminal, date, now))
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[UpdatedMillis]
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[Set[Long]]
     }
 
-  val updateStaffMinutes: ((Terminal, UtcDate), MinutesContainer[StaffMinute, TM]) => Future[UpdatedMillis] =
+  val updateStaffMinutes: ((Terminal, UtcDate), MinutesContainer[StaffMinute, TM]) => Future[Set[Long]] =
     (terminalDate: (Terminal, UtcDate), container: MinutesContainer[StaffMinute, TM]) => {
       val (terminal, date) = terminalDate
       val actor = system.actorOf(TerminalDayStaffActor.props(terminal, date, now))
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[UpdatedMillis]
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[Set[Long]]
     }
 
   val queuesLoadsLookup: MinutesLookup[PassengersMinute, TQM] =

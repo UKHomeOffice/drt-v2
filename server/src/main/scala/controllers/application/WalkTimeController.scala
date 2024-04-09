@@ -7,20 +7,27 @@ import uk.gov.homeoffice.drt.actor.WalkTimeProvider
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 
-class WalkTimeController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+trait WalkTimeLike {
+  private def walkTimes(csvPath: String): Iterable[WalkTime] = WalkTimeProvider.walkTimes(csvPath).map {
+    case ((terminal, gateOrStand), walkTimeSeconds) => WalkTime(gateOrStand, terminal, walkTimeSeconds * 1000)
+  }
+
+  protected def walkTimes(walkTimesFilePath: Option[String]): Iterable[WalkTime] = walkTimesFilePath.map(walkTimes).getOrElse(Iterable())
+
+}
+
+class WalkTimeController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) with WalkTimeLike {
 
   def getWalkTimes: Action[AnyContent] = authByRole(ArrivalsAndSplitsView) {
     Action { _ =>
       import upickle.default._
 
-      val gates = ctrl.params.gateWalkTimesFilePath.map(walkTimes).getOrElse(Iterable())
-      val stands = ctrl.params.standWalkTimesFilePath.map(walkTimes).getOrElse(Iterable())
+      val gates = walkTimes(ctrl.params.gateWalkTimesFilePath)
+      val stands = walkTimes(ctrl.params.standWalkTimesFilePath)
 
       Ok(write(WalkTimes(gates, stands)))
     }
   }
 
-  private def walkTimes(csvPath: String): Iterable[WalkTime] = WalkTimeProvider.walkTimes(csvPath).map {
-    case ((terminal, gateOrStand), walkTimeSeconds) => WalkTime(gateOrStand, terminal, walkTimeSeconds * 1000)
-  }
+
 }

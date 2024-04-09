@@ -6,6 +6,7 @@ import drt.client.components.TerminalContentComponent.exportLink
 import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services._
+import drt.shared.redlist.LhrRedListDatesImpl.{dayHasPaxDiversions, isRedListActive}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid}
@@ -103,7 +104,7 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
       component(Props(terminal, selectedDate, loggedInUser, viewMode, title, exports))
 
   def apply(portCode: PortCode, terminal: Terminal, exportDate: SDateLike): (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = portCode match {
-    case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(exportDate) =>
+    case PortCode("LHR") if isRedListActive(exportDate) && dayHasPaxDiversions(exportDate)  =>
       LhrTerminalTypes(LhrRedListDatesImpl).lhrRedListTerminalForDate(exportDate.millisSinceEpoch) match {
         case None => defaultArrivalsExport
         case Some(redListTerminal) if redListTerminal == terminal =>

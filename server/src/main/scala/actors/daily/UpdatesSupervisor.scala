@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.PartitionedPortStateActor.GetUpdatesSince
+import actors.PartitionedPortStateActor.{GetMinuteUpdatesSince, GetUpdatesSince}
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
@@ -70,7 +70,7 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
     case Some(existing) => existing
     case None =>
       log.info(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
-      val actor = context.system.actorOf(updatesActorFactory(terminal, day), s"updates-actor-$terminal-${day.toISOString}-${UUID.randomUUID().toString}")
+      val actor = context.system.actorOf(updatesActorFactory(terminal, day), s"updates-supervisor-actor-$terminal-${day.toISOString}-${UUID.randomUUID().toString}")
       streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
       lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
       actor
@@ -91,7 +91,7 @@ abstract class UpdatesSupervisor[A, B <: WithTimeAccessor](now: () => SDateLike,
         case _ =>
       }
 
-    case GetUpdatesSince(sinceMillis, fromMillis, toMillis) =>
+    case GetMinuteUpdatesSince(sinceMillis, fromMillis, toMillis) =>
       val replyTo = sender()
       val terminalDays = terminalDaysForPeriod(fromMillis, toMillis)
 

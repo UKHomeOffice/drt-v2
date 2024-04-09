@@ -13,8 +13,8 @@ import uk.gov.homeoffice.drt.time.UtcDate
 
 object MinutesProvider {
   def singleTerminal[A, B <: WithTimeAccessor](minutesRouterActor: ActorRef)
-                                              (implicit timeout: Timeout): (UtcDate, UtcDate, Terminal) => Source[(UtcDate, Seq[A]), NotUsed] =
-    (start, end, terminal) => {
+                                              (implicit timeout: Timeout): Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[A]), NotUsed] =
+    terminal => (start, end) => {
       val request = actors.routing.minutes.GetStreamingMinutesForTerminalDateRange(terminal, start, end)
       minutesByUtcDate(minutesRouterActor, request)
     }

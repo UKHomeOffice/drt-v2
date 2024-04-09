@@ -3,20 +3,17 @@ package drt.server.feeds.lhr
 import akka.actor.typed
 import akka.stream.scaladsl.Source
 import drt.server.feeds.Feed.FeedTick
-import drt.server.feeds.Implicits._
 import drt.server.feeds.lhr.LHRFlightFeed.{emptyStringToOption, parseDateTime}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
-import drt.shared.FlightsApi.Flights
 import org.apache.commons.csv.{CSVFormat, CSVParser, CSVRecord}
 import org.joda.time.DateTime
 import org.joda.time.format.{DateTimeFormat, DateTimeFormatter}
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.util.{Failure, Success, Try}
 
 case class LHRLiveFlight(
@@ -51,11 +48,11 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
 
   def opt(s: String): Option[String] = emptyStringToOption(s, x => x)
 
-  def optDate(s: String): Option[DateTime] = emptyStringToOption(s, parseDateTime)
+  private def optDate(s: String): Option[DateTime] = emptyStringToOption(s, parseDateTime)
 
-  def optInt(s: String): Option[Int] = emptyStringToOption(s, _.toInt)
+  private def optInt(s: String): Option[Int] = emptyStringToOption(s, _.toInt)
 
-  lazy val lhrFlights: Iterator[Try[LHRLiveFlight]] = {
+  private lazy val lhrFlights: Iterator[Try[LHRLiveFlight]] = {
     csvRecords.zipWithIndex.map { case (splitRow, lineNo) =>
       val t = Try {
         LHRLiveFlight(
@@ -84,40 +81,37 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
 
   val walkTimeMinutes = 4
 
-  lazy val successfulFlights: Iterator[LHRLiveFlight] = lhrFlights.collect {
+  private lazy val successfulFlights: Iterator[LHRLiveFlight] = lhrFlights.collect {
     case Success(s) => s
   }
 
-  def dateOptToStringOrEmptyString: Option[DateTime] => String = (dto: Option[DateTime]) => dto.map(_.toDateTimeISO.toString()).getOrElse("")
-
-  lazy val copiedToApiFlights: List[Arrival] =
-    successfulFlights.map(flight => {
-      val pcpTime: Long = flight.scheduled.plusMinutes(walkTimeMinutes).getMillis
+  lazy val copiedToApiFlights: List[LiveArrival] =
+    successfulFlights.map { flight =>
       val schDtIso = flight.scheduled.toDateTimeISO.toString()
+      val (carrierCode, flightNumber, suffix) = FlightCode.flightCodeToParts(flight.flightCode)
 
-      Arrival(
-        Operator = flight.operator,
-        Status = "UNK",
-        Estimated = flight.estimated.map(_.toDate.getTime),
-        Predictions = Predictions(0L, Map()),
-        Actual = flight.touchdown.map(_.toDate.getTime),
-        EstimatedChox = flight.estChox.map(_.toDate.getTime),
-        ActualChox = flight.actChox.map(_.toDate.getTime),
-        Gate = None,
-        Stand = flight.stand,
-        MaxPax = flight.maxPax,
-        RunwayID = None,
-        BaggageReclaimId = None,
-        AirportID = "LHR",
-        Terminal = flight.term,
-        rawICAO = flight.flightCode,
-        rawIATA = flight.flightCode,
-        Origin = flight.from,
-        PcpTime = if (pcpTime == 0) None else Some(pcpTime),
-        FeedSources = Set(LiveFeedSource),
-        PassengerSources = Map(LiveFeedSource -> Passengers(flight.actPax, if (flight.actPax.isEmpty) None else flight.connPax)),
-        Scheduled = SDate(schDtIso).millisSinceEpoch)
-    }).toList
+      LiveArrival(
+        operator = Option(flight.operator),
+        maxPax = flight.maxPax,
+        totalPax = flight.actPax,
+        transPax = if (flight.actPax.isEmpty) None else flight.connPax,
+        terminal = flight.term,
+        voyageNumber = flightNumber.numeric,
+        carrierCode = carrierCode.code,
+        flightCodeSuffix = suffix.map(_.suffix),
+        origin = flight.from,
+        scheduled = SDate(schDtIso).millisSinceEpoch,
+        estimated = flight.estimated.map(_.toDate.getTime),
+        touchdown = flight.touchdown.map(_.toDate.getTime),
+        estimatedChox = flight.estChox.map(_.toDate.getTime),
+        actualChox = flight.actChox.map(_.toDate.getTime),
+        status = "",
+        gate = None,
+        stand = flight.stand,
+        runway = None,
+        baggageReclaim = None,
+      )
+    }.toList
 }
 
 object LHRFlightFeed {
@@ -137,17 +131,19 @@ object LHRFlightFeed {
 
   def parseDateTime(dateString: String): DateTime = pattern.parseDateTime(dateString)
 
-  def apply(csvContentsProvider: () => Try[String], source: Source[FeedTick, typed.ActorRef[FeedTick]]): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
-    source.map(_ => {
+  def apply(csvContentsProvider: () => Try[String],
+            source: Source[FeedTick, typed.ActorRef[FeedTick]],
+           ): Source[ArrivalsFeedResponse, typed.ActorRef[FeedTick]] =
+    source.map { _ =>
       log.info(s"Requesting CSV")
       csvContentsProvider() match {
         case Success(csvContents) =>
           log.info(s"Got CSV content")
           val feedArrivals = LHRFlightFeed(csvParserAsIteratorOfColumnGetter(csvContents)).copiedToApiFlights
-          ArrivalsFeedSuccess(Flights(feedArrivals), SDate.now())
+          ArrivalsFeedSuccess(feedArrivals, SDate.now())
         case Failure(exception) =>
           log.info(s"Failed to get data from LHR live", exception)
           ArrivalsFeedFailure(exception.toString, SDate.now())
       }
-    })
+    }
 }

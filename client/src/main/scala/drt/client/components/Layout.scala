@@ -4,8 +4,10 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain
 import drt.client.SPAMain._
+import drt.client.components.styles.DrtTheme.buttonTheme
 import drt.client.services.SPACircuit
 import drt.client.services.handlers._
+import drt.shared.ContactDetails
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react._
@@ -26,30 +28,32 @@ object Layout {
   case class Props(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]) extends UseValueEq
 
   case class LayoutModelItems(user: Pot[LoggedInUser],
-    airportConfig: Pot[AirportConfig],
-    abFeatures: Pot[Seq[ABFeature]],
-    showFeedbackBanner: Pot[Boolean]
-  ) extends UseValueEq
+                              airportConfig: Pot[AirportConfig],
+                              abFeatures: Pot[Seq[ABFeature]],
+                              showFeedbackBanner: Pot[Boolean],
+                              contactDetails: Pot[ContactDetails]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .renderP((_, props: Props) => {
       val layoutModelItemsRCP = SPACircuit.connect { m =>
-        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner)
+        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails)
       }
       layoutModelItemsRCP { modelProxy =>
         console.log("rendering layout")
         <.div({
           val model = modelProxy()
           val content = for {
+            contactDetails <- model.contactDetails
             airportConfig <- model.airportConfig
             user <- model.user
             abFeatures <- model.abFeatures
             showFeedbackBanner <- model.showFeedbackBanner
           } yield {
+            val email = contactDetails.supportEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk")
             val aORbTest = abFeatures.headOption.map(_.abVersion).getOrElse("B")
             val (bannerHead, gridItem1, gridItem2, gridItem3) = aORbTest match {
               case "A" => ("Your feedback improves DRT for everyone", 4, 2, 5)
-              case _ => ("Help us improve DRT experience", 3, 2, 6)
+              case _ => ("Help us improve the DRT experience", 4, 2, 5)
             }
             <.div(
               if (showFeedbackBanner) {
@@ -61,13 +65,16 @@ object Layout {
                       )
                     ),
                     MuiGrid(item = true, xs = gridItem2)(
-                      MuiTypography(variant = "h5", sx = SxProps(Map("color" -> "white", "padding" -> "2px 0")))(
-                        "Approx. 2 minutes to complete"
-                      )
+                      MuiTypography(variant = "h5", sx = SxProps(Map("color" -> "white", "padding" -> "3px 10px")))
+                      ("Takes 2 minutes to complete")
                     ),
                     MuiGrid(item = true, xs = gridItem3)(
-                      MuiButton(variant = "outlined", sx = SxProps(Map("border" -> "1px solid white", "color" -> "white", "font-weight" -> "bold")))(
-                        "Give feedback >", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest", "_blank")),
+                      MuiButton(variant = "outlined", sx = SxProps(Map("textTransform" -> "none",
+                        "border" -> "1px solid white",
+                        "color" -> "white",
+                        "font-weight" -> "bold",
+                        "font-size" -> buttonTheme.typography.button.fontSize)))(
+                        "Give feedback", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest", "_blank")),
                       )
                     ),
                     MuiGrid(item = true, xs = 1)(
@@ -79,7 +86,9 @@ object Layout {
               } else EmptyVdom,
               <.div(^.className := "topbar",
                 <.div(^.className := "main-logo"),
-                <.div(^.className := "alerts", AlertsComponent())
+                AlertsComponent(),
+                <.div(^.className := "contact", ^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "padding-right" -> "20px"),
+                  <.span("Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)))
               ),
               <.div(
                 <.div(
@@ -92,7 +101,6 @@ object Layout {
                           <.div(^.className := "status-bar",
                             ApiStatusComponent(ApiStatusComponent.Props(
                               !airportConfig.noLivePortFeed,
-                              airportConfig.useTimePredictions,
                               terminal)),
                             PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
                           )

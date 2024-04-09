@@ -3,10 +3,10 @@ package controllers.application
 import com.google.inject.Inject
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import services.graphstages.Crunch
 import services.{BankHolidayApiClient, OOHChecker}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
 
 class ContactDetailsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
@@ -20,7 +20,7 @@ class ContactDetailsController @Inject()(cc: ControllerComponents, ctrl: DrtSyst
   def getOOHStatus: Action[AnyContent] = Action.async { _ =>
     import upickle.default._
 
-    val localTime = SDate.now(Crunch.europeLondonTimeZone)
+    val localTime = SDate.now(europeLondonTimeZone)
 
     OOHChecker(BankHolidayApiClient())
       .isOOH(localTime)

@@ -38,10 +38,10 @@ object BigSummaryBoxes {
   def countFlightsInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike): Pot[Int] =
     rootModel.portStatePot.map(portState => flightsInPeriod(portState.flights.values.toList, now, nowPlus3Hours).length)
 
-  def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike): Pot[Int] = {
+  def countPaxInPeriod(rootModel: RootModel, now: SDateLike, nowPlus3Hours: SDateLike, sourceOrderPreference: Seq[FeedSource]): Pot[Int] = {
     rootModel.portStatePot.map(portState => {
       val flights: Seq[ApiFlightWithSplits] = flightsInPeriod(portState.flights.values.toList, now, nowPlus3Hours)
-      sumActPax(flights)
+      sumActPax(flights, sourceOrderPreference)
     })
   }
 
@@ -84,7 +84,7 @@ object BigSummaryBoxes {
     flightsPcp.filter(f => f.apiFlight.Terminal == ourTerminal)
   }
 
-  def sumActPax(flights: Seq[ApiFlightWithSplits]): Int = flights.flatMap(_.apiFlight.PassengerSources.get(ApiFeedSource).flatMap(_.actual)).sum
+  def sumActPax(flights: Seq[ApiFlightWithSplits], sourceOrderPreference: Seq[FeedSource]): Int = flights.map(_.apiFlight.bestPcpPaxEstimate(sourceOrderPreference).getOrElse(0)).sum
 
   def sumBestPax(bestFlightSplitPax: ApiFlightWithSplits => Double)(flights: Seq[ApiFlightWithSplits]): Double = flights.map(bestFlightSplitPax).sum
 

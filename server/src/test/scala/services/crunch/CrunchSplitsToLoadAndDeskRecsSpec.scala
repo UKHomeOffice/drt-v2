@@ -2,16 +2,15 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import services.crunch.VoyageManifestGenerator._
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, Passengers, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, LiveFeedSource, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Map, Seq, SortedMap}
@@ -31,9 +30,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           val edSplit = 0.25
           val egSplit = 0.75
 
-          val flights = Flights(List(
-            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(21), None)))
-          ))
+          val flights = List(
+            ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(21))
+          )
 
           val airportConfigWithEgates = defaultAirportConfig.copy(
             slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25),
@@ -74,10 +73,10 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           val scheduled = "2017-01-01T00:00Z"
           val scheduled2 = "2017-01-01T00:01Z"
 
-          val flights = Flights(List(
-            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(1), None))),
-            ArrivalGenerator.arrival(schDt = scheduled2, iata = "SA123", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(1), None)))
-          ))
+          val flights = List(
+            ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(1)),
+            ArrivalGenerator.live(schDt = scheduled2, iata = "SA123", terminal = T1, totalPax = Option(1))
+          )
 
           val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled)))
 
@@ -107,9 +106,9 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
         "Then I should see the correct loads for each queue" >> {
           val scheduled = "2017-01-01T00:00Z"
 
-          val flights = Flights(List(
-            ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)))
-          ))
+          val flights = List(
+            ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(100))
+          )
 
           val crunch = runCrunchGraph(TestConfig(
             now = () => SDate(scheduled),
@@ -152,9 +151,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           "Then I should see a pax load of 20 - ie 100% of the passengers as there is only one split" >> {
             val scheduled = "2017-01-01T00:00Z"
 
-            val flight = ArrivalGenerator
-              .arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(20), None)))
-            val flights = Flights(List(flight))
+            val flight = ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(20))
+            val flights = List(flight)
 
             val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduled),
@@ -199,8 +197,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             val scheduled = "2017-01-01T00:00Z"
 
-            val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1,
-              passengerSources = Map(LiveFeedSource -> Passengers(Option(10), None)), airportId = PortCode("LHR"))
+            val arrival = ArrivalGenerator.live(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(10))
 
             val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduled),
@@ -217,7 +214,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               )
             ))
 
-            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Flights(Seq(arrival))))
+            offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(arrival)))
 
             val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
               VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),

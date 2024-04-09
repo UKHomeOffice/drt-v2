@@ -22,7 +22,7 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
-                                 portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch)],
+                                 portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch)],
                                  manifestSummariesModel: ModelR[M, Map[ArrivalKey, FlightManifestSummary]],
                                  paxFeedSourceOrder: ModelR[M, List[FeedSource]],
                                 ) extends LoggingActionHandler(portStateModel) {
@@ -33,10 +33,10 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetPortStateUpdates(viewMode) =>
-      val (_, lastUpdateMillis) = portStateModel.value
+      val (_, flightsSince, queuesSince, staffSince) = portStateModel.value
       val startMillis = viewMode.dayStart.millisSinceEpoch
       val endMillis = startMillis + thirtySixHoursInMillis
-      val updateRequestFuture = DrtApi.get(s"crunch?start=$startMillis&end=$endMillis&since=$lastUpdateMillis")
+      val updateRequestFuture = DrtApi.get(s"crunch?start=$startMillis&end=$endMillis&flights-since=$flightsSince&queues-since=$queuesSince&staff-since=$staffSince")
 
       val eventualAction = processUpdatesRequest(viewMode, updateRequestFuture)
 
@@ -48,7 +48,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
 
     case UpdatePortStateFromUpdates(viewMode, crunchUpdates) =>
       portStateModel.value match {
-        case (Ready(existingState), _) =>
+        case (Ready(existingState), _, _, _) =>
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
           val scheduledUpdateRequest = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
 
@@ -59,7 +59,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
           val effects = (manifestRequest ++ airportsRequest(newOriginCodes))
             .foldLeft(new EffectSet(scheduledUpdateRequest, Set(), queue))(_ + _)
 
-          updated((Ready(newState), crunchUpdates.latest), effects)
+          updated((Ready(newState), crunchUpdates.lastFlightsUpdate, crunchUpdates.lastQueuesUpdate, crunchUpdates.lastStaffUpdate), effects)
 
         case _ =>
           log.warn(s"No existing state to apply updates to. Ignoring")

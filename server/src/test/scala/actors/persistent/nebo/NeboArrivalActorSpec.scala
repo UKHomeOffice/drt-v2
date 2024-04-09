@@ -20,7 +20,6 @@ import scala.concurrent.duration.DurationInt
 
 
 object NeboArrivalActorTest {
-
   def props(redListPassengers: RedListPassengers, testProbeRef: ActorRef): Props =
     Props(new NeboArrivalActor(redListPassengers, () => SDate("2017-10-25T00:00:00Z"), None) {
       override val maybeSnapshotInterval: Option[Int] = Option(1)
@@ -43,7 +42,7 @@ class NeboArrivalActorSpec extends CrunchTestLike with ImplicitSender with Befor
   sequential
   isolated
 
-  override def before(): Unit = cleanupSnapshotFiles()
+  override def before: Unit = cleanupSnapshotFiles()
 
   "A flight of a port from nebo file has all of red list country passengers urns combine from different set" >> {
     val urnFirstSet = RandomString.getNRandomString(5, 10)

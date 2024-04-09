@@ -1,20 +1,17 @@
 package services.crunch
 
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import akka.actor.ActorRef
 import akka.pattern.StatusReply.Ack
 import akka.stream._
 import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
-import drt.chroma.ArrivalsDiffingStage
 import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared.CrunchApi._
-import drt.shared.FlightsApi.Flights
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
-import services.graphstages._
-import services.metrics.Metrics
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff}
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.arrivals.FeedArrival
+import uk.gov.homeoffice.drt.ports._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -23,38 +20,25 @@ object RunnableCrunch {
 
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
 
-  def apply[FR, MS, SAD, RL](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                             forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                             liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                             liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                             manifestsLiveSource: Source[ManifestsFeedResponse, MS],
-                             actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
-                             flushArrivalsSource: Source[Boolean, RL],
-                             addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
-                             setPcpTimes: ArrivalsDiff => Future[ArrivalsDiff],
+  def apply[FR, MS, SAD](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                         forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                         liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                         liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                         manifestsLiveSource: Source[ManifestsFeedResponse, MS],
+                         actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+                         forecastBaseArrivalsActor: ActorRef,
+                         forecastArrivalsActor: ActorRef,
+                         liveBaseArrivalsActor: ActorRef,
+                         liveArrivalsActor: ActorRef,
+                         updateFeedStatus: (FeedSource, ArrivalsFeedResponse) => Unit,
+                         applyPaxDeltas: List[FeedArrival] => Future[List[FeedArrival]],
+                         manifestsActor: ActorRef,
+                         portStateActor: ActorRef,
+                         forecastMaxMillis: () => MillisSinceEpoch
+                        )
+                        (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, MS, SAD, UniqueKillSwitch, UniqueKillSwitch)] = {
 
-                             arrivalsGraphStage: ArrivalsGraphStage,
-
-                             forecastArrivalsDiffStage: ArrivalsDiffingStage,
-                             liveBaseArrivalsDiffStage: ArrivalsDiffingStage,
-                             liveArrivalsDiffStage: ArrivalsDiffingStage,
-
-                             forecastBaseArrivalsActor: ActorRef,
-                             forecastArrivalsActor: ActorRef,
-                             liveBaseArrivalsActor: ActorRef,
-                             liveArrivalsActor: ActorRef,
-                             applyPaxDeltas: List[Arrival] => Future[List[Arrival]],
-
-                             manifestsActor: ActorRef,
-
-                             portStateActor: ActorRef,
-                             aggregatedArrivalsStateActor: ActorRef,
-
-                             forecastMaxMillis: () => MillisSinceEpoch
-                            )
-                            (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, MS, SAD, RL, UniqueKillSwitch, UniqueKillSwitch)] = {
-
-    val arrivalsKillSwitch = KillSwitches.single[ArrivalsFeedResponse]
+    val arrivalsKillSwitch = KillSwitches.single[FeedArrivals]
     val manifestsLiveKillSwitch = KillSwitches.single[ManifestsFeedResponse]
 
     import akka.stream.scaladsl.GraphDSL.Implicits._
@@ -66,10 +50,9 @@ object RunnableCrunch {
       liveArrivalsSource,
       manifestsLiveSource,
       actualDesksAndWaitTimesSource,
-      flushArrivalsSource.async,
       arrivalsKillSwitch,
       manifestsLiveKillSwitch,
-    )((_, _, _, _, _, _, _, _, _)) {
+    )((_, _, _, _, _, _, _, _)) {
 
       implicit builder =>
         (
@@ -79,7 +62,6 @@ object RunnableCrunch {
           liveArrivalsSourceSync,
           manifestsLiveSourceSync,
           actualDesksAndWaitTimesSourceSync,
-          flushArrivalsSourceAsync,
           arrivalsKillSwitchSync,
           manifestsLiveKillSwitchSync,
         ) =>
@@ -89,86 +71,68 @@ object RunnableCrunch {
           def simpleActorSink(actorRef: ActorRef): SinkShape[Any] =
             builder.add(Sink.actorRef(actorRef, StreamCompleted).async)
 
-          val arrivals = builder.add(arrivalsGraphStage)
           val deskStatsSink = ackingActorSink(portStateActor)
-
-          val fcstArrivalsDiffing = builder.add(forecastArrivalsDiffStage)
-          val liveBaseArrivalsDiffing = builder.add(liveBaseArrivalsDiffStage)
-          val liveArrivalsDiffing = builder.add(liveArrivalsDiffStage)
-
-          val forecastBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-          val forecastArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-          val liveBaseArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-          val liveArrivalsFanOut = builder.add(Broadcast[ArrivalsFeedResponse](2))
-
-          val arrivalsFanOut = builder.add(Broadcast[ArrivalsDiff](2))
 
           val baseArrivalsSink = simpleActorSink(forecastBaseArrivalsActor)
           val fcstArrivalsSink = simpleActorSink(forecastArrivalsActor)
           val liveBaseArrivalsSink = simpleActorSink(liveBaseArrivalsActor)
           val liveArrivalsSink = simpleActorSink(liveArrivalsActor)
           val manifestsSink = simpleActorSink(manifestsActor)
-          val flightsSink = ackingActorSink(portStateActor)
-          val aggregatedArrivalsSink = simpleActorSink(aggregatedArrivalsStateActor)
+
+          val forecastBaseBroadcast = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val forecastBroadcast = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val liveBaseBroadcast = builder.add(Broadcast[ArrivalsFeedResponse](2))
+          val liveBroadcast = builder.add(Broadcast[ArrivalsFeedResponse](2))
+
+          val forecastBaseStatusSink = builder.add(Sink.foreach(updateFeedStatus(AclFeedSource, _)))
+          val forecastStatusSink = builder.add(Sink.foreach(updateFeedStatus(ForecastFeedSource, _)))
+          val liveBaseStatusSink = builder.add(Sink.foreach(updateFeedStatus(LiveBaseFeedSource, _)))
+          val liveStatusSink = builder.add(Sink.foreach(updateFeedStatus(LiveFeedSource, _)))
 
           // @formatter:off
-          forecastBaseArrivalsSourceSync.out.map {
-            case ArrivalsFeedSuccess(Flights(as), ca) =>
-              val maxScheduledMillis = forecastMaxMillis()
-              ArrivalsFeedSuccess(Flights(as.filter(_.Scheduled < maxScheduledMillis)), ca)
-            case failure => failure
-          } ~> forecastBaseArrivalsFanOut
-
-          forecastBaseArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) =>
-              Metrics.successCounter("forecastBase.arrival", as.size)
-              as.toList
+          forecastBaseArrivalsSourceSync ~> forecastBaseBroadcast
+          forecastBaseBroadcast ~> forecastBaseStatusSink
+          forecastBaseBroadcast
+            .map {
+              case ArrivalsFeedSuccess(as, _) =>
+                val maxScheduledMillis = forecastMaxMillis()
+                FeedArrivals(as.filter(_.scheduled < maxScheduledMillis))
+              case _ =>
+                FeedArrivals(List())
             }
-            .mapAsync(1)(applyPaxDeltas) ~> arrivals.in0
-          forecastBaseArrivalsFanOut ~> baseArrivalsSink
+            .mapAsync(1) {
+              case FeedArrivals(as) =>
+                applyPaxDeltas(as.toList).map(FeedArrivals(_))
+            } ~> baseArrivalsSink
 
-          forecastArrivalsSourceSync ~> fcstArrivalsDiffing ~> forecastArrivalsFanOut
+          forecastArrivalsSourceSync ~> forecastBroadcast
+          forecastBroadcast ~> forecastStatusSink
+          forecastBroadcast
+            .map {
+              case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
+              case _ => FeedArrivals(List())
+            } ~> fcstArrivalsSink
 
-          forecastArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty =>
-              Metrics.successCounter("forecast.arrival", as.size)
-              as.toList
-            } ~> arrivals.in1
-          forecastArrivalsFanOut ~> fcstArrivalsSink
+          liveBaseArrivalsSourceSync ~> liveBaseBroadcast
+          liveBaseBroadcast ~> liveBaseStatusSink
+          liveBaseBroadcast
+            .map {
+              case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
+              case _ => FeedArrivals(List())
+            } ~> liveBaseArrivalsSink
 
-          liveBaseArrivalsSourceSync ~> liveBaseArrivalsDiffing ~> liveBaseArrivalsFanOut
-          liveBaseArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) if as.nonEmpty =>
-              Metrics.successCounter("liveBase.arrival", as.size)
-              as.toList
-            } ~> arrivals.in2
-          liveBaseArrivalsFanOut ~> liveBaseArrivalsSink
-
-          liveArrivalsSourceSync ~> arrivalsKillSwitchSync ~> liveArrivalsDiffing ~> liveArrivalsFanOut
-          liveArrivalsFanOut
-            .collect { case ArrivalsFeedSuccess(Flights(as), _) =>
-              Metrics.successCounter("live.arrival", as.size)
-              as.toList
-            } ~> arrivals.in3
-
-          flushArrivalsSourceAsync ~> arrivals.in4
-
-          liveArrivalsFanOut ~> liveArrivalsSink
+          liveArrivalsSourceSync ~> liveBroadcast
+          liveBroadcast ~> liveStatusSink
+          liveBroadcast
+            .map {
+              case ArrivalsFeedSuccess(as, _) => FeedArrivals(as)
+              case _ => FeedArrivals(List())
+            } ~> arrivalsKillSwitchSync ~> liveArrivalsSink
 
           manifestsLiveSourceSync.out.collect {
             case ManifestsFeedSuccess(manifests, createdAt) =>
-              Metrics.successCounter("manifestsLive.arrival", manifests.length)
               ManifestsFeedSuccess(manifests, createdAt)
           } ~> manifestsLiveKillSwitchSync ~> manifestsSink
-
-          arrivals.out
-            .mapConcat(diff => diff.splitByScheduledUtcDate(ts => SDate(ts)))
-            .mapAsync(1) { case (date, diff) => addPredictionsToDiff(addArrivalPredictions, date, diff) }
-            .mapAsync(1) { diff =>
-              if (diff.toUpdate.nonEmpty) setPcpTimes(diff) else Future.successful(diff)
-            } ~> arrivalsFanOut
-          arrivalsFanOut ~> flightsSink
-          arrivalsFanOut ~> aggregatedArrivalsSink
 
           actualDesksAndWaitTimesSourceSync.out.map(_.asContainer) ~> deskStatsSink
 
@@ -181,17 +145,4 @@ object RunnableCrunch {
       .fromGraph(graph)
       .withAttributes(StreamSupervision.resumeStrategyWithLog(RunnableCrunch.getClass.getName))
   }
-
-  private def addPredictionsToDiff(addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff], date: UtcDate, diff: ArrivalsDiff)
-                                  (implicit executionContext: ExecutionContext): Future[ArrivalsDiff] =
-    if (diff.toUpdate.nonEmpty) {
-      log.info(f"Looking up arrival predictions for ${diff.toUpdate.size} arrivals on ${date.day}%02d/${date.month}%02d/${date.year}")
-      val startMillis = SDate.now().millisSinceEpoch
-      val withoutPredictions = diff.toUpdate.count(_._2.predictedTouchdown.isEmpty)
-      addArrivalPredictions(diff).map { diffWithPredictions =>
-        val millisTaken = SDate.now().millisSinceEpoch - startMillis
-        log.info(s"Arrival prediction lookups finished for $withoutPredictions arrivals. Took ${millisTaken}ms")
-        diffWithPredictions
-      }
-    } else Future.successful(diff)
 }

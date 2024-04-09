@@ -1,14 +1,11 @@
 package feeds.lhr
 
-import drt.server.feeds.lhr.forecast.{LhrForecastArrival, LhrForecastArrivals}
+import drt.server.feeds.lhr.forecast.LhrForecastArrivals
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Operator, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.T3
 import uk.gov.homeoffice.drt.ports.{ForecastFeedSource, PortCode}
-
-import scala.io.Source
-import scala.util.{Failure, Success}
+import uk.gov.homeoffice.drt.time.SDate
 
 
 class LhrForecastSpec extends Specification {
@@ -22,7 +19,7 @@ class LhrForecastSpec extends Specification {
 
     val arrivalLines = csvContent.split("\n").drop(1)
 
-    val arrival = LhrForecastArrivals(arrivalLines).head
+    val arrival = LhrForecastArrivals(arrivalLines.toIndexedSeq).head
 
     val expected = Arrival(
       Operator = Option(Operator("BA")),
@@ -59,7 +56,7 @@ class LhrForecastSpec extends Specification {
 
     val arrivalLines = csvContent.split("\n").drop(1)
 
-    val arrival: Arrival = LhrForecastArrivals(arrivalLines).head
+    val arrival: Arrival = LhrForecastArrivals(arrivalLines.toIndexedSeq).head
     val actMaxTran = arrival.PassengerSources.get(ForecastFeedSource)
       .map(a => (arrival.MaxPax, a.actual, a.transit))
       .getOrElse((None, None, None))
@@ -67,33 +64,5 @@ class LhrForecastSpec extends Specification {
     val expected = (Some(0), Some(0), Some(0))
 
     actMaxTran === expected
-  }
-
-  "Given an entire CSV " +
-    "When I ask for the Arrivals " +
-    "Then I should see all the valid lines from the CSV as Arrivals" >> {
-    skipped("exploratory")
-    val filename = "/tmp/lhr-forecast.csv"
-    val fileSource = Source.fromFile(filename)
-    val arrivalTries = fileSource.getLines.toSeq.drop(1).map(LhrForecastArrival(_))
-    val totalEntries = arrivalTries.length
-    val arrivals = arrivalTries
-      .filter {
-        case Success(_) => true
-        case Failure(t) =>
-          println(s"failed: $t")
-          false
-      }
-      .collect {
-        case Success(a) => a
-      }
-
-    fileSource.close()
-
-    val totalArrivals = arrivals.length
-
-    println(s"parsed $totalArrivals from $totalEntries")
-
-    true
   }
 }

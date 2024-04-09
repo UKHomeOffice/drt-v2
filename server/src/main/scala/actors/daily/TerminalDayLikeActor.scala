@@ -1,15 +1,14 @@
 package actors.daily
 
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import akka.persistence.SaveSnapshotSuccess
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.mutable
@@ -36,9 +35,18 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 
-  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, Crunch.utcTimeZone)
+  val firstMinute: SDateLike = SDate(year, month, day, 0, 0, utcTimeZone)
   private val firstMinuteMillis: MillisSinceEpoch = firstMinute.millisSinceEpoch
   private val lastMinuteMillis: MillisSinceEpoch = firstMinute.addDays(1).addMinutes(-1).millisSinceEpoch
+
+  override def postRecoveryComplete(): Unit = {
+    super.postRecoveryComplete()
+    val lastMinuteOfDay = SDate(lastMinuteMillis)
+    if (maybePointInTime.isEmpty && messagesPersistedSinceSnapshotCounter > 10 && lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight) {
+      log.info(f"Creating final snapshot for $terminal for historic day $year-$month%02d-$day%02d")
+      saveSnapshot(stateToMessage)
+    }
+  }
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
@@ -52,7 +60,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
     case _: SaveSnapshotSuccess =>
       ackIfRequired()
 
-    case m => log.warn(s"Got unexpected message: $m")
+    case m => log.error(s"Got unexpected message: $m")
   }
 
   private def stateResponse: Option[MinutesContainer[VAL, INDEX]] =
@@ -75,13 +83,13 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   private def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
     diffFromMinutes(state, container.minutes) match {
-      case noDifferences if noDifferences.isEmpty => sender() ! UpdatedMillis.empty
+      case noDifferences if noDifferences.isEmpty => sender() ! Set.empty[Long]
       case differences =>
         updateStateFromDiff(differences)
         val messageToPersist = containerToMessage(differences)
         val updatedMillis = if (shouldSendEffectsToSubscriber(container))
-          UpdatedMillis(differences.map(_.minute).toSet)
-        else UpdatedMillis.empty
+          differences.map(_.minute).toSet
+        else Set.empty[Long]
         val replyToAndMessage = List((sender(), updatedMillis))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
     }

@@ -9,7 +9,6 @@ import org.specs2.mutable.Specification
 import spray.json._
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.A2
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{Await, Future}
@@ -54,32 +53,26 @@ class AzinqEdiFeedSpec extends Specification {
     }
   }
 
-  private def arrival: Arrival = Arrival(
-    Operator = None,
-    CarrierCode = CarrierCode("ZT"),
-    VoyageNumber = VoyageNumber(6566),
-    FlightCodeSuffix = None,
-    Status = ArrivalStatus("A"),
-    Estimated = None,
-    Predictions = Predictions(0, Map()),
-    Actual = Some(1694669040000L),
-    ActualChox = Some(1694671560000L),
-    EstimatedChox = None,
-    Gate = Some(""),
-    Stand = None,
-    MaxPax = Some(0),
-    RunwayID = None,
-    BaggageReclaimId = Some(""),
-    AirportID = PortCode("EMA"),
-    Terminal = A2,
-    Origin = PortCode("EMA"),
-    Scheduled = 1694669400000L,
-    PcpTime = None,
-    FeedSources = Set(LiveFeedSource),
-    CarrierScheduled = None,
-    ScheduledDeparture = None,
-    RedListPax = None,
-    PassengerSources = Map(LiveFeedSource -> Passengers(None, None)),
+  private def arrival: LiveArrival = LiveArrival(
+    operator = None,
+    maxPax = Some(0),
+    totalPax = None,
+    transPax = None,
+    terminal = A2,
+    voyageNumber = 6566,
+    carrierCode = "ZT",
+    flightCodeSuffix = None,
+    origin = "EMA",
+    scheduled = 1694669400000L,
+    estimated = None,
+    touchdown = Some(1694669040000L),
+    estimatedChox = None,
+    actualChox = Some(1694671560000L),
+    status = "A",
+    gate = Some(""),
+    stand = None,
+    runway = None,
+    baggageReclaim = Some(""),
   )
 
 

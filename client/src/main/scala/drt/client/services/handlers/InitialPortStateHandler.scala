@@ -21,8 +21,7 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
-                                 portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, Pot[HashSet[PortCode]])],
-                                 manifestSummariesModel: ModelR[M, Map[ArrivalKey, FlightManifestSummary]],
+                                 portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, Pot[HashSet[PortCode]])],
                                 ) extends LoggingActionHandler(portStateModel) {
   val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
@@ -39,7 +38,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       val eventualAction = processRequest(viewMode, updateRequestFuture)
 
-      updated((Pending(), 0L, Pending()), Effect(Future(ShowLoader())) + Effect(eventualAction))
+      updated((Pending(), 0L, 0L, 0L, Pending()), Effect(Future(ShowLoader())) + Effect(eventualAction))
 
     case SetPortState(viewMode, _) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring out of date view response")
@@ -67,7 +66,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
         }
       }
 
-      updated((Ready(portState), portState.latestUpdate, Pending()), effects)
+      updated((Ready(portState), portState.flightsLatest, portState.crunchMinutesLatest, portState.staffMinutesLatest, Pending()), effects)
   }
 
   def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {

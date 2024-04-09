@@ -15,7 +15,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 
 class MockFeedsActor(lastUpdated: MillisSinceEpoch) extends Actor {
   override def receive: Receive = {
-    case GetFeedStatuses => sender() ! Option(FeedSourceStatuses(ApiFeedSource, FeedStatuses(List(), Option(lastUpdated), None, None)))
+    case GetFeedStatuses => sender() ! FeedSourceStatuses(ApiFeedSource, FeedStatuses(List(), Option(lastUpdated), None, None))
   }
 }
 

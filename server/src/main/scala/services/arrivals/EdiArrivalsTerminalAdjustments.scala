@@ -7,11 +7,9 @@ import uk.gov.homeoffice.drt.ports.Terminals.{A1, A2}
 object EdiArrivalsTerminalAdjustments extends ArrivalsAdjustmentsLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  override def apply(arrivals: Iterable[Arrival]): Iterable[Arrival] =
-    arrivals
-      .map { arrival =>
-        val a1BaggageBelt = Seq("1", "2", "3").contains(arrival.BaggageReclaimId.getOrElse(""))
-        val correctedTerminal = if (a1BaggageBelt) A1 else A2
-        arrival.copy(Terminal = correctedTerminal)
-      }
+  override def adjust(arrival: Arrival): Arrival = {
+    val a1BaggageBelt = Seq("1", "2", "3").contains(arrival.BaggageReclaimId.getOrElse(""))
+    val correctedTerminal = if (a1BaggageBelt) A1 else A2
+    arrival.copy(Terminal = correctedTerminal)
+  }
 }

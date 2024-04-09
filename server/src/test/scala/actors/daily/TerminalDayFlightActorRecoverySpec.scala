@@ -8,6 +8,7 @@ import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
 import scalapb.GeneratedMessage
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.FlightsWithSplitsDiffMessage
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
@@ -46,8 +47,8 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
         val terminal: Terminal = T1
         val recoveryPit: SDateLike = SDate("2020-01-01T12:00Z")
 
-        val fws1 = flightWithSplitsForDayAndTerminal(recoveryPit, terminal)
-        val fws2 = flightWithSplitsForDayAndTerminal(recoveryPit.addHours(1), terminal)
+        val fws1 = flightWithSplitsForDayAndTerminal(recoveryPit, terminal, LiveFeedSource)
+        val fws2 = flightWithSplitsForDayAndTerminal(recoveryPit.addHours(1), terminal, LiveFeedSource)
 
         val persistenceId = f"terminal-flights-${terminal.toString.toLowerCase}-${recoveryPit.getFullYear}-${recoveryPit.getMonth}%02d-${recoveryPit.getDate}%02d"
 
@@ -88,8 +89,8 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
         val terminal: Terminal = T1
         val dateInQuestion: SDateLike = SDate("2021-01-01T00:00Z")
 
-        val flightWithRemovalMessageOutsideThreshold = flightWithSplitsForDayAndTerminal(dateInQuestion.addHours(1), terminal)
-        val flightWithRemovalMessageOnDay = flightWithSplitsForDayAndTerminal(dateInQuestion.addHours(2), terminal)
+        val flightWithRemovalMessageOutsideThreshold = flightWithSplitsForDayAndTerminal(dateInQuestion.addHours(1), terminal, LiveFeedSource)
+        val flightWithRemovalMessageOnDay = flightWithSplitsForDayAndTerminal(dateInQuestion.addHours(2), terminal, LiveFeedSource)
 
         val persistenceId = f"terminal-flights-${terminal.toString.toLowerCase}-${dateInQuestion.getFullYear}-${dateInQuestion.getMonth}%02d-${dateInQuestion.getDate}%02d"
 

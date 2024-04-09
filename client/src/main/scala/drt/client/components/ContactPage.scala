@@ -14,6 +14,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.ABFeature
+import drt.client.components.styles.DrtTheme._
 
 object ContactPage {
 
@@ -146,7 +147,7 @@ object FeedBackComponent {
               val aORbTest = abFeatures.headOption.map(_.abVersion).getOrElse("B")
               val bannerHead = aORbTest match {
                 case "A" => "Your feedback improves DRT for everyone"
-                case _ => "Help us improve your DRT experience"
+                case _ => "Help us improve the DRT experience"
               }
               <.div(
                 MuiPaper(sx = SxProps(Map("elevation" -> "4", "padding" -> "16px", "margin" -> "20px", "backgroundColor" -> "#0E2560")))(
@@ -158,7 +159,7 @@ object FeedBackComponent {
                     ),
                     MuiGrid(item = true, xs = 12)(
                       MuiTypography(variant = "h7", sx = SxProps(Map("color" -> "white", "padding" -> "2px 0")))(
-                        "Complete a short survey (approx. 2 minutes)"
+                        "Complete a short survey (takes 2 minutes to complete)"
                       )
                     ),
                     MuiGrid(item = true, xs = 12)(
@@ -181,8 +182,12 @@ object FeedBackComponent {
                       )
                     ),
                     MuiGrid(item = true, xs = 12)(
-                      MuiButton(variant = "outlined", sx = SxProps(Map("border" -> "1px solid white", "color" -> "white", "font-weight" -> "bold")))(
-                        "Give feedback >", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/contact-us/$aORbTest", "_blank")),
+                      MuiButton(variant = "outlined", sx = SxProps(Map("textTransform" -> "none",
+                        "border" -> "1px solid white",
+                        "color" -> "white",
+                        "font-weight" -> "bold",
+                        "font-size" -> buttonTheme.typography.fontSize)))(
+                        "Give feedback", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/contact-us/$aORbTest", "_blank")),
                       )
                     )
                   )))

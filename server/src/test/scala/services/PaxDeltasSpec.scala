@@ -2,19 +2,17 @@ package services
 
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import org.specs2.mutable.Specification
 import services.PaxDeltas.maybePctDeltas
-import services.graphstages.Crunch
-import uk.gov.homeoffice.drt.arrivals.Passengers
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 class PaxDeltasSpec extends Specification {
-  val now: () => SDateLike = () => SDate("2020-04-01", Crunch.utcTimeZone)
-  val todayMinus1: MillisSinceEpoch = SDate("2020-03-31", Crunch.utcTimeZone).millisSinceEpoch
-  val todayMinus2: MillisSinceEpoch = SDate("2020-03-30", Crunch.utcTimeZone).millisSinceEpoch
-  val todayMinus3: MillisSinceEpoch = SDate("2020-03-29", Crunch.utcTimeZone).millisSinceEpoch
-  val todayMinus4: MillisSinceEpoch = SDate("2020-03-28", Crunch.utcTimeZone).millisSinceEpoch
+  val now: () => SDateLike = () => SDate("2020-04-01", utcTimeZone)
+  val todayMinus1: MillisSinceEpoch = SDate("2020-03-31", utcTimeZone).millisSinceEpoch
+  val todayMinus2: MillisSinceEpoch = SDate("2020-03-30", utcTimeZone).millisSinceEpoch
+  val todayMinus3: MillisSinceEpoch = SDate("2020-03-29", utcTimeZone).millisSinceEpoch
+  val todayMinus4: MillisSinceEpoch = SDate("2020-03-28", utcTimeZone).millisSinceEpoch
   val maxDays = 14
 
   "Given 2 days worth of daily pax counts for yesterday" >> {
@@ -75,24 +73,24 @@ class PaxDeltasSpec extends Specification {
   }
 
   "When I ask for an arrival with 100 pax to have its pax adjusted" >> {
-    val arrival = ArrivalGenerator.arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)))
+    val arrival = ArrivalGenerator.live(totalPax = Option(100))
 
     "Given a delta of 0.5, I should get an arrival with 50 pax" >> {
       val delta = 0.5
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(50)
+      adjustedArrival.totalPax === Option(50)
     }
 
     "Given a delta of -0.5, I should get an arrival with pax capped at 0" >> {
       val delta = -0.5
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(0)
+      adjustedArrival.totalPax === Option(0)
     }
 
     "Given a delta of 2, I should get an arrival with pax capped at 100" >> {
       val delta = 2
       val adjustedArrival = PaxDeltas.applyAdjustment(arrival, delta)
-      adjustedArrival.PassengerSources.get(LiveFeedSource).flatMap(_.actual) === Option(100)
+      adjustedArrival.totalPax === Option(100)
     }
   }
 }

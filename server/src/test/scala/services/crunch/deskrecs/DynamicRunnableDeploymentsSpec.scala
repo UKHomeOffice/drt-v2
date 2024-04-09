@@ -4,9 +4,8 @@ import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.SortedActorRefSource
 import akka.actor.{Actor, Props}
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
-import services.TryCrunchWholePax
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.OptimiserMocks.MockSinkActor
@@ -17,6 +16,7 @@ import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import services.TryCrunchWholePax
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.SortedSet
@@ -54,10 +54,11 @@ class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
       OptimisationProviders.staffMinutesProvider(mockProvider, airportConfig.terminals),
       staffToDeskLimits,
       desksAndWaitsProvider.loadsToSimulations)
+    val crunchRequest: MillisSinceEpoch => CrunchRequest =
+      (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "deployments")
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "deployments")
-
-    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, deskRecs, "deployments").run()
+    val (queue, _) = QueuedRequestProcessing.createGraph(crunchGraphSource, sink, deskRecs, "deployments").run()
     queue ! request
 
     probe.fishForMessage(5.second)(expectedQueuePax)

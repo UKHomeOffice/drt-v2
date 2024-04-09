@@ -6,7 +6,6 @@ import akka.pattern.StatusReply.Ack
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.DataUpdates.Combinable
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -18,9 +17,9 @@ object SequentialAccessActor {
   case object RequestFinished
 }
 
-class SequentialAccessActor[RES, REQ, UPDATES <: Combinable[UPDATES]](resourceRequest: (RES, REQ) => Future[UPDATES],
-                                                                      splitByResource: REQ => Iterable[(RES, REQ)],
-                                                                     ) extends Actor {
+class SequentialAccessActor[RES, REQ, U](resourceRequest: (RES, REQ) => Future[Set[U]],
+                                         splitByResource: REQ => Iterable[(RES, REQ)],
+                                        ) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
   var updatesSubscribers: List[ActorRef] = List.empty
@@ -60,7 +59,7 @@ class SequentialAccessActor[RES, REQ, UPDATES <: Combinable[UPDATES]](resourceRe
           .mapAsync(1) {
             case (resource, request) => resourceRequest(resource, request)
           }
-          .runWith(Sink.reduce[UPDATES](_ ++ _))
+          .runWith(Sink.reduce[Set[U]](_ ++ _))
           .onComplete { maybeUpdates =>
             next.headOption.foreach {
               case (_, request) =>

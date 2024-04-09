@@ -2,7 +2,7 @@ package services.crunch
 
 import akka.actor.{ActorRef, ActorSystem, Props, Terminated, typed}
 import akka.pattern.ask
-import akka.persistence.testkit.PersistenceTestKitPlugin
+import akka.persistence.testkit.{PersistenceTestKitPlugin, PersistenceTestKitSnapshotPlugin}
 import akka.stream.QueueOfferResult.Enqueued
 import akka.stream.Supervision.Stop
 import akka.stream.scaladsl.SourceQueueWithComplete
@@ -19,7 +19,7 @@ import org.specs2.specification.{AfterAll, AfterEach}
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.JdbcProfile
 import slickdb.Tables
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.STN
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
@@ -195,20 +195,20 @@ object TestDefaults {
     )
   }
 
-  val setPcpFromSch: ArrivalsDiff => Future[ArrivalsDiff] =
-    diff => Future.successful(diff.copy(toUpdate = diff.toUpdate.view.mapValues(a => a.copy(PcpTime = Option(SDate(a.Scheduled).millisSinceEpoch))).to(SortedMap)))
+  val setPcpFromSch: Seq[Arrival] => Future[Seq[Arrival]] =
+    arrivals => Future.successful(arrivals.map(a => a.copy(PcpTime = Option(SDate(a.Scheduled).millisSinceEpoch))))
 
-  val setPcpFromBest: ArrivalsDiff => Future[ArrivalsDiff] =
-    diff => Future.successful(
-      diff.copy(toUpdate = diff.toUpdate.view.mapValues { a =>
+  val setPcpFromBest: Seq[Arrival] => Future[Seq[Arrival]] =
+    arrivals => Future.successful(
+      arrivals.map { a =>
         val pcp = if (a.ActualChox.isDefined) SDate(a.ActualChox.get).millisSinceEpoch
         else if (a.EstimatedChox.isDefined) SDate(a.EstimatedChox.get).millisSinceEpoch
         else if (a.Actual.isDefined) SDate(a.Actual.get).millisSinceEpoch
         else if (a.Estimated.isDefined) SDate(a.Estimated.get).millisSinceEpoch
         else SDate(a.Scheduled).millisSinceEpoch
         a.copy(PcpTime = Option(pcp))
-      }.to(SortedMap)
-    ))
+      }
+    )
 
   def testProbe(name: String)(implicit system: ActorSystem): TestProbe = TestProbe(name = name)
 
@@ -221,11 +221,10 @@ object TestDefaults {
     HistoricApiFeedSource,
     AclFeedSource,
   )
-
 }
 
 class CrunchTestLike
-  extends TestKit(ActorSystem("DRT-TEST", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load())))
+  extends TestKit(ActorSystem("DRT-TEST", PersistenceTestKitPlugin.config.withFallback(PersistenceTestKitSnapshotPlugin.config.withFallback(ConfigFactory.load()))))
     with SpecificationLike
     with AfterAll
     with AfterEach {
@@ -238,7 +237,7 @@ class CrunchTestLike
 
   var maybeDrtActor: Option[ActorRef] = None
 
-  override def afterAll: Unit = {
+  override def afterAll(): Unit = {
     log.info("Final cleanup: Shutting down drt actor")
     maybeDrtActor.foreach(shutDownDrtActor)
   }
@@ -274,8 +273,8 @@ class CrunchTestLike
 
   def expectArrivals(arrivalsToExpect: Iterable[Arrival])(implicit crunch: CrunchGraphInputsAndProbes): Unit =
     crunch.portStateTestProbe.fishForMessage(1.seconds) {
-      case ps: PortState =>
-        ps.flights.values.map(_.apiFlight) == arrivalsToExpect
+      case PortState(flights, _, _) =>
+        flights.values.map(_.apiFlight) == arrivalsToExpect
     }
 
   def expectUniqueArrival(uniqueArrival: UniqueArrival)(implicit crunch: CrunchGraphInputsAndProbes): Unit =
@@ -426,7 +425,7 @@ class CrunchTestLike
     }
 
   def offerAndWait[T](sourceQueue: SourceQueueWithComplete[T], offering: T): QueueOfferResult = {
-    Await.result(sourceQueue.offer(offering), 3.seconds) match {
+    Await.result(sourceQueue.offer(offering), 10.seconds) match {
       case offerResult if offerResult != Enqueued =>
         throw new Exception(s"Queue offering (${offering.getClass}) was not enqueued: ${offerResult.getClass}")
       case offerResult =>

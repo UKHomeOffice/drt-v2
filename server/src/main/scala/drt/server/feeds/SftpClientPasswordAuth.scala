@@ -1,10 +1,10 @@
 package drt.server.feeds
 
-import java.io.{ByteArrayOutputStream, OutputStream}
 import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.xfer.InMemoryDestFile
 
+import java.io.ByteArrayOutputStream
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class SftpClientPasswordAuth(ftpServer: String, username: String, password: String) {

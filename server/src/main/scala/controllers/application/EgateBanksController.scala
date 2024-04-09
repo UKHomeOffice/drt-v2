@@ -18,7 +18,7 @@ class EgateBanksController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
 
   def getEgateBanksUpdates: Action[AnyContent] =
     Action.async { _ =>
-      ctrl.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates].map(r => Ok(write(r)))
+      ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates].map(r => Ok(write(r)))
     }
 
   def updateEgateBanksUpdates: Action[AnyContent] = authByRole(EgateBanksEdit) {
@@ -28,7 +28,7 @@ class EgateBanksController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
           case Some(text) =>
             val setUpdate = read[SetEgateBanksUpdate](text)
 
-            ctrl.egateBanksUpdatesActor.ask(setUpdate).map(_ => Accepted)
+            ctrl.applicationService.egateBanksUpdatesActor.ask(setUpdate).map(_ => Accepted)
           case None =>
             Future(BadRequest)
         }
@@ -37,7 +37,7 @@ class EgateBanksController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
 
   def deleteEgateBanksUpdates(terminal: String, effectiveFrom: MillisSinceEpoch): Action[AnyContent] = authByRole(EgateBanksEdit) {
     Action.async {
-      ctrl.egateBanksUpdatesActor.ask(DeleteEgateBanksUpdates(Terminal(terminal), effectiveFrom)).map(_ => Accepted)
+      ctrl.applicationService.egateBanksUpdatesActor.ask(DeleteEgateBanksUpdates(Terminal(terminal), effectiveFrom)).map(_ => Accepted)
     }
   }
 }

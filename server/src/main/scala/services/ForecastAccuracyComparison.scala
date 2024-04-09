@@ -1,7 +1,7 @@
 package services
 
 import org.slf4j.LoggerFactory
-import services.ForecastAccuracyComparison.{maybeAbsoluteError, maybeAverageFlightError}
+import ForecastAccuracyComparison.{maybeAbsoluteError, maybeAverageFlightError}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._

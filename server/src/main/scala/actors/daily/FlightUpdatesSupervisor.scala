@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.PartitionedPortStateActor.GetUpdatesSince
+import actors.PartitionedPortStateActor.GetFlightUpdatesSince
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
@@ -11,7 +11,6 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.FlightsWithSplitsDiff
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
@@ -76,7 +75,7 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
         case _ =>
       }
 
-    case GetUpdatesSince(sinceMillis, fromMillis, toMillis) =>
+    case GetFlightUpdatesSince(sinceMillis, fromMillis, toMillis) =>
       val replyTo = sender()
       val terminalDays = terminalDaysForPeriod(fromMillis, toMillis)
 

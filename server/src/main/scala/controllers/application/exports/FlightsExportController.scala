@@ -1,7 +1,7 @@
 package controllers.application.exports
 
 import actors.PartitionedPortStateActor.PointInTimeQuery
-import actors.persistent.arrivals.{AclForecastArrivalsActor, CirriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
@@ -13,9 +13,9 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
-import services.exports.flights.ArrivalFeedExport
-import services.exports.flights.templates._
 import services.exports.{FlightExports, GeneralExport}
+import services.exports.flights.ArrivalFeedExport
+import services.exports.flights.templates.{AdminExportImpl, BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals, BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals, FlightsExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExportImpl, LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions, LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -44,7 +44,8 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
   private def doExportForPointInTime(localDateString: String,
                                      pointInTime: MillisSinceEpoch,
                                      terminalName: String,
-                                     `export`: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] =
+                                     exportTerminalDateRange: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport,
+                                    ): Action[AnyContent] =
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -53,8 +54,8 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
           case Some(localDate) =>
             val start = SDate(localDate)
             val end = start.addDays(1).addMinutes(-1)
-            ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
-              flightsRequestToCsv(pointInTime, export(user, airportConfig.portCode, redListUpdates)(start, end, Terminal(terminalName)))
+            ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
+              flightsRequestToCsv(Option(pointInTime), exportTerminalDateRange(user, airportConfig.portCode, redListUpdates)(start, end, Terminal(terminalName)))
             }
           case _ =>
             Future(BadRequest("Invalid date format for export day."))
@@ -79,11 +80,11 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val terminal = Terminal(terminalName)
-        val getFlights = FlightExports.flightsForLocalDateRangeProvider(ctrl.terminalFlightsProvider)
-        val getManifests = FlightExports.manifestsForLocalDateProvider(ctrl.manifestsProvider)
-        val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.paxFeedSourceOrder, getManifests)
-        val csvStream = GeneralExport.toCsv(start, end, terminal, getFlights, toRows)
-        val fileName = makeFileName("flights", terminal, start, end, airportConfig.portCode)
+        val getFlights = FlightExports.flightsForLocalDateRangeProvider(ctrl.applicationService.terminalFlightsProvider(terminal))
+        val getManifests = FlightExports.manifestsForLocalDateProvider(ctrl.applicationService.manifestsProvider)
+        val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.feedService.paxFeedSourceOrder, getManifests)
+        val csvStream = GeneralExport.toCsv(start, end, getFlights, toRows)
+        val fileName = makeFileName("flights", Option(terminal), start, end, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>
@@ -98,8 +99,9 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
   private def doExportForDateRange(startLocalDateString: String,
                                    endLocalDateString: String,
                                    terminalName: String,
-                                   `export`: (LoggedInUser, PortCode, RedListUpdates)
-                                     => (SDateLike, SDateLike, Terminal) => FlightsExport): Action[AnyContent] = {
+                                   exportTerminalDateRange: (LoggedInUser, PortCode, RedListUpdates)
+                                     => (SDateLike, SDateLike, Terminal) => FlightsExport,
+                                  ): Action[AnyContent] = {
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -107,8 +109,8 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
           case (Some(start), Some(end)) =>
             val startDate = SDate(start)
             val endDate = SDate(end).addDays(1).addMinutes(-1)
-            ctrl.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
-              flightsRequestToCsv(ctrl.now().millisSinceEpoch, export(user, airportConfig.portCode, redListUpdates)(startDate, endDate, Terminal(terminalName)))
+            ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
+              flightsRequestToCsv(None, exportTerminalDateRange(user, airportConfig.portCode, redListUpdates)(startDate, endDate, Terminal(terminalName)))
             }
           case _ =>
             Future(BadRequest("Invalid date format for start or end date"))
@@ -116,15 +118,17 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     }
   }
 
-  private def flightsRequestToCsv(pointInTime: MillisSinceEpoch, `export`: FlightsExport): Future[Result] = {
-    val pitRequest = PointInTimeQuery(pointInTime, export.request)
-    ctrl.flightsRouterActor.ask(pitRequest).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].map {
+  private def flightsRequestToCsv(maybePointInTime: Option[MillisSinceEpoch],
+                                  `export`: FlightsExport,
+                                 ): Future[Result] = {
+    val request = maybePointInTime.map(PointInTimeQuery(_, export.request)).getOrElse(export.request)
+    ctrl.actorService.flightsRouterActor.ask(request).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]].map {
       flightsStream =>
         val flightsAndManifestsStream = flightsStream.mapAsync(1) { case (d, fws) =>
-          ctrl.manifestsProvider(d, d).map(_._2).runFold(VoyageManifests.empty)(_ ++ _).map(m => (fws, m))
+          ctrl.applicationService.manifestsProvider(d, d).map(_._2).runFold(VoyageManifests.empty)(_ ++ _).map(m => (fws, m))
         }
         val csvStream = export.csvStream(flightsAndManifestsStream)
-        val fileName = makeFileName("flights", export.terminal, export.start.toLocalDate, export.end.toLocalDate, airportConfig.portCode)
+        val fileName = makeFileName("flights", Option(export.terminal), export.start.toLocalDate, export.end.toLocalDate, airportConfig.portCode)
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>
@@ -138,21 +142,21 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     (user, _, _) =>
       (start, end, terminal) =>
         if (user.hasRole(SuperAdmin)) {
-          AdminExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
+          AdminExportImpl(start, end, terminal, ctrl.feedService.paxFeedSourceOrder)
         } else if (user.hasRole(ApiView))
-          FlightsWithSplitsWithActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
-        else FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
+          FlightsWithSplitsWithActualApiExportImpl(start, end, terminal, ctrl.feedService.paxFeedSourceOrder)
+        else FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal, ctrl.feedService.paxFeedSourceOrder)
 
   private val redListDiversionsExportForUser: (LoggedInUser, PortCode, RedListUpdates) => (SDateLike, SDateLike, Terminal) => FlightsExport =
     (user, portCode, redListUpdates) =>
       (start, end, terminal) =>
         (user.hasRole(ApiView), portCode) match {
-          case (true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates, ctrl.paxFeedSourceOrder)
-          case (false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates, ctrl.paxFeedSourceOrder)
-          case (true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start, end, terminal, ctrl.paxFeedSourceOrder)
-          case (false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start, end, terminal, ctrl.paxFeedSourceOrder)
-          case (true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
-          case (false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal, ctrl.paxFeedSourceOrder)
+          case (true, PortCode("LHR")) => LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates, ctrl.feedService.paxFeedSourceOrder)
+          case (false, PortCode("LHR")) => LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start, end, terminal, redListUpdates, ctrl.feedService.paxFeedSourceOrder)
+          case (true, PortCode("BHX")) => BhxFlightsWithSplitsWithActualApiExportWithCombinedTerminals(start, end, terminal, ctrl.feedService.paxFeedSourceOrder)
+          case (false, PortCode("BHX")) => BhxFlightsWithSplitsWithoutActualApiExportWithCombinedTerminals(start, end, terminal, ctrl.feedService.paxFeedSourceOrder)
+          case (true, _) => FlightsWithSplitsWithActualApiExportImpl(start, end, terminal, ctrl.feedService.paxFeedSourceOrder)
+          case (false, _) => FlightsWithSplitsWithoutActualApiExportImpl(start, end, terminal, ctrl.feedService.paxFeedSourceOrder)
         }
 
   def exportArrivalsFromFeed(terminalString: String,
@@ -161,7 +165,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
                              feedSourceString: String): Action[AnyContent] = authByRole(ArrivalSource) {
 
     val feedSourceToPersistenceId: Map[FeedSource, String] = Map(
-      LiveBaseFeedSource -> CirriumLiveArrivalsActor.persistenceId,
+      LiveBaseFeedSource -> CiriumLiveArrivalsActor.persistenceId,
       LiveFeedSource -> PortLiveArrivalsActor.persistenceId,
       AclFeedSource -> AclForecastArrivalsActor.persistenceId,
       ForecastFeedSource -> PortForecastArrivalsActor.persistenceId
@@ -171,7 +175,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     Action(FeedSource(feedSourceString) match {
       case Some(fs) =>
         val persistenceId = feedSourceToPersistenceId(fs)
-        val arrivalsExport = ArrivalFeedExport(ctrl.paxFeedSourceOrder)
+        val arrivalsExport = ArrivalFeedExport(ctrl.feedService.paxFeedSourceOrder)
         val startDate = SDate(startPit)
         val numberOfDays = startDate.getLocalLastMidnight.daysBetweenInclusive(SDate(endPit))
 

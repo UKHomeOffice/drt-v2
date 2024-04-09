@@ -87,7 +87,7 @@ class ArrivalLookupActor(portCode: PortCode, pointInTime: SDateLike, arrivalToLo
       log.info(s"Received GetState request. Sending ArrivalsState with ${state.arrivals.size} arrivals")
       sender() ! state.arrivals.values.headOption.map(a => FeedSourceArrival(feedSource, a))
 
-    case unexpected => log.info(s"Received unexpected message ${unexpected.getClass}")
+    case unexpected => log.error(s"Received unexpected message ${unexpected.getClass}")
   }
 
 }

@@ -1,30 +1,28 @@
 package drt.server.feeds.lcy
 
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
-import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.server.feeds.common.ProdHttpClient
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import org.specs2.mock.Mockito
 import org.specs2.specification.Scope
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 class LCYClientSpec extends CrunchTestLike with Mockito {
 
-  val httpClient = mock[ProdHttpClient]
+  val httpClient: ProdHttpClient = mock[ProdHttpClient]
 
   trait Context extends Scope {
-    val lcyClient = LCYClient(httpClient, "someUser", "someSoapEndPoint", "someUsername", "somePassword")
+    val lcyClient: LCYClient = LCYClient(httpClient, "someUser", "someSoapEndPoint", "someUsername", "somePassword")
   }
 
   "Given a request for a full refresh of all flights, if it's successful the client should return all the flights" in new Context {
 
     httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseTwoFlightXml)))
 
-    val flight1 = LCYFlight(
+    val flight1: LCYFlight = LCYFlight(
       "MMD",
       "5055",
       "SGD",
@@ -65,11 +63,11 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
     )
 
 
-    val result: Flights = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
-    val expected = Flights(List(
+    val result = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
+    val expected = List(
       LCYFlightTransform.lcyFlightToArrival(flight1),
       LCYFlightTransform.lcyFlightToArrival(flight2)
-    ))
+    )
 
     result === expected
   }
@@ -96,10 +94,10 @@ class LCYClientSpec extends CrunchTestLike with Mockito {
   "Given a LCYFlight with 0 for passenger fields, I should see 0 pax, 0 max pax and 0 transfer pax." in new Context {
     httpClient.sendRequest(anyObject[HttpRequest]) returns Future(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, lcySoapResponseZeroPaxFlightXml)))
 
-    val result: Flights = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
+    val result = Await.result(lcyClient.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
     val actMax = result match {
-      case Flights(f :: _) => (f.PassengerSources.get(LiveFeedSource).flatMap(_.actual), f.MaxPax)
+      case f :: _ => (f.totalPax, f.maxPax)
     }
 
     val expected = (None, Some(0))

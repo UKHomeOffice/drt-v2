@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.{Empty, Pot}
 import diode.react.ReactConnectProxy
-import drt.client.SPAMain.{ContactUsLoc, Loc, TerminalPageTabLoc, TrainingHubLoc}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, TrainingHubLoc}
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
@@ -106,7 +106,7 @@ object Navbar {
                         val badgeCount = calculateBadgeCount(userFeatureViewCount, trainingDataTemplates.map(_.id.map(_.toString).getOrElse("0")))
                         <.a(MuiBadge(
                           badgeContent = <.span(^.className := "badge-font", badgeCount), invisible = badgeCount == 0, color = "primary")(Icon.laptopLg),
-                          <.span(if (badgeCount != 0) ^.className := "badge-text" else " ", "New Feature"), ^.onClick ==> handleOpenDialog)
+                          <.span(if (badgeCount != 0) ^.className := "badge-text" else " ", "What's new"), ^.onClick ==> handleOpenDialog)
                       } else EmptyVdom),
                       navbarModel.featureGuides.renderReady { trainingDataTemplates =>
                         navbarModel.showNewFeatureGuideOnLogin.renderReady { showNewFeatureGuideOnLogin =>
@@ -116,7 +116,6 @@ object Navbar {
                         }
                       },
                       <.div(^.className := "training-hub-link", props.ctl.link(TrainingHubLoc())(Icon.calendarO, " ", "Training Hub")),
-                      <.div(^.className := "contact-us-link", props.ctl.link(ContactUsLoc)(Icon.envelope, " ", "Contact Us")),
                       <.div(<.a(Icon.signOut, "Log Out", ^.href := "/oauth/logout?redirect=" + BaseUrl.until_#.value,
                         ^.onClick --> Callback(GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "Log Out", props.loggedInUser.id))))
                     )

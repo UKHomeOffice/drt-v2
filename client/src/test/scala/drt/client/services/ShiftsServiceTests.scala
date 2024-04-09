@@ -139,9 +139,7 @@ object ShiftsServiceTests extends TestSuite {
             val shifts = StaffAssignmentParser(shiftsRawCsv).parsedAssignments.toList
             shifts match {
               case Failure(_) :: Nil => assert(true)
-              case other =>
-                println(s"Should have failed that bad line $other")
-                assert(false)
+              case _ => assert(false)
             }
           }
         }

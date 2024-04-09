@@ -1,5 +1,5 @@
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
-import sbt._
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
+import sbt.*
 
 /**
  * Application settings. Configure the build for your application here.
@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v689"
+    val drtLib = "v808"
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
@@ -65,8 +65,7 @@ object Settings {
     val slick = "3.4.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
-    val scalaJsReactMaterialUi = "0.1.15"
-    val sprayJsonScalaJs = "1.3.5-7"
+    val scalaJsReactMaterialUi = "0.1.16"
     val scalaTestVersion = "3.2.17"
     val twirlApi = "1.6.3"
     val mockitoVersion = "4.11.0"
@@ -77,9 +76,9 @@ object Settings {
     val jwtCore = "9.4.5"
   }
 
-  import versions._
+  import versions.*
 
-  val clientNpmDependencies = Seq(
+  val clientNpmDependencies: Seq[(String, String)] = Seq(
     "react" -> react,
     "react-dom" -> react,
     "log4javascript" -> log4Javascript,
@@ -97,6 +96,7 @@ object Settings {
     "@mui/lab" -> "5.0.0-alpha.119",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
+    "react-markdown" -> "9.0.1"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
@@ -118,7 +118,6 @@ object Settings {
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-lab" % scalaJsReactMaterialUi,
-    "io.crashbox" %% "spray-json" % sprayJsonScalaJs,
     "com.dedipresta" %%% "scala-crypto" % "1.0.0",
     "io.lemonlabs" %%% "scala-uri" % "4.0.3",
 
@@ -180,6 +179,7 @@ object Settings {
 
     "joda-time" % "joda-time" % jodaTime,
 
+    "ch.qos.logback" % "logback-classic" % "1.3.5",
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
@@ -205,7 +205,7 @@ object Settings {
 
     "uk.gov.homeoffice" %% "drt-birmingham-schema" % drtBirminghamSchema,
     "uk.gov.homeoffice" %% "drt-cirium" % drtCirium,
-    "uk.gov.homeoffice" %% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
+    "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
     "uk.gov.service.notify" % "notifications-java-client" % "4.1.0-RELEASE",

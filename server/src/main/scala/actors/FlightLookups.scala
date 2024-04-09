@@ -1,7 +1,6 @@
 package actors
 
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor, TerminalDayFlightActor}
-import actors.persistent.QueueLikeActor.UpdatedMillis
 import actors.routing.FlightsRouterActor
 import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -32,7 +31,7 @@ trait FlightLookupsLike {
   def updateFlights(removalMessageCutOff: Option[FiniteDuration]): FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
     val (terminal, date) = partition
     val actor = system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, removalMessageCutOff, paxFeedSourceOrder))
-    requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[UpdatedMillis]
+    requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Set[Long]]
   }
 
   def flightsByDayLookup(removalMessageCutOff: Option[FiniteDuration]): FlightsLookup =

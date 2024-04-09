@@ -5,10 +5,9 @@ import drt.server.feeds.common.XlsExtractorUtil._
 import drt.server.feeds.lhr.LHRForecastFeed
 import org.apache.poi.ss.usermodel.DateUtil
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
-import services.graphstages.Crunch.europeLondonId
-import uk.gov.homeoffice.drt.arrivals.Arrival
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.arrivals.ForecastArrival
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonId
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.util.TimeZone
 import scala.util.Success
@@ -26,7 +25,7 @@ object LHRForecastXLSExtractor {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply(xlsFilePath: String): List[Arrival] = rows(xlsFilePath)
+  def apply(xlsFilePath: String): List[ForecastArrival] = rows(xlsFilePath)
     .map(LHRForecastFeed.lhrFieldsToArrival)
     .collect {
       case Success(arrival) => arrival

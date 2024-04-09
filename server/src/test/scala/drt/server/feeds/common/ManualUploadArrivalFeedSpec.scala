@@ -19,10 +19,10 @@ class SlowResponseActor extends Actor {
 class ManualUploadArrivalFeedSpec extends CrunchTestLike {
   "Given an forecast feed with a mock actor that takes longer than the timeout to respond" >> {
     val mockActor = system.actorOf(Props(new SlowResponseActor()))
-    val arrivalFeed = ManualUploadArrivalFeed(mockActor)(new Timeout(100 milliseconds))
+    val arrivalFeed = ManualUploadArrivalFeed(mockActor)(new Timeout(100.milliseconds))
 
     "When I request the feed" >> {
-      val result = Await.result(arrivalFeed.requestFeed, 2 seconds)
+      val result = Await.result(arrivalFeed.requestFeed, 2.seconds)
 
       "I should get a ArrivalsFeedFailure rather than an uncaught exception" >> {
         result.getClass === classOf[ArrivalsFeedFailure]

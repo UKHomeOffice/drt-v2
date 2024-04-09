@@ -4,8 +4,9 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import org.slf4j.{Logger, LoggerFactory}
-import services._
+import services.{OptimiserConfig, OptimizerCrunchResult}
 import services.crunch.desklimits.TerminalDeskLimitsLike
+import services.TryCrunchWholePax
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
@@ -14,7 +15,12 @@ import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-case class TerminalDesksAndWaitsProvider(sla: (LocalDate, Queue) => Future[Int], queuePriority: List[Queue], cruncher: TryCrunchWholePax) {
+case class TerminalDesksAndWaitsProvider(terminal: Terminal,
+                                         sla: (LocalDate, Queue) => Future[Int],
+                                         queuePriority: List[Queue],
+                                         cruncher: TryCrunchWholePax,
+                                         description: String,
+                                        ) {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def workToDeskRecs(terminal: Terminal,
@@ -63,7 +69,8 @@ case class TerminalDesksAndWaitsProvider(sla: (LocalDate, Queue) => Future[Int],
       }
       .runFoldAsync(Map[Queue, (Iterable[Int], Iterable[Int], Iterable[Double])]()) {
         case (queueRecsSoFar, (queue, sla)) =>
-          log.info(s"Optimising $queue with sla $sla minutes")
+          val identifier = s"$description $terminal $queue"
+          log.info(s"Optimising $identifier with sla $sla minutes")
           val queuePassengers = passengersByQueue(queue)
           val queueDeskAllocations = queueRecsSoFar.view.mapValues { case (desks, _, _) => desks.toList }.toMap
 
@@ -72,7 +79,7 @@ case class TerminalDesksAndWaitsProvider(sla: (LocalDate, Queue) => Future[Int],
           } yield {
             queuePassengers match {
               case noWork if noWork.isEmpty || noWork.map(_.sum).sum == 0 =>
-                log.info(s"No workload to crunch for $queue on ${SDate(minuteMillis.min).toISOString}. Filling with min desks and zero wait times")
+                log.info(s"No workload to crunch for $identifier on ${SDate(minuteMillis.min).toISOString}. Filling with min desks and zero wait times")
                 queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0), List.fill(minDesks.size)(0d))))
               case someWork =>
                 val start = System.currentTimeMillis()
@@ -83,15 +90,15 @@ case class TerminalDesksAndWaitsProvider(sla: (LocalDate, Queue) => Future[Int],
                     case Success(OptimizerCrunchResult(desks, waits, paxInQueue)) =>
                       queueRecsSoFar + (queue -> ((desks.toList, waits.toList, paxInQueue)))
                     case Failure(t) =>
-                      log.error(s"Crunch failed for $queue", t)
+                      log.error(s"Crunch failed for $identifier", t)
                       queueRecsSoFar
                   }
                 } else {
-                  log.info(s"Skipping crunch for $queue as only ${nonZeroMaxDesksPct * 100}% of max desks are non-zero")
+                  log.info(s"Skipping crunch for $identifier as only ${nonZeroMaxDesksPct * 100}% of max desks are non-zero")
                   queueRecsSoFar
                 }
 
-                log.info(s"$queue crunch for ${SDate(minuteMillis.min).toISOString} took: ${System.currentTimeMillis() - start}ms")
+                log.info(s"$identifier crunch for ${SDate(minuteMillis.min).toISOString} took: ${System.currentTimeMillis() - start}ms")
                 optimisedDesks
             }
           }

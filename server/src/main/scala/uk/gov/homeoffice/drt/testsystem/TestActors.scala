@@ -1,13 +1,14 @@
 package uk.gov.homeoffice.drt.testsystem
 
 import actors._
+import actors.daily.StreamingUpdatesLike.StopUpdates
 import actors.daily._
 import actors.persistent._
-import actors.persistent.arrivals.{AclForecastArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
 import actors.persistent.staffing.{FixedPointsActorLike, ShiftsActorLike, StaffMovementsActorLike, StaffMovementsState}
-import actors.routing.FlightsRouterActor
+import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
+import actors.routing.{FeedArrivalsRouterActor, FlightsRouterActor}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply.Ack
 import akka.pattern.{ask, pipe}
@@ -15,11 +16,13 @@ import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, Persiste
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.Logger
-import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
-import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplits, WithTimeAccessor}
-import uk.gov.homeoffice.drt.ports.FeedSource
+import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
+import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, MergeArrivalsRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{FeedSource, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.Future
@@ -30,7 +33,7 @@ object TestActors {
   case object ResetData
 
   trait Resettable extends PersistentActor {
-    val log: Logger
+    protected val log: Logger
     var replyTo: Option[ActorRef] = None
     private var deletedMessages: Boolean = false
     private var deletedSnapshots: Boolean = false
@@ -43,6 +46,7 @@ object TestActors {
       case ResetData =>
         replyTo = Option(sender())
         log.warn("Received ResetData request. Deleting all messages & snapshots")
+        resetState()
         deleteMessages(Long.MaxValue)
         deleteSnapshots(SnapshotSelectionCriteria(minSequenceNr = 0L, maxSequenceNr = Long.MaxValue))
       case _: DeleteMessagesSuccess =>
@@ -55,7 +59,7 @@ object TestActors {
 
     private def ackIfDeletionFinished(): Unit = replyTo.foreach { r =>
       if (deletionFinished) {
-        log.info("Finished deletions")
+        log.info("Finished message & snapshot deletions")
         resetState()
         deletedMessages = false
         deletedSnapshots = false
@@ -65,63 +69,36 @@ object TestActors {
     }
   }
 
-  class TestAclForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends AclForecastArrivalsActor(now, expireAfterMillis) with Resettable {
-    override def resetState(): Unit = state = state.clear()
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
-  class TestPortForecastArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends PortForecastArrivalsActor(now, expireAfterMillis) {
-
-    private def resetBehaviour: Receive = {
-      case ResetData =>
-        state.clear()
-        sender() ! Ack
-    }
-
-    override def receiveRecover: Receive = {
-      case _ => ()
-    }
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
-  class TestPortLiveArrivalsActor(override val now: () => SDateLike, expireAfterMillis: Int)
-    extends PortLiveArrivalsActor(now, expireAfterMillis) with Resettable {
+  class TestMergeArrivalsQueueActor(now: () => SDateLike, request: Long => MergeArrivalsRequest)
+    extends CrunchQueueActor(now, request) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestCrunchQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends CrunchQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
-    override def resetState(): Unit = {
-      state.clear()
-    }
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
-  class TestDeskRecsQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends DeskRecsQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
-    override def resetState(): Unit = {
-      state.clear()
-    }
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
-  class TestDeploymentQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends DeploymentQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+  class TestCrunchQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
+    extends CrunchQueueActor(now, request) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestStaffingUpdateQueueActor(now: () => SDateLike, crunchOffsetMinutes: Int, durationMinutes: Int)
-    extends StaffingUpdateQueueActor(now, crunchOffsetMinutes, durationMinutes) with Resettable {
+  class TestDeskRecsQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
+    extends DeskRecsQueueActor(now, request) with Resettable {
+    override def resetState(): Unit = state.clear()
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestDeploymentQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
+    extends DeploymentQueueActor(now, request) with Resettable {
+    override def resetState(): Unit = state.clear()
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
+  }
+
+  class TestStaffingUpdateQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
+    extends StaffingUpdateQueueActor(now, request) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
@@ -204,7 +181,7 @@ object TestActors {
     }
   }
 
-  trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B] {
+  trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B, Long] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     private var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 
@@ -231,7 +208,7 @@ object TestActors {
 
   }
 
-  trait TestMinuteActorLike2[A, B <: WithTimeAccessor] extends MinutesActorLike2[A, B] {
+  trait TestMinuteActorLike2[A, B <: WithTimeAccessor] extends MinutesActorLike2[A, B, Long] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     private var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 
@@ -260,7 +237,7 @@ object TestActors {
 
   class TestStaffMinutesRouterActor(terminals: Iterable[Terminal],
                                     lookup: MinutesLookup[StaffMinute, TM],
-                                    updateMinutes: MinutesUpdate[StaffMinute, TM],
+                                    updateMinutes: MinutesUpdate[StaffMinute, TM, Long],
                                     val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
     extends StaffMinutesRouterActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
     override def receive: Receive = resetReceive orElse super.receive
@@ -268,7 +245,7 @@ object TestActors {
 
   class TestQueueMinutesRouterActor(terminals: Iterable[Terminal],
                                     lookup: MinutesLookup[CrunchMinute, TQM],
-                                    updateMinutes: MinutesUpdate[CrunchMinute, TQM],
+                                    updateMinutes: MinutesUpdate[CrunchMinute, TQM, Long],
                                     val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
     extends QueueMinutesRouterActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
@@ -276,7 +253,7 @@ object TestActors {
 
   class TestQueueLoadsMinutesActor(terminals: Iterable[Terminal],
                                    lookup: MinutesLookup[PassengersMinute, TQM],
-                                   updateMinutes: MinutesUpdate[PassengersMinute, TQM],
+                                   updateMinutes: MinutesUpdate[PassengersMinute, TQM, Long],
                                    val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
     extends QueueLoadsMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[PassengersMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
@@ -291,7 +268,7 @@ object TestActors {
   class TestFlightsRouterActor(terminals: Iterable[Terminal],
                                byDayLookup: FlightsLookup,
                                updateMinutes: FlightsUpdate,
-                               val resetData: (Terminal, UtcDate) => Future[Any],
+                               resetData: (Terminal, UtcDate) => Future[Any],
                                paxFeedSourceOrder: List[FeedSource])
     extends FlightsRouterActor(terminals, byDayLookup, updateMinutes, paxFeedSourceOrder) {
     override def receive: Receive = resetReceive orElse super.receive
@@ -311,6 +288,7 @@ object TestActors {
         handleUpdatesAndAck(container, replyTo)
 
       case ResetData =>
+        val replyTo = sender()
         Future
           .sequence(terminalDaysUpdated.map { case (t, d) =>
             resetData(t, d)
@@ -319,7 +297,44 @@ object TestActors {
             terminalDaysUpdated = Set()
             Ack
           }
-          .pipeTo(sender())
+          .pipeTo(replyTo)
+    }
+  }
+
+  class TestFeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
+                                    arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
+                                    updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
+                                    partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
+                                    resetData: (Terminal, UtcDate) => Future[Any],
+                                   )
+    extends FeedArrivalsRouterActor(allTerminals, arrivalsByDayLookup, updateArrivals, partitionUpdates) {
+    override def receive: Receive = resetReceive orElse super.receive
+
+    private var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
+
+    private def addToTerminalDays(container: FeedArrivals): Unit = {
+      partitionUpdates(container).keys.foreach {
+        case (terminal, date) => terminalDaysUpdated = terminalDaysUpdated + ((terminal, date))
+      }
+    }
+
+    private def resetReceive: Receive = {
+      case container: FeedArrivals =>
+        val replyTo = sender()
+        addToTerminalDays(container)
+        handleUpdatesAndAck(container, replyTo)
+
+      case ResetData =>
+        val replyTo = sender()
+        Future
+          .sequence(terminalDaysUpdated.map { case (t, d) =>
+            resetData(t, d)
+          })
+          .map { _ =>
+            terminalDaysUpdated = Set()
+            Ack
+          }
+          .pipeTo(replyTo)
     }
   }
 
@@ -363,6 +378,23 @@ object TestActors {
     }
 
     override def receive: Receive = myReceive orElse super.receive
+  }
+
+  class TestTerminalDayFeedArrivalActor[A <: FeedArrival](year: Int,
+                                                          month: Int,
+                                                          day: Int,
+                                                          terminal: Terminal,
+                                                          feedSource: FeedSource,
+                                                          mpit: Option[Long],
+                                                          etm: PartialFunction[(Any, Map[UniqueArrival, A]), Option[GeneratedMessage]],
+                                                          mts: (GeneratedMessage, Map[UniqueArrival, A]) => Map[UniqueArrival, A],
+                                                          stm: Map[UniqueArrival, A] => GeneratedMessage,
+                                                          sfm: GeneratedMessage => Map[UniqueArrival, A],
+                                                          msi: Int = 250,
+                                                         ) extends TerminalDayFeedArrivalActor(year, month, day, terminal, feedSource, mpit, etm, mts, stm, sfm, msi) with Resettable {
+    override def resetState(): Unit = state = emptyState
+
+    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
   class TestTerminalDayQueuesActor(year: Int,
@@ -415,11 +447,10 @@ object TestActors {
       case PurgeAll =>
         val replyTo = sender()
         log.info(s"Received PurgeAll")
-        Future.sequence(streamingUpdateActors.values.map(actor => killActor.ask(Terminate(actor)))).foreach { _ =>
-          streamingUpdateActors = Map()
-          lastRequests = Map()
-          replyTo ! Ack
-        }
+        streamingUpdateActors.values.foreach(_ ! StopUpdates)
+        streamingUpdateActors = Map()
+        lastRequests = Map()
+        replyTo ! Ack
     }
 
     override def receive: Receive = testReceive orElse super.receive
@@ -434,11 +465,10 @@ object TestActors {
       case PurgeAll =>
         val replyTo = sender()
         log.info(s"Received PurgeAll")
-        Future.sequence(streamingUpdateActors.values.map(actor => killActor.ask(Terminate(actor)))).foreach { _ =>
-          streamingUpdateActors = Map()
-          lastRequests = Map()
-          replyTo ! Ack
-        }
+        streamingUpdateActors.values.foreach(_ ! StopUpdates)
+        streamingUpdateActors = Map()
+        lastRequests = Map()
+        replyTo ! Ack
     }
 
     override def receive: Receive = testReceive orElse super.receive

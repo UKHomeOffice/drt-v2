@@ -39,10 +39,10 @@ case class FeedsHealthCheck(feedActorsForPort: List[ActorRef],
   override def isPassing: Future[Boolean] =
     Source(feedActorsForPort)
       .mapAsync(1) {
-        _.ask(GetFeedStatuses).mapTo[Option[FeedSourceStatuses]]
+        _.ask(GetFeedStatuses).mapTo[FeedSourceStatuses]
       }
       .collect {
-        case Some(FeedSourceStatuses(feedSource, FeedStatuses(_, Some(lastSuccessAt), _, _))) =>
+        case FeedSourceStatuses(feedSource, FeedStatuses(_, Some(lastSuccessAt), _, _)) =>
           val threshold = feedLastCheckThresholds.getOrElse(feedSource, defaultLastCheckThreshold)
           if (gracePeriodHasPassed && lastSuccessAt < (now() - threshold).millisSinceEpoch) {
             val minutesSinceLastCheck = ((now().millisSinceEpoch - lastSuccessAt) / 60000).toInt
@@ -74,8 +74,8 @@ case class ActorResponseTimeHealthCheck(portStateActor: ActorRef,
         val took = requestEnd - requestStart.millisSinceEpoch
         val isWithingThreshold = took < healthyResponseTimeMillis
 
-        val message = s"Health check: Port state request took ${took}ms"
-        if (isWithingThreshold) log.info(message) else log.warn(message)
+        if (isWithingThreshold) log.info(s"Health check passed: Port state request took ${took}ms (<${healthyResponseTimeMillis}ms)")
+        else log.error(s"Health check failed: Port state request took ${took}ms (>${healthyResponseTimeMillis}ms)")
 
         isWithingThreshold
       }

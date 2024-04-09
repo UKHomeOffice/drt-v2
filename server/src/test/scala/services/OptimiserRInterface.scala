@@ -1,7 +1,6 @@
 package services
 
 import java.io.InputStream
-
 import javax.script.{ScriptEngine, ScriptEngineManager}
 import org.renjin.sexp.{DoubleVector, IntVector}
 import org.slf4j.{Logger, LoggerFactory}

@@ -24,10 +24,12 @@ class TestRouter @Inject()(cc: ControllerComponents, testController: TestControl
 
     case DELETE(p"/test/data") => testController.deleteAllData
 
+    case POST(p"/test/replace-all-shifts") => testController.replaceAllShifts
+
   }
 
 
-  override def routes = router.routes
+  override def routes: Router.Routes = router.routes
 
 }
 

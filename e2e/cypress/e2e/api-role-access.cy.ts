@@ -69,7 +69,7 @@ describe('API role access', () => {
     },
     {
       roles: ["test"],
-      endpoint: "/data/staff",
+      endpoint: "/test/replace-all-shifts",
       method: "POST",
       shouldBeGranted: false
     },

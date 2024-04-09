@@ -2,15 +2,13 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.FlightsApi.Flights
 import drt.shared._
 import services.OptimiserWithFlexibleProcessors
-import uk.gov.homeoffice.drt.arrivals.Passengers
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, AirportConfig, LiveFeedSource, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -42,9 +40,9 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
     minutesToCrunch = 30
   )
   val scheduled = "2017-01-01T00:00Z"
-  val flights: Flights = Flights(List(
-    ArrivalGenerator.arrival(schDt = scheduled, iata = "BA0001", terminal = T1, passengerSources = Map(LiveFeedSource -> Passengers(Option(20), None)))
-  ))
+  val flights = List(
+    ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(20))
+  )
 
   "Egate banks handling " >> {
     "Given a flight with 20 very expensive passengers and splits to eea desk & egates " +

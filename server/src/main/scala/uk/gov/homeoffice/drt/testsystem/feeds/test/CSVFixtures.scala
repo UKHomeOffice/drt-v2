@@ -2,19 +2,17 @@ package uk.gov.homeoffice.drt.testsystem.feeds.test
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival}
+import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalStatus, Passengers, Predictions}
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode, Terminals}
 
-import scala.collection.immutable.Seq
 import scala.util.Try
 
 object CSVFixtures {
 
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  object ArrivalsCSVFixture {
-
+  private object ArrivalsCSVFixture {
     object fieldMap {
       val Estimated = 4
       val Actual = 5
@@ -25,43 +23,40 @@ object CSVFixtures {
       val ActPax = 10
       val TranPax = 11
       val Terminal = 0
-      val rawICAO = 1
       val rawIATA = 1
       val Origin = 2
       val Scheduled = 3
     }
-
   }
 
-  def csvPathToArrivalsOnDate(forDate: String, path: String): Seq[Try[Arrival]] = {
+  def csvPathToArrivalsOnDate(forDate: String, path: String): Seq[Try[LiveArrival]] = {
 
     def timeToSDate: String => Option[MillisSinceEpoch] = timeToSDateOnDate(forDate)
 
-    val maybeArrivals: Seq[Try[Arrival]] = csvPathToRows(path).drop(1).map(csvRow => {
+    val maybeArrivals: Seq[Try[LiveArrival]] = csvPathToRows(path).drop(1).map(csvRow => {
       val fields = csvRow.split(",")
       import ArrivalsCSVFixture.fieldMap._
-      Try(Arrival(
-        Operator = None,
-        Status = ArrivalStatus("Unk"),
-        Estimated = timeToSDate(fields(Estimated)),
-        Predictions = Predictions(0L, Map()),
-        Actual = timeToSDate(fields(Actual)),
-        EstimatedChox = timeToSDate(fields(EstimatedChox)),
-        ActualChox = timeToSDate(fields(ActualChox)),
-        Gate = None,
-        Stand = Option(fields(Stand)),
-        MaxPax = Option(fields(MaxPax).toInt),
-        RunwayID = None,
-        BaggageReclaimId = None,
-        AirportID = PortCode("TEST"),
-        Terminal = Terminals.Terminal(fields(Terminal)),
-        rawICAO = fields(rawICAO),
-        rawIATA = fields(rawIATA),
-        Origin = PortCode(fields(Origin)),
-        Scheduled = timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
-        PcpTime = None,
-        FeedSources = Set(LiveFeedSource),
-        PassengerSources = Map(LiveFeedSource -> Passengers(Option(fields(ActPax).toInt), Option(fields(TranPax).toInt)))
+      val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(fields(rawIATA))
+      Try(LiveArrival(
+        operator = None,
+        maxPax = Option(fields(MaxPax).toInt),
+        totalPax = Option(fields(ActPax).toInt),
+        transPax = Option(fields(TranPax).toInt),
+        terminal = Terminals.Terminal(fields(Terminal)),
+        voyageNumber = voyageNumber.numeric,
+        carrierCode = carrierCode.code,
+        flightCodeSuffix = suffix.map(_.suffix),
+        origin = fields(Origin),
+        scheduled = timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
+        estimated = timeToSDate(fields(Estimated)),
+        touchdown = timeToSDate(fields(Actual)),
+        estimatedChox = timeToSDate(fields(EstimatedChox)),
+        actualChox = timeToSDate(fields(ActualChox)),
+        status = "Unk",
+        gate = None,
+        stand = Option(fields(Stand)),
+        runway = None,
+        baggageReclaim = None,
       ))
     })
 
@@ -70,11 +65,11 @@ object CSVFixtures {
     maybeArrivals
   }
 
-  def timeToSDateOnDate(forDate: String)(time: String): Option[MillisSinceEpoch] = SDate.tryParseString(forDate + "T" + time + "Z")
+  private def timeToSDateOnDate(forDate: String)(time: String): Option[MillisSinceEpoch] = SDate.tryParseString(forDate + "T" + time + "Z")
     .toOption
     .map(_.millisSinceEpoch)
 
-  def csvPathToRows(fileName: String): Seq[String] = {
+  private def csvPathToRows(fileName: String): Seq[String] = {
     val bufferedSource = scala.io.Source.fromFile(fileName)
     val lines = bufferedSource.getLines()
     lines.toList

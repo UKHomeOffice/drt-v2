@@ -6,11 +6,10 @@ import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import services.crunch.VoyageManifestGenerator.euPassport
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.HistoricManifestsProvider
 import services.crunch.deskrecs.OptimisationProviders
 import services.crunch.{CrunchTestLike, VoyageManifestGenerator}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, VoyageNumber}
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -29,7 +28,7 @@ case class MockManifestLookupService(bestAvailableManifest: BestAvailableManifes
 }
 
 class ManifestProviderSpec extends CrunchTestLike {
-  val arrival: Arrival = ArrivalGenerator.arrival(iata = "BA0001", schDt = "2021-06-01T12:00Z")
+  val arrival: Arrival = ArrivalGenerator.live(iata = "BA0001", schDt = "2021-06-01T12:00Z").toArrival(LiveFeedSource)
   val manifestForArrival: BestAvailableManifest = BestAvailableManifest(VoyageManifestGenerator.manifestForArrival(arrival, List(euPassport)))
   val manifestHistoricForArrival: ManifestPaxCount = ManifestPaxCount(VoyageManifestGenerator.manifestForArrival(arrival, List(euPassport)),
     SplitSources.Historical)
@@ -40,7 +39,7 @@ class ManifestProviderSpec extends CrunchTestLike {
   val probe: TestProbe = TestProbe("manifests")
 
   "Given a mock lookup returning a BestAvailableManifest" >> {
-    val lookup: HistoricManifestsProvider = OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockLookupService, mockCacheLookup, mockCacheStore)
+    val lookup = OptimisationProviders.historicManifestsProvider(PortCode("STN"), mockLookupService, mockCacheLookup, mockCacheStore)
 
     lookup(Seq(arrival)).runWith(Sink.seq).map(probe.ref ! _)
 

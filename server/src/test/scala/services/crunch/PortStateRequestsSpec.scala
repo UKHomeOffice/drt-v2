@@ -11,11 +11,11 @@ import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._
-import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestTerminalDayQueuesActor}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, FlightsWithSplits, Passengers}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, UnknownFeedSource}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}
+import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestTerminalDayQueuesActor}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
@@ -45,7 +45,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val staffUpdates: ActorRef = system.actorOf(Props(new StaffUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-staff")
   val flightUpdates: ActorRef = system.actorOf(Props(new FlightUpdatesSupervisor(myNow, airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(myNow, InMemoryStreamingJournal))), "updates-supervisor-flight")
 
-  def actorProvider: () => ActorRef = () => {
+  def portStateActorProvider: () => ActorRef = () => {
     system.actorOf(Props(new PartitionedPortStateActor(
       flightsActor,
       queuesActor,
@@ -64,21 +64,21 @@ class PortStateRequestsSpec extends CrunchTestLike {
   }
 
   def flightsWithSplits(params: Iterable[(String, String, Terminal)]): List[ApiFlightWithSplits] = params.map { case (_, scheduled, _) =>
-    val flight = ArrivalGenerator.arrival("BA1000", schDt = scheduled, terminal = T1)
+    val flight = ArrivalGenerator.live("BA1000", schDt = scheduled, terminal = T1).toArrival(LiveFeedSource)
     ApiFlightWithSplits(flight, Set(), Option(myNow().millisSinceEpoch))
   }.toList
 
   def arrival(params: Iterable[(String, String, Terminal)]): Seq[Arrival] = params.map { case (_, scheduled, _) =>
-    ArrivalGenerator.arrival("BA1000", schDt = scheduled, terminal = T1)
+    ArrivalGenerator.live("BA1000", schDt = scheduled, terminal = T1).toArrival(LiveFeedSource)
   }.toList
 
   s"Given an empty PartitionedPortStateActor" >> {
-    val ps = actorProvider()
+    val ps = portStateActorProvider()
 
     resetData(T1, myNow())
 
     "When I send it a flight and then ask for its flights" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
+      val arrival = ArrivalGenerator.live(iata = "BA1000", schDt = scheduled, terminal = T1).toArrival(LiveFeedSource)
       val eventualAck = ps.ask(ArrivalsDiff(Iterable(arrival), List()))
 
       "Then I should see the flight I sent it" >> {
@@ -89,7 +89,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     }
 
     "When I send it a flight and then ask for updates since just before now" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
+      val arrival = ArrivalGenerator.live(iata = "BA1000", schDt = scheduled, terminal = T1).toArrival(LiveFeedSource)
       val eventualAck = ps.ask(ArrivalsDiff(Iterable(arrival), List()))
 
       "Then I should see the flight I sent it in the port state" >> {
@@ -105,8 +105,8 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
     "When I send it 2 flights consecutively and then ask for its flights" >> {
       val scheduled2 = "2020-01-01T00:25"
-      val arrival1 = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
-      val arrival2 = ArrivalGenerator.arrival(iata = "FR5000", schDt = scheduled2, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
+      val arrival1 = ArrivalGenerator.live(iata = "BA1000", schDt = scheduled, terminal = T1).toArrival(LiveFeedSource)
+      val arrival2 = ArrivalGenerator.live(iata = "FR5000", schDt = scheduled2, terminal = T1).toArrival(LiveFeedSource)
       val eventualAck = ps.ask(ArrivalsDiff(Seq(arrival1), List())).flatMap(_ => ps.ask(ArrivalsDiff(Seq(arrival2), List())))
 
       "Then I should see both flights I sent it" >> {
@@ -141,7 +141,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
         val result = Await.result(eventualPortStateUpdates(eventualAck, myNow, ps, sinceMillis), 1.second)
         val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
-        result === Option(PortStateUpdates(myNow().millisSinceEpoch, FlightUpdatesAndRemovals(Map(), Map()), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), Seq()))
+        result === Option(PortStateUpdates(0L, myNow().millisSinceEpoch, 0L, FlightUpdatesAndRemovals(Map(), Map()), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), Seq()))
       }
     }
 
@@ -187,7 +187,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
     }
 
     "When I send it a flight, a queue & a staff minute, and ask for the terminal state" >> {
-      val arrival = ArrivalGenerator.arrival(iata = "BA1000", schDt = scheduled, terminal = T1, passengerSources = Map(UnknownFeedSource -> Passengers(None, None)))
+      val arrival = ArrivalGenerator.live(iata = "BA1000", schDt = scheduled, terminal = T1).toArrival(LiveFeedSource)
       val drm = DeskRecMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
       val sm1 = StaffMinute(T1, myNow().millisSinceEpoch, 1, 2, 3)
 
@@ -201,7 +201,8 @@ class PortStateRequestsSpec extends CrunchTestLike {
 
         val expectedCm = CrunchMinute(T1, EeaDesk, myNow().millisSinceEpoch, 1, 2, 3, 4, None)
 
-        result === PortState(setUpdatedFlights(Seq(ApiFlightWithSplits(arrival, Set())), myNow().millisSinceEpoch), setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), setUpdatedSms(Seq(sm1), myNow().millisSinceEpoch))
+        result === PortState(setUpdatedFlights(Seq(ApiFlightWithSplits(arrival, Set())), myNow().millisSinceEpoch),
+          setUpdatedCms(Seq(expectedCm), myNow().millisSinceEpoch), setUpdatedSms(Seq(sm1), myNow().millisSinceEpoch))
       }
     }
 
@@ -311,7 +312,7 @@ class PortStateRequestsSpec extends CrunchTestLike {
                                sinceMillis: MillisSinceEpoch): Future[Option[PortStateUpdates]] = eventualAck.flatMap { _ =>
     val startMillis = now().getLocalLastMidnight.millisSinceEpoch
     val endMillis = now().getLocalNextMidnight.millisSinceEpoch
-    ps.ask(GetUpdatesSince(sinceMillis, startMillis, endMillis)).mapTo[Option[PortStateUpdates]]
+    ps.ask(GetUpdatesSince(sinceMillis, sinceMillis, sinceMillis, startMillis, endMillis)).mapTo[Option[PortStateUpdates]]
   }
 
   def setLastUpdated(now: () => SDateLike,

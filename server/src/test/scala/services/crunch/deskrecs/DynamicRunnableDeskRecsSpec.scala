@@ -4,11 +4,10 @@ import actors.persistent.SortedActorRefSource
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply
-import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
@@ -18,7 +17,6 @@ import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageMa
 import queueus._
 import services.TryCrunchWholePax
 import services.crunch.VoyageManifestGenerator.{euIdCard, manifestForArrival, visa, xOfPaxType}
-import services.crunch.deskrecs.DynamicRunnableDeskRecs.{HistoricManifestsPaxProvider, HistoricManifestsProvider}
 import services.crunch.deskrecs.DynamicRunnablePassengerLoads.addManifests
 import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
@@ -77,11 +75,11 @@ object OptimiserMocks {
     _ => Future.successful(Source(List()))
   }
 
-  def mockHistoricManifestsProviderNoop: HistoricManifestsProvider = {
+  def mockHistoricManifestsProviderNoop: Iterable[Arrival] => Source[ManifestLike, NotUsed] = {
     _: Iterable[Arrival] => Source(List())
   }
 
-  def mockHistoricManifestsPaxProviderNoop: HistoricManifestsPaxProvider = {
+  def mockHistoricManifestsPaxProviderNoop: Arrival => Future[Option[ManifestPaxCount]] = {
     _: Arrival => Future.successful(None)
   }
 
@@ -95,7 +93,7 @@ object OptimiserMocks {
   }
 
   def mockHistoricManifestsProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
-                                   (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsProvider = {
+                                   (implicit ec: ExecutionContext): Iterable[Arrival] => Source[ManifestLike, NotUsed] = {
     val portCode = PortCode("STN")
 
     val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
@@ -110,7 +108,7 @@ object OptimiserMocks {
   }
 
   def mockHistoricManifestsPaxProvider(arrivalsWithMaybePax: Map[Arrival, Option[List[PassengerInfoJson]]])
-                                      (implicit ec: ExecutionContext, mat: Materializer): HistoricManifestsPaxProvider = {
+                                      (implicit ec: ExecutionContext): Arrival => Future[Option[ManifestPaxCount]] = {
     val portCode = PortCode("STN")
     OptimisationProviders.historicManifestsPaxProvider(
       portCode,
@@ -119,7 +117,9 @@ object OptimiserMocks {
   }
 }
 
-case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]], historicManifestsPax: Map[UniqueArrivalKey, Option[ManifestPaxCount]], destinationPort: PortCode)
+case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKey, Option[BestAvailableManifest]],
+                                     historicManifestsPax: Map[UniqueArrivalKey, Option[ManifestPaxCount]],
+                                     destinationPort: PortCode)
   extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
@@ -129,11 +129,14 @@ case class MockManifestLookupService(bestAvailableManifests: Map[UniqueArrivalKe
     Future.successful((key, bestAvailableManifests.get(key).flatten))
   }
 
-  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
+  override def historicManifestPax(arrivalPort: PortCode,
+                                   departurePort: PortCode,
+                                   voyageNumber: VoyageNumber,
+                                   scheduled: SDateLike,
+                                  ): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
     Future.successful((key, historicManifestsPax.get(key).flatten))
   }
-
 }
 
 class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
@@ -167,13 +170,16 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       splitsSink = mockSplitsSink,
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-      DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
-      airportConfig.queuesByTerminal,
+      dynamicQueueStatusProvider = DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
+      queuesByTerminal = airportConfig.queuesByTerminal,
+      updateLiveView = _ => Future.successful(StatusReply.Ack),
+      paxFeedSourceOrder = paxFeedSourceOrder,
     )
+    val crunchRequest: MillisSinceEpoch => CrunchRequest =
+      (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "passenger-loads")
 
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch, SortedSet(), "passenger-loads")
-
-    val (queue, _) = RunnableOptimisation.createGraph(crunchGraphSource, sink, queueMinutesProducer, "passenger-loads").run()
+    val (queue, _) = QueuedRequestProcessing.createGraph(crunchGraphSource, sink, queueMinutesProducer, "passenger-loads").run()
     queue ! request
 
     probe.fishForMessage(5.second) {
@@ -192,7 +198,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   }
 
   "Given a flight and a mock splits calculator" >> {
-    val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), feedSources = Set(LiveFeedSource), passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)))
+    val arrival = ArrivalGenerator.live(origin = PortCode("JFK"), totalPax = Option(100)).toArrival(LiveFeedSource)
     val flights = Seq(ApiFlightWithSplits(arrival, Set()))
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
     val mockSplits: SplitsForArrival = (_, _) => splits
@@ -237,9 +243,11 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     "add historic API pax" >> {
       "When I have no Feed I should get some pax from historic API" >> {
-        val arrival = ArrivalGenerator.arrival(origin = PortCode("JFK"), feedSources = Set(),
-          passengerSources = Map.empty)
-        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Map(HistoricApiFeedSource -> Passengers(Option(10), None)))
+        val arrival = ArrivalGenerator.live(origin = PortCode("JFK")).toArrival(LiveFeedSource)
+        checkPaxSource(arrival, Map(arrival -> Option(xOfPaxType(10, visa))), Map(
+          LiveFeedSource -> Passengers(None, None),
+          HistoricApiFeedSource -> Passengers(Option(10), None),
+        ))
       }
     }
   }
@@ -277,8 +285,9 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
   "Given an arrival with 100 pax " >> {
 
-    val arrival = ArrivalGenerator.arrival("BA0001", schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), feedSources = Set(LiveFeedSource),
-      passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)))
+    val arrival = ArrivalGenerator.live("BA0001", schDt = s"2021-06-01T12:00", origin = PortCode("JFK"), totalPax = Option(100))
+      .toArrival(LiveFeedSource)
+      .copy(PcpTime = Option(SDate("2021-06-01T11:30").millisSinceEpoch))
 
     "When I provide no live and no historic manifests, terminal splits should be applied (50% desk, 50% egates)" >> {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)
@@ -337,12 +346,16 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   }
 
   "validApiPercentage" >> {
-    val validApi = ApiFlightWithSplits(ArrivalGenerator
-      .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)),
-        feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
-    val invalidApi = ApiFlightWithSplits(ArrivalGenerator
-      .arrival(passengerSources = Map(LiveFeedSource -> Passengers(Option(100), None)),
-        feedSources = Set(LiveFeedSource)), Set(Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    val validApi = ApiFlightWithSplits(
+      ArrivalGenerator.live(totalPax = Option(100)).toArrival(LiveFeedSource),
+        Set(Splits(
+          Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)),
+          ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    val invalidApi = ApiFlightWithSplits(
+      ArrivalGenerator.live(totalPax = Option(100)).toArrival(LiveFeedSource),
+        Set(Splits(
+          Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)),
+          ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
     "Given no flights, then validApiPercentage should give 100%" >> {
       DynamicRunnablePassengerLoads.validApiPercentage(Seq()) === 100d
     }

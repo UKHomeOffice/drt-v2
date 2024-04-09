@@ -13,16 +13,23 @@ import uk.gov.homeoffice.drt.ports._
 
 
 object FlightComponents {
-  def paxFeedSourceClass(paxSource: PaxSource): String = (paxSource.feedSource) match {
-    case ApiFeedSource => "pax-rag-green"
-    case LiveFeedSource => "pax-rag-green"
-    case HistoricApiFeedSource => "pax-rag-amber"
-    case ForecastFeedSource => "pax-rag-amber"
-    case AclFeedSource => "pax-rag-red"
-    case _ => "pax-rag-red"
-  }
+  def paxFeedSourceClass(paxSource: PaxSource, isDomesticOrCta: Boolean): String =
+    if (isDomesticOrCta)
+      "pax-rag-cta"
+    else
+      paxSource.feedSource match {
+        case ApiFeedSource => "pax-rag-green"
+        case LiveFeedSource => "pax-rag-green"
+        case HistoricApiFeedSource => "pax-rag-amber"
+        case ForecastFeedSource => "pax-rag-amber"
+        case AclFeedSource => "pax-rag-red"
+        case _ => "pax-rag-red"
+      }
 
-  def paxComp(flightWithSplits: ApiFlightWithSplits, directRedListFlight: DirectRedListFlight, noPcpPax: Boolean, paxFeedSourceOrder: List[FeedSource]): TagMod = {
+  def paxComp(flightWithSplits: ApiFlightWithSplits,
+              directRedListFlight: DirectRedListFlight,
+              noPcpPax: Boolean,
+              paxFeedSourceOrder: List[FeedSource]): TagMod = {
     val isNotApiData = if (flightWithSplits.hasValidApi) "" else "notApiData"
     val noPcpPaxClass = if (noPcpPax || directRedListFlight.outgoingDiversion) "arrivals__table__flight__no-pcp-pax" else ""
 
@@ -31,7 +38,9 @@ object FlightComponents {
       else if (directRedListFlight.outgoingDiversion) "arrivals__table__flight__pcp-pax__outgoing"
       else ""
 
-    val pcpPaxNumber = if (!flightWithSplits.apiFlight.Origin.isDomesticOrCta) flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a") else "-"
+    val pcpPaxNumber = if (!flightWithSplits.apiFlight.Origin.isDomesticOrCta)
+      flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")
+    else "-"
 
     <.div(
       ^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",

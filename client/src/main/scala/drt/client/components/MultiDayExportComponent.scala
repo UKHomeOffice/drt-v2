@@ -3,16 +3,15 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.SPAMain
 import drt.client.components.TerminalContentComponent.exportLink
-import drt.client.components.styles.{DefaultFormFieldsStyle, WithScalaCssImplicits}
+import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.util.DateUtil.isNotValidDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.redlist.LhrRedListDatesImpl
+import drt.shared.redlist.LhrRedListDatesImpl.{overlapsRedListDates, dayHasPaxDiversions, isRedListActive}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormLabel, MuiGrid, MuiTextField}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiTextField}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.component.Scala.Component
@@ -38,9 +37,11 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
   case class State(startDate: StateDate, endDate: StateDate, showDialogue: Boolean = false) extends UseValueEq {
 
-    def setStart(dateString: String, isNotValid: Boolean): State = if (isNotValid) copy(startDate = StateDate(startDate.date, isNotValid = true)) else copy(startDate = StateDate(LocalDate.parse(dateString).getOrElse(startDate.date)))
+    def setStart(dateString: String, isNotValid: Boolean): State =
+      copy(startDate = StateDate(LocalDate.parse(dateString).getOrElse(startDate.date), isNotValid))
 
-    def setEnd(dateString: String, isNotValid: Boolean): State = if (isNotValid) copy(endDate = StateDate(endDate.date, isNotValid = true)) else copy(endDate = StateDate(LocalDate.parse(dateString).getOrElse(endDate.date)))
+    def setEnd(dateString: String, isNotValid: Boolean): State =
+      copy(endDate = StateDate(LocalDate.parse(dateString).getOrElse(endDate.date), isNotValid))
 
     def startMillis: MillisSinceEpoch = SDate(startDate.date).millisSinceEpoch
 
@@ -74,23 +75,12 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
       val setStartDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
-        isNotValidDate(e.target.value) match {
-          case true =>
-            scope.modState(_.setStart(e.target.value, true))
-
-          case _ =>
-            scope.modState(_.setStart(e.target.value, false))
-        }
+        scope.modState(_.setStart(e.target.value, isNotValid = isNotValidDate(e.target.value)))
       }
 
       val setEndDate: ReactEventFromInput => CallbackTo[Unit] = e => {
         e.persist()
-        isNotValidDate(e.target.value) match {
-          case true =>
-            scope.modState(_.setEnd(e.target.value, true))
-          case _ =>
-            scope.modState(_.setEnd(e.target.value, false))
-        }
+        scope.modState(_.setEnd(e.target.value, isNotValid = isNotValidDate(e.target.value)))
       }
 
       def showDialogue(event: Event): Callback = {
@@ -137,8 +127,10 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
 
                       if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
                         val exports = props.portCode match {
-                          case PortCode("LHR") if LhrRedListDatesImpl.dayHasPaxDiversions(SDate(state.endDate.date)) =>
-                            List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"), ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
+                          case PortCode("LHR") if overlapsRedListDates(SDate(state.startDate.date), SDate(state.endDate.date))
+                            && dayHasPaxDiversions(SDate(state.endDate.date)) =>
+                            List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"),
+                              ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
                           case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
                           case _ => List(ExportArrivals)
                         }
@@ -185,5 +177,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       )
     )
 
-  def apply(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement = component(Props(portCode, terminal, viewMode, selectedDate, loggedInUser: LoggedInUser))
+  def apply(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement =
+    component(Props(portCode, terminal, viewMode, selectedDate, loggedInUser: LoggedInUser))
 }

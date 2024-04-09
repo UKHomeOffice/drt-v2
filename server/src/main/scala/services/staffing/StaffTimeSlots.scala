@@ -2,7 +2,7 @@ package services.staffing
 
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.graphstages.Crunch
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.util.{Success, Try}
@@ -36,12 +36,12 @@ object StaffTimeSlots {
   }
 
   def replaceShiftMonthWithTimeSlotsForMonth(existingShifts: ShiftAssignments, slots: StaffTimeSlotsForTerminalMonth): ShiftAssignments = {
-    val slotSdate = SDate(slots.monthMillis, Crunch.europeLondonTimeZone)
+    val slotSdate = SDate(slots.monthMillis, europeLondonTimeZone)
 
     val shiftsExcludingNewMonth = existingShifts
       .assignments
       .filterNot(assignment => {
-        val assignmentSdate = SDate(assignment.start, Crunch.europeLondonTimeZone)
+        val assignmentSdate = SDate(assignment.start, europeLondonTimeZone)
         val sameMonth = assignmentSdate.getMonth == slotSdate.getMonth
         val sameYear = assignmentSdate.getFullYear == slotSdate.getFullYear
         val sameTerminal = assignment.terminal == slots.terminalName
@@ -54,7 +54,7 @@ object StaffTimeSlots {
   def getShiftsForMonth(shifts: ShiftAssignments, month: SDateLike): ShiftAssignments = {
     val assignmentsForMonth = shifts.assignments
       .filter(assignment => {
-        val assignmentSdate = SDate(assignment.start, Crunch.europeLondonTimeZone)
+        val assignmentSdate = SDate(assignment.start, europeLondonTimeZone)
         assignmentSdate.getMonth == month.getMonth && assignmentSdate.getFullYear == month.getFullYear
       })
 

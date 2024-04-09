@@ -1,17 +1,32 @@
 package controllers.application
 
+import akka.actor.ActorSystem
+import akka.stream.Materializer
 import email.GovNotifyEmail
 import module.DRTModule
+import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
 import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 
-class DropInsControllerSpec extends PlaySpec with MockitoSugar {
+import scala.concurrent.ExecutionContext
+
+class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAfterAll {
+  implicit val system: ActorSystem = akka.actor.ActorSystem("test")
+  implicit val mat: Materializer = Materializer(system)
+  implicit val ec: ExecutionContext = system.dispatcher
+
+  override def afterAll(): Unit = {
+    system.terminate()
+    super.afterAll()
+  }
+
+  val controller: DropInsController = dropInSessionsController
   "DropInsController" should {
     "get published drop-ins" in {
-      val controller: DropInsController = dropInSessionsController
 
       val result = controller.dropIns().apply(FakeRequest())
 
@@ -25,7 +40,6 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar {
     }
 
     "get drop-ins in registration" in {
-      val controller: DropInsController = dropInSessionsController
 
       val result = controller.getDropInRegistrations().apply(FakeRequest())
 
@@ -39,7 +53,6 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar {
     }
 
     "create drop-ins registration" in {
-      val controller: DropInsController = dropInSessionsController
 
       val result = controller.createDropInRegistration().apply(FakeRequest().withTextBody(""""1"""")
         .withHeaders("X-Auth-Email" -> "someone@test.com", "X-Auth-Roles" -> "border-force-staff,TEST"))
@@ -55,7 +68,7 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar {
       override val isTestEnvironment: Boolean = true
     }
 
-    val drtSystemInterface: DrtSystemInterface = module.provideDrtSystemInterface
+    val drtSystemInterface: DrtSystemInterface = TestDrtSystem(module.drtConfigSystem.airportConfig, module.drtParameter, module.now)
 
     val govNotify = mock[GovNotifyEmail]
 

@@ -8,7 +8,6 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.TestProbe
 import drt.server.feeds.common.HttpClient
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
-import drt.shared.FlightsApi.Flights
 import org.mockito.Mockito.{times, verify}
 import org.specs2.mock.Mockito
 import services.crunch.CrunchTestLike
@@ -16,8 +15,7 @@ import services.crunch.CrunchTestLike
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-case class MockHttpClient(probeActor: ActorRef)
-                         (implicit system: ActorSystem) extends HttpClient {
+case class MockHttpClient(probeActor: ActorRef) extends HttpClient {
   def sendRequest(httpRequest: HttpRequest): Future[HttpResponse] = {
     probeActor ! httpRequest
     Future.successful(HttpResponse(entity = HttpEntity(ContentTypes.`text/xml(UTF-8)`, "")))
@@ -35,7 +33,7 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
     val feed = LCYFeed(lcyClient, Feed.actorRefSource)
 
     val feedProbe = TestProbe()
-    val actorSource = feed.take(2).to(Sink.actorRef(feedProbe.ref, NotUsed)).run
+    val actorSource = feed.take(2).to(Sink.actorRef(feedProbe.ref, NotUsed)).run()
     Source(1 to 2).map(_ => actorSource ! Feed.Tick).run()
 
     callProbe.receiveN(2)
@@ -47,7 +45,7 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
   "Given a request for a full refresh of all flights success , it keeps polling for update" >> {
     val lcyClient = mock[LCYClient]
 
-    val arrivalsSuccess = ArrivalsFeedSuccess(Flights(List()))
+    val arrivalsSuccess = ArrivalsFeedSuccess(List())
 
     lcyClient.initialFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)
     lcyClient.updateFlights(anyObject[ActorSystem], anyObject[Materializer]) returns Future(arrivalsSuccess)
@@ -55,7 +53,7 @@ class LCYFeedSpec extends CrunchTestLike with Mockito {
     val feed = LCYFeed(lcyClient, Feed.actorRefSource)
 
     val probe = TestProbe()
-    val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run
+    val actorSource = feed.take(4).to(Sink.actorRef(probe.ref, NotUsed)).run()
     Source(1 to 4).map(_ => actorSource ! Feed.Tick).run().foreach { _ =>
       verify(lcyClient, times(1)).initialFlights(anyObject[ActorSystem], anyObject[Materializer])
       verify(lcyClient, times(3)).updateFlights(anyObject[ActorSystem], anyObject[Materializer])

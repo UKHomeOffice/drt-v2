@@ -2,14 +2,11 @@ package drt.server.feeds.lcy
 
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshaller}
-import drt.server.feeds.Implicits._
-import drt.server.feeds.common.FlightStatus
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.arrivals.{Arrival, Passengers, Predictions}
-import uk.gov.homeoffice.drt.ports.LiveFeedSource
+import uk.gov.homeoffice.drt.arrivals.{FeedArrival, LiveArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable
 import scala.xml.{Node, NodeSeq}
@@ -155,7 +152,7 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
   }
 
   def maybeNodeText(n: NodeSeq): Option[String] = n.text match {
-    case t if t.length > 0 => Option(t)
+    case t if t.nonEmpty => Option(t)
     case _ => None
   }
 
@@ -164,28 +161,26 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
     case _ => None
   }
 
-  def lcyFlightToArrival(f: LCYFlight): Arrival = Arrival(
-    Operator = f.airline,
-    Status = FlightStatus(f.status),
-    Estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
-    Predictions = Predictions(0L, Map()),
-    Actual = maybeTimeStringToMaybeMillis(f.actualTouchDown),
-    EstimatedChox = None,
-    ActualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),
-    Gate = f.passengerGate,
-    Stand = f.aircraftParkingPosition,
-    MaxPax = f.seatCapacity,
-    RunwayID = None,
-    BaggageReclaimId = None,
-    AirportID = f.arrivalAirport,
-    Terminal = Terminal(f.aircraftTerminal),
-    rawICAO = f.airline + f.flightNumber,
-    rawIATA = f.airline + f.flightNumber,
-    Origin = f.departureAirport,
-    Scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
-    PcpTime = None,
-    FeedSources = Set(LiveFeedSource),
-    PassengerSources = Map(LiveFeedSource -> Passengers(f.paxCount, None))
+  def lcyFlightToArrival(f: LCYFlight): FeedArrival = LiveArrival(
+    operator = Option(f.airline),
+    maxPax = f.seatCapacity,
+    totalPax = f.paxCount,
+    transPax = None,
+    terminal = Terminal(f.aircraftTerminal),
+    voyageNumber = f.flightNumber.toInt,
+    carrierCode = f.airline,
+    flightCodeSuffix = None,
+    origin = f.departureAirport,
+    scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
+    estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
+    touchdown = maybeTimeStringToMaybeMillis(f.actualTouchDown),
+    estimatedChox = None,
+    actualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),
+    status = f.status,
+    gate = f.passengerGate,
+    stand = f.aircraftParkingPosition,
+    runway = None,
+    baggageReclaim = None,
   )
 
 

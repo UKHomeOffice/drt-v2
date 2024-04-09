@@ -1,6 +1,6 @@
 package actors.persistent.staffing
 
-import actors.DrtStaticParameters.timeBeforeThisMonth
+import actors.DrtStaticParameters.startOfTheMonth
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
 import actors.persistent.staffing.ShiftsActor.applyUpdatedShifts
@@ -14,13 +14,13 @@ import akka.util.Timeout
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable
@@ -31,7 +31,7 @@ case object GetFeedStatuses
 
 trait ShiftUpdate
 
-case class SetShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
+case class ReplaceAllShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
 case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
@@ -50,7 +50,7 @@ trait ShiftsActorLike {
       case m: ShiftsMessage =>
         val shiftsToRecover = shiftMessagesToStaffAssignments(m.shifts)
         val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
-        val newState = ShiftAssignments(updatedShifts).purgeExpired(timeBeforeThisMonth(now))
+        val newState = ShiftAssignments(updatedShifts).purgeExpired(startOfTheMonth(now))
         val subscriberEvents = terminalUpdateRequests(shiftsToRecover, minutesToCrunch)
         (newState, subscriberEvents)
       case _ => (state, Seq.empty)
@@ -59,7 +59,7 @@ trait ShiftsActorLike {
   val query: (() => SDateLike) => (() => ShiftAssignments, () => ActorRef) => PartialFunction[Any, Unit] =
     now => (getState, getSender) => {
       case GetState =>
-        getSender() ! getState().purgeExpired(timeBeforeThisMonth(now))
+        getSender() ! getState().purgeExpired(startOfTheMonth(now))
 
       case TerminalUpdateRequest(terminal, localDate, _, _) =>
         val assignmentsForDate = ShiftAssignments(getState().assignments.filter { assignment =>
@@ -97,6 +97,7 @@ trait ShiftsActorLike {
 }
 
 object ShiftsActor extends ShiftsActorLike {
+  val snapshotInterval = 5000
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = shiftsToUpdate
@@ -114,20 +115,20 @@ object ShiftsActor extends ShiftsActorLike {
                            )
                            (implicit timeout: Timeout): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
-      val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore)), "shifts-actor-writes")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
-
 }
 
 
 class ShiftsActor(val now: () => SDateLike,
-                  val expireBefore: () => SDateLike) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
+                  val expireBefore: () => SDateLike,
+                  val snapshotInterval: Int,
+                 ) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
-  val snapshotInterval = 5000
   override val maybeSnapshotInterval: Option[Int] = Option(snapshotInterval)
 
   override def persistenceId: String = ShiftsActor.persistenceId
@@ -138,7 +139,14 @@ class ShiftsActor(val now: () => SDateLike,
 
   import ShiftsMessageParser._
 
-  override def stateToMessage: GeneratedMessage = ShiftStateSnapshotMessage(staffAssignmentsToShiftsMessages(state, now()))
+  override def stateToMessage: GeneratedMessage = {
+    terminalDays.foreach {
+      case (terminal, shiftCount, days) =>
+        log.info(s"ShiftsActor stateToMessage: $shiftCount shifts for $terminal, ${days.mkString(", ")}")
+    }
+
+    ShiftStateSnapshotMessage(staffAssignmentsToShiftsMessages(state, now()))
+  }
 
   def updateState(shifts: ShiftAssignments): Unit = state = shifts
 
@@ -157,6 +165,20 @@ class ShiftsActor(val now: () => SDateLike,
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
   }
+
+  override def postRecoveryComplete(): Unit = terminalDays.foreach {
+    case (terminal, shiftCount, days) =>
+      log.info(s"ShiftsActor recovered: $shiftCount shifts for $terminal, ${days.mkString(", ")}")
+  }
+
+  def terminalDays: immutable.Iterable[(Terminal, Int, Seq[String])] = state.assignments
+    .groupBy(_.terminal)
+    .map { case (terminal, assignments) =>
+      val days = assignments
+        .groupBy(a => SDate(a.start).toISODateOnly)
+        .keys
+      (terminal, assignments.size, days.toSeq.sorted)
+    }
 
   def receiveCommand: Receive = {
     case GetState =>
@@ -182,7 +204,7 @@ class ShiftsActor(val now: () => SDateLike,
         (sender(), StatusReply.Ack),
       ))
 
-    case SetShifts(newShiftAssignments) =>
+    case ReplaceAllShifts(newShiftAssignments) =>
       if (newShiftAssignments != state) {
         log.info(s"Replacing shifts state with ${newShiftAssignments.size} shifts")
         purgeExpiredAndUpdateState(ShiftAssignments(newShiftAssignments))
@@ -256,7 +278,7 @@ object ShiftsMessageParser {
     for {
       (d, m, y) <- maybeDayMonthYear
       (hr, min) <- maybeHourMinute
-    } yield SDate(y, m, d, hr, min, Crunch.europeLondonTimeZone)
+    } yield SDate(y, m, d, hr, min, europeLondonTimeZone)
   }
 
   private def shiftMessageToStaffAssignmentv2(shiftMessage: ShiftMessage): Option[StaffAssignment] = Option(StaffAssignment(

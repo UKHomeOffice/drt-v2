@@ -7,5 +7,5 @@ object DrtStaticParameters {
 
   def time48HoursAgo(now: () => SDateLike): () => SDateLike = () => now().addDays(-2)
 
-  def timeBeforeThisMonth(now: () => SDateLike): () => SDateLike = () => now().startOfTheMonth
+  def startOfTheMonth(now: () => SDateLike): () => SDateLike = () => now().startOfTheMonth
 }
