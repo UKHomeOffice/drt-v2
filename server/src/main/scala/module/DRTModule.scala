@@ -14,7 +14,7 @@ import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, FixedPointsServiceImpl, ShiftsService, ShiftsServiceImpl, StaffMovementsService, StaffMovementsServiceImpl}
+import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
 import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -95,6 +95,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   def provideShiftsService: ShiftsService = ShiftsServiceImpl(
     provideDrtSystemInterface.actorService.liveShiftsReadActor,
     provideDrtSystemInterface.actorService.shiftsSequentialWritesActor,
+    ShiftsServiceImpl.pitActor,
   )
 
   @Provides
@@ -102,7 +103,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   def provideFixedPointsService: FixedPointsService = FixedPointsServiceImpl(
     provideDrtSystemInterface.actorService.liveFixedPointsReadActor,
     provideDrtSystemInterface.actorService.fixedPointsSequentialWritesActor,
-    provideDrtSystemInterface.now,
+    FixedPointsServiceImpl.pitActor,
   )
 
   @Provides
@@ -110,6 +111,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   def provideStaffMovementsService: StaffMovementsService = StaffMovementsServiceImpl(
     provideDrtSystemInterface.actorService.liveStaffMovementsReadActor,
     provideDrtSystemInterface.actorService.staffMovementsSequentialWritesActor,
+    StaffMovementsServiceImpl.pitActor,
   )
 
   @Provides

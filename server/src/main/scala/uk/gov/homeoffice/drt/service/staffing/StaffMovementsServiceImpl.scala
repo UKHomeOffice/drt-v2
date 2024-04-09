@@ -1,6 +1,5 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.staffing.{AddStaffMovements, RemoveStaffMovements, StaffMovementsReadActor}
 import akka.Done
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
@@ -15,10 +14,23 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
+object StaffMovementsServiceImpl {
+  def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
+    val actorName = "movements-read-actor-" + UUID.randomUUID().toString
+    val expireBefore = () => pointInTime.addDays(-1)
+    system.actorOf(Props(
+      classOf[StaffMovementsReadActor],
+      pointInTime,
+      expireBefore,
+    ), actorName)
+  }
+}
+
 case class StaffMovementsServiceImpl(liveMovementsActor: ActorRef,
                                      movementsWriteActor: ActorRef,
+                                     pitActor: SDateLike => ActorRef,
                                     )
-                                    (implicit timeout: Timeout, ec: ExecutionContext, system: ActorSystem) extends StaffMovementsService {
+                                    (implicit timeout: Timeout, ec: ExecutionContext) extends StaffMovementsService {
   private val log = LoggerFactory.getLogger(getClass)
 
   override def movementsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[Seq[StaffMovement]] = {
@@ -44,16 +56,11 @@ case class StaffMovementsServiceImpl(liveMovementsActor: ActorRef,
   }
 
   private def movementsForPointInTime(pointInTime: SDateLike): Future[Seq[StaffMovement]] = {
-    val actorName = "movements-read-actor-" + UUID.randomUUID().toString
-    val expireBefore = () => pointInTime.addDays(-1)
-    val movementsReadActor: ActorRef = system.actorOf(Props(
-      classOf[StaffMovementsReadActor],
-      pointInTime,
-      expireBefore,
-    ), actorName)
+    val movementsReadActor = pitActor(pointInTime)
 
     movementsReadActor.ask(GetState)
-      .map { case mm: StaffMovements =>
+      .mapTo[StaffMovements]
+      .map { mm =>
         movementsReadActor ! PoisonPill
         mm.forDay(pointInTime.toLocalDate)(ld => SDate(ld))
       }

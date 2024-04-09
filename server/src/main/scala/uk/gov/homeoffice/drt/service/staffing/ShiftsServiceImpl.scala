@@ -17,10 +17,19 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
+
+object ShiftsServiceImpl {
+  def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
+    val actorName = "shifts-read-actor-" + UUID.randomUUID().toString
+    system.actorOf(ShiftsReadActor.props(pointInTime, time48HoursAgo(() => pointInTime)), actorName)
+  }
+}
+
 case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
                              shiftsWriteActor: ActorRef,
+                             pitActor: SDateLike => ActorRef,
                             )
-                            (implicit timeout: Timeout, ec: ExecutionContext, system: ActorSystem) extends ShiftsService {
+                            (implicit timeout: Timeout, ec: ExecutionContext) extends ShiftsService {
   private val log = LoggerFactory.getLogger(getClass)
 
   override def shiftsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = {
@@ -36,11 +45,11 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
   override def shiftsForMonth(month: MillisSinceEpoch): Future[MonthOfShifts] =
     liveShiftsActor
       .ask(GetState)
-      .collect {
-        case shifts: ShiftAssignments =>
-          log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString}")
-          val monthInLocalTime = SDate(month, europeLondonTimeZone)
-          MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
+      .mapTo[ShiftAssignments]
+      .map { shifts =>
+        log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString}")
+        val monthInLocalTime = SDate(month, europeLondonTimeZone)
+        MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
       }
 
   private def liveShiftsForDate(date: LocalDate): Future[ShiftAssignments] = {
@@ -56,8 +65,7 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
   }
 
   private def shiftsForPointInTime(pointInTime: SDateLike): Future[ShiftAssignments] = {
-    val actorName = "shifts-read-actor-" + UUID.randomUUID().toString
-    val shiftsReadActor: ActorRef = system.actorOf(ShiftsReadActor.props(pointInTime, time48HoursAgo(() => pointInTime)), actorName)
+    val shiftsReadActor: ActorRef = pitActor(pointInTime)
 
     val start = pointInTime.getLocalLastMidnight.millisSinceEpoch
     val end = pointInTime.getLocalNextMidnight.addMinutes(-1).millisSinceEpoch

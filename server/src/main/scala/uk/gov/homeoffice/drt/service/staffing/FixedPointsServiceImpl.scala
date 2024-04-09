@@ -13,11 +13,22 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
+object FixedPointsServiceImpl {
+  def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
+    val actorName = "fixed-points-read-actor-" + UUID.randomUUID().toString
+    system.actorOf(Props(
+      classOf[FixedPointsReadActor],
+      pointInTime,
+      () => SDate.now(),
+    ), actorName)
+  }
+}
+
 case class FixedPointsServiceImpl(liveFixedPointsActor: ActorRef,
                                   fixedPointsWriteActor: ActorRef,
-                                  now: () => SDateLike,
+                                  pointInTimeActor: SDateLike => ActorRef,
                                  )
-                                 (implicit timeout: Timeout, ec: ExecutionContext, system: ActorSystem) extends FixedPointsService {
+                                 (implicit timeout: Timeout, ec: ExecutionContext) extends FixedPointsService {
   private val log = LoggerFactory.getLogger(getClass)
 
   import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
@@ -42,13 +53,8 @@ case class FixedPointsServiceImpl(liveFixedPointsActor: ActorRef,
       }
   }
 
-  private def fixedPointsForPointInTime(date: SDateLike): Future[FixedPointAssignments] = {
-    val actorName = "fixed-points-read-actor-" + UUID.randomUUID().toString
-    val fixedPointsReadActor: ActorRef = system.actorOf(Props(
-      classOf[FixedPointsReadActor],
-      date,
-      now,
-    ), actorName)
+  private def fixedPointsForPointInTime(pointInTime: SDateLike): Future[FixedPointAssignments] = {
+    val fixedPointsReadActor: ActorRef = pointInTimeActor(pointInTime)
 
     fixedPointsReadActor.ask(GetState)
       .map { case sa: FixedPointAssignments =>
