@@ -198,7 +198,7 @@ object Settings {
     "org.mockito" % "mockito-core" % mockitoVersion % Test,
     "org.scalatestplus.play" %% "scalatestplus-play" % scalatestplusPlay % Test,
     "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
-    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
+    "org.webjars" % "font-awesome" % "6.5.2" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "io.netty" % "netty-all" % nettyAll,
