@@ -44,6 +44,8 @@ sealed trait ViewMode {
   def isLive: Boolean
 
   def isHistoric(now: SDateLike): Boolean
+
+  def maybePointInTime: Option[MillisSinceEpoch]
 }
 
 case object ViewLive extends ViewMode {
@@ -52,6 +54,8 @@ case object ViewLive extends ViewMode {
   override val isLive: Boolean = true
 
   override def isHistoric(now: SDateLike): Boolean = false
+
+  override def maybePointInTime: Option[MillisSinceEpoch] = None
 }
 
 case class ViewDay(localDate: LocalDate, timeMachineDate: Option[SDateLike]) extends ViewMode {
@@ -60,6 +64,8 @@ case class ViewDay(localDate: LocalDate, timeMachineDate: Option[SDateLike]) ext
   override val isLive: Boolean = if (liveToday) true else false
 
   override def isHistoric(now: SDateLike): Boolean = timeMachineDate.nonEmpty || dateTime.isHistoricDate(now)
+
+  override def maybePointInTime: Option[MillisSinceEpoch] = timeMachineDate.map(_.millisSinceEpoch)
 }
 
 sealed trait ExportType {

@@ -57,7 +57,7 @@ DELETE        /sla-configs/:effectiveFrom                                       
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 
-GET           /shifts                                                                 controllers.application.StaffingController.getShifts
+GET           /shifts/:localDate                                                      controllers.application.StaffingController.getShifts(localDate: String)
 POST          /shifts                                                                 controllers.application.StaffingController.saveShifts
 GET           /shifts-for-month/:monthMillis                                          controllers.application.StaffingController.getShiftsForMonth(monthMillis: Long)
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints

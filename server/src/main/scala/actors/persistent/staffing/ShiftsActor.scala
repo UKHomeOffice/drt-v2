@@ -1,6 +1,7 @@
 package actors.persistent.staffing
 
 import actors.DrtStaticParameters.startOfTheMonth
+import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
 import actors.persistent.staffing.ShiftsActor.applyUpdatedShifts
@@ -60,6 +61,9 @@ trait ShiftsActorLike {
     now => (getState, getSender) => {
       case GetState =>
         getSender() ! getState().purgeExpired(startOfTheMonth(now))
+
+      case GetStateForDateRange(from, to) =>
+        getSender() ! ShiftAssignments(getState().assignments.filter(a => from <= a.start && a.end <= to))
 
       case TerminalUpdateRequest(terminal, localDate, _, _) =>
         val assignmentsForDate = ShiftAssignments(getState().assignments.filter { assignment =>

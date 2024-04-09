@@ -9,9 +9,7 @@ import com.google.inject.Inject
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import drt.server.feeds.FeedPoller.AdhocCheck
-import drt.server.feeds.Implicits._
-import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
-import drt.shared.FlightsApi.Flights
+import drt.server.feeds.{DqManifests, ManifestsFeedSuccess}
 import drt.shared.ShiftAssignments
 import drt.staff.ImportStaff
 import module.NoCSRFAction
@@ -21,9 +19,9 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import play.api.http.HeaderNames
 import play.api.mvc._
 import spray.json._
-import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FlightCode, LiveArrival, Passengers, Predictions}
+import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightCode, LiveArrival}
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.testsystem.MockRoles.MockRolesProtocol._
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 import uk.gov.homeoffice.drt.testsystem.feeds.test.CSVFixtures
@@ -167,7 +165,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
         maybeShifts match {
           case Some(shifts) =>
             log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
-            ctrl.applicationService.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
+            ctrl.actorService.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
             Created
           case _ =>
             BadRequest("{\"error\": \"Unable to parse data\"}")

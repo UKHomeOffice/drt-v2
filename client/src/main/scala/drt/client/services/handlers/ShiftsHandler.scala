@@ -30,10 +30,8 @@ class ShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, P
       noChange
 
     case GetShifts(viewMode) =>
-      val url = if (viewMode.isHistoric(SDate.now()))
-        s"shifts?pointInTime=${viewMode.millis}"
-      else
-        "shifts"
+      val url = s"shifts/${viewMode.localDate.toISOString}" +
+        viewMode.maybePointInTime.map(pit => s"?pointInTime=$pit").getOrElse("")
 
       val apiCallEffect: EffectSingle[Action] = Effect(
         DrtApi.get(url)

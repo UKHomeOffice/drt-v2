@@ -1,11 +1,9 @@
 package uk.gov.homeoffice.drt.service
 
 import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber}
-import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors._
 import actors.daily.PassengersActor
 import actors.persistent._
-import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
@@ -175,13 +173,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
     airportConfig.crunchOffsetMinutes,
     airportConfig.minutesToCrunch,
     params.forecastMaxDays)), "egate-banks-updates-actor")
-
-  val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
-    now, startOfTheMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
-  val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
-    now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
-  val staffMovementsSequentialWritesActor: ActorRef = system.actorOf(StaffMovementsActor.sequentialWritesProps(
-    now, time48HoursAgo(now), requestAndTerminateActor, system), "staff-movements-sequential-writes-actor")
 
   lazy val flightsProvider: FlightsProvider = FlightsProvider(actorService.flightsRouterActor)
 

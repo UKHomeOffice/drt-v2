@@ -13,6 +13,8 @@ import email.GovNotifyEmail
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
+import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, FixedPointsServiceImpl, ShiftsService, ShiftsServiceImpl, StaffMovementsService, StaffMovementsServiceImpl}
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
 import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -20,11 +22,13 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import javax.inject.Singleton
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+
+
 class DRTModule extends AbstractModule with AkkaGuiceSupport {
   val config: Configuration = new Configuration(ConfigFactory.load)
 
   val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
-  val airportConfig = DrtActorSystem.airportConfig
+  val airportConfig: AirportConfig = DrtActorSystem.airportConfig
 
   lazy val mockDrtParameters: MockDrtParameters = MockDrtParameters()
 
@@ -85,6 +89,28 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
     else
       drtProdSystem
   }
+
+  @Provides
+  @Singleton
+  def provideShiftsService: ShiftsService = ShiftsServiceImpl(
+    provideDrtSystemInterface.actorService.liveShiftsReadActor,
+    provideDrtSystemInterface.actorService.shiftsSequentialWritesActor,
+  )
+
+  @Provides
+  @Singleton
+  def provideFixedPointsService: FixedPointsService = FixedPointsServiceImpl(
+    provideDrtSystemInterface.actorService.liveFixedPointsReadActor,
+    provideDrtSystemInterface.actorService.fixedPointsSequentialWritesActor,
+    provideDrtSystemInterface.now,
+  )
+
+  @Provides
+  @Singleton
+  def provideStaffMovementsService: StaffMovementsService = StaffMovementsServiceImpl(
+    provideDrtSystemInterface.actorService.liveStaffMovementsReadActor,
+    provideDrtSystemInterface.actorService.staffMovementsSequentialWritesActor,
+  )
 
   @Provides
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(config.get[String]("notifications.gov-notify-api-key"))
