@@ -7,7 +7,6 @@ import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.{MonthOfShifts, ShiftAssignments, StaffAssignmentLike}
-import org.slf4j.LoggerFactory
 import services.staffing.StaffTimeSlots
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
@@ -30,8 +29,6 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
                              pitActor: SDateLike => ActorRef,
                             )
                             (implicit timeout: Timeout, ec: ExecutionContext) extends ShiftsService {
-  private val log = LoggerFactory.getLogger(getClass)
-
   override def shiftsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = {
     maybePointInTime match {
       case None =>
@@ -47,7 +44,6 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
       .ask(GetState)
       .mapTo[ShiftAssignments]
       .map { shifts =>
-        log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString}")
         val monthInLocalTime = SDate(month, europeLondonTimeZone)
         MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
       }
@@ -57,11 +53,6 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
     val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
     liveShiftsActor.ask(GetStateForDateRange(start, end))
       .map { case sa: ShiftAssignments => sa }
-      .recoverWith {
-        case t =>
-          log.error(s"Error getting shifts for $date: ${t.getMessage}")
-          Future(ShiftAssignments.empty)
-      }
   }
 
   private def shiftsForPointInTime(pointInTime: SDateLike): Future[ShiftAssignments] = {
@@ -76,9 +67,9 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
         sa
       }
       .recoverWith {
-        case _ =>
+        case t =>
           shiftsReadActor ! PoisonPill
-          Future(ShiftAssignments.empty)
+          throw t
       }
   }
 

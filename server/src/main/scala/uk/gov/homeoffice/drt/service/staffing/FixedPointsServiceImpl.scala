@@ -6,7 +6,6 @@ import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{FixedPointAssignments, StaffAssignmentLike}
-import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -29,9 +28,6 @@ case class FixedPointsServiceImpl(liveFixedPointsActor: ActorRef,
                                   pointInTimeActor: SDateLike => ActorRef,
                                  )
                                  (implicit timeout: Timeout, ec: ExecutionContext) extends FixedPointsService {
-  private val log = LoggerFactory.getLogger(getClass)
-
-  import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 
   override def fixedPoints(maybePointInTime: Option[MillisSinceEpoch]): Future[FixedPointAssignments] = {
     maybePointInTime match {
@@ -43,15 +39,9 @@ case class FixedPointsServiceImpl(liveFixedPointsActor: ActorRef,
     }
   }
 
-  private def liveFixedPointsForDate(): Future[FixedPointAssignments] = {
+  private def liveFixedPointsForDate(): Future[FixedPointAssignments] =
     liveFixedPointsActor.ask(GetState)
       .map { case sa: FixedPointAssignments => sa }
-      .recoverWith {
-        case t =>
-          log.error(s"Error getting fixedPoints: ${t.getMessage}")
-          Future(FixedPointAssignments.empty)
-      }
-  }
 
   private def fixedPointsForPointInTime(pointInTime: SDateLike): Future[FixedPointAssignments] = {
     val fixedPointsReadActor: ActorRef = pointInTimeActor(pointInTime)
@@ -62,9 +52,9 @@ case class FixedPointsServiceImpl(liveFixedPointsActor: ActorRef,
         sa
       }
       .recoverWith {
-        case _ =>
+        case t =>
           fixedPointsReadActor ! PoisonPill
-          Future(FixedPointAssignments.empty)
+          throw t
       }
   }
 

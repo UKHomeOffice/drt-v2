@@ -6,7 +6,6 @@ import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import akka.util.Timeout
 import drt.shared.{StaffMovement, StaffMovements}
-import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
@@ -31,8 +30,6 @@ case class StaffMovementsServiceImpl(liveMovementsActor: ActorRef,
                                      pitActor: SDateLike => ActorRef,
                                     )
                                     (implicit timeout: Timeout, ec: ExecutionContext) extends StaffMovementsService {
-  private val log = LoggerFactory.getLogger(getClass)
-
   override def movementsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[Seq[StaffMovement]] = {
     maybePointInTime match {
       case None =>
@@ -48,11 +45,6 @@ case class StaffMovementsServiceImpl(liveMovementsActor: ActorRef,
       .ask(GetState)
       .mapTo[StaffMovements]
       .map(_.forDay(date)(ld => SDate(ld)))
-      .recoverWith {
-        case t =>
-          log.error(s"Error getting movements for $date: ${t.getMessage}")
-          Future(Seq.empty)
-      }
   }
 
   private def movementsForPointInTime(pointInTime: SDateLike): Future[Seq[StaffMovement]] = {
@@ -65,9 +57,9 @@ case class StaffMovementsServiceImpl(liveMovementsActor: ActorRef,
         mm.forDay(pointInTime.toLocalDate)(ld => SDate(ld))
       }
       .recoverWith {
-        case _ =>
+        case t =>
           movementsReadActor ! PoisonPill
-          Future(Seq.empty)
+          throw t
       }
   }
 
