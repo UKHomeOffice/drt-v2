@@ -119,7 +119,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   val setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]] = arrivals =>
     Future.successful(arrivals.map(a => a.copy(PcpTime = Option(pcpArrivalTimeCalculator(a).millisSinceEpoch))))
 
-  private val manifestsRouterActorReadOnly: ActorRef =
+  val manifestsRouterActorReadOnly: ActorRef =
     system.actorOf(
       Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)),
       name = "voyage-manifests-router-actor-read-only")
