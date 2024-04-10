@@ -8,21 +8,22 @@ import play.api.test.{FakeRequest, Helpers}
 class EgateBanksControllerSpec extends PlaySpec {
 
   "EgateBanksController" should {
+    val module = new DRTModule() {
+      override val isTestEnvironment: Boolean = true
+    }
+
+    val drtSystemInterface = module.provideDrtSystemInterface
 
     "get port e-gate details updates" in {
 
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-      }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
-
       val controller = new EgateBanksController(Helpers.stubControllerComponents(), drtSystemInterface)
 
-      val result = controller.getEgateBanksUpdates.apply(FakeRequest().withHeaders("X-Auth-Email" -> "test@test.com",
+      val request = FakeRequest().withHeaders("X-Auth-Email" -> "test@test.com",
         "X-Auth-Username" -> "test",
         "X-Auth-Userid" -> "test",
-        "X-Auth-Roles" -> s"TEST"))
+        "X-Auth-Roles" -> s"TEST")
+
+      val result = controller.getEgateBanksUpdates.apply(request)
 
       status(result) mustBe OK
 

@@ -18,16 +18,16 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
 
   "AuthController" should {
 
+    val module = new DRTModule() {
+      override val isTestEnvironment: Boolean = true
+    }
+
+    val drtSystemInterface = module.provideDrtSystemInterface
+
     "get loggedIn User" in {
 
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-      }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
-
-      val controller = new AuthController(Helpers.stubControllerComponents(), drtSystemInterface) {
-        override def getLoggedInUser(): Action[AnyContent] = super.getLoggedInUser()
+      val controller: AuthController = new AuthController(Helpers.stubControllerComponents(), drtSystemInterface) {
+        override def getLoggedInUser: Action[AnyContent] = super.getLoggedInUser()
       }
 
       val result = controller.getLoggedInUser().apply(FakeRequest()
@@ -47,24 +47,18 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
     }
 
     "get user details" in {
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-      }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
 
       val keyCloakClient = mock[KeyCloakClient with ProdSendAndReceive]
 
       when(keyCloakClient.getUsersForEmail("test@test.com"))
         .thenReturn(Future.successful(Some(KeyCloakUser("test", "test", false, false, "test", "test", "test@test.com"))))
 
-
-      val controller = new AuthController(Helpers.stubControllerComponents(), drtSystemInterface) {
-        override def getLoggedInUser(): Action[AnyContent] = super.getLoggedInUser()
+      val controller: AuthController = new AuthController(Helpers.stubControllerComponents(), drtSystemInterface) {
+        override def getLoggedInUser: Action[AnyContent] = super.getLoggedInUser()
 
         override def userDetails(email: String): Action[AnyContent] = super.userDetails(email)
 
-        override def keyCloakClientWithHeader(headers: Headers) = keyCloakClient
+        override def keyCloakClientWithHeader(headers: Headers): KeyCloakClient with ProdSendAndReceive = keyCloakClient
 
       }
 
@@ -86,25 +80,19 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
     }
 
     "authByRole" in {
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-      }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
 
       val controller = new AuthController(Helpers.stubControllerComponents(), drtSystemInterface) {
-        override def getLoggedInUser(): Action[AnyContent] = super.getLoggedInUser()
+        override def getLoggedInUser: Action[AnyContent] = super.getLoggedInUser()
 
         override def userDetails(email: String): Action[AnyContent] = super.userDetails(email)
 
-        override def authByRole[A](allowedRole: Role)(action: Action[A]) = super.authByRole(allowedRole)(action)
+        override def authByRole[A](allowedRole: Role)(action: Action[A]): Action[A] = super.authByRole(allowedRole)(action)
 
         val action: Action[AnyContent] = Action.async { _ =>
           Future.successful(Ok("Success!"))
         }
 
       }
-
 
       val result = controller.authByRole(ManageUsers)(controller.action).apply(FakeRequest()
         .withHeaders("X-Auth-Email" -> "test@test.com",
@@ -120,16 +108,10 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
     }
 
     "trackUser" in {
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
+
+      val controller: AuthController = new AuthController(Helpers.stubControllerComponents(), drtSystemInterface) {
+        override def trackUser: Action[AnyContent] = super.trackUser()
       }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
-
-      val controller = new AuthController(Helpers.stubControllerComponents(), drtSystemInterface) {
-        override def trackUser(): Action[AnyContent] = super.trackUser()
-      }
-
 
       val result = controller.trackUser().apply(FakeRequest()
         .withHeaders("X-Auth-Email" -> "test@test.com",

@@ -68,7 +68,7 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAft
       override val isTestEnvironment: Boolean = true
     }
 
-    val drtSystemInterface: DrtSystemInterface = TestDrtSystem(module.drtConfigSystem.airportConfig, module.drtParameter, module.now)
+    val drtSystemInterface: DrtSystemInterface = TestDrtSystem(module.drtConfigSystem.airportConfig, module.drtParameters, module.now)
 
     val govNotify = mock[GovNotifyEmail]
 

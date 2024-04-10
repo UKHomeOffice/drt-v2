@@ -16,9 +16,9 @@ class AlertsControllerSpec extends PlaySpec with MockitoSugar {
       override val isTestEnvironment: Boolean = true
     }
 
-    "get alerts created after the given time" in {
+    val drtSystemInterface = module.provideDrtSystemInterface
 
-      val drtSystemInterface = module.provideDrtSystemInterface
+    "get alerts created after the given time" in {
 
       val controller = new AlertsController(Helpers.stubControllerComponents(), drtSystemInterface)
 
@@ -32,8 +32,6 @@ class AlertsControllerSpec extends PlaySpec with MockitoSugar {
 
     "add an alert" in {
 
-      val drtSystemInterface = module.provideDrtSystemInterface
-      implicit val actorSystem = drtSystemInterface.system
       val controller = new AlertsController(Helpers.stubControllerComponents(), drtSystemInterface)
       val alert: Alert = Alert("title", "message", "alertClass", System.currentTimeMillis() + 100000, System.currentTimeMillis())
       import Alert.rw
@@ -58,9 +56,8 @@ class AlertsControllerSpec extends PlaySpec with MockitoSugar {
     }
 
     "delete all alerts" in {
-      val drtSystemInterface = module.provideDrtSystemInterface
-      implicit val actorSystem = drtSystemInterface.system
       val controller = new AlertsController(Helpers.stubControllerComponents(), drtSystemInterface)
+
       val result = controller.deleteAlerts().apply(FakeRequest(POST, "/alerts/delete")
         .withHeaders("X-Auth-Email" -> "test@test.com",
           "X-Auth-Roles" -> "create-alerts,TEST",

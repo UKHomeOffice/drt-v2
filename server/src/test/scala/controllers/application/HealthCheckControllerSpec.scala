@@ -114,7 +114,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    new TestDrtSystem(Lhr.config, mod.drtParameter, now) {
+    new TestDrtSystem(Lhr.config, mod.drtParameters, now) {
       self =>
       override lazy val applicationService: ApplicationService = new ApplicationService(
         journalType = journalType,

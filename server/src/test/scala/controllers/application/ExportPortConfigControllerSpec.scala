@@ -77,7 +77,7 @@ class ExportPortConfigControllerSpec extends PlaySpec {
   private def exportPortConfigController = {
     val module = new DRTModule() {
       override val isTestEnvironment: Boolean = true
-      override val drtParameter: DrtParameters = new MockDrtParameters() {
+      override val drtParameters: DrtParameters = new MockDrtParameters() {
         override val gateWalkTimesFilePath: Option[String] = Some(getClass.getClassLoader.getResource("gate-walk-time-test.csv").getPath)
         override val standWalkTimesFilePath: Option[String] = Some(getClass.getClassLoader.getResource("stand-walk-time-test.csv").getPath)
       }

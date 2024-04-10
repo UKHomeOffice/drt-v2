@@ -20,14 +20,14 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import upickle.default.write
 
 import java.sql.Timestamp
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 
 abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AbstractController(cc) {
 
   val log: LoggingAdapter = ctrl.system.log
 
-  implicit val ec = ctrl.ec
+  implicit val ec: ExecutionContext = ctrl.ec
 
   implicit val config: Configuration = ctrl.config
 
@@ -51,7 +51,7 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
     Ok(Json.toJson(user))
   }
 
-  def trackUser = Action.async { request =>
+  def trackUser: Action[AnyContent] = Action.async { request =>
     val loggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     ctrl.userService.upsertUser(
       UserRow(id = loggedInUser.id,
@@ -74,13 +74,13 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
 
   def keyCloakClientWithHeader(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
     val token = headers.get("X-Auth-Token")
-      .getOrElse(throw new Exception(JsError("X-Auth-Token missing from headers, we need this to query the Key Cloak API.")))
+      .getOrElse(throw Exception(JsError("X-Auth-Token missing from headers, we need this to query the Key Cloak API.")))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
-      .getOrElse(throw new Exception(JsError("Missing key-cloak.url config value, we need this to query the Key Cloak API")))
+      .getOrElse(throw Exception(JsError("Missing key-cloak.url config value, we need this to query the Key Cloak API")))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
-  def userDetails(email: String) = Action.async { request =>
+  def userDetails(email: String): Action[AnyContent] = Action.async { request =>
     if (ctrl.getLoggedInUser(config, request.headers, request.session).roles.contains(ManageUsers)) {
       val keyCloakClient = keyCloakClientWithHeader(request.headers)
       keyCloakClient.getUsersForEmail(email) map {
@@ -107,7 +107,7 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
           }
 
         case _ => log.error(s"Unable to add $userId to $group")
-          Future.failed(new Exception(JsError(s"Unable to add $userId to $group")))
+          Future.failed(Exception(JsError(s"Unable to add $userId to $group")))
       }
     } else Future.successful(Unauthorized(write(ErrorResponse(s"Permission denied, do not have access"))))
 

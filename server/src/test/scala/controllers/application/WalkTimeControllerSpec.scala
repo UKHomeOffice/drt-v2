@@ -15,7 +15,7 @@ class WalkTimeControllerSpec extends PlaySpec {
 
       val module = new DRTModule() {
         override val isTestEnvironment: Boolean = true
-        override val drtParameter = new MockDrtParameters {
+        override val drtParameters = new MockDrtParameters {
           override val gateWalkTimesFilePath: Option[String] = Some(getClass.getClassLoader.getResource("gateWalktime.csv").getPath)
 
           override val standWalkTimesFilePath: Option[String] = Some(getClass.getClassLoader.getResource("standWalktime.csv").getPath)
