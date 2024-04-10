@@ -3,7 +3,7 @@ package controllers.application
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import controllers.ArrivalGenerator
+import controllers.{ArrivalGenerator, DrtConfigSystem}
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.TQM
 import module.DRTModule
@@ -37,10 +37,10 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
   val splits: Splits = Splits(Set(), ApiSplitsWithHistoricalEGateAndFTPercentages, Option(DC), Percentage)
   val flights: Seq[(UtcDate, FlightsWithSplits)] = Seq(
     (UtcDate(2024, 6, 26), FlightsWithSplits(Seq(
-      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0001", schDt = "2024-06-26T11:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:40").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0011", schDt = "2024-06-26T12:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
-      ApiFlightWithSplits(ArrivalGenerator.live(iata= "BA0015", schDt = "2024-06-26T12:35", actDt = "2024-06-26T12:45").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0001", schDt = "2024-06-26T11:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0005", schDt = "2024-06-26T11:35", actDt = "2024-06-26T11:40").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0011", schDt = "2024-06-26T12:30").toArrival(LiveFeedSource), Set(), lastUpdated = Option(SDate("2024-06-26T05:40").millisSinceEpoch)),
+      ApiFlightWithSplits(ArrivalGenerator.live(iata = "BA0015", schDt = "2024-06-26T12:35", actDt = "2024-06-26T12:45").toArrival(LiveFeedSource), Set(splits), lastUpdated = Option(SDate("2024-06-26T11:50").millisSinceEpoch)),
     ))),
   )
 
@@ -107,11 +107,14 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
   private def newDrtInterface(flights: Seq[(UtcDate, FlightsWithSplits)], minutes: Seq[(UtcDate, MinutesContainer[CrunchMinute, TQM])]): DrtSystemInterface = {
     val mod = new DRTModule() {
       override val isTestEnvironment: Boolean = true
-      override val airportConfig: AirportConfig = Lhr.config
+      override lazy val drtConfigSystem: DrtConfigSystem = new DrtConfigSystem() {
+        override val airportConfig: AirportConfig = Lhr.config
+      }
+
     }
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-    new TestDrtSystem(Lhr.config, mod.mockDrtParameters, now) {
+    new TestDrtSystem(Lhr.config, mod.drtParameters, now) {
       self =>
       override lazy val applicationService: ApplicationService = new ApplicationService(
         journalType = journalType,

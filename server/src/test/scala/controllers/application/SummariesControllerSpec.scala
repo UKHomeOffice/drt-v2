@@ -3,6 +3,7 @@ package controllers.application
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.stream.Materializer
+import controllers.DrtConfigSystem
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import module.DRTModule
 import org.scalatest.BeforeAndAfterEach
@@ -233,6 +234,9 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   private def newDrtInterface =
     new DRTModule() {
       override val isTestEnvironment: Boolean = true
-      override val airportConfig: AirportConfig = Lhr.config
+      override lazy val drtConfigSystem: DrtConfigSystem = new DrtConfigSystem() {
+        override val airportConfig: AirportConfig = Lhr.config
+      }
     }.provideDrtSystemInterface
+
 }
