@@ -79,7 +79,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
         request.body.asText match {
           case Some(text) =>
             val movementsToAdd: List[StaffMovement] = read[List[StaffMovement]](text)
-            println(s"adding movements: $movementsToAdd")
             movementsService.addMovements(movementsToAdd).map(_ => Accepted)
           case None =>
             Future.successful(BadRequest)

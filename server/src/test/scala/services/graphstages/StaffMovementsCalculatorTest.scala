@@ -7,7 +7,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import java.util.UUID
 
-object StaffMovementsCalculatorTest$ extends Specification {
+object StaffMovementsCalculatorTest extends Specification {
   "Given some movements" >> {
     "When those movements don't fall on minute boundaries" >> {
       val startDate1 = SDate("2017-01-01T00:00:15").millisSinceEpoch
