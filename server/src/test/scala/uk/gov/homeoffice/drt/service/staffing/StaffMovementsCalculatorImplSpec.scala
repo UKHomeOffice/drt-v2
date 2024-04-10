@@ -28,7 +28,7 @@ object MockActor {
   var response: Any = None
 }
 
-class StaffMovementsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpecLike with Matchers {
+class StaffMovementsCalculatorImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpecLike with Matchers {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(1.second)
 

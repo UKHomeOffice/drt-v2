@@ -30,7 +30,7 @@ object Staffing {
 
     val relevantMovements = removeOldMovements(dropBeforeMillis, movements)
 
-    val movementsService = StaffMovementsService(relevantMovements)
+    val movementsService = StaffMovementsCalculator(relevantMovements)
 
     val available = terminalStaffAt(relevantShifts, fixedPoints, movementsService)
 
@@ -83,7 +83,7 @@ object Staffing {
 
   def terminalStaffAt(shifts: ShiftAssignments,
                       fixedPoints: FixedPointAssignments,
-                      movements: StaffMovementsService): (MillisSinceEpoch, Terminal, MillisSinceEpoch => SDateLike) => Int =
+                      movements: StaffMovementsCalculator): (MillisSinceEpoch, Terminal, MillisSinceEpoch => SDateLike) => Int =
     (dateTimeMillis: MillisSinceEpoch, terminalName: Terminal, msToSd: MillisSinceEpoch => SDateLike) => {
       val date = SDate(dateTimeMillis, europeLondonTimeZone)
 
@@ -234,7 +234,7 @@ trait StaffAssignmentService {
   def terminalStaffAt(terminalName: Terminal, date: SDateLike): Int
 }
 
-case class StaffMovementsService(movements: Seq[StaffMovement])
+case class StaffMovementsCalculator(movements: Seq[StaffMovement])
   extends StaffAssignmentService {
   def terminalStaffAt(terminalName: Terminal, date: SDateLike): Int = {
     val minutesSinceEpoch = date.millisSinceEpoch / 60000
