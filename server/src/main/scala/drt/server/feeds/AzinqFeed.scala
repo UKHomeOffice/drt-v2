@@ -34,13 +34,13 @@ object AzinqFeed extends SprayJsonSupport with DefaultJsonProtocol {
         }
     })
 
-  def apply[A <: Arriveable](uri: String,
-                             username: String,
-                             password: String,
-                             token: String,
-                             httpRequest: HttpRequest => Future[HttpResponse],
-                            )
-                            (implicit ec: ExecutionContext, mat: Materializer, json: RootJsonFormat[A]): () => Future[Seq[FeedArrival]] = {
+  def apply[A <: AzinqArrival](uri: String,
+                               username: String,
+                               password: String,
+                               token: String,
+                               httpRequest: HttpRequest => Future[HttpResponse],
+                              )
+                              (implicit ec: ExecutionContext, mat: Materializer, json: RootJsonFormat[A]): () => Future[Seq[FeedArrival]] = {
     val request = HttpRequest(
       uri = uri,
       headers = List(
@@ -56,7 +56,7 @@ object AzinqFeed extends SprayJsonSupport with DefaultJsonProtocol {
   }
 }
 
-trait Arriveable {
+trait AzinqArrival {
   val AirlineIATA: String
   val FlightNumber: String
   val MaxPax: Option[Int]
