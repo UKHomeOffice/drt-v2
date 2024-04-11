@@ -4,7 +4,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshaller}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{FeedArrival, LiveArrival}
+import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -160,27 +160,35 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
     case _ => None
   }
 
-  def lcyFlightToArrival(f: LCYFlight): FeedArrival = LiveArrival(
-    operator = Option(f.airline),
-    maxPax = f.seatCapacity,
-    totalPax = f.paxCount,
-    transPax = None,
-    terminal = Terminal(f.aircraftTerminal),
-    voyageNumber = f.flightNumber.toInt,
-    carrierCode = f.airline,
-    flightCodeSuffix = None,
-    origin = f.departureAirport,
-    scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
-    estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
-    touchdown = maybeTimeStringToMaybeMillis(f.actualTouchDown),
-    estimatedChox = None,
-    actualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),
-    status = f.status,
-    gate = f.passengerGate,
-    stand = f.aircraftParkingPosition,
-    runway = None,
-    baggageReclaim = None,
-  )
+  def lcyFlightToArrival(f: LCYFlight): FeedArrival = {
+    lazy val (carrierCode, voyageNumberLike, maybeSuffix) = FlightCode.flightCodeToParts(f.airline + f.flightNumber)
+    lazy val voyageNumber: VoyageNumber = voyageNumberLike match {
+      case vn: VoyageNumber => vn
+      case _ => throw new Exception(s"Failed to parse voyage number from ${f.airline + f.flightNumber}")
+    }
+
+    LiveArrival(
+      operator = Option(f.airline),
+      maxPax = f.seatCapacity,
+      totalPax = f.paxCount,
+      transPax = None,
+      terminal = Terminal(f.aircraftTerminal),
+      voyageNumber = voyageNumber.numeric,
+      carrierCode = carrierCode.code,
+      flightCodeSuffix = maybeSuffix.map(_.suffix),
+      origin = f.departureAirport,
+      scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
+      estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
+      touchdown = maybeTimeStringToMaybeMillis(f.actualTouchDown),
+      estimatedChox = None,
+      actualChox = maybeTimeStringToMaybeMillis(f.actualOnBlocks),
+      status = f.status,
+      gate = f.passengerGate,
+      stand = f.aircraftParkingPosition,
+      runway = None,
+      baggageReclaim = None,
+    )
+  }
 
 
   def maybeTimeStringToMaybeMillis(t: Option[String]): Option[MillisSinceEpoch] = t.flatMap(
