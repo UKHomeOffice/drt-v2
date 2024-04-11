@@ -3,13 +3,11 @@ package controllers.application
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
-import controllers.{ArrivalGenerator, DrtConfig, ProdDrtConfig}
+import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.TQM
-import module.DRTModule
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
-import play.api.Configuration
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers._
 import play.api.test._
@@ -18,11 +16,11 @@ import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}
 import uk.gov.homeoffice.drt.service.ApplicationService
 import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
@@ -106,14 +104,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
     new HealthCheckController(Helpers.stubControllerComponents(), interface)
 
   private def newDrtInterface(flights: Seq[(UtcDate, FlightsWithSplits)], minutes: Seq[(UtcDate, MinutesContainer[CrunchMinute, TQM])]): DrtSystemInterface = {
-    val mod = new DRTModule() {
-      override val drtConfig: DrtConfig = new DrtConfig {
-        override val airportConfig: AirportConfig = Lhr.config
-
-        override def config: Configuration = ProdDrtConfig.config
-      }
-
-    }
+    val mod = new TestDrtModule(Lhr.config)
     implicit val ec: ExecutionContextExecutor = system.dispatcher
 
     new TestDrtSystem(Lhr.config, mod.drtParameters, now) {

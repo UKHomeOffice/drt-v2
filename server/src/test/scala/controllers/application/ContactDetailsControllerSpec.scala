@@ -1,32 +1,23 @@
 package controllers.application
 
 import akka.util.Timeout
-import controllers.{DrtConfig, ProdDrtConfig}
-import module.DRTModule
+import module.DrtModule
 import org.scalatestplus.play.PlaySpec
-import play.api.Configuration
 import play.api.test.Helpers._
 import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.config.Lhr
 
 
 class ContactDetailsControllerSpec extends PlaySpec {
   "ContactDetailsController" should {
 
     "get contact details" in {
-      val origConfig = ProdDrtConfig.airportConfig
-      val drtConfigSystemI = new DrtConfig() {
-        override def airportConfig: AirportConfig = origConfig.copy(
-          contactEmail = Some("test@test.com"),
-          outOfHoursContactPhone = Some("0123456789"))
+      val config = Lhr.config.copy(
+        contactEmail = Some("test@test.com"),
+        outOfHoursContactPhone = Some("0123456789"))
 
-        override def config: Configuration = ProdDrtConfig.config
-      }
-
-      val module: DRTModule = new DRTModule() {
-        override val drtConfig = drtConfigSystemI
-      }
+      val module: DrtModule = new TestDrtModule(config)
 
       implicit val timeout: Timeout = module.timeout
 

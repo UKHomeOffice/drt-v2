@@ -1,6 +1,6 @@
 package module
 
-import actors.{DrtParameters, ProdDrtParameters}
+import actors.DrtParameters
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.util.Timeout
@@ -8,29 +8,32 @@ import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController}
-import controllers.{Application, DrtConfig, ProdDrtConfig}
+import controllers.{AirportConfigProvider, Application}
 import email.GovNotifyEmail
+import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing._
+import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
-import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import javax.inject.Singleton
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-class DRTModule extends AbstractModule with AkkaGuiceSupport {
+class DrtModule extends AbstractModule with AkkaGuiceSupport {
   val now: () => SDateLike = () => SDate.now()
 
-  val drtConfig: DrtConfig = ProdDrtConfig
+  val config: Configuration = new Configuration(ConfigFactory.load)
 
-  lazy val drtParameters: DrtParameters = DrtParameters(drtConfig.config)
+  val airportConfig: AirportConfig = AirportConfigProvider(config)
 
-  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(drtConfig.airportConfig, drtParameters, now)
-  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(drtConfig.airportConfig, drtParameters, now)
+  lazy val drtParameters: DrtParameters = DrtParameters(config)
+
+  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, drtParameters, now)
+  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, drtParameters, now)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(10.seconds)

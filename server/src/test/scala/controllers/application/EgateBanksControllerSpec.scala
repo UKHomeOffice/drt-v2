@@ -1,6 +1,5 @@
 package controllers.application
 
-import module.DRTModule
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
@@ -8,9 +7,7 @@ import play.api.test.{FakeRequest, Helpers}
 class EgateBanksControllerSpec extends PlaySpec {
 
   "EgateBanksController" should {
-    val module = new DRTModule()
-
-    val drtSystemInterface = module.provideDrtSystemInterface
+    val drtSystemInterface = new TestDrtModule().provideDrtSystemInterface
 
     "get port e-gate details updates" in {
 

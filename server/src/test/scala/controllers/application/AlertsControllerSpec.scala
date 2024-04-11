@@ -2,7 +2,6 @@ package controllers.application
 
 import akka.http.scaladsl.model.StatusCodes.OK
 import drt.shared.Alert
-import module.DRTModule
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
@@ -12,9 +11,7 @@ class AlertsControllerSpec extends PlaySpec with MockitoSugar {
 
   "AlertsController" should {
 
-    val module = new DRTModule()
-
-    val drtSystemInterface = module.provideDrtSystemInterface
+    val drtSystemInterface = new TestDrtModule().provideDrtSystemInterface
 
     "get alerts created after the given time" in {
 

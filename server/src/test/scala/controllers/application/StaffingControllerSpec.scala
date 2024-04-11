@@ -3,18 +3,14 @@ package controllers.application
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.Materializer
-import controllers.{DrtConfig, ProdDrtConfig}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import module.DRTModule
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
-import play.api.Configuration
 import play.api.mvc.{AnyContentAsEmpty, AnyContentAsText, Headers}
 import play.api.test.Helpers._
 import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.config.Lhr
 import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, ShiftsService, StaffMovementsService}
@@ -190,8 +186,9 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
-      contentAsString(result) must ===("""Terminal,Reason,Time,Staff Change,Made by
-                                         |T1,some reason,2024-07-01 06:00,1,""".stripMargin)
+      contentAsString(result) must ===(
+        """Terminal,Reason,Time,Staff Change,Made by
+          |T1,some reason,2024-07-01 06:00,1,""".stripMargin)
     }
   }
 
@@ -271,13 +268,6 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     )
 
   private def newDrtInterface(): DrtSystemInterface = {
-    val mod = new DRTModule() {
-      override val drtConfig: DrtConfig = new DrtConfig {
-        override val airportConfig: AirportConfig = Lhr.config
-
-        override def config: Configuration = ProdDrtConfig.config
-      }
-    }
-    mod.provideDrtSystemInterface
+    new TestDrtModule(Lhr.config).provideDrtSystemInterface
   }
 }

@@ -1,6 +1,5 @@
 package controllers.application
 
-import module.DRTModule
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
 import play.api.test._
@@ -13,7 +12,7 @@ class WalkTimeControllerSpec extends PlaySpec {
 
     "get stand and gate walk times" in {
 
-      val module = new DRTModule() {
+      val module = new TestDrtModule() {
         override lazy val drtParameters = new MockDrtParameters {
           override val gateWalkTimesFilePath: Option[String] = Some(getClass.getClassLoader.getResource("gateWalktime.csv").getPath)
 
@@ -38,6 +37,3 @@ class WalkTimeControllerSpec extends PlaySpec {
 
   }
 }
-
-
-
