@@ -223,7 +223,6 @@ class GlaFeedSpec extends CrunchTestLike {
     success
   }
 
-
   "Given a different arrival with only required JSON fields then I should still get an arrival object with those fields" >> {
     val mockFeed = mockFeedWithResponse(requiredFieldsOnlyJson)
 
@@ -255,6 +254,22 @@ class GlaFeedSpec extends CrunchTestLike {
 
     probe.fishForMessage(1.seconds) {
       case ArrivalsFeedSuccess(arrival :: Nil, _) => arrival === expected
+      case _ => false
+    }
+
+    success
+  }
+
+  "Given an arrival with a flight code suffix I should see that in the FlightCodeSuffix of the arrival object" >> {
+    val mockFeed = mockFeedWithResponse(withFlightCodeSuffix)
+
+    val probe = TestProbe()
+    val actorSource = mockFeed.to(Sink.actorRef(probe.ref, StreamCompleted)).run()
+    actorSource ! Feed.Tick
+
+    probe.fishForMessage(1.seconds) {
+      case ArrivalsFeedSuccess(arrival :: Nil, _) =>
+        arrival.voyageNumber === 244 && arrival.flightCodeSuffix === Some("F")
       case _ => false
     }
 
@@ -328,6 +343,33 @@ class GlaFeedSpec extends CrunchTestLike {
       |        "DepartureArrivalType": "A",
       |        "EIBT": "2019-11-14T12:44:00+00:00",
       |        "FlightNumber": "244",
+      |        "FlightStatus": "C",
+      |        "FlightStatusDesc": "Flight is cancelled",
+      |        "GateCode": "GATE",
+      |        "MaxPax": 0,
+      |        "OriginDestAirportIATA": "TTT",
+      |        "OriginDestAirportICAO": "TTTT",
+      |        "PaxEstimated": null,
+      |        "Runway": "4",
+      |        "ScheduledDateTime": "2019-11-14T12:44:00+00:00",
+      |        "StandCode": "STAND",
+      |        "TerminalCode": "T1",
+      |        "TotalPassengerCount": 0
+      |}]""".stripMargin
+
+  def withFlightCodeSuffix: String =
+    """[{
+      |        "AIBT": "2019-11-14T14:40:00+00:00",
+      |        "AirlineIATA": "TT",
+      |        "AirlineICAO": "TTT",
+      |        "ALDT": "2019-11-14T14:41:00+00:00",
+      |        "AODBProbableDateTime": null,
+      |        "CarouselCode": "2",
+      |        "CodeShareFlights": "",
+      |        "CodeShareInd": "N",
+      |        "DepartureArrivalType": "A",
+      |        "EIBT": "2019-11-14T12:44:00+00:00",
+      |        "FlightNumber": "244F",
       |        "FlightStatus": "C",
       |        "FlightStatusDesc": "Flight is cancelled",
       |        "GateCode": "GATE",

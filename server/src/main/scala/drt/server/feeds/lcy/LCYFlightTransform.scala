@@ -96,7 +96,6 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
       val maybeEstChox = estChox(operationTimes)
       val maybeActualChox = actualChox(operationTimes)
 
-
       LCYFlight(
         airline,
         flightNumber,

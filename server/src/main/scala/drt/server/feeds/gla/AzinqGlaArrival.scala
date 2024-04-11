@@ -3,8 +3,6 @@ package drt.server.feeds.gla
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import drt.server.feeds.Arriveable
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals
-import uk.gov.homeoffice.drt.arrivals.LiveArrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -31,27 +29,11 @@ case class AzinqGlaArrival(AIBT: Option[String],
 
   override val isValid: Boolean = DepartureArrivalType == "A"
 
-  override def toArrival: LiveArrival = arrivals.LiveArrival(
-    operator = None,
-    maxPax = MaxPax,
-    totalPax = TotalPassengerCount,
-    transPax = None,
-    terminal = Terminal(TerminalCode),
-    voyageNumber = FlightNumber.toInt,
-    carrierCode = AirlineIATA,
-    flightCodeSuffix = None,
-    origin = OriginDestAirportIATA,
-    scheduled = SDate(ScheduledDateTime).millisSinceEpoch,
-    estimated = AODBProbableDateTime.map(SDate(_).millisSinceEpoch),
-    touchdown = ALDT.map(SDate(_).millisSinceEpoch),
-    estimatedChox = EIBT.map(SDate(_).millisSinceEpoch),
-    actualChox = AIBT.map(SDate(_).millisSinceEpoch),
-    status = FlightStatusDesc,
-    gate = GateCode,
-    stand = StandCode,
-    runway = Runway,
-    baggageReclaim = CarouselCode,
-  )
+  override val maybeEstimated: Option[Long] = AODBProbableDateTime.map(SDate(_).millisSinceEpoch)
+  override val maybeEstimatedChox: Option[Long] = EIBT.map(SDate(_).millisSinceEpoch)
+  override val terminal: Terminal = Terminal(TerminalCode)
+  override val FlightStatus: String = FlightStatusDesc
+  override val runway: Option[String] = Runway
 }
 
 object AzinqGlaArrivalJsonFormats extends SprayJsonSupport with DefaultJsonProtocol {
