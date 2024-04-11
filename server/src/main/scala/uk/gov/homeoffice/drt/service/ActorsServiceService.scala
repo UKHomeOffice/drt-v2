@@ -1,9 +1,10 @@
 package uk.gov.homeoffice.drt.service
 
+import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
-import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors.persistent.staffing._
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.util.Timeout
 import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
@@ -11,6 +12,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import javax.inject.Singleton
+
 
 @Singleton
 case class ActorsServiceService(journalType: StreamingJournalLike,
@@ -28,6 +30,13 @@ case class ActorsServiceService(journalType: StreamingJournalLike,
     journalType, now, forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
   override val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
+
+  override val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
+    now, startOfTheMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
+  override val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
+    now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")
+  override val staffMovementsSequentialWritesActor: ActorRef = system.actorOf(StaffMovementsActor.sequentialWritesProps(
+    now, time48HoursAgo(now), requestAndTerminateActor, system), "staff-movements-sequential-writes-actor")
 
   override val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
   override val queueLoadsRouterActor: ActorRef = minuteLookups.queueLoadsMinutesActor

@@ -9,6 +9,10 @@ trait ActorsServiceLike {
   val liveFixedPointsReadActor: ActorRef
   val liveStaffMovementsReadActor: ActorRef
 
+  val shiftsSequentialWritesActor: ActorRef
+  val fixedPointsSequentialWritesActor: ActorRef
+  val staffMovementsSequentialWritesActor: ActorRef
+
   val flightsRouterActor: ActorRef
   val queueLoadsRouterActor: ActorRef
   val queuesRouterActor: ActorRef

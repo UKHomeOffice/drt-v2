@@ -3,7 +3,6 @@ package controllers.application
 import drt.http.ProdSendAndReceive
 import drt.shared.KeyCloakApi.KeyCloakUser
 import drt.users.KeyCloakClient
-import module.DRTModule
 import org.mockito.Mockito.{times, verify, when}
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
@@ -18,11 +17,7 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
 
   "AuthController" should {
 
-    val module = new DRTModule() {
-      override val isTestEnvironment: Boolean = true
-    }
-
-    val drtSystemInterface = module.provideDrtSystemInterface
+    val drtSystemInterface = new TestDrtModule().provideDrtSystemInterface
 
     "get loggedIn User" in {
 

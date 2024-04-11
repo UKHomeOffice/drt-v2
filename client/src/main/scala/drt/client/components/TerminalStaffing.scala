@@ -22,7 +22,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliDate, SDateLike}
 
 import scala.collection.immutable.NumericRange
 import scala.util.Success
@@ -55,21 +55,23 @@ object TerminalStaffing {
                 <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminal))
               ),
               <.div(^.className := "container",
-                <.div(^.className := "col-md-10", staffOverTheDay(movementsForTheDay, shifts, props.terminal)))
+                <.div(^.className := "col-md-10", staffOverTheDay(props.viewMode.localDate, movementsForTheDay, shifts, props.terminal)))
             )
           }
         }
       }
     )
 
-    def staffOverTheDay(movements: Seq[StaffMovement],
+    def staffOverTheDay(localDate: LocalDate,
+                        movements: Seq[StaffMovement],
                         shifts: ShiftAssignments,
                         terminalName: Terminal): VdomTagOf[Div] = {
       val terminalShifts = ShiftAssignments(shifts.forTerminal(terminalName))
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
+
       <.div(
         <.h2("Staff over the day"),
-        staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate.midnightThisMorning()), staffWithShiftsAndMovementsAt)
+        staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate(localDate)), staffWithShiftsAndMovementsAt)
       )
     }
 

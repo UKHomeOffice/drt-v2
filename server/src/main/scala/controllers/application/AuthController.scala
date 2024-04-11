@@ -138,7 +138,7 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
   }
 
   def unauthorizedMessageJson(allowedRole: Role): Result =
-    Unauthorized(write(ErrorResponse(s"Permission denied, you need $allowedRole to access this resource")))
+    Forbidden(write(ErrorResponse(s"Permission denied, you need $allowedRole to access this resource")))
 
   def auth[A](action: Action[A]): Action[A] = Action.async(action.parser) { request =>
 

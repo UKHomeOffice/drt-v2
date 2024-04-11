@@ -1,6 +1,5 @@
 package controllers.application
 
-import module.DRTModule
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
@@ -12,11 +11,7 @@ class AirportInfoControllerSpec extends PlaySpec {
 
     "get airport info for the portCode requested" in {
 
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-      }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
+      val drtSystemInterface = new TestDrtModule().provideDrtSystemInterface
 
       val controller = new AirportInfoController(Helpers.stubControllerComponents(), drtSystemInterface)
 

@@ -5,7 +5,8 @@ import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
-import module.DRTModule
+import drt.shared.airportconfig.Test
+import module.DrtModule
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers.{OK, contentAsString, contentType, status}
@@ -110,11 +111,10 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   }
 
   private def forecastAccuracyController(forecastTotalPax: Int, mlFeedPax: Int, liveFeedPax: Int, mlPred: Int, flights: FlightsWithSplits) = {
-    val module: DRTModule = new DRTModule() {
-      override val isTestEnvironment: Boolean = true
+    val module: DrtModule = new TestDrtModule() {
       override val now: () => SDateLike = () => SDate("2023-02-01T00:00")
 
-      override def provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(drtConfigSystem.airportConfig, drtParameters, now)(mat, ec, system, timeout) {
+      override def provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(Test.config, drtParameters, now)(mat, ec, system, timeout) {
         lazy override val feedService: ProdFeedService = new ProdFeedService(journalType, airportConfig, now, params,
           config, paxFeedSourceOrder, flightLookups, manifestLookups, actorService.requestAndTerminateActor,
           drtParameters.forecastMaxDays, SDate("2024-04-03"))(this.system, ec, timeout) {

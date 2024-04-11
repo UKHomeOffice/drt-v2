@@ -3,9 +3,7 @@ package controllers.application
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.stream.Materializer
-import controllers.DrtConfigSystem
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import module.DRTModule
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
@@ -15,7 +13,6 @@ import services.crunch.H2Tables
 import slick.jdbc.H2Profile.api._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
-import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, T3, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr
@@ -231,12 +228,6 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   private def newController(interface: DrtSystemInterface) =
     new SummariesController(Helpers.stubControllerComponents(), interface)
 
-  private def newDrtInterface =
-    new DRTModule() {
-      override val isTestEnvironment: Boolean = true
-      override lazy val drtConfigSystem: DrtConfigSystem = new DrtConfigSystem() {
-        override val airportConfig: AirportConfig = Lhr.config
-      }
-    }.provideDrtSystemInterface
+  private def newDrtInterface = new TestDrtModule(Lhr.config).provideDrtSystemInterface
 
 }

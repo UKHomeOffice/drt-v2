@@ -4,9 +4,9 @@ import akka.event.Logging
 import api._
 import buildinfo.BuildInfo
 import com.google.inject.Inject
-import com.typesafe.config.ConfigFactory
 import controllers.application._
 import drt.http.ProdSendAndReceive
+import drt.shared.DrtPortConfigs
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
@@ -26,23 +26,21 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-trait AirportConfiguration {
-  def airportConfig: AirportConfig
-}
-
-trait AirportConfProvider extends AirportConfiguration {
-  val portCode: PortCode = PortCode(ConfigFactory.load().getString("portcode").toUpperCase)
-  val config: Configuration
-
-  def contactEmail: Option[String] = config.getOptional[String]("contact-email")
-
-  def oohPhone: Option[String] = config.getOptional[String]("ooh-phone")
-
-  def noLivePortFeed: Boolean = config.get[Boolean]("feature-flags.no-live-port-feed")
-
-  def aclDisabled: Boolean = config.getOptional[Boolean]("acl.disabled").getOrElse(false)
-
-  def idealStaffAsDefault: Boolean = config.getOptional[Boolean]("feature-flags.use-ideal-staff-default").getOrElse(false)
+object AirportConfigProvider {
+  def apply(config: Configuration): AirportConfig = {
+    val portCode = PortCode(config.get[String]("portcode").toUpperCase)
+    val airportConfig = DrtPortConfigs.confByPort(portCode)
+    val configForPort = airportConfig.copy(
+      contactEmail = config.getOptional[String]("contact-email"),
+      outOfHoursContactPhone = config.getOptional[String]("ooh-phone"),
+      useTimePredictions = true,
+      noLivePortFeed = config.get[Boolean]("feature-flags.no-live-port-feed"),
+      aclDisabled = config.getOptional[Boolean]("acl.disabled").getOrElse(false),
+      idealStaffAsDefault = config.getOptional[Boolean]("feature-flags.use-ideal-staff-default").getOrElse(false)
+    )
+    configForPort.assertValid()
+    configForPort
+  }
 }
 
 trait FeatureGuideProviderLike {
@@ -272,7 +270,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     Action(parse.tolerantFormUrlEncoded) {
       implicit request =>
 
-        def postStringValOrElse(key: String, default: String) = {
+        def postStringValOrElse(key: String, default: String): String = {
           request.body.get(key).map(_.head).getOrElse(default)
         }
 
