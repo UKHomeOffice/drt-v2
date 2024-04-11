@@ -18,9 +18,7 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
 
   "AuthController" should {
 
-    val module = new DRTModule() {
-      override val isTestEnvironment: Boolean = true
-    }
+    val module = new DRTModule()
 
     val drtSystemInterface = module.provideDrtSystemInterface
 

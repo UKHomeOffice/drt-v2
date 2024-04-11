@@ -3,6 +3,7 @@ package actors
 import com.google.inject.Inject
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
+import uk.gov.homeoffice.drt.testsystem.MockDrtParameters
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.nio.file.{Files, Paths}
@@ -57,6 +58,16 @@ trait DrtParameters {
   val usePassengerPredictions: Boolean
 
   val legacyFeedArrivalsBeforeDate: SDateLike
+  val govNotifyApiKey: String
+  val isTestEnvironment: Boolean
+}
+
+object DrtParameters {
+  def apply(config: Configuration): DrtParameters = {
+    val isTest = config.getOptional[String]("env").getOrElse("prod") == "test"
+
+    if (isTest) MockDrtParameters() else ProdDrtParameters(config)
+  }
 }
 
 case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParameters {
@@ -113,4 +124,8 @@ case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParamete
   override val usePassengerPredictions: Boolean = config.get[Boolean]("feature-flags.use-passenger-predictions")
 
   override val legacyFeedArrivalsBeforeDate: SDateLike = SDate(config.get[String]("feeds.legacy-feed-arrivals-before-datetime"))
+
+  override val govNotifyApiKey: String = config.get[String]("notifications.gov-notify-api-key")
+
+  override val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
 }

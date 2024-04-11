@@ -8,7 +8,7 @@ import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController}
-import controllers.{Application, DrtConfigSystem}
+import controllers.{Application, DrtConfig, ProdDrtConfig}
 import email.GovNotifyEmail
 import play.api.libs.concurrent.AkkaGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
@@ -23,22 +23,20 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class DRTModule extends AbstractModule with AkkaGuiceSupport {
-
-  lazy val drtConfigSystem: DrtConfigSystem = new DrtConfigSystem()
-
   val now: () => SDateLike = () => SDate.now()
 
-  val isTestEnvironment: Boolean = drtConfigSystem.isTestEnvironment
+  val drtConfig: DrtConfig = ProdDrtConfig
 
-  val drtParameters: DrtParameters = if (isTestEnvironment) MockDrtParameters() else ProdDrtParameters(drtConfigSystem.config)
-  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(drtConfigSystem.airportConfig, drtParameters, now)
-  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(drtConfigSystem.airportConfig, drtParameters, now)
+  lazy val drtParameters: DrtParameters = DrtParameters(drtConfig.config)
+
+  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(drtConfig.airportConfig, drtParameters, now)
+  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(drtConfig.airportConfig, drtParameters, now)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(10.seconds)
 
   override def configure(): Unit = {
-    if (isTestEnvironment) {
+    if (drtParameters.isTestEnvironment) {
       bind(classOf[TestController]).asEagerSingleton()
     }
     bind(classOf[AirportInfoController]).asEagerSingleton()
@@ -72,7 +70,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   @Singleton
-  implicit val provideActorSystem: ActorSystem = if (isTestEnvironment) {
+  implicit val provideActorSystem: ActorSystem = if (drtParameters.isTestEnvironment) {
     ActorSystem("DRT-Module", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load()))
   } else {
     ActorSystem("DRT-Module")
@@ -81,7 +79,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   @Provides
   @Singleton
   def provideDrtSystemInterface: DrtSystemInterface = {
-    if (isTestEnvironment)
+    if (drtParameters.isTestEnvironment)
       drtTestSystem
     else
       drtProdSystem
@@ -112,5 +110,5 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   )
 
   @Provides
-  def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtConfigSystem.govNotifyApiKey)
+  def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtParameters.govNotifyApiKey)
 }

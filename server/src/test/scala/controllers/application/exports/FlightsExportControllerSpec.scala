@@ -25,12 +25,9 @@ class FlightsExportControllerSpec extends PlaySpec {
 
     "get flights for a date in " in {
 
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-      }
+      val module = new DRTModule()
 
       val drtSystemInterface = module.provideDrtSystemInterface
-      implicit val mat: Materializer = drtSystemInterface.materializer
 
       val controller = new FlightsExportController(Helpers.stubControllerComponents(), drtSystemInterface)
 

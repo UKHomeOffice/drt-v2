@@ -8,9 +8,7 @@ import play.api.test.{FakeRequest, Helpers}
 class EgateBanksControllerSpec extends PlaySpec {
 
   "EgateBanksController" should {
-    val module = new DRTModule() {
-      override val isTestEnvironment: Boolean = true
-    }
+    val module = new DRTModule()
 
     val drtSystemInterface = module.provideDrtSystemInterface
 

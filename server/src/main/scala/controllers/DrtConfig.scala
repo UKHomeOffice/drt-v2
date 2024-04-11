@@ -5,14 +5,16 @@ import drt.shared.DrtPortConfigs
 import play.api.Configuration
 import uk.gov.homeoffice.drt.ports.AirportConfig
 
-class DrtConfigSystem extends AirportConfProvider {
+trait DrtConfig {
+  def airportConfig: AirportConfig
+
+  def config: Configuration
+}
+
+object ProdDrtConfig extends DrtConfig with AirportConfProvider {
   lazy val config: Configuration = new Configuration(ConfigFactory.load)
 
   private def getPortConfFromEnvVar: AirportConfig = DrtPortConfigs.confByPort(portCode)
-
-  def govNotifyApiKey = config.get[String]("notifications.gov-notify-api-key")
-
-  def isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
 
   override def airportConfig: AirportConfig = {
     val configForPort = getPortConfFromEnvVar.copy(

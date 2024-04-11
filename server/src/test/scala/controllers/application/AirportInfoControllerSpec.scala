@@ -12,9 +12,7 @@ class AirportInfoControllerSpec extends PlaySpec {
 
     "get airport info for the portCode requested" in {
 
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-      }
+      val module = new DRTModule()
 
       val drtSystemInterface = module.provideDrtSystemInterface
 

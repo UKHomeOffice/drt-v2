@@ -15,8 +15,7 @@ class FeatureFlagsControllerSpec extends PlaySpec {
     "get list of feature flag" in {
 
       val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-        override val drtParameters = new MockDrtParameters {
+        override lazy val drtParameters = new MockDrtParameters {
           override val useApiPaxNos = true
           override val enableToggleDisplayWaitTimes = true
           override val displayRedListInfo = true

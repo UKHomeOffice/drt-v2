@@ -3,11 +3,13 @@ package controllers.application
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.Materializer
+import controllers.{DrtConfig, ProdDrtConfig}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import module.DRTModule
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
+import play.api.Configuration
 import play.api.mvc.{AnyContentAsEmpty, AnyContentAsText, Headers}
 import play.api.test.Helpers._
 import play.api.test._
@@ -270,8 +272,11 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   private def newDrtInterface(): DrtSystemInterface = {
     val mod = new DRTModule() {
-      override val isTestEnvironment: Boolean = true
-      override val airportConfig: AirportConfig = Lhr.config
+      override val drtConfig: DrtConfig = new DrtConfig {
+        override val airportConfig: AirportConfig = Lhr.config
+
+        override def config: Configuration = ProdDrtConfig.config
+      }
     }
     mod.provideDrtSystemInterface
   }

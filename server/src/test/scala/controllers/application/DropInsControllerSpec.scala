@@ -2,6 +2,7 @@ package controllers.application
 
 import akka.actor.ActorSystem
 import akka.stream.Materializer
+import controllers.{DrtConfig, ProdDrtConfig}
 import email.GovNotifyEmail
 import module.DRTModule
 import org.scalatest.BeforeAndAfterAll
@@ -64,11 +65,9 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAft
   }
 
   private def dropInSessionsController = {
-    val module = new DRTModule() {
-      override val isTestEnvironment: Boolean = true
-    }
+    val module = new DRTModule()
 
-    val drtSystemInterface: DrtSystemInterface = TestDrtSystem(module.drtConfigSystem.airportConfig, module.drtParameters, module.now)
+    val drtSystemInterface: DrtSystemInterface = TestDrtSystem(ProdDrtConfig.airportConfig, module.drtParameters, module.now)
 
     val govNotify = mock[GovNotifyEmail]
 

@@ -10,9 +10,7 @@ class FeedsControllerSpec extends PlaySpec {
 
   "FeedsController" should {
 
-    val module = new DRTModule() {
-      override val isTestEnvironment: Boolean = true
-    }
+    val module = new DRTModule()
 
     val drtSystemInterface = module.provideDrtSystemInterface
 
