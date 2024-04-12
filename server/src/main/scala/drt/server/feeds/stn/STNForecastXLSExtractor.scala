@@ -81,7 +81,7 @@ object STNForecastXLSExtractor {
 
   private def stnFieldsToArrival(flightRow: STNForecastFlightRow): Try[ForecastArrival] = {
     val totalPax = if (flightRow.totalPax == 0) None else Option(flightRow.totalPax)
-    val (carrierCode, voyageNumber, _) = FlightCode.flightCodeToParts(flightRow.flightCode.replace(" ", ""))
+    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(flightRow.flightCode.replace(" ", ""))
     Try {
       ForecastArrival(
         operator = None,
@@ -91,7 +91,7 @@ object STNForecastXLSExtractor {
         terminal = Terminal("T1"),
         voyageNumber = voyageNumber.numeric,
         carrierCode = carrierCode.code,
-        flightCodeSuffix = None,
+        flightCodeSuffix = suffix.map(_.suffix),
         origin = flightRow.origin,
         scheduled = flightRow.scheduledDate.millisSinceEpoch,
       )

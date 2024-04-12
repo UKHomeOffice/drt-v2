@@ -13,7 +13,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.LiveArrival
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -84,6 +84,9 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
   def toArrival(ltnFeedFlight: LtnLiveFlight): LiveArrival = {
     val operator: String = ltnFeedFlight.AirlineDesc.getOrElse("")
     val status: String = ltnFeedFlight.FlightStatusDesc.getOrElse("Scheduled")
+    val carrier = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing carrier code"))
+    val flightNumber = ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number"))
+    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(carrier + flightNumber)
 
     LiveArrival(
       operator = Option(operator),
@@ -91,9 +94,9 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       totalPax = ltnFeedFlight.TotalPassengerCount,
       transPax = None,
       terminal = Terminal(ltnFeedFlight.TerminalCode.getOrElse(throw new Exception("Missing terminal"))),
-      voyageNumber = ltnFeedFlight.FlightNumber.getOrElse(throw new Exception("Missing flight number")).toInt,
-      carrierCode = ltnFeedFlight.AirlineIATA.getOrElse(throw new Exception("Missing carrier code")),
-      flightCodeSuffix = None,
+      voyageNumber = voyageNumber.numeric,
+      carrierCode = carrierCode.code,
+      flightCodeSuffix = suffix.map(_.suffix),
       origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
       scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
       estimated = ltnFeedFlight.EstimatedDateTime.map(sdateWithTimeZoneApplied),

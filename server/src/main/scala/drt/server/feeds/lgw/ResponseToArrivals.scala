@@ -29,15 +29,18 @@ case class ResponseToArrivals(data: String) {
     val operator = (n \ "AirlineIATA") text
     val totalPax = parsePaxCount(n, "70A").orElse(None)
     val transPax = parsePaxCount(n, "TIP")
+    val carrier = n \\ "AirlineIATA" text
+    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(carrier + flightNumber(n))
+
     val arrival = LiveArrival(
       operator = if (operator.isEmpty) None else Option(operator),
       maxPax = (n \\ "SeatCapacity").headOption.map(n => (n text).toInt),
       totalPax = totalPax,
       transPax = transPax,
       terminal = parseTerminal(n),
-      voyageNumber = parseFlightNumber(n),
-      carrierCode = n \\ "AirlineIATA" text,
-      flightCodeSuffix = None,
+      voyageNumber = voyageNumber.numeric,
+      carrierCode = carrierCode.code,
+      flightCodeSuffix = suffix.map(_.suffix),
       origin = parseOrigin(n),
       scheduled = (((n \ "FlightLeg").head \ "LegData").head \\ "OperationTime")
         .find(n => (n \ "@OperationQualifier" text).equals("ONB") && (n \ "@TimeType" text).equals("SCT"))
@@ -67,9 +70,8 @@ case class ResponseToArrivals(data: String) {
     mappedTerminal
   }
 
-  private def parseFlightNumber(n: Node): Int = {
-    (((n \ "FlightLeg").head \ "LegIdentifier").head \ "FlightNumber" text).toInt
-  }
+  private def flightNumber(n: Node): String =
+    ((n \ "FlightLeg").head \ "LegIdentifier").head \ "FlightNumber" text
 
   private def parseStatus(n: Node): String = {
     val aidxCodeOrIdahoCode = ((n \ "FlightLeg").head \ "LegData").head \ "OperationalStatus" text
