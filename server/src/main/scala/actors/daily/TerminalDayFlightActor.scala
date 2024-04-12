@@ -70,7 +70,7 @@ class TerminalDayFlightActor(year: Int,
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 
   override def postRecoveryComplete(): Unit = {
-    state = state.copy(flights = restorer.arrivals)
+    state = state.copy(flights = restorer.arrivals.filter(_._1.number != 0))
     restorer.finish()
 
     if (maybePointInTime.isEmpty && messagesPersistedSinceSnapshotCounter > 10 && lastMinuteOfDay.addDays(1) < now().getUtcLastMidnight) {

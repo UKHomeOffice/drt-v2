@@ -163,13 +163,7 @@ object MagFeed {
                         arrival: ArrivalDetails,
                         flightStatus: String)
   def toArrival(ma: MagArrival): LiveArrival = {
-    val (carrierCode, voyageNumberLike, suffix) = FlightCode.flightCodeToParts(ma.operatingAirline.iata + ma.flightNumber.trackNumber.getOrElse(""))
-
-    val voyageNumber = voyageNumberLike match {
-      case VoyageNumber(vn) if vn != 0 => vn
-      case _ =>
-        throw new Exception(s"\n\nFailed to parse voyage number from ${ma.operatingAirline.iata + ma.flightNumber.trackNumber}\n\n")
-    }
+    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(ma.operatingAirline.iata + ma.flightNumber.trackNumber.getOrElse(""))
 
     LiveArrival(
       operator = Option(ma.operatingAirline.iata),
@@ -177,7 +171,7 @@ object MagFeed {
       totalPax = ma.passenger.count,
       transPax = ma.passenger.transferCount,
       terminal = Terminals.Terminal(ma.arrival.terminal.getOrElse("")),
-      voyageNumber = voyageNumber,
+      voyageNumber = voyageNumber.numeric,
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = ma.departureAirport.iata,
