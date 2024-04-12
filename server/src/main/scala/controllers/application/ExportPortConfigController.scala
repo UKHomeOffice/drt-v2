@@ -1,29 +1,19 @@
 package controllers.application
 
+import akka.pattern.ask
 import com.google.inject.Inject
+import drt.shared.api.{WalkTime, WalkTimes}
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.egates.{EgateBanksUpdates, PortEgateBanksUpdates}
-import akka.pattern.ask
-import drt.shared.api.{WalkTime, WalkTimes}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{PaxTypes, Queues, Terminals}
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
+import uk.gov.homeoffice.drt.ports.{PaxTypes, Queues, Terminals}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate}
 
 import scala.concurrent.Future
 
 class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) with WalkTimeLike {
-
-  private def createTitleHeaderAndBody(title: String, headers: String, body: String): String = {
-    s"$title\n$headers\n$body"
-  }
-
-  private def createHeaderAndBody(headers: String, body: String): String = {
-    s"$headers\n$body"
-  }
-
   private def updatesByTerminalF: Future[Map[Terminals.Terminal, EgateBanksUpdates]] = {
     val eGateBanks: Future[PortEgateBanksUpdates] = ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
     eGateBanks.map(_.updatesByTerminal)
@@ -40,14 +30,14 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
           }"
         }.mkString("\n")
       }.mkString("\n")
-      val eGatesTitle = "E-gates schedule"
+      val eGatesHeader = "E-gates schedule"
       val eGatesHeaders = "Terminal,Effective from,OpenGates per bank"
-      createTitleHeaderAndBody(eGatesTitle, eGatesHeaders, eGatesCsv)
+      Seq(eGatesHeader, eGatesHeaders, eGatesCsv).mkString("\n")
     }
   }
 
   private def getSlaConfig(thisTerminal: Terminals.Terminal): Future[String] = {
-    val slaTitle = "Queue SLAs"
+    val slaHeader = "Queue SLAs"
     ctrl.applicationService.slasActor
       .ask(GetState).mapTo[SlaConfigs]
       .map { sla =>
@@ -65,7 +55,7 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
 
             s"$dateStr,$queueSlas"
         }.mkString("\n")
-        createTitleHeaderAndBody(slaTitle, slaHeaders, slaCsv)
+        Seq(slaHeader, slaHeaders, slaCsv).mkString("\n")
       }
   }
 
@@ -79,9 +69,9 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         case (ptq, time) => s"${ptq.displayName},${(time * 60).toInt}"
       }
       .mkString("\n")
-    val processingTimeTitle = "Processing Times"
-    val processingTimeHeader = "Passenger Type & Queue,Seconds"
-    createTitleHeaderAndBody(processingTimeTitle, processingTimeHeader, processingTimeString)
+    val processingTimesHeader = "Processing Times"
+    val passengerTypeQueueAndSecondsHeader = "Passenger Type & Queue,Seconds"
+    Seq(processingTimesHeader, passengerTypeQueueAndSecondsHeader, processingTimeString).mkString("\n")
   }
 
   private def getDeskAndEGates(terminal: Terminals.Terminal): Future[String] = {
@@ -102,8 +92,8 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   }
 
   private def defaultPaxSplits(terminal: Terminals.Terminal): String = {
-    val passengerAllocationTitle = "Passenger Queue Allocation"
-    val queueAllocationHeader = "Passenger Type,Queue,Allocation"
+    val passengerAllocationHeader = "Passenger Queue Allocation"
+    val passengerTypeAndQueueAllocationHeader = "Passenger Type,Queue,Allocation"
     val allocationString = airportConfig.terminalPaxTypeQueueAllocation(terminal)
       .toList
       .sortBy {
@@ -117,13 +107,13 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
           }
       }
       .mkString("\n")
-    createTitleHeaderAndBody(passengerAllocationTitle, queueAllocationHeader, allocationString)
+    Seq(passengerAllocationHeader, passengerTypeAndQueueAllocationHeader, allocationString).mkString("\n")
   }
 
   private def defaultWalkTime(terminal: Terminals.Terminal): String = {
     val walkTimeHeader = "Walk times"
     val walkTimeString = s"Default walk time (minutes),${airportConfig.defaultWalkTimeMillis(terminal) / MilliTimes.oneMinuteMillis}"
-    createHeaderAndBody(walkTimeHeader, walkTimeString)
+    Seq(walkTimeHeader, walkTimeString).mkString("\n")
   }
 
   private def walkTimesFromConfig(terminal: Terminals.Terminal): String = {
@@ -134,10 +124,10 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     val walkTimesGatesStands = WalkTimes(gates, stands)
 
     if (walkTimesGatesStands.byTerminal.nonEmpty) {
-      val gateStandTitle = "Gate/Stand Walk time"
+      val gateStandHeader = "Gate/Stand Walk time"
       val gate = walkTimeString("Gate", walkTimesGatesStands.byTerminal(terminal).gateWalktimes)
       val stand = walkTimeString("Stand", walkTimesGatesStands.byTerminal(terminal).standWalkTimes)
-      createTitleHeaderAndBody(gateStandTitle, gate, stand)
+      Seq(gateStandHeader, gate, stand).mkString("\n")
     } else ""
   }
 
@@ -149,10 +139,10 @@ class ExportPortConfigController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         }
         .mkString("\n")
 
-  private def walkTimeString(header: String, walktimes: Map[String, WalkTime]) = {
+  private def walkTimeString(header: String, walktimes: Map[String, WalkTime]): String = {
     val walkTimeHeader = s"$header,Walk time in minutes"
     val walkTimeString = walkTimesString(walktimes)
-    createHeaderAndBody(walkTimeHeader, walkTimeString)
+    Seq(walkTimeHeader, walkTimeString).mkString("\n")
   }
 
   private def getAirportConfig(tn: Terminals.Terminal): String = {
