@@ -14,7 +14,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeed
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival}
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -163,7 +163,13 @@ object MagFeed {
                         arrival: ArrivalDetails,
                         flightStatus: String)
   def toArrival(ma: MagArrival): LiveArrival = {
-    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(ma.operatingAirline.iata + ma.flightNumber.trackNumber)
+    val (carrierCode, voyageNumberLike, suffix) = FlightCode.flightCodeToParts(ma.operatingAirline.iata + ma.flightNumber.trackNumber.getOrElse(""))
+
+    val voyageNumber = voyageNumberLike match {
+      case VoyageNumber(vn) if vn != 0 => vn
+      case _ =>
+        throw new Exception(s"\n\nFailed to parse voyage number from ${ma.operatingAirline.iata + ma.flightNumber.trackNumber}\n\n")
+    }
 
     LiveArrival(
       operator = Option(ma.operatingAirline.iata),
@@ -171,7 +177,7 @@ object MagFeed {
       totalPax = ma.passenger.count,
       transPax = ma.passenger.transferCount,
       terminal = Terminals.Terminal(ma.arrival.terminal.getOrElse("")),
-      voyageNumber = voyageNumber.numeric,
+      voyageNumber = voyageNumber,
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = ma.departureAirport.iata,
