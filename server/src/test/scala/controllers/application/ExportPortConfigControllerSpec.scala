@@ -64,12 +64,12 @@ class ExportPortConfigControllerSpec extends PlaySpec {
            |Default walk time (minutes),10
            |
            |Gate/Stand Walk time
-           |Gate, Walk time in minutes
+           |Gate,Walk time in minutes
            |1,2
-           |Stand, Walk time in minutes
+           |Stand,Walk time in minutes
            |03A,4""".stripMargin
 
-      contentAsString(result) must include(resultExpected)
+      contentAsString(result) must ===(resultExpected)
     }
   }
 

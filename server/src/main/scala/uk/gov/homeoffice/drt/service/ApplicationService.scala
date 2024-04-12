@@ -40,6 +40,7 @@ import slickdb.Tables
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.serialisation.{ConfigDeserialiser, ConfigSerialiser, EmptyConfig}
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
@@ -57,6 +58,7 @@ import uk.gov.homeoffice.drt.time._
 
 import javax.inject.Singleton
 import scala.collection.SortedSet
+import scala.collection.immutable.SortedMap
 import scala.concurrent.duration.{DurationInt, DurationLong}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -87,13 +89,16 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
-
   private val crunchRequestProvider: LocalDate => CrunchRequest =
     date => CrunchRequest(date, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
 
-  val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestProvider, maxDaysToConsider)))
-
-  ensureDefaultSlaConfig()
+  val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestProvider, maxDaysToConsider)(
+    emptyProvider = new EmptyConfig[Map[Queue, Int], SlaConfigs] {
+      override def empty: SlaConfigs = SlaConfigs(SortedMap(SDate("2014-09-01T00:00").millisSinceEpoch -> airportConfig.slaByQueue))
+    },
+    serialiser = ConfigSerialiser.slaConfigsSerialiser,
+    deserialiser = ConfigDeserialiser.slaConfigsDeserialiser,
+  )))
 
   val portDeskRecs: PortDesksAndWaitsProviderLike =
     PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, Slas.slaProvider(slasActor))
@@ -130,16 +135,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
     PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
-
-  private def ensureDefaultSlaConfig(): Unit =
-    slasActor.ask(GetState).mapTo[SlaConfigs].foreach { slasUpdate =>
-      if (slasUpdate.configs.isEmpty) {
-        log.info(s"No SLAs. Adding defaults from airport config")
-        slasActor ! ConfigActor.SetUpdate(SlasUpdate(SDate("2014-09-01T00:00").millisSinceEpoch, airportConfig.slaByQueue, None))
-      } else {
-        log.info("SLAs: " + slasUpdate)
-      }
-    }
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2.minutes)
 
