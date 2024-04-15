@@ -84,7 +84,14 @@ lazy val client: Project = (project in file("client"))
     scalaJSUseMainModuleInitializer := true,
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
+    stIgnore := List("react-dom", "log4javascript", "bootstrap",
+      "@handsontable/react", "handsontable", "core-js", "chart.js", "@tippyjs/react",
+      "react-chartjs-2","moment", "@mui/system", "@mui/material", "@mui/icons-material", "@mui/lab","@mui/private-theming","@mui/styled-engine","@mui/base",
+      "flickity", "react-flickity-component", "react-markdown"),
+      stFlavour := Flavour.ScalajsReact,
+
   )
+  .enablePlugins(ScalablyTypedConverterPlugin)
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
   .enablePlugins(ScalaJSWeb)

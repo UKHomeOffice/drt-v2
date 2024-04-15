@@ -118,7 +118,12 @@ object FlightTable {
                 filterFlightComponent,
                 <.div(^.style := js.Dictionary("borderRight" -> "1px solid #000")),
                 <.div(^.style := js.Dictionary("padding-left" -> "24px"),
-                  NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)))
+                  NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities))),
+                <.div(^.style := js.Dictionary("padding-left" -> "24px"),
+                  typings.drtReact.components.Button(label = "clickME")
+                  //                  InputTextComponent(js.Dynamic.literal(value ="text")),
+                  //                  ButtonJsComponent(js.Dynamic.literal(label = "Click Me"))
+                ),
               )
             } else EmptyVdom
           ),

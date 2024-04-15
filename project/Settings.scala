@@ -96,7 +96,11 @@ object Settings {
     "@mui/lab" -> "5.0.0-alpha.119",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
-    "react-markdown" -> "9.0.1"
+    "react-markdown" -> "9.0.1",
+    "@emotion/react"-> "11.11.4",
+    "@emotion/styled"-> "11.11.5",
+    "moment-timezone"-> "^0.5.40",
+    "drt-react" -> "/Users/nilesh/HO_DRT/drt-react"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
