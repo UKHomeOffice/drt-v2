@@ -24,7 +24,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.splits.ApiSplitsToSplitRatio
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
@@ -135,10 +135,17 @@ object FlightTableRow {
 
       val expectedContent = maybeLocalTimeWithPopup(bestExpectedTime, Option(timesPopUp), None)
 
-      val charts = (flightWithSplits.hasValidApi, props.manifestSummary) match {
+      val charts = (flightWithSplits.hasApi, props.manifestSummary) match {
         case (true, Some(manifestSummary)) =>
-          <.div(^.className := "arrivals__table__flight-code__info",
-            FlightChartComponent(FlightChartComponent.Props(manifestSummary)))
+          val maybeLivePcpPax = flightWithSplits.apiFlight.bestPcpPaxEstimate(Seq(LiveFeedSource))
+          val maybePaxDiffAndPct = maybeLivePcpPax.map { pcpPax =>
+            val diff = pcpPax - manifestSummary.passengerCount
+            (diff, diff.toDouble / pcpPax)
+          }
+          if (maybePaxDiffAndPct.isEmpty || maybePaxDiffAndPct.exists(_._2 <= 1.05))
+            <.div(^.className := "arrivals__table__flight-code__info",
+              FlightChartComponent(FlightChartComponent.Props(manifestSummary, maybePaxDiffAndPct)))
+          else EmptyVdom
         case _ => EmptyVdom
       }
 
