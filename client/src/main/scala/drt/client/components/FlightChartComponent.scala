@@ -78,7 +78,7 @@ object FlightChartComponent {
         Tippy.interactiveInfo(
           content =
             <.div(^.cls := "arrivals__table__flight__chart-box",
-              maybeWarning.map(MuiAlert(variant = MuiAlert.Variant.standard, severity = "error")(_)).getOrElse(<.div()),
+              maybeWarning.map(MuiAlert(variant = MuiAlert.Variant.standard, severity = "warning")(_)).getOrElse(<.div()),
 
               <.div(^.className := "arrivals__table__flight__chart-wrapper", ^.width := (chartWidth * 3).toString + "px",
                 if (sortedNats.toMap.values.sum > 0) {
