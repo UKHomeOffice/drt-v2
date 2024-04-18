@@ -18,7 +18,7 @@ import queueus.DynamicQueueStatusProvider
 import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, HistoricApiFeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -278,7 +278,13 @@ object DynamicRunnablePassengerLoads {
       }
       .mapAsync(1) { case (crunchRequest, flights) =>
         val startTime = SDate.now()
-        val arrivalsToLookup = flights.filter(_.bestSplits.isEmpty).map(_.apiFlight)
+        val arrivalsToLookup = flights
+          .filter { f=>
+            val hasLiveApi = f.splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)
+            val hasHistoricApi = f.splits.exists(_.source == Historical)
+            !hasLiveApi && !hasHistoricApi
+          }
+          .map(_.apiFlight)
         historicManifestsProvider(arrivalsToLookup)
           .runWith(Sink.seq)
           .map { manifests =>
