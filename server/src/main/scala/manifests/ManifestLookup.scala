@@ -44,7 +44,8 @@ case class UniqueArrivalKey(arrivalPort: PortCode,
     (arrivalPort.iata, departurePort.iata, voyageNumber.numeric.toString, new Timestamp(scheduled.millisSinceEpoch))
 }
 
-case class ManifestLookup(tables: Tables) extends ManifestLookupLike {
+case class ManifestLookup(tables: Tables)
+                         (implicit mat: Materializer)extends ManifestLookupLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
@@ -52,9 +53,9 @@ case class ManifestLookup(tables: Tables) extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
-                                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
-    //historicManifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
+                                          scheduled: SDateLike
+                                         ): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
+    historicManifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
 
   private def manifestsForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
                                    (implicit mat: Materializer): Future[immutable.Seq[List[ManifestPassengerProfile]]] = {
