@@ -9,7 +9,9 @@ case class FlightManifestSummary(arrivalKey: ArrivalKey,
                                  ageRanges: Map[PaxAgeRange, Int],
                                  nationalities: Map[Nationality, Int],
                                  paxTypes: Map[PaxType, Int]
-                                )
+                                ) {
+  lazy val passengerCount: Int = Seq(ageRanges.values.sum, nationalities.values.sum, paxTypes.values.sum).max
+}
 
 object FlightManifestSummary {
   implicit val rw: ReadWriter[FlightManifestSummary] = macroRW
