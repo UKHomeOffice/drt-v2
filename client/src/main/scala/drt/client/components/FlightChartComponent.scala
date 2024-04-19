@@ -25,9 +25,10 @@ object FlightChartComponent {
     .initialState(State(false))
     .renderPS { (scope, props, state) =>
       val maybeWarning = props.maybeLivePcpPax.collect {
-        case (pax, pct) if pct > 0.05 =>
-          val apiRecords = props.manifestSummary.passengerCount
-          f"DRT has received $apiRecords out of ${apiRecords + pax} passenger records for this flight."
+        case (missingPaxCount, missingPaxPct) if missingPaxPct > 0.05 =>
+          val apiPaxCount = props.manifestSummary.passengerCount
+          val totalPax = apiPaxCount + missingPaxCount
+          f"DRT has received $apiPaxCount out of $totalPax passenger records for this flight."
       }
       val nationalitiesCount = if (state.showAllNationalities) props.manifestSummary.nationalities.size else 10
 
