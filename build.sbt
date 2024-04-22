@@ -82,16 +82,21 @@ lazy val client: Project = (project in file("client"))
     // use uTest framework for tests
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
-    Test / parallelExecution := false,
+    scalaJSLinkerConfig ~= { _.withSourceMap(true) },
+        Test / parallelExecution := false,
     Compile / doc / sources := List(),
-    stIgnore := List("react-dom", "log4javascript", "bootstrap",
-      "@handsontable/react", "handsontable", "core-js", "chart.js", "@tippyjs/react",
-      "react-chartjs-2","moment", "@mui/system", "@mui/material", "@mui/icons-material", "@mui/lab","@mui/private-theming","@mui/styled-engine","@mui/base",
-      "flickity", "react-flickity-component", "react-markdown"),
-      stFlavour := Flavour.ScalajsReact,
+//    stMinimize := Selection.NoneExcept("@drt/drt-react"),
+//    stIgnore := List("bootstrap", "core-js", "flickity", "react-dom", "handsontable","@handsontable/react","@mui/styled-engine"),
+//    stIgnore := List(//"react-dom",
+//        "log4javascript", "bootstrap",
+//      "@handsontable/react", "handsontable", "core-js", "chart.js", "@tippyjs/react",//"@emotion/react","@emotion/styled",
+//      "react-chartjs-2","moment", "@mui/system", "@mui/icons-material", "@mui/lab",
+//        "@mui/private-theming","@mui/base",//"@mui/styled-engine",
+//      "flickity", "react-flickity-component", "react-markdown"),
+//    stFlavour := Flavour.ScalajsReact,
 
   )
-  .enablePlugins(ScalablyTypedConverterPlugin)
+//  .enablePlugins(ScalablyTypedConverterPlugin)
   .enablePlugins(ScalaJSPlugin)
   .enablePlugins(ScalaJSBundlerPlugin)
   .enablePlugins(ScalaJSWeb)
@@ -144,7 +149,7 @@ lazy val server = (project in file("server"))
     TwirlKeys.templateImports += "buildinfo._",
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
-    dependencyCheckFormats := Seq("XML", "JSON" ,"HTML")
+    dependencyCheckFormats := Seq("XML", "JSON", "HTML")
   )
   .aggregate(clients.map(projectToRef) *)
   .dependsOn(sharedJVM)

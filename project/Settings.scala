@@ -90,6 +90,7 @@ object Settings {
     "@tippyjs/react" -> "4.1.0",
     "react-chartjs-2" -> "^4.0.0",
     "moment" -> ">=2.29.4",
+//    "@mui/styled-engine" -> "5.11.16",
     "@mui/system" -> "5.11.16",
     "@mui/material" -> "5.11.16",
     "@mui/icons-material" -> "5.11.16",
@@ -97,10 +98,12 @@ object Settings {
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
     "react-markdown" -> "9.0.1",
-    "@emotion/react"-> "11.11.4",
-    "@emotion/styled"-> "11.11.5",
+//    "@emotion/react"-> "11.11.4",
+//    "@emotion/styled"-> "11.11.5",
     "moment-timezone"-> "^0.5.40",
-    "drt-react" -> "/Users/nilesh/HO_DRT/drt-react"
+    "@types/react-dom" -> react,
+//    "drt-react" -> "github:UKHomeOffice/drt-react",
+    "drt-react" -> "/Users/nilesh/HO_DRT/drt-react",
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

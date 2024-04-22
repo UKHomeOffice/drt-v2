@@ -10,7 +10,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps}
 import io.kinoplan.scalajs.react.material.ui.core.{MuiInputAdornment, MuiTextField, MuiTypography}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Clear, Search}
@@ -18,6 +18,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, _}
+//import typings.muiMaterial.inputInputMod.InputProps
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
@@ -112,7 +113,7 @@ object FlightTable {
               )
             case _ => <.div()
           },
-          <.div(^.style := js.Dictionary("backgroundColor" -> "#E6E9F1", "padding-left" -> "24px", "padding-top" -> "24px", "padding-bottom" -> "24px"),
+          <.div(^.id := "showFlagger", ^.style := js.Dictionary("backgroundColor" -> "#E6E9F1", "padding-left" -> "24px", "padding-top" -> "24px", "padding-bottom" -> "24px"),
             if (props.showFlagger) {
               <.div(^.style := js.Dictionary("display" -> "flex"),
                 filterFlightComponent,
@@ -120,11 +121,9 @@ object FlightTable {
                 <.div(^.style := js.Dictionary("padding-left" -> "24px"),
                   NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities))),
                 <.div(^.style := js.Dictionary("padding-left" -> "24px"),
-                  typings.drtReact.components.Button(label = "clickME")
-                  //                  InputTextComponent(js.Dynamic.literal(value ="text")),
-                  //                  ButtonJsComponent(js.Dynamic.literal(label = "Click Me"))
-                ),
-              )
+                  <.div(^.id := "fcomponent", DrtReactComponent.component(DrtReactComponent.InputProps(`type` = "text")),
+                    DrtReactComponent.componentButton(DrtReactComponent.ButtonProps("Click Me")))
+                ))
             } else EmptyVdom
           ),
           <.div(
