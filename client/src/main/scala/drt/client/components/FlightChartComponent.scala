@@ -4,6 +4,7 @@ import drt.client.components.ChartJSComponent.{ChartJsData, ChartJsOptions, Char
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.api.FlightManifestSummary
+import io.kinoplan.scalajs.react.material.ui.core.MuiAlert
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
@@ -15,7 +16,7 @@ import uk.gov.homeoffice.drt.ports.PaxTypes
 import scala.scalajs.js
 
 object FlightChartComponent {
-  case class Props(manifestSummary: FlightManifestSummary)
+  case class Props(manifestSummary: FlightManifestSummary, maybeLivePcpPax: Option[(Int, Double)])
 
   case class State(showAllNationalities: Boolean)
 
@@ -23,6 +24,12 @@ object FlightChartComponent {
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FlightChart")
     .initialState(State(false))
     .renderPS { (scope, props, state) =>
+      val maybeWarning = props.maybeLivePcpPax.collect {
+        case (missingPaxCount, missingPaxPct) if missingPaxPct > 0.05 =>
+          val apiPaxCount = props.manifestSummary.passengerCount
+          val totalPax = apiPaxCount + missingPaxCount
+          f"DRT has received $apiPaxCount out of $totalPax passenger records for this flight."
+      }
       val nationalitiesCount = if (state.showAllNationalities) props.manifestSummary.nationalities.size else 10
 
       val sortedNats = summariseNationalities(props.manifestSummary.nationalities, nationalitiesCount)
@@ -72,6 +79,8 @@ object FlightChartComponent {
         Tippy.interactiveInfo(
           content =
             <.div(^.cls := "arrivals__table__flight__chart-box",
+              maybeWarning.map(MuiAlert(variant = MuiAlert.Variant.standard, severity = "warning")(_)).getOrElse(<.div()),
+
               <.div(^.className := "arrivals__table__flight__chart-wrapper", ^.width := (chartWidth * 3).toString + "px",
                 if (sortedNats.toMap.values.sum > 0) {
                   val maxY = sortedNats.toMap.values.max + 5

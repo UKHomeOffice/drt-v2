@@ -331,14 +331,11 @@ object DynamicRunnablePassengerLoads {
           .get(ArrivalKey(flight.apiFlight))
           .map(splitsForArrival(_, flight.apiFlight))
 
-        val existingSplits = maybeNewSplits match {
-          case Some(splits) if splits.source == ApiSplitsWithHistoricalEGateAndFTPercentages =>
-            flight.splits.filter(_.source != ApiSplitsWithHistoricalEGateAndFTPercentages)
-          case _ =>
-            flight.splits
-        }
+        val updatedSplits = maybeNewSplits
+          .map(sp => flight.splits.filterNot(_.source == sp.source) + sp)
+          .getOrElse(flight.splits)
 
-        flight.copy(splits = existingSplits ++ maybeNewSplits)
+        flight.copy(splits = updatedSplits)
       }
       .map { flight =>
         flight.splits.find(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages) match {
