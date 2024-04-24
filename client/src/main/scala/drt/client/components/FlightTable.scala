@@ -59,15 +59,14 @@ object FlightTable {
         a.filterFlightNumber == b.filterFlightNumber
   }
 
-  var typingTimer: Option[SetTimeoutHandle] = None
-  val doneTypingInterval = 5000
-  var latestTypingValue: String = ""
-  def doneTyping(value: String, port: String): Unit = {
-    latestTypingValue = ""
-    typingTimer.foreach(clearTimeout)
+  var typingSearchTimer: Option[SetTimeoutHandle] = None
+  val doneSearchTypingInterval = 5000
+  var latestSearchTypingValue: String = ""
+  def doneSearchTyping(value: String, port: String): Unit = {
+    latestSearchTypingValue = ""
+    typingSearchTimer.foreach(clearTimeout)
     if (value.length > 1) {
       Callback(GoogleEventTracker.sendEvent(port, "flightNumberSearch", value))
-      println(s"Searching for flight number: $value")// scalastyle:ignore
     }
   }
 
@@ -81,7 +80,7 @@ object FlightTable {
       else
         "* Passengers from CTA origins do not contribute to PCP workload"
 
-      typingTimer = Some(setTimeout(doneTypingInterval)(doneTyping(latestTypingValue, props.airportConfig.portCode.toString)))
+      typingSearchTimer = Some(setTimeout(doneSearchTypingInterval)(doneSearchTyping(latestSearchTypingValue, props.airportConfig.portCode.toString)))
 
       def updateState(value: String): CallbackTo[Unit] = {
         Callback(SPACircuit.dispatch(SetFlightFilterMessage(value)))
@@ -110,7 +109,7 @@ object FlightTable {
           ^.autoFocus := true,
           ^.onChange ==> { e: ReactEventFromInput =>
             val value = e.target.value
-            latestTypingValue = value
+            latestSearchTypingValue = value
             updateState(value)
           })
       )
