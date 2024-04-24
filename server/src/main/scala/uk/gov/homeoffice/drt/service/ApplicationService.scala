@@ -49,8 +49,8 @@ import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpda
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
-import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeatures, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
+import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
+import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, PaxCapModelAndFeaturesV2, ToChoxModelAndFeatures, WalkTimeModelAndFeatures}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
@@ -189,11 +189,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
     QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
   }
 
-  private def enabledPredictionModelNames: Seq[String] = Seq(
-    OffScheduleModelAndFeatures.targetName,
-    ToChoxModelAndFeatures.targetName,
-    WalkTimeModelAndFeatures.targetName,
-    PaxCapModelAndFeatures.targetName,
+  private def enabledPredictionModelNamesWithUpperThresholds = Map(
+    OffScheduleModelAndFeatures.targetName -> 45,
+    ToChoxModelAndFeatures.targetName -> 20,
+    WalkTimeModelAndFeatures.targetName -> 30 * 60,
+    PaxCapModelAndFeaturesV2.targetName -> 100,
   )
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
@@ -208,14 +208,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
         TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
         PredictionModelActor.Terminal(a.Terminal.toString),
       ),
-      feedService.flightModelPersistence.getModels(enabledPredictionModelNames),
-      Map(
-        OffScheduleModelAndFeatures.targetName -> 45,
-        ToChoxModelAndFeatures.targetName -> 20,
-        WalkTimeModelAndFeatures.targetName -> 30 * 60,
-        PaxCapModelAndFeatures.targetName -> 100,
-      ),
-      15
+      feedService.flightModelPersistence.getModels(enabledPredictionModelNamesWithUpperThresholds.keys.toSeq),
+      enabledPredictionModelNamesWithUpperThresholds,
+      minimumImprovementPctThreshold = 15
     ).addPredictions
 
   val startUpdateGraphs: (
