@@ -29,6 +29,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.HashSet
 import scala.scalajs.js
+import scala.scalajs.js.timers._
 
 object FlightTable {
   case class Props(queueOrder: Seq[Queue],
@@ -58,6 +59,18 @@ object FlightTable {
         a.filterFlightNumber == b.filterFlightNumber
   }
 
+  var typingSearchTimer: Option[SetTimeoutHandle] = None
+  val doneSearchTypingInterval = 5000
+
+  def submitSearchTermToAnalyticsAfterDelay(searchTerm: String, portCode: String): Unit = {
+    typingSearchTimer.foreach(clearTimeout)
+    if (searchTerm.length > 1) {
+      typingSearchTimer = Some(setTimeout(doneSearchTypingInterval) {
+        Callback(GoogleEventTracker.sendEvent(portCode, "flightNumberSearch", searchTerm))
+      })
+    }
+  }
+
   def apply(shortLabel: Boolean = false,
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
@@ -69,8 +82,7 @@ object FlightTable {
         "* Passengers from CTA origins do not contribute to PCP workload"
 
       def updateState(value: String): CallbackTo[Unit] = {
-        Callback(SPACircuit.dispatch(SetFlightFilterMessage(value))) >>
-          Callback(if (value.nonEmpty) GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "flightNumberSearch", value))
+        Callback(SPACircuit.dispatch(SetFlightFilterMessage(value)))
       }
 
       case class Model(flaggedNationalities: Set[Country],
@@ -95,8 +107,9 @@ object FlightTable {
           ^.defaultValue := props.filterFlightNumber,
           ^.autoFocus := true,
           ^.onChange ==> { e: ReactEventFromInput =>
-            val value = e.target.value
-            updateState(value)
+            val searchTerm = e.target.value
+            submitSearchTermToAnalyticsAfterDelay(searchTerm, props.portCode.toString)
+            updateState(searchTerm)
           })
       )
 
