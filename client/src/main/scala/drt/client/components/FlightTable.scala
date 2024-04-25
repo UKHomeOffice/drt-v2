@@ -61,12 +61,13 @@ object FlightTable {
 
   var typingSearchTimer: Option[SetTimeoutHandle] = None
   val doneSearchTypingInterval = 5000
-  var latestSearchTypingValue: String = ""
-  def doneSearchTyping(value: String, port: String): Unit = {
-    latestSearchTypingValue = ""
+
+  def submitSearchTermToAnalyticsAfterDelay(searchTerm: String, portCode: String): Unit = {
     typingSearchTimer.foreach(clearTimeout)
-    if (value.length > 1) {
-      Callback(GoogleEventTracker.sendEvent(port, "flightNumberSearch", value))
+    if (searchTerm.length > 1) {
+      typingSearchTimer = Some(setTimeout(doneSearchTypingInterval) {
+        Callback(GoogleEventTracker.sendEvent(portCode, "flightNumberSearch", searchTerm))
+      })
     }
   }
 
@@ -106,10 +107,9 @@ object FlightTable {
           ^.defaultValue := props.filterFlightNumber,
           ^.autoFocus := true,
           ^.onChange ==> { e: ReactEventFromInput =>
-            val value = e.target.value
-            typingSearchTimer = Some(setTimeout(doneSearchTypingInterval)(doneSearchTyping(latestSearchTypingValue, props.airportConfig.portCode.toString)))
-            latestSearchTypingValue = value
-            updateState(value)
+            val searchTerm = e.target.value
+            submitSearchTermToAnalyticsAfterDelay(searchTerm, props.portCode.toString)
+            updateState(searchTerm)
           })
       )
 
