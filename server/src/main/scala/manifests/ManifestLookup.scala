@@ -173,22 +173,22 @@ case class ManifestLookup(tables: Tables)
             arrival_port_code,
             departure_port_code,
             voyage_number,
-            scheduled_date
-          FROM
-            voyage_manifest_passenger_info
+            scheduled
+          FROM processed_json
           WHERE
             event_code ='DC'
             and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
             and departure_port_code=${uniqueArrivalKey.departurePort.toString}
             and voyage_number=${uniqueArrivalKey.voyageNumber.numeric}
-            and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')::int
-            and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
+            and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')::int
+            and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
+            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#${lastYear.toISODateOnly}')::int, EXTRACT(YEAR FROM TIMESTAMP '#${uniqueArrivalKey.scheduled.toISODateOnly}')::int)
           GROUP BY
             arrival_port_code,
             departure_port_code,
             voyage_number,
-            scheduled_date
-          ORDER BY scheduled_date DESC
+            scheduled
+          ORDER BY scheduled DESC
           LIMIT 6
           """.as[(String, String, String, Timestamp)]
   }
@@ -204,21 +204,22 @@ case class ManifestLookup(tables: Tables)
             arrival_port_code,
             departure_port_code,
             voyage_number,
-            scheduled_date
+            scheduled
           FROM
-            voyage_manifest_passenger_info
+            processed_json
           WHERE
             event_code ='DC'
             and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
             and departure_port_code=${uniqueArrivalKey.departurePort.toString}
             and voyage_number=${uniqueArrivalKey.voyageNumber.numeric}
-            and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
+            and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
+            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#${lastYear.toISODateOnly}')::int, EXTRACT(YEAR FROM TIMESTAMP '#${uniqueArrivalKey.scheduled.toISODateOnly}')::int)
           GROUP BY
             arrival_port_code,
             departure_port_code,
             voyage_number,
-            scheduled_date
-          ORDER BY scheduled_date DESC
+            scheduled
+          ORDER BY scheduled DESC
           LIMIT 6
           """.as[(String, String, String, Timestamp)]
   }
@@ -235,21 +236,22 @@ case class ManifestLookup(tables: Tables)
             arrival_port_code,
             departure_port_code,
             voyage_number,
-            scheduled_date
+            scheduled
           FROM
             voyage_manifest_passenger_info
           WHERE
             event_code ='DC'
             and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
             and departure_port_code=${uniqueArrivalKey.departurePort.toString}
-            and day_of_week = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')::int
-            and week_of_year IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
+            and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '#$scheduledTs')::int
+            and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '#$earliestTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$middleTs')::int, EXTRACT(WEEK FROM TIMESTAMP '#$latestTs')::int)
+            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#${lastYear.toISODateOnly}')::int, EXTRACT(YEAR FROM TIMESTAMP '#${uniqueArrivalKey.scheduled.toISODateOnly}')::int)
           GROUP BY
             arrival_port_code,
             departure_port_code,
             voyage_number,
-            scheduled_date
-          ORDER BY scheduled_date DESC
+            scheduled
+          ORDER BY scheduled DESC
           LIMIT 6
           """.as[(String, String, String, Timestamp)]
   }
