@@ -80,8 +80,6 @@ object FlightTable {
       else
         "* Passengers from CTA origins do not contribute to PCP workload"
 
-      typingSearchTimer = Some(setTimeout(doneSearchTypingInterval)(doneSearchTyping(latestSearchTypingValue, props.airportConfig.portCode.toString)))
-
       def updateState(value: String): CallbackTo[Unit] = {
         Callback(SPACircuit.dispatch(SetFlightFilterMessage(value)))
       }
@@ -109,6 +107,7 @@ object FlightTable {
           ^.autoFocus := true,
           ^.onChange ==> { e: ReactEventFromInput =>
             val value = e.target.value
+            typingSearchTimer = Some(setTimeout(doneSearchTypingInterval)(doneSearchTyping(latestSearchTypingValue, props.airportConfig.portCode.toString)))
             latestSearchTypingValue = value
             updateState(value)
           })
