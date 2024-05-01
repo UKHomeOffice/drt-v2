@@ -144,8 +144,8 @@ object SPAMain {
       (terminal != p.terminal) || (maybeViewDate != p.maybeViewDate) || (mode != p.mode) || (maybeTimeMachineDate != p.maybeTimeMachineDate)
 
     def loadAction: Action = mode match {
-      case Planning =>
-        GetForecastWeek(TerminalPlanningComponent.defaultStartDate(dateFromUrlOrNow), terminal)
+//      case Planning =>
+//        GetForecastWeek(TerminalPlanningComponent.defaultStartDate(dateFromUrlOrNow), terminal, 60)
       case Staffing =>
         GetShiftsForMonth(dateFromUrlOrNow)
       case _ =>
