@@ -1,52 +1,53 @@
 package drt.server.feeds.api
 
 import akka.Done
-import akka.stream.scaladsl.SourceQueueWithComplete
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
 import org.slf4j.LoggerFactory
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import uk.gov.homeoffice.drt.time.SDate
 import slickdb.Tables
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.CarrierCode
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
+import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait ManifestProcessor {
-  def process(uniqueArrivalKey: UniqueArrivalKey, processedAt: MillisSinceEpoch): Future[Done]
+  def process(uniqueArrivalKeys: Seq[UniqueArrivalKey], processedAt: MillisSinceEpoch): Future[Done]
+
   def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done]
 }
 
 case class DbManifestProcessor(tables: Tables,
                                destinationPortCode: PortCode,
-                               manifestsLiveResponse: SourceQueueWithComplete[ManifestsFeedResponse])
-                              (implicit ec: ExecutionContext) extends ManifestProcessor {
+                               persistManifests: ManifestsFeedResponse => Future[Done],
+                              )
+                              (implicit ec: ExecutionContext, mat: Materializer) extends ManifestProcessor {
   private val log = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
 
   override def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done] =
-    manifestsLiveResponse
-      .offer(ManifestsFeedSuccess(DqManifests(processedAt, Seq())))
-      .map(_ => Done)
+    persistManifests(ManifestsFeedSuccess(DqManifests(processedAt, Seq())))
 
-  override def process(uniqueArrivalKey: UniqueArrivalKey, processedAt: MillisSinceEpoch): Future[Done] =
-    manifestForArrivalKey(uniqueArrivalKey).flatMap {
-      case None =>
-        log.warn(s"No manifest entries found for $uniqueArrivalKey")
-        Future.successful(Done)
-
-      case Some(manifest) =>
-        val response = ManifestsFeedSuccess(DqManifests(processedAt, Seq(manifest)))
-        manifestsLiveResponse
-          .offer(response)
-          .map(_ => Done)
-    }
+  override def process(uniqueArrivalKeys: Seq[UniqueArrivalKey], processedAt: MillisSinceEpoch): Future[Done] =
+    Source(uniqueArrivalKeys.grouped(10).toList)
+      .mapAsync(1) { group =>
+        Source(group)
+          .mapAsync(1)(manifestForArrivalKey)
+          .collect {
+            case Some(manifest) => manifest
+          }
+          .runWith(Sink.seq)
+          .flatMap(manifests => persistManifests(ManifestsFeedSuccess(DqManifests(processedAt, manifests))))
+      }
+      .runWith(Sink.ignore)
 
   private def manifestForArrivalKey(uniqueArrivalKey: UniqueArrivalKey): Future[Option[VoyageManifest]] = {
     val scheduled = SDate(uniqueArrivalKey.scheduled.millisSinceEpoch).toISOString
@@ -87,19 +88,19 @@ case class DbManifestProcessor(tables: Tables,
         }
 
     tables.run(query).map {
-      case pax if pax.isEmpty => None
-      case pax =>
-        Option(VoyageManifest(
-          DC,
-          uniqueArrivalKey.arrivalPort,
-          uniqueArrivalKey.departurePort,
-          uniqueArrivalKey.voyageNumber,
-          CarrierCode(""),
-          ManifestDateOfArrival(uniqueArrivalKey.scheduled.toISODateOnly),
-          ManifestTimeOfArrival(uniqueArrivalKey.scheduled.toHoursAndMinutes),
-          pax.toList
-        ))
-    }
+        case pax if pax.isEmpty => None
+        case pax =>
+          Option(VoyageManifest(
+            DC,
+            uniqueArrivalKey.arrivalPort,
+            uniqueArrivalKey.departurePort,
+            uniqueArrivalKey.voyageNumber,
+            CarrierCode(""),
+            ManifestDateOfArrival(uniqueArrivalKey.scheduled.toISODateOnly),
+            ManifestTimeOfArrival(uniqueArrivalKey.scheduled.toHoursAndMinutes),
+            pax.toList
+          ))
+      }
       .recover {
         case t =>
           log.error(s"Failed to execute query", t)

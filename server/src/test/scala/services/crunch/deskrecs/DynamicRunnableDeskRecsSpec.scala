@@ -11,7 +11,7 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinut
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
-import manifests.queues.SplitsCalculator.SplitsForArrival
+import manifests.queues.SplitsCalculator.SplitsForTerminal
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus._
@@ -201,7 +201,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val arrival = ArrivalGenerator.live(origin = PortCode("JFK"), totalPax = Option(100)).toArrival(LiveFeedSource)
     val flights = Seq(ApiFlightWithSplits(arrival, Set()))
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
-    val mockSplits: SplitsForArrival = (_, _) => splits
+    val mockSplits: SplitsForTerminal = (_, _) => splits
 
     "addManifests" >> {
       "When I have a manifest matching the arrival I should get the mock splits added to the arrival" >> {

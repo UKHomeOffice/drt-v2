@@ -1,7 +1,7 @@
 package manifests.queues
 
 import manifests.passengers.ManifestLike
-import manifests.queues.SplitsCalculator.SplitsForArrival
+import manifests.queues.SplitsCalculator.SplitsForTerminal
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, PaxTypeQueueAllocation, QueueAdjustments}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, PaxTypeAndQueue}
 
 object SplitsCalculator {
-  type SplitsForArrival = (ManifestLike, Arrival) => Splits
+  type SplitsForTerminal = (ManifestLike, Terminal) => Splits
 }
 
 case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
@@ -30,7 +30,7 @@ case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
     Splits(portDefault.toSet, SplitSources.TerminalAverage, None, Percentage)
   }
 
-  val splitsForArrival: SplitsForArrival =
-    (manifest: ManifestLike, arrival: Arrival) =>
-      adjustments.adjust(queueAllocator.toSplits(arrival.Terminal, manifest))
+  val splitsForArrival: SplitsForTerminal =
+    (manifest: ManifestLike, terminal: Terminal) =>
+      adjustments.adjust(queueAllocator.toSplits(terminal, manifest))
 }

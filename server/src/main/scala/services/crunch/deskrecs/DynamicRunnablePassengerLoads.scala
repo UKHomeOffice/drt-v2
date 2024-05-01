@@ -11,7 +11,7 @@ import drt.shared.FlightsApi.PaxForArrivals
 import drt.shared._
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
-import manifests.queues.SplitsCalculator.SplitsForArrival
+import manifests.queues.SplitsCalculator.SplitsForTerminal
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.DynamicQueueStatusProvider
@@ -324,7 +324,7 @@ object DynamicRunnablePassengerLoads {
 
   def addManifests(flights: Iterable[ApiFlightWithSplits],
                    manifests: Map[ArrivalKey, ManifestLike],
-                   splitsForArrival: SplitsForArrival): Iterable[ApiFlightWithSplits] =
+                   splitsForArrival: SplitsForTerminal): Iterable[ApiFlightWithSplits] =
     flights
       .map { flight =>
         val maybeNewSplits = manifests

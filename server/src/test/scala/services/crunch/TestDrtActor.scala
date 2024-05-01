@@ -52,17 +52,19 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
-case class MockManifestLookupService() extends ManifestLookupLike {
+case class MockManifestLookupService(maybeBestManifest: Option[BestAvailableManifest] = None,
+                                     maybeManifestPaxCount: Option[ManifestPaxCount] = None,
+                                    ) extends ManifestLookupLike {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
                                           scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), maybeBestManifest))
 
   override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
-    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), maybeManifestPaxCount))
   }
 }
 

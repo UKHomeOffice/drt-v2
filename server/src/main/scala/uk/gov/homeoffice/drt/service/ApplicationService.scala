@@ -393,8 +393,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
                         startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef,
                           UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
-    val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] =
-      Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
+//    val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] =
+//      Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
 
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
@@ -402,11 +402,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
       maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = DrtStaticParameters.expireAfterMillis,
       now = now,
-      manifestsLiveSource = voyageManifestsLiveSource,
+//      manifestsLiveSource = voyageManifestsLiveSource,
       crunchActors = actors,
       feedActors = feedService.feedActors,
       updateFeedStatus = feedService.updateFeedStatus,
-      manifestsRouterActor = persistentStateActors.manifestsRouterActor,
+//      manifestsRouterActor = persistentStateActors.manifestsRouterActor,
       arrivalsForecastBaseFeed = feedService.baseArrivalsSource(feedService.maybeAclFeed),
       arrivalsForecastFeed = feedService.forecastArrivalsSource(airportConfig.portCode),
       arrivalsLiveBaseFeed = feedService.liveBaseArrivalsSource(airportConfig.portCode),
@@ -464,7 +464,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
 
         val arrivalKeysProvider = DbManifestArrivalKeys(AggregateDb, airportConfig.portCode)
-        val manifestProcessor = DbManifestProcessor(AggregateDb, airportConfig.portCode, crunchInputs.manifestsLiveResponseSource)
+        val manifestProcessor = DbManifestProcessor(AggregateDb, airportConfig.portCode, persistentStateActors.manifestsRouterActor)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
         log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
         ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 1.second)

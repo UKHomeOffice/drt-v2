@@ -4,7 +4,6 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import slick.sql.SqlStreamingAction
 import slickdb.Tables
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
@@ -25,17 +24,10 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
   override def nextKeys(since: Long): Future[(Option[MillisSinceEpoch], Iterable[UniqueArrivalKey])] = {
     val ts = SDate(since).toISOString.dropRight(1) + "." + SDate(since).millisSinceEpoch.toString.takeRight(3) + "Z"
 
-    tables.run(zipQuery(ts))
-      .flatMap {
-        case Some((zipFileName, processedAt)) =>
-          tables.run(jsonQuery(zipFileName))
-            .flatMap { jsonFileNames =>
-              tables.run(manifestsQuery(jsonFileNames)).map { result =>
-                (Option(processedAt), result)
-              }
-            }
-        case None =>
-          Future.successful((None, Vector()))
+    tables.run(manifestsQuery2(ts))
+      .map {
+        case Some((arrivalKeys, nextTs)) => (Option(nextTs), arrivalKeys)
+        case _ => (None, Vector())
       }
       .recover {
         case t =>
@@ -44,31 +36,39 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
       }
   }
 
-  def zipQuery(ts: String): DBIOAction[Option[(String, MillisSinceEpoch)], NoStream, Effect] =
-    sql"""SELECT pz.zip_file_name, EXTRACT(EPOCH FROM pz.processed_at) * 1000 FROM processed_zip pz WHERE pz.processed_at > TIMESTAMP '#$ts' ORDER BY pz.processed_at LIMIT 1
+  def manifestsQuery2(ts: String): DBIOAction[Option[(Seq[UniqueArrivalKey], Long)], NoStream, Effect] =
+    sql"""SELECT pj.departure_port_code, pj.voyage_number, EXTRACT(EPOCH FROM pj.scheduled) * 1000, MAX(EXTRACT(EPOCH FROM pz.processed_at)) * 1000
+         |FROM processed_json pj
+         |INNER JOIN processed_zip pz on pz.zip_file_name=pj.zip_file_name
+         |WHERE
+         |  pz.processed_at > TIMESTAMP '#$ts'
+         |  AND pj.arrival_port_code = ${destinationPortCode.iata}
+         |  AND event_code = 'DC'
+         |GROUP BY pj.departure_port_code, pj.voyage_number, pj.scheduled
+         |ORDER BY pj.scheduled
          |""".stripMargin
-      .as[(String, Long)]
-      .map(_.headOption)
-
-  def jsonQuery(zipFileName: String): DBIOAction[Vector[String], NoStream, Effect] =
-    sql"""SELECT pj.json_file_name FROM processed_json pj WHERE pj.zip_file_name=$zipFileName
-         |""".stripMargin
-      .as[String]
-
-  def manifestsQuery(jsonFileNames: Iterable[String]): DBIOAction[Vector[UniqueArrivalKey], NoStream, Effect] =
-    sql"""SELECT vm.departure_port_code, vm.voyage_number, EXTRACT(EPOCH FROM vm.scheduled_date) * 1000
-         |FROM voyage_manifest_passenger_info vm
-         |WHERE json_file IN ('#${jsonFileNames.mkString("','")}')
-         |AND vm.arrival_port_code = ${destinationPortCode.iata}
-         |AND event_code = 'DC'
-         GROUP BY vm.departure_port_code, vm.voyage_number, vm.scheduled_date;
-         |""".stripMargin
-      .as[(String, Int, Long)]
-      .map {
-        _.map {
-          case (origin, voyageNumber, scheduled) =>
-            UniqueArrivalKey(destinationPortCode, PortCode(origin), VoyageNumber(voyageNumber), SDate(scheduled, DateTimeZone.UTC))
+      .as[(String, Int, Long, Long)]
+      .map { rows =>
+        if (rows.nonEmpty) {
+          val nextTs = rows.map(_._4).max
+          val keys = rows.map {
+            case (origin, voyageNumber, scheduled, _) =>
+              UniqueArrivalKey(destinationPortCode, PortCode(origin), VoyageNumber(voyageNumber), SDate(scheduled, DateTimeZone.UTC))
+          }
+          Option(keys, nextTs)
         }
+        else None
       }
 }
 
+/**
+ SELECT pj.departure_port_code, pj.voyage_number, EXTRACT(EPOCH FROM pj.scheduled) * 1000, MAX(EXTRACT(EPOCH FROM pz.processed_at)) * 1000
+ FROM processed_json pj
+ INNER JOIN processed_zip pz on pz.zip_file_name=pj.zip_file_name
+ WHERE
+ pz.processed_at > '2024-04-30'
+ AND pj.arrival_port_code = 'STN'
+  AND event_code = 'DC'
+ GROUP BY pj.departure_port_code, pj.voyage_number, pj.scheduled
+ ORDER BY pj.scheduled
+ */

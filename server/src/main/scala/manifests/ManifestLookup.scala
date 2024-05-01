@@ -10,7 +10,7 @@ import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.Tables
 import uk.gov.homeoffice.drt.Nationality
-import uk.gov.homeoffice.drt.arrivals.VoyageNumber
+import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -42,6 +42,14 @@ case class UniqueArrivalKey(arrivalPort: PortCode,
 
   val queryArrivalKey: (String, String, String, Timestamp) =
     (arrivalPort.iata, departurePort.iata, voyageNumber.numeric.toString, new Timestamp(scheduled.millisSinceEpoch))
+}
+
+object UniqueArrivalKey {
+  def apply(arrival: Arrival, port: PortCode): UniqueArrivalKey =
+    UniqueArrivalKey(port, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+
+  def apply(feedArrival: FeedArrival, port: PortCode): UniqueArrivalKey =
+    UniqueArrivalKey(port, PortCode(feedArrival.origin), VoyageNumber(feedArrival.voyageNumber), SDate(feedArrival.scheduled))
 }
 
 case class ManifestLookup(tables: Tables)
@@ -197,11 +205,11 @@ case class ManifestLookup(tables: Tables)
    WHERE
    event_code ='DC'
    and arrival_port_code='STN'
-            and departure_port_code='SDR'
-            and voyage_number=2613
-            and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '2024-04-29')::int
-   and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' + interval '1 week')::int)
-   and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-04-29' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-04-29')::int)
+            and departure_port_code='SZY'
+            and voyage_number=229
+            and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '2024-04-30')::int
+   and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-04-30' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-30')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-30' + interval '1 week')::int)
+   and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-04-30' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-04-30')::int)
    GROUP BY
    arrival_port_code,
    departure_port_code,
