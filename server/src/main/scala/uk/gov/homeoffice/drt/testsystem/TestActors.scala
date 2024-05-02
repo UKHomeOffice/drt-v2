@@ -423,7 +423,7 @@ object TestActors {
                                    terminal: Terminal,
                                    now: () => SDateLike,
                                    paxFeedSourceOrder: List[FeedSource],
-                                  ) extends TerminalDayFlightActor(year, month, day, terminal, now, None, None, paxFeedSourceOrder) with Resettable {
+                                  ) extends TerminalDayFlightActor(year, month, day, terminal, now, None, None, paxFeedSourceOrder, None) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

@@ -4,7 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.TQM
 import org.slf4j.LoggerFactory
 import services.graphstages.Crunch.LoadMinute
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PaxType, PaxTypeAndQueue}
@@ -21,6 +21,7 @@ object WholePassengerQueueSplits {
              queueStatus: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
              queueFallbacks: QueueFallbacks,
              paxFeedSourceOrder: List[FeedSource],
+             terminalSplits: Terminal => Option[Splits],
             ): Map[TQM, LoadMinute] =
     flights
       .groupBy(_.apiFlight.Terminal)
@@ -30,7 +31,7 @@ object WholePassengerQueueSplits {
           val procTimes = processingTime(terminal)
           flights
             .flatMap { flight =>
-              flightSplits(minuteMillis, flight, procTimes, queueStatus(flight.apiFlight.Terminal), queueFallbacks, paxFeedSourceOrder)
+              flightSplits(minuteMillis, flight, procTimes, queueStatus(flight.apiFlight.Terminal), queueFallbacks, paxFeedSourceOrder, terminalSplits)
                 .flatMap { case (queue, byMinute) =>
                   byMinute.map {
                     case (minute, passengers) =>
@@ -53,8 +54,9 @@ object WholePassengerQueueSplits {
                            queueStatus: (Queue, MillisSinceEpoch) => QueueStatus,
                            queueFallbacks: QueueFallbacks,
                            paxFeedSourceOrder: List[FeedSource],
+                           terminalSplits: Terminal => Option[Splits],
                           ): Map[Queue, Map[MillisSinceEpoch, List[Double]]] =
-    flight.bestSplits match {
+    flight.bestSplits.orElse(terminalSplits(flight.apiFlight.Terminal)) match {
       case Some(splitsToUse) =>
         val pcpPax = flight.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)
         val startMinute = SDate(flight.apiFlight.pcpRange(paxFeedSourceOrder).min)

@@ -76,6 +76,7 @@ object Scenarios {
       queuesByTerminal = simulationAirportConfig.queuesByTerminal,
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
+      terminalSplits = splitsCalculator.terminalSplits,
     )
 
     class DummyPersistentActor extends Actor {

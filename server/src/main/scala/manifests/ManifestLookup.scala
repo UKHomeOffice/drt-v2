@@ -39,9 +39,6 @@ case class UniqueArrivalKey(arrivalPort: PortCode,
                             voyageNumber: VoyageNumber,
                             scheduled: SDateLike) {
   override def toString: String = s"$arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString}"
-
-  val queryArrivalKey: (String, String, String, Timestamp) =
-    (arrivalPort.iata, departurePort.iata, voyageNumber.numeric.toString, new Timestamp(scheduled.millisSinceEpoch))
 }
 
 object UniqueArrivalKey {
@@ -83,8 +80,11 @@ case class ManifestLookup(tables: Tables)
     manifestsForScheduled(flightKeys).map(_.flatten)
 
   private def manifestPaxForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
-                                     (implicit mat: Materializer): Future[Int] =
-    manifestsForScheduled(flightKeys).map { manifests => manifests.flatten.size / manifests.size }
+                                     (implicit mat: Materializer): Future[Option[Int]] =
+    manifestsForScheduled(flightKeys).map {
+      case manifests if manifests.nonEmpty => Option(manifests.flatten.size / manifests.size)
+      case _ => None
+    }
 
   private def paxProfilesFromQuery(builder: SQLActionBuilder): Future[Try[List[ManifestPassengerProfile]]] =
     tables
@@ -119,7 +119,7 @@ case class ManifestLookup(tables: Tables)
     val startTime = SDate.now()
     findFlights(uniqueArrivalKey, queries).flatMap { flightKeys =>
       manifestPaxForScheduled(flightKeys)
-        .map(passengerCount => (uniqueArrivalKey, Option(maybeManifestPaxFromProfiles(uniqueArrivalKey, passengerCount))))
+        .map(maybePaxCount => (uniqueArrivalKey, maybePaxCount.map(paxCount => maybeManifestPaxFromProfiles(uniqueArrivalKey, paxCount))))
     }.map { res =>
       val timeTaken = SDate.now().millisSinceEpoch - startTime.millisSinceEpoch
       if (timeTaken > 1000)

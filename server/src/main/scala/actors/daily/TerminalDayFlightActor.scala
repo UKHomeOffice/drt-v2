@@ -26,16 +26,20 @@ object TerminalDayFlightActor {
                               date: UtcDate,
                               now: () => SDateLike,
                               cutOff: Option[FiniteDuration],
-                              paxFeedSourceOrder: List[FeedSource]): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, cutOff, paxFeedSourceOrder))
+                              paxFeedSourceOrder: List[FeedSource],
+                              terminalSplits: Option[Splits],
+                             ): Props =
+    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, cutOff, paxFeedSourceOrder, terminalSplits))
 
   def propsPointInTime(terminal: Terminal,
                        date: UtcDate,
                        now: () => SDateLike,
                        pointInTime: MillisSinceEpoch,
                        cutOff: Option[FiniteDuration],
-                       paxFeedSourceOrder: List[FeedSource]): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), cutOff, paxFeedSourceOrder))
+                       paxFeedSourceOrder: List[FeedSource],
+                       terminalSplits: Option[Splits],
+                      ): Props =
+    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), cutOff, paxFeedSourceOrder, terminalSplits))
 }
 
 class TerminalDayFlightActor(year: Int,
@@ -46,8 +50,8 @@ class TerminalDayFlightActor(year: Int,
                              override val maybePointInTime: Option[MillisSinceEpoch],
                              maybeRemovalMessageCutOff: Option[FiniteDuration],
                              paxFeedSourceOrder: List[FeedSource],
+                             terminalSplits: Option[Splits],
                             ) extends RecoveryActorLike {
-
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
@@ -140,6 +144,7 @@ class TerminalDayFlightActor(year: Int,
     if (diff.nonEmpty) {
       val timestamp = now().millisSinceEpoch
       val (updatedState, _) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
+
       state = updatedState
 
       val replyToAndMessage = List((sender(), Set.empty))
@@ -201,7 +206,7 @@ class TerminalDayFlightActor(year: Int,
           val updateFws: (Option[ApiFlightWithSplits], Arrival) => Option[ApiFlightWithSplits] = (maybeExistingFws, incoming) => {
             val updated = maybeExistingFws
               .map(existingFws => existingFws.copy(apiFlight = existingFws.apiFlight.update(incoming)))
-              .getOrElse(ApiFlightWithSplits(incoming, Set(), Option(createdAt)))
+              .getOrElse(ApiFlightWithSplits(incoming, terminalSplits.toSet, Option(createdAt)))
               .copy(lastUpdated = Option(createdAt))
             Option(updated)
           }

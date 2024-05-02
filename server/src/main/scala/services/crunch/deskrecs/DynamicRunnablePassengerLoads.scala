@@ -42,6 +42,7 @@ object DynamicRunnablePassengerLoads {
                                    queuesByTerminal: Map[Terminal, Iterable[Queue]],
                                    updateLiveView: MinutesContainer[PassengersMinute, TQM] => Future[StatusReply[Done]],
                                    paxFeedSourceOrder: List[FeedSource],
+                                   terminalSplits: Terminal => Option[Splits],
                                   )
                                   (implicit
                                    ec: ExecutionContext,
@@ -53,14 +54,14 @@ object DynamicRunnablePassengerLoads {
       .via(addArrivals(arrivalsProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum} passengers"))
       .via(addPax(historicManifestsPaxProvider))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - pax added"))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - historic api pax added"))
       .via(updateHistoricApiPaxNos(splitsSink))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - pax updated"))
-      .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - splits added"))
-      .via(updateSplits(splitsSink))
+      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - historic api pax updated"))
+//      .via(addSplits(liveManifestsProvider, historicManifestsProvider, splitsCalculator))
+//      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - splits added"))
+//      .via(updateSplits(splitsSink))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - splits persisted"))
-      .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal))
+      .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal, terminalSplits))
       .wireTap { crWithPax =>
         log.info(s"${crWithPax._1} crunch request - ${crWithPax._2.minutes.size} minutes of passenger loads with ${crWithPax._2.minutes.map(_.toMinute.passengers.size).sum} passengers")
         updateLiveView(crWithPax._2)
@@ -82,25 +83,25 @@ object DynamicRunnablePassengerLoads {
     } else 100
   }
 
-  private def updateSplits(splitsSink: ActorRef)
-                          (implicit
-                           ec: ExecutionContext,
-                           timeout: Timeout,
-                          ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
-    Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
-      .mapAsync(1) {
-        case (crunchRequest, flights) =>
-          splitsSink
-            .ask(SplitsForArrivals(flights.map { fws =>
-              (fws.unique, fws.splits)
-            }.toMap))
-            .map(_ => (crunchRequest, flights))
-            .recover {
-              case t =>
-                log.error(s"Failed to updates splits for arrivals", t)
-                (crunchRequest, flights)
-            }
-      }
+//  private def updateSplits(splitsSink: ActorRef)
+//                          (implicit
+//                           ec: ExecutionContext,
+//                           timeout: Timeout,
+//                          ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
+//    Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
+//      .mapAsync(1) {
+//        case (crunchRequest, flights) =>
+//          splitsSink
+//            .ask(SplitsForArrivals(flights.map { fws =>
+//              (fws.unique, fws.splits)
+//            }.toMap))
+//            .map(_ => (crunchRequest, flights))
+//            .recover {
+//              case t =>
+//                log.error(s"Failed to updates splits for arrivals", t)
+//                (crunchRequest, flights)
+//            }
+//      }
 
   private def updateHistoricApiPaxNos(splitsSink: ActorRef)
                                      (implicit
@@ -124,6 +125,7 @@ object DynamicRunnablePassengerLoads {
                                redListUpdatesProvider: () => Future[RedListUpdates],
                                dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                                queuesByTerminal: Map[Terminal, Iterable[Queue]],
+                               terminalSplits: Terminal => Option[Splits],
                               )
                               (implicit
                                ec: ExecutionContext,
@@ -138,7 +140,7 @@ object DynamicRunnablePassengerLoads {
             statuses <- dynamicQueueStatusProvider.allStatusesForPeriod(procRequest.minutesInMillis)
             queueStatusProvider = queueStatusesProvider(statuses)
           } yield {
-            val flightsPax = portDesksAndWaitsProvider.flightsToLoads(procRequest.minutesInMillis, FlightsWithSplits(flights), redListUpdates, queueStatusProvider)
+            val flightsPax = portDesksAndWaitsProvider.flightsToLoads(procRequest.minutesInMillis, FlightsWithSplits(flights), redListUpdates, queueStatusProvider, terminalSplits)
             val paxMinutesForCrunchPeriod = for {
               terminal <- queuesByTerminal.keys
               queue <- queuesByTerminal(terminal)
@@ -239,9 +241,9 @@ object DynamicRunnablePassengerLoads {
                (implicit ec: ExecutionContext, mat: Materializer): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, Iterable[ApiFlightWithSplits]), NotUsed] =
     Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
-        case (crunchRequest, flightsSource) =>
+        case (crunchRequest, flights) =>
           liveManifestsProvider(crunchRequest)
-            .map(manifestsStream => Option((crunchRequest, flightsSource, manifestsStream)))
+            .map(manifestsStream => Option((crunchRequest, flights, manifestsStream)))
             .recover {
               case t =>
                 log.error(s"Failed to fetch live manifests", t)
@@ -258,7 +260,7 @@ object DynamicRunnablePassengerLoads {
       }
       .map { case (crunchRequest, arrivals, manifests) =>
         val manifestsByKey = manifestsByArrivalKey(manifests.manifests)
-        val withLiveSplits = addManifests(arrivals, manifestsByKey, splitsCalculator.splitsForArrival)
+        val withLiveSplits = addManifests(arrivals, manifestsByKey, splitsCalculator.splitsForManifest)
         withLiveSplits
           .groupBy(f =>
             (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
@@ -294,7 +296,7 @@ object DynamicRunnablePassengerLoads {
       }
       .map { case (crunchRequest, flights, manifests) =>
         val manifestsByKey = manifestsByArrivalKey(manifests)
-        (crunchRequest, addManifests(flights, manifestsByKey, splitsCalculator.splitsForArrival))
+        (crunchRequest, addManifests(flights, manifestsByKey, splitsCalculator.splitsForManifest))
       }
       .map {
         case (crunchRequest, flights) =>
@@ -329,7 +331,7 @@ object DynamicRunnablePassengerLoads {
       .map { flight =>
         val maybeNewSplits = manifests
           .get(ArrivalKey(flight.apiFlight))
-          .map(splitsForArrival(_, flight.apiFlight))
+          .map(splitsForArrival(_, flight.apiFlight.Terminal))
 
         val updatedSplits = maybeNewSplits
           .map(sp => flight.splits.filterNot(_.source == sp.source) + sp)

@@ -65,7 +65,7 @@ class ApiFeedImplTest extends CrunchTestLike {
       ))
       val mockProcessor = MockManifestProcessor(probe.ref)
       val feed = ApiFeedImpl(mockArrivalKeys, mockProcessor, 100.milliseconds)
-      val killSwitch = feed.processFilesAfter(0L).viaMat(KillSwitches.single)(Keep.right).to(Sink.ignore).run()
+      val killSwitch = feed.startProcessingFrom(0L).viaMat(KillSwitches.single)(Keep.right).to(Sink.ignore).run()
 
       probe.expectMsg((key1, processedAt1220))
       probe.expectMsg((key2, processedAt1220))

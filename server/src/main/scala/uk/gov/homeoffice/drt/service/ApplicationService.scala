@@ -6,8 +6,8 @@ import actors.daily.PassengersActor
 import actors.persistent._
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
-import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
 import drt.server.feeds.Feed.FeedTick
@@ -17,6 +17,7 @@ import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProce
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared._
 import manifests.ManifestLookupLike
+import manifests.passengers.ManifestLike
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
@@ -77,6 +78,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               actorService: ActorsServiceLike,
                               persistentStateActors: PersistentStateActors,
                               requestAndTerminateActor: ActorRef,
+                              splitsCalculator: SplitsCalculator,
                              )
                              (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
   val log: Logger = LoggerFactory.getLogger(getClass)
@@ -104,12 +106,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
     PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, Slas.slaProvider(slasActor))
 
   val paxTypeQueueAllocation: PaxTypeQueueAllocation = paxTypeQueueAllocator(airportConfig)
-
-  val splitAdjustments: QueueAdjustments = if (params.adjustEGateUseByUnder12s)
-    ChildEGateAdjustments(airportConfig.assumedAdultsPerChild)
-  else
-    AdjustmentsNoop
-
 
   private def walkTimeProviderWithFallback(arrival: Arrival): MillisSinceEpoch = {
     val defaultWalkTimeMillis = airportConfig.defaultWalkTimeMillis.getOrElse(arrival.Terminal, 300000L)
@@ -226,7 +222,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
       implicit val timeout: Timeout = new Timeout(10.seconds)
 
-      val splitsCalculator = SplitsCalculator(paxTypeQueueAllocation, airportConfig.terminalPaxSplits, splitAdjustments)
       val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, now, system, timeout, ec)
       val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, now, system, timeout, ec)
 
@@ -248,6 +243,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
           airportConfig.queuesByTerminal,
           updateLiveView = updateLivePaxView,
           paxFeedSourceOrder = feedService.paxFeedSourceOrder,
+          terminalSplits = splitsCalculator.terminalSplits,
         )
 
       val crunchRequest: MillisSinceEpoch => CrunchRequest =
@@ -374,7 +370,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]], manifestsRouterActor: ActorRef): Unit = {
     actorService.flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestQueueActor)
-    manifestsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestQueueActor)
     actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestQueueActor)
     actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestQueueActor)
     actorService.staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestQueueActor)
@@ -393,20 +388,15 @@ case class ApplicationService(journalType: StreamingJournalLike,
                         startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef,
                           UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
-//    val voyageManifestsLiveSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] =
-//      Source.queue[ManifestsFeedResponse](1, OverflowStrategy.backpressure)
-
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,
       portStateActor = actorService.portStateActor,
       maxDaysToCrunch = params.forecastMaxDays,
       expireAfterMillis = DrtStaticParameters.expireAfterMillis,
       now = now,
-//      manifestsLiveSource = voyageManifestsLiveSource,
       crunchActors = actors,
       feedActors = feedService.feedActors,
       updateFeedStatus = feedService.updateFeedStatus,
-//      manifestsRouterActor = persistentStateActors.manifestsRouterActor,
       arrivalsForecastBaseFeed = feedService.baseArrivalsSource(feedService.maybeAclFeed),
       arrivalsForecastFeed = feedService.forecastArrivalsSource(airportConfig.portCode),
       arrivalsLiveBaseFeed = feedService.liveBaseArrivalsSource(airportConfig.portCode),
@@ -424,7 +414,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
     val futurePortStates =
       for {
-        _ <- feedService.populateFeedArrivals()
         mergeArrivalsQueue <- actors.mergeArrivalsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         crunchQueue <- actors.crunchQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
         deskRecsQueue <- actors.deskRecsQueueActor.ask(GetState).mapTo[SortedSet[ProcessingRequest]]
@@ -463,13 +452,65 @@ case class ApplicationService(journalType: StreamingJournalLike,
           else initialState[ApiFeedState](persistentStateActors.manifestsRouterActor).map(_.lastProcessedMarker)
         system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
 
+        val persistSplits: Iterable[(UniqueArrival, Splits)] => Future[Done] =
+          splits => actorService.flightsRouterActor
+            .ask(SplitsForArrivals(splits.toMap.view.mapValues(s => Set(s)).toMap))
+            .map(_ => Done)
+
+        val flightsForDate: UtcDate => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+          date => FlightsProvider(actorService.flightsRouterActor).allTerminals(date, date)
+
+        def splitsPersister(flightsForDate: UtcDate => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                            splitsForManifest: (ManifestLike, Terminal) => Splits,
+                            persistSplits: Iterable[(UniqueArrival, Splits)] => Future[Done],
+                           ): Iterable[ManifestLike] => Future[Done] =
+          keys => Source(keys.groupBy(k => k.scheduled.toUtcDate))
+            .flatMapConcat {
+              case (date, manifests) =>
+                flightsForDate(date).map {
+                  case (_, flights) =>
+                    manifests
+                      .map { manifest =>
+                        val maybeSplits = flights
+                          .find(fws => manifest.maybeKey.contains(ArrivalKey(fws.apiFlight)))
+                          .map(fws => (fws.unique, splitsForManifest(manifest, fws.apiFlight.Terminal)))
+
+                        if (maybeSplits.isEmpty) log.warn(s"Failed to find flight for manifest: ${manifest.maybeKey}")
+
+                        maybeSplits
+                      }
+                      .collect { case Some(keyAndSplits) => keyAndSplits }
+                }
+            }
+            .runWith(Sink.fold(Seq[(UniqueArrival, Splits)]())(_ ++ _))
+            .flatMap(persistSplits)
+            .recover { e =>
+              log.error("Failed to set splits for unique arrivals", e)
+              Done
+            }
+
+        val persistSplitsFromManifests = splitsPersister(flightsForDate, splitsCalculator.splitsForManifest, persistSplits)
+
+        val persistManifests: ManifestsFeedResponse => Future[Done] = {
+          case success: ManifestsFeedSuccess =>
+            persistentStateActors.manifestsRouterActor
+              .ask(success)
+              .flatMap(_ => persistSplitsFromManifests(success.manifests.manifests))
+
+          case failure: ManifestsFeedFailure =>
+            log.error(s"Failed to persist manifests: ${failure.responseMessage}")
+            Future.successful(Done)
+        }
+
         val arrivalKeysProvider = DbManifestArrivalKeys(AggregateDb, airportConfig.portCode)
-        val manifestProcessor = DbManifestProcessor(AggregateDb, airportConfig.portCode, persistentStateActors.manifestsRouterActor)
+        val manifestProcessor = DbManifestProcessor(AggregateDb, airportConfig.portCode, persistManifests)
         val processFilesAfter = lastProcessedLiveApiMarker.getOrElse(SDate.now().addHours(-12).millisSinceEpoch)
-        log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
-        ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 1.second)
-          .processFilesAfter(processFilesAfter)
-          .runWith(Sink.ignore)
+
+        system.scheduler.scheduleOnce(20.seconds) {
+          log.info(s"Importing live manifests processed after ${SDate(processFilesAfter).toISOString}")
+          ApiFeedImpl(arrivalKeysProvider, manifestProcessor, 1.second)
+            .startProcessingFrom(processFilesAfter)
+        }
 
         setSubscribers(crunchInputs, persistentStateActors.manifestsRouterActor)
 

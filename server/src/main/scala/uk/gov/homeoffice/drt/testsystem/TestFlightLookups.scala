@@ -4,6 +4,7 @@ import actors.FlightLookupsLike
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
+import uk.gov.homeoffice.drt.arrivals.Splits
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -16,6 +17,7 @@ case class TestFlightLookups(system: ActorSystem,
                              now: () => SDateLike,
                              queuesByTerminal: Map[Terminal, Seq[Queue]],
                              paxFeedSourceOrder: List[FeedSource],
+                             terminalSplits: Terminal => Option[Splits],
                             ) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-flights-lookup-kill-actor")
 

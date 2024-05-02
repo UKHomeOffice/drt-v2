@@ -36,18 +36,21 @@ case class DbManifestProcessor(tables: Tables,
   override def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done] =
     persistManifests(ManifestsFeedSuccess(DqManifests(processedAt, Seq())))
 
-  override def process(uniqueArrivalKeys: Seq[UniqueArrivalKey], processedAt: MillisSinceEpoch): Future[Done] =
-    Source(uniqueArrivalKeys.grouped(10).toList)
-      .mapAsync(1) { group =>
-        Source(group)
+  override def process(uniqueArrivalKeys: Seq[UniqueArrivalKey], processedAt: MillisSinceEpoch): Future[Done] = {
+    Source(uniqueArrivalKeys.grouped(25).toList)
+      .mapAsync(1) { keys =>
+        Source(keys)
           .mapAsync(1)(manifestForArrivalKey)
           .collect {
             case Some(manifest) => manifest
           }
           .runWith(Sink.seq)
-          .flatMap(manifests => persistManifests(ManifestsFeedSuccess(DqManifests(processedAt, manifests))))
+          .flatMap { manifests =>
+            persistManifests(ManifestsFeedSuccess(DqManifests(processedAt, manifests)))
+          }
       }
       .runWith(Sink.ignore)
+  }
 
   private def manifestForArrivalKey(uniqueArrivalKey: UniqueArrivalKey): Future[Option[VoyageManifest]] = {
     val scheduled = SDate(uniqueArrivalKey.scheduled.millisSinceEpoch).toISOString

@@ -4,7 +4,7 @@ import akka.stream.Materializer
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch, PassengersMinute}
 import drt.shared.{SimulationMinutes, TQM}
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
+import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -19,7 +19,9 @@ trait PortDesksAndWaitsProviderLike {
   def flightsToLoads(minuteMillis: NumericRange[MillisSinceEpoch],
                      flights: FlightsWithSplits,
                      redListUpdates: RedListUpdates,
-                     terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
+                     terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
+                     terminalSplits: Terminal => Option[Splits],
+                    )
                     (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, PassengersMinute]
 
   def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
