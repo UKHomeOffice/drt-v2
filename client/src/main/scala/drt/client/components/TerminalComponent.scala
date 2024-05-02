@@ -9,7 +9,7 @@ import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
-import drt.client.services.handlers.GetTimePeriodSelected
+import drt.client.services.handlers.GetSelectedTimeInterval
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -36,7 +36,7 @@ object TerminalComponent {
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
 
-  private case class TerminalModel(userStaffPlanningTimePeriod: Pot[Int],
+  private case class TerminalModel(userSelectedPlanningTimePeriod: Pot[Int],
                                    potShifts: Pot[ShiftAssignments],
                                    potMonthOfShifts: Pot[MonthOfShifts],
                                    potFixedPoints: Pot[FixedPointAssignments],
@@ -61,7 +61,7 @@ object TerminalComponent {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalComponent")
     .render_P { props =>
       val modelRCP = SPACircuit.connect(model => TerminalModel(
-        userStaffPlanningTimePeriod = model.userStaffPlanningTimePeriod,
+        userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
         potShifts = model.shifts,
         potMonthOfShifts = model.monthOfShifts,
         potFixedPoints = model.fixedPoints,
@@ -148,7 +148,7 @@ object TerminalComponent {
                     )
 
                   case Planning =>
-                    <.div(model.userStaffPlanningTimePeriod.render { timePeriod =>
+                    <.div(model.userSelectedPlanningTimePeriod.render { timePeriod =>
                       TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod))
                     })
                   case Staffing if loggedInUser.roles.contains(StaffEdit) =>
@@ -163,7 +163,7 @@ object TerminalComponent {
         ))
     }
     .componentDidMount(_ =>
-      Callback(SPACircuit.dispatch(GetTimePeriodSelected()))
+      Callback(SPACircuit.dispatch(GetSelectedTimeInterval()))
     )
     .configure(Reusability.shouldComponentUpdate)
     .build

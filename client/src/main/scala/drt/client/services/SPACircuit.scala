@@ -180,7 +180,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      abFeatures:Pot[Seq[ABFeature]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
-                     userStaffPlanningTimePeriod: Pot[Int] = Empty,
+                     userSelectedPlanningTimePeriod: Pot[Int] = Empty,
                     )
 
 object PollDelay {
@@ -261,7 +261,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ABFeatureHandler(zoomRW(_.abFeatures)((m, v) => m.copy(abFeatures = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
-      new UserStaffPlanningTimePeriodHandler(zoomRW(_.userStaffPlanningTimePeriod)((m, v) => m.copy(userStaffPlanningTimePeriod = v)),
+      new UserSelectionPlanningPeriodHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v)),
       )
     )
     composedHandlers

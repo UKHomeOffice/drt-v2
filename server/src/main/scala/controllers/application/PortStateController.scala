@@ -58,7 +58,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     (startOfWeekMidnight, endOfForecast)
   }
 
-  def forecastWeekSummary(terminalName: String, startDay: MillisSinceEpoch, forecastPeriod: Int): Action[AnyContent] = authByRole(DesksAndQueuesView) {
+  def forecastWeekSummary(terminalName: String, startDay: MillisSinceEpoch, periodInterval: Int): Action[AnyContent] = authByRole(DesksAndQueuesView) {
     Action.async { request =>
       val terminal = Terminal(terminalName)
       val numberOfDays = 7
@@ -69,7 +69,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       )(new Timeout(30.seconds))
 
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-      ctrl.userService.updateStaffPlanningTimePeriod(userEmail, forecastPeriod).recover {
+      ctrl.userService.updateStaffPlanningTimePeriod(userEmail, periodInterval).recover {
         case t =>
           log.error(s"Failed to update UpdateStaff Planning Time Period: ${t.getMessage}")
           None
@@ -79,7 +79,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         .map {
           case portState: PortState =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
-            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, forecastPeriod)
+            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, periodInterval)
             val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
               airportConfig.queuesByTerminal(terminal).toList)
             Option(ForecastPeriodWithHeadlines(fp, hf))

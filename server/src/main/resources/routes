@@ -63,7 +63,7 @@ GET           /shifts-for-month/:monthMillis                                    
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 
-GET           /forecast-summary/:terminalName/:startDay/:forecastPeriod               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,forecastPeriod: Int)
+GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
 
 GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
 GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)

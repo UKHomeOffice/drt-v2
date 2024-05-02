@@ -27,7 +27,7 @@ trait UserTableLike {
 
   def updateCloseBanner(email: String, at: java.sql.Timestamp)(implicit ec: ExecutionContext): Future[Int]
 
-  def updateStaffPlanningTimePeriod(email: String, forecastPeriod: Int)(implicit ec: ExecutionContext): Future[Int]
+  def updateStaffPlanningTimePeriod(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int]
 }
 
 case class UserTable(tables: Tables) extends UserTableLike {
@@ -92,10 +92,10 @@ case class UserTable(tables: Tables) extends UserTableLike {
   def matchId(id: String): tables.User => Rep[Boolean] = (userTracking: User) =>
     userTracking.id == id
 
-  override def updateStaffPlanningTimePeriod(email: String, forecastPeriod: Int)(implicit ec: ExecutionContext): Future[Int] = {
+  override def updateStaffPlanningTimePeriod(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int] = {
     val query = userTableQuery.filter(_.email === email)
       .map(f => (f.staff_planning_time_period))
-      .update(Option(forecastPeriod))
+      .update(Option(periodInterval))
     tables.run(query).recover {
       case throwable =>
         log.error(s"updateStaffPlanningTimePeriod failed", throwable)

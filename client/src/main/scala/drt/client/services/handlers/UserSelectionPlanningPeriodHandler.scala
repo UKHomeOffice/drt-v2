@@ -8,29 +8,29 @@ import drt.client.services.{DrtApi, PollDelay}
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-case class SetTimePeriodSelected(previousPeriod: Int) extends Action
+case class SetSelectedTimeInterval(previousInterval: Int) extends Action
 
-case class GetTimePeriodSelected() extends Action
+case class GetSelectedTimeInterval() extends Action
 
-class UserStaffPlanningTimePeriodHandler[M](modelRW: ModelRW[M, Pot[Int]]) extends LoggingActionHandler(modelRW) {
+class UserSelectionPlanningPeriodHandler[M](modelRW: ModelRW[M, Pot[Int]]) extends LoggingActionHandler(modelRW) {
 
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
-    case GetTimePeriodSelected() =>
+    case GetSelectedTimeInterval() =>
       val apiCallEffect = Effect(DrtApi.get("data/user-selected-time-period")
-        .map(r => SetTimePeriodSelected(r.responseText match {
+        .map(r => SetSelectedTimeInterval(r.responseText match {
           case "15" => 15
           case _ => 60
         }))
         .recoverWith {
           case _ =>
             log.error(s"Failed to get Previous Time PeriodSelected data. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(GetTimePeriodSelected(), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetSelectedTimeInterval(), PollDelay.recoveryDelay))
         })
       effectOnly(apiCallEffect)
 
-    case SetTimePeriodSelected(previousPeriod) => updated(Ready(previousPeriod))
+    case SetSelectedTimeInterval(previousPeriodInterval) => updated(Ready(previousPeriodInterval))
 
   }
 }
