@@ -9,11 +9,12 @@ import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
+import drt.client.services.handlers.GetTimePeriodSelected
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
-import drt.shared.CrunchApi.ForecastPeriodWithHeadlines
 import drt.shared._
 import drt.shared.api.WalkTimes
+import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -35,7 +36,7 @@ object TerminalComponent {
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
 
-  private case class TerminalModel(//forecastPeriodPot: Pot[ForecastPeriodWithHeadlines],
+  private case class TerminalModel(userStaffPlanningTimePeriod: Pot[Int],
                                    potShifts: Pot[ShiftAssignments],
                                    potMonthOfShifts: Pot[MonthOfShifts],
                                    potFixedPoints: Pot[FixedPointAssignments],
@@ -60,7 +61,7 @@ object TerminalComponent {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalComponent")
     .render_P { props =>
       val modelRCP = SPACircuit.connect(model => TerminalModel(
-        //forecastPeriodPot = model.forecastPeriodPot,
+        userStaffPlanningTimePeriod = model.userStaffPlanningTimePeriod,
         potShifts = model.shifts,
         potMonthOfShifts = model.monthOfShifts,
         potFixedPoints = model.fixedPoints,
@@ -147,9 +148,9 @@ object TerminalComponent {
                     )
 
                   case Planning =>
-//                    <.div(model.forecastPeriodPot.render { fp =>
-                      TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router))
-//                    })
+                    <.div(model.userStaffPlanningTimePeriod.render { timePeriod =>
+                      TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod))
+                    })
                   case Staffing if loggedInUser.roles.contains(StaffEdit) =>
                     model.potMonthOfShifts.render { ms =>
                       MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
@@ -161,6 +162,9 @@ object TerminalComponent {
         }.getOrElse(LoadingOverlay())
         ))
     }
+    .componentDidMount(_ =>
+      Callback(SPACircuit.dispatch(GetTimePeriodSelected()))
+    )
     .configure(Reusability.shouldComponentUpdate)
     .build
 

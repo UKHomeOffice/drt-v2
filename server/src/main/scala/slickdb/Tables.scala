@@ -119,7 +119,7 @@ trait Tables {
       case _ => None
     }
   } with profile.api.Table[ArrivalRow](_tableTag, maybeSchema, "arrival") {
-    def * = (code, number, destination, origin, terminal, gate, stand, status, scheduled, estimated, actual, estimatedchox, actualchox, pcp, totalpassengers, pcppassengers,scheduled_departure) <> (ArrivalRow.tupled, ArrivalRow.unapply)
+    def * = (code, number, destination, origin, terminal, gate, stand, status, scheduled, estimated, actual, estimatedchox, actualchox, pcp, totalpassengers, pcppassengers, scheduled_departure) <> (ArrivalRow.tupled, ArrivalRow.unapply)
 
     val code: Rep[String] = column[String]("code")
     val number: Rep[Int] = column[Int]("number")
@@ -151,7 +151,7 @@ trait Tables {
   }
 
   class User(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
-    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at,feedback_banner_closed_at) <> (UserRow.tupled, UserRow.unapply)
+    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at, feedback_banner_closed_at, staff_planning_time_period) <> (UserRow.tupled, UserRow.unapply)
 
     val id: Rep[String] = column[String]("id")
     val userName: Rep[String] = column[String]("username")
@@ -162,7 +162,7 @@ trait Tables {
     val drop_in_notification_at = column[Option[java.sql.Timestamp]]("drop_in_notification_at")
     val created_at = column[Option[Timestamp]]("created_at")
     val feedback_banner_closed_at = column[Option[java.sql.Timestamp]]("feedback_banner_closed_at")
-
+    val staff_planning_time_period = column[Option[Int]]("staff_planning_time_period")
     val pk = primaryKey("user_pkey", (id))
     val index1 = index("username", userName)
     val index2 = index("email", email)

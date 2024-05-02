@@ -62,7 +62,8 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
         revoked_access = None,
         drop_in_notification_at = None,
         created_at = Some(new java.sql.Timestamp(ctrl.now().millisSinceEpoch)),
-        feedback_banner_closed_at = None))
+        feedback_banner_closed_at = None,
+        staff_planning_time_period = None))
     Future.successful(Ok(s"User-tracked"))
   }
 

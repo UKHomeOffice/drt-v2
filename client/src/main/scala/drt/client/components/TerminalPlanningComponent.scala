@@ -1,6 +1,5 @@
 package drt.client.components
 
-import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
@@ -8,28 +7,28 @@ import drt.client.actions.Actions.GetForecastWeek
 import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.styles.DrtTheme
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.{DrtApi, SPACircuit}
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.{DrtApi, SPACircuit}
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.Forecast
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiCircularProgress, MuiDivider, MuiFormControl, MuiFormControlLabel, MuiFormLabel, MuiRadio, MuiRadioGroup, MuiTypography}
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import japgolly.scalajs.react.callback.CallbackTo
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
 import uk.gov.homeoffice.drt.ports.Queues
-import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
-import japgolly.scalajs.react.vdom.VdomElement
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
@@ -44,20 +43,14 @@ object TerminalPlanningComponent {
     SDate(f"${sunday.getFullYear}-${sunday.getMonth}%02d-${sunday.getDate}%02dT00:00:00")
   }
 
-  case class Props(page: TerminalPageTabLoc, router: RouterCtl[Loc]) extends UseValueEq {
-//        def hash: Int = {
-//          forecastPeriod.forecast.days.toList.map {
-//            case (_, slots) => slots.hashCode
-//          }
-//        }.hashCode
-  }
+  case class Props(page: TerminalPageTabLoc, router: RouterCtl[Loc], timePeriod: Int)
 
   private val forecastWeeks: Seq[SDateLike] = (-4 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
-  case class State(downloadingHeadlines: Boolean, downloadingStaff: Boolean, forecastPeriod: Int)
+  case class State(downloadingHeadlines: Boolean, downloadingStaff: Boolean, timePeriod: Int)
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
-    .initialState(State(downloadingHeadlines = false, downloadingStaff = false, forecastPeriod = 60))
+    .initialStateFromProps(p => State(downloadingHeadlines = false, downloadingStaff = false, timePeriod = p.timePeriod))
     .renderPS((scope, props, state) => {
       val modelRCP = SPACircuit.connect(model => TerminalPlanningModel(forecastPeriodPot = model.forecastPeriodPot))
       modelRCP(modelProxy => {
@@ -152,8 +145,10 @@ object TerminalPlanningComponent {
                 }, {
                   val byDay = forecastPeriod.headlines.queueDayHeadlines.groupBy(_.day).toList
                   List(
-                    <.tr(^.className := "total", <.th(^.className := "queue-heading", "Total Pax"), byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.paxNos).sum)).toTagMod),
-                    <.tr(^.className := "total", <.th(^.className := "queue-heading", "Workloads"), byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.workload).sum)).toTagMod)
+                    <.tr(^.className := "total",
+                      <.th(^.className := "queue-heading", "Total Pax"), byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.paxNos).sum)).toTagMod),
+                    <.tr(^.className := "total",
+                      <.th(^.className := "queue-heading", "Workloads"), byDay.sortBy(_._1).map(hl => <.th(hl._2.map(_.workload).sum)).toTagMod)
                   ).toTagMod
                 }
               )
@@ -165,8 +160,8 @@ object TerminalPlanningComponent {
                   "padding-right" -> "10px",
                   "color" -> DrtTheme.theme.palette.grey.`900`,
                   "font-weight" -> "bold")))(<.span("Time Period")),
-                MuiRadioGroup(row = true)(^.value := state.forecastPeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
-                  scope.modState(_.copy(forecastPeriod = e.target.value.toInt)) >>
+                MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
+                  scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
                     Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt)))
                 }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
                   MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")
@@ -181,7 +176,8 @@ object TerminalPlanningComponent {
                   }.toTagMod
                 ),
                 <.tr(
-                  <.th(^.className := "heading", "Time"), sortedDays.flatMap(_ => List(<.th(^.className := "sub-heading", "Avail"), <.th(^.className := "sub-heading", "Rec"))).toTagMod
+                  <.th(^.className := "heading", "Time"),
+                  sortedDays.flatMap(_ => List(<.th(^.className := "sub-heading", "Avail"), <.th(^.className := "sub-heading", "Rec"))).toTagMod
                 )),
               <.tbody(
                 byTimeSlot.zip(slotStartTimes).map {
@@ -204,7 +200,7 @@ object TerminalPlanningComponent {
       })
     })
     .componentDidMount(p =>
-      Callback(SPACircuit.dispatch(GetForecastWeek(p.props.page.dateFromUrlOrNow, Terminal(p.props.page.terminalName), 60))) >>
+      Callback(SPACircuit.dispatch(GetForecastWeek(p.props.page.dateFromUrlOrNow, Terminal(p.props.page.terminalName), p.props.timePeriod))) >>
         Callback {
           GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
         })

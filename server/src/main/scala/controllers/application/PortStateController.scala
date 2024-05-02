@@ -59,7 +59,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   }
 
   def forecastWeekSummary(terminalName: String, startDay: MillisSinceEpoch, forecastPeriod: Int): Action[AnyContent] = authByRole(DesksAndQueuesView) {
-    Action.async {
+    Action.async { request =>
       val terminal = Terminal(terminalName)
       val numberOfDays = 7
       val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, numberOfDays)
@@ -67,6 +67,13 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val portStateFuture = ctrl.actorService.portStateActor.ask(
         GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
       )(new Timeout(30.seconds))
+
+      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      ctrl.userService.updateStaffPlanningTimePeriod(userEmail, forecastPeriod).recover {
+        case t =>
+          log.error(s"Failed to update UpdateStaff Planning Time Period: ${t.getMessage}")
+          None
+      }
 
       val forecast = portStateFuture
         .map {
@@ -76,12 +83,11 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
             val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
               airportConfig.queuesByTerminal(terminal).toList)
             Option(ForecastPeriodWithHeadlines(fp, hf))
-        }
-        .recover {
-          case t =>
-            log.error(s"Failed to get PortState: ${t.getMessage}")
-            None
-        }
+        }.recover {
+        case t =>
+          log.error(s"Failed to get PortState: ${t.getMessage}")
+          None
+      }
       forecast.map(r => Ok(write(r)))
     }
   }
