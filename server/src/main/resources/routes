@@ -102,7 +102,7 @@ GET           /data/should-user-view-banner                                     
 
 GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
 
-POST          /data/user-preference-planning-interval-minutes/:interval               controllers.Application.setUserSelectedTimePeriod(interval: Int)
+PUT          /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin

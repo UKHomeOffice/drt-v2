@@ -36,7 +36,7 @@ class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[Int]]) extends LoggingAc
     case SetSelectedTimeInterval(previousPeriodInterval) => updated(Ready(previousPeriodInterval))
 
     case SendSelectedTimeInterval(interval) =>
-      val apiCallEffect = Effect(DrtApi.post(s"data/user-preference-planning-interval-minutes/${interval.toString}", "")
+      val apiCallEffect = Effect(DrtApi.put(s"data/user-preference-planning-interval-minutes", s"${interval.toString}")
         .map(_ => SetSelectedTimeInterval(interval))
         .recoverWith {
           case _ =>

@@ -112,8 +112,9 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     }
   }
 
-  def setUserSelectedTimePeriod(periodInterval: Int): Action[AnyContent] = authByRole(BorderForceStaff) {
+  def setUserSelectedTimePeriod(): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
+      val periodInterval: Int = request.body.asText.getOrElse("60").toInt
       val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
       ctrl.userService.updateStaffPlanningIntervalMinutes(userEmail, periodInterval).map {
         case _ => Ok("Updated period")
