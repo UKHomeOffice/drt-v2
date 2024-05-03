@@ -8,6 +8,7 @@ import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.styles.DrtTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.handlers.{SendSelectedTimeInterval, SetSelectedTimeInterval}
 import drt.client.services.{DrtApi, SPACircuit}
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.Forecast
@@ -82,7 +83,7 @@ object TerminalPlanningComponent {
           }
 
           val headlineFiguresExportUrl = s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
-          val staffRecommendationsExportUrl = s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
+          val staffRecommendationsExportUrl = s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}/${state.timePeriod}"
 
           def createDownload(updateState: (State, Boolean) => State): String => Event => CallbackTo[Unit] = url => {
             event =>
@@ -162,6 +163,7 @@ object TerminalPlanningComponent {
                   "font-weight" -> "bold")))(<.span("Time Period")),
                 MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
                   scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
+                    Callback(SPACircuit.dispatch(SendSelectedTimeInterval(e.target.value.toInt))) >>
                     Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt)))
                 }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
                   MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")

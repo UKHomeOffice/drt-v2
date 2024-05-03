@@ -9,7 +9,7 @@ import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
-import drt.client.services.handlers.GetSelectedTimeInterval
+import drt.client.services.handlers.GetUserPreferenceIntervalMinutes
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -163,7 +163,7 @@ object TerminalComponent {
         ))
     }
     .componentDidMount(_ =>
-      Callback(SPACircuit.dispatch(GetSelectedTimeInterval()))
+      Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes()))
     )
     .configure(Reusability.shouldComponentUpdate)
     .build

@@ -68,13 +68,6 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         GetStateForTerminalDateRange(startOfForecast.millisSinceEpoch, endOfForecast.millisSinceEpoch, terminal)
       )(new Timeout(30.seconds))
 
-      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
-      ctrl.userService.updateStaffPlanningTimePeriod(userEmail, periodInterval).recover {
-        case t =>
-          log.error(s"Failed to update UpdateStaff Planning Time Period: ${t.getMessage}")
-          None
-      }
-
       val forecast = portStateFuture
         .map {
           case portState: PortState =>
@@ -83,11 +76,12 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
             val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
               airportConfig.queuesByTerminal(terminal).toList)
             Option(ForecastPeriodWithHeadlines(fp, hf))
-        }.recover {
-        case t =>
-          log.error(s"Failed to get PortState: ${t.getMessage}")
-          None
-      }
+        }
+        .recover {
+          case t =>
+            log.error(s"Failed to get PortState: ${t.getMessage}")
+            None
+        }
       forecast.map(r => Ok(write(r)))
     }
   }

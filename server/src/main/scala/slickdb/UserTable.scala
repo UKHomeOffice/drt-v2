@@ -14,7 +14,7 @@ case class UserRow(
                     drop_in_notification_at: Option[java.sql.Timestamp],
                     created_at: Option[java.sql.Timestamp],
                     feedback_banner_closed_at: Option[java.sql.Timestamp],
-                    staff_planning_time_period: Option[Int]
+                    staff_planning_interval_minutes: Option[Int]
 )
 
 trait UserTableLike {
@@ -27,7 +27,7 @@ trait UserTableLike {
 
   def updateCloseBanner(email: String, at: java.sql.Timestamp)(implicit ec: ExecutionContext): Future[Int]
 
-  def updateStaffPlanningTimePeriod(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int]
+  def updateStaffPlanningIntervalMinutes(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int]
 }
 
 case class UserTable(tables: Tables) extends UserTableLike {
@@ -92,9 +92,9 @@ case class UserTable(tables: Tables) extends UserTableLike {
   def matchId(id: String): tables.User => Rep[Boolean] = (userTracking: User) =>
     userTracking.id == id
 
-  override def updateStaffPlanningTimePeriod(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int] = {
+  override def updateStaffPlanningIntervalMinutes(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int] = {
     val query = userTableQuery.filter(_.email === email)
-      .map(f => (f.staff_planning_time_period))
+      .map(f => (f.staff_planning_interval_minutes))
       .update(Option(periodInterval))
     tables.run(query).recover {
       case throwable =>

@@ -75,7 +75,7 @@ GET           /export/arrivals-with-red-list-diversions/:startLocalDay/:endLocal
 GET           /export/arrivals-with-red-list-diversions/snapshot/:localDate/:pointInTime/:terminalName         controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDate: String, pointInTime: Long, terminalName: String)
 
 GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.application.exports.FlightsExportController.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
-GET           /export/planning/:weekStarting/:terminalName                            controllers.application.ExportsController.exportForecastWeekToCSV(weekStarting, terminalName)
+GET           /export/planning/:weekStarting/:terminalName/:minutesInSlot             controllers.application.ExportsController.exportForecastWeekToCSV(weekStarting, terminalName,minutesInSlot:Int)
 GET           /export/headlines/:weekStarting/:terminalName                           controllers.application.ExportsController.exportForecastWeekHeadlinesToCSV(weekStarting, terminalName)
 GET           /export/users                                                           controllers.application.ExportsController.exportUsers
 GET           /export/staff-movements/:date/:terminal                                 controllers.application.StaffingController.exportStaffMovements(terminal: String, date: String)
@@ -101,6 +101,8 @@ POST          /data/close-banner                                                
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
 GET           /data/user-selected-time-period                                         controllers.Application.userSelectedTimePeriod
+
+POST          /data/set-user-selected-time-period/:interval                           controllers.Application.setUserSelectedTimePeriod(interval: Int)
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin

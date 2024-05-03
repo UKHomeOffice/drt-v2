@@ -58,12 +58,11 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
 
   private val sixMonthsDays = 180
 
-  def exportForecastWeekToCSV(startDay: String, terminalName: String): Action[AnyContent] = authByRole(ForecastView) {
+  def exportForecastWeekToCSV(startDay: String, terminalName: String, minutesInSlot: Int): Action[AnyContent] = authByRole(ForecastView) {
     val terminal = Terminal(terminalName)
     Action.async {
       val start = SDate(startDay.toLong, europeLondonTimeZone)
       val end = start.addDays(sixMonthsDays)
-      val minutesInSlot = 15
       val numberOfSlots = minutesInADay / minutesInSlot
       val rowHeaders = Seq("") ++ (0 until numberOfSlots).map(qh => start.addMinutes(qh * minutesInSlot).toHoursAndMinutes)
       val staffingProvider = StaffRequirementExports.staffingForLocalDateProvider(ctrl.applicationService.staffMinutesProvider(terminal))

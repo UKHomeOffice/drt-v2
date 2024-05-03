@@ -5,19 +5,22 @@ import diode.{Action, ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
+
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 case class SetSelectedTimeInterval(previousInterval: Int) extends Action
 
-case class GetSelectedTimeInterval() extends Action
+case class SendSelectedTimeInterval(interval: Int) extends Action
+
+case class GetUserPreferenceIntervalMinutes() extends Action
 
 class UserSelectionPlanningPeriodHandler[M](modelRW: ModelRW[M, Pot[Int]]) extends LoggingActionHandler(modelRW) {
 
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
-    case GetSelectedTimeInterval() =>
+    case GetUserPreferenceIntervalMinutes() =>
       val apiCallEffect = Effect(DrtApi.get("data/user-selected-time-period")
         .map(r => SetSelectedTimeInterval(r.responseText match {
           case "15" => 15
@@ -26,11 +29,20 @@ class UserSelectionPlanningPeriodHandler[M](modelRW: ModelRW[M, Pot[Int]]) exten
         .recoverWith {
           case _ =>
             log.error(s"Failed to get Previous Time PeriodSelected data. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(GetSelectedTimeInterval(), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetUserPreferenceIntervalMinutes(), PollDelay.recoveryDelay))
         })
       effectOnly(apiCallEffect)
 
     case SetSelectedTimeInterval(previousPeriodInterval) => updated(Ready(previousPeriodInterval))
 
+    case SendSelectedTimeInterval(interval) =>
+      val apiCallEffect = Effect(DrtApi.post(s"data/set-user-selected-time-period/${interval.toString}", "")
+        .map(_ => SetSelectedTimeInterval(interval))
+        .recoverWith {
+          case _ =>
+            log.error(s"Failed to send time period selected data. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(SendSelectedTimeInterval(interval), PollDelay.recoveryDelay))
+        })
+      effectOnly(apiCallEffect)
   }
 }
