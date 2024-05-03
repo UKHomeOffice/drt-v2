@@ -66,6 +66,7 @@ object FlightTable {
     typingSearchTimer.foreach(clearTimeout)
     if (searchTerm.length > 1) {
       typingSearchTimer = Some(setTimeout(doneSearchTypingInterval) {
+        println(s"Sending event for search term $searchTerm")
         Callback(GoogleEventTracker.sendEvent(portCode, "flightNumberSearch", searchTerm))
       })
     }

@@ -63,7 +63,7 @@ GET           /shifts-for-month/:monthMillis                                    
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 
-GET           /forecast-summary/:terminalName/:startDay                               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long)
+GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
 
 GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
 GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)
@@ -99,6 +99,10 @@ GET           /data/track-user                                                  
 POST          /data/close-banner                                                      controllers.Application.closeBanner
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
+
+GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
+
+PUT          /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin

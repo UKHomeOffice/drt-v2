@@ -40,6 +40,8 @@ case class MockUserTable() extends UserTableLike {
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
   override def updateCloseBanner(email: String, at: Timestamp)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def updateStaffPlanningIntervalMinutes(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 }
 
 case class MockFeatureGuideTable() extends FeatureGuideTableLike {

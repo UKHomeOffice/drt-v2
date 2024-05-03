@@ -58,8 +58,8 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     (startOfWeekMidnight, endOfForecast)
   }
 
-  def forecastWeekSummary(terminalName: String, startDay: MillisSinceEpoch): Action[AnyContent] = authByRole(DesksAndQueuesView) {
-    Action.async {
+  def forecastWeekSummary(terminalName: String, startDay: MillisSinceEpoch, periodInterval: Int): Action[AnyContent] = authByRole(DesksAndQueuesView) {
+    Action.async { request =>
       val terminal = Terminal(terminalName)
       val numberOfDays = 7
       val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, numberOfDays)
@@ -72,7 +72,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         .map {
           case portState: PortState =>
             log.info(s"Sent forecast for week beginning ${SDate(startDay).toISOString} on $terminal")
-            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState)
+            val fp = Forecast.forecastPeriod(airportConfig, terminal, startOfForecast, endOfForecast, portState, periodInterval)
             val hf = Forecast.headlineFigures(startOfForecast, numberOfDays, terminal, portState,
               airportConfig.queuesByTerminal(terminal).toList)
             Option(ForecastPeriodWithHeadlines(fp, hf))
