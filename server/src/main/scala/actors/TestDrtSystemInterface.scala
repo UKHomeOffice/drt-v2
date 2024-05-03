@@ -58,7 +58,7 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
 
     feedService.liveFeedPollingActor ! Enable(crunchInputs.liveArrivalsResponse)
 
-    applicationService.setSubscribers(crunchInputs, applicationService.persistentStateActors.manifestsRouterActor)
+    applicationService.setSubscribers(crunchInputs)
 
     crunchInputs.killSwitches
   }

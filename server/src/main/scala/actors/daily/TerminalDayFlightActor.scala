@@ -166,10 +166,10 @@ class TerminalDayFlightActor(year: Int,
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {
       val timestamp = now().millisSinceEpoch
-      val (updatedState, _) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
+      val (updatedState, minutes) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
       state = updatedState
 
-      val replyToAndMessage = List((sender(), Set.empty))
+      val replyToAndMessage = List((sender(), minutes))
       val message = splitsForArrivalsToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
     } else sender() ! Set.empty

@@ -46,7 +46,8 @@ class WorkloadSpec extends CrunchTestLike {
         FlightsWithSplits(Iterable(ApiFlightWithSplits(arrival, splits, None))),
         redListedZimbabwe,
         (_: Terminal) => (_: Queue, _: MillisSinceEpoch) => Open,
-        paxFeedSourceOrder
+        paxFeedSourceOrder,
+        terminalSplits = _ => None,
       )
       .minutes.values.map(_.workLoad).sum
   }
@@ -76,7 +77,8 @@ class WorkloadSpec extends CrunchTestLike {
         FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, splits, None))),
         RedListUpdates.empty,
         _ => (_: Queue, _: MillisSinceEpoch) => Open,
-        paxFeedSourceOrder
+        paxFeedSourceOrder,
+        terminalSplits = _ => None,
       )
 
     val startTime = SDate(workloads.minutes.keys.toList.minBy(_.minute).minute).toISOString

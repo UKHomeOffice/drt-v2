@@ -108,7 +108,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -151,7 +151,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -194,7 +194,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -237,7 +237,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -295,7 +295,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -334,7 +334,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             None,
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -444,7 +444,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             Option(DC),
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -463,7 +463,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             Option(DC),
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -482,7 +482,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             Option(DC),
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -502,7 +502,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             Option(DC),
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -536,7 +536,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             Option(DC),
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }
@@ -557,7 +557,7 @@ class SplitsCalculatorSpec extends CrunchTestLike {
             Option(DC),
             PaxNumbers
           )
-          val result = splitsCalculator.splitsForManifest(manifest, testArrival)
+          val result = splitsCalculator.splitsForManifest(manifest, testArrival.Terminal)
 
           result === expected
         }

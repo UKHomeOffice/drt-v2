@@ -3,9 +3,12 @@ package actors.routing
 import actors.DateRange
 import actors.PartitionedPortStateActor._
 import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
-import akka.NotUsed
+import akka.actor.ActorRef
+import akka.pattern.ask
+import akka.{Done, NotUsed}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
+import akka.util.Timeout
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi._
@@ -78,6 +81,13 @@ object FlightsRouterActor {
       .log(getClass.getName)
       .runWith(Sink.fold(FlightsWithSplits.empty)(_ ++ _._2))
     )
+
+  def persistSplits(flightsRouterActor: ActorRef)
+                   (implicit timeout: Timeout, ec: ExecutionContext): Iterable[(UniqueArrival, Splits)] => Future[Done] =
+    splits => flightsRouterActor
+      .ask(SplitsForArrivals(splits.toMap.view.mapValues(s => Set(s)).toMap))
+      .map(_ => Done)
+
 }
 
 class FlightsRouterActor(allTerminals: Iterable[Terminal],
@@ -171,6 +181,6 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
 
   override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = {
     case _: ArrivalsDiff => true
-    case _: SplitsForArrivals => false
+    case _: SplitsForArrivals => true
   }
 }

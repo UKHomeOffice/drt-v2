@@ -8,6 +8,47 @@ import slick.lifted.ProvenShape
 import java.sql.Timestamp
 import scala.concurrent.Future
 
+
+case class ProcessedZipRow(zip_file_name: String, success: Boolean, processed_at: Timestamp, created_on: Option[String])
+
+case class ProcessedJsonRow(zip_file_name: String,
+                            json_file_name: String,
+                            suspicious_date: Boolean,
+                            success: Boolean,
+                            processed_at: Timestamp,
+                            arrival_port_code: Option[String],
+                            departure_port_code: Option[String],
+                            voyage_number: Option[Int],
+                            carrier_code: Option[String],
+                            scheduled: Option[Timestamp],
+                            event_code: Option[String],
+                            non_interactive_total_count: Option[Int],
+                            non_interactive_trans_count: Option[Int],
+                            interactive_total_count: Option[Int],
+                            interactive_trans_count: Option[Int],
+                           )
+
+case class VoyageManifestPassengerInfoRow(event_code: String,
+                                          arrival_port_code: String,
+                                          departure_port_code: String,
+                                          voyage_number: Int,
+                                          carrier_code: String,
+                                          scheduled_date: java.sql.Timestamp,
+                                          day_of_week: Int,
+                                          week_of_year: Int,
+                                          document_type: String,
+                                          document_issuing_country_code: String,
+                                          eea_flag: String,
+                                          age: Int,
+                                          disembarkation_port_code: String,
+                                          in_transit_flag: String,
+                                          disembarkation_port_country_code: String,
+                                          nationality_country_code: String,
+                                          passenger_identifier: String,
+                                          in_transit: Boolean,
+                                          json_file: String)
+
+
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
 trait Tables {
   val profile: slick.jdbc.JdbcProfile
@@ -20,29 +61,7 @@ trait Tables {
   /** DDL for all tables. Call .create to execute. */
   lazy val schema: profile.SchemaDescription = VoyageManifestPassengerInfo.schema ++ ProcessedJson.schema ++ ProcessedZip.schema ++ Arrival.schema
 
-  case class ProcessedZipRow(zip_file_name: String, success: Boolean, processed_at: Timestamp)
 
-  case class ProcessedJsonRow(zip_file_name: String, json_file_name: String, suspicious_date: Boolean, success: Boolean, processed_at: Timestamp)
-
-  case class VoyageManifestPassengerInfoRow(event_code: String,
-                                            arrival_port_code: String,
-                                            departure_port_code: String,
-                                            voyage_number: Int,
-                                            carrier_code: String,
-                                            scheduled_date: java.sql.Timestamp,
-                                            day_of_week: Int,
-                                            week_of_year: Int,
-                                            document_type: String,
-                                            document_issuing_country_code: String,
-                                            eea_flag: String,
-                                            age: Int,
-                                            disembarkation_port_code: String,
-                                            in_transit_flag: String,
-                                            disembarkation_port_country_code: String,
-                                            nationality_country_code: String,
-                                            passenger_identifier: String,
-                                            in_transit: Boolean,
-                                            json_file: String)
 
   case class ArrivalRow(code: String,
                         number: Int,
@@ -69,22 +88,35 @@ trait Tables {
       None
   }
 
-  class ProcessedZip(_tableTag: Tag) extends profile.api.Table[ProcessedZipRow](_tableTag, maybeSchema, "processed_zip") {
-    override def * : ProvenShape[ProcessedZipRow] = (zip_file_name, success, processed_at) <> (ProcessedZipRow.tupled, ProcessedZipRow.unapply)
-
+  class ProcessedZipTable(_tableTag: Tag) extends profile.api.Table[ProcessedZipRow](_tableTag, maybeSchema, "processed_zip") {
     val zip_file_name: Rep[String] = column[String]("zip_file_name")
     val success: Rep[Boolean] = column[Boolean]("success")
     val processed_at: Rep[Timestamp] = column[Timestamp]("processed_at")
+    val created_on: Rep[Option[String]] = column[Option[String]]("created_on")
+
+    def * = (zip_file_name, success, processed_at, created_on).mapTo[ProcessedZipRow]
   }
 
-  class ProcessedJson(_tableTag: Tag) extends profile.api.Table[ProcessedJsonRow](_tableTag, maybeSchema, "processed_json") {
-    def * = (zip_file_name, json_file_name, suspicious_date, success, processed_at) <> (ProcessedJsonRow.tupled, ProcessedJsonRow.unapply)
-
+  class ProcessedJsonTable(_tableTag: Tag) extends Table[ProcessedJsonRow](_tableTag, Option("public"), "processed_json") {
     val zip_file_name: Rep[String] = column[String]("zip_file_name")
     val json_file_name: Rep[String] = column[String]("json_file_name")
     val suspicious_date: Rep[Boolean] = column[Boolean]("suspicious_date")
     val success: Rep[Boolean] = column[Boolean]("success")
     val processed_at: Rep[Timestamp] = column[Timestamp]("processed_at")
+    val arrival_port_code: Rep[Option[String]] = column[Option[String]]("arrival_port_code")
+    val departure_port_code: Rep[Option[String]] = column[Option[String]]("departure_port_code")
+    val voyage_number: Rep[Option[Int]] = column[Option[Int]]("voyage_number")
+    val carrier_code: Rep[Option[String]] = column[Option[String]]("carrier_code")
+    val scheduled: Rep[Option[Timestamp]] = column[Option[Timestamp]]("scheduled")
+    val event_code: Rep[Option[String]] = column[Option[String]]("event_code")
+    val non_interactive_total_count: Rep[Option[Int]] = column[Option[Int]]("non_interactive_total_count")
+    val non_interactive_trans_count: Rep[Option[Int]] = column[Option[Int]]("non_interactive_trans_count")
+    val interactive_total_count: Rep[Option[Int]] = column[Option[Int]]("interactive_total_count")
+    val interactive_trans_count: Rep[Option[Int]] = column[Option[Int]]("interactive_trans_count")
+
+    def * = (zip_file_name, json_file_name, suspicious_date, success, processed_at,
+      arrival_port_code, departure_port_code, voyage_number, carrier_code, scheduled,
+      event_code, non_interactive_total_count, non_interactive_trans_count, interactive_total_count, interactive_trans_count).mapTo[ProcessedJsonRow]
   }
 
   /** Table description of table arrival. Objects of this class serve as prototypes for rows in queries. */
@@ -171,8 +203,8 @@ trait Tables {
 
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */
   lazy val VoyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfo(tag))
-  lazy val ProcessedJson = new TableQuery(tag => new ProcessedJson(tag))
-  lazy val ProcessedZip = new TableQuery(tag => new ProcessedZip(tag))
+  lazy val ProcessedJson = new TableQuery(tag => new ProcessedJsonTable(tag))
+  lazy val ProcessedZip = new TableQuery(tag => new ProcessedZipTable(tag))
   lazy val Arrival = new TableQuery(tag => new Arrival(tag))
   lazy val User = new TableQuery(tag => new User(tag))
 }

@@ -56,6 +56,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
 
     case UpdateStateFlights(fws, removals) =>
       state = state.copy(flights = (state.flights -- removals) ++ fws.flights)
+      println(s"updated flights: ${fws.flights.values.map(_.apiFlight.PassengerSources)}, ${fws.flights.values.map(_.splits.map(_.source))}")
       sendStateToProbe()
 
     case UpdateStateCrunchMinutes(container) =>
@@ -85,18 +86,23 @@ class PartitionedPortStateTestActor(probe: ActorRef,
       message match {
         case splits: SplitsForArrivals if splits.splits.keys.nonEmpty =>
           val updatedMillis: Iterable[MillisSinceEpoch] = splits.splits.keys.map(_.scheduled)
+          println(s"\nSplitsForArrivals")
           updateFlights(actor, Seq(), updatedMillis.min, updatedMillis.max)
 
         case pax: PaxForArrivals if pax.pax.keys.nonEmpty =>
           val updatedMillis: Iterable[MillisSinceEpoch] = pax.pax.keys.map(_.scheduled)
+          println(s"\nPaxForArrivals")
           updateFlights(actor, Seq(), updatedMillis.min, updatedMillis.max)
 
         case arrivalsDiff@ArrivalsDiff(_, removals) =>
           val minutesAffected = minutesAffectedByDiff(arrivalsDiff, removals)
-          if (minutesAffected.nonEmpty)
+          if (minutesAffected.nonEmpty) {
+            println(s"\nArrivalsDiff")
             updateFlights(actor, removals, minutesAffected.min, minutesAffected.max)
+          }
 
         case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
+          println(s"\nFlightsWithSplitsDiff")
           updateFlights(
             actor,
             flightsWithSplitsDiff.arrivalsToRemove.collect {
@@ -123,7 +129,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     }
   }
 
-  private def minutesAffectedByDiff(arrivalsDiff: ArrivalsDiff, removals: Iterable[UniqueArrival]) = {
+  private def minutesAffectedByDiff(arrivalsDiff: ArrivalsDiff, removals: Iterable[UniqueArrival]): Iterable[MillisSinceEpoch] = {
     val updateMinutes = arrivalsDiff.toUpdate.values.flatMap(_.pcpRange(paxFeedSourceOrder))
     val flightsToRemove = state.flights.values.filter(fws => removals.toSeq.contains(fws.apiFlight.unique))
     val removalMinutes = flightsToRemove.flatMap(_.apiFlight.pcpRange(paxFeedSourceOrder))

@@ -24,7 +24,7 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
   override def nextKeys(since: Long): Future[(Option[MillisSinceEpoch], Iterable[UniqueArrivalKey])] = {
     val ts = SDate(since).toISOString.dropRight(1) + "." + SDate(since).millisSinceEpoch.toString.takeRight(3) + "Z"
 
-    tables.run(manifestsQuery2(ts))
+    tables.run(manifestsQuery(ts))
       .map {
         case Some((arrivalKeys, nextTs)) => (Option(nextTs), arrivalKeys)
         case _ => (None, Vector())
@@ -36,7 +36,7 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
       }
   }
 
-  def manifestsQuery2(ts: String): DBIOAction[Option[(Seq[UniqueArrivalKey], Long)], NoStream, Effect] =
+  def manifestsQuery(ts: String): DBIOAction[Option[(Seq[UniqueArrivalKey], Long)], NoStream, Effect] =
     sql"""SELECT pj.departure_port_code, pj.voyage_number, EXTRACT(EPOCH FROM pj.scheduled) * 1000, MAX(EXTRACT(EPOCH FROM pz.processed_at)) * 1000
          |FROM processed_json pj
          |INNER JOIN processed_zip pz on pz.zip_file_name=pj.zip_file_name
@@ -60,15 +60,3 @@ case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
         else None
       }
 }
-
-/**
- SELECT pj.departure_port_code, pj.voyage_number, EXTRACT(EPOCH FROM pj.scheduled) * 1000, MAX(EXTRACT(EPOCH FROM pz.processed_at)) * 1000
- FROM processed_json pj
- INNER JOIN processed_zip pz on pz.zip_file_name=pj.zip_file_name
- WHERE
- pz.processed_at > '2024-04-30'
- AND pj.arrival_port_code = 'STN'
-  AND event_code = 'DC'
- GROUP BY pj.departure_port_code, pj.voyage_number, pj.scheduled
- ORDER BY pj.scheduled
- */

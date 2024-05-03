@@ -3,6 +3,7 @@ package controllers.application
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import akka.util.Timeout
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.TQM
@@ -26,6 +27,7 @@ import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration.DurationInt
 
 class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test")
@@ -123,6 +125,7 @@ class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
         actorService = actorService,
         persistentStateActors = persistentActors,
         requestAndTerminateActor = actorService.requestAndTerminateActor,
+        splitsCalculator = splitsCalculator
       )(system, ec, mat, timeout) {
         override lazy val flightsProvider: FlightsProvider = FlightsProvider(system.actorOf(Props(new MockFlightsRouterActor(flights))))(timeout)
       }

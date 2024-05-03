@@ -119,7 +119,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     implicit val timeout: Timeout = new Timeout(50.milliseconds)
     val deskRecsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(mockPortStateActor),
-      liveManifestsProvider = mockLiveManifestsProviderNoop,
       historicManifestsProvider = historicManifests,
       historicManifestsPaxProvider = historicManifestsPaxProvider,
       splitsCalculator = splitsCalc,
@@ -130,6 +129,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       queuesByTerminal = airportConfig.queuesByTerminal,
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
+      terminalSplits = splitsCalc.terminalSplits,
     )
     val crunchRequest: MillisSinceEpoch => CrunchRequest =
       (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)

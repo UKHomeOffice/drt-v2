@@ -11,7 +11,6 @@ import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.SimulationParams
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser
 import queueus.DynamicQueueStatusProvider
 import services.OptimiserWithFlexibleProcessors
 import services.crunch.desklimits.PortDeskLimits
@@ -36,7 +35,6 @@ object Scenarios {
                        sla: (LocalDate, Queue) => Future[Int],
                        splitsCalculator: SplitsCalculator,
                        flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
-                       liveManifestsProvider: ProcessingRequest => Future[Source[VoyageManifestParser.VoyageManifests, NotUsed]],
                        historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
                        historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]],
                        flightsActor: ActorRef,
@@ -65,7 +63,6 @@ object Scenarios {
 
     val paxLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = flightsProvider,
-      liveManifestsProvider = liveManifestsProvider,
       historicManifestsProvider = historicManifestsProvider,
       historicManifestsPaxProvider = historicManifestsPaxProvider,
       splitsCalculator = splitsCalculator,

@@ -9,7 +9,6 @@ import drt.shared._
 import manifests.UniqueArrivalKey
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import queueus.{B5JPlusTypeAllocator, ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
 import services.crunch.CrunchTestLike
 import services.imports.ArrivalCrunchSimulationActor
@@ -49,8 +48,6 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
   def flightsProvider(cr: ProcessingRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
     Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
 
-  def manifestsProvider(cr: ProcessingRequest): Future[Source[VoyageManifests, NotUsed]] = Future.successful(Source(List()))
-
   def historicManifestsProvider(arrivals: Iterable[Arrival]): Source[ManifestLike, NotUsed] = Source(List())
 
   def historicManifestsPaxProvider(arrival: Arrival): Future[Option[ManifestPaxCount]] = Future.successful(
@@ -71,7 +68,6 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       (_: LocalDate, q: Queue) => Future.successful(defaultAirportConfig.slaByQueue(q)),
       splitsCalculator = splitsCalculator,
       flightsProvider = flightsProvider,
-      liveManifestsProvider = manifestsProvider,
       historicManifestsProvider = historicManifestsProvider,
       historicManifestsPaxProvider = historicManifestsPaxProvider,
       flightsActor = system.actorOf(Props(new AkkingActor())),

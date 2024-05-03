@@ -6,6 +6,7 @@ import org.specs2.specification.BeforeEach
 import services.crunch.{CrunchTestLike, H2Tables}
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
+import slickdb.{ProcessedJsonRow, ProcessedZipRow}
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -74,8 +75,23 @@ class DbManifestArrivalKeysTest
   }
 
   private def createProcessedPassengerJsonZip(zipName: String, jsonName: String, arrivalPort: String, departurePort: String, scheduled: SDateLike, voyageNumber: Int, paxCount: Int, processedAt: Timestamp) = {
-    addZipRecord(H2Tables, zipName, processedAt)
-    addJsonRecord(H2Tables, zipName, jsonName, processedAt)
+    addZipRecord(H2Tables, ProcessedZipRow(zipName, true, processedAt, None))
+    addJsonRecord(H2Tables, ProcessedJsonRow(
+      zip_file_name = zipName,
+      json_file_name = jsonName,
+      suspicious_date = false,
+      success = true,
+      processed_at = processedAt,
+      arrival_port_code = Option(arrivalPort),
+      departure_port_code = Option(departurePort),
+      voyage_number = Option(voyageNumber),
+      carrier_code = Option("BA"),
+      scheduled = Option(new Timestamp(scheduled.millisSinceEpoch)),
+      event_code = Option("DC"),
+      non_interactive_total_count = None,
+      non_interactive_trans_count = None,
+      interactive_total_count = None,
+      interactive_trans_count = None))
 
     (0 until paxCount).foreach (id => addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, id.toString, jsonName))
   }

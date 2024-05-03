@@ -1,7 +1,6 @@
 package manifests.queues
 
 import manifests.passengers.ManifestLike
-import manifests.queues.SplitsCalculator.SplitsForTerminal
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments, PaxTypeQueueAllocation, QueueAdjustments}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
@@ -13,8 +12,6 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, ApiPaxTypeAndQueueCount, PaxTypeAndQueue}
 
 object SplitsCalculator {
-  type SplitsForTerminal = (ManifestLike, Terminal) => Splits
-
   def apply(airportConfig: AirportConfig, queueAdjustments: QueueAdjustments): SplitsCalculator = {
     val queueAllocator = paxTypeQueueAllocator(airportConfig)
     val terminalSplitRatios = airportConfig.terminalPaxSplits
@@ -40,7 +37,7 @@ case class SplitsCalculator(queueAllocator: PaxTypeQueueAllocation,
   val terminalSplits: Terminal => Option[Splits] =
     terminal => Option(terminalDefaultSplits(terminal))
 
-  val splitsForManifest: SplitsForTerminal =
+  val splitsForManifest: (ManifestLike, Terminal) => Splits =
     (manifest: ManifestLike, terminal: Terminal) =>
       adjustments.adjust(queueAllocator.toSplits(terminal, manifest))
 }

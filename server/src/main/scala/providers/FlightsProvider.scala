@@ -32,13 +32,16 @@ case class FlightsProvider(flightsRouterActor: ActorRef)
       flightsByUtcDate(request).map(_._2).runFold(Seq.empty[ApiFlightWithSplits])(_ ++ _)
     }
 
-  def allTerminals: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+  def allTerminalsDateRange: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     (start, end) => {
       val startMillis = SDate(start).millisSinceEpoch
       val endMillis = SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch
       val request = PartitionedPortStateActor.GetFlights(startMillis, endMillis)
       flightsByUtcDate(request)
     }
+
+  def allTerminalsSingleDate: UtcDate => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+    date => allTerminalsDateRange(date, date)
 
   private def flightsByUtcDate(request: FlightsRequest): Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     Source

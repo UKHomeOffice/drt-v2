@@ -134,7 +134,8 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
       minuteMillis = start to end by MilliTimes.oneMinuteMillis,
       flights = FlightsWithSplits(flights),
       RedListUpdates.empty,
-      _ => (_: Queue, _: MillisSinceEpoch) => Open
+      _ => (_: Queue, _: MillisSinceEpoch) => Open,
+      _ => None,
     )
   }
 

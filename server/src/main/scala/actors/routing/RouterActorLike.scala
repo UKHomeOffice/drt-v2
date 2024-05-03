@@ -20,8 +20,11 @@ trait RouterActorLikeWithSubscriber[U <: Updates, P, A] extends RouterActorLike[
 
   override def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[Set[A]] =
     super.handleUpdatesAndAck(updates, replyTo).map { updatedMillis =>
-      if (shouldSendEffectsToSubscriber(updates))
-        updatesSubscribers.foreach(_ ! updatedMillis)
+      if (shouldSendEffectsToSubscriber(updates)) {
+        updatesSubscribers.foreach { subscriber =>
+          if (updatedMillis.nonEmpty) subscriber ! updatedMillis
+        }
+      }
       updatedMillis
     }
 

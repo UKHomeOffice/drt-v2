@@ -13,7 +13,9 @@ sealed trait FeedResponse {
 
 sealed trait ArrivalsFeedResponse extends FeedResponse
 
-sealed trait ManifestsFeedResponse extends FeedResponse
+sealed trait ManifestsFeedResponse extends FeedResponse {
+  val manifests: DqManifests
+}
 
 case class StoreFeedImportArrivals(arrivals: Seq[FeedArrival])
 
@@ -45,6 +47,7 @@ object ManifestsFeedSuccess {
 
 case class ManifestsFeedFailure(responseMessage: String, createdAt: SDateLike) extends ManifestsFeedResponse {
   override val length: Int = 0
+  override val manifests: DqManifests = DqManifests.empty
 }
 
 object ManifestsFeedFailure {
@@ -53,4 +56,8 @@ object ManifestsFeedFailure {
 
 case class DqManifests(lastProcessedMarker: MillisSinceEpoch, manifests: Iterable[VoyageManifest]) {
   def length: Int = manifests.size
+}
+
+object DqManifests {
+  val empty: DqManifests = DqManifests(0L, Iterable())
 }

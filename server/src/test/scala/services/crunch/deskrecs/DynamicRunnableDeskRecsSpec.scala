@@ -11,7 +11,6 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinut
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
-import manifests.queues.SplitsCalculator.SplitsForTerminal
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import passengersplits.parsing.VoyageManifestParser.{PassengerInfoJson, VoyageManifest, VoyageManifests}
 import queueus._
@@ -26,9 +25,9 @@ import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitSource, SplitSources}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -70,10 +69,6 @@ object OptimiserMocks {
 
   def mockFlightsProvider(arrivals: List[Arrival]): ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
     _ => Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
-
-  def mockLiveManifestsProviderNoop: ProcessingRequest => Future[Source[VoyageManifests, NotUsed]] = {
-    _ => Future.successful(Source(List()))
-  }
 
   def mockHistoricManifestsProviderNoop: Iterable[Arrival] => Source[ManifestLike, NotUsed] = {
     _: Iterable[Arrival] => Source(List())
@@ -153,7 +148,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   def setupGraphAndCheckQueuePax(arrival: Arrival,
-                                 livePax: Option[List[PassengerInfoJson]],
                                  historicPax: Option[List[PassengerInfoJson]],
                                  expectedQueuePax: Map[(Terminal, Queue), Int]): Any = {
     val probe = TestProbe()
@@ -163,7 +157,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
 
     val queueMinutesProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = mockFlightsProvider(List(arrival)),
-      liveManifestsProvider = mockLiveManifestsProvider(arrival, livePax),
       historicManifestsProvider = mockHistoricManifestsProvider(Map(arrival -> historicPax)),
       historicManifestsPaxProvider = mockHistoricManifestsPaxProvider(Map(arrival -> historicPax)),
       splitsCalculator = splitsCalculator,
@@ -174,6 +167,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       queuesByTerminal = airportConfig.queuesByTerminal,
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
+      terminalSplits = _ => None,
     )
     val crunchRequest: MillisSinceEpoch => CrunchRequest =
       (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
@@ -201,7 +195,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
     val arrival = ArrivalGenerator.live(origin = PortCode("JFK"), totalPax = Option(100)).toArrival(LiveFeedSource)
     val flights = Seq(ApiFlightWithSplits(arrival, Set()))
     val splits = Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, EeaDesk, 1.0, None, None)), ApiSplitsWithHistoricalEGateAndFTPercentages, None, Percentage)
-    val mockSplits: SplitsForTerminal = (_, _) => splits
+    val mockSplits: (ManifestLike, Terminal) => Splits = (_, _) => splits
 
     "addManifests" >> {
       "When I have a manifest matching the arrival I should get the mock splits added to the arrival" >> {
@@ -223,24 +217,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       }
     }
 
-    "addSplits" >> {
-      "When I have live manifests matching the arrival where the live manifest is within the trust threshold I should get the live splits" >> {
-        checkSplitsSource(arrival, Option(xOfPaxType(100, visa)), Map(), Set(ApiSplitsWithHistoricalEGateAndFTPercentages))
-      }
-
-      "When I have live and historic manifests matching the arrival where the live manifest isn't within the trust threshold I should get the fallback historic splits" >> {
-        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(arrival -> Option(xOfPaxType(10, visa))), Set(ApiSplitsWithHistoricalEGateAndFTPercentages, Historical))
-      }
-
-      "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
-        checkSplitsSource(arrival, Option(xOfPaxType(10, visa)), Map(), Set(TerminalAverage))
-      }
-
-      "When I have live manifests matching the arrival where the live manifest isn't within the trust threshold, and no historical manifest, I should get the fallback terminal average splits" >> {
-        checkSplitsSource(arrival, None, Map(), Set(TerminalAverage))
-      }
-    }
-
     "add historic API pax" >> {
       "When I have no Feed I should get some pax from historic API" >> {
         val arrival = ArrivalGenerator.live(origin = PortCode("JFK")).toArrival(LiveFeedSource)
@@ -250,21 +226,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         ))
       }
     }
-  }
-
-  private def checkSplitsSource(arrival: Arrival,
-                                maybeLiveManifestPax: Option[List[PassengerInfoJson]],
-                                maybeHistoricArrivalManifestPax: Map[Arrival, Option[List[PassengerInfoJson]]],
-                                expectedSplitsSources: Set[SplitSource]) = {
-    val flow = DynamicRunnablePassengerLoads.addSplits(
-      mockLiveManifestsProvider(arrival, maybeLiveManifestPax),
-      mockHistoricManifestsProvider(maybeHistoricArrivalManifestPax),
-      splitsCalculator)
-
-    val value1 = Source(List((CrunchRequest(SDate(arrival.Scheduled).toLocalDate, 0, 1440), List(ApiFlightWithSplits(arrival, Set())))))
-    val result = Await.result(value1.via(flow).runWith(Sink.seq), 1.second)
-
-    result.head._2.exists(_.bestSplits.nonEmpty) && result.head._2.exists(_.splits.map(_.source) === expectedSplitsSources)
   }
 
   private def checkPaxSource(arrival: Arrival,
@@ -293,7 +254,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EGate) -> 50, (T1, EeaDesk) -> 50)
       setupGraphAndCheckQueuePax(
         arrival = arrival,
-        livePax = None,
         historicPax = None,
         expectedQueuePax = expected)
 
@@ -304,40 +264,6 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
       setupGraphAndCheckQueuePax(
         arrival = arrival,
-        livePax = None,
-        historicPax = Option(List(euIdCard)),
-        expectedQueuePax = expected)
-
-      success
-    }
-
-    "When I provide only live splits with an id card pax, all pax should arrive at the eea desk " >> {
-      val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
-      setupGraphAndCheckQueuePax(
-        arrival = arrival,
-        livePax = Option(xOfPaxType(100, euIdCard)),
-        historicPax = None,
-        expectedQueuePax = expected)
-
-      success
-    }
-
-    "When I provide live (id card) and historic (visa) splits, all pax should arrive at the eea desk as per the live splits" >> {
-      val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
-      setupGraphAndCheckQueuePax(
-        arrival = arrival,
-        livePax = Option(xOfPaxType(100, euIdCard)),
-        historicPax = Option(List(visa)),
-        expectedQueuePax = expected)
-
-      success
-    }
-
-    "When I provide live (visa) and historic (id card) splits, all pax should arrive at the non-eea desk as per the live splits" >> {
-      val expected: Map[(Terminal, Queue), Int] = Map((T1, NonEeaDesk) -> 100)
-      setupGraphAndCheckQueuePax(
-        arrival = arrival,
-        livePax = Option(xOfPaxType(100, visa)),
         historicPax = Option(List(euIdCard)),
         expectedQueuePax = expected)
 

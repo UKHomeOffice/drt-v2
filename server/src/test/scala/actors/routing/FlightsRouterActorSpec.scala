@@ -268,7 +268,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
   "Concerning persistence of flights" >> {
     "Given a router, I should see updates sent to it are persisted" >> {
-      val lookups = FlightLookups(system, myNow, queuesByTerminal = Map(T1 -> Seq(EeaDesk, NonEeaDesk, EGate)), None, paxFeedSourceOrder)
+      val lookups = FlightLookups(system, myNow, queuesByTerminal = Map(T1 -> Seq(EeaDesk, NonEeaDesk, EGate)), None, paxFeedSourceOrder, _ => None)
       val router = lookups.flightsRouterActor
 
       val scheduled = "2021-06-01T00:00"
@@ -314,7 +314,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Add red list pax to an existing arrival" in {
         val redListNow = SDate("2021-06-24T12:10:00")
-        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None, paxFeedSourceOrder)
+        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None, paxFeedSourceOrder, _ => None)
         val redListPassengers = RedListPassengers("BA0001", PortCode("LHR"), SDate(scheduled), redListPax)
         val neboArrivalActor: ActorRef = system.actorOf(NeboArrivalActor.props(redListPassengers, () => redListNow))
         val arrival = ArrivalGenerator.live(iata = "BA0001", terminal = T1, schDt = scheduled).toArrival(LiveFeedSource)
@@ -334,7 +334,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Add red list pax counts to the appropriate arrivals" in {
         val redListNow = SDate("2021-06-24T12:10:00")
-        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None, paxFeedSourceOrder)
+        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None, paxFeedSourceOrder, _ => None)
         val flightsRouter = lookups.flightsRouterActor
         val scheduled2 = "2021-06-24T15:05"
         val arrivalT1 = ArrivalGenerator.live(iata = "BA0001", terminal = T1, schDt = scheduled).toArrival(LiveFeedSource)
@@ -364,7 +364,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
       "Retain red list pax counts after updating an arrival" in {
         val redListNow = SDate("2021-06-24T12:10:00")
-        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None, paxFeedSourceOrder)
+        val lookups = FlightLookups(system, () => redListNow, Map(T1 -> Seq(), T2 -> Seq()), None, paxFeedSourceOrder, _ => None)
         val flightsRouter = lookups.flightsRouterActor
         val arrivalT1 = ArrivalGenerator.live(iata = "BA0001", terminal = T1, schDt = scheduled).toArrival(LiveFeedSource)
         val redListPax = util.RandomString.getNRandomString(10, 10)

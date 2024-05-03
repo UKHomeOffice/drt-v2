@@ -13,7 +13,7 @@ import akka.NotUsed
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.Supervision.Stop
-import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.testkit.TestProbe
 import akka.util.Timeout
@@ -42,7 +42,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.service.ProdFeedService
+import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService}
 import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
 import uk.gov.homeoffice.drt.testsystem.TestActors.MockAggregatedArrivalsActor
 import uk.gov.homeoffice.drt.time._
@@ -189,10 +189,10 @@ class TestDrtActor extends Actor {
 
       val manifestLookups = ManifestLookups(system)
 
-      val manifestsRouterActorRef: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
+      val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
 
       val crunchActors = new PersistentStateActors() {
-        override val manifestsRouterActor: ActorRef = manifestsRouterActorRef
+        override val manifestsRouterActor: ActorRef = manifestsRouterActor
 
         override val mergeArrivalsQueueActor: ActorRef = TestProbe("merge-arrivals-queue-actor").ref
         override val crunchQueueActor: ActorRef = TestProbe("crunch-queue-actor").ref
@@ -204,10 +204,9 @@ class TestDrtActor extends Actor {
           case Some(actor) => actor
           case None => system.actorOf(Props(new MockAggregatedArrivalsActor))
         }
-
       }
 
-      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder)
+      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None)
       val flightsActor: ActorRef = flightLookups.flightsRouterActor
       val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor
@@ -249,13 +248,13 @@ class TestDrtActor extends Actor {
 
       val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, terminalEgatesProvider) _
 
+      val ptqa = paxTypeQueueAllocator(tc.airportConfig)
+      val splitAdjustments = AdjustmentsNoop
+
+      val splitsCalculator = SplitsCalculator(ptqa, tc.airportConfig.terminalPaxSplits, splitAdjustments)
+
       val startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) = () => {
         implicit val timeout: Timeout = new Timeout(1 second)
-        val ptqa = paxTypeQueueAllocator(tc.airportConfig)
-
-        val splitAdjustments = AdjustmentsNoop
-
-        val splitsCalculator = SplitsCalculator(ptqa, tc.airportConfig.terminalPaxSplits, splitAdjustments)
 
         val historicManifestLookups: ManifestLookupLike = MockManifestLookupService()
 
@@ -263,7 +262,6 @@ class TestDrtActor extends Actor {
         val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(StatusReply.Ack)
         val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
           arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-          liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ManifestsProvider(manifestsRouterActorRef)),
           historicManifestsProvider = OptimisationProviders.historicManifestsProvider(
             tc.airportConfig.portCode,
             tc.historicManifestLookup.getOrElse(historicManifestLookups),
@@ -282,6 +280,7 @@ class TestDrtActor extends Actor {
           queuesByTerminal = tc.airportConfig.queuesByTerminal,
           updateLiveView = _ => Future.successful(StatusReply.Ack),
           paxFeedSourceOrder = paxFeedSourceOrder,
+          terminalSplits = splitsCalculator.terminalSplits,
         )
 
         val crunchRequest: MillisSinceEpoch => CrunchRequest =
@@ -293,7 +292,7 @@ class TestDrtActor extends Actor {
         val existingMergedArrivals: UtcDate => Future[Set[UniqueArrival]] =
           (date: UtcDate) =>
             FlightsProvider(portStateActor)
-              .allTerminals(date, date).map(_._2.map(_.unique).toSet)
+              .allTerminalsDateRange(date, date).map(_._2.map(_.unique).toSet)
               .runWith(Sink.fold(Set[UniqueArrival]())(_ ++ _))
               .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
 
@@ -366,7 +365,7 @@ class TestDrtActor extends Actor {
         liveFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestActor)
 
         flightsActor ! AddUpdatesSubscriber(crunchRequestActor)
-        manifestsRouterActorRef ! AddUpdatesSubscriber(crunchRequestActor)
+        manifestsRouterActor ! AddUpdatesSubscriber(crunchRequestActor)
         queueLoadsActor ! AddUpdatesSubscriber(deskRecsRequestQueueActor)
         queueLoadsActor ! AddUpdatesSubscriber(deploymentRequestActor)
         staffActor ! AddUpdatesSubscriber(deploymentRequestActor)
@@ -375,6 +374,15 @@ class TestDrtActor extends Actor {
       }
 
       val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
+
+      val persistManifests = ManifestPersistence.processManifestFeedResponse(
+        manifestsRouterActor,
+        flightLookups.flightsRouterActor,
+        splitsCalculator.splitsForManifest,
+      )
+
+      val manifestsLiveResponseSource: SourceQueueWithComplete[ManifestsFeedResponse] = manifestsSource.mapAsync(1)(persistManifests).toMat(Sink.ignore)(Keep.left).run
+
       val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
@@ -386,7 +394,6 @@ class TestDrtActor extends Actor {
         maxDaysToCrunch = tc.forecastMaxDays,
         expireAfterMillis = tc.expireAfterMillis,
         now = tc.now,
-        manifestsLiveSource = manifestsSource,
         crunchActors = crunchActors,
         feedActors = Map(
           AclFeedSource -> forecastBaseFeedArrivalsActor,
@@ -394,7 +401,6 @@ class TestDrtActor extends Actor {
           LiveBaseFeedSource -> liveBaseFeedArrivalsActor,
           LiveFeedSource -> liveFeedArrivalsActor,
         ),
-        manifestsRouterActor = manifestsRouterActorRef,
         arrivalsForecastBaseFeed = Feed(forecastBaseArrivals, 1.second, 5.second),
         arrivalsForecastFeed = Feed(forecastArrivals, 1.second, 5.second),
         arrivalsLiveBaseFeed = Feed(liveBaseArrivals, 1.second, 1.second),
@@ -412,7 +418,7 @@ class TestDrtActor extends Actor {
         forecastArrivalsInput = crunchInputs.forecastArrivalsResponse.feedSource,
         liveArrivalsInput = crunchInputs.liveArrivalsResponse.feedSource,
         ciriumArrivalsInput = crunchInputs.liveBaseArrivalsResponse.feedSource,
-        manifestsLiveInput = crunchInputs.manifestsLiveResponseSource,
+        manifestsLiveInput = manifestsLiveResponseSource,
         shiftsInput = shiftsSequentialWritesActor,
         fixedPointsInput = fixedPointsSequentialWritesActor,
         staffMovementsInput = staffMovementsSequentialWritesActor,

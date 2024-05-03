@@ -1,6 +1,6 @@
 package drt.server.feeds.api
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -13,16 +13,16 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 trait ApiFeed {
-  def startProcessingFrom(since: MillisSinceEpoch): Future[Done]
+  def startProcessingFrom(since: MillisSinceEpoch): Source[Done, NotUsed]
 }
 
 case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
                        manifestProcessor: ManifestProcessor,
                        throttleDuration: FiniteDuration)
-                      (implicit ec: ExecutionContext, mat: Materializer) extends ApiFeed {
+                      (implicit ec: ExecutionContext) extends ApiFeed {
   private val log = LoggerFactory.getLogger(getClass)
 
-  override def startProcessingFrom(since: MillisSinceEpoch): Future[Done] =
+  override def startProcessingFrom(since: MillisSinceEpoch): Source[Done, NotUsed] =
     Source
       .unfoldAsync((since, Iterable[(UniqueArrivalKey, MillisSinceEpoch)]())) { case (lastProcessedAt, lastKeys) =>
         markerAndNextArrivalKeys(lastProcessedAt).map {
@@ -55,7 +55,6 @@ case class ApiFeedImpl(arrivalKeyProvider: ManifestArrivalKeys,
         case _ =>
           Future.successful(Done)
       }
-      .runWith(Sink.ignore)
 
   private def markerAndNextArrivalKeys(since: MillisSinceEpoch): Future[(MillisSinceEpoch, Iterable[(UniqueArrivalKey, MillisSinceEpoch)])] =
     arrivalKeyProvider

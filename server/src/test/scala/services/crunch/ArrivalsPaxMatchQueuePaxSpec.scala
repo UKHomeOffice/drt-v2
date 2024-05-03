@@ -107,6 +107,7 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
             val paxInQueues = paxLoadsFromPortState(ps, 1440 * 2).map {
               case (_, queuesPax) => queuesPax.values.map(_.sum).sum
             }.sum
+            println(s"hasApi: $hasApi, paxInQueues: $paxInQueues (${ps.flights.values.map(_.apiFlight.PassengerSources)})")
             hasApi && paxInQueues == 111
         }
 
