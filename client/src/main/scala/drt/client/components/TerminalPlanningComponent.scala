@@ -83,7 +83,7 @@ object TerminalPlanningComponent {
           }
 
           val headlineFiguresExportUrl = s"export/headlines/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
-          val staffRecommendationsExportUrl = s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}/${state.timePeriod}"
+          val staffRecommendationsExportUrl = s"export/planning/${defaultStartDate(props.page.dateFromUrlOrNow).millisSinceEpoch}/${props.page.terminal}"
 
           def createDownload(updateState: (State, Boolean) => State): String => Event => CallbackTo[Unit] = url => {
             event =>

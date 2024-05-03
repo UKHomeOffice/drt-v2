@@ -58,33 +58,36 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
 
   private val sixMonthsDays = 180
 
-  def exportForecastWeekToCSV(startDay: String, terminalName: String, minutesInSlot: Int): Action[AnyContent] = authByRole(ForecastView) {
+  def exportForecastWeekToCSV(startDay: String, terminalName: String): Action[AnyContent] = authByRole(ForecastView) {
     val terminal = Terminal(terminalName)
-    Action.async {
+    Action.async { implicit request =>
       val start = SDate(startDay.toLong, europeLondonTimeZone)
       val end = start.addDays(sixMonthsDays)
-      val numberOfSlots = minutesInADay / minutesInSlot
-      val rowHeaders = Seq("") ++ (0 until numberOfSlots).map(qh => start.addMinutes(qh * minutesInSlot).toHoursAndMinutes)
-      val staffingProvider = StaffRequirementExports.staffingForLocalDateProvider(ctrl.applicationService.staffMinutesProvider(terminal))
-      val makeHourlyStaffing = StaffRequirementExports.toHourlyStaffing(staffingProvider, minutesInSlot)
+      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      ctrl.userService.selectUser(userEmail.trim).flatMap { userRow =>
+        val minutesInSlot: Int = userRow.flatMap(_.staff_planning_interval_minutes).getOrElse(60)
+        val numberOfSlots = minutesInADay / minutesInSlot
+        val rowHeaders = Seq("") ++ (0 until numberOfSlots).map(qh => start.addMinutes(qh * minutesInSlot).toHoursAndMinutes)
+        val staffingProvider = StaffRequirementExports.staffingForLocalDateProvider(ctrl.applicationService.staffMinutesProvider(terminal))
+        val makeHourlyStaffing = StaffRequirementExports.toHourlyStaffing(staffingProvider, minutesInSlot)
 
-      StaffRequirementExports
-        .queuesProvider(ctrl.applicationService.crunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
-        .mapAsync(1) {
-          case (date, minutes) => makeHourlyStaffing(date, minutes)
-        }
-        .runWith(Sink.seq)
-        .map { seqs =>
-          val rows = seqs.transpose.map { x =>
-            x.map(t => s"${t._1},${t._2},${t._3}").mkString(",")
+        StaffRequirementExports
+          .queuesProvider(ctrl.applicationService.crunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
+          .mapAsync(1) {
+            case (date, minutes) => makeHourlyStaffing(date, minutes)
           }
-          rowHeaders.zip(rows).map { case (header, data) => s"$header,$data" }.mkString("\n")
-        }
-        .map { csvData =>
-          val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
-          CsvFileStreaming.csvFileResult(fileName, csvData)
-        }
-
+          .runWith(Sink.seq)
+          .map { seqs =>
+            val rows = seqs.transpose.map { x =>
+              x.map(t => s"${t._1},${t._2},${t._3}").mkString(",")
+            }
+            rowHeaders.zip(rows).map { case (header, data) => s"$header,$data" }.mkString("\n")
+          }
+          .map { csvData =>
+            val fileName = f"${airportConfig.portCode}-$terminal-forecast-export-${start.getFullYear}-${start.getMonth}%02d-${start.getDate}%02d"
+            CsvFileStreaming.csvFileResult(fileName, csvData)
+          }
+      }
     }
   }
 

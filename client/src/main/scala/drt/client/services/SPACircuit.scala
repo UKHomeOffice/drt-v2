@@ -261,7 +261,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ABFeatureHandler(zoomRW(_.abFeatures)((m, v) => m.copy(abFeatures = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
-      new UserSelectionPlanningPeriodHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v)),
+      new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v)),
       )
     )
     composedHandlers

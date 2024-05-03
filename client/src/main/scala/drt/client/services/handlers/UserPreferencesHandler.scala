@@ -15,13 +15,13 @@ case class SendSelectedTimeInterval(interval: Int) extends Action
 
 case class GetUserPreferenceIntervalMinutes() extends Action
 
-class UserSelectionPlanningPeriodHandler[M](modelRW: ModelRW[M, Pot[Int]]) extends LoggingActionHandler(modelRW) {
+class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[Int]]) extends LoggingActionHandler(modelRW) {
 
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case GetUserPreferenceIntervalMinutes() =>
-      val apiCallEffect = Effect(DrtApi.get("data/user-selected-time-period")
+      val apiCallEffect = Effect(DrtApi.get("data/user-preference-planning-interval-minutes")
         .map(r => SetSelectedTimeInterval(r.responseText match {
           case "15" => 15
           case _ => 60
@@ -36,7 +36,7 @@ class UserSelectionPlanningPeriodHandler[M](modelRW: ModelRW[M, Pot[Int]]) exten
     case SetSelectedTimeInterval(previousPeriodInterval) => updated(Ready(previousPeriodInterval))
 
     case SendSelectedTimeInterval(interval) =>
-      val apiCallEffect = Effect(DrtApi.post(s"data/set-user-selected-time-period/${interval.toString}", "")
+      val apiCallEffect = Effect(DrtApi.post(s"data/user-preference-planning-interval-minutes/${interval.toString}", "")
         .map(_ => SetSelectedTimeInterval(interval))
         .recoverWith {
           case _ =>
