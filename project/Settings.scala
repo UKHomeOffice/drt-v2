@@ -39,7 +39,7 @@ object Settings {
 
     val akka = "2.8.5"
 
-    val specs2 = "4.20.3"
+    val specs2 = "4.20.6"
     val react = "18.2.0"
 
     val bootstrap = "3.3.6"
