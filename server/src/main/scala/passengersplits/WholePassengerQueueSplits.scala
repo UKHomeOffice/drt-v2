@@ -59,7 +59,6 @@ object WholePassengerQueueSplits {
     flight.bestSplits.orElse(terminalSplits(flight.apiFlight.Terminal)) match {
       case Some(splitsToUse) =>
         val pcpPax = flight.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)
-        println(s"pcpPax: $pcpPax (${flight.apiFlight.PassengerSources}")
         val startMinute = SDate(flight.apiFlight.pcpRange(paxFeedSourceOrder).min)
         val terminalQueueFallbacks = (q: Queue, pt: PaxType) => queueFallbacks.availableFallbacks(flight.apiFlight.Terminal, q, pt).toList
         val wholePaxSplits = wholePassengerSplits(pcpPax, splitsToUse.splits)
