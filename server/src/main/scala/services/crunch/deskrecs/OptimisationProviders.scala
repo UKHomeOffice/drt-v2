@@ -81,12 +81,6 @@ object OptimisationProviders {
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       .map(_.map(_._2.flights.values.toList))
 
-//  def liveManifestsProvider(manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
-//                           (processingRequest: ProcessingRequest): Future[Source[VoyageManifests, NotUsed]] =
-//    Future.successful(
-//      manifestsProvider(processingRequest.start.toUtcDate, processingRequest.end.toUtcDate).map(_._2)
-//    )
-
   def passengersProvider(passengersActor: ActorRef)
                         (processingRequest: ProcessingRequest)
                         (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[TQM, PassengersMinute]] =
