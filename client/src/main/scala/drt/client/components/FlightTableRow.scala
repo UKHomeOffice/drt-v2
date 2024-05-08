@@ -5,7 +5,7 @@ import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
 import drt.client.components.FlightComponents.{SplitsGraph, paxFeedSourceClass}
-import drt.client.components.styles.ArrivalsPageStylesDefault
+import drt.client.components.styles.{ArrivalsPageStylesDefault, DrtTheme}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
@@ -234,6 +234,7 @@ object FlightTableRow {
               sx = SxProps(Map(
                 "color" -> "#FFFFFF",
                 "backgroundColor" -> "#316CCC",
+                "fontSize" -> DrtTheme.theme.typography.body2.fontSize,
               ))
             )())
             else None
