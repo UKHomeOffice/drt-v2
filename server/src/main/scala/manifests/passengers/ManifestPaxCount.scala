@@ -12,7 +12,8 @@ case class ManifestPaxCount(source: SplitSource,
                             voyageNumber: VoyageNumberLike,
                             carrierCode: CarrierCode,
                             scheduled: SDateLike,
-                            pax: Option[Int],
+                            totalPax: Int,
+                            transPax: Int,
                             maybeEventType: Option[EventType])
 
 
@@ -20,6 +21,7 @@ object ManifestPaxCount {
 
   def apply(manifest: ManifestLike,
             source: SplitSource): ManifestPaxCount = {
+    val passengers = manifest.uniquePassengers
     ManifestPaxCount(
       source = source,
       arrivalPortCode = manifest.arrivalPortCode,
@@ -27,20 +29,24 @@ object ManifestPaxCount {
       voyageNumber = manifest.voyageNumber,
       carrierCode = manifest.carrierCode,
       scheduled = manifest.scheduled,
-      pax = Option(manifest.uniquePassengers.size),
+      totalPax = passengers.size,
+      transPax = passengers.count(_.inTransit),
       maybeEventType = manifest.maybeEventType,
     )
   }
 
   def apply(source: SplitSource,
             uniqueArrivalKey: UniqueArrivalKey,
-            pax: Int): ManifestPaxCount = ManifestPaxCount(
+            totalPax: Int,
+            transPax: Int,
+           ): ManifestPaxCount = ManifestPaxCount(
     source = source,
     arrivalPortCode = uniqueArrivalKey.arrivalPort,
     departurePortCode = uniqueArrivalKey.departurePort,
     voyageNumber = uniqueArrivalKey.voyageNumber,
     carrierCode = CarrierCode(""),
     scheduled = uniqueArrivalKey.scheduled,
-    pax = Option(pax),
+    totalPax = totalPax,
+    transPax = transPax,
     maybeEventType = None)
 }

@@ -35,9 +35,6 @@ object Scenarios {
                        sla: (LocalDate, Queue) => Future[Int],
                        splitsCalculator: SplitsCalculator,
                        flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
-                       historicManifestsProvider: Iterable[Arrival] => Source[ManifestLike, NotUsed],
-                       historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]],
-                       flightsActor: ActorRef,
                        portStateActor: ActorRef,
                        redListUpdatesProvider: () => Future[RedListUpdates],
                        egateBanksProvider: () => Future[PortEgateBanksUpdates],
@@ -63,10 +60,6 @@ object Scenarios {
 
     val paxLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = flightsProvider,
-      historicManifestsProvider = historicManifestsProvider,
-      historicManifestsPaxProvider = historicManifestsPaxProvider,
-      splitsCalculator = splitsCalculator,
-      splitsSink = flightsActor,
       portDesksAndWaitsProvider = portDesksAndWaitsProvider,
       redListUpdatesProvider = redListUpdatesProvider,
       dynamicQueueStatusProvider = DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider),

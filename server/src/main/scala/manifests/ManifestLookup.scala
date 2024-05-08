@@ -28,10 +28,10 @@ trait ManifestLookupLike {
                                  voyageNumber: VoyageNumber,
                                  scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])]
 
-  def historicManifestPax(arrivalPort: PortCode,
-                          departurePort: PortCode,
-                          voyageNumber: VoyageNumber,
-                          scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])]
+  def maybeHistoricManifestPax(arrivalPort: PortCode,
+                               departurePort: PortCode,
+                               voyageNumber: VoyageNumber,
+                               scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])]
 }
 
 case class UniqueArrivalKey(arrivalPort: PortCode,
@@ -80,9 +80,12 @@ case class ManifestLookup(tables: Tables)
     manifestsForScheduled(flightKeys).map(_.flatten)
 
   private def manifestPaxForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
-                                     (implicit mat: Materializer): Future[Option[Int]] =
+                                     (implicit mat: Materializer): Future[Option[(Int, Int)]] =
     manifestsForScheduled(flightKeys).map {
-      case manifests if manifests.nonEmpty => Option(manifests.flatten.size / manifests.size)
+      case manifests if manifests.nonEmpty =>
+        val totalPax = manifests.flatten.size / manifests.size
+        val transPax = manifests.flatten.count(_.inTransit) / manifests.size
+        Option(totalPax, transPax)
       case _ => None
     }
 
@@ -119,7 +122,9 @@ case class ManifestLookup(tables: Tables)
     val startTime = SDate.now()
     findFlights(uniqueArrivalKey, queries).flatMap { flightKeys =>
       manifestPaxForScheduled(flightKeys)
-        .map(maybePaxCount => (uniqueArrivalKey, maybePaxCount.map(paxCount => maybeManifestPaxFromProfiles(uniqueArrivalKey, paxCount))))
+        .map(maybePaxCount => (uniqueArrivalKey, maybePaxCount.map { case (totalPax, transPax) =>
+          ManifestPaxCount(SplitSources.Historical, uniqueArrivalKey, totalPax, transPax)
+        }))
     }.map { res =>
       val timeTaken = SDate.now().millisSinceEpoch - startTime.millisSinceEpoch
       if (timeTaken > 1000)
@@ -149,17 +154,15 @@ case class ManifestLookup(tables: Tables)
       }
   }
 
-  private def maybeManifestFromProfiles(uniqueArrivalKey: UniqueArrivalKey, profiles: immutable.Seq[ManifestPassengerProfile]) = {
+  private def maybeManifestFromProfiles(uniqueArrivalKey: UniqueArrivalKey,
+                                        profiles: immutable.Seq[ManifestPassengerProfile],
+                                       ): Option[BestAvailableManifest] = {
     if (profiles.nonEmpty)
       Some(BestAvailableManifest(SplitSources.Historical, uniqueArrivalKey, profiles.toList))
     else None
   }
 
-  private def maybeManifestPaxFromProfiles(uniqueArrivalKey: UniqueArrivalKey, profiles: Int) = {
-    ManifestPaxCount(SplitSources.Historical, uniqueArrivalKey, profiles)
-  }
-
-  type QueryFunction =
+  private type QueryFunction =
     UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), tables.profile.api.Effect]
 
   private val queryHierarchy: List[(String, QueryFunction)] = List(
@@ -348,6 +351,6 @@ case class ManifestLookup(tables: Tables)
       ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age.toInt)).toOption, transit, maybeIdentifier)
   }
 
-  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] =
+  override def maybeHistoricManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] =
     historicManifestSearchForPaxCount(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
 }

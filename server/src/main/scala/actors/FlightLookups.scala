@@ -29,17 +29,24 @@ trait FlightLookupsLike {
   val paxFeedSourceOrder: List[FeedSource]
   val terminalSplits: Terminal => Option[Splits]
 
-  def updateFlights(removalMessageCutOff: Option[FiniteDuration]): FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
+  def updateFlights(removalMessageCutOff: Option[FiniteDuration])
+                   (requestHistoricSplitsActor: Option[ActorRef],
+                    requestHistoricPaxActor: Option[ActorRef]
+                   ): FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
     val (terminal, date) = partition
-    val actor = system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal)))
+    val props = TerminalDayFlightActor.propsWithRemovalsCutoff(
+      terminal, date, now, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal), requestHistoricSplitsActor, requestHistoricPaxActor)
+    val actor = system.actorOf(props)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Set[Long]]
   }
 
   def flightsByDayLookup(removalMessageCutOff: Option[FiniteDuration]): FlightsLookup =
     (maybePit: Option[MillisSinceEpoch]) => (date: UtcDate) => (terminal: Terminal) => {
       val props = maybePit match {
-        case None => TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, now, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal))
-        case Some(pointInTime) => TerminalDayFlightActor.propsPointInTime(terminal, date, now, pointInTime, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal))
+        case None => TerminalDayFlightActor.propsWithRemovalsCutoff(
+          terminal, date, now, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal), None, None)
+        case Some(pointInTime) => TerminalDayFlightActor.propsPointInTime(
+          terminal, date, now, pointInTime, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal))
       }
       val actor = system.actorOf(props)
       requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[FlightsWithSplits]

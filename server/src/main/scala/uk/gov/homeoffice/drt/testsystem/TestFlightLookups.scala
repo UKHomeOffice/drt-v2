@@ -22,7 +22,7 @@ case class TestFlightLookups(system: ActorSystem,
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-flights-lookup-kill-actor")
 
   val resetFlightsData: (Terminal, UtcDate) => Future[Any] = (terminal: Terminal, date: UtcDate) => {
-    val actor = system.actorOf(Props(new TestTerminalDayFlightActor(date.year, date.month, date.day, terminal, now, paxFeedSourceOrder)))
+    val actor = system.actorOf(Props(new TestTerminalDayFlightActor(date.year, date.month, date.day, terminal, now, paxFeedSourceOrder, None, None)))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 

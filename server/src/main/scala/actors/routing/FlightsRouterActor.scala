@@ -2,6 +2,7 @@ package actors.routing
 
 import actors.DateRange
 import actors.PartitionedPortStateActor._
+import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -27,6 +28,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object FlightsRouterActor {
   private val log: Logger = LoggerFactory.getLogger(getClass)
+
+  case class AddHistoricSplitsRequestActor(actor: ActorRef)
+  case class AddHistoricPaxRequestActor(actor: ActorRef)
 
   def scheduledInRange(start: SDateLike, end: SDateLike, scheduled: MillisSinceEpoch): Boolean = {
     val scheduledDate = SDate(scheduled)
@@ -92,10 +96,19 @@ object FlightsRouterActor {
 
 class FlightsRouterActor(allTerminals: Iterable[Terminal],
                          flightsByDayLookup: FlightsLookup,
-                         updateFlights: FlightsUpdate,
+                         updateFlights: (Option[ActorRef], Option[ActorRef]) => FlightsUpdate,
                          paxFeedSourceOrder: List[FeedSource],
                         ) extends RouterActorLikeWithSubscriber[FlightUpdates, (Terminal, UtcDate), Long] {
+  var historicSplitsRequestActor: Option[ActorRef] = None
+  var historicPaxRequestActor: Option[ActorRef] = None
+
   override def receiveQueries: Receive = {
+    case AddHistoricSplitsRequestActor(actor) =>
+      historicSplitsRequestActor = Option(actor)
+
+    case AddHistoricPaxRequestActor(actor) =>
+      historicPaxRequestActor = Option(actor)
+
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! flightsLookupService(SDate(startMillis), SDate(endMillis), allTerminals, Option(pit), paxFeedSourceOrder)
 
@@ -159,8 +172,7 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
       val removals: Map[(Terminal, UtcDate), Iterable[UniqueArrival]] = container.toRemove
         .groupBy(arrival => (arrival.terminal, SDate(arrival.scheduled).toUtcDate))
 
-      val keys = updates.keys ++ removals.keys
-      keys
+      (updates.keys ++ removals.keys)
         .map { terminalDay =>
           val terminalUpdates = updates.getOrElse(terminalDay, List())
           val terminalRemovals = removals.getOrElse(terminalDay, List())
@@ -176,11 +188,13 @@ class FlightsRouterActor(allTerminals: Iterable[Terminal],
       allTerminals.flatMap(t => dates.map(d => ((t, d), RemoveSplits))).toMap
   }
 
-  def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[Set[Long]] =
-    updateFlights(partition, updates)
+  override def updatePartition(partition: (Terminal, UtcDate), updates: FlightUpdates): Future[Set[Long]] =
+    updateFlights(historicSplitsRequestActor, historicPaxRequestActor)(partition, updates)
 
   override def shouldSendEffectsToSubscriber: FlightUpdates => Boolean = {
-    case _: ArrivalsDiff => true
+    case _: RedListCounts => true
     case _: SplitsForArrivals => true
+    case _: PaxForArrivals => false
+    case _: ArrivalsDiff => true
   }
 }

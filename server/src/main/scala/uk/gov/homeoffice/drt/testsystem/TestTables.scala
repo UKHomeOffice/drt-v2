@@ -23,10 +23,10 @@ case class MockManifestLookupService() extends ManifestLookupLike {
                                           scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
 
-  override def historicManifestPax(arrivalPort: PortCode,
-                                   departurePort: PortCode,
-                                   voyageNumber: VoyageNumber,
-                                   scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
+  override def maybeHistoricManifestPax(arrivalPort: PortCode,
+                                        departurePort: PortCode,
+                                        voyageNumber: VoyageNumber,
+                                        scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
   }
 }

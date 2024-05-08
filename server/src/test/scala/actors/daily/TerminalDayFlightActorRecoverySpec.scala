@@ -81,7 +81,8 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
     val cutOffThreshold = 1.second
 
     def actorForTerminalAndDate(terminal: Terminal, date: UtcDate): ActorRef = {
-      system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), Some(cutOffThreshold), paxFeedSourceOrder, None))
+      system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(
+        terminal, date, () => SDate(date), Some(cutOffThreshold), paxFeedSourceOrder, None, None, None))
     }
 
     "When I have a removal message that came through after the day for this actor " >> {

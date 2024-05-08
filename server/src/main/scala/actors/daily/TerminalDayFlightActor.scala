@@ -1,6 +1,6 @@
 package actors.daily
 
-import akka.actor.Props
+import akka.actor.{ActorRef, Props}
 import akka.persistence.SaveSnapshotSuccess
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -12,6 +12,7 @@ import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, SplitsForArrivalsMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
@@ -19,6 +20,7 @@ import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 object TerminalDayFlightActor {
@@ -28,8 +30,22 @@ object TerminalDayFlightActor {
                               cutOff: Option[FiniteDuration],
                               paxFeedSourceOrder: List[FeedSource],
                               terminalSplits: Option[Splits],
+                              requestHistoricSplitsActor: Option[ActorRef],
+                              requestHistoricPaxActor: Option[ActorRef],
                              ): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, cutOff, paxFeedSourceOrder, terminalSplits))
+    Props(new TerminalDayFlightActor(
+      date.year,
+      date.month,
+      date.day,
+      terminal,
+      now,
+      None,
+      cutOff,
+      paxFeedSourceOrder,
+      terminalSplits,
+      requestHistoricSplitsActor,
+      requestHistoricPaxActor,
+    ))
 
   def propsPointInTime(terminal: Terminal,
                        date: UtcDate,
@@ -38,8 +54,21 @@ object TerminalDayFlightActor {
                        cutOff: Option[FiniteDuration],
                        paxFeedSourceOrder: List[FeedSource],
                        terminalSplits: Option[Splits],
-                      ): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), cutOff, paxFeedSourceOrder, terminalSplits))
+                      )
+                      (implicit ec: ExecutionContext): Props =
+    Props(new TerminalDayFlightActor(
+      date.year,
+      date.month,
+      date.day,
+      terminal,
+      now,
+      Option(pointInTime),
+      cutOff,
+      paxFeedSourceOrder,
+      terminalSplits,
+      None,
+      None,
+    ))
 }
 
 class TerminalDayFlightActor(year: Int,
@@ -51,6 +80,8 @@ class TerminalDayFlightActor(year: Int,
                              maybeRemovalMessageCutOff: Option[FiniteDuration],
                              paxFeedSourceOrder: List[FeedSource],
                              terminalSplits: Option[Splits],
+                             maybeRequestHistoricSplitsActor: Option[ActorRef],
+                             maybeRequestHistoricPaxActor: Option[ActorRef],
                             ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -140,27 +171,46 @@ class TerminalDayFlightActor(year: Int,
     case m => log.error(s"Got unexpected message: $m")
   }
 
+  private def requestMissingHistoricSplits(): Unit =
+    maybeRequestHistoricSplitsActor.foreach { requestActor =>
+      val missingHistoricSplits = state.flights.values.collect {
+        case fws if !fws.splits.exists(_.source == Historical) => fws.unique
+      }
+      requestActor ! missingHistoricSplits
+    }
+
+  private def requestMissingPax(): Unit =
+    maybeRequestHistoricPaxActor.foreach { requestActor =>
+      val missingPaxSource = state.flights.values.collect {
+        case fws if !fws.apiFlight.hasNoPaxSource => fws.unique
+      }
+      requestActor ! missingPaxSource
+    }
+
+  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[MillisSinceEpoch] = {
+    val (updatedState, minutesToUpdate) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
+
+    state = updatedState
+
+    requestMissingPax()
+    requestMissingHistoricSplits()
+
+    minutesToUpdate
+  }
+
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =
     if (diff.nonEmpty) {
-      val timestamp = now().millisSinceEpoch
-      val (updatedState, _) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
-
-      state = updatedState
-
-      val replyToAndMessage = List((sender(), Set.empty))
-      val message = flightWithSplitsDiffToMessage(diff, timestamp)
-      persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
-    } else sender() ! Set.empty
+      val minutesToUpdate = applyDiffAndPersist(diff.applyTo)
+      val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
+      persistAndMaybeSnapshotWithAck(message, List((sender(), minutesToUpdate)))
+    }
+    else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
-      val timestamp = now().millisSinceEpoch
-      val (updatedState, minutesToUpdate) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
-      state = updatedState
-
-      val replyToAndMessage = List((sender(), minutesToUpdate))
-      val message = arrivalsDiffToMessage(diff, timestamp)
-      persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
+      val minutesToUpdate = applyDiffAndPersist(diff.applyTo)
+      val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
+      persistAndMaybeSnapshotWithAck(message, List((sender(), minutesToUpdate)))
     } else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =

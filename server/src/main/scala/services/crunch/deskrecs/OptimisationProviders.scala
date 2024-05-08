@@ -58,7 +58,7 @@ object OptimisationProviders {
   def historicManifestsPaxProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
                                   (implicit ec: ExecutionContext): Arrival => Future[Option[ManifestPaxCount]] = arrival =>
     manifestLookupService
-      .historicManifestPax(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+      .maybeHistoricManifestPax(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
       .map { case (_, maybeManifest) => maybeManifest }
       .recover {
         case t =>

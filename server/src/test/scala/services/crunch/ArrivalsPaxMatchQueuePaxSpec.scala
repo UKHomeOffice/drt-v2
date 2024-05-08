@@ -32,10 +32,10 @@ class ArrivalsPaxMatchQueuePaxSpec extends CrunchTestLike {
       Future.successful((key, manifest))
     }
 
-    override def historicManifestPax(arrivalPort: PortCode,
-                                     departurePort: PortCode,
-                                     voyageNumber: VoyageNumber,
-                                     scheduled: SDateLike,
+    override def maybeHistoricManifestPax(arrivalPort: PortCode,
+                                          departurePort: PortCode,
+                                          voyageNumber: VoyageNumber,
+                                          scheduled: SDateLike,
                                     ): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
       val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
       Future.successful((key, manifestPaxCount))

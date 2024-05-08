@@ -117,7 +117,7 @@ object MergeArrivals {
     )
 
   def processingRequestToArrivalsDiff(mergeArrivalsForDate: UtcDate => Future[ArrivalsDiff],
-                                      setPcpTime: Seq[Arrival] => Future[Seq[Arrival]],
+                                      setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
                                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                                       updateAggregatedArrivals: ArrivalsDiff => Unit,
                                      )
@@ -131,7 +131,7 @@ object MergeArrivals {
           mergeArrivalsForDate(request.date)
             .flatMap(addArrivalPredictions)
             .flatMap { diff =>
-              setPcpTime(diff.toUpdate.values.toSeq)
+              setPcpTimes(diff.toUpdate.values.toSeq)
                 .map(arrivals => diff.copy(toUpdate = arrivals.map(a => a.unique -> a).toMap))
             }
       }
