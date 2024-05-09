@@ -21,20 +21,20 @@ object RunnableCrunch {
   val oneDayMillis: Int = 60 * 60 * 24 * 1000
 
   def apply[FR, SAD](forecastBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                         forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                         liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                         liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
-                         actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
-                         forecastBaseArrivalsActor: ActorRef,
-                         forecastArrivalsActor: ActorRef,
-                         liveBaseArrivalsActor: ActorRef,
-                         liveArrivalsActor: ActorRef,
-                         updateFeedStatus: (FeedSource, ArrivalsFeedResponse) => Unit,
-                         applyPaxDeltas: List[FeedArrival] => Future[List[FeedArrival]],
-                         portStateActor: ActorRef,
-                         forecastMaxMillis: () => MillisSinceEpoch
-                        )
-                        (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, SAD, UniqueKillSwitch)] = {
+                     forecastArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                     liveBaseArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                     liveArrivalsSource: Source[ArrivalsFeedResponse, FR],
+                     actualDesksAndWaitTimesSource: Source[ActualDeskStats, SAD],
+                     forecastBaseArrivalsActor: ActorRef,
+                     forecastArrivalsActor: ActorRef,
+                     liveBaseArrivalsActor: ActorRef,
+                     liveArrivalsActor: ActorRef,
+                     updateFeedStatus: (FeedSource, ArrivalsFeedResponse) => Unit,
+                     applyPaxDeltas: List[FeedArrival] => Future[List[FeedArrival]],
+                     portStateActor: ActorRef,
+                     forecastMaxMillis: () => MillisSinceEpoch
+                    )
+                    (implicit ec: ExecutionContext): RunnableGraph[(FR, FR, FR, FR, SAD, UniqueKillSwitch)] = {
 
     val arrivalsKillSwitch = KillSwitches.single[FeedArrivals]
 

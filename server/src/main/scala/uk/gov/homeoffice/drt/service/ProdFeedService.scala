@@ -198,49 +198,7 @@ trait FeedService {
     LiveBaseFeedSource -> liveBaseFeedArrivalsActor,
     LiveFeedSource -> liveFeedArrivalsActor,
   )
-
-//  def populateFeedArrivals()
-//                          (implicit materializer: Materializer): Future[Done] = {
-//    Source(feedActors.toSeq)
-//      .mapAsync(1) {
-//        case (source, actor) =>
-//          actor.ask(FeedArrivalsRouterActor.GetStateForDateRange(now().toUtcDate, now().toUtcDate))
-//            .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
-//            .flatMap(_.runWith(Sink.headOption))
-//            .flatMap {
-//              case Some((_, state)) if state.nonEmpty =>
-//                log.info(s"Current $source feed is not empty. Skipping population of feed $source")
-//                Future.successful(Done)
-//              case _ =>
-//                log.info(s"Current $source feed is empty. Populating feed $source")
-//                val startTime = now().millisSinceEpoch
-//                val legacyProps = source match {
-//                  case AclFeedSource => Props(new AclForecastArrivalsActor(now, expireAfterMillis))
-//                  case ForecastFeedSource => Props(new PortForecastArrivalsActor(now, expireAfterMillis))
-//                  case LiveBaseFeedSource => Props(new CiriumLiveArrivalsActor(now, expireAfterMillis))
-//                  case LiveFeedSource => Props(new PortLiveArrivalsActor(now, expireAfterMillis))
-//                }
-//                val legacyActor = system.actorOf(legacyProps, "legacy-arrivals")
-//                requestAndTerminateActor
-//                  .ask(RequestAndTerminate(legacyActor, GetState))
-//                  .mapTo[ArrivalsState]
-//                  .flatMap { state =>
-//                    log.info(s"Populating $source feed with ${state.arrivals.size} arrivals")
-//                    val feedArrivals = FeedArrivals(state.arrivals.values.map(ArrivalToFeedArrival.toFeedArrival(_, source)).toSeq)
-//                    log.info(s"Converted arrivals to feed arrivals for $source")
-//                    feedActors(source)
-//                      .ask(feedArrivals)(new Timeout(5.minutes))
-//                      .map { _ =>
-//                        val took = now().millisSinceEpoch - startTime
-//                        log.info(s"Finished populating $source feed. Took ${took.millis.toSeconds}s")
-//                        Done
-//                      }
-//                  }
-//            }
-//      }
-//      .run()
-//  }
-
+  
   val flightModelPersistence: ModelPersistence = Flight()
 
   private val liveArrivalsFeedStatusActor: ActorRef =

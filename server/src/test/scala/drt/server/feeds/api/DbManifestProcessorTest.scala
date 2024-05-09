@@ -117,9 +117,6 @@ class DbManifestProcessorTest
   }
 
   private def processor(probe: TestProbe) = {
-//    val manifestQueue = Source
-//      .queue[ManifestsFeedResponse](10, OverflowStrategy.dropHead)
-//      .map(probe.ref ! _).toMat(Sink.ignore)(Keep.left).run()
     val handleManifestResponse: ManifestsFeedResponse => Future[Done] =
       response => {
         probe.ref ! response
