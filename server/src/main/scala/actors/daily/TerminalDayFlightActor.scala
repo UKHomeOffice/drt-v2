@@ -179,13 +179,14 @@ class TerminalDayFlightActor(year: Int,
       requestActor ! missingHistoricSplits
     }
 
-  private def requestMissingPax(): Unit =
+  private def requestMissingPax(): Unit = {
     maybeRequestHistoricPaxActor.foreach { requestActor =>
       val missingPaxSource = state.flights.values.collect {
-        case fws if !fws.apiFlight.hasNoPaxSource => fws.unique
+        case fws if fws.apiFlight.hasNoPaxSource => fws.unique
       }
       requestActor ! missingPaxSource
     }
+  }
 
   private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[MillisSinceEpoch] = {
     val (updatedState, minutesToUpdate) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)

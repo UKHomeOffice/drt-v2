@@ -39,7 +39,6 @@ object DynamicRunnablePassengerLoads {
       .wireTap(cr => log.info(s"${cr.date} crunch request - started"))
       .via(addArrivals(arrivalsProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum} passengers"))
-      .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - splits persisted"))
       .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal, terminalSplits))
       .wireTap { crWithPax =>
         log.info(s"${crWithPax._1} crunch request - ${crWithPax._2.minutes.size} minutes of passenger loads with ${crWithPax._2.minutes.map(_.toMinute.passengers.size).sum} passengers")

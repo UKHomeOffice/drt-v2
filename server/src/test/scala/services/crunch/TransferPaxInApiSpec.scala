@@ -5,12 +5,12 @@ import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedSuccess}
 import drt.shared._
 import passengersplits.parsing.VoyageManifestParser.{ManifestDateOfArrival, ManifestTimeOfArrival, VoyageManifest}
 import services.crunch.VoyageManifestGenerator.{euPassport, inTransitFlag}
-import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, Passengers, PaxSource, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues._
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues, UnknownFeedSource}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{Seq, SortedMap}
@@ -80,9 +80,8 @@ class TransferPaxInApiSpec extends CrunchTestLike {
     }
   }
 
-  "Given a flight that is using API for passenger numbers, and which has Transit passengers in the API data " >> {
+  "Given a flight using API for passenger numbers, and which has Transit passengers in the API data " >> {
     "Then these passengers should not be included in the total pax when using API pax nos" >> {
-
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Seq(
@@ -108,7 +107,8 @@ class TransferPaxInApiSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        airportConfig = lhrAirportConfig
+        airportConfig = lhrAirportConfig,
+
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -121,17 +121,7 @@ class TransferPaxInApiSpec extends CrunchTestLike {
 
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState =>
-          val paxSources = ps.flights.values.head.apiFlight.PassengerSources
-          val pax = paxFeedSourceOrder
-            .find(source => paxSources.get(source).exists(_.actual.isDefined))
-            .flatMap(source => paxSources.get(source).map(PaxSource(source, _)))
-            .getOrElse(PaxSource(UnknownFeedSource, Passengers(None, None)))
-
-          println(s"flight best pax: ${pax}")
-          val maybePcpPax = ps.flights.values.head.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder)
-          println(s"flight pax sources: $maybePcpPax")
-
-          maybePcpPax == Option(1)
+          ps.flights.values.head.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder) == Option(1)
       }
 
       success
