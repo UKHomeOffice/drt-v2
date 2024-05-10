@@ -418,6 +418,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
     ))
   }
 
+  val persistManifests: ManifestsFeedResponse => Future[Done] = ManifestPersistence.processManifestFeedResponse(
+    persistentStateActors.manifestsRouterActor,
+    actorService.flightsRouterActor,
+    splitsCalculator.splitsForManifest,
+  )
+
   def run(): Unit = {
     val actors = persistentStateActors
 
@@ -460,12 +466,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
           if (refetchApiData) None
           else initialState[ApiFeedState](persistentStateActors.manifestsRouterActor).map(_.lastProcessedMarker)
         system.log.info(s"Providing last processed API marker: ${lastProcessedLiveApiMarker.map(SDate(_).toISOString).getOrElse("None")}")
-
-        val persistManifests = ManifestPersistence.processManifestFeedResponse(
-          persistentStateActors.manifestsRouterActor,
-          actorService.flightsRouterActor,
-          splitsCalculator.splitsForManifest,
-        )
 
         val arrivalKeysProvider = DbManifestArrivalKeys(AggregateDb, airportConfig.portCode)
         val manifestProcessor = DbManifestProcessor(AggregateDb, airportConfig.portCode, persistManifests)
