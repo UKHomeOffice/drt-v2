@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.service
 
-import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddRecalculateArrivalsSubscriber}
+import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddQueueHistoricPaxLookupSubscriber, AddQueueHistoricSplitsLookupSubscriber, AddRecalculateArrivalsSubscriber}
 import actors._
 import actors.daily.PassengersActor
 import actors.persistent._
@@ -8,7 +8,7 @@ import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistori
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.{Flow, Sink, Source}
-import akka.stream.{CompletionStrategy, Materializer, OverflowStrategy, UniqueKillSwitch}
+import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
 import drt.server.feeds.Feed.FeedTick
@@ -16,11 +16,9 @@ import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
-import drt.shared.FlightsApi.PaxForArrivals
 import drt.shared._
-import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
+import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
 import play.api.Configuration
@@ -52,6 +50,7 @@ import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateAct
 import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
@@ -64,7 +63,7 @@ import uk.gov.homeoffice.drt.time._
 import javax.inject.Singleton
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
-import scala.concurrent.duration.{DurationInt, DurationLong, FiniteDuration}
+import scala.concurrent.duration.{DurationInt, DurationLong}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -198,7 +197,28 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val crunchManagerActor: ActorRef = system.actorOf(Props(new CrunchManagerActor), name = "crunch-manager-actor")
+  private val missingHistoricSplitsArrivalKeysForDate: UtcDate => Future[Iterable[UniqueArrival]] =
+    date => flightsProvider.allTerminalsDateRange(date, date)
+      .map {
+        _._2
+          .filter(!_.apiFlight.Origin.isDomesticOrCta)
+          .filter(!_.splits.exists(_.source == Historical))
+          .map(_.unique)
+      }
+      .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
+
+  private val missingPaxArrivalKeysForDate: UtcDate => Future[Iterable[UniqueArrival]] =
+    date => flightsProvider.allTerminalsDateRange(date, date)
+      .map {
+        _._2
+          .filter(!_.apiFlight.Origin.isDomesticOrCta)
+          .filter(_.apiFlight.hasNoPaxSource)
+          .map(_.unique)
+      }
+      .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
+
+  private val crunchManagerProps: Props = Props(new CrunchManagerActor(missingHistoricSplitsArrivalKeysForDate, missingPaxArrivalKeysForDate))
+  val crunchManagerActor: ActorRef = system.actorOf(crunchManagerProps, name = "crunch-manager-actor")
   private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
 
   val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
@@ -238,13 +258,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest =
         (millis: MillisSinceEpoch) => MergeArrivalsRequest(SDate(millis).toUtcDate)
 
-      val historicSplitsActor = RunnableHistoricSplits(
+      val historicSplitsQueueActor = RunnableHistoricSplits(
         airportConfig.portCode,
         actorService.flightsRouterActor,
         splitsCalculator.splitsForManifest,
         manifestLookupService.maybeBestAvailableManifest)
 
-      val historicPaxActor = RunnableHistoricPax(airportConfig.portCode, actorService.flightsRouterActor, manifestLookupService.maybeHistoricManifestPax)
+      val historicPaxQueueActor = RunnableHistoricPax(airportConfig.portCode, actorService.flightsRouterActor, manifestLookupService.maybeHistoricManifestPax)
 
       val crunchRequestQueueActor: ActorRef = startPaxLoads(actors.crunchQueueActor, crunchQueue, crunchRequest)
 
@@ -280,10 +300,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
       system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
 
       egateBanksUpdatesActor ! AddUpdatesSubscriber(crunchRequestQueueActor)
+
       crunchManagerActor ! AddQueueCrunchSubscriber(crunchRequestQueueActor)
       crunchManagerActor ! AddRecalculateArrivalsSubscriber(mergeArrivalsRequestQueueActor)
-      actorService.flightsRouterActor ! AddHistoricSplitsRequestActor(historicSplitsActor)
-      actorService.flightsRouterActor ! AddHistoricPaxRequestActor(historicPaxActor)
+      crunchManagerActor ! AddQueueHistoricSplitsLookupSubscriber(historicSplitsQueueActor)
+      crunchManagerActor ! AddQueueHistoricPaxLookupSubscriber(historicPaxQueueActor)
+
+      actorService.flightsRouterActor ! AddHistoricSplitsRequestActor(historicSplitsQueueActor)
+      actorService.flightsRouterActor ! AddHistoricPaxRequestActor(historicPaxQueueActor)
 
       feedService.forecastBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
       feedService.forecastFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)

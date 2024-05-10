@@ -85,7 +85,7 @@ case class ManifestLookup(tables: Tables)
                                      queries: List[(String, QueryFunction)])
                                     (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
     val startTime = SDate.now()
-    findFlights(uniqueArrivalKey, queries)
+    findFlights(uniqueArrivalKey, queries, 1)
       .flatMap { flightKeys =>
         manifestsForScheduled(flightKeys)
           .map(profiles => (uniqueArrivalKey, maybeManifestFromProfiles(uniqueArrivalKey, profiles)))
@@ -102,7 +102,7 @@ case class ManifestLookup(tables: Tables)
                                                 queries: List[(String, QueryFunction)])
                                                (implicit mat: Materializer): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     val startTime = SDate.now()
-    findFlights(uniqueArrivalKey, queries).flatMap { flightKeys =>
+    findFlights(uniqueArrivalKey, queries, 1).flatMap { flightKeys =>
       manifestPaxForScheduled(flightKeys)
         .map(maybePaxCount => (uniqueArrivalKey, maybePaxCount.map { case (totalPax, transPax) =>
           ManifestPaxCount(SplitSources.Historical, uniqueArrivalKey, totalPax, transPax)
@@ -116,18 +116,27 @@ case class ManifestLookup(tables: Tables)
   }
 
   private def findFlights(uniqueArrivalKey: UniqueArrivalKey,
-                          queries: List[(String, QueryFunction)])
-                         (implicit mat: Materializer): Future[Vector[(String, String, String, Timestamp)]] = queries.zipWithIndex match {
+                          queries: List[(String, QueryFunction)],
+                          queryNumber: Int,
+                         )
+                         (implicit mat: Materializer): Future[Vector[(String, String, String, Timestamp)]] = queries match {
     case Nil => Future(Vector.empty)
-    case ((_, nextQuery), queryNumber) :: tail =>
+    case (_, nextQuery) :: tail =>
       val startTime = SDate.now()
       tables
         .run(nextQuery(uniqueArrivalKey))
+        .recover {
+          case t =>
+            log.error(s"Error looking up manifest for ${uniqueArrivalKey.toString}", t)
+            Vector.empty
+        }
         .flatMap {
           case flightsFound if flightsFound.nonEmpty =>
+//            println(s"\nFound ${flightsFound.size} historic manifests for $uniqueArrivalKey query $queryNumber")
             Future(flightsFound)
           case _ =>
-            findFlights(uniqueArrivalKey, tail.map(_._1))
+//            println(s"\nNo results for $uniqueArrivalKey with query ${3 - tail.size}. ${tail.size} queries left.")
+            findFlights(uniqueArrivalKey, tail, queryNumber + 1)
         }.map { res =>
           val timeTaken = SDate.now().millisSinceEpoch - startTime.millisSinceEpoch
           if (timeTaken > 1000)
@@ -181,27 +190,27 @@ case class ManifestLookup(tables: Tables)
   }
 
   /**
-   * SELECT
-   * arrival_port_code,
-   * departure_port_code,
-   * voyage_number,
-   * scheduled
-   * FROM processed_json
-   * WHERE
-   * event_code ='DC'
-   * and arrival_port_code='STN'
-   * and departure_port_code='SZY'
-   * and voyage_number=229
-   * and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '2024-04-30')::int
-   * and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-04-30' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-30')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-30' + interval '1 week')::int)
-   * and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-04-30' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-04-30')::int)
-   * GROUP BY
-   * arrival_port_code,
-   * departure_port_code,
-   * voyage_number,
-   * scheduled
-   * ORDER BY scheduled DESC
-   * LIMIT 6
+   SELECT
+   arrival_port_code,
+   departure_port_code,
+   voyage_number,
+   scheduled
+   FROM processed_json
+   WHERE
+   event_code ='DC'
+   and arrival_port_code='STN'
+   and departure_port_code='BJV'
+   and voyage_number=1416
+   and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '2024-05-14')::int
+   and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-05-14' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-14')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-14' + interval '1 week')::int)
+   and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-05-14' - interval '2 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-05-14' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-05-14')::int)
+   GROUP BY
+   arrival_port_code,
+   departure_port_code,
+   voyage_number,
+   scheduled
+   ORDER BY scheduled DESC
+   LIMIT 6
    */
 
   private def sameFlight3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
@@ -231,26 +240,26 @@ case class ManifestLookup(tables: Tables)
   }
 
   /**
-   * SELECT
-   * arrival_port_code,
-   * departure_port_code,
-   * voyage_number,
-   * scheduled
-   * FROM processed_json
-   * WHERE
-   * event_code ='DC'
-   * and arrival_port_code='STN'
-   * and departure_port_code='BER'
-   * and voyage_number=144
-   * and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-05-10' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-10')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-10' + interval '1 week')::int)
-   * and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-05-10' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-05-10')::int)
-   * GROUP BY
-   * arrival_port_code,
-   * departure_port_code,
-   * voyage_number,
-   * scheduled
-   * ORDER BY scheduled DESC
-   * LIMIT 6
+   SELECT
+   arrival_port_code,
+   departure_port_code,
+   voyage_number,
+   scheduled
+   FROM processed_json
+   WHERE
+   event_code ='DC'
+   and arrival_port_code='STN'
+   and departure_port_code='BJV'
+   and voyage_number=1416
+   and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-05-14' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-14')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-14' + interval '1 week')::int)
+   and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-05-14' - interval '2 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-05-14' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-05-14')::int)
+   GROUP BY
+   arrival_port_code,
+   departure_port_code,
+   voyage_number,
+   scheduled
+   ORDER BY scheduled DESC
+   LIMIT 6
    */
 
   private def sameRouteAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
@@ -279,26 +288,26 @@ case class ManifestLookup(tables: Tables)
   }
 
   /**
-   * SELECT
-   * arrival_port_code,
-   * departure_port_code,
-   * voyage_number,
-   * scheduled
-   * FROM
-   * processed_json
-   * WHERE
-   * event_code ='DC'
-   * and arrival_port_code='STN'
-   * and departure_port_code='SDR'
-   * and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' + interval '1 week')::int)
-   * and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-04-29' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-04-29')::int)
-   * GROUP BY
-   * arrival_port_code,
-   * departure_port_code,
-   * voyage_number,
-   * scheduled
-   * ORDER BY scheduled DESC
-   * LIMIT 6
+   SELECT
+   arrival_port_code,
+   departure_port_code,
+   voyage_number,
+   scheduled
+   FROM
+   processed_json
+   WHERE
+   event_code ='DC'
+   and arrival_port_code='STN'
+   and departure_port_code='BJV'
+   and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-05-14' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-14')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-14' + interval '1 week')::int)
+   and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-05-14' - interval '2 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-05-14' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-05-14')::int)
+   GROUP BY
+   arrival_port_code,
+   departure_port_code,
+   voyage_number,
+   scheduled
+   ORDER BY scheduled DESC
+   LIMIT 6
    */
 
   private def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] = {

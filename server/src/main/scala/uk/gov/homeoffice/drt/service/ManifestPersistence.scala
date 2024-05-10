@@ -21,11 +21,11 @@ import scala.concurrent.{ExecutionContext, Future}
 object ManifestPersistence {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def persistSplitsFromManifest(flightsForDate: UtcDate => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                                splitsFromManifest: (ManifestLike, Terminal) => Splits,
-                                persistSplits: Iterable[(UniqueArrival, Splits)] => Future[Done],
-                               )
-                               (implicit mat: Materializer, ec: ExecutionContext): Iterable[ManifestLike] => Future[Done] =
+  private def persistSplitsFromManifest(flightsForDate: UtcDate => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                        splitsFromManifest: (ManifestLike, Terminal) => Splits,
+                                        persistSplits: Iterable[(UniqueArrival, Splits)] => Future[Done],
+                                       )
+                                       (implicit mat: Materializer, ec: ExecutionContext): Iterable[ManifestLike] => Future[Done] =
     keys => Source(keys.groupBy(_.scheduled.toUtcDate))
       .flatMapConcat {
         case (date, manifests) =>
@@ -51,16 +51,16 @@ object ManifestPersistence {
         Done
       }
 
-  def manifestsFeedResponsePersistor(manifestsRouterActor: ActorRef)
-                                    (implicit timeout: Timeout, ec: ExecutionContext): ManifestsFeedResponse => Future[Done] =
+  private def manifestsFeedResponsePersistor(manifestsRouterActor: ActorRef)
+                                            (implicit timeout: Timeout, ec: ExecutionContext): ManifestsFeedResponse => Future[Done] =
     response => manifestsRouterActor.ask(response).map(_ => Done)
 
   private def manifestsToSplitsPersistor(flightsRouterActor: ActorRef, splitsForManifest: (ManifestLike, Terminal) => Splits)
                                         (implicit
-                                 timeout: Timeout,
-                                 ec: ExecutionContext,
-                                 mat: Materializer,
-                                ): Iterable[ManifestLike] => Future[Done] = ManifestPersistence.persistSplitsFromManifest(
+                                         timeout: Timeout,
+                                         ec: ExecutionContext,
+                                         mat: Materializer,
+                                        ): Iterable[ManifestLike] => Future[Done] = ManifestPersistence.persistSplitsFromManifest(
     FlightsProvider(flightsRouterActor).allTerminalsSingleDate,
     splitsForManifest,
     FlightsRouterActor.persistSplits(flightsRouterActor),

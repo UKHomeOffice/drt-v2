@@ -20,7 +20,6 @@ import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 object TerminalDayFlightActor {
@@ -54,8 +53,7 @@ object TerminalDayFlightActor {
                        cutOff: Option[FiniteDuration],
                        paxFeedSourceOrder: List[FeedSource],
                        terminalSplits: Option[Splits],
-                      )
-                      (implicit ec: ExecutionContext): Props =
+                      ): Props =
     Props(new TerminalDayFlightActor(
       date.year,
       date.month,
@@ -174,7 +172,7 @@ class TerminalDayFlightActor(year: Int,
   private def requestMissingHistoricSplits(): Unit =
     maybeRequestHistoricSplitsActor.foreach { requestActor =>
       val missingHistoricSplits = state.flights.values.collect {
-        case fws if !fws.splits.exists(_.source == Historical) => fws.unique
+        case fws if !fws.apiFlight.Origin.isDomesticOrCta && !fws.splits.exists(_.source == Historical) => fws.unique
       }
       requestActor ! missingHistoricSplits
     }
@@ -182,7 +180,7 @@ class TerminalDayFlightActor(year: Int,
   private def requestMissingPax(): Unit = {
     maybeRequestHistoricPaxActor.foreach { requestActor =>
       val missingPaxSource = state.flights.values.collect {
-        case fws if fws.apiFlight.hasNoPaxSource => fws.unique
+        case fws if fws.apiFlight.Origin.isDomesticOrCta && fws.apiFlight.hasNoPaxSource => fws.unique
       }
       requestActor ! missingPaxSource
     }

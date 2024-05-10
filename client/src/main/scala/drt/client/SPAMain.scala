@@ -6,7 +6,7 @@ import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, De
 import drt.client.components.styles._
 import drt.client.components.{
   ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage,
-  PortDashboardPage, StatusPage, TerminalComponent, TerminalPlanningComponent, TrainingHubComponent, UserDashboardPage
+  PortDashboardPage, FeedsStatusPage, TerminalComponent, TerminalPlanningComponent, TrainingHubComponent, UserDashboardPage
 }
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
@@ -237,7 +237,7 @@ object SPAMain {
   def statusRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#status", StatusLoc) ~> renderR((_: RouterCtl[Loc]) => StatusPage())
+    staticRoute("#status", StatusLoc) ~> renderR((_: RouterCtl[Loc]) => FeedsStatusPage())
   }
 
   def contactRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {

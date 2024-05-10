@@ -203,6 +203,10 @@ object Actions {
 
   object RequestRecalculateArrivals extends Action
 
+  object RequestMissingHistoricSplits extends Action
+
+  object RequestMissingPaxNos extends Action
+
   case class GetForecastAccuracy(localDate: LocalDate) extends Action
 
   case object ClearForecastAccuracy extends Action

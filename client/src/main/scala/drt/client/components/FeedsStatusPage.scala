@@ -1,8 +1,9 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.{RequestForecastRecrunch, RequestRecalculateArrivals}
+import drt.client.actions.Actions.{RequestForecastRecrunch, RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals}
 import drt.client.components.ToolTips._
+import drt.client.components.styles.DrtTheme
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -11,6 +12,7 @@ import drt.client.services.handlers.CheckFeed
 import drt.shared.CrunchApi.MillisSinceEpoch
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
+import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
@@ -22,7 +24,7 @@ import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedS
 import uk.gov.homeoffice.drt.ports._
 
 
-object StatusPage {
+object FeedsStatusPage {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -49,6 +51,14 @@ object StatusPage {
 
       def requestRecalculateArrivals(): Callback = Callback {
         SPACircuit.dispatch(RequestRecalculateArrivals)
+      }
+
+      def requestMissingHistoricSplitsLookup(): Callback = Callback {
+        SPACircuit.dispatch(RequestMissingHistoricSplits)
+      }
+
+      def requestMissingPaxNos(): Callback = Callback {
+        SPACircuit.dispatch(RequestMissingPaxNos)
       }
 
 
@@ -121,9 +131,23 @@ object StatusPage {
             <.br(),
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
-              MuiButton(variant = "outlined", size = "medium", color = Color.primary)(<.div("Re-crunch forecast", ^.onClick --> requestForecastRecrunch())),
-              MuiButton(variant = "outlined", size = "medium", color = Color.primary)(<.div("Refresh splits", ^.onClick --> requestSplitsRefresh())),
-              MuiButton(variant = "outlined", size = "medium", color = Color.primary)(<.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())),
+              ThemeProvider(DrtTheme.theme)(
+                MuiButton(variant = "outlined", color = Color.primary)(
+                  <.div("Re-crunch forecast", ^.onClick --> requestForecastRecrunch())
+                ),
+                MuiButton(variant = "outlined", color = Color.primary)(
+                  <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
+                ),
+                MuiButton(variant = "outlined", color = Color.primary)(
+                  <.div("Recalculate arrivals", ^.onClick --> requestRecalculateArrivals())
+                ),
+                MuiButton(variant = "outlined", color = Color.primary)(
+                  <.div("Lookup missing historic splits", ^.onClick --> requestMissingHistoricSplitsLookup())
+                ),
+                MuiButton(variant = "outlined", color = Color.primary)(
+                  <.div("Lookup missing forecast pax nos", ^.onClick --> requestMissingPaxNos())
+                ),
+              )
             )
           ) else EmptyVdom
         }
