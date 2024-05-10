@@ -26,6 +26,8 @@ object RunnableHistoricSplits {
                               (implicit ec: ExecutionContext, mat: Materializer): Flow[Iterable[UniqueArrival], Done, NotUsed] =
     Flow[Iterable[UniqueArrival]]
       .mapAsync(1) { arrivalKeys =>
+        log.info(s"Looking up historic splits for ${arrivalKeys.size} arrivals")
+        val startTime = SDate.now().millisSinceEpoch
         Source(arrivalKeys.toList)
           .mapAsync(1) { arrival =>
             maybeHistoricSplits(arrival).map(_.map(s => (arrival, Set(s))))
@@ -34,7 +36,10 @@ object RunnableHistoricSplits {
             case Some(keyWithSplits) => keyWithSplits
           }
           .runWith(Sink.seq)
-          .flatMap(splits => persistSplits(SplitsForArrivals(splits.toMap)))
+          .flatMap { splits =>
+            log.info(s"Found historic splits for ${splits.size}/${arrivalKeys.size} arrivals in ${SDate.now().millisSinceEpoch - startTime}ms")
+            persistSplits(SplitsForArrivals(splits.toMap))
+          }
       }
 
   def maybeHistoricSplits(maybeManifest: UniqueArrival => Future[Option[ManifestLike]],

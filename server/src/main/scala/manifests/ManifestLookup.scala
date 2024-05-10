@@ -1,12 +1,9 @@
 package manifests
 
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
-import services.StreamSupervision
-import slick.jdbc.SQLActionBuilder
 import slick.sql.SqlStreamingAction
 import slickdb.Tables
 import uk.gov.homeoffice.drt.Nationality
@@ -19,7 +16,7 @@ import java.sql.Timestamp
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 
 trait ManifestLookupLike {
@@ -38,7 +35,7 @@ case class UniqueArrivalKey(arrivalPort: PortCode,
                             departurePort: PortCode,
                             voyageNumber: VoyageNumber,
                             scheduled: SDateLike) {
-  override def toString: String = s"$arrivalPort -> $departurePort: $voyageNumber @ ${scheduled.toISOString}"
+  override def toString: String = s"$departurePort -> $arrivalPort: $voyageNumber @ ${scheduled.toISOString}"
 }
 
 object UniqueArrivalKey {
@@ -50,7 +47,7 @@ object UniqueArrivalKey {
 }
 
 case class ManifestLookup(tables: Tables)
-                         (implicit mat: Materializer)extends ManifestLookupLike {
+                         (implicit mat: Materializer) extends ManifestLookupLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
@@ -59,45 +56,30 @@ case class ManifestLookup(tables: Tables)
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
                                           scheduled: SDateLike
-                                         ): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    historicManifestSearch(UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), queryHierarchy)
-
-  private def manifestsForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
-                                   (implicit mat: Materializer): Future[immutable.Seq[List[ManifestPassengerProfile]]] = {
-    val eventualMaybePaxProfiles = Source(paxForArrivalQuery(flightKeys))
-      .mapAsync(1)(paxProfilesFromQuery)
-      .withAttributes(StreamSupervision.resumeStrategyWithLog(getClass.getName))
-      .runWith(Sink.seq)
-
-    eventualMaybePaxProfiles.map { tries =>
-      tries.collect { case Failure(t) => log.warn(s"Failed to get manifests", t) }
-      tries.collect { case Success(paxProfiles) => paxProfiles }
-    }
+                                         ): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] = {
+    val key = UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled)
+    historicManifestSearch(key, queryHierarchy)
+      .recover {
+        case t =>
+          log.error(s"Error looking up manifest for ${key.toString}", t)
+          (key, None)
+      }
   }
 
-  private def manifestTriesForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
-                                       (implicit mat: Materializer): Future[immutable.Seq[ManifestPassengerProfile]] =
-    manifestsForScheduled(flightKeys).map(_.flatten)
+  private def manifestsForScheduled(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] =
+    if (flightKeys.nonEmpty)
+      paxForArrivalQuery(flightKeys)
+    else
+      Future(Vector.empty)
 
-  private def manifestPaxForScheduled(flightKeys: Vector[(String, String, String, Timestamp)])
-                                     (implicit mat: Materializer): Future[Option[(Int, Int)]] =
+  private def manifestPaxForScheduled(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Option[(Int, Int)]] =
     manifestsForScheduled(flightKeys).map {
       case manifests if manifests.nonEmpty =>
-        val totalPax = manifests.flatten.size / manifests.size
-        val transPax = manifests.flatten.count(_.inTransit) / manifests.size
+        val totalPax = manifests.size / manifests.size
+        val transPax = manifests.count(_.inTransit) / manifests.size
         Option(totalPax, transPax)
       case _ => None
     }
-
-  private def paxProfilesFromQuery(builder: SQLActionBuilder): Future[Try[List[ManifestPassengerProfile]]] =
-    tables
-      .run(builder.as[(String, String, String, String, String, Boolean, String)])
-      .map { rows =>
-        Success(passengerProfiles(rows).toList)
-      }
-      .recover {
-        case t => Failure(t)
-      }
 
   private def historicManifestSearch(uniqueArrivalKey: UniqueArrivalKey,
                                      queries: List[(String, QueryFunction)])
@@ -105,7 +87,7 @@ case class ManifestLookup(tables: Tables)
     val startTime = SDate.now()
     findFlights(uniqueArrivalKey, queries)
       .flatMap { flightKeys =>
-        manifestTriesForScheduled(flightKeys)
+        manifestsForScheduled(flightKeys)
           .map(profiles => (uniqueArrivalKey, maybeManifestFromProfiles(uniqueArrivalKey, profiles)))
       }
       .map { res =>
@@ -147,11 +129,11 @@ case class ManifestLookup(tables: Tables)
           case _ =>
             findFlights(uniqueArrivalKey, tail.map(_._1))
         }.map { res =>
-        val timeTaken = SDate.now().millisSinceEpoch - startTime.millisSinceEpoch
-        if (timeTaken > 1000)
-          log.warn(s"Historic manifest query $queryNumber for $uniqueArrivalKey took ${timeTaken}ms")
-        res
-      }
+          val timeTaken = SDate.now().millisSinceEpoch - startTime.millisSinceEpoch
+          if (timeTaken > 1000)
+            log.warn(s"Historic manifest query $queryNumber for $uniqueArrivalKey took ${timeTaken}ms")
+          res
+        }
   }
 
   private def maybeManifestFromProfiles(uniqueArrivalKey: UniqueArrivalKey,
@@ -199,27 +181,27 @@ case class ManifestLookup(tables: Tables)
   }
 
   /**
-   SELECT
-   arrival_port_code,
-   departure_port_code,
-   voyage_number,
-   scheduled
-   FROM processed_json
-   WHERE
-   event_code ='DC'
-   and arrival_port_code='STN'
-            and departure_port_code='SZY'
-            and voyage_number=229
-            and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '2024-04-30')::int
-   and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-04-30' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-30')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-30' + interval '1 week')::int)
-   and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-04-30' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-04-30')::int)
-   GROUP BY
-   arrival_port_code,
-   departure_port_code,
-   voyage_number,
-   scheduled
-   ORDER BY scheduled DESC
-   LIMIT 6
+   * SELECT
+   * arrival_port_code,
+   * departure_port_code,
+   * voyage_number,
+   * scheduled
+   * FROM processed_json
+   * WHERE
+   * event_code ='DC'
+   * and arrival_port_code='STN'
+   * and departure_port_code='SZY'
+   * and voyage_number=229
+   * and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '2024-04-30')::int
+   * and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-04-30' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-30')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-30' + interval '1 week')::int)
+   * and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-04-30' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-04-30')::int)
+   * GROUP BY
+   * arrival_port_code,
+   * departure_port_code,
+   * voyage_number,
+   * scheduled
+   * ORDER BY scheduled DESC
+   * LIMIT 6
    */
 
   private def sameFlight3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
@@ -249,26 +231,26 @@ case class ManifestLookup(tables: Tables)
   }
 
   /**
-   SELECT
-   arrival_port_code,
-   departure_port_code,
-   voyage_number,
-   scheduled
-   FROM
-   processed_json
-   WHERE
-   event_code ='DC'
-   and arrival_port_code='STN'
-            and departure_port_code='SDR'
-            and voyage_number=2613
-            and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' + interval '1 week')::int)
-   and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-04-29' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-04-29')::int)
-   GROUP BY
-   arrival_port_code,
-   departure_port_code,
-   voyage_number,
-   scheduled
-   ORDER BY scheduled DESC
+   * SELECT
+   * arrival_port_code,
+   * departure_port_code,
+   * voyage_number,
+   * scheduled
+   * FROM processed_json
+   * WHERE
+   * event_code ='DC'
+   * and arrival_port_code='STN'
+   * and departure_port_code='BER'
+   * and voyage_number=144
+   * and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-05-10' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-10')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-05-10' + interval '1 week')::int)
+   * and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-05-10' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-05-10')::int)
+   * GROUP BY
+   * arrival_port_code,
+   * departure_port_code,
+   * voyage_number,
+   * scheduled
+   * ORDER BY scheduled DESC
+   * LIMIT 6
    */
 
   private def sameRouteAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
@@ -297,47 +279,80 @@ case class ManifestLookup(tables: Tables)
   }
 
   /**
-   SELECT
-            arrival_port_code,
-            departure_port_code,
-            voyage_number,
-            scheduled
-          FROM
-            processed_json
-          WHERE
-            event_code ='DC'
-            and arrival_port_code='STN'
-            and departure_port_code='SDR'
-            and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' + interval '1 week')::int)
-            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-04-29' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-04-29')::int)
-          GROUP BY
-            arrival_port_code,
-            departure_port_code,
-            voyage_number,
-            scheduled
-          ORDER BY scheduled DESC
+   * SELECT
+   * arrival_port_code,
+   * departure_port_code,
+   * voyage_number,
+   * scheduled
+   * FROM
+   * processed_json
+   * WHERE
+   * event_code ='DC'
+   * and arrival_port_code='STN'
+   * and departure_port_code='SDR'
+   * and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29')::int, EXTRACT(WEEK FROM TIMESTAMP '2024-04-29' + interval '1 week')::int)
+   * and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '2024-04-29' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '2024-04-29')::int)
+   * GROUP BY
+   * arrival_port_code,
+   * departure_port_code,
+   * voyage_number,
+   * scheduled
+   * ORDER BY scheduled DESC
+   * LIMIT 6
    */
 
-  private def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Vector[SQLActionBuilder] =
-    flightKeys.map {
-      case (destination, origin, voyageNumberString, scheduled) =>
-        val voyageNumber = VoyageNumber(voyageNumberString)
-        sql"""select
-            nationality_country_code,
-            document_type,
-            age,
-            in_transit_flag,
-            disembarkation_port_country_code,
-            in_transit,
-            passenger_identifier
-          from voyage_manifest_passenger_info
-          where
-            event_code ='DC'
-            and arrival_port_code=$destination
-            and departure_port_code=$origin
-            and voyage_number=${voyageNumber.numeric}
-            and scheduled_date=$scheduled"""
-    }
+  private def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] = {
+    val q = tables.VoyageManifestPassengerInfo
+      .filter { vm =>
+        vm.event_code === "DC" && flightKeys.map {
+          case (destination, origin, voyageNumberString, scheduled) =>
+            val voyageNumber = VoyageNumber(voyageNumberString)
+              vm.arrival_port_code === destination &&
+              vm.departure_port_code === origin &&
+              vm.voyage_number === voyageNumber.numeric &&
+              vm.scheduled_date === scheduled
+        }.reduce(_ || _)
+      }
+      .map(vm => (vm.nationality_country_code, vm.document_type, vm.age, vm.in_transit_flag, vm.disembarkation_port_country_code, vm.in_transit, vm.passenger_identifier))
+      .result
+
+    tables.run(q)
+      .map { rows =>
+        val identifiersExist = rows.exists(_._7.nonEmpty)
+        rows.filter(r => if (identifiersExist) r._7.nonEmpty else true).map {
+          case (nat, doc, age, transitFlag, endCountry, inTransit, identifier) =>
+            val transit = (transitFlag, endCountry, inTransit) match {
+              case (t, _, _) if t == "Y" => true
+              case (_, c, _) if c != "GBR" => true
+              case (_, _, t) if t => true
+              case _ => false
+            }
+            val maybeIdentifier = if (identifier.nonEmpty) Option(identifier) else None
+            ManifestPassengerProfile(Nationality(nat), Option(DocumentType(doc)), Try(PaxAge(age)).toOption, transit, maybeIdentifier)
+        }
+      }
+  }
+
+//  private def paxForArrivalQuery_(flightKeys: Vector[(String, String, String, Timestamp)]): Vector[SQLActionBuilder] =
+//    flightKeys.map {
+//      case (destination, origin, voyageNumberString, scheduled) =>
+//        val voyageNumber = VoyageNumber(voyageNumberString)
+//        sql"""select
+//            nationality_country_code,
+//            document_type,
+//            age,
+//            in_transit_flag,
+//            disembarkation_port_country_code,
+//            in_transit,
+//            passenger_identifier
+//          from voyage_manifest_passenger_info
+//          where
+//            event_code ='DC'
+//            and arrival_port_code=$destination
+//            and departure_port_code=$origin
+//            and voyage_number=${voyageNumber.numeric}
+//            and scheduled_date=$scheduled"""
+//    }
 
   private def passengerProfiles(rows: Vector[(String, String, String, String, String, Boolean, String)]): Vector[ManifestPassengerProfile] = rows.map {
     case (nat, doc, age, transitFlag, endCountry, inTransit, identifier) =>
