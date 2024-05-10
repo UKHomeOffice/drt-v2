@@ -169,7 +169,7 @@ case class ManifestLookup(tables: Tables)
             and voyage_number=${uniqueArrivalKey.voyageNumber.numeric}
             and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '#$scheduled')::int
             and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '#$scheduled')::int, EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' + interval '1 week')::int)
-            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled')::int)
+            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '2 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled')::int)
           GROUP BY
             arrival_port_code,
             departure_port_code,
@@ -219,7 +219,7 @@ case class ManifestLookup(tables: Tables)
             and departure_port_code=${uniqueArrivalKey.departurePort.toString}
             and voyage_number=${uniqueArrivalKey.voyageNumber.numeric}
             and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '#$scheduled')::int, EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' + interval '1 week')::int)
-            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled')::int)
+            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '2 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled')::int)
           GROUP BY
             arrival_port_code,
             departure_port_code,
@@ -267,7 +267,7 @@ case class ManifestLookup(tables: Tables)
             and arrival_port_code=${uniqueArrivalKey.arrivalPort.toString}
             and departure_port_code=${uniqueArrivalKey.departurePort.toString}
             and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '#$scheduled')::int, EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' + interval '1 week')::int)
-            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled')::int)
+            and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '2 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled')::int)
           GROUP BY
             arrival_port_code,
             departure_port_code,
