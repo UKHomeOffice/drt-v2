@@ -41,12 +41,12 @@ object RunnableStaffing extends DrtRunnableGraph {
 
     val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
       startQueuedRequestProcessingGraph(
-        staffMinutesFlow,
-        staffingQueueActor,
-        staffQueue,
-        staffMinutesActor,
-        "staffing",
-        crunchRequest,
+        minutesProducer = staffMinutesFlow,
+        persistentQueueActor = staffingQueueActor,
+        initialQueue = staffQueue,
+        sinkActor = staffMinutesActor,
+        graphName = "staffing",
+        processingRequest = crunchRequest,
       )
     (staffingUpdateRequestQueue, staffingUpdateKillSwitch)
   }

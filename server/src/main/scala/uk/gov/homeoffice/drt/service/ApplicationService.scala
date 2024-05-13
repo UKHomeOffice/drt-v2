@@ -231,6 +231,17 @@ case class ApplicationService(journalType: StreamingJournalLike,
         actorService.flightsRouterActor,
         manifestLookupService.maybeHistoricManifestPax)
 
+      val (mergeArrivalsRequestQueueActor: ActorRef, mergeArrivalsKillSwitch: UniqueKillSwitch) = RunnableMergedArrivals(
+        portCode = airportConfig.portCode,
+        flightsRouterActor = actorService.flightsRouterActor,
+        aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
+        mergeArrivalsQueueActor = actors.mergeArrivalsQueueActor,
+        feedArrivalsForDate = ProdFeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary),
+        mergeArrivalsQueue = mergeArrivalsQueue,
+        mergeArrivalRequest = mergeArrivalRequest,
+        setPcpTimes = setPcpTimes,
+        addArrivalPredictions = addArrivalPredictions)
+
       val crunchRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
         actors.crunchQueueActor,
         crunchQueue,
@@ -244,17 +255,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
         minuteLookups.queueLoadsMinutesActor,
         airportConfig.queuesByTerminal,
         feedService.paxFeedSourceOrder)
-
-      val (mergeArrivalsRequestQueueActor: ActorRef, mergeArrivalsKillSwitch: UniqueKillSwitch) = RunnableMergedArrivals(
-        portCode = airportConfig.portCode,
-        flightsRouterActor = actorService.flightsRouterActor,
-        aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
-        mergeArrivalsQueueActor = actors.mergeArrivalsQueueActor,
-        feedArrivalsForDate = ProdFeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary),
-        mergeArrivalsQueue = mergeArrivalsQueue,
-        mergeArrivalRequest = mergeArrivalRequest,
-        setPcpTimes = setPcpTimes,
-        addArrivalPredictions = addArrivalPredictions)
 
       val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
         actors.deskRecsQueueActor,
@@ -289,13 +289,21 @@ case class ApplicationService(journalType: StreamingJournalLike,
       actorService.liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       actorService.liveStaffMovementsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
 
-      val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
-      log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString}")
+      feedService.forecastBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
+      feedService.forecastFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
+      feedService.liveBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
+      feedService.liveFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
 
-      val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
+      actorService.flightsRouterActor ! AddUpdatesSubscriber(crunchRequestQueueActor)
+      actorService.flightsRouterActor ! AddHistoricSplitsRequestActor(historicSplitsQueueActor)
+      actorService.flightsRouterActor ! AddHistoricPaxRequestActor(historicPaxQueueActor)
 
-      staffChecker.calculateForecastStaffMinutes()
-      system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
+      actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(deskRecsRequestQueueActor)
+      actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
+
+      actorService.staffRouterActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
+
+      slasActor ! AddUpdatesSubscriber(deskRecsRequestQueueActor)
 
       egateBanksUpdatesActor ! AddUpdatesSubscriber(crunchRequestQueueActor)
 
@@ -304,25 +312,16 @@ case class ApplicationService(journalType: StreamingJournalLike,
       crunchManagerActor ! AddQueueHistoricSplitsLookupSubscriber(historicSplitsQueueActor)
       crunchManagerActor ! AddQueueHistoricPaxLookupSubscriber(historicPaxQueueActor)
 
-      actorService.flightsRouterActor ! AddHistoricSplitsRequestActor(historicSplitsQueueActor)
-      actorService.flightsRouterActor ! AddHistoricPaxRequestActor(historicPaxQueueActor)
+      val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
+      log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString}")
 
-      feedService.forecastBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
-      feedService.forecastFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
-      feedService.liveBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
-      feedService.liveFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
+      val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
+
+      system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
 
       (mergeArrivalsRequestQueueActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor,
         mergeArrivalsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
     }
-
-  def setSubscribers(crunchInputs: CrunchSystem[typed.ActorRef[FeedTick]]): Unit = {
-    actorService.flightsRouterActor ! AddUpdatesSubscriber(crunchInputs.crunchRequestQueueActor)
-    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestQueueActor)
-    actorService.queueLoadsRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestQueueActor)
-    actorService.staffRouterActor ! AddUpdatesSubscriber(crunchInputs.deploymentRequestQueueActor)
-    slasActor ! AddUpdatesSubscriber(crunchInputs.deskRecsRequestQueueActor)
-  }
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
 
@@ -416,8 +415,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
             .startProcessingFrom(processFilesAfter)
             .runWith(Sink.ignore)
         }
-
-        setSubscribers(crunchInputs)
 
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
 
