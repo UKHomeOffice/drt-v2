@@ -245,18 +245,16 @@ case class ApplicationService(journalType: StreamingJournalLike,
         airportConfig.queuesByTerminal,
         feedService.paxFeedSourceOrder)
 
-      val (mergeArrivalsRequestQueueActor: ActorRef, mergeArrivalsKillSwitch: UniqueKillSwitch) =
-        RunnableMergedArrivals(
-          portCode = airportConfig.portCode,
-          flightsRouterActor = actorService.flightsRouterActor,
-          aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
-          mergeArrivalsQueueActor = actors.mergeArrivalsQueueActor,
-          feedArrivalsForDate = ProdFeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary),
-          mergeArrivalsQueue = mergeArrivalsQueue,
-          mergeArrivalRequest = mergeArrivalRequest,
-          setPcpTimes = setPcpTimes,
-          addArrivalPredictions = addArrivalPredictions,
-        )
+      val (mergeArrivalsRequestQueueActor: ActorRef, mergeArrivalsKillSwitch: UniqueKillSwitch) = RunnableMergedArrivals(
+        portCode = airportConfig.portCode,
+        flightsRouterActor = actorService.flightsRouterActor,
+        aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
+        mergeArrivalsQueueActor = actors.mergeArrivalsQueueActor,
+        feedArrivalsForDate = ProdFeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary),
+        mergeArrivalsQueue = mergeArrivalsQueue,
+        mergeArrivalRequest = mergeArrivalRequest,
+        setPcpTimes = setPcpTimes,
+        addArrivalPredictions = addArrivalPredictions)
 
       val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
         actors.deskRecsQueueActor,
