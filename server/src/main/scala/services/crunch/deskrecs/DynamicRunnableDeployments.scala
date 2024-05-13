@@ -1,22 +1,54 @@
 package services.crunch.deskrecs
 
 import akka.NotUsed
+import akka.actor.ActorRef
+import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.Flow
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
-import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, ProcessingRequest}
+import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
+import scala.collection.SortedSet
 import scala.collection.immutable.{Map, NumericRange}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object DynamicRunnableDeployments {
+object DynamicRunnableDeployments extends DrtRunnableGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
+
+  def apply(deploymentQueueActor: ActorRef,
+            deploymentQueue: SortedSet[ProcessingRequest],
+            staffToDeskLimits: Map[Terminal, List[Int]] => Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff],
+            crunchRequest: MillisSinceEpoch => CrunchRequest,
+            paxProvider: ProcessingRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
+            staffMinutesProvider: ProcessingRequest => Future[Map[Terminal, List[Int]]],
+            loadsToDeployments: PassengersToQueueMinutes,
+            queueMinutesSinkActor: ActorRef)
+           (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+    val deploymentsFlow = DynamicRunnableDeployments.crunchRequestsToDeployments(
+      loadsProvider = paxProvider,
+      staffProvider = staffMinutesProvider,
+      staffToDeskLimits = staffToDeskLimits,
+      loadsToQueueMinutes = loadsToDeployments,
+    )
+
+    val (deploymentRequestQueueActor, deploymentsKillSwitch) =
+      startQueuedRequestProcessingGraph(
+        minutesProducer = deploymentsFlow,
+        persistentQueueActor = deploymentQueueActor,
+        initialQueue = deploymentQueue,
+        sinkActor = queueMinutesSinkActor,
+        graphName = "deployments",
+        processingRequest = crunchRequest,
+      )
+    (deploymentRequestQueueActor, deploymentsKillSwitch)
+  }
 
   type PassengersToQueueMinutes =
     (NumericRange[MillisSinceEpoch], Map[TQM, PassengersMinute], Map[Terminal, TerminalDeskLimitsLike], String) => Future[PortStateQueueMinutes]

@@ -1,14 +1,16 @@
 package services.crunch.deskrecs
 
+import actors.persistent.SortedActorRefSource
+import akka.actor.ActorRef
 import akka.pattern.StatusReply
-import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.{Done, NotUsed}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.DynamicQueueStatusProvider
-import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
@@ -16,11 +18,66 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDate
 
+import scala.collection.SortedSet
+import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object DynamicRunnablePassengerLoads {
+trait DrtRunnableGraph {
+  def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[ProcessingRequest, A, NotUsed],
+                                           persistentQueueActor: ActorRef,
+                                           initialQueue: SortedSet[ProcessingRequest],
+                                           sinkActor: ActorRef,
+                                           graphName: String,
+                                           processingRequest: MillisSinceEpoch => ProcessingRequest,
+                                          )
+                                          (implicit mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+    val graphSource = new SortedActorRefSource(persistentQueueActor, processingRequest, initialQueue, graphName)
+    QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
+  }
+
+}
+
+object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
   private val log: Logger = LoggerFactory.getLogger(getClass)
+
+  def apply(crunchQueueActor: ActorRef,
+            crunchQueue: SortedSet[ProcessingRequest],
+            crunchRequest: MillisSinceEpoch => CrunchRequest,
+            flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
+            deskRecsProvider: PortDesksAndWaitsProviderLike,
+            redListUpdatesProvider: () => Future[RedListUpdates],
+            queueStatusProvider: DynamicQueueStatusProvider,
+            updateLivePaxView: MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]],
+            terminalSplits: Terminal => Option[Splits],
+            queueLoadsActor: ActorRef,
+            queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
+            paxFeedSourceOrder: List[FeedSource])
+           (implicit ec: ExecutionContext, mat: Materializer): ActorRef = {
+    val passengerLoadsFlow: Flow[ProcessingRequest, MinutesContainer[CrunchApi.PassengersMinute, TQM], NotUsed] =
+      DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
+        arrivalsProvider = flightsProvider,
+        portDesksAndWaitsProvider = deskRecsProvider,
+        redListUpdatesProvider = redListUpdatesProvider,
+        queueStatusProvider,
+        queuesByTerminal,
+        updateLiveView = updateLivePaxView,
+        paxFeedSourceOrder = paxFeedSourceOrder,
+        terminalSplits = terminalSplits,
+      )
+
+    val (crunchRequestQueueActor, _: UniqueKillSwitch) =
+      startQueuedRequestProcessingGraph(
+        passengerLoadsFlow,
+        crunchQueueActor,
+        crunchQueue,
+        queueLoadsActor,
+        "passenger-loads",
+        crunchRequest,
+      )
+    crunchRequestQueueActor
+  }
+
 
   def crunchRequestsToQueueMinutes(arrivalsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                                    portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,

@@ -1,12 +1,13 @@
 package actors
 
-import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddQueueHistoricPaxLookupSubscriber, AddQueueHistoricSplitsLookupSubscriber, AddRecalculateArrivalsSubscriber, LookupHistoricPaxNos, LookupHistoricSplits, RecalculateArrivals, Recrunch}
-import akka.Done
-import akka.actor.{Actor, ActorRef}
+import actors.CrunchManagerActor._
+import akka.NotUsed
+import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,6 +32,39 @@ object CrunchManagerActor {
   case class LookupHistoricSplits(updatedMillis: Set[Long]) extends ReProcessDates
 
   case class LookupHistoricPaxNos(updatedMillis: Set[Long]) extends ReProcessDates
+
+  def missingHistoricSplitsArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                             )
+                                             (implicit mat: Materializer): UtcDate => Future[Iterable[UniqueArrival]] =
+    date => allTerminalsFlights(date, date)
+      .map {
+        _._2
+          .filter(!_.apiFlight.Origin.isDomesticOrCta)
+          .filter(!_.splits.exists(_.source == Historical))
+          .map(_.unique)
+      }
+      .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
+
+  def missingPaxArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                  )
+                                  (implicit mat: Materializer): UtcDate => Future[Iterable[UniqueArrival]] =
+    date => allTerminalsFlights(date, date)
+      .map {
+        _._2
+          .filter(!_.apiFlight.Origin.isDomesticOrCta)
+          .filter(_.apiFlight.hasNoPaxSource)
+          .map(_.unique)
+      }
+      .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
+
+  def props(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+           )
+           (implicit ec: ExecutionContext, mat: Materializer): Props = {
+    val missingHistoricSplitsArrivalKeysForDate = CrunchManagerActor.missingHistoricSplitsArrivalKeysForDate(allTerminalsFlights)
+    val missingPaxArrivalKeysForDate = CrunchManagerActor.missingPaxArrivalKeysForDate(allTerminalsFlights)
+
+    Props(new CrunchManagerActor(missingHistoricSplitsArrivalKeysForDate, missingPaxArrivalKeysForDate))
+  }
 }
 
 class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
@@ -71,7 +105,7 @@ class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable
   }
 
   private def queueLookups(millis: Set[Long], subscriber: Option[ActorRef], lookup: UtcDate => Future[Iterable[UniqueArrival]], label: String)
-                          : Unit =
+  : Unit =
     Source(millis
       .map(SDate(_).toUtcDate).toList
       .sorted)

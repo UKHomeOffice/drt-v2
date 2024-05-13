@@ -18,12 +18,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 object RunnableHistoricPax {
-  private val log = LoggerFactory.getLogger(getClass)
-
-  def arrivalsToHistoricPax(maybeHistoricPax: UniqueArrival => Future[Option[(Int, Int)]],
-                            persist: PaxForArrivals => Future[Done],
+  private def arrivalsToHistoricPax(maybeHistoricPax: UniqueArrival => Future[Option[(Int, Int)]],
+                                    persist: PaxForArrivals => Future[Done],
                            )
-                           (implicit ec: ExecutionContext, mat: Materializer): Flow[Iterable[UniqueArrival], Done, NotUsed] =
+                                   (implicit ec: ExecutionContext, mat: Materializer): Flow[Iterable[UniqueArrival], Done, NotUsed] =
     Flow[Iterable[UniqueArrival]]
       .mapAsync(1) { arrivalKeys =>
         Source(arrivalKeys.toList)
@@ -39,8 +37,8 @@ object RunnableHistoricPax {
           .flatMap(paxForArrivals => persist(PaxForArrivals(paxForArrivals.toMap)))
       }
 
-  def maybeHistoricPax(maybeManifestPaxCount: UniqueArrival => Future[Option[ManifestPaxCount]])
-                      (implicit ec: ExecutionContext): UniqueArrival => Future[Option[(Int, Int)]] =
+  private def maybeHistoricPax(maybeManifestPaxCount: UniqueArrival => Future[Option[ManifestPaxCount]])
+                              (implicit ec: ExecutionContext): UniqueArrival => Future[Option[(Int, Int)]] =
     uniqueArrival =>
       maybeManifestPaxCount(uniqueArrival)
         .map(_.map(manifestPaxCount => (manifestPaxCount.totalPax, manifestPaxCount.transPax)))
