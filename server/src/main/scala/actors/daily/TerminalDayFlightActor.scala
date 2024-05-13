@@ -180,7 +180,7 @@ class TerminalDayFlightActor(year: Int,
   private def requestMissingPax(): Unit = {
     maybeRequestHistoricPaxActor.foreach { requestActor =>
       val missingPaxSource = state.flights.values.collect {
-        case fws if fws.apiFlight.Origin.isDomesticOrCta && fws.apiFlight.hasNoPaxSource => fws.unique
+        case fws if !fws.apiFlight.Origin.isDomesticOrCta && fws.apiFlight.hasNoPaxSource => fws.unique
       }
       requestActor ! missingPaxSource
     }
