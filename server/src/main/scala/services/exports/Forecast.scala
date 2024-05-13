@@ -28,11 +28,12 @@ object Forecast {
                      terminal: Terminal,
                      startOfForecast: SDateLike,
                      endOfForecast: SDateLike,
-                     portState: PortState): ForecastPeriod = {
-    val fifteenMinuteMillis = 15 * 60 * 1000
+                     portState: PortState,
+                     forecastPeriod: Int): ForecastPeriod = {
+    val fifteenMinuteMillis = forecastPeriod * 60 * 1000
     val periods = (endOfForecast.millisSinceEpoch - startOfForecast.millisSinceEpoch) / fifteenMinuteMillis
-    val staffSummary = portState.staffSummary(startOfForecast, periods, 15, terminal)
-    val crunchSummary15Mins = portState.crunchSummary(startOfForecast, periods, 15, terminal, airportConfig.nonTransferQueues(terminal).toList)
+    val staffSummary = portState.staffSummary(startOfForecast, periods, forecastPeriod, terminal)
+    val crunchSummary15Mins = portState.crunchSummary(startOfForecast, periods, forecastPeriod, terminal, airportConfig.nonTransferQueues(terminal).toList)
     val timeSlotsByDay = Forecast.rollUpForWeek(crunchSummary15Mins, staffSummary)
     ForecastPeriod(timeSlotsByDay)
   }

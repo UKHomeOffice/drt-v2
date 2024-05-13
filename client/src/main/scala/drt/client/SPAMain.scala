@@ -12,8 +12,8 @@ import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
+import drt.client.spa.TerminalPageModes.{Current, Staffing}
 import drt.client.spa.{TerminalPageMode, TerminalPageModes}
-import drt.client.spa.TerminalPageModes.{Current, Planning, Staffing}
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
@@ -144,8 +144,6 @@ object SPAMain {
       (terminal != p.terminal) || (maybeViewDate != p.maybeViewDate) || (mode != p.mode) || (maybeTimeMachineDate != p.maybeTimeMachineDate)
 
     def loadAction: Action = mode match {
-      case Planning =>
-        GetForecastWeek(TerminalPlanningComponent.defaultStartDate(dateFromUrlOrNow), terminal)
       case Staffing =>
         GetShiftsForMonth(dateFromUrlOrNow)
       case _ =>
