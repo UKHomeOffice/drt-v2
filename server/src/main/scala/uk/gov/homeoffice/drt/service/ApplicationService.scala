@@ -204,7 +204,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       SortedSet[ProcessingRequest],
       SortedSet[ProcessingRequest],
       SortedSet[ProcessingRequest],
-    ) => () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) =
+    ) => () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]) =
     (actors, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffQueue) => () => {
       val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(airportConfig, terminalEgatesProvider) _
 
@@ -219,13 +219,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest =
         (millis: MillisSinceEpoch) => MergeArrivalsRequest(SDate(millis).toUtcDate)
 
-      val historicSplitsQueueActor = RunnableHistoricSplits(
+      val (historicSplitsQueueActor, historicSplitsKillSwitch) = RunnableHistoricSplits(
         airportConfig.portCode,
         actorService.flightsRouterActor,
         splitsCalculator.splitsForManifest,
         manifestLookupService.maybeBestAvailableManifest)
 
-      val historicPaxQueueActor = RunnableHistoricPax(
+      val (historicPaxQueueActor, historicPaxKillSwitch) = RunnableHistoricPax(
         airportConfig.portCode,
         actorService.flightsRouterActor,
         manifestLookupService.maybeHistoricManifestPax)
@@ -318,8 +318,10 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
       system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
 
-      (mergeArrivalsRequestQueueActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor,
-        mergeArrivalsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+      val killSwitches = Iterable(mergeArrivalsKillSwitch, historicSplitsKillSwitch, historicPaxKillSwitch,
+        deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+
+      (mergeArrivalsRequestQueueActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, killSwitches)
     }
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
@@ -331,8 +333,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
 
   def startCrunchSystem(actors: PersistentStateActors,
-                        startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef,
-                          UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
+                        startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]),
                        ): CrunchSystem[typed.ActorRef[FeedTick]] = {
     CrunchSystem(CrunchProps(
       airportConfig = airportConfig,

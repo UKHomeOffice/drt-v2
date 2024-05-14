@@ -2,14 +2,15 @@ package services.arrivals
 
 import akka.actor.ActorRef
 import akka.pattern.ask
-import akka.stream.scaladsl.{Flow, Sink, Source}
-import akka.stream.{CompletionStrategy, Materializer, OverflowStrategy}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import akka.stream.{CompletionStrategy, KillSwitches, Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
 import drt.shared.FlightsApi.PaxForArrivals
 import manifests.UniqueArrivalKey
 import manifests.passengers.ManifestPaxCount
 import org.slf4j.LoggerFactory
+import services.arrivals.RunnableHistoricSplits.constructAndRunGraph
 import uk.gov.homeoffice.drt.arrivals.{Passengers, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.{FeedSource, HistoricApiFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -17,7 +18,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object RunnableHistoricPax {
+object RunnableHistoricPax extends RunnableHistoricManifestsLike {
   private def arrivalsToHistoricPax(maybeHistoricPax: UniqueArrival => Future[Option[(Int, Int)]],
                                     persist: PaxForArrivals => Future[Done],
                            )
@@ -47,7 +48,7 @@ object RunnableHistoricPax {
             flightsRouterActor: ActorRef,
             maybeHistoricManifestPax: (PortCode, PortCode, VoyageNumber, SDateLike) => Future[(UniqueArrivalKey, Option[ManifestPaxCount])],
            )
-           (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): ActorRef = {
+           (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
     val getManifest: UniqueArrival => Future[Option[ManifestPaxCount]] = uniqueArrival => {
       val origin: PortCode = uniqueArrival.origin
       val voyageNumber: VoyageNumber = VoyageNumber(uniqueArrival.number)
@@ -57,18 +58,6 @@ object RunnableHistoricPax {
     val maybeHistoricPax = RunnableHistoricPax.maybeHistoricPax(getManifest)
     val persistPax: PaxForArrivals => Future[Done] = paxForArrivals => flightsRouterActor.ask(paxForArrivals).map(_ => Done)
     val flow = RunnableHistoricPax.arrivalsToHistoricPax(maybeHistoricPax, persistPax)
-    val (sourceActorRef, _) = flow
-      .runWith(
-        Source.actorRef(
-          completionMatcher = {
-            case Done => CompletionStrategy.immediately
-          },
-          failureMatcher = PartialFunction.empty,
-          bufferSize = 100,
-          overflowStrategy = OverflowStrategy.dropTail,
-        ),
-        Sink.ignore)
-    sourceActorRef
+    constructAndRunGraph(flow)
   }
-
 }

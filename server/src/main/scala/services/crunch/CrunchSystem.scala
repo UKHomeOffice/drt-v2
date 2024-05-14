@@ -5,7 +5,7 @@ import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
 import akka.stream._
 import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.server.feeds.Feed.EnabledFeedWithFrequency
-import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
+import drt.server.feeds.{ArrivalsFeedResponse, Feed}
 import drt.shared.CrunchApi._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
@@ -43,8 +43,7 @@ case class CrunchProps[FT](airportConfig: AirportConfig,
                            arrivalsLiveBaseFeed: Feed[FT],
                            arrivalsLiveFeed: Feed[FT],
                            optimiser: TryCrunchWholePax,
-                           startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch,
-                             UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch),
+                           startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]),
                            setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
                            passengerAdjustments: List[FeedArrival] => Future[List[FeedArrival]],
                            system: ActorSystem,
@@ -66,10 +65,7 @@ object CrunchSystem {
       crunchRequestQueueActor,
       deskRecsRequestQueueActor,
       deploymentRequestQueueActor,
-      mergeArrivalsKillSwitch,
-      deskRecsKillSwitch,
-      deploymentsKillSwitch,
-      staffingUpdateKillSwitch,
+      killSwitches,
       ) = props.startDeskRecs()
 
     val runnableCrunch = RunnableCrunch(
@@ -97,7 +93,7 @@ object CrunchSystem {
       arrivalsKillSwitch,
       ) = runnableCrunch.run()
 
-    val killSwitches = List(arrivalsKillSwitch, mergeArrivalsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+    val allKillSwitches = List(arrivalsKillSwitch) ++ killSwitches
 
     CoordinatedShutdown(props.system).addTask(CoordinatedShutdown.PhaseBeforeServiceUnbind, "shutdown-crunch") { () =>
       log.info("Shutting down crunch system")
@@ -121,7 +117,7 @@ object CrunchSystem {
       crunchRequestQueueActor = crunchRequestQueueActor,
       deskRecsRequestQueueActor = deskRecsRequestQueueActor,
       deploymentRequestQueueActor = deploymentRequestQueueActor,
-      killSwitches,
+      allKillSwitches,
     )
   }
 

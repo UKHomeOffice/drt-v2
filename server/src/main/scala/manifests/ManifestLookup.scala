@@ -155,12 +155,12 @@ case class ManifestLookup(tables: Tables)
     UniqueArrivalKey => SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), tables.profile.api.Effect]
 
   private val queryHierarchy: List[(String, QueryFunction)] = List(
-    ("sameFlightAndDay3WeekWindowPreviousYearQuery", sameFlightAndDay3WeekWindowPreviousYearQuery),
+    ("sameFlightAndDay5WeekWindowPreviousYearQuery", sameFlightAndDay5WeekWindowPreviousYearQuery),
     ("sameFlight3WeekWindowPreviousYearQuery", sameFlight3WeekWindowPreviousYearQuery),
     ("sameRouteAndDay3WeekWindowPreviousYearQuery", sameRouteAndDay3WeekWindowPreviousYearQuery)
   )
 
-  private def sameFlightAndDay3WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
+  private def sameFlightAndDay5WeekWindowPreviousYearQuery(uniqueArrivalKey: UniqueArrivalKey): SqlStreamingAction[Vector[(String, String, String, Timestamp)], (String, String, String, Timestamp), Effect] = {
     val scheduled = uniqueArrivalKey.scheduled.toISODateOnly
 
     sql"""SELECT
@@ -175,7 +175,12 @@ case class ManifestLookup(tables: Tables)
             and departure_port_code=${uniqueArrivalKey.departurePort.toString}
             and voyage_number=${uniqueArrivalKey.voyageNumber.numeric}
             and EXTRACT(DOW FROM scheduled) = EXTRACT(DOW FROM TIMESTAMP '#$scheduled')::int
-            and EXTRACT(WEEK FROM scheduled) IN (EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' - interval '1 week')::int, EXTRACT(WEEK FROM TIMESTAMP '#$scheduled')::int, EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' + interval '1 week')::int)
+            and EXTRACT(WEEK FROM scheduled) IN (
+              EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' - interval '3 week')::int,
+              EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' - interval '2 week')::int,
+              EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' - interval '1 week')::int,
+              EXTRACT(WEEK FROM TIMESTAMP '#$scheduled')::int,
+              EXTRACT(WEEK FROM TIMESTAMP '#$scheduled' + interval '1 week')::int)
             and EXTRACT(YEAR FROM scheduled) IN (EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '2 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled' - interval '1 year')::int, EXTRACT(YEAR FROM TIMESTAMP '#$scheduled')::int)
           GROUP BY
             arrival_port_code,
