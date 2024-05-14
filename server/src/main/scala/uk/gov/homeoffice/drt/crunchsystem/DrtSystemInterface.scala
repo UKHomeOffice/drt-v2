@@ -7,13 +7,18 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
 import manifests.ManifestLookupLike
+import manifests.queues.SplitsCalculator
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments}
+import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import slickdb.Tables
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
+import uk.gov.homeoffice.drt.arrivals.Splits
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
@@ -79,6 +84,9 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val feedService: FeedService
 
+  lazy val queueAdjustments = if (params.adjustEGateUseByUnder12s) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild) else AdjustmentsNoop
+  lazy val splitsCalculator: SplitsCalculator = SplitsCalculator(airportConfig, queueAdjustments)
+
   lazy val applicationService: ApplicationService = ApplicationService(
     journalType = journalType,
     airportConfig = airportConfig,
@@ -93,6 +101,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     actorService = actorService,
     persistentStateActors = persistentActors,
     requestAndTerminateActor = actorService.requestAndTerminateActor,
+    splitsCalculator,
   )
   def run(): Unit
 

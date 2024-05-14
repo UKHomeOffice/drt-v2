@@ -50,7 +50,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val abFeatureService: IABFeatureDao = MockAbFeatureDao()
 
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
-  override val flightLookups: FlightLookupsLike = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder)
+  override val flightLookups: FlightLookupsLike = TestFlightLookups(system, now, airportConfig.queuesByTerminal, paxFeedSourceOrder, splitsCalculator.terminalSplits)
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val manifestLookups: ManifestLookupsLike = ManifestLookups(system)
   lazy override val actorService: ActorsServiceLike = TestActorService(journalType,

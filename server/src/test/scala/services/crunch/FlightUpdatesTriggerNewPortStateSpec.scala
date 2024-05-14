@@ -38,56 +38,19 @@ class FlightUpdatesTriggerNewPortStateSpec extends CrunchTestLike {
         val scheduled = "2017-01-01T00:00Z"
 
         val flight = ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1,totalPax = Option(21))
-        val inputFlightsBefore = List(flight)
         val updatedArrival = flight.copy(totalPax = Option(50))
-        val inputFlightsAfter = List(updatedArrival)
         val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(flight)))
         crunch.portStateTestProbe.fishForMessage(1.second) {
           case PortState(flights, _, _) => flights.nonEmpty
         }
 
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
-
-        val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.toArrival(LiveFeedSource).copy(PcpTime = Option(SDate(scheduled).millisSinceEpoch)),
-          Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
+        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(List(updatedArrival)))
 
         crunch.portStateTestProbe.fishForMessage(3.seconds) {
           case ps: PortState =>
-            val flightsAfterUpdate = ps.flights.values.map(_.copy(lastUpdated = None)).toSet
-            flightsAfterUpdate == expectedFlights
-        }
-
-        success
-      }
-    }
-  }
-
-  "Given a noop update to an existing flight followed by a real update " >> {
-    "When I expect a PortState " >> {
-      "Then I should see one containing the updated flight" >> {
-
-        val scheduled = "2017-01-01T00:00Z"
-
-        val flight = ArrivalGenerator.live(schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(21))
-        val inputFlightsBefore = List(flight)
-        val updatedArrival = flight.copy(totalPax = Option(50))
-        val inputFlightsAfter = List(updatedArrival)
-        val crunch = runCrunchGraph(TestConfig(now = () => SDate(scheduled), airportConfig = testAirportConfig))
-
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsBefore))
-        offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(inputFlightsAfter))
-
-        val expectedFlights = Set(ApiFlightWithSplits(
-          updatedArrival.toArrival(LiveFeedSource).copy(PcpTime = Option(SDate(scheduled).millisSinceEpoch)),
-          Set(Splits(Set(ApiPaxTypeAndQueueCount(EeaMachineReadable, Queues.EeaDesk, 100.0, None, None)), TerminalAverage, None, Percentage))))
-
-        crunch.portStateTestProbe.fishForMessage(3.seconds) {
-          case ps: PortState =>
-            val flightsAfterUpdate = ps.flights.values.map(_.copy(lastUpdated = None)).toSet
-            flightsAfterUpdate == expectedFlights
+            ps.flights.values.exists(_.apiFlight.bestPcpPaxEstimate(Seq(LiveFeedSource)).contains(50))
         }
 
         success

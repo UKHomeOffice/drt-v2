@@ -6,7 +6,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.WholePassengerQueueSplits
 import Crunch.SplitMinutes
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PaxType, PaxTypeAndQueue}
@@ -24,6 +24,7 @@ trait WorkloadCalculatorLike {
                         redListUpdates: RedListUpdates,
                         terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
                         paxFeedSourceOrder: List[FeedSource],
+                        terminalSplits: Terminal => Option[Splits],
                        )
                        (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes
 
@@ -49,6 +50,7 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
                                  redListUpdates: RedListUpdates,
                                  terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
                                  paxFeedSourceOrder: List[FeedSource],
+                                 terminalSplits: Terminal => Option[Splits],
                                 )
                                 (implicit ex: ExecutionContext, mat: Materializer): SplitMinutes = {
     val uniqueWithCodeShares = CodeShares.uniqueArrivals(paxFeedSourceOrder)(flights.flights.values.toSeq)
@@ -58,6 +60,9 @@ case class DynamicWorkloadCalculator(terminalProcTimes: Map[Terminal, Map[PaxTyp
         .getOrElse(terminal, Map.empty)
         .getOrElse(PaxTypeAndQueue(paxType, queue), fallbackProcessingTime)
 
-    SplitMinutes(WholePassengerQueueSplits.splits(minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider, paxFeedSourceOrder))
+    val loadMinutes = WholePassengerQueueSplits.splits(
+      minuteMillis, relevantFlights, procTimes, terminalQueueStatuses, fallbacksProvider, paxFeedSourceOrder, terminalSplits)
+
+    SplitMinutes(loadMinutes)
   }
 }

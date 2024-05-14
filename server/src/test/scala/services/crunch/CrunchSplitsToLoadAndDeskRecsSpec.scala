@@ -199,6 +199,13 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             val arrival = ArrivalGenerator.live(origin = PortCode("JFK"), schDt = scheduled, iata = "BA0001", terminal = T1, totalPax = Option(10))
 
+            val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
+              VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"),
+                ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
+                manifestPax(10, euPassport)
+              )
+            )))
+
             val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduled),
               airportConfig = defaultAirportConfig.copy(
@@ -216,11 +223,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
 
             offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(arrival)))
 
-            val voyageManifests = ManifestsFeedSuccess(DqManifests(0, Set(
-              VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival("2017-01-01"), ManifestTimeOfArrival("00:00"),
-                manifestPax(10, euPassport)
-              )
-            )))
+            waitForFlightsInPortState(crunch.portStateTestProbe)
 
             offerAndWait(crunch.manifestsLiveInput, voyageManifests)
 

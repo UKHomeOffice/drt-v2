@@ -30,7 +30,7 @@ case class MockManifestProcessor(probe: ActorRef) extends ManifestProcessor {
   override def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done] =
     Future.successful(Done)
 
-  override def process(uniqueArrivalKey: UniqueArrivalKey, processedAt: MillisSinceEpoch): Future[Done] = {
+  override def process(uniqueArrivalKey: Seq[UniqueArrivalKey], processedAt: MillisSinceEpoch): Future[Done] = {
     probe ! ((uniqueArrivalKey, processedAt))
     Future.successful(Done)
   }
@@ -65,11 +65,10 @@ class ApiFeedImplTest extends CrunchTestLike {
       ))
       val mockProcessor = MockManifestProcessor(probe.ref)
       val feed = ApiFeedImpl(mockArrivalKeys, mockProcessor, 100.milliseconds)
-      val killSwitch = feed.processFilesAfter(0L).viaMat(KillSwitches.single)(Keep.right).to(Sink.ignore).run()
+      val killSwitch = feed.startProcessingFrom(0L).viaMat(KillSwitches.single)(Keep.right).to(Sink.ignore).run()
 
-      probe.expectMsg((key1, processedAt1220))
-      probe.expectMsg((key2, processedAt1220))
-      probe.expectMsg((key3, processedAt1230))
+      probe.expectMsg((List(key1, key2), processedAt1220))
+      probe.expectMsg((List(key3), processedAt1230))
       probe.expectNoMessage(250.millis)
 
       killSwitch.shutdown()

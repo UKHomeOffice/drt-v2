@@ -433,6 +433,12 @@ class CrunchTestLike
     }
   }
 
+  def waitForFlightsInPortState(testProbe: TestProbe): Any =
+    testProbe.fishForMessage(1.second) {
+      case ps: PortState => ps.flights.nonEmpty
+    }
+
+
   def offerAndWait[T](source: typed.ActorRef[T], offering: T): Unit = {
     source ! offering
   }

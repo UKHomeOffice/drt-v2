@@ -1,9 +1,7 @@
 package controllers.application
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
-import actors.RouteHistoricManifestActor
 import actors.routing.FlightsRouterActor
-import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.NotUsed
 import akka.actor.Props
 import akka.pattern.ask
@@ -58,22 +56,14 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
               simulationParams.terminal
             )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-            val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, ctrl.now, actorSystem, timeout, ec)
-
-            val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, ctrl.now, actorSystem, timeout, ec)
-
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
               val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
               Scenarios.simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
                 sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
-                splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.applicationService.splitAdjustments),
+                splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.queueAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.applicationService.manifestsProvider),
-                historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
-                historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
-                flightsActor = ctrl.actorService.flightsRouterActor,
                 portStateActor = portStateActor,
                 redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
                 egateBanksProvider = () => ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
@@ -106,22 +96,14 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
               simulationParams.terminal
             )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-            val manifestCacheLookup = RouteHistoricManifestActor.manifestCacheLookup(airportConfig.portCode, ctrl.now, actorSystem, timeout, ec)
-
-            val manifestCacheStore = RouteHistoricManifestActor.manifestCacheStore(airportConfig.portCode, ctrl.now, actorSystem, timeout, ec)
-
             val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws => {
               val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
               Scenarios.simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
                 sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
-                splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.applicationService.splitAdjustments),
+                splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.queueAdjustments),
                 flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-                liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ctrl.applicationService.manifestsProvider),
-                historicManifestsProvider = OptimisationProviders.historicManifestsProvider(airportConfig.portCode, ctrl.manifestLookupService, manifestCacheLookup, manifestCacheStore),
-                historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(airportConfig.portCode, ctrl.manifestLookupService),
-                flightsActor = ctrl.actorService.flightsRouterActor,
                 portStateActor = portStateActor,
                 redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
                 egateBanksProvider = () => ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
@@ -158,7 +140,6 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
   }
 
-
   private def simulationResultAsCsv(simulationParams: SimulationParams,
                                     terminal: Terminal,
                                     futureDeskRecMinutes: Future[DeskRecMinutes]): Future[Result] = {
@@ -182,8 +163,8 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         date.getLocalNextMidnight,
         terminal,
         airportConfig.desksExportQueueOrder,
-        simulationQueuesLookup(crunchMinutes),
-        staffLookupNoop,
+        (_, _) => Future.successful(Option(MinutesContainer(crunchMinutes.values.toSeq))),
+        (_, _) => Future.successful(None),
         None
       )
 
@@ -197,11 +178,4 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       result
     })
   }
-
-  private def simulationQueuesLookup(cms: SortedMap[TQM, CrunchMinute])(
-    terminalDate: (Terminal, UtcDate),
-    maybePit: Option[MillisSinceEpoch]
-  ): Future[Option[MinutesContainer[CrunchMinute, TQM]]] = Future(Option(MinutesContainer(cms.values.toSeq)))
-
-  private def staffLookupNoop: MinutesLookup[StaffMinute, TM] = (terminalDate: (Terminal, UtcDate), maybePit: Option[MillisSinceEpoch]) => Future(None)
 }

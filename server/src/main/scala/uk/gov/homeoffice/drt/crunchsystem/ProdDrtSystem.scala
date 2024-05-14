@@ -29,7 +29,9 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     now,
     airportConfig.queuesByTerminal,
     params.maybeRemovalCutOffSeconds,
-    paxFeedSourceOrder)
+    paxFeedSourceOrder,
+    splitsCalculator.terminalSplits,
+  )
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)
 

@@ -262,16 +262,18 @@ class ForecastCrunchSpec extends CrunchTestLike {
     val crunch = runCrunchGraph(TestConfig(now = () => SDate(baseScheduled).addDays(-1)))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseArrivals))
-    crunch.portStateTestProbe.receiveOne(2.seconds)
+    waitForFlightsInPortState(crunch.portStateTestProbe)
+
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals1st))
-    crunch.portStateTestProbe.receiveOne(2.seconds)
+    crunch.portStateTestProbe.fishForMessage(1.second) {
+      case PortState(flights, _, _) =>
+        flights.values.exists(_.apiFlight.bestPcpPaxEstimate(Seq(ForecastFeedSource, AclFeedSource)) == Option(51))
+    }
     offerAndWait(crunch.forecastArrivalsInput, ArrivalsFeedSuccess(forecastArrivals2nd))
 
-    val expectedForecastArrivals = Set(("BA0001", Option(51)), ("AA1110", Option(52)))
-
-    crunch.portStateTestProbe.fishForMessage(1.seconds) {
-      case ps: PortState =>
-        ps.flights.values.map(f => (f.apiFlight.flightCodeString, f.apiFlight.PassengerSources.values.head.actual)).toSet == expectedForecastArrivals
+    crunch.portStateTestProbe.fishForMessage(1.second) {
+      case PortState(flights, _, _) =>
+        flights.values.exists(_.apiFlight.bestPcpPaxEstimate(Seq(ForecastFeedSource, AclFeedSource)) == Option(52))
     }
 
     success

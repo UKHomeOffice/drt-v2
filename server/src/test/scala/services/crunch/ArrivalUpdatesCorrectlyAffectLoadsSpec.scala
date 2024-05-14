@@ -15,7 +15,7 @@ import scala.collection.immutable.{List, Map, SortedMap}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class ArrivalUpdatesCorrectlyAffectLoads extends CrunchTestLike {
+class ArrivalUpdatesCorrectlyAffectLoadsSpec extends CrunchTestLike {
   val crunch: CrunchGraphInputsAndProbes = runCrunchGraph(TestConfig(
     now = () => SDate("2019-01-01T01:00"),
     setPcpTimes = TestDefaults.setPcpFromBest,

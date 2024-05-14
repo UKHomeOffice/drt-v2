@@ -1,9 +1,7 @@
 package uk.gov.homeoffice.drt.service
 
-import actors.DrtStaticParameters.expireAfterMillis
 import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import actors._
-import actors.daily.RequestAndTerminate
 import actors.persistent.ManifestRouterActor
 import actors.persistent.arrivals._
 import actors.persistent.staffing.GetFeedStatuses
@@ -43,8 +41,6 @@ import play.api.Configuration
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import services.{Retry, RetryDelays, StreamSupervision}
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -198,48 +194,6 @@ trait FeedService {
     LiveBaseFeedSource -> liveBaseFeedArrivalsActor,
     LiveFeedSource -> liveFeedArrivalsActor,
   )
-
-  def populateFeedArrivals()
-                          (implicit materializer: Materializer): Future[Done] = {
-    Source(feedActors.toSeq)
-      .mapAsync(1) {
-        case (source, actor) =>
-          actor.ask(FeedArrivalsRouterActor.GetStateForDateRange(now().toUtcDate, now().toUtcDate))
-            .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
-            .flatMap(_.runWith(Sink.headOption))
-            .flatMap {
-              case Some((_, state)) if state.nonEmpty =>
-                log.info(s"Current $source feed is not empty. Skipping population of feed $source")
-                Future.successful(Done)
-              case _ =>
-                log.info(s"Current $source feed is empty. Populating feed $source")
-                val startTime = now().millisSinceEpoch
-                val legacyProps = source match {
-                  case AclFeedSource => Props(new AclForecastArrivalsActor(now, expireAfterMillis))
-                  case ForecastFeedSource => Props(new PortForecastArrivalsActor(now, expireAfterMillis))
-                  case LiveBaseFeedSource => Props(new CiriumLiveArrivalsActor(now, expireAfterMillis))
-                  case LiveFeedSource => Props(new PortLiveArrivalsActor(now, expireAfterMillis))
-                }
-                val legacyActor = system.actorOf(legacyProps, "legacy-arrivals")
-                requestAndTerminateActor
-                  .ask(RequestAndTerminate(legacyActor, GetState))
-                  .mapTo[ArrivalsState]
-                  .flatMap { state =>
-                    log.info(s"Populating $source feed with ${state.arrivals.size} arrivals")
-                    val feedArrivals = FeedArrivals(state.arrivals.values.map(ArrivalToFeedArrival.toFeedArrival(_, source)).toSeq)
-                    log.info(s"Converted arrivals to feed arrivals for $source")
-                    feedActors(source)
-                      .ask(feedArrivals)(new Timeout(5.minutes))
-                      .map { _ =>
-                        val took = now().millisSinceEpoch - startTime
-                        log.info(s"Finished populating $source feed. Took ${took.millis.toSeconds}s")
-                        Done
-                      }
-                  }
-            }
-      }
-      .run()
-  }
 
   val flightModelPersistence: ModelPersistence = Flight()
 
@@ -547,51 +501,5 @@ case class ProdFeedService(journalType: StreamingJournalLike,
       log.info(s"Using Noop Base Live Feed")
       arrivalsNoOp
     }
-  }
-}
-
-object ArrivalToFeedArrival {
-  def toLiveArrival(arrival: Arrival): LiveArrival =
-    LiveArrival(
-      operator = arrival.Operator.map(_.code),
-      maxPax = arrival.MaxPax,
-      totalPax = arrival.PassengerSources.headOption.flatMap(_._2.actual),
-      transPax = arrival.PassengerSources.headOption.flatMap(_._2.transit),
-      terminal = arrival.Terminal,
-      voyageNumber = arrival.VoyageNumber.numeric,
-      carrierCode = arrival.CarrierCode.code,
-      flightCodeSuffix = arrival.FlightCodeSuffix.map(_.suffix),
-      origin = arrival.Origin.iata,
-      scheduled = arrival.Scheduled,
-      estimated = arrival.Estimated,
-      touchdown = arrival.Actual,
-      estimatedChox = arrival.EstimatedChox,
-      actualChox = arrival.ActualChox,
-      status = arrival.Status.description,
-      gate = arrival.Gate,
-      stand = arrival.Stand,
-      runway = arrival.RunwayID,
-      baggageReclaim = arrival.BaggageReclaimId,
-    )
-
-  def toForecastArrival(arrival: Arrival): ForecastArrival =
-    ForecastArrival(
-      operator = arrival.Operator.map(_.code),
-      maxPax = arrival.MaxPax,
-      totalPax = arrival.PassengerSources.headOption.flatMap(_._2.actual),
-      transPax = arrival.PassengerSources.headOption.flatMap(_._2.transit),
-      terminal = arrival.Terminal,
-      voyageNumber = arrival.VoyageNumber.numeric,
-      carrierCode = arrival.CarrierCode.code,
-      flightCodeSuffix = arrival.FlightCodeSuffix.map(_.suffix),
-      origin = arrival.Origin.iata,
-      scheduled = arrival.Scheduled,
-    )
-
-  def toFeedArrival(arrival: Arrival, feedSource: FeedSource): FeedArrival = feedSource match {
-    case LiveBaseFeedSource => toLiveArrival(arrival)
-    case LiveFeedSource => toLiveArrival(arrival)
-    case ForecastFeedSource => toForecastArrival(arrival)
-    case AclFeedSource => toForecastArrival(arrival)
   }
 }

@@ -1,6 +1,6 @@
 package actors.daily
 
-import akka.actor.Props
+import akka.actor.{ActorRef, Props}
 import akka.persistence.SaveSnapshotSuccess
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -12,6 +12,7 @@ import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, SplitsForArrivalsMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
@@ -26,16 +27,46 @@ object TerminalDayFlightActor {
                               date: UtcDate,
                               now: () => SDateLike,
                               cutOff: Option[FiniteDuration],
-                              paxFeedSourceOrder: List[FeedSource]): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, None, cutOff, paxFeedSourceOrder))
+                              paxFeedSourceOrder: List[FeedSource],
+                              terminalSplits: Option[Splits],
+                              requestHistoricSplitsActor: Option[ActorRef],
+                              requestHistoricPaxActor: Option[ActorRef],
+                             ): Props =
+    Props(new TerminalDayFlightActor(
+      date.year,
+      date.month,
+      date.day,
+      terminal,
+      now,
+      None,
+      cutOff,
+      paxFeedSourceOrder,
+      terminalSplits,
+      requestHistoricSplitsActor,
+      requestHistoricPaxActor,
+    ))
 
   def propsPointInTime(terminal: Terminal,
                        date: UtcDate,
                        now: () => SDateLike,
                        pointInTime: MillisSinceEpoch,
                        cutOff: Option[FiniteDuration],
-                       paxFeedSourceOrder: List[FeedSource]): Props =
-    Props(new TerminalDayFlightActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), cutOff, paxFeedSourceOrder))
+                       paxFeedSourceOrder: List[FeedSource],
+                       terminalSplits: Option[Splits],
+                      ): Props =
+    Props(new TerminalDayFlightActor(
+      date.year,
+      date.month,
+      date.day,
+      terminal,
+      now,
+      Option(pointInTime),
+      cutOff,
+      paxFeedSourceOrder,
+      terminalSplits,
+      None,
+      None,
+    ))
 }
 
 class TerminalDayFlightActor(year: Int,
@@ -46,8 +77,10 @@ class TerminalDayFlightActor(year: Int,
                              override val maybePointInTime: Option[MillisSinceEpoch],
                              maybeRemovalMessageCutOff: Option[FiniteDuration],
                              paxFeedSourceOrder: List[FeedSource],
+                             terminalSplits: Option[Splits],
+                             maybeRequestHistoricSplitsActor: Option[ActorRef],
+                             maybeRequestHistoricPaxActor: Option[ActorRef],
                             ) extends RecoveryActorLike {
-
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
@@ -136,35 +169,56 @@ class TerminalDayFlightActor(year: Int,
     case m => log.error(s"Got unexpected message: $m")
   }
 
+  private def requestMissingHistoricSplits(): Unit =
+    maybeRequestHistoricSplitsActor.foreach { requestActor =>
+      val missingHistoricSplits = state.flights.values.collect {
+        case fws if !fws.apiFlight.Origin.isDomesticOrCta && !fws.splits.exists(_.source == Historical) => fws.unique
+      }
+      requestActor ! missingHistoricSplits
+    }
+
+  private def requestMissingPax(): Unit = {
+    maybeRequestHistoricPaxActor.foreach { requestActor =>
+      val missingPaxSource = state.flights.values.collect {
+        case fws if !fws.apiFlight.Origin.isDomesticOrCta && fws.apiFlight.hasNoPaxSource => fws.unique
+      }
+      requestActor ! missingPaxSource
+    }
+  }
+
+  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[MillisSinceEpoch] = {
+    val (updatedState, minutesToUpdate) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
+
+    state = updatedState
+
+    requestMissingPax()
+    requestMissingHistoricSplits()
+
+    minutesToUpdate
+  }
+
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =
     if (diff.nonEmpty) {
-      val timestamp = now().millisSinceEpoch
-      val (updatedState, _) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
-      state = updatedState
-
-      val replyToAndMessage = List((sender(), Set.empty))
-      val message = flightWithSplitsDiffToMessage(diff, timestamp)
-      persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
-    } else sender() ! Set.empty
+      val minutesToUpdate = applyDiffAndPersist(diff.applyTo)
+      val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
+      persistAndMaybeSnapshotWithAck(message, List((sender(), minutesToUpdate)))
+    }
+    else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
-      val timestamp = now().millisSinceEpoch
-      val (updatedState, minutesToUpdate) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
-      state = updatedState
-
-      val replyToAndMessage = List((sender(), minutesToUpdate))
-      val message = arrivalsDiffToMessage(diff, timestamp)
-      persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
+      val minutesToUpdate = applyDiffAndPersist(diff.applyTo)
+      val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
+      persistAndMaybeSnapshotWithAck(message, List((sender(), minutesToUpdate)))
     } else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {
       val timestamp = now().millisSinceEpoch
-      val (updatedState, _) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
+      val (updatedState, minutes) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
       state = updatedState
 
-      val replyToAndMessage = List((sender(), Set.empty))
+      val replyToAndMessage = List((sender(), minutes))
       val message = splitsForArrivalsToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
     } else sender() ! Set.empty
@@ -201,7 +255,7 @@ class TerminalDayFlightActor(year: Int,
           val updateFws: (Option[ApiFlightWithSplits], Arrival) => Option[ApiFlightWithSplits] = (maybeExistingFws, incoming) => {
             val updated = maybeExistingFws
               .map(existingFws => existingFws.copy(apiFlight = existingFws.apiFlight.update(incoming)))
-              .getOrElse(ApiFlightWithSplits(incoming, Set(), Option(createdAt)))
+              .getOrElse(ApiFlightWithSplits(incoming, terminalSplits.toSet, Option(createdAt)))
               .copy(lastUpdated = Option(createdAt))
             Option(updated)
           }

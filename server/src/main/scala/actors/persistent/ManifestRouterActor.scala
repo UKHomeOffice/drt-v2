@@ -18,7 +18,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
-import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
@@ -77,7 +77,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   )
 
   var state: ApiFeedState = initialState
-  private var maybeUpdatesSubscriber: Option[ActorRef] = None
 
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
@@ -111,10 +110,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
   )
 
   override def receiveCommand: Receive = {
-    case AddUpdatesSubscriber(queueActor) =>
-      log.info("Received subscriber")
-      maybeUpdatesSubscriber = Option(queueActor)
-
     case ManifestsFeedSuccess(DqManifests(updatedLZF, newManifests), createdAt) =>
       updateRequestsQueue = (sender(), VoyageManifests(newManifests)) :: updateRequestsQueue
 
@@ -196,7 +191,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     processingRequest = true
     val eventualEffects = sendUpdates(updates)
     eventualEffects
-      .map(updatedMillis => maybeUpdatesSubscriber.foreach(_ ! updatedMillis))
       .onComplete { _ =>
         processingRequest = false
         replyTo ! StatusReply.Ack

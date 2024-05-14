@@ -36,14 +36,12 @@ object FlightTableRow {
 
   import FlightTableComponents._
 
-  type OriginMapperF = PortCode => VdomNode
-
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShareFlightCodes: Seq[String],
                    idx: Int,
-                   originMapper: OriginMapperF = portCode => portCode.toString,
+                   originMapper: PortCode => VdomNode = portCode => portCode.toString,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,

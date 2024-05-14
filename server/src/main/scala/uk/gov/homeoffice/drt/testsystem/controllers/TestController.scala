@@ -56,8 +56,8 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
 
   private def saveVoyageManifest(voyageManifest: VoyageManifest): Future[Any] = {
     log.info(s"Sending Splits: ${voyageManifest.EventCode} to Test Actor")
-    ctrl.persistentActors.manifestsRouterActor
-      .ask(ManifestsFeedSuccess(DqManifests(0, VoyageManifests(Set(voyageManifest)).manifests)))
+    ctrl.applicationService
+      .persistManifests(ManifestsFeedSuccess(DqManifests(0, VoyageManifests(Set(voyageManifest)).manifests)))
   }
 
   def resetData: Future[Any] = {
