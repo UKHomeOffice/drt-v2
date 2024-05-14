@@ -75,8 +75,8 @@ case class ManifestLookup(tables: Tables)
   private def manifestPaxForScheduled(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Option[(Int, Int)]] =
     manifestsForScheduled(flightKeys).map {
       case manifests if manifests.nonEmpty =>
-        val totalPax = manifests.size / manifests.size
-        val transPax = manifests.count(_.inTransit) / manifests.size
+        val totalPax = manifests.size / flightKeys.size
+        val transPax = manifests.count(_.inTransit) / flightKeys.size
         Option(totalPax, transPax)
       case _ => None
     }
