@@ -25,7 +25,8 @@ import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
-import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits}
+import services.arrivals
+import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits, RunnableMergedArrivals}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
@@ -42,7 +43,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
-import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService, RunnableMergedArrivals}
+import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService}
 import uk.gov.homeoffice.drt.testsystem.TestActors.MockAggregatedArrivalsActor
 import uk.gov.homeoffice.drt.time._
 
@@ -284,7 +285,7 @@ class TestDrtActor extends Actor {
           portStateActor,
           historicManifestLookups.maybeHistoricManifestPax)
 
-        val (mergeArrivalsRequestActor, mergeArrivalsKillSwitch: UniqueKillSwitch) = RunnableMergedArrivals(
+        val (mergeArrivalsRequestActor, mergeArrivalsKillSwitch: UniqueKillSwitch) = arrivals.RunnableMergedArrivals(
           portCode = tc.airportConfig.portCode,
           flightsRouterActor = portStateActor,
           aggregatedArrivalsActor = actors.aggregatedArrivalsActor,

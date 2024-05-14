@@ -7,7 +7,7 @@ import actors.persistent._
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
@@ -24,8 +24,7 @@ import play.api.Configuration
 import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
-import services.arrivals.MergeArrivals.FeedArrivalSet
-import services.arrivals.{ArrivalsAdjustments, MergeArrivals, RunnableHistoricPax, RunnableHistoricSplits}
+import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits, RunnableMergedArrivals}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
@@ -430,62 +429,4 @@ case class ApplicationService(journalType: StreamingJournalLike,
         }
     }
   }
-}
-
-object RunnableMergedArrivals {
-  def apply(portCode: PortCode,
-            flightsRouterActor: ActorRef,
-            aggregatedArrivalsActor: ActorRef,
-            mergeArrivalsQueueActor: ActorRef,
-            feedArrivalsForDate: Seq[DateLike => Future[FeedArrivalSet]],
-            mergeArrivalsQueue: SortedSet[ProcessingRequest],
-            mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest,
-            setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
-            addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
-           )
-           (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): (ActorRef, UniqueKillSwitch) = {
-    val existingMergedArrivals: UtcDate => Future[Set[UniqueArrival]] =
-      (date: UtcDate) =>
-        FlightsProvider(flightsRouterActor)
-          .allTerminalsDateRange(date, date).map(_._2.map(_.unique).toSet)
-          .runWith(Sink.fold(Set[UniqueArrival]())(_ ++ _))
-          .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
-
-    val merger = MergeArrivals(
-      existingMergedArrivals,
-      feedArrivalsForDate,
-      ArrivalsAdjustments.adjustmentsForPort(portCode),
-    )
-
-    val mergeArrivalsFlow = MergeArrivals.processingRequestToArrivalsDiff(
-      mergeArrivalsForDate = merger,
-      setPcpTimes = setPcpTimes,
-      addArrivalPredictions = addArrivalPredictions,
-      updateAggregatedArrivals = aggregatedArrivalsActor ! _,
-    )
-
-    val (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =
-      startQueuedRequestProcessingGraph(
-        mergeArrivalsFlow,
-        mergeArrivalsQueueActor,
-        mergeArrivalsQueue,
-        flightsRouterActor,
-        "arrivals",
-        mergeArrivalRequest,
-      )
-    (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch)
-  }
-
-  private def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[ProcessingRequest, A, NotUsed],
-                                                   persistentQueueActor: ActorRef,
-                                                   initialQueue: SortedSet[ProcessingRequest],
-                                                   sinkActor: ActorRef,
-                                                   graphName: String,
-                                                   processingRequest: MillisSinceEpoch => ProcessingRequest,
-                                                  )
-                                                  (implicit materializer: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource(persistentQueueActor, processingRequest, initialQueue, graphName)
-    QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
-  }
-
 }
