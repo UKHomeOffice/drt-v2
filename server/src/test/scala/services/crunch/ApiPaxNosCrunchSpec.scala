@@ -111,7 +111,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
           terminalProcessingTimes = procTimes,
           queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
         ),
-        historicManifestLookup = Option(MockManifestLookupService(maybeBestManifest = Option(manifest), maybeManifestPaxCount = Option(ManifestPaxCount(manifest, Historical))))
+        historicManifestLookup = Option(MockManifestLookupService(maybeBestManifest = Option(manifest)))
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -119,9 +119,45 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case PortState(flights, _, _) =>
           val maybeSplits = flights.values.headOption.map(_.splits)
-          val paxSources = flights.values.headOption.map(_.apiFlight.PassengerSources)
+          maybeSplits.exists(_.exists(_.source == Historical))
+      }
 
-          maybeSplits.exists(_.exists(_.source == Historical)) && paxSources.exists(_.exists(_._1 == HistoricApiFeedSource))
+      success
+    }
+  }
+
+  "Given an historic pax provider and a flight with no forecast pax nos" >> {
+    "Then the flight should have historic pax added to it" >> {
+      val arrival = forecastArrival
+      val manifest = BestAvailableManifest(
+        source = Historical,
+        PortCode("LHR"),
+        PortCode("JFK"),
+        VoyageNumber(arrival.voyageNumber),
+        CarrierCode("BA"),
+        SDate(arrival.scheduled),
+        Seq(
+          ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(9)), inTransit = false, Option("a")),
+          ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(23)), inTransit = false, Option("b")),
+        ),
+        Option(EventTypes.DC),
+      )
+
+      val crunch = runCrunchGraph(TestConfig(
+        now = () => SDate(scheduled),
+        airportConfig = defaultAirportConfig.copy(
+          terminalProcessingTimes = procTimes,
+          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+        ),
+        historicManifestLookup = Option(MockManifestLookupService(maybeManifestPaxCount = Option(ManifestPaxCount(manifest, Historical))))
+      ))
+
+      offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
+
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
+        case PortState(flights, _, _) =>
+          val paxSources = flights.values.headOption.map(_.apiFlight.PassengerSources)
+          paxSources.exists(_.exists(_._1 == HistoricApiFeedSource))
       }
 
       success
