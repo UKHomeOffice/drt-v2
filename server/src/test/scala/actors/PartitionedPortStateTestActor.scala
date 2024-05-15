@@ -84,7 +84,6 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     actor.ask(message).foreach { _ =>
       message match {
         case splits: SplitsForArrivals if splits.splits.keys.nonEmpty =>
-          println(s"Received splits for ${splits.splits.keys.size} flights")
           val updatedMillis = splits.splits.keys.map(_.scheduled)
           updateFlights(actor, Seq(), updatedMillis.min, updatedMillis.max)
 
