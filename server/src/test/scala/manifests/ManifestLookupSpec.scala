@@ -17,8 +17,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class ManifestLookupSpec extends CrunchTestLike with Before {
-  skipped("Postgres queries incompatible with H2")
-
   override def before: Any = {
     H2Tables.dropAndCreateH2Tables()
     val scheduled = SDate("2024-05-15T12:00Z")
@@ -72,6 +70,8 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
 
   "ManifestLookup" should {
     "lookup a manifest" in {
+      skipped("Postgres queries incompatible with H2")
+
       val manifestLookup = ManifestLookup(H2Tables)
       val manifest = manifestLookup.maybeBestAvailableManifest(PortCode("LHR"), PortCode("JFK"), VoyageNumber(1), SDate("2024-05-15T12:00Z"))
       val expectedKey = UniqueArrivalKey(PortCode("LHR"), PortCode("JFK"), VoyageNumber(1), SDate("2024-05-15T12:00Z"))
