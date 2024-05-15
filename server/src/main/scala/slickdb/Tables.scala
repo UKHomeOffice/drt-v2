@@ -120,7 +120,7 @@ trait Tables {
   }
 
   /** Table description of table arrival. Objects of this class serve as prototypes for rows in queries. */
-  class VoyageManifestPassengerInfo(_tableTag: Tag) extends profile.api.Table[VoyageManifestPassengerInfoRow](_tableTag, maybeSchema, "voyage_manifest_passenger_info") {
+  class VoyageManifestPassengerInfoTable(_tableTag: Tag) extends profile.api.Table[VoyageManifestPassengerInfoRow](_tableTag, maybeSchema, "voyage_manifest_passenger_info") {
     def * = (event_code, arrival_port_code, departure_port_code, voyage_number, carrier_code, scheduled_date, day_of_week, week_of_year, document_type, document_issuing_country_code, eea_flag, age, disembarkation_port_code, in_transit_flag, disembarkation_port_country_code, nationality_country_code, passenger_identifier, in_transit, json_file) <> (VoyageManifestPassengerInfoRow.tupled, VoyageManifestPassengerInfoRow.unapply)
 
     val event_code: Rep[String] = column[String]("event_code")
@@ -202,7 +202,7 @@ trait Tables {
   }
 
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */
-  lazy val VoyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfo(tag))
+  lazy val VoyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfoTable(tag))
   lazy val ProcessedJson = new TableQuery(tag => new ProcessedJsonTable(tag))
   lazy val ProcessedZip = new TableQuery(tag => new ProcessedZipTable(tag))
   lazy val Arrival = new TableQuery(tag => new Arrival(tag))

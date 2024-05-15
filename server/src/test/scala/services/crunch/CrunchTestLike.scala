@@ -40,6 +40,22 @@ object H2Tables extends Tables {
   val db: profile.backend.Database = profile.api.Database.forConfig("h2-aggregated-db")
 
   override def run[R](action: DBIOAction[R, NoStream, Nothing]): Future[R] = db.run[R](action)
+
+  import profile.api._
+
+  private val tables = Seq(
+    TableQuery[ProcessedZipTable],
+    TableQuery[ProcessedJsonTable],
+    TableQuery[VoyageManifestPassengerInfoTable],
+  )
+
+  def dropAndCreateH2Tables()
+                           (implicit ec: ExecutionContext): Unit =
+    Await.result(
+      run(DBIO.seq(tables.map(_.schema.dropIfExists): _*))
+        .flatMap(_ => run(DBIO.seq(tables.map(_.schema.create): _*))),
+      1.second
+    )
 }
 
 object TestDefaults {
