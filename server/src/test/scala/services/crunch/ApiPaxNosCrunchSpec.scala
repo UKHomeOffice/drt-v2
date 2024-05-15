@@ -88,30 +88,26 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
     }
   }
 
+  def manifest(arrival: ForecastArrival): BestAvailableManifest = BestAvailableManifest(
+    source = Historical,
+    PortCode("LHR"),
+    PortCode("JFK"),
+    VoyageNumber(arrival.voyageNumber),
+    CarrierCode("BA"),
+    SDate(arrival.scheduled),
+    Seq(
+      ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(9)), inTransit = false, Option("a")),
+      ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(23)), inTransit = false, Option("b")),
+    ),
+    Option(EventTypes.DC),
+  )
+
   "Given an historic manifests provider and a flight with no historic splits" >> {
     "Then the flight should have historic splits added to it" >> {
       val arrival = forecastArrival
-      val manifest = BestAvailableManifest(
-        source = Historical,
-        PortCode("LHR"),
-        PortCode("JFK"),
-        VoyageNumber(arrival.voyageNumber),
-        CarrierCode("BA"),
-        SDate(arrival.scheduled),
-        Seq(
-          ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(9)), inTransit = false, Option("a")),
-          ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(23)), inTransit = false, Option("b")),
-        ),
-        Option(EventTypes.DC),
-      )
-
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        airportConfig = defaultAirportConfig.copy(
-          terminalProcessingTimes = procTimes,
-          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-        ),
-        historicManifestLookup = Option(MockManifestLookupService(maybeBestManifest = Option(manifest)))
+        historicManifestLookup = Option(MockManifestLookupService(maybeBestManifest = Option(manifest(arrival))))
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
@@ -129,27 +125,9 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
   "Given an historic pax provider and a flight with no forecast pax nos" >> {
     "Then the flight should have historic pax added to it" >> {
       val arrival = forecastArrival
-      val manifest = BestAvailableManifest(
-        source = Historical,
-        PortCode("LHR"),
-        PortCode("JFK"),
-        VoyageNumber(arrival.voyageNumber),
-        CarrierCode("BA"),
-        SDate(arrival.scheduled),
-        Seq(
-          ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(9)), inTransit = false, Option("a")),
-          ManifestPassengerProfile(Nationality("GBR"), Option(Passport), Option(PaxAge(23)), inTransit = false, Option("b")),
-        ),
-        Option(EventTypes.DC),
-      )
-
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        airportConfig = defaultAirportConfig.copy(
-          terminalProcessingTimes = procTimes,
-          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-        ),
-        historicManifestLookup = Option(MockManifestLookupService(maybeManifestPaxCount = Option(ManifestPaxCount(manifest, Historical))))
+        historicManifestLookup = Option(MockManifestLookupService(maybeManifestPaxCount = Option(ManifestPaxCount(manifest(arrival), Historical))))
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))

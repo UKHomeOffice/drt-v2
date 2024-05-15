@@ -62,7 +62,7 @@ object RunnableHistoricSplits extends RunnableHistoricManifestsLike {
       maybeBestAvailableManifest(portCode, origin, voyageNumber, scheduled).map(_._2)
     }
     val maybeHistoricSplits = RunnableHistoricSplits.maybeHistoricSplits(getManifest, splitsFromManifest)
-    val persistSplits: SplitsForArrivals => Future[Done] = splits => flightsRouterActor.ask(splits.splits).map(_ => Done)
+    val persistSplits: SplitsForArrivals => Future[Done] = splits => flightsRouterActor.ask(splits).map(_ => Done)
     val flow = RunnableHistoricSplits.arrivalsToHistoricSplits(maybeHistoricSplits, persistSplits)
     constructAndRunGraph(flow)
   }
