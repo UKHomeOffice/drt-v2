@@ -217,8 +217,7 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
     case StreamFailure(t) => log.error(s"Stream failed", t)
 
     case updates: FlightUpdates =>
-      val replyTo = sender()
-      askThenAck(flightsRouterActor, updates, replyTo)
+      askThenAck(flightsRouterActor, updates, sender())
 
     case noUpdates: PortStateMinutes[_, _] if noUpdates.isEmpty =>
       sender() ! StatusReply.Ack

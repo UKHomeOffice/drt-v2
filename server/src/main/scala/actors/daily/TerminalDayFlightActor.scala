@@ -11,9 +11,9 @@ import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, HistoricApiFeedSource, MlFeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{FlightsWithSplitsDiffMessage, FlightsWithSplitsMessage, SplitsForArrivalsMessage}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
@@ -174,16 +174,25 @@ class TerminalDayFlightActor(year: Int,
       val missingHistoricSplits = state.flights.values.collect {
         case fws if !fws.apiFlight.Origin.isDomesticOrCta && !fws.splits.exists(_.source == Historical) => fws.unique
       }
-      requestActor ! missingHistoricSplits
+      if (missingHistoricSplits.nonEmpty)
+        requestActor ! missingHistoricSplits
     }
 
   private def requestMissingPax(): Unit = {
     maybeRequestHistoricPaxActor.foreach { requestActor =>
       val missingPaxSource = state.flights.values.collect {
-        case fws if !fws.apiFlight.Origin.isDomesticOrCta && fws.apiFlight.hasNoPaxSource => fws.unique
+        case fws if !fws.apiFlight.Origin.isDomesticOrCta && hasNoForecastPax(fws.apiFlight) => fws.unique
       }
-      requestActor ! missingPaxSource
+      if (missingPaxSource.nonEmpty)
+        requestActor ! missingPaxSource
     }
+  }
+
+  private def hasNoForecastPax(arrival: Arrival): Boolean = {
+    val existingSources: Set[FeedSource] = arrival.PassengerSources.keySet
+    val acceptableSources: Set[FeedSource] = Set(HistoricApiFeedSource, MlFeedSource, ForecastFeedSource)
+    val acceptableExistingSources = existingSources.intersect(acceptableSources)
+    acceptableExistingSources.isEmpty
   }
 
   private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[MillisSinceEpoch] = {

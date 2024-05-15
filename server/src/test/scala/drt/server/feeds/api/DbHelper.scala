@@ -46,7 +46,7 @@ object DbHelper {
       in_transit = false,
       json_file = jsonFileName)
 
-    Await.ready(tables.run(TableQuery[tables.VoyageManifestPassengerInfo] += row), 1.second)
+    Await.ready(tables.run(TableQuery[tables.VoyageManifestPassengerInfoTable] += row), 1.second)
   }
 
 }

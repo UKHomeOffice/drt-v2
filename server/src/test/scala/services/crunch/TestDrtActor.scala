@@ -4,9 +4,9 @@ import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
+import actors.persistent.ManifestRouterActor
 import actors.persistent.arrivals._
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
@@ -19,14 +19,13 @@ import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovements}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import services.arrivals
-import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits, RunnableMergedArrivals}
+import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
@@ -215,7 +214,7 @@ class TestDrtActor extends Actor {
       val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
       val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
       val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
-      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsRouterActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal, paxFeedSourceOrder)))
+      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsRouterActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal, paxFeedSourceOrder)), "partitioned-port-state-actor")
       tc.initialPortState match {
         case Some(ps) =>
           val withPcpTimes = ps.flights.view.mapValues {
@@ -253,7 +252,7 @@ class TestDrtActor extends Actor {
 
       val splitsCalculator = SplitsCalculator(ptqa, tc.airportConfig.terminalPaxSplits, splitAdjustments)
 
-      val startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) = () => {
+      val startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]) = () => {
         implicit val timeout: Timeout = new Timeout(1 second)
 
         val historicManifestLookups: ManifestLookupLike = tc.historicManifestLookup match {
@@ -274,13 +273,13 @@ class TestDrtActor extends Actor {
           (LiveFeedSource, true, None, liveFeedArrivalsActor)
         ))
 
-        val historicSplitsActor = RunnableHistoricSplits(
+        val (historicSplitsActor, historicSplitsKillSwitch) = RunnableHistoricSplits(
           tc.airportConfig.portCode,
           portStateActor,
           splitsCalculator.splitsForManifest,
           historicManifestLookups.maybeBestAvailableManifest)
 
-        val historicPaxActor = RunnableHistoricPax(
+        val (historicPaxActor, historicPaxKillSwitch) = RunnableHistoricPax(
           tc.airportConfig.portCode,
           portStateActor,
           historicManifestLookups.maybeHistoricManifestPax)
@@ -357,8 +356,11 @@ class TestDrtActor extends Actor {
 
         staffActor ! AddUpdatesSubscriber(deploymentRequestActor)
 
+        val killSwitches = Iterable(mergeArrivalsKillSwitch, historicSplitsKillSwitch, historicPaxKillSwitch,
+          deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+
         (mergeArrivalsRequestActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestActor,
-          mergeArrivalsKillSwitch, deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+          killSwitches)
       }
 
       val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
