@@ -196,14 +196,15 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     }
   }
 
+  val protocol = if (isSecure) "https://" else "http://"
+  val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
+  val redirectUrl = protocol + baseDomain + fromPort
+
   def index: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     if (user.hasRole(airportConfig.role)) {
       Ok(views.html.index("DRT - BorderForce", airportConfig.portCode.toString, googleTrackingCode, user.id))
     } else {
-      val protocol = if (isSecure) "https://" else "http://"
-      val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
-      val redirectUrl = protocol + baseDomain + fromPort
       log.info(s"User lacks ${airportConfig.role} role. Redirecting to $redirectUrl")
       Redirect(Call("get", redirectUrl))
     }
@@ -234,6 +235,25 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     healthChecker.checksPassing.map {
       case true => Ok("health check ok")
       case _ => InternalServerError("health check failed")
+    }
+  }
+
+  def logoutUser(username: String) = Action.async { _ =>
+    val realmUrlOption = config.getOptional[String]("key-cloak.url")
+    val clientIdOption = config.getOptional[String]("key-cloak.client_id")
+    val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
+    (realmUrlOption, clientIdOption, clientSecretOption) match {
+      case (Some(realmUrl), Some(clientId), Some(clientSecret)) =>
+        val authClient = new KeyCloakAuth(realmUrl, clientId, clientSecret) with ProdSendAndReceive
+        log.info(s"Logout $username")
+        authClient.logout(username, realmUrl).map(_ => Redirect(Call("get", redirectUrl))).recover {
+          case e =>
+            log.error(s"Failed to logout user $username: ${e.getMessage}")
+            InternalServerError("Failed to logout user")
+        }
+      case _ =>
+        log.error(s"Failed to logout user $username: Feature not implemented")
+        Future.successful(Redirect(Call("get", redirectUrl)))
     }
   }
 

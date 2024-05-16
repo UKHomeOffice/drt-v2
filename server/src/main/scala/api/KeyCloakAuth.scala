@@ -40,6 +40,19 @@ abstract case class KeyCloakAuth(tokenUrl: String, clientId: String, clientSecre
       Unmarshal(r).to[KeyCloakAuthResponse]
     }
   }
+
+  def logout(userId: String,logoutUrl:String): Future[HttpResponse] = {
+    val request = HttpRequest(
+      method = HttpMethods.POST,
+      uri = Uri(s"$logoutUrl/users/${userId}/logout"),
+      headers = List(Accept(MediaTypes.`application/json`)),
+      entity = HttpEntity.Empty
+    )
+
+    val requestWithHeaders = request.addHeader(Accept(MediaTypes.`application/json`))
+
+    sendAndReceive(requestWithHeaders)
+  }
 }
 
 sealed trait KeyCloakAuthResponse
