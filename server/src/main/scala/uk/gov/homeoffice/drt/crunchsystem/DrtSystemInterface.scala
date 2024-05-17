@@ -12,7 +12,7 @@ import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
-import slickdb.Tables
+import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.arrivals.Splits
@@ -40,7 +40,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
   val env: AppEnvironment = AppEnvironment(config.getOptional[String]("env").getOrElse("other"))
 
-  val db: Tables
+  val db: AggregatedDbTables
   val airportConfig: AirportConfig
   val params: DrtParameters
 

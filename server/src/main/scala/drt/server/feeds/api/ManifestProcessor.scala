@@ -9,7 +9,7 @@ import manifests.UniqueArrivalKey
 import org.slf4j.LoggerFactory
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
-import slickdb.Tables
+import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.CarrierCode
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
@@ -24,7 +24,7 @@ trait ManifestProcessor {
   def reportNoNewData(processedAt: MillisSinceEpoch): Future[Done]
 }
 
-case class DbManifestProcessor(tables: Tables,
+case class DbManifestProcessor(tables: AggregatedDbTables,
                                destinationPortCode: PortCode,
                                persistManifests: ManifestsFeedResponse => Future[Done],
                               )

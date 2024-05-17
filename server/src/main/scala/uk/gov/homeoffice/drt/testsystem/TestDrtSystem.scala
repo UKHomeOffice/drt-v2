@@ -17,6 +17,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.FeedService
 import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
@@ -34,7 +35,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
 
   log.warn("Using test System")
 
-  lazy override val db: Tables = AggregateDbH2
+  lazy override val db: AggregatedDbTables = AggregateDbH2
 
   override def getRoles(config: Configuration,
                         headers: Headers,

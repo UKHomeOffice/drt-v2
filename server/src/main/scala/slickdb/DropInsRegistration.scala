@@ -37,7 +37,7 @@ trait DropInsRegistrationTableLike {
   def getDropInRegistrations(email: String)(implicit ex: ExecutionContext): Future[Seq[DropInsRegistrationRow]]
 }
 
-case class DropInsRegistrationTable(tables: Tables) extends DropInsRegistrationTableLike {
+case class DropInsRegistrationTable(tables: AggregatedDbTables) extends DropInsRegistrationTableLike {
   val dropInsRegistrationTable = TableQuery[DropInsRegistration]
 
   private def getCurrentTime = new Timestamp(new DateTime().getMillis)

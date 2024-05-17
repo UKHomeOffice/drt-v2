@@ -36,7 +36,7 @@ import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
-import slickdb.Tables
+import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
@@ -69,7 +69,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               now: () => SDateLike,
                               params: DrtParameters,
                               config: Configuration,
-                              db: Tables,
+                              db: AggregatedDbTables,
                               feedService: FeedService,
                               manifestLookups: ManifestLookupsLike,
                               manifestLookupService: ManifestLookupLike,
