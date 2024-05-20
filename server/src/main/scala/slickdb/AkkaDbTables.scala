@@ -10,15 +10,11 @@ import scala.concurrent.Future
 case class JournalRow(ordering: Long,
                       persistenceId: String,
                       sequenceNumber: Long,
-                      deleted: Option[Boolean],
-                      tags: Option[String],
-                      message: Array[Byte],
                      )
 
 case class SnapshotRow(persistenceId: String,
                        sequenceNumber: Long,
                        created: Long,
-                       snapshot: Array[Byte],
                       )
 
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
@@ -40,20 +36,16 @@ trait AkkaDbTables {
     val ordering: Rep[Long] = column[Long]("ordering")
     val persistenceId: Rep[String] = column[String]("persistence_id", O.Length(255, varying = true))
     val sequenceNumber: Rep[Long] = column[Long]("sequence_number")
-    val deleted: Rep[Option[Boolean]] = column[Option[Boolean]]("deleted")
-    val tags: Rep[Option[String]] = column[Option[String]]("tags")
-    val message: Rep[Array[Byte]] = column[Array[Byte]]("message")
 
-    def * = (ordering, persistenceId, sequenceNumber, deleted, tags, message).mapTo[JournalRow]
+    def * = (ordering, persistenceId, sequenceNumber).mapTo[JournalRow]
   }
 
   class SnapshotTable(_tableTag: Tag) extends Table[SnapshotRow](_tableTag, maybeSchema, "snapshot") {
     val persistenceId: Rep[String] = column[String]("persistence_id", O.Length(255, varying = true))
     val sequenceNumber: Rep[Long] = column[Long]("sequence_number")
     val created: Rep[Long] = column[Long]("created")
-    val snapshot: Rep[Array[Byte]] = column[Array[Byte]]("snapshot")
 
-    def * = (persistenceId, sequenceNumber, created, snapshot).mapTo[SnapshotRow]
+    def * = (persistenceId, sequenceNumber, created).mapTo[SnapshotRow]
   }
 
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */
