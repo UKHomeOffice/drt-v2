@@ -191,7 +191,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   def viewedFeatureGuideIds: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
       import spray.json.DefaultJsonProtocol.{StringJsonFormat, immSeqFormat}
-      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.featureGuideViewService.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
     }
   }
