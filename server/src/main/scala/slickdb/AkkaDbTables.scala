@@ -32,7 +32,7 @@ trait AkkaDbTables {
       None
   }
 
-  class JournalTable(_tableTag: Tag) extends Table[JournalRow](_tableTag, maybeSchema, "processed_json") {
+  class JournalTable(_tableTag: Tag) extends Table[JournalRow](_tableTag, maybeSchema, "journal") {
     val ordering: Rep[Long] = column[Long]("ordering")
     val persistenceId: Rep[String] = column[String]("persistence_id", O.Length(255, varying = true))
     val sequenceNumber: Rep[Long] = column[Long]("sequence_number")

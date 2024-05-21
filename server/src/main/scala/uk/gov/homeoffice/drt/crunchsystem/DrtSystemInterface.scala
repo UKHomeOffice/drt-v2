@@ -10,15 +10,12 @@ import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments}
-import services.crunch.CrunchSystem.paxTypeQueueAllocator
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments}
 import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
-import uk.gov.homeoffice.drt.arrivals.Splits
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}

@@ -2,9 +2,9 @@ package drt.client.services.handlers
 
 import diode.AnyAction.aType
 import diode.Implicits.runAfterImpl
-import diode.data.{Pending, Pot, Ready}
+import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{DoNothing, GetSlaConfigs, RemoveSlasUpdate, RetryActionAfter, SaveSlasUpdate, UpdateSlaConfigs}
+import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs

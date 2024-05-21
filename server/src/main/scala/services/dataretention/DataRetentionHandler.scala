@@ -129,8 +129,16 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
 
   private def purgeOldPersistenceIds(persistenceIds: Iterable[String]): Future[Done] =
     Source(persistenceIds.toList)
-      .mapAsync(1)(deletePersistenceId)
+      .mapAsync(1) { pId =>
+        log.info(s"Deleting persistenceId $pId")
+        deletePersistenceId(pId)
+      }
       .run()
+      .recover {
+        case t: Throwable =>
+          log.error("Failed to delete persistenceIds", t)
+          Done
+      }
 
   private def purgeOldSequenceNumbers(persistenceIds: Iterable[String]): Future[Done] =
     Source(persistenceIds.toList)
@@ -152,4 +160,9 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
             }
       }
       .run()
+      .recover {
+        case t: Throwable =>
+          log.error("Failed to delete sequence numbers", t)
+          Done
+      }
 }

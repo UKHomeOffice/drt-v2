@@ -6,7 +6,7 @@ import drt.client.services.SPACircuit
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Close, Flag}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Flag
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.facade.React.Node
 import japgolly.scalajs.react.vdom.html_<^._
