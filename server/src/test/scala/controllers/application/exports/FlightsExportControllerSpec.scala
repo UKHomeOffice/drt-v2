@@ -77,10 +77,10 @@ class FlightsExportControllerSpec extends PlaySpec {
       val result = Await.ready(controller.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString = "2023-11-06",
         pointInTime = SDate("2023-11-06T00:00").millisSinceEpoch,
         terminalName = "T1")
-        .apply(FakeRequest().withHeaders("X-Auth-Email" -> "test@test.com",
-          "X-Auth-Username" -> "test",
-          "X-Auth-Userid" -> "test",
-          "X-Auth-Roles" -> s"TEST,${ApiView.name}")), 1.second)
+        .apply(FakeRequest().withHeaders("X-Forwarded-Email" -> "test@test.com",
+          "X-Forwarded-Preferred-Username" -> "test",
+          "X-Forwarded-User" -> "test",
+          "X-Forwarded-Groups" -> s"TEST,${ApiView.name}")), 1.second)
 
       status(result) mustBe OK
 

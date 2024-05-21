@@ -51,7 +51,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
     val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
     val controller: ForecastAccuracyController = forecastAccuracyController(forecastTotalPax, mlFeedPax, liveFeedPax, mlPredCapPct, flights)
     "get forecast accuracy percentage" in {
-      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
+      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Forwarded-Groups", "TEST")), body = AnyContentAsEmpty)
 
       val result = controller.getForecastAccuracy("2023-01-01").apply(request)
 
@@ -62,7 +62,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
     }
 
     "get forecast Accuracy prediction csv" in {
-      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
+      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Forwarded-Groups", "TEST")), body = AnyContentAsEmpty)
 
       val result = controller.forecastAccuracyExport(1, 1).apply(request)
 
@@ -75,7 +75,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
     }
 
     "get forecast comparison csv - future date does not include act pax" in {
-      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
+      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Forwarded-Groups", "TEST")), body = AnyContentAsEmpty)
 
       val modelId = "some-model-id"
       val result = controller.forecastModelComparison(modelId, "T1", "2024-02-14", "2024-02-14").apply(request)
@@ -92,7 +92,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
     }
 
     "get forecast comparison csv - historic date does include act pax" in {
-      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Auth-Roles", "TEST")), body = AnyContentAsEmpty)
+      val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Forwarded-Groups", "TEST")), body = AnyContentAsEmpty)
 
       val modelId = "some-model-id"
       val result = controller.forecastModelComparison(modelId, "T1", "2023-01-01", "2023-01-01").apply(request)

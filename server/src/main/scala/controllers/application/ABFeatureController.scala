@@ -17,7 +17,7 @@ class ABFeatureController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   private def getRandomABTest: String = if (Random.nextInt(100) < 50) "A" else "B"
 
   def getABFeature(functionName: String): Action[AnyContent] = Action.async { implicit request =>
-    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
     val abFeatureRowsF: Future[Seq[ABFeatureRow]] = ctrl.abFeatureService.getABFeaturesByEmailForFunction(userEmail, functionName)
     val abFeatures: Future[Seq[ABFeatureRow]] = abFeatureRowsF.flatMap { abFeatureRows =>
       abFeatureRows.size match {

@@ -104,7 +104,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   def userSelectedTimePeriod: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
-      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.userService.selectUser(userEmail.trim).map {
         case Some(user) => Ok(user.staff_planning_interval_minutes.getOrElse(60).toString)
         case None => Ok("")
@@ -115,7 +115,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   def setUserSelectedTimePeriod(): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
       val periodInterval: Int = request.body.asText.getOrElse("60").toInt
-      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.userService.updateStaffPlanningIntervalMinutes(userEmail, periodInterval).map {
         case _ => Ok("Updated period")
       }
@@ -128,7 +128,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   }
 
   def shouldUserViewBanner: Action[AnyContent] = Action.async { implicit request =>
-    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
     val oneEightyDaysInMillis: Long = 180.days.toMillis
     val cutoffTime = new Timestamp(ctrl.now().millisSinceEpoch - oneEightyDaysInMillis)
     val feedbackExistF = ctrl.userFeedbackService.selectByEmail(userEmail)
@@ -160,7 +160,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   }
 
   def isNewFeatureAvailableSinceLastLogin: Action[AnyContent] = Action.async { implicit request =>
-    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
     val latestFeatureDateF: Future[Option[Timestamp]] = ctrl.featureGuideService.selectAll.map(_.headOption.map(_.uploadTime))
     val latestLoginDateF: Future[Option[Timestamp]] = ctrl.userService.selectUser(userEmail.trim).map(_.map(_.latest_login))
     for {
@@ -176,7 +176,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   def recordFeatureGuideView(filename: String): Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
-      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.featureGuideService.getGuideIdForFilename(filename).flatMap {
         case Some(id) =>
           ctrl.featureGuideViewService

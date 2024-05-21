@@ -31,7 +31,7 @@ class DropInsController @Inject()(cc: ControllerComponents,
   }
 
   def getDropInRegistrations: Action[AnyContent] = Action.async { implicit request =>
-    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
     val dropInsRegistrationJson: Future[Seq[DropInRegistration]] = ctrl.dropInRegistrationService
       .getDropInRegistrations(userEmail)
       .map(_.map(_.toDropInRegistration))
@@ -42,7 +42,7 @@ class DropInsController @Inject()(cc: ControllerComponents,
     Action { implicit request =>
       import spray.json.DefaultJsonProtocol._
       import spray.json._
-      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       request.body.asText match {
         case Some(content) =>
           Try(content.parseJson.convertTo[String])

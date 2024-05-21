@@ -24,10 +24,10 @@ class FeatureFlagsControllerSpec extends PlaySpec {
 
       val controller = new FeatureFlagsController(Helpers.stubControllerComponents(), drtSystemInterface)
 
-      val result = controller.getFeatureFlags.apply(FakeRequest().withHeaders("X-Auth-Email" -> "test@test.com",
-        "X-Auth-Username" -> "test",
-        "X-Auth-Userid" -> "test",
-        "X-Auth-Roles" -> s"TEST"))
+      val result = controller.getFeatureFlags.apply(FakeRequest().withHeaders("X-Forwarded-Email" -> "test@test.com",
+        "X-Forwarded-Preferred-Username" -> "test",
+        "X-Forwarded-User" -> "test",
+        "X-Forwarded-Groups" -> s"TEST"))
 
       status(result) mustBe OK
 

@@ -26,10 +26,10 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
       }
 
       val result = controller.getLoggedInUser().apply(FakeRequest()
-        .withHeaders("X-Auth-Email" -> "test@test.com",
-          "X-Auth-Username" -> "test",
-          "X-Auth-Userid" -> "test",
-          "X-Auth-Roles" -> "TEST")
+        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+          "X-Forwarded-Preferred-Username" -> "test",
+          "X-Forwarded-User" -> "test",
+          "X-Forwarded-Groups" -> "TEST")
       )
 
       status(result) mustBe OK
@@ -58,10 +58,10 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
       }
 
       val result = controller.userDetails("test@test.com").apply(FakeRequest()
-        .withHeaders("X-Auth-Email" -> "test@test.com",
-          "X-Auth-Username" -> "test",
-          "X-Auth-Userid" -> "test",
-          "X-Auth-Roles" -> s"TEST,${ManageUsers.name}")
+        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+          "X-Forwarded-Preferred-Username" -> "test",
+          "X-Forwarded-User" -> "test",
+          "X-Forwarded-Groups" -> s"TEST,${ManageUsers.name}")
       )
 
       status(result) mustBe OK
@@ -90,10 +90,10 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
       }
 
       val result = controller.authByRole(ManageUsers)(controller.action).apply(FakeRequest()
-        .withHeaders("X-Auth-Email" -> "test@test.com",
-          "X-Auth-Username" -> "test",
-          "X-Auth-Userid" -> "test",
-          "X-Auth-Roles" -> s"TEST,${ManageUsers.name}")
+        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+          "X-Forwarded-Preferred-Username" -> "test",
+          "X-Forwarded-User" -> "test",
+          "X-Forwarded-Groups" -> s"TEST,${ManageUsers.name}")
       )
 
       status(result) mustBe OK
@@ -109,10 +109,10 @@ class AuthControllerSpec extends PlaySpec with MockitoSugar {
       }
 
       val result = controller.trackUser().apply(FakeRequest()
-        .withHeaders("X-Auth-Email" -> "test@test.com",
-          "X-Auth-Username" -> "test",
-          "X-Auth-Userid" -> "test",
-          "X-Auth-Roles" -> s"TEST,${ManageUsers.name}")
+        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+          "X-Forwarded-Preferred-Username" -> "test",
+          "X-Forwarded-User" -> "test",
+          "X-Forwarded-Groups" -> s"TEST,${ManageUsers.name}")
       )
 
       status(result) mustBe OK

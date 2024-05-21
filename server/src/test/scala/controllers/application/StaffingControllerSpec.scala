@@ -64,7 +64,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   "getShifts" should {
     "return the shifts from the mock service as json" in {
-      val authHeader = Headers("X-Auth-Roles" -> "fixed-points:view,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:view,LHR")
       val result = controller
         .getShifts("2024-06-26")
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
@@ -76,7 +76,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   "saveShifts" should {
     "return Accepted" in {
-      val authHeader = Headers("X-Auth-Roles" -> "staff:edit,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
       val result = controller
         .saveShifts
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsText(write(ShiftAssignments(shifts)))))
@@ -84,7 +84,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
       status(result) must ===(ACCEPTED)
     }
     "return BadRequest" in {
-      val authHeader = Headers("X-Auth-Roles" -> "staff:edit,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
       val result = controller
         .saveShifts
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsEmpty))
@@ -95,7 +95,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   "getShiftsForMonth" should {
     "return the shifts from the mock service as json" in {
-      val authHeader = Headers("X-Auth-Roles" -> "staff:edit,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
       val result = controller
         .getShiftsForMonth(SDate("2024-07-01T01:00").millisSinceEpoch)
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
@@ -107,7 +107,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   "getFixedPoints" should {
     "return the fixed points from the mock service as json" in {
-      val authHeader = Headers("X-Auth-Roles" -> "fixed-points:view,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:view,LHR")
       val result = controller
         .getFixedPoints
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
@@ -119,7 +119,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   "saveFixedPoints" should {
     "return Accepted" in {
-      val authHeader = Headers("X-Auth-Roles" -> "fixed-points:edit,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:edit,LHR")
       val result = controller
         .saveFixedPoints
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsText(write(FixedPointAssignments(fixedPoints)))))
@@ -127,7 +127,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
       status(result) must ===(ACCEPTED)
     }
     "return BadRequest" in {
-      val authHeader = Headers("X-Auth-Roles" -> "fixed-points:edit,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:edit,LHR")
       val result = controller
         .saveFixedPoints
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsEmpty))
@@ -138,7 +138,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   "addStaffMovements" should {
     "return Accepted" in {
-      val authHeader = Headers("X-Auth-Roles" -> "staff-movements:edit,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "staff-movements:edit,LHR")
       val result = controller
         .addStaffMovements
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsText(write(movements))))
@@ -146,7 +146,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
       status(result) must ===(ACCEPTED)
     }
     "return BadRequest" in {
-      val authHeader = Headers("X-Auth-Roles" -> "staff-movements:edit,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "staff-movements:edit,LHR")
       val result = controller
         .addStaffMovements
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsEmpty))
@@ -157,7 +157,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   "removeStaffMovements" should {
     "return Accepted" in {
-      val authHeader = Headers("X-Auth-Roles" -> "staff-movements:edit,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "staff-movements:edit,LHR")
       val result = controller
         .removeStaffMovements("abc")
         .apply(FakeRequest(method = "DELETE", uri = "", headers = authHeader, body = AnyContentAsEmpty))
@@ -168,7 +168,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   "getStaffMovements" should {
     "return the movements from the mock service as json" in {
-      val authHeader = Headers("X-Auth-Roles" -> "border-force-staff,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "border-force-staff,LHR")
       val result = controller
         .getStaffMovements("2024-06-26")
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
@@ -180,7 +180,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 
   "exportStaffMovements" should {
     "return the movements from the mock service in csv format" in {
-      val authHeader = Headers("X-Auth-Roles" -> "staff-movements:export,LHR")
+      val authHeader = Headers("X-Forwarded-Groups" -> "staff-movements:export,LHR")
       val result = controller
         .exportStaffMovements("T1", "2024-06-26")
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
