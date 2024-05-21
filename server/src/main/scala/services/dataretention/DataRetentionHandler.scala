@@ -5,6 +5,8 @@ import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import org.slf4j.LoggerFactory
+import slickdb.AkkaDao
+import uk.gov.homeoffice.drt.db.AkkaDb
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.prediction.ModelCategory
@@ -26,7 +28,7 @@ object DataRetentionHandler {
     "fixedPoints-store",
   )
 
-  private def byDatePersistenceIdPrefixes(terminals: Seq[Terminal], sources: Set[FeedSource]): Seq[String] = Seq(
+  private def byDatePersistenceIdPrefixes(terminals: Iterable[Terminal], sources: Iterable[FeedSource]): Iterable[String] = Seq(
     terminals.map(t => s"terminal-flights-${t.toString}"),
     terminals.map(t => s"terminal-passengers-${t.toString}"),
     terminals.map(t => s"terminal-queues-${t.toString}"),
@@ -43,10 +45,16 @@ object DataRetentionHandler {
     s"$persistenceIdPrefix-${date.toISOString}"
   }
 
-  def persistenceIdsForPurge(terminals: Seq[Terminal],
+  def retentionForecastDateRange(retentionPeriod: FiniteDuration, maxForecastDays: Int, todaySDate: SDateLike): Seq[UtcDate] = {
+    val oldestForecastDate = todaySDate.addMillis(-retentionPeriod.toMillis)
+    val youngestForecastDate = oldestForecastDate.addDays(maxForecastDays)
+    DateRange(oldestForecastDate.toUtcDate, youngestForecastDate.toUtcDate)
+  }
+
+  def persistenceIdsForPurge(terminals: Iterable[Terminal],
                              retentionPeriod: FiniteDuration,
-                             sources: Set[FeedSource],
-                            ): UtcDate => Seq[String] =
+                             sources: Iterable[FeedSource],
+                            ): UtcDate => Iterable[String] =
     today => {
       val date = SDate(today).addDays(-retentionPeriod.toDays.toInt).toUtcDate
 
@@ -56,25 +64,47 @@ object DataRetentionHandler {
         }
     }
 
-  def preRetentionForecastPersistenceIds(retentionPeriod: FiniteDuration,
-                                         maxForecastDays: Int,
-                                         terminals: Seq[Terminal],
-                                         sources: Set[FeedSource],
-                                        ): UtcDate => Seq[String] = today => {
+  def retentionForecastPersistenceIds(retentionPeriod: FiniteDuration,
+                                      maxForecastDays: Int,
+                                      terminals: Iterable[Terminal],
+                                      sources: Set[FeedSource],
+                                     ): UtcDate => Iterable[String] = today => {
     val todaySDate = SDate(today)
-    val oldestForecastDate = todaySDate.addMillis(-(retentionPeriod.toMillis + maxForecastDays.days.toMillis)).toUtcDate
-    val youngestForecastDate = todaySDate.addDays(-retentionPeriod.toDays.toInt).toUtcDate
+    val dateRange = retentionForecastDateRange(retentionPeriod, maxForecastDays, todaySDate)
 
-    DateRange(oldestForecastDate, youngestForecastDate).flatMap { date =>
+    dateRange.flatMap { date =>
       byDatePersistenceIdPrefixes(terminals, sources).map { persistenceIdPrefix =>
         s"$persistenceIdPrefix-${date.toISOString}"
       }
     } ++ nonDatePersistenceIds
   }
+
+  def apply(retentionPeriod: FiniteDuration,
+            maxForecastDays: Int,
+            terminals: Iterable[Terminal],
+            now: () => SDateLike,
+           )
+           (implicit ec: ExecutionContext, mat: Materializer): DataRetentionHandler = {
+    val pIdsForSequenceNumberPurge = DataRetentionHandler
+      .retentionForecastPersistenceIds(retentionPeriod, maxForecastDays, terminals, FeedSource.feedSources)
+    val pIdsForFullPurge = DataRetentionHandler
+      .persistenceIdsForPurge(terminals, retentionPeriod, FeedSource.feedSources)
+    val akkaDao = AkkaDao(AkkaDb, now)
+    DataRetentionHandler(
+      pIdsForSequenceNumberPurge,
+      pIdsForFullPurge,
+      retentionPeriod,
+      now,
+      akkaDao.deletePersistenceId,
+      akkaDao.deleteLowerSequenceNumbers,
+      akkaDao.getSequenceNumberBeforeRetentionPeriod,
+    )
+  }
+
 }
 
-case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate => Seq[String],
-                                persistenceIdsForPurge: UtcDate => Seq[String],
+case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate => Iterable[String],
+                                persistenceIdsForFullPurge: UtcDate => Iterable[String],
                                 retentionPeriod: FiniteDuration,
                                 now: () => SDateLike,
                                 deletePersistenceId: String => Future[Int],
@@ -94,16 +124,16 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
 
     purgeOldSequenceNumbers(persistenceIdsForSequenceNumberPurge(today))
 
-    purgeOldPersistenceIds(persistenceIdsForPurge(today))
+    purgeOldPersistenceIds(persistenceIdsForFullPurge(today))
   }
 
-  private def purgeOldPersistenceIds(persistenceIds: Seq[String]): Future[Done] =
-    Source(persistenceIds)
+  private def purgeOldPersistenceIds(persistenceIds: Iterable[String]): Future[Done] =
+    Source(persistenceIds.toList)
       .mapAsync(1)(deletePersistenceId)
       .run()
 
-  private def purgeOldSequenceNumbers(persistenceIds: Seq[String]): Future[Done] =
-    Source(persistenceIds)
+  private def purgeOldSequenceNumbers(persistenceIds: Iterable[String]): Future[Done] =
+    Source(persistenceIds.toList)
       .mapAsync(1) { persistenceId =>
         getSequenceNumberBeforeRetentionPeriod(persistenceId, retentionPeriod)
           .map { maybeSeq =>

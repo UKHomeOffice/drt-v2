@@ -5,7 +5,7 @@ import slickdb._
 
 import scala.concurrent.Future
 
-object AkkaDb extends AggregatedDbTables {
+object AkkaDb extends AkkaDbTables {
   override val profile = slick.jdbc.PostgresProfile
   val db: profile.backend.Database = profile.api.Database.forConfig("slick.db")
 

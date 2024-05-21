@@ -379,12 +379,9 @@ class TestDrtActor extends Actor {
       val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
 
       val crunchInputs = CrunchSystem(CrunchProps(
-        airportConfig = tc.airportConfig,
         portStateActor = portStateActor,
         maxDaysToCrunch = tc.forecastMaxDays,
-        expireAfterMillis = tc.expireAfterMillis,
         now = tc.now,
-        crunchActors = actors,
         feedActors = Map(
           AclFeedSource -> forecastBaseFeedArrivalsActor,
           ForecastFeedSource -> forecastFeedArrivalsActor,
@@ -397,7 +394,6 @@ class TestDrtActor extends Actor {
         arrivalsLiveFeed = Feed(liveArrivals, 1.second, 500.millis),
         optimiser = tc.cruncher,
         startDeskRecs = startDeskRecs,
-        setPcpTimes = tc.setPcpTimes,
         passengerAdjustments = tc.passengerAdjustments,
         system = system,
         updateFeedStatus = (feedSource: FeedSource, response: ArrivalsFeedResponse) => feedStatusWriteActors(feedSource) ! response,

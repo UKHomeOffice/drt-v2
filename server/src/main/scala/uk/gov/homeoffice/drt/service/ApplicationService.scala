@@ -30,13 +30,14 @@ import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.crunch.{CrunchProps, CrunchSystem}
+import services.dataretention.DataRetentionHandler
 import services.graphstages.FlightFilter
 import services.liveviews.PassengersLiveView
 import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
-import slickdb.AggregatedDbTables
+import slickdb.{AggregatedDbTables, AkkaDao}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
@@ -44,7 +45,7 @@ import uk.gov.homeoffice.drt.actor.serialisation.{ConfigDeserialiser, ConfigSeri
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
-import uk.gov.homeoffice.drt.db.AggregateDb
+import uk.gov.homeoffice.drt.db.{AggregateDb, AkkaDb}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -332,16 +333,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
   else
     PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
 
-  def startCrunchSystem(actors: PersistentStateActors,
-                        startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]),
-                       ): CrunchSystem[typed.ActorRef[FeedTick]] = {
+  def startCrunchSystem(startUpdateGraphs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]),
+                       ): CrunchSystem[typed.ActorRef[FeedTick]] =
     CrunchSystem(CrunchProps(
-      airportConfig = airportConfig,
       portStateActor = actorService.portStateActor,
       maxDaysToCrunch = params.forecastMaxDays,
-      expireAfterMillis = DrtStaticParameters.expireAfterMillis,
       now = now,
-      crunchActors = actors,
       feedActors = feedService.feedActors,
       updateFeedStatus = feedService.updateFeedStatus,
       arrivalsForecastBaseFeed = feedService.baseArrivalsSource(feedService.maybeAclFeed),
@@ -351,10 +348,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
       passengerAdjustments = PaxDeltas.applyAdjustmentsToArrivals(passengersActorProvider, aclPaxAdjustmentDays),
       optimiser = optimiser,
       startDeskRecs = startUpdateGraphs,
-      setPcpTimes = setPcpTimes,
       system = system,
     ))
-  }
 
   val persistManifests: ManifestsFeedResponse => Future[Done] = ManifestPersistence.processManifestFeedResponse(
     persistentStateActors.manifestsRouterActor,
@@ -378,9 +373,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
       case Success((mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)) =>
         system.log.info(s"Successfully restored initial state for App")
 
-        val crunchInputs: CrunchSystem[typed.ActorRef[Feed.FeedTick]] = startCrunchSystem(
-          actors,
-          startUpdateGraphs = startUpdateGraphs(actors, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue),
+        val crunchInputs = startCrunchSystem(
+          startUpdateGraphs(actors, mergeArrivalsQueue, crunchQueue, deskRecsQueue, deploymentQueue, staffingUpdateQueue)
         )
 
         feedService.fcstBaseFeedPollingActor ! Enable(crunchInputs.forecastBaseArrivalsResponse)
@@ -418,6 +412,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
 
+        val retentionHandler = DataRetentionHandler((5 * 365).days, params.forecastMaxDays, airportConfig.terminals, now)
+        system.scheduler.scheduleAtFixedRate(0.millis, 1.day) { () =>
+          log.info("Purging data outside retention period")
+          retentionHandler.purgeDataOutsideRetentionPeriod()
+        }
+
       case Failure(error) =>
         system.log.error(error, s"Failed to restore initial state for App. Beginning actor system shutdown")
         system.terminate().onComplete {
@@ -430,4 +430,5 @@ case class ApplicationService(journalType: StreamingJournalLike,
         }
     }
   }
+
 }
