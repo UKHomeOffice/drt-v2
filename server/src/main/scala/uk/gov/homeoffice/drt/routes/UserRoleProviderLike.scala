@@ -12,7 +12,7 @@ trait UserRoleProviderLike {
 
   val userService: UserTableLike
 
-  def userRolesFromHeader(headers: Headers): Set[Role] = headers.get("X-Forwarded-Groups").map(_.split(",")).map(_.map(_.split(":").last))
+  def userRolesFromHeader(headers: Headers): Set[Role] = headers.get("X-Forwarded-Groups").map(_.split(",")).map(_.map(_.split("role:").last))
       .map(_.flatMap(Roles.parse).toSet).getOrElse(Set.empty[Role])
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
