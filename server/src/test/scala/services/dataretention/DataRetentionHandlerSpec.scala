@@ -25,7 +25,7 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
       val terminals = Seq(T1, T2)
       val retentionPeriod = 7.days
       val persistenceIds = DataRetentionHandler
-        .persistenceIdsForPurge(terminals, retentionPeriod, Set(AclFeedSource))(UtcDate(2024, 5, 20))
+        .persistenceIdsForFullPurge(terminals, retentionPeriod, Set(AclFeedSource))(UtcDate(2024, 5, 20))
 
       val expectedPersistenceIds = Seq(
         "terminal-flights-T1-2024-05-13",
@@ -66,7 +66,7 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
       val maxForecastDays = 1
       val terminals = Seq(T1)
       val persistenceIds = DataRetentionHandler
-        .retentionForecastPersistenceIds(retentionPeriod, maxForecastDays, terminals, Set(AclFeedSource))(UtcDate(2024, 5, 20))
+        .persistenceIdsForSequenceNumberPurge(retentionPeriod, maxForecastDays, terminals, Set(AclFeedSource))(UtcDate(2024, 5, 20))
 
       persistenceIds.toSeq.sorted should === (Seq(
         "terminal-flights-T1-2024-05-13",

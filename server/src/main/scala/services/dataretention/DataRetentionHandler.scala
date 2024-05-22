@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.prediction.ModelCategory
 import uk.gov.homeoffice.drt.prediction.category.FlightCategory
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
-import scala.concurrent.duration.{DurationInt, FiniteDuration}
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 object DataRetentionHandler {
@@ -51,10 +51,10 @@ object DataRetentionHandler {
     DateRange(oldestForecastDate.toUtcDate, youngestForecastDate.toUtcDate)
   }
 
-  def persistenceIdsForPurge(terminals: Iterable[Terminal],
-                             retentionPeriod: FiniteDuration,
-                             sources: Iterable[FeedSource],
-                            ): UtcDate => Iterable[String] =
+  def persistenceIdsForFullPurge(terminals: Iterable[Terminal],
+                                 retentionPeriod: FiniteDuration,
+                                 sources: Iterable[FeedSource],
+                                ): UtcDate => Iterable[String] =
     today => {
       val date = SDate(today).addDays(-retentionPeriod.toDays.toInt).toUtcDate
 
@@ -64,11 +64,11 @@ object DataRetentionHandler {
         }
     }
 
-  def retentionForecastPersistenceIds(retentionPeriod: FiniteDuration,
-                                      maxForecastDays: Int,
-                                      terminals: Iterable[Terminal],
-                                      sources: Set[FeedSource],
-                                     ): UtcDate => Iterable[String] = today => {
+  def persistenceIdsForSequenceNumberPurge(retentionPeriod: FiniteDuration,
+                                           maxForecastDays: Int,
+                                           terminals: Iterable[Terminal],
+                                           sources: Set[FeedSource],
+                                          ): UtcDate => Iterable[String] = today => {
     val todaySDate = SDate(today)
     val dateRange = retentionForecastDateRange(retentionPeriod, maxForecastDays, todaySDate)
 
@@ -86,9 +86,9 @@ object DataRetentionHandler {
            )
            (implicit ec: ExecutionContext, mat: Materializer): DataRetentionHandler = {
     val pIdsForSequenceNumberPurge = DataRetentionHandler
-      .retentionForecastPersistenceIds(retentionPeriod, maxForecastDays, terminals, FeedSource.feedSources)
+      .persistenceIdsForSequenceNumberPurge(retentionPeriod, maxForecastDays, terminals, FeedSource.feedSources)
     val pIdsForFullPurge = DataRetentionHandler
-      .persistenceIdsForPurge(terminals, retentionPeriod, FeedSource.feedSources)
+      .persistenceIdsForFullPurge(terminals, retentionPeriod, FeedSource.feedSources)
     val akkaDao = AkkaDao(AkkaDb, now)
     DataRetentionHandler(
       pIdsForSequenceNumberPurge,
@@ -123,8 +123,7 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
     val today = now().toUtcDate
 
     purgeOldSequenceNumbers(persistenceIdsForSequenceNumberPurge(today))
-
-    purgeOldPersistenceIds(persistenceIdsForFullPurge(today))
+      .flatMap(_ => purgeOldPersistenceIds(persistenceIdsForFullPurge(today)))
   }
 
   private def purgeOldPersistenceIds(persistenceIds: Iterable[String]): Future[Done] =
@@ -143,12 +142,18 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
   private def purgeOldSequenceNumbers(persistenceIds: Iterable[String]): Future[Done] =
     Source(persistenceIds.toList)
       .mapAsync(1) { persistenceId =>
+        log.info(s"Looking for pre-retention period snapshot sequence number for $persistenceId")
         getSequenceNumberBeforeRetentionPeriod(persistenceId, retentionPeriod)
           .map { maybeSeq =>
             maybeSeq.map { seq =>
               log.info(s"Found snapshot sequence number $maybeSeq for $persistenceId")
               (persistenceId, seq)
             }
+          }
+          .recover {
+            case t: Throwable =>
+              log.error(s"Failed to get sequence number for $persistenceId", t)
+              None
           }
       }
       .collect {
@@ -158,11 +163,11 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
               log.info(s"Deleted ${counts._1} journal events and ${counts._2} snapshots for $persistenceId")
               counts
             }
+            .recover {
+              case t: Throwable =>
+                log.error(s"Failed to delete sequence numbers for $persistenceId", t)
+                (0, 0)
+            }
       }
       .run()
-      .recover {
-        case t: Throwable =>
-          log.error("Failed to delete sequence numbers", t)
-          Done
-      }
 }
