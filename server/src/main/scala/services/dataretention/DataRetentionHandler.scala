@@ -43,14 +43,17 @@ object DataRetentionHandler {
 
   private def lowerCaseTerminalString(t: Terminal) = t.toString.toLowerCase
 
-  private def persistenceIdForDate(persistenceIdPrefix: String, date: UtcDate): String = {
+  private def persistenceIdForDate(persistenceIdPrefix: String, date: UtcDate): String =
     s"$persistenceIdPrefix-${date.toISOString}"
-  }
+
+  def closestPreRetentionDate(retentionPeriod: FiniteDuration, today: UtcDate): UtcDate =
+    SDate(today).addDays(-(retentionPeriod.toDays.toInt + 1)).toUtcDate
 
   def retentionForecastDateRange(retentionPeriod: FiniteDuration, maxForecastDays: Int, todaySDate: SDateLike): Seq[UtcDate] = {
-    val oldestForecastDate = todaySDate.addDays(-retentionPeriod.toDays.toInt)
-    val youngestForecastDate = oldestForecastDate.addDays(maxForecastDays)
-    DateRange(oldestForecastDate.toUtcDate, youngestForecastDate.toUtcDate)
+    val preRetentionDate = closestPreRetentionDate(retentionPeriod, todaySDate.toUtcDate)
+    val retentionForecastStartDate = SDate(preRetentionDate).addDays(1).toUtcDate
+    val retentionForecastEndDate = SDate(retentionForecastStartDate).addDays(maxForecastDays).toUtcDate
+    DateRange(retentionForecastStartDate, retentionForecastEndDate)
   }
 
   def persistenceIdsForFullPurge(terminals: Iterable[Terminal],
@@ -58,13 +61,14 @@ object DataRetentionHandler {
                                  sources: Iterable[FeedSource],
                                 ): UtcDate => Iterable[String] =
     today => {
-      val date = SDate(today).addDays(-retentionPeriod.toDays.toInt).toUtcDate
+      val date = closestPreRetentionDate(retentionPeriod, today)
 
       byDatePersistenceIdPrefixes(terminals, sources)
         .map { persistenceIdPrefix =>
           persistenceIdForDate(persistenceIdPrefix, date)
         }
     }
+
 
   def persistenceIdsForSequenceNumberPurge(retentionPeriod: FiniteDuration,
                                            maxForecastDays: Int,

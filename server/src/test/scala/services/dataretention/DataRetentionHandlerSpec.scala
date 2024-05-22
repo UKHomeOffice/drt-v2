@@ -20,30 +20,50 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
     system.terminate()
   }
 
+  "closestPreRetentionDate" should {
+    "return the day prior to the retention period for a short retention period" in {
+      val retentionPeriod = 7.days
+      val today = UtcDate(2024, 5, 20)
+
+      val result = DataRetentionHandler.closestPreRetentionDate(retentionPeriod, today)
+
+      result should ===(UtcDate(2024, 5, 12))
+    }
+    "return the day prior to the retention period for a long retention period" in {
+      val years = 5
+      val retentionPeriod = years * 365.days
+      val today = UtcDate(2024, 5, 20)
+
+      val result = DataRetentionHandler.closestPreRetentionDate(retentionPeriod, today)
+
+      result should ===(UtcDate(2019, 5, 21))
+    }
+  }
+
   "persistenceIdsForPurge" should {
-    "return a list of persistence ids for the given terminals and retention period" in {
+    "return a list of persistence ids with dates 8 days ago for the given terminals and a 7 day retention period" in {
       val terminals = Seq(T1, T2)
       val retentionPeriod = 7.days
       val persistenceIds = DataRetentionHandler
         .persistenceIdsForFullPurge(terminals, retentionPeriod, Set(AclFeedSource))(UtcDate(2024, 5, 20))
 
       val expectedPersistenceIds = Seq(
-        "terminal-flights-t1-2024-05-13",
-        "terminal-flights-t2-2024-05-13",
-        "terminal-passengers-t1-2024-05-13",
-        "terminal-passengers-t2-2024-05-13",
-        "terminal-queues-t1-2024-05-13",
-        "terminal-queues-t2-2024-05-13",
-        "terminal-staff-t1-2024-05-13",
-        "terminal-staff-t2-2024-05-13",
-        s"${AclFeedSource.id}-feed-arrivals-t1-2024-05-13",
-        s"${AclFeedSource.id}-feed-arrivals-t2-2024-05-13",
+        "terminal-flights-t1-2024-05-12",
+        "terminal-flights-t2-2024-05-12",
+        "terminal-passengers-t1-2024-05-12",
+        "terminal-passengers-t2-2024-05-12",
+        "terminal-queues-t1-2024-05-12",
+        "terminal-queues-t2-2024-05-12",
+        "terminal-staff-t1-2024-05-12",
+        "terminal-staff-t2-2024-05-12",
+        s"${AclFeedSource.id}-feed-arrivals-t1-2024-05-12",
+        s"${AclFeedSource.id}-feed-arrivals-t2-2024-05-12",
       )
       persistenceIds.toSeq.sorted should ===(expectedPersistenceIds.sorted)
     }
   }
 
-  "preRetentionForecastDateRange" should {
+  "retentionForecastDateRange" should {
     "return a range of dates starting from earliest retention date and ending forecast days later" in {
       val retentionPeriod = 10.days
       val maxForecastDays = 3
