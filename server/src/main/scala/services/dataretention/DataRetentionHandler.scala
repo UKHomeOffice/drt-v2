@@ -152,7 +152,7 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
         getSequenceNumberBeforeRetentionPeriod(persistenceId, retentionPeriod)
           .map {
             case Some(seq) =>
-              log.info(s"Found snapshot sequence number $seq for $persistenceId")
+              log.info(s"Found pre-retention period snapshot sequence number $seq for $persistenceId")
               Option((persistenceId, seq))
             case None =>
               log.info(s"No pre-retention period snapshot sequence number found for $persistenceId")
