@@ -5,7 +5,7 @@ import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile, Ma
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import slick.sql.SqlStreamingAction
-import slickdb.Tables
+import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
@@ -46,7 +46,7 @@ object UniqueArrivalKey {
     UniqueArrivalKey(port, PortCode(feedArrival.origin), VoyageNumber(feedArrival.voyageNumber), SDate(feedArrival.scheduled))
 }
 
-case class ManifestLookup(tables: Tables)
+case class ManifestLookup(tables: AggregatedDbTables)
                          (implicit mat: Materializer) extends ManifestLookupLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 

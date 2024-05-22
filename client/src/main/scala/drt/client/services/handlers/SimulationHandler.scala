@@ -16,7 +16,7 @@ class SimulationHandler[M](simulationResult: ModelRW[M, Pot[SimulationResult]]) 
 
       updated(Pending(), Effect(DrtApi.get(s"desk-rec-simulation?${params.toQueryStringParams}")
         .map(r => SetSimulation(read[SimulationResult](r.responseText))).recoverWith {
-        case e =>
+        case _ =>
           Future(RetryActionAfter(GetSimulation(params), PollDelay.recoveryDelay))
       }))
     case SetSimulation(simulation) =>

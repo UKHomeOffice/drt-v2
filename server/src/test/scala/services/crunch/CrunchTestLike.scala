@@ -18,7 +18,7 @@ import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.{AfterAll, AfterEach}
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.JdbcProfile
-import slickdb.Tables
+import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.STN
 import uk.gov.homeoffice.drt.ports.PaxTypes._
@@ -35,7 +35,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
 
 
-object H2Tables extends Tables {
+object H2AggregatedDbTables$ extends AggregatedDbTables {
   override val profile: JdbcProfile = slick.jdbc.H2Profile
   val db: profile.backend.Database = profile.api.Database.forConfig("h2-aggregated-db")
 

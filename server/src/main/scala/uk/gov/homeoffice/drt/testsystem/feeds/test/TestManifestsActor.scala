@@ -6,10 +6,12 @@ import akka.stream.scaladsl.SourceQueueWithComplete
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.OfferHandler
-import uk.gov.homeoffice.drt.db.SubscribeResponseQueue
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 
 import scala.concurrent.ExecutionContext.Implicits.global
+
+
+case class SubscribeResponseQueue(subscriber: SourceQueueWithComplete[ManifestsFeedResponse])
 
 
 class TestManifestsActor extends Actor with ActorLogging {

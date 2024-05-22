@@ -27,7 +27,7 @@ object AggregatedArrival {
   )
 }
 
-case class ArrivalTable(portCode: PortCode, tables: Tables, paxFeedSourceOrder: List[FeedSource]) extends ArrivalTableLike {
+case class ArrivalTable(portCode: PortCode, tables: AggregatedDbTables, paxFeedSourceOrder: List[FeedSource]) extends ArrivalTableLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._

@@ -6,8 +6,8 @@ import diode.{Action, ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.{DropIn}
-import upickle.default.{read, write}
+import drt.shared.DropIn
+import upickle.default.read
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue

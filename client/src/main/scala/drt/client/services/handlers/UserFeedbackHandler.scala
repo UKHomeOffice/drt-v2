@@ -4,14 +4,13 @@ import diode.data.{Pot, Ready}
 import diode.{Action, ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
+import drt.client.services.handlers.UserFeedbackRow._
 import drt.client.services.{DrtApi, PollDelay}
+import uk.gov.homeoffice.drt.feedback.UserFeedback
+import upickle.default._
 
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
-import upickle.default.{macroRW, read, readwriter, write}
-import upickle.default._
-import UserFeedbackRow._
-import uk.gov.homeoffice.drt.feedback.UserFeedback
 
 
 case class GetUserFeedback() extends Action

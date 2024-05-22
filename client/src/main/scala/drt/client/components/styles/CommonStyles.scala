@@ -1,7 +1,6 @@
 package drt.client.components.styles
 
 import drt.client.components.styles.ScalaCssImplicits.CssSettings._
-import io.kinoplan.scalajs.react.material.ui.core.colors
 import io.kinoplan.scalajs.react.material.ui.core.system._
 import scalacss.ScalaCssReactImplicits
 import scalacss.internal.mutable.StyleSheet

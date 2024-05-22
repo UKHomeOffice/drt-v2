@@ -8,9 +8,8 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent, _}
 import org.scalajs.dom
-import org.scalajs.dom.{Element, File, HTMLInputElement}
+import org.scalajs.dom.File
 import org.scalajs.dom.html.{Div, Heading}
-import org.scalajs.dom.raw.{FormData, HTMLFormElement}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 
 

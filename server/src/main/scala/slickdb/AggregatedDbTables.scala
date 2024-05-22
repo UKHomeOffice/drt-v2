@@ -3,7 +3,6 @@ package slickdb
 
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
-import slick.lifted.ProvenShape
 
 import java.sql.Timestamp
 import scala.concurrent.Future
@@ -50,7 +49,7 @@ case class VoyageManifestPassengerInfoRow(event_code: String,
 
 
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
-trait Tables {
+trait AggregatedDbTables {
   val profile: slick.jdbc.JdbcProfile
 
   def run[R](a: DBIOAction[R, NoStream, Nothing]): Future[R]
@@ -60,8 +59,6 @@ trait Tables {
 
   /** DDL for all tables. Call .create to execute. */
   lazy val schema: profile.SchemaDescription = VoyageManifestPassengerInfo.schema ++ ProcessedJson.schema ++ ProcessedZip.schema ++ Arrival.schema
-
-
 
   case class ArrivalRow(code: String,
                         number: Int,

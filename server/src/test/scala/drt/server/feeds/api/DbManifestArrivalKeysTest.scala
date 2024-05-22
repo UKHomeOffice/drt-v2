@@ -3,7 +3,7 @@ package drt.server.feeds.api
 import drt.server.feeds.api.DbHelper.{addJsonRecord, addPaxRecord, addZipRecord}
 import manifests.UniqueArrivalKey
 import org.specs2.specification.BeforeEach
-import services.crunch.{CrunchTestLike, H2Tables}
+import services.crunch.{CrunchTestLike, H2AggregatedDbTables$}
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import slickdb.{ProcessedJsonRow, ProcessedZipRow}
@@ -29,14 +29,14 @@ class DbManifestArrivalKeysTest
   }
 
   def createTables(): Unit = {
-    H2Tables.schema.createStatements.toList.foreach { query =>
-      Await.result(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
+    H2AggregatedDbTables$.schema.createStatements.toList.foreach { query =>
+      Await.result(H2AggregatedDbTables$.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
     }
   }
 
   def dropTables(): Unit = {
-    H2Tables.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.result(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
+    H2AggregatedDbTables$.schema.dropStatements.toList.reverse.foreach { query =>
+      Await.result(H2AggregatedDbTables$.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
     }
   }
 
@@ -45,7 +45,7 @@ class DbManifestArrivalKeysTest
     val jfk = "JFK"
 
     "Return nothing when there are no voyage manifest rows" in {
-      val nextKeys = Await.result(DbManifestArrivalKeys(H2Tables, PortCode(lhr)).nextKeys(0L), 1.second)
+      val nextKeys = Await.result(DbManifestArrivalKeys(H2AggregatedDbTables$, PortCode(lhr)).nextKeys(0L), 1.second)
 
       nextKeys === (None, Iterable())
     }
@@ -55,7 +55,7 @@ class DbManifestArrivalKeysTest
       val processedAt = new Timestamp(date.millisSinceEpoch)
 
       createProcessedPassengerJsonZip("1.zip", "1.json", lhr, jfk, date, voyageNumber = 1, paxCount = 5, processedAt)
-      val nextKeys = Await.result(DbManifestArrivalKeys(H2Tables, PortCode(lhr)).nextKeys(processedAt.getTime), 1.second)
+      val nextKeys = Await.result(DbManifestArrivalKeys(H2AggregatedDbTables$, PortCode(lhr)).nextKeys(processedAt.getTime), 1.second)
 
       nextKeys === (None, Iterable())
     }
@@ -68,15 +68,15 @@ class DbManifestArrivalKeysTest
       createProcessedPassengerJsonZip("1.zip", "1.json", lhr, jfk, date, voyageNumber = 1, paxCount = 5, processedAt)
       createProcessedPassengerJsonZip("2.zip", "2.json", lhr, jfk, date, voyageNumber = 99, paxCount = 5, laterProcessedAt)
 
-      val nextKeys = Await.result(DbManifestArrivalKeys(H2Tables, PortCode(lhr)).nextKeys(processedAt.getTime), 1.second)
+      val nextKeys = Await.result(DbManifestArrivalKeys(H2AggregatedDbTables$, PortCode(lhr)).nextKeys(processedAt.getTime), 1.second)
 
       nextKeys === (Option(laterProcessedAt.getTime), Iterable(UniqueArrivalKey(PortCode(lhr), PortCode(jfk), VoyageNumber(99), date)))
     }
   }
 
   private def createProcessedPassengerJsonZip(zipName: String, jsonName: String, arrivalPort: String, departurePort: String, scheduled: SDateLike, voyageNumber: Int, paxCount: Int, processedAt: Timestamp) = {
-    addZipRecord(H2Tables, ProcessedZipRow(zipName, true, processedAt, None))
-    addJsonRecord(H2Tables, ProcessedJsonRow(
+    addZipRecord(H2AggregatedDbTables$, ProcessedZipRow(zipName, true, processedAt, None))
+    addJsonRecord(H2AggregatedDbTables$, ProcessedJsonRow(
       zip_file_name = zipName,
       json_file_name = jsonName,
       suspicious_date = false,
@@ -93,6 +93,6 @@ class DbManifestArrivalKeysTest
       interactive_total_count = None,
       interactive_trans_count = None))
 
-    (0 until paxCount).foreach (id => addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, id.toString, jsonName))
+    (0 until paxCount).foreach (id => addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, id.toString, jsonName))
   }
 }

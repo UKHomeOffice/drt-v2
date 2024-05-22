@@ -7,7 +7,7 @@ import drt.client.actions.Actions._
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates}
+import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
