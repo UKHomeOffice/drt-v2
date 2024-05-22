@@ -28,16 +28,16 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
         .persistenceIdsForFullPurge(terminals, retentionPeriod, Set(AclFeedSource))(UtcDate(2024, 5, 20))
 
       val expectedPersistenceIds = Seq(
-        "terminal-flights-T1-2024-05-13",
-        "terminal-flights-T2-2024-05-13",
-        "terminal-passengers-T1-2024-05-13",
-        "terminal-passengers-T2-2024-05-13",
-        "terminal-queues-T1-2024-05-13",
-        "terminal-queues-T2-2024-05-13",
-        "terminal-staff-T1-2024-05-13",
-        "terminal-staff-T2-2024-05-13",
-        s"${AclFeedSource.id}-feed-arrivals-T1-2024-05-13",
-        s"${AclFeedSource.id}-feed-arrivals-T2-2024-05-13",
+        "terminal-flights-t1-2024-05-13",
+        "terminal-flights-t2-2024-05-13",
+        "terminal-passengers-t1-2024-05-13",
+        "terminal-passengers-t2-2024-05-13",
+        "terminal-queues-t1-2024-05-13",
+        "terminal-queues-t2-2024-05-13",
+        "terminal-staff-t1-2024-05-13",
+        "terminal-staff-t2-2024-05-13",
+        s"${AclFeedSource.id}-feed-arrivals-t1-2024-05-13",
+        s"${AclFeedSource.id}-feed-arrivals-t2-2024-05-13",
       )
       persistenceIds.toSeq.sorted should ===(expectedPersistenceIds.sorted)
     }
@@ -45,17 +45,17 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
 
   "preRetentionForecastDateRange" should {
     "return a range of dates starting from earliest retention date and ending forecast days later" in {
-      val retentionPeriod = 3.days
+      val retentionPeriod = 10.days
       val maxForecastDays = 3
       val today = SDate("2024-05-20")
 
       val result = DataRetentionHandler.retentionForecastDateRange(retentionPeriod, maxForecastDays, today)
 
       result should ===(Seq(
-        UtcDate(2024, 5, 17),
-        UtcDate(2024, 5, 18),
-        UtcDate(2024, 5, 19),
-        UtcDate(2024, 5, 20),
+        UtcDate(2024, 5, 10),
+        UtcDate(2024, 5, 11),
+        UtcDate(2024, 5, 12),
+        UtcDate(2024, 5, 13),
       ))
     }
   }
@@ -69,16 +69,16 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
         .persistenceIdsForSequenceNumberPurge(retentionPeriod, maxForecastDays, terminals, Set(AclFeedSource))(UtcDate(2024, 5, 20))
 
       persistenceIds.toSeq.sorted should === (Seq(
-        "terminal-flights-T1-2024-05-13",
-        "terminal-flights-T1-2024-05-14",
-        "terminal-passengers-T1-2024-05-13",
-        "terminal-passengers-T1-2024-05-14",
-        "terminal-queues-T1-2024-05-13",
-        "terminal-queues-T1-2024-05-14",
-        "terminal-staff-T1-2024-05-13",
-        "terminal-staff-T1-2024-05-14",
-        "acl-feed-arrivals-T1-2024-05-13",
-        "acl-feed-arrivals-T1-2024-05-14",
+        "terminal-flights-t1-2024-05-13",
+        "terminal-flights-t1-2024-05-14",
+        "terminal-passengers-t1-2024-05-13",
+        "terminal-passengers-t1-2024-05-14",
+        "terminal-queues-t1-2024-05-13",
+        "terminal-queues-t1-2024-05-14",
+        "terminal-staff-t1-2024-05-13",
+        "terminal-staff-t1-2024-05-14",
+        "acl-feed-arrivals-t1-2024-05-13",
+        "acl-feed-arrivals-t1-2024-05-14",
         "daily-pax",
         "actors.ForecastBaseArrivalsActor-forecast-base",
         "actors.LiveBaseArrivalsActor-live-base",

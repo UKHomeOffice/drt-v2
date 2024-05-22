@@ -29,24 +29,26 @@ object DataRetentionHandler {
   )
 
   private def byDatePersistenceIdPrefixes(terminals: Iterable[Terminal], sources: Iterable[FeedSource]): Iterable[String] = Seq(
-    terminals.map(t => s"terminal-flights-${t.toString}"),
-    terminals.map(t => s"terminal-passengers-${t.toString}"),
-    terminals.map(t => s"terminal-queues-${t.toString}"),
-    terminals.map(t => s"terminal-staff-${t.toString}"),
+    terminals.map(t => s"terminal-flights-${lowerCaseTerminalString(t)}"),
+    terminals.map(t => s"terminal-passengers-${lowerCaseTerminalString(t)}"),
+    terminals.map(t => s"terminal-queues-${lowerCaseTerminalString(t)}"),
+    terminals.map(t => s"terminal-staff-${lowerCaseTerminalString(t)}"),
     for {
       fs <- sources
       t <- terminals
     } yield {
-      s"${fs.id}-feed-arrivals-${t.toString}"
+      s"${fs.id}-feed-arrivals-${lowerCaseTerminalString(t)}"
     },
   ).flatten
+
+  private def lowerCaseTerminalString(t: Terminal) = t.toString.toLowerCase
 
   private def persistenceIdForDate(persistenceIdPrefix: String, date: UtcDate): String = {
     s"$persistenceIdPrefix-${date.toISOString}"
   }
 
   def retentionForecastDateRange(retentionPeriod: FiniteDuration, maxForecastDays: Int, todaySDate: SDateLike): Seq[UtcDate] = {
-    val oldestForecastDate = todaySDate.addMillis(-retentionPeriod.toMillis)
+    val oldestForecastDate = todaySDate.addDays(-retentionPeriod.toDays.toInt)
     val youngestForecastDate = oldestForecastDate.addDays(maxForecastDays)
     DateRange(oldestForecastDate.toUtcDate, youngestForecastDate.toUtcDate)
   }
@@ -144,15 +146,17 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
       .mapAsync(1) { persistenceId =>
         log.info(s"Looking for pre-retention period snapshot sequence number for $persistenceId")
         getSequenceNumberBeforeRetentionPeriod(persistenceId, retentionPeriod)
-          .map { maybeSeq =>
-            maybeSeq.map { seq =>
-              log.info(s"Found snapshot sequence number $maybeSeq for $persistenceId")
-              (persistenceId, seq)
-            }
+          .map {
+            case Some(seq) =>
+              log.info(s"Found snapshot sequence number $seq for $persistenceId")
+              Option((persistenceId, seq))
+            case None =>
+              log.info(s"No pre-retention period snapshot sequence number found for $persistenceId")
+              None
           }
           .recover {
             case t: Throwable =>
-              log.error(s"Failed to get sequence number for $persistenceId", t)
+              log.error(s"Failed to get pre-retention period sequence number for $persistenceId", t)
               None
           }
       }
