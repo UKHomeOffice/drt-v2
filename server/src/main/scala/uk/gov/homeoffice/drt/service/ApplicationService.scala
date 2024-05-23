@@ -412,10 +412,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
 
-        val retentionHandler = DataRetentionHandler((5 * 365).days, params.forecastMaxDays, airportConfig.terminals, now)
-        system.scheduler.scheduleAtFixedRate(0.millis, 1.day) { () =>
-          log.info("Purging data outside retention period")
-          retentionHandler.purgeDataOutsideRetentionPeriod()
+        if (params.enablePreRetentionPeriodDataDeletion) {
+          val retentionHandler = DataRetentionHandler((5 * 365).days, params.forecastMaxDays, airportConfig.terminals, now)
+          system.scheduler.scheduleAtFixedRate(0.millis, 1.day) { () =>
+            log.info("Purging data outside retention period")
+            retentionHandler.purgeDataOutsideRetentionPeriod()
+          }
         }
 
       case Failure(error) =>
