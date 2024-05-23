@@ -59,6 +59,9 @@ trait DrtParameters {
 
   val legacyFeedArrivalsBeforeDate: SDateLike
   val govNotifyApiKey: String
+
+  val enablePreRetentionPeriodDataDeletion: Boolean
+
   val isTestEnvironment: Boolean
 }
 
@@ -124,6 +127,8 @@ case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParamete
   override val usePassengerPredictions: Boolean = config.get[Boolean]("feature-flags.use-passenger-predictions")
 
   override val legacyFeedArrivalsBeforeDate: SDateLike = SDate(config.get[String]("feeds.legacy-feed-arrivals-before-datetime"))
+
+  override val enablePreRetentionPeriodDataDeletion: Boolean = config.get[Boolean]("feature-flags.enable-pre-retention-period-data-deletion")
 
   override val govNotifyApiKey: String = config.get[String]("notifications.gov-notify-api-key")
 
