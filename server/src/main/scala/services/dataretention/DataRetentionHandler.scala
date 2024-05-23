@@ -69,6 +69,12 @@ object DataRetentionHandler {
         }
     }
 
+  def persistenceIdsForDate(terminals: Iterable[Terminal],
+                            sources: Iterable[FeedSource],
+                           ): UtcDate => Iterable[String] =
+    today =>
+      byDatePersistenceIdPrefixes(terminals, sources)
+        .map(persistenceIdForDate(_, today))
 
   def persistenceIdsForSequenceNumberPurge(retentionPeriod: FiniteDuration,
                                            maxForecastDays: Int,
@@ -95,10 +101,13 @@ object DataRetentionHandler {
       .persistenceIdsForSequenceNumberPurge(retentionPeriod, maxForecastDays, terminals, FeedSource.feedSources)
     val pIdsForFullPurge = DataRetentionHandler
       .persistenceIdsForFullPurge(terminals, retentionPeriod, FeedSource.feedSources)
+    val pIdsForDate = DataRetentionHandler
+      .persistenceIdsForDate(terminals, FeedSource.feedSources)
     val akkaDao = AkkaDao(AkkaDb, now)
     DataRetentionHandler(
       pIdsForSequenceNumberPurge,
       pIdsForFullPurge,
+      pIdsForDate,
       retentionPeriod,
       now,
       akkaDao.deletePersistenceId,
@@ -110,7 +119,8 @@ object DataRetentionHandler {
 }
 
 case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate => Iterable[String],
-                                persistenceIdsForFullPurge: UtcDate => Iterable[String],
+                                preRetentionPersistenceIdsForFullPurge: UtcDate => Iterable[String],
+                                persistenceIdsForDate: UtcDate => Iterable[String],
                                 retentionPeriod: FiniteDuration,
                                 now: () => SDateLike,
                                 deletePersistenceId: String => Future[Int],
@@ -129,8 +139,31 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
     val today = now().toUtcDate
 
     purgeOldSequenceNumbers(persistenceIdsForSequenceNumberPurge(today))
-      .flatMap(_ => purgeOldPersistenceIds(persistenceIdsForFullPurge(today)))
+      .flatMap(_ => purgeOldPersistenceIds(preRetentionPersistenceIdsForFullPurge(today)))
   }
+
+  def purgeDateRange(start: UtcDate, end: UtcDate): Future[Done] =
+    Source(DateRange(start, end))
+      .map(date => (date, persistenceIdsForDate(date)))
+      .flatMapConcat { case (date, ids) =>
+        Source(ids.toList)
+          .mapAsync(1)(deletePersistenceId)
+          .map { _ =>
+            log.info(s"Deleted data for ${date.toISOString}")
+            Done
+          }
+          .recover {
+            case t =>
+              log.error(s"Failed to delete ${date.toISOString} ", t)
+              Done
+          }
+      }
+      .run()
+      .recover {
+        case t =>
+          log.error(s"Failed during date range deletion", t)
+          Done
+      }
 
   private def purgeOldPersistenceIds(persistenceIds: Iterable[String]): Future[Done] =
     Source(persistenceIds.toList)
