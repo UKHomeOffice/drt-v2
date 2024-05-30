@@ -117,7 +117,7 @@ object Navbar {
                       },
                       <.div(^.className := "training-hub-link", props.ctl.link(TrainingHubLoc())(Icon.calendarO, " ", "Training Hub")),
                       <.div(<.a(Icon.signOut, "Log Out",
-                        ^.href := s"/oauth/logout/${props.loggedInUser.userName.replace("\"", "")}?redirect=" + BaseUrl.until_#.value,
+                        ^.href := s"/oauth/logout?redirect=" + BaseUrl.until_#.value,
                         ^.onClick --> Callback(GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "Log Out", props.loggedInUser.id))))
                     )
                   }
