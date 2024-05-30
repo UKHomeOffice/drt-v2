@@ -112,7 +112,7 @@ PUT          /data/user-preference-planning-interval-minutes                    
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
 
-GET           /oauth/logout/:username                                                 controllers.Application.logoutUser(username: String)
+#GET           /oauth/logout/:username                                                 controllers.Application.logoutUser(username: String)
 
 GET           /data/userDetails/:email                                                controllers.Application.userDetails(email:String)
 
