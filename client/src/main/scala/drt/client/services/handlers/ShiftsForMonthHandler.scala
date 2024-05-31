@@ -5,7 +5,6 @@ import diode.data.{Pending, Pot, Ready}
 import drt.client.actions.Actions.{GetShiftsForMonth, SetShiftsForMonth}
 import drt.client.logger.log
 import drt.client.services.DrtApi
-import drt.client.services.JSDateConversions.SDate
 import drt.shared.MonthOfShifts
 import upickle.default.read
 

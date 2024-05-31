@@ -3,7 +3,7 @@ package manifests
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.specification.Before
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType.Passport
-import services.crunch.{CrunchTestLike, H2Tables}
+import services.crunch.{CrunchTestLike, H2AggregatedDbTables$}
 import slickdb.{ProcessedJsonRow, ProcessedZipRow, VoyageManifestPassengerInfoRow}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
@@ -18,7 +18,7 @@ import scala.concurrent.duration.DurationInt
 
 class ManifestLookupSpec extends CrunchTestLike with Before {
   override def before: Any = {
-    H2Tables.dropAndCreateH2Tables()
+    H2AggregatedDbTables$.dropAndCreateH2Tables()
     val scheduled = SDate("2024-05-15T12:00Z")
     val processedZipRow = ProcessedZipRow("some-zip", true, new Timestamp(scheduled.millisSinceEpoch), Option("2024-05-15"))
     val processedJsonRow = ProcessedJsonRow(
@@ -59,12 +59,12 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
       in_transit = false,
       json_file = "some-json",
     )
-    import H2Tables.profile.api._
+    import H2AggregatedDbTables$.profile.api._
     Await.ready(
-      H2Tables.run(DBIO.seq(
-        H2Tables.ProcessedZip += processedZipRow,
-        H2Tables.ProcessedJson += processedJsonRow,
-        H2Tables.VoyageManifestPassengerInfo += passengerRow,
+      H2AggregatedDbTables$.run(DBIO.seq(
+        H2AggregatedDbTables$.ProcessedZip += processedZipRow,
+        H2AggregatedDbTables$.ProcessedJson += processedJsonRow,
+        H2AggregatedDbTables$.VoyageManifestPassengerInfo += passengerRow,
       )), 1.second)
   }
 
@@ -72,7 +72,7 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
     "lookup a manifest" in {
       skipped("Postgres queries incompatible with H2")
 
-      val manifestLookup = ManifestLookup(H2Tables)
+      val manifestLookup = ManifestLookup(H2AggregatedDbTables$)
       val manifest = manifestLookup.maybeBestAvailableManifest(PortCode("LHR"), PortCode("JFK"), VoyageNumber(1), SDate("2024-05-15T12:00Z"))
       val expectedKey = UniqueArrivalKey(PortCode("LHR"), PortCode("JFK"), VoyageNumber(1), SDate("2024-05-15T12:00Z"))
       val expectedManifest = BestAvailableManifest(

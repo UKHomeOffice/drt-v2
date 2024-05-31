@@ -30,7 +30,7 @@ trait UserTableLike {
   def updateStaffPlanningIntervalMinutes(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int]
 }
 
-case class UserTable(tables: Tables) extends UserTableLike {
+case class UserTable(tables: AggregatedDbTables) extends UserTableLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.User

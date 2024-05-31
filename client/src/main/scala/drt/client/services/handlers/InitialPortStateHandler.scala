@@ -8,8 +8,7 @@ import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.CrunchApi._
-import drt.shared.{ArrivalKey, PortState}
-import drt.shared.api.FlightManifestSummary
+import drt.shared.PortState
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.ports.PortCode
 import upickle.default.read

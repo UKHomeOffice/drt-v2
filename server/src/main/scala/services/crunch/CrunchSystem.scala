@@ -10,8 +10,7 @@ import drt.shared.CrunchApi._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import services.TryCrunchWholePax
-import uk.gov.homeoffice.drt.arrivals.{Arrival, FeedArrival}
-import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
+import uk.gov.homeoffice.drt.arrivals.FeedArrival
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -30,12 +29,9 @@ case class CrunchSystem[FT](forecastBaseArrivalsResponse: EnabledFeedWithFrequen
                             killSwitches: List[UniqueKillSwitch]
                            )
 
-case class CrunchProps[FT](airportConfig: AirportConfig,
-                           portStateActor: ActorRef,
+case class CrunchProps[FT](portStateActor: ActorRef,
                            maxDaysToCrunch: Int,
-                           expireAfterMillis: Int,
                            now: () => SDateLike = () => SDate.now(),
-                           crunchActors: PersistentStateActors,
                            feedActors: Map[FeedSource, ActorRef],
                            updateFeedStatus: (FeedSource, ArrivalsFeedResponse) => Unit,
                            arrivalsForecastBaseFeed: Feed[FT],
@@ -44,7 +40,6 @@ case class CrunchProps[FT](airportConfig: AirportConfig,
                            arrivalsLiveFeed: Feed[FT],
                            optimiser: TryCrunchWholePax,
                            startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]),
-                           setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
                            passengerAdjustments: List[FeedArrival] => Future[List[FeedArrival]],
                            system: ActorSystem,
                           )

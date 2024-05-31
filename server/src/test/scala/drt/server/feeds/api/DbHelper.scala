@@ -1,6 +1,6 @@
 package drt.server.feeds.api
 
-import slickdb.{ProcessedJsonRow, ProcessedZipRow, Tables, VoyageManifestPassengerInfoRow}
+import slickdb.{ProcessedJsonRow, ProcessedZipRow, AggregatedDbTables, VoyageManifestPassengerInfoRow}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.sql.Timestamp
@@ -8,19 +8,19 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
 
 object DbHelper {
-  def addZipRecord(tables: Tables, row: ProcessedZipRow): Future[Int] = {
+  def addZipRecord(tables: AggregatedDbTables, row: ProcessedZipRow): Future[Int] = {
     import tables.profile.api._
 
     Await.ready(tables.run(TableQuery[tables.ProcessedZipTable] += row), 1.second)
   }
 
-  def addJsonRecord(tables: Tables, row: ProcessedJsonRow): Future[Int] = {
+  def addJsonRecord(tables: AggregatedDbTables, row: ProcessedJsonRow): Future[Int] = {
     import tables.profile.api._
 
     Await.ready(tables.run(TableQuery[tables.ProcessedJsonTable] += row), 1.second)
   }
 
-  def addPaxRecord(tables: Tables, arrivalPort: String, departurePort: String, voyageNumber: Int, scheduled: SDateLike, paxId: String, jsonFileName: String): Any = {
+  def addPaxRecord(tables: AggregatedDbTables, arrivalPort: String, departurePort: String, voyageNumber: Int, scheduled: SDateLike, paxId: String, jsonFileName: String): Any = {
     import tables.profile.api._
 
     val scheduledTs = new Timestamp(scheduled.millisSinceEpoch)

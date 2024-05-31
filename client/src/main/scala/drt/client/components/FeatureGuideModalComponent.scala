@@ -12,7 +12,6 @@ import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
 import upickle.default.write
 
-import scala.language.postfixOps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiDialog, MuiDialogContent, MuiDialogTitle}
 import uk.gov.homeoffice.drt.training.FeatureGuide
 import scala.scalajs.js

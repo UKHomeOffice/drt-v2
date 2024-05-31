@@ -60,7 +60,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     clearDatabase()
   }
 
-  val table: ArrivalTable = ArrivalTable(defaultAirportConfig.portCode, H2Tables, paxFeedSourceOrder)
+  val table: ArrivalTable = ArrivalTable(defaultAirportConfig.portCode, H2AggregatedDbTables$, paxFeedSourceOrder)
 
   def clearDatabase(): Unit = {
     Try(dropTables())
@@ -68,14 +68,14 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
   }
 
   def createTables(): Unit = {
-    H2Tables.schema.createStatements.toList.foreach { query =>
-      Await.ready(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
+    H2AggregatedDbTables$.schema.createStatements.toList.foreach { query =>
+      Await.ready(H2AggregatedDbTables$.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 
   def dropTables(): Unit = {
-    H2Tables.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.ready(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
+    H2AggregatedDbTables$.schema.dropStatements.toList.reverse.foreach { query =>
+      Await.ready(H2AggregatedDbTables$.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 

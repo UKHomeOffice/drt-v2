@@ -27,7 +27,7 @@ trait FeatureGuideViewLike {
   def featureViewed(email: String)(implicit ec: ExecutionContext): Future[Seq[String]]
 }
 
-case class FeatureGuideViewTable(tables: Tables) extends FeatureGuideViewLike {
+case class FeatureGuideViewTable(tables: AggregatedDbTables) extends FeatureGuideViewLike {
 
   val userFeatureView = TableQuery[FeatureGuideView]
 

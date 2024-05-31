@@ -4,7 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}
-import slickdb.Tables
+import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.SDate
@@ -15,7 +15,7 @@ trait ManifestArrivalKeys {
   def nextKeys(since: MillisSinceEpoch): Future[(Option[MillisSinceEpoch], Iterable[UniqueArrivalKey])]
 }
 
-case class DbManifestArrivalKeys(tables: Tables, destinationPortCode: PortCode)
+case class DbManifestArrivalKeys(tables: AggregatedDbTables, destinationPortCode: PortCode)
                                 (implicit ec: ExecutionContext) extends ManifestArrivalKeys {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
