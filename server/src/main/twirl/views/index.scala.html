@@ -22,9 +22,9 @@
             // Function to clear specific cookies
             function clearCookies() {
                 // Clear the kc-access cookie
-                document.cookie = 'kc-access=; Max-Age=0; path=/; domain=.homeoffice.gov.uk';
+                document.cookie = 'kc-access=; Max-Age=0; path=/; domain='+ window.location.hostname +';'
                 // Clear the kc-state cookie
-                document.cookie = 'kc-state=; Max-Age=0; path=/; domain=.homeoffice.gov.uk';
+                document.cookie = 'kc-state=; Max-Age=0; path=/; domain='+ window.location.hostname +';'
             }
 
             // Call clearCookies on page load
