@@ -60,7 +60,7 @@ import uk.gov.homeoffice.drt.time._
 import javax.inject.Singleton
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
-import scala.concurrent.duration.{DurationInt, DurationLong}
+import scala.concurrent.duration.{DurationInt, DurationLong, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -357,6 +357,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
     splitsCalculator.splitsForManifest,
   )
 
+
+  private val daysInYear = 365
+  val retentionPeriod: FiniteDuration = (params.retainDataForYears * daysInYear).days
+  val retentionHandler: DataRetentionHandler = DataRetentionHandler(retentionPeriod, params.forecastMaxDays, airportConfig.terminals, now)
+
   def run(): Unit = {
     val actors = persistentStateActors
 
@@ -413,7 +418,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
 
         if (params.enablePreRetentionPeriodDataDeletion) {
-          val retentionHandler = DataRetentionHandler((5 * 365).days, params.forecastMaxDays, airportConfig.terminals, now)
           system.scheduler.scheduleAtFixedRate(0.millis, 1.day) { () =>
             log.info("Purging data outside retention period")
             retentionHandler.purgeDataOutsideRetentionPeriod()
