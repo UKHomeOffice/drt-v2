@@ -1,4 +1,4 @@
-package uk.gov.homeoffice.drt.db
+package uk.gov.homeoffice.drt.testsystem.db
 
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.JdbcProfile

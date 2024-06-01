@@ -5,7 +5,7 @@ import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import org.slf4j.LoggerFactory
-import slickdb.AkkaDao
+import slickdb.{AkkaDao, AkkaDbTables}
 import uk.gov.homeoffice.drt.db.AkkaDb
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -91,10 +91,25 @@ object DataRetentionHandler {
     } ++ nonDatePersistenceIds
   }
 
+  def dateIsSafeToPurge(retentionPeriod: FiniteDuration, now: () => SDateLike): UtcDate => Boolean =
+    date => {
+      val mostRecentDateToPurge = SDate(latestDateToPurge(retentionPeriod, now)())
+      val startDate = SDate(date)
+      startDate <= mostRecentDateToPurge
+    }
+
+  def latestDateToPurge(retentionPeriod: FiniteDuration, now: () => SDateLike): () => UtcDate =
+    () => {
+      val retentionPeriodStartDate = now().addDays(-retentionPeriod.toDays.toInt)
+      retentionPeriodStartDate.addDays(-1).toUtcDate
+    }
+
+
   def apply(retentionPeriod: FiniteDuration,
             maxForecastDays: Int,
             terminals: Iterable[Terminal],
             now: () => SDateLike,
+            db: AkkaDbTables,
            )
            (implicit ec: ExecutionContext, mat: Materializer): DataRetentionHandler = {
     val pIdsForSequenceNumberPurge = DataRetentionHandler
@@ -103,7 +118,7 @@ object DataRetentionHandler {
       .persistenceIdsForFullPurge(terminals, retentionPeriod, FeedSource.feedSources)
     val pIdsForDate = DataRetentionHandler
       .persistenceIdsForDate(terminals, FeedSource.feedSources)
-    val akkaDao = AkkaDao(AkkaDb, now)
+    val akkaDao = AkkaDao(db, now)
     DataRetentionHandler(
       pIdsForSequenceNumberPurge,
       pIdsForFullPurge,

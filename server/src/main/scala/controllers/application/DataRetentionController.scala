@@ -11,20 +11,15 @@ class DataRetentionController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
 
   def purge(fromStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
     Action {
-      val retentionPeriodStartDate = ctrl.now().addDays(-ctrl.applicationService.retentionPeriod.toDays.toInt)
-      val mostRecentDateToPurge = retentionPeriodStartDate.addDays(-1)
+      val fromDate = SDate(fromStr).toUtcDate
+      val toDate = ctrl.applicationService.latestDateToPurge()
 
-      val startDate = SDate(fromStr)
-
-      if (startDate < mostRecentDateToPurge) {
-        val fromDate = startDate.toUtcDate
-        val toDate = mostRecentDateToPurge.toUtcDate
-
+      if (ctrl.applicationService.dateIsSafeToPurge(fromDate)) {
         ctrl.applicationService.retentionHandler.purgeDateRange(fromDate, toDate)
 
-        Ok(s"Deleting data from $fromDate to $toDate")
+        Ok(s"Deleting data from ${fromDate.toISOString} to ${toDate.toISOString}")
       } else {
-        BadRequest(s"Cannot purge data from $fromStr as it is within the retention period")
+        BadRequest(s"Cannot purge data from ${fromDate.toISOString} as it is within the retention period (${toDate.toISOString} onwards)")
       }
     }
   }

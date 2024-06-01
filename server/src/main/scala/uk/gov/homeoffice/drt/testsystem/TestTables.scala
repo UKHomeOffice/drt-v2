@@ -123,6 +123,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val usePassengerPredictions: Boolean = true
   override val legacyFeedArrivalsBeforeDate: SDateLike = SDate("2024-04-03")
   override val enablePreRetentionPeriodDataDeletion: Boolean = false
+  override val retainDataForYears: Int = 5
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
 }

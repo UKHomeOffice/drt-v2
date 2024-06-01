@@ -208,4 +208,19 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
       testProbeDeletePersistenceId.expectMsg("full-delete-pid-a-2024-05-12")
       testProbeDeletePersistenceId.expectMsg("full-delete-pid-b-2024-05-12")
     }
-  }}
+  }
+
+  "dateIsSafeToPurge" should {
+    val retentionPeriod = 5 * 365.days
+    val today = UtcDate(2024, 5, 20)
+    val isSafe = DataRetentionHandler.dateIsSafeToPurge(retentionPeriod, () => SDate(today))
+
+    "return true if the date is outside the retention period" in {
+      isSafe(UtcDate(2019, 5, 21)) should ===(true)
+    }
+
+    "return false if the date is within the retention period" in {
+      isSafe(UtcDate(2019, 5, 22)) should ===(false)
+    }
+  }
+}
