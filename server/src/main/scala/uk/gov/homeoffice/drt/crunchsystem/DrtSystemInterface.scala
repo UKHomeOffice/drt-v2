@@ -11,7 +11,7 @@ import manifests.queues.SplitsCalculator
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments}
-import slickdb.AggregatedDbTables
+import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.auth.Roles
@@ -37,7 +37,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
   val env: AppEnvironment = AppEnvironment(config.getOptional[String]("env").getOrElse("other"))
 
-  val db: AggregatedDbTables
+  val aggregatedDb: AggregatedDbTables
+  val akkaDb: AkkaDbTables
   val airportConfig: AirportConfig
   val params: DrtParameters
 
@@ -90,7 +91,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
     now = now,
     params = params,
     config = config,
-    db = db,
+    aggregatedDb = aggregatedDb,
+    akkaDb = akkaDb,
     feedService = feedService,
     manifestLookups = manifestLookups,
     manifestLookupService = manifestLookupService,

@@ -37,7 +37,7 @@ import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
-import slickdb.{AggregatedDbTables, AkkaDao}
+import slickdb.{AggregatedDbTables, AkkaDao, AkkaDbTables}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
@@ -60,7 +60,7 @@ import uk.gov.homeoffice.drt.time._
 import javax.inject.Singleton
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
-import scala.concurrent.duration.{DurationInt, DurationLong}
+import scala.concurrent.duration.{DurationInt, DurationLong, FiniteDuration}
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
@@ -70,7 +70,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               now: () => SDateLike,
                               params: DrtParameters,
                               config: Configuration,
-                              db: AggregatedDbTables,
+                              aggregatedDb: AggregatedDbTables,
+                              akkaDb: AkkaDbTables,
                               feedService: FeedService,
                               manifestLookups: ManifestLookupsLike,
                               manifestLookupService: ManifestLookupLike,
@@ -129,7 +130,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   val manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifestParser.VoyageManifests), NotUsed] =
     ManifestsProvider(manifestsRouterActorReadOnly)
 
-  private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, db)
+  private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, aggregatedDb)
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
     PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
@@ -357,6 +358,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
     splitsCalculator.splitsForManifest,
   )
 
+
+  private val daysInYear = 365
+  private val retentionPeriod: FiniteDuration = (params.retainDataForYears * daysInYear).days
+  val retentionHandler: DataRetentionHandler = DataRetentionHandler(
+    retentionPeriod, params.forecastMaxDays, airportConfig.terminals, now, airportConfig.portCode, akkaDb, aggregatedDb)
+  val dateIsSafeToPurge: UtcDate => Boolean = DataRetentionHandler.dateIsSafeToPurge(retentionPeriod, now)
+  val latestDateToPurge: () => UtcDate = DataRetentionHandler.latestDateToPurge(retentionPeriod, now)
+
   def run(): Unit = {
     val actors = persistentStateActors
 
@@ -413,7 +422,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
         system.scheduler.scheduleAtFixedRate(0.millis, 1.minute)(ApiValidityReporter(feedService.flightLookups.flightsRouterActor))
 
         if (params.enablePreRetentionPeriodDataDeletion) {
-          val retentionHandler = DataRetentionHandler((5 * 365).days, params.forecastMaxDays, airportConfig.terminals, now)
           system.scheduler.scheduleAtFixedRate(0.millis, 1.day) { () =>
             log.info("Purging data outside retention period")
             retentionHandler.purgeDataOutsideRetentionPeriod()

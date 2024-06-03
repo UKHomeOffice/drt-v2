@@ -6,11 +6,12 @@ import drt.server.feeds.api.DbHelper.addPaxRecord
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import manifests.UniqueArrivalKey
 import org.specs2.specification.BeforeEach
-import services.crunch.{CrunchTestLike, H2AggregatedDbTables$}
+import services.crunch.CrunchTestLike
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.concurrent.duration.DurationInt
@@ -30,14 +31,14 @@ class DbManifestProcessorTest
   }
 
   def createTables(): Unit = {
-    H2AggregatedDbTables$.schema.createStatements.toList.foreach { query =>
-      Await.result(H2AggregatedDbTables$.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
+    AggregateDbH2.schema.createStatements.toList.foreach { query =>
+      Await.result(AggregateDbH2.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
     }
   }
 
   def dropTables(): Unit = {
-    H2AggregatedDbTables$.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.result(H2AggregatedDbTables$.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
+    AggregateDbH2.schema.dropStatements.toList.reverse.foreach { query =>
+      Await.result(AggregateDbH2.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
     }
   }
 
@@ -51,7 +52,7 @@ class DbManifestProcessorTest
 
     "Find matching passengers and enqueue a successful manifest response for iAPI" in {
       implicit val probe: TestProbe = TestProbe("manifestProbe")
-      addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
 
       processAndCheckIapiManifestPax(key, Set(paxId))
 
@@ -60,8 +61,8 @@ class DbManifestProcessorTest
 
     "Find matching passengers and enqueue a successful manifest response, using only unique passenger identifiers for iAPI" in {
       implicit val probe: TestProbe = TestProbe("manifestProbe")
-      addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
-      addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
 
       processAndCheckIapiManifestPax(key, Set(paxId))
 
@@ -74,10 +75,10 @@ class DbManifestProcessorTest
       val paxId2 = "2"
       val paxId3 = "3"
 
-      addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, paxId1, "a.json")
-      addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, paxId2, "a.json")
-      addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, paxId2, "b.json")
-      addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, paxId3, "b.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId1, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId2, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId2, "b.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId3, "b.json")
 
       processAndCheckIapiManifestPax(key, Set(paxId1, paxId2, paxId3))
 
@@ -86,8 +87,8 @@ class DbManifestProcessorTest
 
     "Find matching passengers and enqueue a successful manifest response, using only unique passenger identifiers for non-iAPI" in {
       implicit val probe: TestProbe = TestProbe("manifestProbe")
-      addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, "", "a.json")
-      addPaxRecord(H2AggregatedDbTables$, arrivalPort, departurePort, voyageNumber, scheduled, "", "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, "", "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, "", "a.json")
 
       processAndCheckNonIapiManifestPax(key, 2)
 
@@ -123,6 +124,6 @@ class DbManifestProcessorTest
         Future(Done)
       }
 
-    DbManifestProcessor(H2AggregatedDbTables$, PortCode("LHR"), handleManifestResponse)
+    DbManifestProcessor(AggregateDbH2, PortCode("LHR"), handleManifestResponse)
   }
 }

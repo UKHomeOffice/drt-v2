@@ -47,7 +47,9 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(AggregateDb)
 
-  lazy override val db: AggregatedDbTables = AggregateDb
+  lazy override val aggregatedDb: AggregatedDbTables = AggregateDb
+
+  lazy override val akkaDb: AkkaDbTables = AkkaDb
 
   override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb.db)
 
