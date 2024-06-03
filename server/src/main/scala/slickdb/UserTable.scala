@@ -33,10 +33,9 @@ trait UserTableLike {
 case class UserTable(tables: AggregatedDbTables) extends UserTableLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  import tables.User
   import tables.profile.api._
 
-  val userTableQuery = TableQuery[User]
+  val userTableQuery = TableQuery[tables.UserTable]
 
   def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = {
     tables.run(userTableQuery.filter(_.email === email).result).mapTo[Seq[UserRow]].map(_.headOption)
@@ -89,8 +88,8 @@ case class UserTable(tables: AggregatedDbTables) extends UserTableLike {
     tables.run(query)
   }
 
-  def matchId(id: String): tables.User => Rep[Boolean] = (userTracking: User) =>
-    userTracking.id == id
+  def matchId(id: String): tables.UserTable => Rep[Boolean] = (userTracking: tables.UserTable) =>
+    userTracking.id === id
 
   override def updateStaffPlanningIntervalMinutes(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int] = {
     val query = userTableQuery.filter(_.email === email)

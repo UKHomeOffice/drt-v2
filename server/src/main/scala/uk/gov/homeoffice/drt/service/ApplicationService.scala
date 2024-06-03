@@ -361,7 +361,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private val daysInYear = 365
   private val retentionPeriod: FiniteDuration = (params.retainDataForYears * daysInYear).days
-  val retentionHandler: DataRetentionHandler = DataRetentionHandler(retentionPeriod, params.forecastMaxDays, airportConfig.terminals, now, akkaDb)
+  val retentionHandler: DataRetentionHandler = DataRetentionHandler(
+    retentionPeriod, params.forecastMaxDays, airportConfig.terminals, now, airportConfig.portCode, akkaDb, aggregatedDb)
   val dateIsSafeToPurge: UtcDate => Boolean = DataRetentionHandler.dateIsSafeToPurge(retentionPeriod, now)
   val latestDateToPurge: () => UtcDate = DataRetentionHandler.latestDateToPurge(retentionPeriod, now)
 

@@ -3,13 +3,14 @@ package manifests
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile}
 import org.specs2.specification.Before
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType.Passport
-import services.crunch.{CrunchTestLike, H2AggregatedDbTables$}
+import services.crunch.CrunchTestLike
 import slickdb.{ProcessedJsonRow, ProcessedZipRow, VoyageManifestPassengerInfoRow}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.{PaxAge, PortCode}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.SDate
 
 import java.sql.Timestamp
@@ -18,7 +19,7 @@ import scala.concurrent.duration.DurationInt
 
 class ManifestLookupSpec extends CrunchTestLike with Before {
   override def before: Any = {
-    H2AggregatedDbTables$.dropAndCreateH2Tables()
+    AggregateDbH2.dropAndCreateH2Tables()
     val scheduled = SDate("2024-05-15T12:00Z")
     val processedZipRow = ProcessedZipRow("some-zip", true, new Timestamp(scheduled.millisSinceEpoch), Option("2024-05-15"))
     val processedJsonRow = ProcessedJsonRow(
@@ -59,12 +60,12 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
       in_transit = false,
       json_file = "some-json",
     )
-    import H2AggregatedDbTables$.profile.api._
+    import AggregateDbH2.profile.api._
     Await.ready(
-      H2AggregatedDbTables$.run(DBIO.seq(
-        H2AggregatedDbTables$.ProcessedZip += processedZipRow,
-        H2AggregatedDbTables$.ProcessedJson += processedJsonRow,
-        H2AggregatedDbTables$.VoyageManifestPassengerInfo += passengerRow,
+      AggregateDbH2.run(DBIO.seq(
+        AggregateDbH2.processedZip += processedZipRow,
+        AggregateDbH2.processedJson += processedJsonRow,
+        AggregateDbH2.voyageManifestPassengerInfo += passengerRow,
       )), 1.second)
   }
 
@@ -72,7 +73,7 @@ class ManifestLookupSpec extends CrunchTestLike with Before {
     "lookup a manifest" in {
       skipped("Postgres queries incompatible with H2")
 
-      val manifestLookup = ManifestLookup(H2AggregatedDbTables$)
+      val manifestLookup = ManifestLookup(AggregateDbH2)
       val manifest = manifestLookup.maybeBestAvailableManifest(PortCode("LHR"), PortCode("JFK"), VoyageNumber(1), SDate("2024-05-15T12:00Z"))
       val expectedKey = UniqueArrivalKey(PortCode("LHR"), PortCode("JFK"), VoyageNumber(1), SDate("2024-05-15T12:00Z"))
       val expectedManifest = BestAvailableManifest(

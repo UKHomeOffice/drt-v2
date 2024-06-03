@@ -5,9 +5,8 @@ import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import org.slf4j.LoggerFactory
-import slickdb.{AkkaDao, AkkaDbTables}
-import uk.gov.homeoffice.drt.db.AkkaDb
-import uk.gov.homeoffice.drt.ports.FeedSource
+import slickdb.{AggregatedDao, AggregatedDbTables, AkkaDao, AkkaDbTables}
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.prediction.ModelCategory
 import uk.gov.homeoffice.drt.prediction.category.FlightCategory
@@ -17,6 +16,8 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 object DataRetentionHandler {
+  private val log = LoggerFactory.getLogger(getClass)
+
   private val nonDatePersistenceIds: Seq[String] = Seq(
     "daily-pax",
     "actors.ForecastBaseArrivalsActor-forecast-base",
@@ -100,16 +101,29 @@ object DataRetentionHandler {
 
   def latestDateToPurge(retentionPeriod: FiniteDuration, now: () => SDateLike): () => UtcDate =
     () => {
-      val retentionPeriodStartDate = now().addDays(-retentionPeriod.toDays.toInt)
-      retentionPeriodStartDate.addDays(-1).toUtcDate
+      val retentionPeriodStartDate = retentionStartDate(retentionPeriod, now)
+      SDate(retentionPeriodStartDate()).addDays(-1).toUtcDate
     }
 
+  def retentionStartDate(retentionPeriod: FiniteDuration, now: () => SDateLike): () => UtcDate =
+    () => now().addDays(-retentionPeriod.toDays.toInt).toUtcDate
+
+  def deleteAggregatedArrivalsBeforeRetentionPeriod(deleteArrivalsBefore: UtcDate => Future[Int],
+                                                    retentionStartDate: () => UtcDate,
+                                                   ): () => Future[Int] =
+    () => {
+      val retentionStart = retentionStartDate()
+      log.info(s"Deleting aggregated arrivals before retention period, ${retentionStart.toISOString}")
+      deleteArrivalsBefore(retentionStart)
+    }
 
   def apply(retentionPeriod: FiniteDuration,
             maxForecastDays: Int,
             terminals: Iterable[Terminal],
             now: () => SDateLike,
-            db: AkkaDbTables,
+            portCode: PortCode,
+            akkaDb: AkkaDbTables,
+            aggregatedDb: AggregatedDbTables,
            )
            (implicit ec: ExecutionContext, mat: Materializer): DataRetentionHandler = {
     val pIdsForSequenceNumberPurge = DataRetentionHandler
@@ -118,7 +132,13 @@ object DataRetentionHandler {
       .persistenceIdsForFullPurge(terminals, retentionPeriod, FeedSource.feedSources)
     val pIdsForDate = DataRetentionHandler
       .persistenceIdsForDate(terminals, FeedSource.feedSources)
-    val akkaDao = AkkaDao(db, now)
+    val aggDao = AggregatedDao(aggregatedDb, now, portCode)
+    val deleteArrivalsBeforeRetentionPeriod = deleteAggregatedArrivalsBeforeRetentionPeriod(
+      aggDao.deleteArrivalsBefore,
+      retentionStartDate(retentionPeriod, now),
+    )
+    val akkaDao = AkkaDao(akkaDb, now)
+
     DataRetentionHandler(
       pIdsForSequenceNumberPurge,
       pIdsForFullPurge,
@@ -128,6 +148,7 @@ object DataRetentionHandler {
       akkaDao.deletePersistenceId,
       akkaDao.deleteLowerSequenceNumbers,
       akkaDao.getSequenceNumberBeforeRetentionPeriod,
+      deleteArrivalsBeforeRetentionPeriod,
     )
   }
 
@@ -141,6 +162,7 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
                                 deletePersistenceId: String => Future[Int],
                                 deleteLowerSequenceNumbers: (String, Long) => Future[(Int, Int)],
                                 getSequenceNumberBeforeRetentionPeriod: (String, FiniteDuration) => Future[Option[Long]],
+                                deleteAggregatedArrivalsBeforeRetentionPeriod: () => Future[Int],
                                )
                                (implicit ec: ExecutionContext, mat: Materializer) {
   private val log = LoggerFactory.getLogger(getClass)
@@ -155,6 +177,7 @@ case class DataRetentionHandler(persistenceIdsForSequenceNumberPurge: UtcDate =>
 
     purgeOldSequenceNumbers(persistenceIdsForSequenceNumberPurge(today))
       .flatMap(_ => purgeOldPersistenceIds(preRetentionPersistenceIdsForFullPurge(today)))
+      .flatMap(_ => deleteAggregatedArrivalsBeforeRetentionPeriod())
   }
 
   def purgeDateRange(start: UtcDate, end: UtcDate): Future[Done] =

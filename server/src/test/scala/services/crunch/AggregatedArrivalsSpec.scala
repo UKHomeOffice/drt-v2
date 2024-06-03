@@ -16,6 +16,7 @@ import slickdb.{AggregatedArrival, AggregatedArrivals, ArrivalTable, ArrivalTabl
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq}
@@ -60,7 +61,7 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
     clearDatabase()
   }
 
-  val table: ArrivalTable = ArrivalTable(defaultAirportConfig.portCode, H2AggregatedDbTables$, paxFeedSourceOrder)
+  val table: ArrivalTable = ArrivalTable(defaultAirportConfig.portCode, AggregateDbH2, paxFeedSourceOrder)
 
   def clearDatabase(): Unit = {
     Try(dropTables())
@@ -68,14 +69,14 @@ class AggregatedArrivalsSpec extends CrunchTestLike with BeforeEach {
   }
 
   def createTables(): Unit = {
-    H2AggregatedDbTables$.schema.createStatements.toList.foreach { query =>
-      Await.ready(H2AggregatedDbTables$.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
+    AggregateDbH2.schema.createStatements.toList.foreach { query =>
+      Await.ready(AggregateDbH2.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 
   def dropTables(): Unit = {
-    H2AggregatedDbTables$.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.ready(H2AggregatedDbTables$.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
+    AggregateDbH2.schema.dropStatements.toList.reverse.foreach { query =>
+      Await.ready(AggregateDbH2.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 10.seconds)
     }
   }
 
