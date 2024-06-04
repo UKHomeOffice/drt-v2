@@ -37,12 +37,10 @@ RUN chown -R 1000:1000 /home/drt/.ssh
 RUN mkdir -p /var/data
 RUN chown 1000:1000 -R /var/data
 
-COPY certs/rds-combined-ca-bundle.der /etc/drt/rds-combined-ca-bundle.der
-COPY certs/rds-ca-2019-root.der /etc/drt/rds-ca-2019-root.der
+RUN wget https://truststore.pki.rds.amazonaws.com/eu-west-2/eu-west-2-bundle.pem -O /etc/drt/eu-west-2-bundle.pem
+RUN openssl x509 -outform der -in /etc/drt/eu-west-2-bundle.pem -out /etc/drt/certificate.der
 
-RUN echo keytool $KEYTOOL_PASSWORD
-RUN keytool -noprompt -storepass changeit -import -alias rds-root-deprecated -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-combined-ca-bundle.der
-RUN keytool -noprompt -storepass changeit -import -alias rds-root -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-ca-2019-root.der
+RUN keytool -noprompt -storepass changeit -import -alias rds-root -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/certificate.der
 
 USER 1000:0
 ENTRYPOINT ["/opt/docker/bin/drt", "-Duser.timezone=UTC"]
