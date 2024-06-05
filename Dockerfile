@@ -37,6 +37,7 @@ RUN chown -R 1000:1000 /home/drt/.ssh
 RUN mkdir -p /var/data
 RUN chown 1000:1000 -R /var/data
 
+RUN mkdir -p /etc/drt
 RUN wget https://truststore.pki.rds.amazonaws.com/eu-west-2/eu-west-2-bundle.pem -O /etc/drt/eu-west-2-bundle.pem
 RUN openssl x509 -outform der -in /etc/drt/eu-west-2-bundle.pem -out /etc/drt/certificate.der
 
