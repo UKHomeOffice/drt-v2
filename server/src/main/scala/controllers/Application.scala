@@ -238,25 +238,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     }
   }
 
-  def logoutUser(username: String) = Action.async { _ =>
-    val realmUrlOption = config.getOptional[String]("key-cloak.url")
-    val clientIdOption = config.getOptional[String]("key-cloak.client_id")
-    val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
-    (realmUrlOption, clientIdOption, clientSecretOption) match {
-      case (Some(realmUrl), Some(clientId), Some(clientSecret)) =>
-        val authClient = new KeyCloakAuth(realmUrl, clientId, clientSecret) with ProdSendAndReceive
-        log.info(s"Logout $username")
-        authClient.logout(username, realmUrl).map(_ => Redirect(Call("get", redirectUrl))).recover {
-          case e =>
-            log.error(s"Failed to logout user $username: ${e.getMessage}")
-            InternalServerError("Failed to logout user")
-        }
-      case _ =>
-        log.error(s"Failed to logout user $username: Feature not implemented")
-        Future.successful(Redirect(Call("get", redirectUrl)))
-    }
-  }
-
   def apiLogin: Action[Map[String, Seq[String]]] = Action.async(parse.tolerantFormUrlEncoded) { request =>
 
     def postStringValOrElse(key: String): Option[String] = {
