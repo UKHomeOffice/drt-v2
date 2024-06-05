@@ -24,7 +24,7 @@ RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
 RUN mkdir -p /opt/docker/target && chown 1000 /opt/docker/target
 RUN apt-get update
-RUN apt-get install -y openssh-client ca-certificates wget
+RUN apt-get install -y openssh-client ca-certificates curl
 RUN rm -rf /var/cache/apt/*
 
 RUN mkdir -p /home/drt/.ssh
@@ -38,7 +38,7 @@ RUN mkdir -p /var/data
 RUN chown 1000:1000 -R /var/data
 
 RUN mkdir -p /etc/drt
-RUN wget https://truststore.pki.rds.amazonaws.com/eu-west-2/eu-west-2-bundle.pem -O /etc/drt/eu-west-2-bundle.pem
+RUN curl https://truststore.pki.rds.amazonaws.com/eu-west-2/eu-west-2-bundle.pem > /etc/drt/eu-west-2-bundle.pem
 RUN openssl x509 -outform der -in /etc/drt/eu-west-2-bundle.pem -out /etc/drt/certificate.der
 
 RUN keytool -noprompt -storepass changeit -import -alias rds-root -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/certificate.der
