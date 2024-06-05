@@ -42,6 +42,7 @@ RUN wget https://truststore.pki.rds.amazonaws.com/eu-west-2/eu-west-2-bundle.pem
 RUN openssl x509 -outform der -in /etc/drt/eu-west-2-bundle.pem -out /etc/drt/certificate.der
 
 RUN keytool -noprompt -storepass changeit -import -alias rds-root -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/certificate.der
+RUN keytool -v -list -keystore $JAVA_HOME/lib/security/cacerts
 
 USER 1000:0
 ENTRYPOINT ["/opt/docker/bin/drt", "-Duser.timezone=UTC"]
