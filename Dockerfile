@@ -24,7 +24,7 @@ RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
 RUN mkdir -p /opt/docker/target && chown 1000 /opt/docker/target
 RUN apt-get update
-RUN apt-get install -y curl
+RUN apt-get install -y openssh-client curl
 RUN rm -rf /var/cache/apt/*
 
 RUN mkdir -p /home/drt/.ssh
