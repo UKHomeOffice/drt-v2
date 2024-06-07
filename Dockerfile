@@ -24,7 +24,7 @@ RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
 RUN mkdir -p /var/log/drt && chown 1000 /var/log/drt
 RUN mkdir -p /opt/docker/target && chown 1000 /opt/docker/target
 RUN apt-get update
-RUN apt-get install -y openssh-client ca-certificates
+RUN apt-get install -y openssh-client curl
 RUN rm -rf /var/cache/apt/*
 
 RUN mkdir -p /home/drt/.ssh
@@ -37,12 +37,8 @@ RUN chown -R 1000:1000 /home/drt/.ssh
 RUN mkdir -p /var/data
 RUN chown 1000:1000 -R /var/data
 
-COPY certs/rds-combined-ca-bundle.der /etc/drt/rds-combined-ca-bundle.der
-COPY certs/rds-ca-2019-root.der /etc/drt/rds-ca-2019-root.der
-
-RUN echo keytool $KEYTOOL_PASSWORD
-RUN keytool -noprompt -storepass changeit -import -alias rds-root-deprecated -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-combined-ca-bundle.der
-RUN keytool -noprompt -storepass changeit -import -alias rds-root -keystore $JAVA_HOME/lib/security/cacerts -file /etc/drt/rds-ca-2019-root.der
+RUN mkdir /home/drt/.postgresql
+RUN curl https://truststore.pki.rds.amazonaws.com/eu-west-2/eu-west-2-bundle.pem > /home/drt/.postgresql/root.crt
 
 USER 1000:0
 ENTRYPOINT ["/opt/docker/bin/drt", "-Duser.timezone=UTC"]
