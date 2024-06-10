@@ -87,8 +87,7 @@ object FlightTableContent {
         flights.filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(filter.toLowerCase)
           || f.apiFlight.Origin.iata.toLowerCase.contains(filter.toLowerCase)
           || airportInfos.get(f.apiFlight.Origin).exists(airportInfo => airportInfo
-            .map(_.country.toLowerCase.contains(filter.toLowerCase))
-            .getOrElse(false)))
+            .exists(_.country.toLowerCase.contains(filter.toLowerCase))))
       }
 
       modelRCP(modelMP => {
