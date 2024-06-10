@@ -35,7 +35,7 @@ trait FeatureGuideTableLike {
   def getGuideIdForFilename(filename: String)(implicit ec: ExecutionContext): Future[Option[Int]]
 }
 
-case class FeatureGuideTable(table: Tables) extends FeatureGuideTableLike {
+case class FeatureGuideTable(table: AggregatedDbTables) extends FeatureGuideTableLike {
 
   val featureGuideTable = TableQuery[FeatureGuide]
 

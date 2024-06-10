@@ -5,7 +5,7 @@ import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
 import drt.client.components.FlightComponents.{SplitsGraph, paxFeedSourceClass}
-import drt.client.components.styles.ArrivalsPageStylesDefault
+import drt.client.components.styles.{ArrivalsPageStylesDefault, DrtTheme}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
@@ -24,7 +24,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.splits.ApiSplitsToSplitRatio
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
@@ -36,14 +36,12 @@ object FlightTableRow {
 
   import FlightTableComponents._
 
-  type OriginMapperF = PortCode => VdomNode
-
   type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShareFlightCodes: Seq[String],
                    idx: Int,
-                   originMapper: OriginMapperF = portCode => portCode.toString,
+                   originMapper: PortCode => VdomNode = portCode => portCode.toString,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
@@ -135,10 +133,17 @@ object FlightTableRow {
 
       val expectedContent = maybeLocalTimeWithPopup(bestExpectedTime, Option(timesPopUp), None)
 
-      val charts = (flightWithSplits.hasValidApi, props.manifestSummary) match {
+      val charts = (flightWithSplits.hasApi, props.manifestSummary) match {
         case (true, Some(manifestSummary)) =>
-          <.div(^.className := "arrivals__table__flight-code__info",
-            FlightChartComponent(FlightChartComponent.Props(manifestSummary)))
+          val maybeLivePcpPax = flightWithSplits.apiFlight.bestPcpPaxEstimate(Seq(LiveFeedSource))
+          val maybePaxDiffAndPct = maybeLivePcpPax.map { pcpPax =>
+            val diff = pcpPax - manifestSummary.passengerCount
+            (diff, diff.toDouble / pcpPax)
+          }
+          if (maybePaxDiffAndPct.isEmpty || maybePaxDiffAndPct.exists(_._2 <= 1.05))
+            <.div(^.className := "arrivals__table__flight-code__info",
+              FlightChartComponent(FlightChartComponent.Props(manifestSummary, maybePaxDiffAndPct)))
+          else EmptyVdom
         case _ => EmptyVdom
       }
 
@@ -223,10 +228,11 @@ object FlightTableRow {
           .map { country =>
             val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
             if (pax > 0) Option(MuiChip(
-              label = VdomNode(s"${country.threeLetterCode} ($pax)"),
+              label = VdomNode(s"($pax) ${country.threeLetterCode}"),
               sx = SxProps(Map(
                 "color" -> "#FFFFFF",
                 "backgroundColor" -> "#316CCC",
+                "fontSize" -> DrtTheme.theme.typography.body2.fontSize,
               ))
             )())
             else None

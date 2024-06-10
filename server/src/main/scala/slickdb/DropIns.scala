@@ -59,7 +59,7 @@ trait DropInTableLike {
   def getDropIns(ids: Seq[String])(implicit ec: ExecutionContext): Future[Seq[DropInRow]]
 }
 
-case class DropInTable(tables: Tables) extends DropInTableLike {
+case class DropInTable(tables: AggregatedDbTables) extends DropInTableLike {
   val dropInTable = TableQuery[DropIns]
 
   def getFuturePublishedDropIns()(implicit ec: ExecutionContext): Future[Seq[DropIn]] = {

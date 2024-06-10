@@ -4,7 +4,7 @@ import diode._
 import diode.data.Pot
 import drt.client.actions.Actions._
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{ViewLive, ViewMode}
+import drt.client.services.ViewMode
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.PortState
 import uk.gov.homeoffice.drt.time.SDateLike

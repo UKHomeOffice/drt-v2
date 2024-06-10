@@ -84,17 +84,18 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     actor.ask(message).foreach { _ =>
       message match {
         case splits: SplitsForArrivals if splits.splits.keys.nonEmpty =>
-          val updatedMillis: Iterable[MillisSinceEpoch] = splits.splits.keys.map(_.scheduled)
+          val updatedMillis = splits.splits.keys.map(_.scheduled)
           updateFlights(actor, Seq(), updatedMillis.min, updatedMillis.max)
 
         case pax: PaxForArrivals if pax.pax.keys.nonEmpty =>
-          val updatedMillis: Iterable[MillisSinceEpoch] = pax.pax.keys.map(_.scheduled)
+          val updatedMillis = pax.pax.keys.map(_.scheduled)
           updateFlights(actor, Seq(), updatedMillis.min, updatedMillis.max)
 
         case arrivalsDiff@ArrivalsDiff(_, removals) =>
           val minutesAffected = minutesAffectedByDiff(arrivalsDiff, removals)
-          if (minutesAffected.nonEmpty)
+          if (minutesAffected.nonEmpty) {
             updateFlights(actor, removals, minutesAffected.min, minutesAffected.max)
+          }
 
         case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
           updateFlights(
@@ -102,7 +103,8 @@ class PartitionedPortStateTestActor(probe: ActorRef,
             flightsWithSplitsDiff.arrivalsToRemove.collect {
               case ua: UniqueArrival => ua
             },
-            flightsWithSplitsDiff.updateMinutes(paxFeedSourceOrder).min, flightsWithSplitsDiff.updateMinutes(paxFeedSourceOrder).max
+            flightsWithSplitsDiff.updateMinutes(paxFeedSourceOrder).min,
+            flightsWithSplitsDiff.updateMinutes(paxFeedSourceOrder).max
           )
 
         case mc: MinutesContainer[_, _] =>
@@ -123,7 +125,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     }
   }
 
-  private def minutesAffectedByDiff(arrivalsDiff: ArrivalsDiff, removals: Iterable[UniqueArrival]) = {
+  private def minutesAffectedByDiff(arrivalsDiff: ArrivalsDiff, removals: Iterable[UniqueArrival]): Iterable[MillisSinceEpoch] = {
     val updateMinutes = arrivalsDiff.toUpdate.values.flatMap(_.pcpRange(paxFeedSourceOrder))
     val flightsToRemove = state.flights.values.filter(fws => removals.toSeq.contains(fws.apiFlight.unique))
     val removalMinutes = flightsToRemove.flatMap(_.apiFlight.pcpRange(paxFeedSourceOrder))
@@ -136,9 +138,7 @@ class PartitionedPortStateTestActor(probe: ActorRef,
     val eventualSource = actor.ask(query).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
     FlightsRouterActor
       .runAndCombine(eventualSource)
-      .foreach { fws =>
-        self ! UpdateStateFlights(fws, removals)
-      }
+      .foreach(flights => self ! UpdateStateFlights(flights, removals))
   }
 
   def sendStateToProbe(): Unit = {

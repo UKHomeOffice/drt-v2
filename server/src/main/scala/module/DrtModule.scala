@@ -1,6 +1,6 @@
 package module
 
-import actors.{DrtParameters, ProdDrtParameters}
+import actors.DrtParameters
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.util.Timeout
@@ -8,35 +8,38 @@ import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController}
-import controllers.{Application, DrtConfigSystem}
+import controllers.{AirportConfigProvider, Application}
 import email.GovNotifyEmail
+import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
+import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.service.staffing._
+import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
-import uk.gov.homeoffice.drt.testsystem.{MockDrtParameters, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import javax.inject.Singleton
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-class DRTModule extends AbstractModule with AkkaGuiceSupport {
-
-  lazy val drtConfigSystem: DrtConfigSystem = new DrtConfigSystem()
-
+class DrtModule extends AbstractModule with AkkaGuiceSupport {
   val now: () => SDateLike = () => SDate.now()
 
-  val isTestEnvironment: Boolean = drtConfigSystem.isTestEnvironment
+  val config: Configuration = new Configuration(ConfigFactory.load)
 
-  val drtParameters: DrtParameters = if (isTestEnvironment) MockDrtParameters() else ProdDrtParameters(drtConfigSystem.config)
-  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(drtConfigSystem.airportConfig, drtParameters, now)
-  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(drtConfigSystem.airportConfig, drtParameters, now)
+  val airportConfig: AirportConfig = AirportConfigProvider(config)
+
+  lazy val drtParameters: DrtParameters = DrtParameters(config)
+
+  private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, drtParameters, now)
+  private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, drtParameters, now)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(10.seconds)
 
   override def configure(): Unit = {
-    if (isTestEnvironment) {
+    if (drtParameters.isTestEnvironment) {
       bind(classOf[TestController]).asEagerSingleton()
     }
     bind(classOf[AirportInfoController]).asEagerSingleton()
@@ -70,7 +73,7 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   @Singleton
-  implicit val provideActorSystem: ActorSystem = if (isTestEnvironment) {
+  implicit val provideActorSystem: ActorSystem = if (drtParameters.isTestEnvironment) {
     ActorSystem("DRT-Module", PersistenceTestKitPlugin.config.withFallback(ConfigFactory.load()))
   } else {
     ActorSystem("DRT-Module")
@@ -79,12 +82,36 @@ class DRTModule extends AbstractModule with AkkaGuiceSupport {
   @Provides
   @Singleton
   def provideDrtSystemInterface: DrtSystemInterface = {
-    if (isTestEnvironment)
+    if (drtParameters.isTestEnvironment)
       drtTestSystem
     else
       drtProdSystem
   }
 
   @Provides
-  def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtConfigSystem.govNotifyApiKey)
+  @Singleton
+  def provideShiftsService: ShiftsService = ShiftsServiceImpl(
+    provideDrtSystemInterface.actorService.liveShiftsReadActor,
+    provideDrtSystemInterface.actorService.shiftsSequentialWritesActor,
+    ShiftsServiceImpl.pitActor,
+  )
+
+  @Provides
+  @Singleton
+  def provideFixedPointsService: FixedPointsService = FixedPointsServiceImpl(
+    provideDrtSystemInterface.actorService.liveFixedPointsReadActor,
+    provideDrtSystemInterface.actorService.fixedPointsSequentialWritesActor,
+    FixedPointsServiceImpl.pitActor,
+  )
+
+  @Provides
+  @Singleton
+  def provideStaffMovementsService: StaffMovementsService = StaffMovementsServiceImpl(
+    provideDrtSystemInterface.actorService.liveStaffMovementsReadActor,
+    provideDrtSystemInterface.actorService.staffMovementsSequentialWritesActor,
+    StaffMovementsServiceImpl.pitActor,
+  )
+
+  @Provides
+  def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtParameters.govNotifyApiKey)
 }

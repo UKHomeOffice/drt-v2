@@ -80,9 +80,8 @@ class TransferPaxInApiSpec extends CrunchTestLike {
     }
   }
 
-  "Given a flight that is using API for passenger numbers, and which has Transit passengers in the API data " >> {
+  "Given a flight using API for passenger numbers, and which has Transit passengers in the API data " >> {
     "Then these passengers should not be included in the total pax when using API pax nos" >> {
-
       val scheduled = "2017-01-01T00:00Z"
 
       val flights = Seq(
@@ -108,23 +107,21 @@ class TransferPaxInApiSpec extends CrunchTestLike {
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        airportConfig = lhrAirportConfig
+        airportConfig = lhrAirportConfig,
+
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(flights))
-      offerAndWait(crunch.manifestsLiveInput, inputManifests)
-
-      val expected = 1
 
       crunch.portStateTestProbe.fishForMessage(1.seconds) {
-        case ps: PortState =>
-          val totalPaxAtPCP = paxLoadsFromPortState(ps, 1, 0)
-            .values
-            .flatMap((_.values))
-            .flatten
-            .sum
+        case ps: PortState => ps.flights.nonEmpty
+      }
 
-          totalPaxAtPCP == expected
+      offerAndWait(crunch.manifestsLiveInput, inputManifests)
+
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
+        case ps: PortState =>
+          ps.flights.values.head.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder) == Option(1)
       }
 
       success

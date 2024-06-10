@@ -1,14 +1,14 @@
 package drt.client.services.handlers
 
 import diode.data.{Pot, Ready}
-import diode.{Action, ActionResult, Effect, ModelRW, NoAction}
-import uk.gov.homeoffice.drt.auth.{LoggedInUser, Roles}
+import diode._
 import drt.client.SPAMain
 import drt.client.actions.Actions._
 import drt.client.logger.log
 import org.scalajs.dom
 import org.scalajs.dom.XMLHttpRequest
 import ujson.Value
+import uk.gov.homeoffice.drt.auth.{LoggedInUser, Roles}
 import upickle.default._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -56,11 +56,10 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
     case TrackUser() => {
       val url = SPAMain.absoluteUrl("data/track-user")
       val eventualRequest: Future[XMLHttpRequest] = dom.ext.Ajax.get(url = url)
-      effectOnly(Effect(eventualRequest.map(r => {
+      effectOnly(Effect(eventualRequest.map { _ =>
         log.info(s"Tracking user")
         NoAction
-      }
-      )))
+      }))
     }
   }
 }

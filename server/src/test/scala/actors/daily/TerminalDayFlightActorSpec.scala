@@ -22,7 +22,8 @@ import scala.concurrent.{Await, Future}
 
 class MockTerminalDayQueuesActor(day: SDateLike,
                                  terminal: Terminal,
-                                 override val state: mutable.Map[TQM, CrunchMinute]) extends TerminalDayQueuesActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => day, None)
+                                 override val state: mutable.Map[TQM, CrunchMinute],
+                                ) extends TerminalDayQueuesActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => day, None)
 
 class TerminalDayFlightsActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
@@ -124,6 +125,6 @@ class TerminalDayFlightsActorSpec extends CrunchTestLike {
   }
 
   private def actorForTerminalAndDate(terminal: Terminal, date: UtcDate): ActorRef = {
-    system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), None, paxFeedSourceOrder))
+    system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), None, paxFeedSourceOrder, None, None, None))
   }
 }

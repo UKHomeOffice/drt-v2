@@ -11,7 +11,6 @@ import drt.shared.{TM, TQM}
 import manifests.ManifestLookupLike
 import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
-import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.metrics.Metrics
 import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
@@ -59,7 +58,7 @@ object OptimisationProviders {
   def historicManifestsPaxProvider(destination: PortCode, manifestLookupService: ManifestLookupLike)
                                   (implicit ec: ExecutionContext): Arrival => Future[Option[ManifestPaxCount]] = arrival =>
     manifestLookupService
-      .historicManifestPax(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
+      .maybeHistoricManifestPax(destination, arrival.Origin, arrival.VoyageNumber, SDate(arrival.Scheduled))
       .map { case (_, maybeManifest) => maybeManifest }
       .recover {
         case t =>
@@ -81,12 +80,6 @@ object OptimisationProviders {
       .ask(GetFlights(request.start.millisSinceEpoch, request.end.millisSinceEpoch))
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
       .map(_.map(_._2.flights.values.toList))
-
-  def liveManifestsProvider(manifestsProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
-                           (processingRequest: ProcessingRequest): Future[Source[VoyageManifests, NotUsed]] =
-    Future.successful(
-      manifestsProvider(processingRequest.start.toUtcDate, processingRequest.end.toUtcDate).map(_._2)
-    )
 
   def passengersProvider(passengersActor: ActorRef)
                         (processingRequest: ProcessingRequest)

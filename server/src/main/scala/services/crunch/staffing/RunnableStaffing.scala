@@ -1,21 +1,56 @@
 package services.crunch.staffing
 
 import akka.NotUsed
+import akka.actor.ActorRef
+import akka.pattern.ask
+import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.Flow
-import drt.shared.CrunchApi.{MinutesContainer, StaffMinute, StaffMinutes}
+import akka.util.Timeout
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute, StaffMinutes}
 import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovements, TM}
 import org.slf4j.{Logger, LoggerFactory}
+import services.crunch.deskrecs.DrtRunnableGraph
 import services.graphstages.Staffing
-import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
+import scala.collection.SortedSet
 import scala.concurrent.{ExecutionContext, Future}
 
-object RunnableStaffing {
+object RunnableStaffing extends DrtRunnableGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import SDate.implicits.sdateFromMillisLocal
+
+  def apply(staffingQueueActor: ActorRef,
+            staffQueue: SortedSet[ProcessingRequest],
+            crunchRequest: MillisSinceEpoch => CrunchRequest,
+            shiftsActor: ActorRef,
+            fixedPointsActor: ActorRef,
+            movementsActor: ActorRef,
+            staffMinutesActor: ActorRef,
+            now: () => SDateLike,
+           )
+           (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+    val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
+    val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
+    val movementsProvider = (r: ProcessingRequest) => movementsActor.ask(r).mapTo[StaffMovements]
+
+    val staffMinutesFlow = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now)
+
+    val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
+      startQueuedRequestProcessingGraph(
+        minutesProducer = staffMinutesFlow,
+        persistentQueueActor = staffingQueueActor,
+        initialQueue = staffQueue,
+        sinkActor = staffMinutesActor,
+        graphName = "staffing",
+        processingRequest = crunchRequest,
+      )
+    (staffingUpdateRequestQueue, staffingUpdateKillSwitch)
+  }
+
 
   def staffMinutesFlow(shiftsProvider: ProcessingRequest => Future[ShiftAssignments],
                        fixedPointsProvider: ProcessingRequest => Future[FixedPointAssignments],

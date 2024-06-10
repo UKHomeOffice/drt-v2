@@ -36,7 +36,7 @@ trait BHXLiveArrivals extends BHXArrivals {
   def toLiveArrival(flightRecord: FlightRecord): LiveArrival = {
     val actPax = flightRecord.getPassengers
     val transPax = flightRecord.getTransits
-    val (carrierCode, voyageNumber, _) = FlightCode.flightCodeToParts(flightRecord.getFlightNumber)
+    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(flightRecord.getFlightNumber)
 
     LiveArrival(
       operator = None,
@@ -46,7 +46,7 @@ trait BHXLiveArrivals extends BHXArrivals {
       terminal = Terminal(s"T${flightRecord.getTerminal}"),
       voyageNumber = voyageNumber.numeric,
       carrierCode = carrierCode.code,
-      flightCodeSuffix = None,
+      flightCodeSuffix = suffix.map(_.suffix),
       origin = flightRecord.getOrigin,
       scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       estimated = convertToUTC(flightRecord.getEstimatedTime).map(SDate(_).millisSinceEpoch),
@@ -68,7 +68,7 @@ trait BHXForecastArrivals extends BHXArrivals {
     val maxPax = flightRecord.getCapacity
     val actPax = flightRecord.getPassengers
     val transPax = flightRecord.getTransits
-    val (carrierCode, voyageNumber, _) = FlightCode.flightCodeToParts(flightRecord.getFlightNumber)
+    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(flightRecord.getFlightNumber)
 
     ForecastArrival(
       operator = None,
@@ -78,7 +78,7 @@ trait BHXForecastArrivals extends BHXArrivals {
       terminal = Terminal(s"T${flightRecord.getTerminal}"),
       voyageNumber = voyageNumber.numeric,
       carrierCode = carrierCode.code,
-      flightCodeSuffix = None,
+      flightCodeSuffix = suffix.map(_.suffix),
       origin = flightRecord.getOrigin,
       scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
     )

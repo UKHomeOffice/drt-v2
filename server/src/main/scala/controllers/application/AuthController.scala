@@ -62,7 +62,8 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
         revoked_access = None,
         drop_in_notification_at = None,
         created_at = Some(new java.sql.Timestamp(ctrl.now().millisSinceEpoch)),
-        feedback_banner_closed_at = None))
+        feedback_banner_closed_at = None,
+        staff_planning_interval_minutes = None))
     Future.successful(Ok(s"User-tracked"))
   }
 
@@ -138,7 +139,7 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
   }
 
   def unauthorizedMessageJson(allowedRole: Role): Result =
-    Unauthorized(write(ErrorResponse(s"Permission denied, you need $allowedRole to access this resource")))
+    Forbidden(write(ErrorResponse(s"Permission denied, you need $allowedRole to access this resource")))
 
   def auth[A](action: Action[A]): Action[A] = Action.async(action.parser) { request =>
 

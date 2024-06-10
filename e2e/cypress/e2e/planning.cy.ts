@@ -13,7 +13,7 @@ describe('Planning page', () => {
       .get('@tabContent').contains('Non-EEA')
       .get('@tabContent').contains('Total Pax')
       .get('@tabContent').contains('Workloads')
-      .get('@tabContent').contains('Total staff required at each hour of the day')
+      .get('@tabContent').contains('Available and recommended staff')
   })
 
 })

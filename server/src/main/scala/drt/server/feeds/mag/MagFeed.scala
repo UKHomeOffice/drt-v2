@@ -14,7 +14,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeed
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.LiveArrival
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -162,27 +162,31 @@ object MagFeed {
                         arrivalDate: String,
                         arrival: ArrivalDetails,
                         flightStatus: String)
-  def toArrival(ma: MagArrival): LiveArrival = LiveArrival(
-    operator = Option(ma.operatingAirline.iata),
-    maxPax = ma.passenger.maximum,
-    totalPax = ma.passenger.count,
-    transPax = ma.passenger.transferCount,
-    terminal = Terminals.Terminal(ma.arrival.terminal.getOrElse("")),
-    voyageNumber = ma.flightNumber.trackNumber.map(_.toInt).getOrElse(0),
-    carrierCode = ma.operatingAirline.iata,
-    flightCodeSuffix = None,
-    origin = ma.departureAirport.iata,
-    scheduled = SDate(ma.arrival.scheduled).millisSinceEpoch,
-    estimated = ma.arrival.estimated.map(str => SDate(str).millisSinceEpoch),
-    touchdown = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),
-    estimatedChox = ma.onBlockTime.estimated.map(str => SDate(str).millisSinceEpoch),
-    actualChox = ma.onBlockTime.actual.map(str => SDate(str).millisSinceEpoch),
-    status = if (ma.onBlockTime.actual.isDefined) "On Chocks" else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
-    gate = ma.gate.map(_.name.replace("Gate ", "")),
-    stand = ma.stand.flatMap(_.name.map(_.replace("Stand ", ""))),
-    runway = None,
-    baggageReclaim = None,
-  )
+  def toArrival(ma: MagArrival): LiveArrival = {
+    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(ma.operatingAirline.iata + ma.flightNumber.trackNumber.getOrElse(""))
+
+    LiveArrival(
+      operator = Option(ma.operatingAirline.iata),
+      maxPax = ma.passenger.maximum,
+      totalPax = ma.passenger.count,
+      transPax = ma.passenger.transferCount,
+      terminal = Terminals.Terminal(ma.arrival.terminal.getOrElse("")),
+      voyageNumber = voyageNumber.numeric,
+      carrierCode = carrierCode.code,
+      flightCodeSuffix = suffix.map(_.suffix),
+      origin = ma.departureAirport.iata,
+      scheduled = SDate(ma.arrival.scheduled).millisSinceEpoch,
+      estimated = ma.arrival.estimated.map(str => SDate(str).millisSinceEpoch),
+      touchdown = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),
+      estimatedChox = ma.onBlockTime.estimated.map(str => SDate(str).millisSinceEpoch),
+      actualChox = ma.onBlockTime.actual.map(str => SDate(str).millisSinceEpoch),
+      status = if (ma.onBlockTime.actual.isDefined) "On Chocks" else if (ma.touchDownTime.actual.isDefined) "Landed" else ma.flightStatus,
+      gate = ma.gate.map(_.name.replace("Gate ", "")),
+      stand = ma.stand.flatMap(_.name.map(_.replace("Stand ", ""))),
+      runway = None,
+      baggageReclaim = None,
+    )
+  }
 
   case class IataIcao(iata: String, icao: String)
 

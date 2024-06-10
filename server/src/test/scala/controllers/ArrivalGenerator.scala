@@ -33,7 +33,7 @@ object ArrivalGenerator {
     actualArrival.copy(PcpTime = Option(actualArrival.bestArrivalTime(true)))
   }
 
-  def live(iata: String = "",
+  def live(iata: String = "BA0001",
            schDt: String = "",
            maxPax: Option[Int] = None,
            terminal: Terminal = T1,

@@ -45,7 +45,6 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
 
   private def startSystem: () => List[KillSwitch] = () => {
     val crunchInputs = applicationService.startCrunchSystem(
-      actors = applicationService.persistentStateActors,
       startUpdateGraphs = applicationService.startUpdateGraphs(
         applicationService.persistentStateActors,
         SortedSet(),
@@ -57,8 +56,6 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
     )
 
     feedService.liveFeedPollingActor ! Enable(crunchInputs.liveArrivalsResponse)
-
-    applicationService.setSubscribers(crunchInputs, applicationService.persistentStateActors.manifestsRouterActor)
 
     crunchInputs.killSwitches
   }

@@ -16,9 +16,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.{AfterAll, AfterEach}
-import slick.dbio.{DBIOAction, NoStream}
-import slick.jdbc.JdbcProfile
-import slickdb.Tables
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.STN
 import uk.gov.homeoffice.drt.ports.PaxTypes._
@@ -33,14 +30,6 @@ import scala.collection.immutable
 import scala.collection.immutable.{Map, SortedMap}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
-
-
-object H2Tables extends Tables {
-  override val profile: JdbcProfile = slick.jdbc.H2Profile
-  val db: profile.backend.Database = profile.api.Database.forConfig("h2-aggregated-db")
-
-  override def run[R](action: DBIOAction[R, NoStream, Nothing]): Future[R] = db.run[R](action)
-}
 
 object TestDefaults {
   val airportConfig: AirportConfig = AirportConfig(
@@ -432,6 +421,12 @@ class CrunchTestLike
         offerResult
     }
   }
+
+  def waitForFlightsInPortState(testProbe: TestProbe): Any =
+    testProbe.fishForMessage(1.second) {
+      case ps: PortState => ps.flights.nonEmpty
+    }
+
 
   def offerAndWait[T](source: typed.ActorRef[T], offering: T): Unit = {
     source ! offering

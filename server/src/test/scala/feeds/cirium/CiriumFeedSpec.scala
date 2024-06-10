@@ -111,6 +111,21 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     result === expected
   }
 
+  "Given a CiriumFlightStatus with a flight code suffix, it should be parsed correctly" >> {
+    val ciriumArrival = ciriumFlightStatus(
+      publishedArrivalTime = "2019-07-15T11:05:00.000Z",
+      estRunwayArrival = "2019-07-15T11:07:00.000Z",
+      actRunwayArrival = "2019-07-15T11:08:00.000Z",
+      estGateArrivalTime = "2019-07-15T11:09:00.000Z",
+      actGateArrivalTime = "2019-07-15T11:10:00.000Z",
+      flightNumber = "1000F",
+      publishedDepartureTime = "2019-07-15T09:10:00.000Z"
+    )
+
+    val arrival = CiriumFeed.toArrival(ciriumArrival, PortCode("LHR"))
+    arrival.voyageNumber === 1000 && arrival.flightCodeSuffix === Option("F")
+  }
+
   private def drtArrival(publishedArrivalTime: String, estRunwayArrival: String, actRunwayArrival: String, estGateArrivalTime: String, actGateArrivalTime: String): LiveArrival = {
     LiveArrival(
       operator = Option("TST"),
@@ -135,15 +150,13 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     )
   }
 
-  private def ciriumFlightStatus(
-                                  publishedArrivalTime: String,
-                                  estRunwayArrival: String,
-                                  actRunwayArrival: String,
-                                  estGateArrivalTime: String,
-                                  actGateArrivalTime: String,
-                                  flightNumber: String,
-                                  publishedDepartureTime: String
-                                ) = {
+  private def ciriumFlightStatus(publishedArrivalTime: String,
+                                 estRunwayArrival: String,
+                                 actRunwayArrival: String,
+                                 estGateArrivalTime: String,
+                                 actGateArrivalTime: String,
+                                 flightNumber: String,
+                                 publishedDepartureTime: String) =
     CiriumFlightStatus(
       100000,
       "TST",
@@ -183,7 +196,6 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
         baggage = Option("12"))
       ),
       Seq())
-  }
 
 
   private val basicCiriumFlightStatus = {

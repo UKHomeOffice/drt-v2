@@ -34,7 +34,15 @@ GET           /crunch                                                           
 + nocsrf
 POST          /control/crunch/recalculate                                             controllers.application.PortStateController.reCrunchFullForecast
 + nocsrf
+POST          /control/historic-splits/lookup-missing                                 controllers.application.PortStateController.lookupMissingHistoricSplits
++ nocsrf
+POST          /control/pax-nos/lookup-missing                                         controllers.application.PortStateController.lookupMissingPaxNos
++ nocsrf
 POST          /control/crunch/recalculate/:startLocalDate/:endLocalDate               controllers.application.PortStateController.reCrunch(startLocalDate: String, endLocalDate: String)
+
++ nocsrf
+POST          /control/data-retention/purge/:startUtcDate                             controllers.application.DataRetentionController.purge(startUtcDate: String)
+
 POST          /control/arrivals/recalculate                                           controllers.application.PortStateController.reCalculateArrivals
 GET           /crunch-snapshot/:pit                                                   controllers.application.PortStateController.getCrunchSnapshot(pit: Long)
 
@@ -57,13 +65,13 @@ DELETE        /sla-configs/:effectiveFrom                                       
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 
-GET           /shifts                                                                 controllers.application.StaffingController.getShifts
+GET           /shifts/:localDate                                                      controllers.application.StaffingController.getShifts(localDate: String)
 POST          /shifts                                                                 controllers.application.StaffingController.saveShifts
 GET           /shifts-for-month/:monthMillis                                          controllers.application.StaffingController.getShiftsForMonth(monthMillis: Long)
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 
-GET           /forecast-summary/:terminalName/:startDay                               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long)
+GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
 
 GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
 GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)
@@ -99,6 +107,10 @@ GET           /data/track-user                                                  
 POST          /data/close-banner                                                      controllers.Application.closeBanner
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
+
+GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
+
+PUT          /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin

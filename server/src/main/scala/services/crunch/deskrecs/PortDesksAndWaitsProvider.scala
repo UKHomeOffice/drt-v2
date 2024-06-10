@@ -8,7 +8,7 @@ import services.TryCrunchWholePax
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
-import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
+import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
@@ -55,9 +55,11 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
   override def flightsToLoads(minuteMillis: NumericRange[MillisSinceEpoch],
                               flights: FlightsWithSplits,
                               redListUpdates: RedListUpdates,
-                              terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus)
+                              terminalQueueStatuses: Terminal => (Queue, MillisSinceEpoch) => QueueStatus,
+                              terminalSplits: Terminal => Option[Splits],
+                             )
                              (implicit ec: ExecutionContext, mat: Materializer): Map[TQM, PassengersMinute] = workloadCalculator
-    .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses, paxFeedSourceOrder).minutes
+    .flightLoadMinutes(minuteMillis, flights, redListUpdates, terminalQueueStatuses, paxFeedSourceOrder, terminalSplits).minutes
     .groupBy {
       case (TQM(t, q, m), _) => val finalQueueName = divertedQueues.getOrElse(q, q)
         TQM(t, finalQueueName, m)

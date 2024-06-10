@@ -1,9 +1,10 @@
 package controllers.application.exports
 
+import akka.actor.ActorSystem
 import akka.stream.Materializer
 import controllers.ArrivalGenerator
+import controllers.application.TestDrtModule
 import drt.server.feeds.{DqManifests, ManifestsFeedSuccess}
-import module.DRTModule
 import org.scalatestplus.play.PlaySpec
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
@@ -20,17 +21,14 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class FlightsExportControllerSpec extends PlaySpec {
+  implicit val system: ActorSystem = akka.actor.ActorSystem("test")
+  implicit val mat: Materializer = Materializer(system)
 
   "FlightsExportController" should {
 
     "get flights for a date in " in {
 
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-      }
-
-      val drtSystemInterface = module.provideDrtSystemInterface
-      implicit val mat: Materializer = drtSystemInterface.materializer
+      val drtSystemInterface = new TestDrtModule().provideDrtSystemInterface
 
       val controller = new FlightsExportController(Helpers.stubControllerComponents(), drtSystemInterface)
 

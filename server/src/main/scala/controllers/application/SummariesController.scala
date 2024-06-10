@@ -93,7 +93,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val portCodeStr = portCode.toString
       val maybeTerminalName = maybeTerminal.map(_.toString)
       val queueTotals = PassengersHourlyDao.queueTotalsForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
-      val queueTotalsQueryForDate: LocalDate => Future[Map[Queue, Int]] = date => ctrl.db.run(queueTotals(date))
+      val queueTotalsQueryForDate: LocalDate => Future[Map[Queue, Int]] = date => ctrl.aggregatedDb.run(queueTotals(date))
 
       val queuesToContent = if (contentType == "text/csv")
         passengersCsvRow(regionName, portCodeStr, maybeTerminalName)
@@ -103,7 +103,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val stream = granularity match {
         case Some("hourly") =>
           val hourlyQueueTotals = PassengersHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
-          val hourlyQueueTotalsQueryForDate = (date: LocalDate) => ctrl.db.run(hourlyQueueTotals(date))
+          val hourlyQueueTotalsQueryForDate = (date: LocalDate) => ctrl.aggregatedDb.run(hourlyQueueTotals(date))
           hourlyStream(hourlyQueueTotalsQueryForDate)
         case Some("daily") =>
           dailyStream(queueTotalsQueryForDate)

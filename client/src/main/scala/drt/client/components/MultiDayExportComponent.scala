@@ -9,7 +9,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.util.DateUtil.isNotValidDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.redlist.LhrRedListDatesImpl.{overlapsRedListDates, dayHasPaxDiversions, isRedListActive}
+import drt.shared.redlist.LhrRedListDatesImpl.{dayHasPaxDiversions, overlapsRedListDates}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiTextField}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons

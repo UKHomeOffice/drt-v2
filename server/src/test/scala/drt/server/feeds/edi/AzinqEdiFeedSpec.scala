@@ -20,7 +20,7 @@ class AzinqEdiFeedSpec extends Specification {
 
   "Given some json containing an edi flight" >> {
     "I should be able to parse it to an Arrival" >> {
-      val arrivals = json("T1", "A").parseJson.convertTo[List[AzinqEdiArrival]].map(_.toArrival)
+      val arrivals = json("T1", "A").parseJson.convertTo[List[EdiArrival]].map(_.toArrival)
 
       arrivals === List(arrival)
     }

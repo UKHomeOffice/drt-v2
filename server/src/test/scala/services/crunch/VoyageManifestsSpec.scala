@@ -62,6 +62,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ))
 
     offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
+    waitForFlightsInPortState(crunch.portStateTestProbe)
     offerAndWait(crunch.manifestsLiveInput, inputManifestsCi)
     Thread.sleep(1000)
     offerAndWait(crunch.manifestsLiveInput, inputManifestsDc)
@@ -106,6 +107,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ))
 
         offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
+        waitForFlightsInPortState(crunch.portStateTestProbe)
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
         val expected = Map(Queues.EeaDesk -> 4.0, Queues.EGate -> 16.0)
@@ -156,6 +158,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
+        waitForFlightsInPortState(crunch.portStateTestProbe)
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
         val expected = Map(Queues.EeaDesk -> 1.0, Queues.EGate -> 4.0, Queues.NonEeaDesk -> 0.0)
@@ -279,6 +282,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
         ))
 
         offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
+        waitForFlightsInPortState(crunch.portStateTestProbe)
         offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
         val expected = Map(Queues.EeaDesk -> 1, Queues.EGate -> 1, Queues.NonEeaDesk -> 2.0)
@@ -330,6 +334,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
+    waitForFlightsInPortState(crunch.portStateTestProbe)
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 2
@@ -378,6 +383,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
+    waitForFlightsInPortState(crunch.portStateTestProbe)
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 3
@@ -426,6 +432,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
     ))
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(Seq(flight)))
+    waitForFlightsInPortState(crunch.portStateTestProbe)
     offerAndWait(crunch.manifestsLiveInput, inputManifests)
 
     val expected = 2

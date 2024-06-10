@@ -68,22 +68,6 @@ class ArrivalsGraphStageSpec extends CrunchTestLike {
       success
     }
 
-    "FeedSource is not updated if the live API does not meet the trust threshold" >> {
-      val voyageManifests: ManifestsFeedResponse = ManifestsFeedSuccess(DqManifests(0, Set(
-        VoyageManifest(EventTypes.DC, PortCode("STN"), PortCode("JFK"), VoyageNumber("0001"), CarrierCode("BA"), ManifestDateOfArrival(date), ManifestTimeOfArrival(hour), List(
-          PassengerInfoJson(Option(DocumentType("P")), Nationality("GBR"), EeaFlag("EEA"), Option(PaxAge(22)), Option(PortCode("LHR")), InTransit("N"), Option(Nationality("GBR")), Option(Nationality("GBR")), None)
-        ))
-      )))
-
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(Seq(arrival_v2_with_chox_time)))
-      expectArrivals(Iterable(withPcpTime(arrival_v2_with_chox_time.toArrival(LiveFeedSource))))
-
-      offerAndWait(crunch.manifestsLiveInput, voyageManifests)
-      expectFeedSources(Set(LiveFeedSource))
-
-      success
-    }
-
     "once an API (advanced passenger information) input arrives for the flight, it will update the arrivals FeedSource so that it has a LiveFeed and an ApiFeed" >> {
       val paxCount = arrival_v2_with_chox_time.totalPax.getOrElse(0)
       val voyageManifests: ManifestsFeedResponse = ManifestsFeedSuccess(DqManifests(0, Set(

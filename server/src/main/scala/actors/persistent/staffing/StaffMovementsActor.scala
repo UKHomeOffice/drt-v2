@@ -54,7 +54,7 @@ trait StaffMovementsActorLike {
   val query: (() => StaffMovementsState, () => ActorRef) => PartialFunction[Any, Unit] =
     (getState, getSender) => {
       case GetState =>
-        getSender() ! getState()
+        getSender() ! getState().staffMovements
 
       case TerminalUpdateRequest(terminal, localDate, _, _) =>
         getSender() ! StaffMovements(getState().staffMovements.movements.filter { movement =>

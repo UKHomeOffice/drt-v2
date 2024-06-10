@@ -11,7 +11,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeed
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.cirium.JsonSupport._
 import uk.gov.homeoffice.cirium.services.entities.CiriumFlightStatus
-import uk.gov.homeoffice.drt.arrivals.LiveArrival
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{A2, InvalidTerminal, T1, Terminal}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -66,6 +66,11 @@ object CiriumFeed {
   def toArrival(f: CiriumFlightStatus, portCode: PortCode): LiveArrival = {
     val carrierScheduledTime = f.arrivalDate.millis
     val scheduledToNearest5Mins = timeToNearest5Minutes(SDate(carrierScheduledTime)).millisSinceEpoch
+    lazy val (carrierCode, voyageNumberLike, maybeSuffix) = FlightCode.flightCodeToParts(f.operatingCarrierFsCode + f.flightNumber)
+    lazy val voyageNumber: VoyageNumber = voyageNumberLike match {
+      case vn: VoyageNumber => vn
+      case _ => throw new Exception(s"Failed to parse voyage number from ${f.operatingCarrierFsCode + f.flightNumber}")
+    }
 
     LiveArrival(
       operator = Option(f.carrierFsCode),
@@ -73,9 +78,9 @@ object CiriumFeed {
       totalPax = None,
       transPax = None,
       terminal = terminalMatchForPort(f.airportResources.flatMap(_.arrivalTerminal), portCode),
-      voyageNumber = f.flightNumber.toInt,
-      carrierCode = f.operatingCarrierFsCode,
-      flightCodeSuffix = None,
+      voyageNumber = voyageNumber.numeric,
+      carrierCode = carrierCode.code,
+      flightCodeSuffix = maybeSuffix.map(_.suffix),
       origin = f.departureAirportFsCode,
       scheduled = scheduledToNearest5Mins,
       estimated = f.estimated,

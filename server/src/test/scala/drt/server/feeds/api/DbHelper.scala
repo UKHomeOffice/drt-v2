@@ -1,6 +1,6 @@
 package drt.server.feeds.api
 
-import slickdb.Tables
+import slickdb.{ProcessedJsonRow, ProcessedZipRow, AggregatedDbTables, VoyageManifestPassengerInfoRow}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import java.sql.Timestamp
@@ -8,28 +8,24 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
 
 object DbHelper {
-  def addZipRecord(tables: Tables, zipName: String, createdAt: Timestamp): Future[Int] = {
-    import  tables.profile.api._
+  def addZipRecord(tables: AggregatedDbTables, row: ProcessedZipRow): Future[Int] = {
+    import tables.profile.api._
 
-    val row = tables.ProcessedZipRow(zipName, success = false, createdAt)
-
-    Await.ready(tables.run(TableQuery[tables.ProcessedZip] += row), 1.second)
+    Await.ready(tables.run(TableQuery[tables.ProcessedZipTable] += row), 1.second)
   }
 
-  def addJsonRecord(tables: Tables, zipName: String, jsonName: String, createdAt: Timestamp): Future[Int] = {
-    import  tables.profile.api._
+  def addJsonRecord(tables: AggregatedDbTables, row: ProcessedJsonRow): Future[Int] = {
+    import tables.profile.api._
 
-    val row = tables.ProcessedJsonRow(zipName, jsonName, suspicious_date = false, success = true, createdAt)
-
-    Await.ready(tables.run(TableQuery[tables.ProcessedJson] += row), 1.second)
+    Await.ready(tables.run(TableQuery[tables.ProcessedJsonTable] += row), 1.second)
   }
 
-  def addPaxRecord(tables: Tables, arrivalPort: String, departurePort: String, voyageNumber: Int, scheduled: SDateLike, paxId: String, jsonFileName: String): Any = {
+  def addPaxRecord(tables: AggregatedDbTables, arrivalPort: String, departurePort: String, voyageNumber: Int, scheduled: SDateLike, paxId: String, jsonFileName: String): Any = {
     import tables.profile.api._
 
     val scheduledTs = new Timestamp(scheduled.millisSinceEpoch)
 
-    val row = tables.VoyageManifestPassengerInfoRow(
+    val row = VoyageManifestPassengerInfoRow(
       event_code = "DC",
       arrival_port_code = arrivalPort,
       departure_port_code = departurePort,
@@ -50,7 +46,7 @@ object DbHelper {
       in_transit = false,
       json_file = jsonFileName)
 
-    Await.ready(tables.run(TableQuery[tables.VoyageManifestPassengerInfo] += row), 1.second)
+    Await.ready(tables.run(TableQuery[tables.VoyageManifestPassengerInfoTable] += row), 1.second)
   }
 
 }

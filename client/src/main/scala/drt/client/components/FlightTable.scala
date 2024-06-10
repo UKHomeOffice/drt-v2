@@ -30,6 +30,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.HashSet
 import scala.scalajs.js
+import scala.scalajs.js.timers._
 
 object FlightTable {
   case class Props(queueOrder: Seq[Queue],
@@ -59,6 +60,19 @@ object FlightTable {
         a.filterFlightNumber == b.filterFlightNumber
   }
 
+  var typingSearchTimer: Option[SetTimeoutHandle] = None
+  val doneSearchTypingInterval = 5000
+
+  def submitSearchTermToAnalyticsAfterDelay(searchTerm: String, portCode: String): Unit = {
+    typingSearchTimer.foreach(clearTimeout)
+    if (searchTerm.length > 1) {
+      typingSearchTimer = Some(setTimeout(doneSearchTypingInterval) {
+        println(s"Sending event for search term $searchTerm")
+        Callback(GoogleEventTracker.sendEvent(portCode, "flightNumberSearch", searchTerm))
+      })
+    }
+  }
+
   def apply(shortLabel: Boolean = false,
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
@@ -70,14 +84,13 @@ object FlightTable {
         "* Passengers from CTA origins do not contribute to PCP workload"
 
       def updateState(value: String): CallbackTo[Unit] = {
-        Callback(SPACircuit.dispatch(SetFlightFilterMessage(value))) >>
-          Callback(if (value.nonEmpty) GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "flightNumberSearch", value))
+        Callback(SPACircuit.dispatch(SetFlightFilterMessage(value)))
       }
 
       case class Model(flaggedNationalities: Set[Country],
                        portStatePot: Pot[PortState],
                        flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
-                       arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])]
+                       arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                       )
 
       val flaggerConnect = SPACircuit.connect(m => Model(m.flaggedNationalities, m.portStatePot, m.flightManifestSummaries, m.arrivalSources))
@@ -85,8 +98,8 @@ object FlightTable {
 
       val filterFlightComponent = <.div(^.style := js.Dictionary("padding-right" -> "24px"), MuiTypography(sx = SxProps(Map("font-weight" -> "bold",
         "padding-bottom" -> "10px"
-      )))("Search by flight number"),
-        MuiTextField(label = "Enter flight number".toVdom, sx = SxProps(Map("minWidth" -> "199px", "font-weight" -> "bold")),
+      )))("Search by flight details"),
+        MuiTextField(label = "Enter flight details".toVdom, sx = SxProps(Map("minWidth" -> "199px", "font-weight" -> "bold")),
           InputProps = js.Dynamic.literal(
             "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
             "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],
@@ -96,8 +109,9 @@ object FlightTable {
           ^.defaultValue := props.filterFlightNumber,
           ^.autoFocus := true,
           ^.onChange ==> { e: ReactEventFromInput =>
-            val value = e.target.value
-            updateState(value)
+            val searchTerm = e.target.value
+            submitSearchTermToAnalyticsAfterDelay(searchTerm, props.portCode.toString)
+            updateState(searchTerm)
           })
       )
 

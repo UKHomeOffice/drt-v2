@@ -12,7 +12,7 @@ import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{FeedArrival, LiveArrival}
+import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -283,16 +283,18 @@ object BHXFlight extends NodeSeqUnmarshaller {
     case _ => None
   }
 
-  def bhxFlightToArrival(f: BHXFlight): FeedArrival =
+  def bhxFlightToArrival(f: BHXFlight): FeedArrival = {
+    val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(f.airline + f.flightNumber)
+
     LiveArrival(
       operator = Option(f.airline),
       maxPax = f.seatCapacity,
       totalPax = f.paxCount,
       transPax = None,
       terminal = Terminal(s"T${f.aircraftTerminal}"),
-      voyageNumber = f.flightNumber.toInt,
-      carrierCode = f.airline,
-      flightCodeSuffix = None,
+      voyageNumber = voyageNumber.numeric,
+      carrierCode = carrierCode.code,
+      flightCodeSuffix = suffix.map(_.suffix),
       origin = f.departureAirport,
       scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
       estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
@@ -305,6 +307,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
       runway = None,
       baggageReclaim = None,
     )
+  }
 
   def maybeTimeStringToMaybeMillis(t: Option[String]): Option[MillisSinceEpoch] = t.flatMap(
     SDate.tryParseString(_).toOption.map(_.millisSinceEpoch)

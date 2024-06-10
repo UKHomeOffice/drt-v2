@@ -7,9 +7,11 @@ import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
 import manifests.ManifestLookupLike
+import manifests.queues.SplitsCalculator
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import slickdb.Tables
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments}
+import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
 import uk.gov.homeoffice.drt.auth.Roles
@@ -35,7 +37,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
   val env: AppEnvironment = AppEnvironment(config.getOptional[String]("env").getOrElse("other"))
 
-  val db: Tables
+  val aggregatedDb: AggregatedDbTables
+  val akkaDb: AkkaDbTables
   val airportConfig: AirportConfig
   val params: DrtParameters
 
@@ -79,13 +82,17 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val feedService: FeedService
 
+  lazy val queueAdjustments = if (params.adjustEGateUseByUnder12s) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild) else AdjustmentsNoop
+  lazy val splitsCalculator: SplitsCalculator = SplitsCalculator(airportConfig, queueAdjustments)
+
   lazy val applicationService: ApplicationService = ApplicationService(
     journalType = journalType,
     airportConfig = airportConfig,
     now = now,
     params = params,
     config = config,
-    db = db,
+    aggregatedDb = aggregatedDb,
+    akkaDb = akkaDb,
     feedService = feedService,
     manifestLookups = manifestLookups,
     manifestLookupService = manifestLookupService,
@@ -93,6 +100,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     actorService = actorService,
     persistentStateActors = persistentActors,
     requestAndTerminateActor = actorService.requestAndTerminateActor,
+    splitsCalculator,
   )
   def run(): Unit
 

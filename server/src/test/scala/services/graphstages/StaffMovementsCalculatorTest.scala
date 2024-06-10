@@ -7,7 +7,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.T1
 
 import java.util.UUID
 
-object StaffMovementsServiceTest extends Specification {
+object StaffMovementsCalculatorTest extends Specification {
   "Given some movements" >> {
     "When those movements don't fall on minute boundaries" >> {
       val startDate1 = SDate("2017-01-01T00:00:15").millisSinceEpoch
@@ -15,7 +15,7 @@ object StaffMovementsServiceTest extends Specification {
       val uuid = UUID.randomUUID().toString
       val staffMovement1 = StaffMovement(T1, "some reason", startDate1, 1, uuid, None, None)
       val staffMovement2 = StaffMovement(T1, "some reason", endDate1, -1, uuid, None, None)
-      val service = StaffMovementsService(Seq(staffMovement1, staffMovement2))
+      val service = StaffMovementsCalculator(Seq(staffMovement1, staffMovement2))
 
       "I should not see them apply to the rounded minute before the start" >> {
         service.terminalStaffAt(T1, SDate("2016-12-31T23:59")) === 0

@@ -44,6 +44,8 @@ sealed trait ViewMode {
   def isLive: Boolean
 
   def isHistoric(now: SDateLike): Boolean
+
+  def maybePointInTime: Option[MillisSinceEpoch]
 }
 
 case object ViewLive extends ViewMode {
@@ -52,6 +54,8 @@ case object ViewLive extends ViewMode {
   override val isLive: Boolean = true
 
   override def isHistoric(now: SDateLike): Boolean = false
+
+  override def maybePointInTime: Option[MillisSinceEpoch] = None
 }
 
 case class ViewDay(localDate: LocalDate, timeMachineDate: Option[SDateLike]) extends ViewMode {
@@ -60,6 +64,8 @@ case class ViewDay(localDate: LocalDate, timeMachineDate: Option[SDateLike]) ext
   override val isLive: Boolean = if (liveToday) true else false
 
   override def isHistoric(now: SDateLike): Boolean = timeMachineDate.nonEmpty || dateTime.isHistoricDate(now)
+
+  override def maybePointInTime: Option[MillisSinceEpoch] = timeMachineDate.map(_.millisSinceEpoch)
 }
 
 sealed trait ExportType {
@@ -173,7 +179,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      userFeedbacks: Pot[Seq[UserFeedback]] = Empty,
                      abFeatures:Pot[Seq[ABFeature]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
-                     showFeedbackBanner: Pot[Boolean] = Empty
+                     showFeedbackBanner: Pot[Boolean] = Empty,
+                     userSelectedPlanningTimePeriod: Pot[Int] = Empty,
                     )
 
 object PollDelay {
@@ -254,6 +261,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ABFeatureHandler(zoomRW(_.abFeatures)((m, v) => m.copy(abFeatures = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
+      new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v)),
+      )
     )
     composedHandlers
   }

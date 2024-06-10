@@ -267,7 +267,7 @@ object TestActors {
 
   class TestFlightsRouterActor(terminals: Iterable[Terminal],
                                byDayLookup: FlightsLookup,
-                               updateMinutes: FlightsUpdate,
+                               updateMinutes: (Option[ActorRef], Option[ActorRef]) => FlightsUpdate,
                                resetData: (Terminal, UtcDate) => Future[Any],
                                paxFeedSourceOrder: List[FeedSource])
     extends FlightsRouterActor(terminals, byDayLookup, updateMinutes, paxFeedSourceOrder) {
@@ -423,7 +423,10 @@ object TestActors {
                                    terminal: Terminal,
                                    now: () => SDateLike,
                                    paxFeedSourceOrder: List[FeedSource],
-                                  ) extends TerminalDayFlightActor(year, month, day, terminal, now, None, None, paxFeedSourceOrder) with Resettable {
+                                   requestHistoricSplitsActor: Option[ActorRef],
+                                   requestHistoricPaxActor: Option[ActorRef],
+                                  )
+    extends TerminalDayFlightActor(year, month, day, terminal, now, None, None, paxFeedSourceOrder, None, requestHistoricSplitsActor, requestHistoricPaxActor) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

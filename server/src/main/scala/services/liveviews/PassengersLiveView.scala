@@ -11,7 +11,7 @@ import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
 import drt.shared.{CrunchApi, TQM}
 import org.slf4j.LoggerFactory
-import slickdb.Tables
+import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
 import uk.gov.homeoffice.drt.db.serialisers.PassengersHourlySerialiser
 import uk.gov.homeoffice.drt.db.{PassengersHourly, PassengersHourlyRow}
@@ -52,7 +52,7 @@ object PassengersLiveView {
         }
     }
 
-  def updateLiveView(portCode: PortCode, now: () => SDateLike, db: Tables)
+  def updateLiveView(portCode: PortCode, now: () => SDateLike, db: AggregatedDbTables)
                     (implicit ec: ExecutionContext): MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]] = {
     val replaceHours = PassengersHourlyDao.replaceHours(portCode)
     val containerToHourlyRows = PassengersLiveView.minutesContainerToHourlyRows(portCode, () => now().millisSinceEpoch)

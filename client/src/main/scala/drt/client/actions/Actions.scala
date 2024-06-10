@@ -55,7 +55,7 @@ object Actions {
 
   case class UpdatePortStateFromUpdates(viewMode: ViewMode, portStateUpdates: PortStateUpdates) extends Action
 
-  case class GetForecastWeek(startDay: SDateLike, terminal: Terminal) extends Action
+  case class GetForecastWeek(startDay: SDateLike, terminal: Terminal, periodInterval: Int) extends Action
 
   case class SetForecastPeriod(forecastPeriodOption: Option[ForecastPeriodWithHeadlines]) extends Action
 
@@ -202,6 +202,10 @@ object Actions {
   case class RequestForecastRecrunch(recalculateSplits: Boolean) extends Action
 
   object RequestRecalculateArrivals extends Action
+
+  object RequestMissingHistoricSplits extends Action
+
+  object RequestMissingPaxNos extends Action
 
   case class GetForecastAccuracy(localDate: LocalDate) extends Action
 

@@ -1,10 +1,6 @@
 package controllers.application
 
-import actors.DrtStaticParameters.time48HoursAgo
-import actors.persistent.staffing._
 import akka.NotUsed
-import akka.actor.{ActorRef, PoisonPill, Props}
-import akka.pattern._
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
@@ -12,50 +8,28 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.exports.StaffMovementsExport
-import services.staffing.StaffTimeSlots
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.time.SDate
 import upickle.default.{read, write}
 
-import java.util.UUID
 import scala.concurrent.Future
 
 
 class StaffingController @Inject()(cc: ControllerComponents,
-                                   ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
-
-  import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
-
-  def getShifts: Action[AnyContent] = authByRole(FixedPointsView) {
+                                   ctrl: DrtSystemInterface,
+                                   shiftsService: ShiftsService,
+                                   fixedPointsService: FixedPointsService,
+                                   movementsService: StaffMovementsService,
+                                  ) extends AuthController(cc, ctrl) {
+  def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
-      val shifts = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong)) match {
-        case None =>
-          ctrl.actorService.liveShiftsReadActor.ask(GetState)
-            .map { case sa: ShiftAssignments => sa }
-            .recoverWith { case _ => Future(ShiftAssignments.empty) }
-
-        case Some(millis) =>
-          val date = SDate(millis)
-
-          val actorName = "shifts-read-actor-" + UUID.randomUUID().toString
-          val shiftsReadActor: ActorRef = actorSystem.actorOf(ShiftsReadActor.props(date, time48HoursAgo(() => date)), actorName)
-
-          shiftsReadActor.ask(GetState)
-            .map { case sa: ShiftAssignments =>
-              shiftsReadActor ! PoisonPill
-              sa
-            }
-            .recoverWith {
-              case _ =>
-                shiftsReadActor ! PoisonPill
-                Future(ShiftAssignments.empty)
-            }
-      }
-      shifts.map(sa => Ok(write(sa)))
+      val date = SDate(localDateStr).toLocalDate
+      val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
+      shiftsService.shiftsForDate(date, maybePointInTime)
+        .map(sa => Ok(write(sa)))
     }
   }
 
@@ -64,7 +38,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
-          ctrl.applicationService.shiftsSequentialWritesActor ! UpdateShifts(shifts.assignments)
+          shiftsService.updateShifts(shifts.assignments)
           Accepted
         case None =>
           BadRequest
@@ -74,59 +48,24 @@ class StaffingController @Inject()(cc: ControllerComponents,
 
   def getShiftsForMonth(month: MillisSinceEpoch): Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
-      val monthOfShifts = ctrl.actorService.liveShiftsReadActor
-        .ask(GetState)
-        .collect {
-          case shifts: ShiftAssignments =>
-            log.info(s"Shifts: Retrieved shifts from actor for month starting: ${SDate(month).toISOString}")
-            val monthInLocalTime = SDate(month, europeLondonTimeZone)
-            MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
-        }
-      monthOfShifts.map(s => Ok(write(s)))
+      shiftsService.shiftsForMonth(month).map(s => Ok(write(s)))
     }
   }
 
   def getFixedPoints: Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
-
-      val fixedPoints = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong)) match {
-        case None =>
-          ctrl.actorService.liveFixedPointsReadActor.ask(GetState)
-            .map { case sa: FixedPointAssignments => sa }
-            .recoverWith { case _ => Future(FixedPointAssignments.empty) }
-
-        case Some(millis) =>
-          val date = SDate(millis)
-
-          val actorName = "fixed-points-read-actor-" + UUID.randomUUID().toString
-          val fixedPointsReadActor: ActorRef = actorSystem.actorOf(Props(
-            classOf[FixedPointsReadActor],
-            date,
-            ctrl.now,
-          ), actorName)
-
-          fixedPointsReadActor.ask(GetState)
-            .map { case sa: FixedPointAssignments =>
-              fixedPointsReadActor ! PoisonPill
-              sa
-            }
-            .recoverWith {
-              case _ =>
-                fixedPointsReadActor ! PoisonPill
-                Future(FixedPointAssignments.empty)
-            }
-      }
-      fixedPoints.map(fp => Ok(write(fp)))
+      val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
+      fixedPointsService.fixedPoints(maybePointInTime)
+        .map(sa => Ok(write(sa)))
     }
   }
 
   def saveFixedPoints: Action[AnyContent] = authByRole(FixedPointsEdit) {
     Action { request =>
-
       request.body.asText match {
         case Some(text) =>
           val fixedPoints: FixedPointAssignments = read[FixedPointAssignments](text)
-          ctrl.applicationService.fixedPointsSequentialWritesActor ! SetFixedPoints(fixedPoints.assignments)
+          fixedPointsService.updateFixedPoints(fixedPoints.assignments)
           Accepted
         case None =>
           BadRequest
@@ -140,9 +79,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
         request.body.asText match {
           case Some(text) =>
             val movementsToAdd: List[StaffMovement] = read[List[StaffMovement]](text)
-            ctrl.applicationService.staffMovementsSequentialWritesActor
-              .ask(AddStaffMovements(movementsToAdd))
-              .map(_ => Accepted)
+            movementsService.addMovements(movementsToAdd).map(_ => Accepted)
           case None =>
             Future.successful(BadRequest)
         }
@@ -151,15 +88,16 @@ class StaffingController @Inject()(cc: ControllerComponents,
 
   def removeStaffMovements(movementsToRemove: String): Action[AnyContent] = authByRole(StaffMovementsEdit) {
     Action {
-      ctrl.applicationService.staffMovementsSequentialWritesActor ! RemoveStaffMovements(movementsToRemove)
+      movementsService.removeMovements(movementsToRemove)
       Accepted
     }
   }
 
   def getStaffMovements(date: String): Action[AnyContent] = authByRole(BorderForceStaff) {
-    Action.async {
+    Action.async { request =>
       val localDate = SDate(date).toLocalDate
-      val eventualStaffMovements = staffMovementsForDay(localDate)
+      val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
+      val eventualStaffMovements = movementsService.movementsForDate(localDate, maybePointInTime)
 
       eventualStaffMovements.map(sms => Ok(write(sms)))
     }
@@ -170,7 +108,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
       Action {
         val terminal = Terminal(terminalString)
         val localDate = SDate(date).toLocalDate
-        val eventualStaffMovements = staffMovementsForDay(localDate)
+        val eventualStaffMovements = movementsService.movementsForDate(localDate, None)
 
         val csvSource: Source[String, NotUsed] =
           Source.future(
@@ -190,27 +128,4 @@ class StaffingController @Inject()(cc: ControllerComponents,
           ))
       }
     }
-
-  def staffMovementsForDay(date: LocalDate): Future[Seq[StaffMovement]] = {
-    val actorName = "staff-movements-read-actor-" + UUID.randomUUID().toString
-    val pointInTime = SDate(date).addDays(1)
-    val expireBefore = () => SDate(date).addDays(-1)
-    val staffMovementsReadActor: ActorRef = actorSystem.actorOf(Props(
-      classOf[StaffMovementsReadActor],
-      pointInTime,
-      expireBefore,
-    ), actorName)
-
-    staffMovementsReadActor.ask(GetState)
-      .map {
-        case movements: StaffMovements =>
-          staffMovementsReadActor ! PoisonPill
-          movements.forDay(date)(ld => SDate(ld))
-      }
-      .recoverWith {
-        case _ =>
-          staffMovementsReadActor ! PoisonPill
-          Future.successful(Seq.empty[StaffMovement])
-      }
-  }
 }

@@ -1,22 +1,21 @@
 package drt.server.feeds.api
 
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Keep, Sink, Source}
+import akka.Done
 import akka.testkit.TestProbe
-import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.server.feeds.api.DbHelper.addPaxRecord
+import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import manifests.UniqueArrivalKey
 import org.specs2.specification.BeforeEach
-import services.crunch.{CrunchTestLike, H2Tables}
+import services.crunch.CrunchTestLike
 import slick.jdbc.SQLActionBuilder
 import slick.jdbc.SetParameter.SetUnit
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.SDate
 
-import scala.collection.immutable.List
-import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 import scala.util.Try
 
 class DbManifestProcessorTest
@@ -32,14 +31,14 @@ class DbManifestProcessorTest
   }
 
   def createTables(): Unit = {
-    H2Tables.schema.createStatements.toList.foreach { query =>
-      Await.result(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
+    AggregateDbH2.schema.createStatements.toList.foreach { query =>
+      Await.result(AggregateDbH2.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
     }
   }
 
   def dropTables(): Unit = {
-    H2Tables.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.result(H2Tables.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
+    AggregateDbH2.schema.dropStatements.toList.reverse.foreach { query =>
+      Await.result(AggregateDbH2.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
     }
   }
 
@@ -51,19 +50,9 @@ class DbManifestProcessorTest
     val paxId = "1"
     val key = UniqueArrivalKey(PortCode(arrivalPort), PortCode(departurePort), VoyageNumber(voyageNumber), scheduled)
 
-    "Enqueues no manifest when there are no matching passengers" in {
-      implicit val probe: TestProbe = TestProbe("manifestProbe")
-
-      processor(probe).process(key, SDate.now().millisSinceEpoch)
-
-      probe.expectNoMessage(500.millis)
-
-      success
-    }
-
     "Find matching passengers and enqueue a successful manifest response for iAPI" in {
       implicit val probe: TestProbe = TestProbe("manifestProbe")
-      addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
 
       processAndCheckIapiManifestPax(key, Set(paxId))
 
@@ -72,8 +61,8 @@ class DbManifestProcessorTest
 
     "Find matching passengers and enqueue a successful manifest response, using only unique passenger identifiers for iAPI" in {
       implicit val probe: TestProbe = TestProbe("manifestProbe")
-      addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
-      addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId, "a.json")
 
       processAndCheckIapiManifestPax(key, Set(paxId))
 
@@ -86,10 +75,10 @@ class DbManifestProcessorTest
       val paxId2 = "2"
       val paxId3 = "3"
 
-      addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, paxId1, "a.json")
-      addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, paxId2, "a.json")
-      addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, paxId2, "b.json")
-      addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, paxId3, "b.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId1, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId2, "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId2, "b.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, paxId3, "b.json")
 
       processAndCheckIapiManifestPax(key, Set(paxId1, paxId2, paxId3))
 
@@ -98,8 +87,8 @@ class DbManifestProcessorTest
 
     "Find matching passengers and enqueue a successful manifest response, using only unique passenger identifiers for non-iAPI" in {
       implicit val probe: TestProbe = TestProbe("manifestProbe")
-      addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, "", "a.json")
-      addPaxRecord(H2Tables, arrivalPort, departurePort, voyageNumber, scheduled, "", "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, "", "a.json")
+      addPaxRecord(AggregateDbH2, arrivalPort, departurePort, voyageNumber, scheduled, "", "a.json")
 
       processAndCheckNonIapiManifestPax(key, 2)
 
@@ -109,7 +98,7 @@ class DbManifestProcessorTest
 
   private def processAndCheckIapiManifestPax(key: UniqueArrivalKey, expectedPaxIds: Set[String])
                                             (implicit probe: TestProbe): Any = {
-    processor(probe).process(key, SDate.now().millisSinceEpoch)
+    processor(probe).process(Seq(key), SDate.now().millisSinceEpoch)
 
     probe.fishForMessage(1.second) {
       case ManifestsFeedSuccess(DqManifests(_, manifests), _) =>
@@ -120,7 +109,7 @@ class DbManifestProcessorTest
 
   private def processAndCheckNonIapiManifestPax(key: UniqueArrivalKey, expectedPaxCount: Int)
                                                (implicit probe: TestProbe): Any = {
-    processor(probe).process(key, SDate.now().millisSinceEpoch)
+    processor(probe).process(Seq(key), SDate.now().millisSinceEpoch)
 
     probe.fishForMessage(1.second) {
       case ManifestsFeedSuccess(DqManifests(_, manifests), _) =>
@@ -129,10 +118,12 @@ class DbManifestProcessorTest
   }
 
   private def processor(probe: TestProbe) = {
-    val manifestQueue = Source
-      .queue[ManifestsFeedResponse](10, OverflowStrategy.dropHead)
-      .map(probe.ref ! _).toMat(Sink.ignore)(Keep.left).run()
+    val handleManifestResponse: ManifestsFeedResponse => Future[Done] =
+      response => {
+        probe.ref ! response
+        Future(Done)
+      }
 
-    DbManifestProcessor(H2Tables, PortCode("LHR"), manifestQueue)
+    DbManifestProcessor(AggregateDbH2, PortCode("LHR"), handleManifestResponse)
   }
 }

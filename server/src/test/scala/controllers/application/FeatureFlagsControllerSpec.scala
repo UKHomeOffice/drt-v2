@@ -1,11 +1,9 @@
 package controllers.application
 
-import module.DRTModule
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.OK
-import play.api.test.{FakeRequest, Helpers}
-import play.api.test.Helpers.{contentAsString, status}
 import play.api.test.Helpers._
+import play.api.test.{FakeRequest, Helpers}
 import uk.gov.homeoffice.drt.testsystem.MockDrtParameters
 
 class FeatureFlagsControllerSpec extends PlaySpec {
@@ -14,9 +12,8 @@ class FeatureFlagsControllerSpec extends PlaySpec {
 
     "get list of feature flag" in {
 
-      val module = new DRTModule() {
-        override val isTestEnvironment: Boolean = true
-        override val drtParameters = new MockDrtParameters {
+      val module = new TestDrtModule() {
+        override lazy val drtParameters = new MockDrtParameters {
           override val useApiPaxNos = true
           override val enableToggleDisplayWaitTimes = true
           override val displayRedListInfo = true

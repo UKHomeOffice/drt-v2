@@ -2,7 +2,6 @@ package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.SortedActorRefSource
-import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply
 import akka.stream.UniqueKillSwitch
@@ -14,13 +13,10 @@ import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.CrunchApi._
 import drt.shared.FlightsApi.PaxForArrivals
 import drt.shared._
-import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
 import services.TryCrunchWholePax
-import services.crunch.VoyageManifestGenerator.{euPassport, visa}
-import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestConfig, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
@@ -106,8 +102,6 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
   val mockSplitsSink: ActorRef = system.actorOf(Props(new MockSplitsSinkActor))
 
   private def getDeskRecsGraph(mockPortStateActor: ActorRef,
-                               historicManifests: Iterable[Arrival] => Source[ManifestLike, NotUsed],
-                               historicManifestsPaxProvider: Arrival => Future[Option[ManifestPaxCount]],
                                airportConfig: AirportConfig = defaultAirportConfig): (ActorRef, UniqueKillSwitch) = {
     val paxAllocation = PaxTypeQueueAllocation(
       B5JPlusTypeAllocator,
@@ -119,17 +113,13 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     implicit val timeout: Timeout = new Timeout(50.milliseconds)
     val deskRecsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(mockPortStateActor),
-      liveManifestsProvider = mockLiveManifestsProviderNoop,
-      historicManifestsProvider = historicManifests,
-      historicManifestsPaxProvider = historicManifestsPaxProvider,
-      splitsCalculator = splitsCalc,
-      splitsSink = mockSplitsSink,
       portDesksAndWaitsProvider = desksAndWaitsProvider,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
       dynamicQueueStatusProvider = DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
       queuesByTerminal = airportConfig.queuesByTerminal,
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
+      terminalSplits = splitsCalc.terminalSplits,
     )
     val crunchRequest: MillisSinceEpoch => CrunchRequest =
       (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
@@ -147,7 +137,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     "I should see a request for flights for 2019-01-01 00:00 to 00:30" >> {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop, mockHistoricManifestsPaxProviderNoop)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor)
 
     val midnight20190101 = SDate("2019-01-01T00:00")
     daysQueueSource ! crunchRequest(midnight20190101)
@@ -169,7 +159,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, longDelay)))
 
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop, mockHistoricManifestsPaxProviderNoop)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor)
 
     val midnight20190101 = SDate("2019-01-01T00:00")
     daysQueueSource ! crunchRequest(midnight20190101)
@@ -190,8 +180,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
       mockPortStateActor ! SetFlights(flight)
 
-      val arrivalPax = Map(arrival -> Option(List(euPassport, visa)))
-      val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(arrivalPax), mockHistoricManifestsPaxProvider(arrivalPax))
+      val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor)
 
       daysQueueSource ! crunchRequest(SDate(scheduled))
 
@@ -227,7 +216,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(Map(arrival -> Option(List(euPassport, visa)))), mockHistoricManifestsPaxProvider(Map(arrival -> Option(List(euPassport, visa)))))
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor)
 
     daysQueueSource ! crunchRequest(SDate(scheduled))
 
@@ -264,13 +253,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
     mockPortStateActor ! SetFlights(flight)
 
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProvider(Map(
-      arrival -> Option(List(euPassport, visa)),
-      arrival2 -> Option(List(euPassport, visa)),
-    )), mockHistoricManifestsPaxProvider(Map(
-      arrival -> Option(List(euPassport, visa)),
-      arrival2 -> Option(List(euPassport, visa)),
-    )))
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor)
 
     val pcpTime = SDate(scheduled).addMinutes(Arrival.defaultMinutesToChox)
     daysQueueSource ! crunchRequest(pcpTime)
@@ -309,7 +292,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val portStateProbe = TestProbe("port-state")
     val mockPortStateActor = system.actorOf(Props(new MockPortStateActor(portStateProbe, noDelay)))
 
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop, mockHistoricManifestsPaxProviderNoop)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor)
 
     val noonMillis = SDate(pcpOne).millisSinceEpoch
     val onePmMillis = SDate(pcpUpdated).millisSinceEpoch
@@ -514,7 +497,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
 
     val minsInADay = 1440
     val airportConfig = defaultAirportConfig.copy(minutesToCrunch = minsInADay)
-    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, mockHistoricManifestsProviderNoop, mockHistoricManifestsPaxProviderNoop, airportConfig)
+    val (daysQueueSource, _) = getDeskRecsGraph(mockPortStateActor, airportConfig)
 
     daysQueueSource ! crunchRequest(SDate(scheduled), airportConfig)
 

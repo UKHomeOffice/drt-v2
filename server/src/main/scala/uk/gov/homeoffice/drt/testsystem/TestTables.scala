@@ -23,10 +23,10 @@ case class MockManifestLookupService() extends ManifestLookupLike {
                                           scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
 
-  override def historicManifestPax(arrivalPort: PortCode,
-                                   departurePort: PortCode,
-                                   voyageNumber: VoyageNumber,
-                                   scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
+  override def maybeHistoricManifestPax(arrivalPort: PortCode,
+                                        departurePort: PortCode,
+                                        voyageNumber: VoyageNumber,
+                                        scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
     Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
   }
 }
@@ -40,6 +40,8 @@ case class MockUserTable() extends UserTableLike {
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
   override def updateCloseBanner(email: String, at: Timestamp)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def updateStaffPlanningIntervalMinutes(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 }
 
 case class MockFeatureGuideTable() extends FeatureGuideTableLike {
@@ -120,6 +122,10 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val maybeRemovalCutOffSeconds: Option[FiniteDuration] = None
   override val usePassengerPredictions: Boolean = true
   override val legacyFeedArrivalsBeforeDate: SDateLike = SDate("2024-04-03")
+  override val enablePreRetentionPeriodDataDeletion: Boolean = false
+  override val retainDataForYears: Int = 5
+  override val govNotifyApiKey: String = ""
+  override val isTestEnvironment: Boolean = true
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {

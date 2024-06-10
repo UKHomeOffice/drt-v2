@@ -3,22 +3,19 @@ package controllers.application
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.stream.Materializer
-import controllers.DrtConfigSystem
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import module.DRTModule
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers._
 import play.api.test._
-import services.crunch.H2Tables
 import slick.jdbc.H2Profile.api._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
-import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, T3, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
@@ -33,7 +30,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   val schema = PassengersHourlyDao.table.schema
 
   override def beforeEach(): Unit = {
-    Await.ready(H2Tables.db.run(DBIO.seq(schema.dropIfExists, schema.createIfNotExists)), 10.second)
+    Await.ready(AggregateDbH2.db.run(DBIO.seq(schema.dropIfExists, schema.createIfNotExists)), 10.second)
   }
 
   def generateMinutes(start: SDateLike, end: SDateLike, terminals: Seq[Terminal], queues: Seq[Queue], paxPerHour: Double): Seq[CrunchMinute] = {
@@ -69,7 +66,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       status(result) must ===(OK)
 
       val hourlyForLhrT3 = PassengersHourlyDao.hourlyForPortAndDate("LHR", Option("T3"))
-      val rows = Await.result(H2Tables.db.run(hourlyForLhrT3(LocalDate(2024, 6, 1))), 5.second)
+      val rows = Await.result(AggregateDbH2.db.run(hourlyForLhrT3(LocalDate(2024, 6, 1))), 5.second)
       rows must ===((0 to 23).map { hour =>
         (SDate("2024-06-01", europeLondonTimeZone).addHours(hour).millisSinceEpoch, Map(EeaDesk -> queuePaxPerHour, NonEeaDesk -> queuePaxPerHour))
       }.toMap)
@@ -231,12 +228,6 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   private def newController(interface: DrtSystemInterface) =
     new SummariesController(Helpers.stubControllerComponents(), interface)
 
-  private def newDrtInterface =
-    new DRTModule() {
-      override val isTestEnvironment: Boolean = true
-      override lazy val drtConfigSystem: DrtConfigSystem = new DrtConfigSystem() {
-        override val airportConfig: AirportConfig = Lhr.config
-      }
-    }.provideDrtSystemInterface
+  private def newDrtInterface = new TestDrtModule(Lhr.config).provideDrtSystemInterface
 
 }

@@ -38,7 +38,7 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
     }
     "When I ask it for updates after an arrival has been persisted it should give those diffs" >> {
       val flightRoutesActor = system.actorOf(Props(
-        new TerminalDayFlightActor(2023, 8, 8, T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource))
+        new TerminalDayFlightActor(2023, 8, 8, T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource), None, None, None)
       ))
       val updatesActor = system.actorOf(Props(new TerminalDayFlightUpdatesActor(2023, 8, 8, T1, () => TimeControl.now, InMemoryStreamingJournal)))
       val arrival = ArrivalGenerator.arrival(
@@ -60,7 +60,7 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
 
     "When I ask it for updates after an arrival and splits have been persisted it should give those diffs" >> {
       val flightRoutesActor = system.actorOf(Props(
-        new TerminalDayFlightActor(2023, 8, 8, T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource))
+        new TerminalDayFlightActor(2023, 8, 8, T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource), None, None, None)
       ))
       val updatesActor = system.actorOf(Props(new TerminalDayFlightUpdatesActor(2023, 8, 8, T1, () => TimeControl.now, InMemoryStreamingJournal)))
       val arrival = ArrivalGenerator.arrival(

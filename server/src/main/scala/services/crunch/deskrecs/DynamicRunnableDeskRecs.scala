@@ -1,20 +1,51 @@
 package services.crunch.deskrecs
 
 import akka.NotUsed
+import akka.actor.ActorRef
+import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.Flow
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.DynamicRunnableDeployments.PassengersToQueueMinutes
-import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
+import scala.collection.SortedSet
+import scala.collection.immutable.NumericRange
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object DynamicRunnableDeskRecs {
+object DynamicRunnableDeskRecs extends DrtRunnableGraph {
   private val log: Logger = LoggerFactory.getLogger(getClass)
+
+  def apply(deskRecsQueueActor: ActorRef,
+            deskRecsQueue: SortedSet[ProcessingRequest],
+            crunchRequest: MillisSinceEpoch => CrunchRequest,
+            paxProvider: ProcessingRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
+            deskLimitsProvider: Map[Terminal, TerminalDeskLimitsLike],
+            loadsToQueueMinutes: (NumericRange[MillisSinceEpoch], Map[TQM, CrunchApi.PassengersMinute], Map[Terminal, TerminalDeskLimitsLike], String) => Future[CrunchApi.DeskRecMinutes],
+            queueMinutesSinkActor: ActorRef)
+           (implicit ex: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+    val deskRecsFlow = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
+      loadsProvider = paxProvider,
+      maxDesksProviders = deskLimitsProvider,
+      loadsToQueueMinutes = loadsToQueueMinutes,
+    )
+
+    val (deskRecsRequestQueueActor, deskRecsKillSwitch) =
+      startQueuedRequestProcessingGraph(
+        deskRecsFlow,
+        deskRecsQueueActor,
+        deskRecsQueue,
+        queueMinutesSinkActor,
+        "desk-recs",
+        crunchRequest,
+      )
+    (deskRecsRequestQueueActor, deskRecsKillSwitch)
+  }
+
 
   def crunchRequestsToDeskRecs(loadsProvider: ProcessingRequest => Future[Map[TQM, PassengersMinute]],
                                maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],

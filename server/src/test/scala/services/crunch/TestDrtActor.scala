@@ -4,29 +4,28 @@ import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, staffUpdatesProps}
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
-import actors.persistent.arrivals.{AclForecastArrivalsActor, ArrivalFeedStatusActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
+import actors.persistent.ManifestRouterActor
+import actors.persistent.arrivals._
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
-import actors.persistent.{ManifestRouterActor, SortedActorRefSource}
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
-import akka.NotUsed
+import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.Supervision.Stop
-import akka.stream.scaladsl.{Flow, Sink, Source, SourceQueueWithComplete}
+import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComplete}
 import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovements}
-import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
+import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import org.slf4j.{Logger, LoggerFactory}
-import providers.{FlightsProvider, ManifestsProvider}
 import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
-import services.arrivals.MergeArrivals
+import services.arrivals
+import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
@@ -35,15 +34,15 @@ import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.service.ProdFeedService
 import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
+import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService}
 import uk.gov.homeoffice.drt.testsystem.TestActors.MockAggregatedArrivalsActor
 import uk.gov.homeoffice.drt.time._
 
@@ -52,17 +51,19 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
-case class MockManifestLookupService() extends ManifestLookupLike {
+case class MockManifestLookupService(maybeBestManifest: Option[BestAvailableManifest] = None,
+                                     maybeManifestPaxCount: Option[ManifestPaxCount] = None,
+                                    ) extends ManifestLookupLike {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   override def maybeBestAvailableManifest(arrivalPort: PortCode,
                                           departurePort: PortCode,
                                           voyageNumber: VoyageNumber,
                                           scheduled: SDateLike): Future[(UniqueArrivalKey, Option[BestAvailableManifest])] =
-    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), maybeBestManifest))
 
-  override def historicManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
-    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), None))
+  override def maybeHistoricManifestPax(arrivalPort: PortCode, departurePort: PortCode, voyageNumber: VoyageNumber, scheduled: SDateLike): Future[(UniqueArrivalKey, Option[ManifestPaxCount])] = {
+    Future.successful((UniqueArrivalKey(arrivalPort, departurePort, voyageNumber, scheduled), maybeManifestPaxCount))
   }
 }
 
@@ -134,8 +135,8 @@ class TestDrtActor extends Actor {
       val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "request-and-terminate-actor")
 
       def feedArrivalsRouter(source: FeedSource,
-                                     partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
-                                     name: String): ActorRef =
+                             partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
+                             name: String): ActorRef =
         system.actorOf(Props(new FeedArrivalsRouterActor(
           tc.airportConfig.terminals,
           getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
@@ -187,10 +188,10 @@ class TestDrtActor extends Actor {
 
       val manifestLookups = ManifestLookups(system)
 
-      val manifestsRouterActorRef: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
+      val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
 
-      val crunchActors = new PersistentStateActors() {
-        override val manifestsRouterActor: ActorRef = manifestsRouterActorRef
+      val actors = new PersistentStateActors() {
+        override val manifestsRouterActor: ActorRef = manifestsRouterActor
 
         override val mergeArrivalsQueueActor: ActorRef = TestProbe("merge-arrivals-queue-actor").ref
         override val crunchQueueActor: ActorRef = TestProbe("crunch-queue-actor").ref
@@ -202,11 +203,10 @@ class TestDrtActor extends Actor {
           case Some(actor) => actor
           case None => system.actorOf(Props(new MockAggregatedArrivalsActor))
         }
-
       }
 
-      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder)
-      val flightsActor: ActorRef = flightLookups.flightsRouterActor
+      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None)
+      val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
       val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor
       val queuesActor = minuteLookups.queueMinutesRouterActor
@@ -214,7 +214,7 @@ class TestDrtActor extends Actor {
       val queueUpdates = system.actorOf(Props(new QueueUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, queueUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-queues")
       val staffUpdates = system.actorOf(Props(new StaffUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, staffUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-staff")
       val flightUpdates = system.actorOf(Props(new FlightUpdatesSupervisor(tc.now, tc.airportConfig.queuesByTerminal.keys.toList, flightUpdatesProps(tc.now, InMemoryStreamingJournal))), "updates-supervisor-flight")
-      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal, paxFeedSourceOrder)))
+      val portStateActor = system.actorOf(Props(new PartitionedPortStateTestActor(portStateProbe.ref, flightsRouterActor, queuesActor, staffActor, queueUpdates, staffUpdates, flightUpdates, tc.now, tc.airportConfig.queuesByTerminal, paxFeedSourceOrder)), "partitioned-port-state-actor")
       tc.initialPortState match {
         case Some(ps) =>
           val withPcpTimes = ps.flights.view.mapValues {
@@ -247,40 +247,18 @@ class TestDrtActor extends Actor {
 
       val staffToDeskLimits = PortDeskLimits.flexedByAvailableStaff(tc.airportConfig, terminalEgatesProvider) _
 
-      val startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch, UniqueKillSwitch) = () => {
+      val ptqa = paxTypeQueueAllocator(tc.airportConfig)
+      val splitAdjustments = AdjustmentsNoop
+
+      val splitsCalculator = SplitsCalculator(ptqa, tc.airportConfig.terminalPaxSplits, splitAdjustments)
+
+      val startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]) = () => {
         implicit val timeout: Timeout = new Timeout(1 second)
-        val ptqa = paxTypeQueueAllocator(tc.airportConfig)
 
-        val splitAdjustments = AdjustmentsNoop
-
-        val splitsCalculator = SplitsCalculator(ptqa, tc.airportConfig.terminalPaxSplits, splitAdjustments)
-
-        val historicManifestLookups: ManifestLookupLike = MockManifestLookupService()
-
-        val mockCacheLookup: Arrival => Future[Option[ManifestLike]] = _ => Future.successful(None)
-        val mockCacheStore: (Arrival, ManifestLike) => Future[Any] = (_: Arrival, _: ManifestLike) => Future.successful(StatusReply.Ack)
-        val passengerLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
-          arrivalsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-          liveManifestsProvider = OptimisationProviders.liveManifestsProvider(ManifestsProvider(manifestsRouterActorRef)),
-          historicManifestsProvider = OptimisationProviders.historicManifestsProvider(
-            tc.airportConfig.portCode,
-            tc.historicManifestLookup.getOrElse(historicManifestLookups),
-            mockCacheLookup,
-            mockCacheStore
-          ),
-          historicManifestsPaxProvider = OptimisationProviders.historicManifestsPaxProvider(
-            tc.airportConfig.portCode,
-            tc.historicManifestLookup.getOrElse(historicManifestLookups),
-          ),
-          splitsCalculator = splitsCalculator,
-          splitsSink = portStateActor,
-          portDesksAndWaitsProvider = portDeskRecs,
-          redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-          dynamicQueueStatusProvider = DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
-          queuesByTerminal = tc.airportConfig.queuesByTerminal,
-          updateLiveView = _ => Future.successful(StatusReply.Ack),
-          paxFeedSourceOrder = paxFeedSourceOrder,
-        )
+        val historicManifestLookups: ManifestLookupLike = tc.historicManifestLookup match {
+          case Some(hml) => hml
+          case None => MockManifestLookupService()
+        }
 
         val crunchRequest: MillisSinceEpoch => CrunchRequest =
           (millis: MillisSinceEpoch) => CrunchRequest(millis, tc.airportConfig.crunchOffsetMinutes, tc.airportConfig.minutesToCrunch)
@@ -288,71 +266,77 @@ class TestDrtActor extends Actor {
         val mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest =
           (millis: MillisSinceEpoch) => MergeArrivalsRequest(SDate(millis).toUtcDate)
 
-        val existingMergedArrivals: UtcDate => Future[Set[UniqueArrival]] =
-          (date: UtcDate) =>
-            FlightsProvider(portStateActor)
-              .allTerminals(date, date).map(_._2.map(_.unique).toSet)
-              .runWith(Sink.fold(Set[UniqueArrival]())(_ ++ _))
-              .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
-
         val feedProviders = ProdFeedService.arrivalFeedProvidersInOrder(Seq(
           (AclFeedSource, true, None, forecastBaseFeedArrivalsActor),
           (ForecastFeedSource, false, None, forecastFeedArrivalsActor),
           (LiveBaseFeedSource, false, Option(5.minutes), liveBaseFeedArrivalsActor),
           (LiveFeedSource, true, None, liveFeedArrivalsActor)
         ))
-        val merger = MergeArrivals(existingMergedArrivals, feedProviders, tc.arrivalsAdjustments.adjust)
 
-        val mergeArrivalsFlow: Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = MergeArrivals
-          .processingRequestToArrivalsDiff(
-            mergeArrivalsForDate = merger,
-            setPcpTime = tc.setPcpTimes,
-            addArrivalPredictions = tc.addArrivalPredictions,
-            updateAggregatedArrivals = crunchActors.aggregatedArrivalsActor ! _,
-          )
+        val (historicSplitsActor, historicSplitsKillSwitch) = RunnableHistoricSplits(
+          tc.airportConfig.portCode,
+          portStateActor,
+          splitsCalculator.splitsForManifest,
+          historicManifestLookups.maybeBestAvailableManifest)
 
-        val mergeArrivalsGraphSource = new SortedActorRefSource(TestProbe().ref, mergeArrivalRequest, SortedSet(), "merge-arrivals")
-        val (mergeArrivalsRequestActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =
-          QueuedRequestProcessing.createGraph(mergeArrivalsGraphSource, portStateActor, mergeArrivalsFlow, "merge-arrivals").run()
+        val (historicPaxActor, historicPaxKillSwitch) = RunnableHistoricPax(
+          tc.airportConfig.portCode,
+          portStateActor,
+          historicManifestLookups.maybeHistoricManifestPax)
 
-        val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "passenger-loads")
+        val (mergeArrivalsRequestActor, mergeArrivalsKillSwitch: UniqueKillSwitch) = arrivals.RunnableMergedArrivals(
+          portCode = tc.airportConfig.portCode,
+          flightsRouterActor = portStateActor,
+          aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
+          mergeArrivalsQueueActor = TestProbe().ref,
+          feedArrivalsForDate = feedProviders,
+          mergeArrivalsQueue = SortedSet.empty[ProcessingRequest],
+          mergeArrivalRequest = mergeArrivalRequest,
+          setPcpTimes = tc.setPcpTimes,
+          addArrivalPredictions = tc.addArrivalPredictions)
 
-        val (crunchRequestActor, crunchKillSwitch) =
-          QueuedRequestProcessing.createGraph(crunchGraphSource, minuteLookups.queueLoadsMinutesActor, passengerLoadsProducer, "passenger-loads").run()
+        val crunchRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
+          TestProbe().ref,
+          SortedSet.empty[ProcessingRequest],
+          crunchRequest,
+          OptimisationProviders.flightsWithSplitsProvider(portStateActor),
+          portDeskRecs,
+          () => Future.successful(RedListUpdates.empty),
+          DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
+          _ => Future.successful(StatusReply.Ack),
+          splitsCalculator.terminalSplits,
+          minuteLookups.queueLoadsMinutesActor,
+          tc.airportConfig.queuesByTerminal,
+          paxFeedSourceOrder)
 
-        val deskRecsProducer = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
-          loadsProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-          maxDesksProviders = deskLimitsProviders,
-          loadsToQueueMinutes = portDeskRecs.loadsToDesks,
-        )
+        val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
+          TestProbe().ref,
+          SortedSet.empty[ProcessingRequest],
+          crunchRequest,
+          OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+          deskLimitsProviders,
+          portDeskRecs.loadsToDesks,
+          portStateActor)
 
-        val deskRecsGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "desk-recs")
-
-        val (deskRecsRequestQueueActor, _) =
-          QueuedRequestProcessing.createGraph(deskRecsGraphSource, portStateActor, deskRecsProducer, "desk-recs").run()
-
-        val deploymentsProducer = DynamicRunnableDeployments.crunchRequestsToDeployments(
+        val (deploymentRequestActor, deploymentsKillSwitch) = DynamicRunnableDeployments(
+          TestProbe().ref,
+          SortedSet.empty[ProcessingRequest],
+          staffToDeskLimits,
+          crunchRequest,
           OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
           OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, tc.airportConfig.terminals),
-          staffToDeskLimits,
-          portDeskRecs.loadsToSimulations
-        )
+          portDeskRecs.loadsToSimulations,
+          portStateActor)
 
-        val deploymentGraphSource = new SortedActorRefSource(
+        val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = RunnableStaffing(
           TestProbe().ref,
+          SortedSet.empty[ProcessingRequest],
           crunchRequest,
-          SortedSet(), "deployments")
-        val (deploymentRequestActor, deploymentsKillSwitch) =
-          QueuedRequestProcessing.createGraph(deploymentGraphSource, portStateActor, deploymentsProducer, "deployments").run()
-
-        val shiftsProvider = (r: ProcessingRequest) => liveShiftsReadActor.ask(r).mapTo[ShiftAssignments]
-        val fixedPointsProvider = (r: ProcessingRequest) => liveFixedPointsReadActor.ask(r).mapTo[FixedPointAssignments]
-        val movementsProvider = (r: ProcessingRequest) => liveStaffMovementsReadActor.ask(r).mapTo[StaffMovements]
-
-        val staffMinutesProducer = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, tc.now)
-        val staffingGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "staffing")
-        val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) =
-          QueuedRequestProcessing.createGraph(staffingGraphSource, portStateActor, staffMinutesProducer, "staffing").run()
+          liveShiftsReadActor,
+          liveFixedPointsReadActor,
+          liveStaffMovementsReadActor,
+          portStateActor,
+          tc.now)
 
         liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
         liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
@@ -363,43 +347,53 @@ class TestDrtActor extends Actor {
         liveBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestActor)
         liveFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestActor)
 
-        flightsActor ! AddUpdatesSubscriber(crunchRequestActor)
-        manifestsRouterActorRef ! AddUpdatesSubscriber(crunchRequestActor)
+        flightsRouterActor ! AddUpdatesSubscriber(crunchRequestQueueActor)
+        flightsRouterActor ! AddHistoricSplitsRequestActor(historicSplitsActor)
+        flightsRouterActor ! AddHistoricPaxRequestActor(historicPaxActor)
+
         queueLoadsActor ! AddUpdatesSubscriber(deskRecsRequestQueueActor)
         queueLoadsActor ! AddUpdatesSubscriber(deploymentRequestActor)
+
         staffActor ! AddUpdatesSubscriber(deploymentRequestActor)
 
-        (mergeArrivalsRequestActor, crunchRequestActor, deskRecsRequestQueueActor, deploymentRequestActor, mergeArrivalsKillSwitch, crunchKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+        val killSwitches = Iterable(mergeArrivalsKillSwitch, historicSplitsKillSwitch, historicPaxKillSwitch,
+          deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
+
+        (mergeArrivalsRequestActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestActor,
+          killSwitches)
       }
 
       val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
+
+      val persistManifests = ManifestPersistence.processManifestFeedResponse(
+        manifestsRouterActor,
+        portStateActor,
+        splitsCalculator.splitsForManifest,
+      )
+
+      val manifestsLiveResponseSource: SourceQueueWithComplete[ManifestsFeedResponse] = manifestsSource.mapAsync(1)(persistManifests).toMat(Sink.ignore)(Keep.left).run
+
       val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val forecastBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
 
       val crunchInputs = CrunchSystem(CrunchProps(
-        airportConfig = tc.airportConfig,
         portStateActor = portStateActor,
         maxDaysToCrunch = tc.forecastMaxDays,
-        expireAfterMillis = tc.expireAfterMillis,
         now = tc.now,
-        manifestsLiveSource = manifestsSource,
-        crunchActors = crunchActors,
         feedActors = Map(
           AclFeedSource -> forecastBaseFeedArrivalsActor,
           ForecastFeedSource -> forecastFeedArrivalsActor,
           LiveBaseFeedSource -> liveBaseFeedArrivalsActor,
           LiveFeedSource -> liveFeedArrivalsActor,
         ),
-        manifestsRouterActor = manifestsRouterActorRef,
         arrivalsForecastBaseFeed = Feed(forecastBaseArrivals, 1.second, 5.second),
         arrivalsForecastFeed = Feed(forecastArrivals, 1.second, 5.second),
         arrivalsLiveBaseFeed = Feed(liveBaseArrivals, 1.second, 1.second),
         arrivalsLiveFeed = Feed(liveArrivals, 1.second, 500.millis),
         optimiser = tc.cruncher,
         startDeskRecs = startDeskRecs,
-        setPcpTimes = tc.setPcpTimes,
         passengerAdjustments = tc.passengerAdjustments,
         system = system,
         updateFeedStatus = (feedSource: FeedSource, response: ArrivalsFeedResponse) => feedStatusWriteActors(feedSource) ! response,
@@ -410,13 +404,13 @@ class TestDrtActor extends Actor {
         forecastArrivalsInput = crunchInputs.forecastArrivalsResponse.feedSource,
         liveArrivalsInput = crunchInputs.liveArrivalsResponse.feedSource,
         ciriumArrivalsInput = crunchInputs.liveBaseArrivalsResponse.feedSource,
-        manifestsLiveInput = crunchInputs.manifestsLiveResponseSource,
+        manifestsLiveInput = manifestsLiveResponseSource,
         shiftsInput = shiftsSequentialWritesActor,
         fixedPointsInput = fixedPointsSequentialWritesActor,
         staffMovementsInput = staffMovementsSequentialWritesActor,
         actualDesksAndQueuesInput = crunchInputs.actualDeskStatsSource,
         portStateTestProbe = portStateProbe,
-        aggregatedArrivalsActor = crunchActors.aggregatedArrivalsActor,
+        aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
         portStateActor = portStateActor,
       )
   }

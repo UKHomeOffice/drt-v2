@@ -16,4 +16,8 @@ object DrtApi {
   def post(resource: String, json: String): Future[XMLHttpRequest] = dom.ext.Ajax.post(SPAMain.absoluteUrl(resource), json,
     headers = Map("Csrf-Token" -> document.getElementById("csrfToken").asInstanceOf[html.Input].value)
   )
+
+  def put(resource: String, text: String): Future[XMLHttpRequest] = dom.ext.Ajax.put(SPAMain.absoluteUrl(resource), text,
+    headers = Map("Csrf-Token" -> document.getElementById("csrfToken").asInstanceOf[html.Input].value)
+  )
 }

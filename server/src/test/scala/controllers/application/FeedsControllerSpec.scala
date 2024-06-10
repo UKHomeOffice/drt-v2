@@ -1,6 +1,5 @@
 package controllers.application
 
-import module.DRTModule
 import org.scalatestplus.play.PlaySpec
 import play.api.http.Status.OK
 import play.api.test.Helpers._
@@ -10,11 +9,7 @@ class FeedsControllerSpec extends PlaySpec {
 
   "FeedsController" should {
 
-    val module = new DRTModule() {
-      override val isTestEnvironment: Boolean = true
-    }
-
-    val drtSystemInterface = module.provideDrtSystemInterface
+    val drtSystemInterface = new TestDrtModule().provideDrtSystemInterface
 
     implicit val mat = drtSystemInterface.materializer
 
@@ -37,4 +32,3 @@ class FeedsControllerSpec extends PlaySpec {
     }
   }
 }
-

@@ -236,6 +236,31 @@ class LCYFlightTransformSpec extends CrunchTestLike {
     result === expected
   }
 
+  "An LcyFlight with a flight code suffix should be parsed correctly" >> {
+    val lcyFlight = LCYFlight(
+      airline = "SA",
+      flightNumber = "123F",
+      departureAirport = "JNB",
+      arrivalAirport = "LCY",
+      aircraftTerminal = "MT",
+      status = "ARR",
+      scheduledOnBlocks = "2018-09-01T23:00:00.000Z",
+      arrival = true,
+      international = true,
+      estimatedOnBlocks = None,
+      actualOnBlocks = None,
+      estimatedTouchDown = None,
+      actualTouchDown = None,
+      aircraftParkingPosition = None,
+      passengerGate = None,
+      seatCapacity = None,
+      paxCount = None,
+      codeShares = List.empty)
+
+    val arrival = LCYFlightTransform.lcyFlightToArrival(lcyFlight)
+    arrival.voyageNumber === 123 && arrival.flightCodeSuffix === Option("F")
+  }
+
   def lcySoapResponseOneFlightXml: String =
     """<s:Envelope xmlns:s="http://schemas.xmlsoap.org/soap/envelope/">
       |   <s:Body xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
