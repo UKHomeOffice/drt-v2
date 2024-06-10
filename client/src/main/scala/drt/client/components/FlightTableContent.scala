@@ -86,7 +86,9 @@ object FlightTableContent {
                         airportInfos: Map[PortCode, Pot[AirportInfo]]): List[ApiFlightWithSplits] = {
         flights.filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(filter.toLowerCase)
           || f.apiFlight.Origin.iata.toLowerCase.contains(filter.toLowerCase)
-          || airportInfos(f.apiFlight.Origin).fold(false)(_.country.toLowerCase.contains(filter.toLowerCase)))
+          || airportInfos.get(f.apiFlight.Origin).exists(airportInfo => airportInfo
+            .map(_.country.toLowerCase.contains(filter.toLowerCase))
+            .getOrElse(false)))
       }
 
       modelRCP(modelMP => {
