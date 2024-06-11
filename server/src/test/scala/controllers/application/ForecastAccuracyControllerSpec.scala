@@ -160,7 +160,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   }
 
   case class MockModelPersistence(pax: Int) extends ModelPersistence {
-    override def getModels(validModelNames: Seq[String]): PredictionModelActor.WithId => Future[PredictionModelActor.Models] =
+    override def getModels(validModelNames: Seq[String], maybePointInTime: Option[Long]): PredictionModelActor.WithId => Future[PredictionModelActor.Models] =
       _ => Future.successful(Models(Map("some-model-id" -> new ArrivalModelAndFeatures {
         override val model: RegressionModel = RegressionModel(Seq(), 1)
         override val features: FeaturesWithOneToManyValues = FeaturesWithOneToManyValues(List(), IndexedSeq())

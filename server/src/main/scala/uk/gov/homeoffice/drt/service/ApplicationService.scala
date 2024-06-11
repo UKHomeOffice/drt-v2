@@ -37,7 +37,7 @@ import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
-import slickdb.{AggregatedDbTables, AkkaDao, AkkaDbTables}
+import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
@@ -45,7 +45,7 @@ import uk.gov.homeoffice.drt.actor.serialisation.{ConfigDeserialiser, ConfigSeri
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
-import uk.gov.homeoffice.drt.db.{AggregateDb, AkkaDb}
+import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
