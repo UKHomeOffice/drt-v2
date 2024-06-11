@@ -194,7 +194,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         TerminalCarrier(a.Terminal.toString, a.CarrierCode.code),
         PredictionModelActor.Terminal(a.Terminal.toString),
       ),
-      feedService.flightModelPersistence.getModels(enabledPredictionModelNamesWithUpperThresholds.keys.toSeq),
+      feedService.flightModelPersistence.getModels(enabledPredictionModelNamesWithUpperThresholds.keys.toSeq, None),
       enabledPredictionModelNamesWithUpperThresholds,
       minimumImprovementPctThreshold = 15
     ).addPredictions
