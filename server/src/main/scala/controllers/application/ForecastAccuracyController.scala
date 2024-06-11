@@ -14,7 +14,6 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import upickle.default.write
@@ -85,17 +84,21 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
 
       getModelsForId(None)(id).flatMap { models =>
         val sortedModels = models.models.toList.sortBy(_._1)
-        val paxHeaders = Seq("Act", "Port Forecast", "Legay DRT Forecast") ++ sortedModels.flatMap(nm => Seq(nm._1))
+        val paxHeaders = Seq("Act", "Port Forecast", "Legacy DRT Forecast") ++ sortedModels.flatMap(nm => Seq(nm._1))
         val capHeaders = paxHeaders.map(_ + " Cap%")
         val headerRow = (Seq("Date") ++ paxHeaders ++ capHeaders).mkString(",") + "\n"
         Source(DateRange(startDate, endDate))
           .mapAsync(1) { localDate =>
-            getModelsForId(Some(SDate(localDate).millisSinceEpoch))(id).map(models => (localDate, models.models.toList.sortBy(_._1)))
+            getModelsForId(Some(SDate(localDate).millisSinceEpoch))(id).map { models =>
+              log.info(s"Got ${models.models.size} models for $localDate")
+              (localDate, models.models.toList.sortBy(_._1))
+            }
           }
           .mapAsync(1) {
             case (localDate, sortedModelsForDate) =>
               val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
-              terminalFlights(localDate)
+              val pointInTime = SDate(localDate).millisSinceEpoch
+              terminalFlights(localDate, Option(pointInTime))
                 .map { arrivals =>
                   val validArrivals = arrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
                   val actPax = if (isNonHistoricDate) 0 else feedPaxTotal(localDate, validArrivals, Seq(LiveFeedSource, ApiFeedSource))
