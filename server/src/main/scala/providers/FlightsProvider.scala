@@ -1,7 +1,7 @@
 package providers
 
 import actors.PartitionedPortStateActor
-import actors.PartitionedPortStateActor.FlightsRequest
+import actors.PartitionedPortStateActor.{DateRangeMillisLike, PointInTimeQuery}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -24,12 +24,16 @@ case class FlightsProvider(flightsRouterActor: ActorRef)
       flightsByUtcDate(request)
     }
 
-  def terminalLocalDate(implicit mat: Materializer): Terminal => LocalDate => Future[Seq[ApiFlightWithSplits]] =
-    terminal => localDate => {
+  def terminalLocalDate(implicit mat: Materializer): Terminal => (LocalDate, Option[Long]) => Future[Seq[ApiFlightWithSplits]] =
+    terminal => (localDate, maybePointInTime) => {
       val startMillis = SDate(localDate).millisSinceEpoch
       val endMillis = SDate(localDate).addDays(1).addMinutes(-1).millisSinceEpoch
       val request = PartitionedPortStateActor.GetFlightsForTerminals(startMillis, endMillis, Seq(terminal))
-      flightsByUtcDate(request).map(_._2).runFold(Seq.empty[ApiFlightWithSplits])(_ ++ _)
+      val finalRequest = maybePointInTime match {
+        case Some(pointInTime) => PointInTimeQuery(pointInTime, request)
+        case None => request
+      }
+      flightsByUtcDate(finalRequest).map(_._2).runFold(Seq.empty[ApiFlightWithSplits])(_ ++ _)
     }
 
   def allTerminalsDateRange: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
@@ -43,7 +47,7 @@ case class FlightsProvider(flightsRouterActor: ActorRef)
   def allTerminalsSingleDate: UtcDate => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     date => allTerminalsDateRange(date, date)
 
-  private def flightsByUtcDate(request: FlightsRequest): Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+  private def flightsByUtcDate(request: DateRangeMillisLike): Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     Source
       .future(flightsRouterActor.ask(request).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]])
       .flatMapConcat(identity)
