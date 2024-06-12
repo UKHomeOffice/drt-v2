@@ -86,7 +86,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       val fcstCapPct = forecastPcp.toDouble / maxPax * 100
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
       contentAsString(result) must ===(
-        f"""Date,Act,Port Forecast,DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,DRT Forecast Cap%%,$modelId Cap%%
+        f"""Date,Act,Port Forecast,Legacy DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,Legacy DRT Forecast Cap%%,$modelId Cap%%
            |2024-02-14,0,$forecastPcp,0,$mlPax,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
            |""".stripMargin)
     }
@@ -104,7 +104,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
       val liveCapPct = liveArrivalPax.toDouble / maxPax * 100
       contentAsString(result) must ===(
-        f"""Date,Act,Port Forecast,DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,DRT Forecast Cap%%,$modelId Cap%%
+        f"""Date,Act,Port Forecast,Legacy DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,Legacy DRT Forecast Cap%%,$modelId Cap%%
            |2023-01-01,$liveArrivalPax,$forecastPcp,0,$mlPax,$liveCapPct%.2f,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
            |""".stripMargin)
     }

@@ -78,10 +78,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       val getModelsForId: Option[Long] => PredictionModelActor.WithId => Future[PredictionModelActor.Models] =
         maybePointInTime => ctrl.feedService.flightModelPersistence.getModels(modelNamesList, maybePointInTime)
 
-      val contentType = acceptHeader(request) match {
-        case "text/csv" => "text/csv"
-        case _ => "application/json"
-      }
+      val contentType = "text/csv"
 
       getModelsForId(None)(id).flatMap { models =>
         val sortedModels = models.models.toList.sortBy(_._1)
