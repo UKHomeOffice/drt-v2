@@ -102,14 +102,16 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
           }
           .mapAsync(1) {
             case (localDate, sortedModelsForDate, actualArrivals) =>
-              val pointInTime = SDate(localDate).addDays(-3).millisSinceEpoch
-              terminalFlights(localDate, Option(pointInTime))
-                .map(forecastArrivals => (localDate, sortedModelsForDate, actualArrivals, forecastArrivals))
+              val pointInTime = SDate(localDate).addDays(-3)
+              if (localDate <= ctrl.now().toLocalDate)
+                terminalFlights(localDate, Option(pointInTime.millisSinceEpoch))
+                  .map(forecastArrivals => (localDate, sortedModelsForDate, actualArrivals, Option(forecastArrivals)))
+              else
+                Future.successful((localDate, sortedModelsForDate, actualArrivals, None))
           }
           .map {
-            case (localDate, sortedModelsForDate, actualArrivals, forecastArrivals) =>
-              val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
-              generateCsvRow(localDate, sortedModelsForDate, actualArrivals, isNonHistoricDate, forecastArrivals)
+            case (localDate, sortedModelsForDate, actualArrivals, maybeForecastArrivals) =>
+              generateCsvRow(localDate, sortedModelsForDate, actualArrivals, maybeForecastArrivals.getOrElse(actualArrivals))
           }
           .runWith(Sink.seq)
           .map { rows =>
@@ -126,8 +128,8 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   private def generateCsvRow(localDate: LocalDate,
                              sortedModelsForDate: List[(String, ModelAndFeatures)],
                              actualArrivals: Seq[ApiFlightWithSplits],
-                             isNonHistoricDate: Boolean,
-                             forecastArrivals: Seq[ApiFlightWithSplits]) = {
+                             forecastArrivals: Seq[ApiFlightWithSplits]): String = {
+    val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
     val validForecastArrivals = forecastArrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
     val validActualArrivals = actualArrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
     val actPax = if (isNonHistoricDate) 0 else feedPaxTotal(localDate, validActualArrivals, Seq(LiveFeedSource, ApiFeedSource))
