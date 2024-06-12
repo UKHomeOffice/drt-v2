@@ -87,7 +87,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         val headerRow = (Seq("Date") ++ paxHeaders ++ capHeaders).mkString(",") + "\n"
         Source(DateRange(startDate, endDate))
           .mapAsync(1) { localDate =>
-            getModelsForId(Some(SDate(localDate).millisSinceEpoch))(id).map { models =>
+            getModelsForId(Some(SDate(localDate).addDays(-3).millisSinceEpoch))(id).map { models =>
               log.info(s"Got ${models.models.size} models for $localDate")
               (localDate, models.models.toList.sortBy(_._1))
             }
