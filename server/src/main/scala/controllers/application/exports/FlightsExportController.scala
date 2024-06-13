@@ -8,10 +8,10 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.inject.Inject
 import controllers.application.AuthController
-import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
+import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, streamingResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import play.api.http.{HttpChunk, HttpEntity, Writeable}
+import play.api.http.{HttpEntity, Writeable}
 import play.api.mvc._
 import services.exports.{FlightExports, GeneralExport}
 import services.exports.flights.ArrivalFeedExport
@@ -192,11 +192,11 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
           airportConfig.portCode
         }-$terminal-$feedSourceString-$periodString"
 
-        Result(
-          header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-          body = HttpEntity.Chunked(csvDataSource.collect {
-            case Some(s) => s
-          }.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
+        val byteStringStream = csvDataSource.collect {
+          case Some(s) => s
+        }
+
+        sourceToCsvResponse(byteStringStream, fileName)
 
       case None =>
         NotFound(s"Unknown feed source $feedSourceString")
