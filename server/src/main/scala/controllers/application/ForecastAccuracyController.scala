@@ -128,7 +128,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
     val validForecastArrivals = forecastArrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
     val validActualArrivals = actualArrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
-    val actualFlights = validActualArrivals.length
+    val actualFlights = if (isNonHistoricDate) 0 else validActualArrivals.length
     val forecastFlights = validForecastArrivals.length
     val unscheduledPercentage = if (isNonHistoricDate) 0 else 100 * (actualFlights - forecastFlights).toDouble / actualFlights
     val actPax = if (isNonHistoricDate) 0 else feedPaxTotal(localDate, validActualArrivals, Seq(LiveFeedSource, ApiFeedSource))
