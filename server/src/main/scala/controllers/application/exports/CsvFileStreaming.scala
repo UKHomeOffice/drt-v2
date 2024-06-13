@@ -30,7 +30,7 @@ object CsvFileStreaming {
     }
 
     Result(
-      header = ResponseHeader(200, Map("Content-Type" -> "application/json") ++ maybeFileName.map(fn => "Content-Disposition" -> s"attachment; filename=$fn.csv")),
+      header = ResponseHeader(200, Map("Content-Type" -> mimeType) ++ maybeFileName.map(fn => "Content-Disposition" -> s"attachment; filename=$fn")),
       body = HttpEntity.Streamed(byteStringStream, None, writeable.contentType)
     )
   }
