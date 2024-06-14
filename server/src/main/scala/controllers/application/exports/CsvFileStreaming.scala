@@ -33,7 +33,7 @@ object CsvFileStreaming {
       "Content-Type" -> mimeType,
       "X-Accel-Buffering" -> "no",
     ) ++ maybeFileName.map(fn => "Content-Disposition" -> s"attachment; filename=$fn")
-    
+
     Result(
       header = ResponseHeader(200, headers),
       body = HttpEntity.Streamed(byteStringStream, None, writeable.contentType)
