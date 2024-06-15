@@ -5,7 +5,8 @@ import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import org.slf4j.LoggerFactory
-import slickdb.{AggregatedDao, AggregatedDbTables, AkkaDao, AkkaDbTables}
+import slickdb.dao.{AggregatedDao, AkkaDao}
+import slickdb.{AggregatedDbTables, AkkaDbTables, dao}
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.prediction.ModelCategory
@@ -132,12 +133,12 @@ object DataRetentionHandler {
       .persistenceIdsForFullPurge(terminals, retentionPeriod, FeedSource.feedSources)
     val pIdsForDate = DataRetentionHandler
       .persistenceIdsForDate(terminals, FeedSource.feedSources)
-    val aggDao = AggregatedDao(aggregatedDb, now, portCode)
+    val aggDao = dao.AggregatedDao(aggregatedDb, now, portCode)
     val deleteArrivalsBeforeRetentionPeriod = deleteAggregatedArrivalsBeforeRetentionPeriod(
       aggDao.deleteArrivalsBefore,
       retentionStartDate(retentionPeriod, now),
     )
-    val akkaDao = AkkaDao(akkaDb, now)
+    val akkaDao = dao.AkkaDao(akkaDb, now)
 
     DataRetentionHandler(
       pIdsForSequenceNumberPurge,

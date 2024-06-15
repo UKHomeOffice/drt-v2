@@ -31,7 +31,6 @@ object CsvFileStreaming {
 
     val headers = Map(
       "Content-Type" -> mimeType,
-      "X-Accel-Buffering" -> "no",
     ) ++ maybeFileName.map(fn => "Content-Disposition" -> s"attachment; filename=$fn")
 
     Result(

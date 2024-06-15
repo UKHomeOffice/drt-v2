@@ -3,6 +3,7 @@ package slickdb
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
+import slickdb.dao.AggregatedDao
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

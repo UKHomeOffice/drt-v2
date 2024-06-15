@@ -65,6 +65,17 @@ case class ArrivalRow(code: String,
                       pcppassengers: Option[Int] = None,
                       scheduled_departure: Option[java.sql.Timestamp] = None)
 
+case class ArrivalStatsRow(portCode: String,
+                           terminal: String,
+                           date: String,
+                           daysAhead: Int,
+                           dataType: String,
+                           flights: Int,
+                           pax: Int,
+                           averageLoad: Double,
+                           createdAt: Long,
+                          )
+
 
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
 trait AggregatedDbTables {
@@ -200,10 +211,27 @@ trait AggregatedDbTables {
     index("latest_login", latest_login)
   }
 
+  class ArrivalStatsTable(_tableTag: Tag) extends profile.api.Table[ArrivalStatsRow](_tableTag, maybeSchema, "arrival_stats") {
+    val portCode: Rep[String] = column[String]("port_code")
+    val terminal: Rep[String] = column[String]("terminal")
+    val date: Rep[String] = column[String]("date")
+    val daysAhead: Rep[Int] = column[Int]("days_ahead")
+    val dataType: Rep[String] = column[String]("data_type")
+    val flights: Rep[Int] = column[Int]("flights")
+    val pax: Rep[Int] = column[Int]("pax")
+    val averageLoad: Rep[Double] = column[Double]("average_load")
+    val createdAt: Rep[Long] = column[Long]("created_at")
+
+    def * = (portCode, terminal, date, daysAhead, dataType, flights, pax, averageLoad, createdAt).mapTo[ArrivalStatsRow]
+
+    val pk = primaryKey("arrival_stats_pkey", (portCode, terminal, date, daysAhead, dataType))
+  }
+
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */
   lazy val voyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfoTable(tag))
   lazy val processedJson = new TableQuery(tag => new ProcessedJsonTable(tag))
   lazy val processedZip = new TableQuery(tag => new ProcessedZipTable(tag))
   lazy val arrival = new TableQuery(tag => new ArrivalTable(tag))
+  lazy val arrivalStats = new TableQuery(tag => new ArrivalStatsTable(tag))
   lazy val user = new TableQuery(tag => new UserTable(tag))
 }

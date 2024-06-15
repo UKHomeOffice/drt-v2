@@ -1,5 +1,6 @@
-package slickdb
+package slickdb.dao
 
+import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
