@@ -37,6 +37,7 @@ import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
+import slickdb.dao.ArrivalStatsDao
 import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
@@ -358,6 +359,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     splitsCalculator.splitsForManifest,
   )
 
+  val arrivalStats = ArrivalStatsDao(aggregatedDb, now, airportConfig.portCode)
 
   private val daysInYear = 365
   private val retentionPeriod: FiniteDuration = (params.retainDataForYears * daysInYear).days

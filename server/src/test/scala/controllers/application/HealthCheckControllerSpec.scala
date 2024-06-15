@@ -29,7 +29,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration.DurationInt
 
-class HealthCheckControllerSpec extends PlaySpec with BeforeAndAfterEach {
+class HealthCheckControllerSpec extends PlaySpec {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
 

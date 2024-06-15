@@ -17,6 +17,7 @@ object AggregateDbH2 extends AggregatedDbTables {
 
   private val tables = Seq(
     arrival,
+    arrivalStats,
     processedZip,
     processedJson,
     voyageManifestPassengerInfo,

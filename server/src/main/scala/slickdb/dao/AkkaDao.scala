@@ -1,5 +1,6 @@
-package slickdb
+package slickdb.dao
 
+import slickdb.AkkaDbTables
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.duration.FiniteDuration

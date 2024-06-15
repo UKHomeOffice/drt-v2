@@ -29,8 +29,12 @@ object CsvFileStreaming {
       case s if s.nonEmpty => writeable.transform(s)
     }
 
+    val headers = Map(
+      "Content-Type" -> mimeType,
+    ) ++ maybeFileName.map(fn => "Content-Disposition" -> s"attachment; filename=$fn")
+
     Result(
-      header = ResponseHeader(200, Map("Content-Type" -> mimeType) ++ maybeFileName.map(fn => "Content-Disposition" -> s"attachment; filename=$fn")),
+      header = ResponseHeader(200, headers),
       body = HttpEntity.Streamed(byteStringStream, None, writeable.contentType)
     )
   }
