@@ -243,7 +243,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         f"${mf.load}%.2f,$modelLoadDiff%.2f"
       }
 
-    val unscheduledFlightsPct = if (isNonHistoricDate) 0d else 100 * (forecast.flights - actuals.flights).toDouble / actuals.flights
+    val unscheduledFlightsPct = if (isNonHistoricDate) 0d else 100 * (actuals.flights - forecast.flights).toDouble / forecast.flights
 
     (Seq(actuals.date.toISOString, actuals.flights, forecast.flights, f"$unscheduledFlightsPct%.2f") ++ paxCells ++ loadCells).mkString(",") + "\n"
   }
