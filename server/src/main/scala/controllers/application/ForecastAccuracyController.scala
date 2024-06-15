@@ -96,7 +96,6 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     Source(DateRange(startDate, endDate))
       .mapAsync(1) { localDate =>
         getModels(Some(SDate(localDate).addDays(-daysAhead).millisSinceEpoch)).flatMap { models =>
-          log.info(s"Got ${models.models.size} models for $localDate")
           val sortedModels = models.models.toList.sortBy(_._1)
           val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
 
@@ -125,8 +124,11 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
 
           futureMaybeModels
             .flatMap {
-              case Some(models) => Future.successful(models)
+              case Some(models) =>
+                log.info(s"Using cached stats for $localDate")
+                Future.successful(models)
               case None =>
+                log.info(s"Calculating stats for $localDate")
                 terminalFlights(localDate, None)
                   .flatMap { actualArrivals =>
                     val validActualArrivals = actualArrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
@@ -154,7 +156,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                           _ => Future.sequence(modelFcstRows.map(mf => ctrl.applicationService.arrivalStats.addOrUpdate(mf)))
                         )
                       )
-                      
+
                       (actuals, fcst, modelFcsts)
                   }
             }
