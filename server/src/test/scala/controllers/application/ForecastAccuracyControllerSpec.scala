@@ -7,6 +7,7 @@ import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared.airportconfig.Test
 import module.DrtModule
+import org.scalatest.BeforeAndAfter
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers.{OK, contentAsString, contentType, status}
@@ -20,17 +21,24 @@ import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSour
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.{FeaturesWithOneToManyValues, ModelPersistence, RegressionModel}
 import uk.gov.homeoffice.drt.service.ProdFeedService
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
-class ForecastAccuracyControllerSpec extends PlaySpec {
+class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test-1")
   implicit val mat: Materializer = Materializer(system)
   implicit val ec: ExecutionContext = system.dispatcher
   implicit val timeout: akka.util.Timeout = 5.seconds
+  private val aggDb = AggregateDbH2
+  import aggDb.profile.api._
+
+  before {
+    aggDb.dropAndCreateH2Tables()
+  }
 
   "ForecastAccuracyController" should {
     val liveArrivalPax = 80
