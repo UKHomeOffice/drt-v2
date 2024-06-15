@@ -72,10 +72,8 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       val stream = Source.future(getModels(None))
         .flatMapConcat { models =>
           val sortedModels = models.models.toList.sortBy(_._1)
-          val paxHeaders = Seq("Actual pax", "Port forecast pax", "Port forecast pax % diff") ++
-            sortedModels.flatMap(nm => Seq(s"ML ${nm._1} pax, ML ${nm._1} pax % diff"))
-          val loadHeaders = Seq("Actual load", "Port forecast load", "Port forecast load % diff") ++
-            sortedModels.flatMap(nm => Seq(s"ML ${nm._1} load", s"ML ${nm._1} load % diff"))
+          val paxHeaders = comparisonHeaders(sortedModels, "pax")
+          val loadHeaders = comparisonHeaders(sortedModels, "load")
 
           val headerRow = (Seq("Date", "Actual flights", "Forecast flights", "Unscheduled flights %") ++ paxHeaders ++ loadHeaders).mkString(",") + "\n"
 
@@ -86,6 +84,10 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       sourceToCsvResponse(stream, "forecast-model-comparison.csv")
     }
   }
+
+  private def comparisonHeaders(sortedModels: List[(String, ModelAndFeatures)], label: String): Seq[String] =
+    Seq(s"Actual $label", s"Port forecast $label", s"Port forecast $label % diff") ++
+      sortedModels.flatMap(nm => Seq(s"ML ${nm._1} $label,ML ${nm._1} $label % diff"))
 
   private def streamDateRange(startDate: LocalDate,
                               endDate: LocalDate,

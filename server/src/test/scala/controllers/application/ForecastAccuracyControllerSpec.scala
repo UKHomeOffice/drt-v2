@@ -94,7 +94,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
       val flights = 1
       contentAsString(result) must ===(
-        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax, ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
+        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
            |2024-02-14,0,$flights,0.00,0,$forecastPcp,0.00,$mlPax,0.00,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f,0.00
            |""".stripMargin)
     }
@@ -114,7 +114,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       val flights = 1
       val fcstPaxDiff = (forecastPcp - liveArrivalPax).toDouble / liveArrivalPax * 100
       contentAsString(result) must ===(
-        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax, ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
+        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
            |2023-01-01,$flights,$flights,0.00,$liveArrivalPax,$forecastPcp,$fcstPaxDiff%.2f,$mlPax,87.50,$liveCapPct%.2f,$fcstCapPct%.2f,37.50,${mlPredCapPct.toDouble}%.2f,87.50
            |""".stripMargin)
     }
