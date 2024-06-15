@@ -133,12 +133,12 @@ object DataRetentionHandler {
       .persistenceIdsForFullPurge(terminals, retentionPeriod, FeedSource.feedSources)
     val pIdsForDate = DataRetentionHandler
       .persistenceIdsForDate(terminals, FeedSource.feedSources)
-    val aggDao = dao.AggregatedDao(aggregatedDb, now, portCode)
+    val aggDao = AggregatedDao(aggregatedDb, now, portCode)
     val deleteArrivalsBeforeRetentionPeriod = deleteAggregatedArrivalsBeforeRetentionPeriod(
       aggDao.deleteArrivalsBefore,
       retentionStartDate(retentionPeriod, now),
     )
-    val akkaDao = dao.AkkaDao(akkaDb, now)
+    val akkaDao = AkkaDao(akkaDb, now)
 
     DataRetentionHandler(
       pIdsForSequenceNumberPurge,
