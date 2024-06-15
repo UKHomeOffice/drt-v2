@@ -34,7 +34,6 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
   implicit val ec: ExecutionContext = system.dispatcher
   implicit val timeout: akka.util.Timeout = 5.seconds
   private val aggDb = AggregateDbH2
-  import aggDb.profile.api._
 
   before {
     aggDb.dropAndCreateH2Tables()
