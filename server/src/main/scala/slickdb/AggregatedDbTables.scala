@@ -47,6 +47,35 @@ case class VoyageManifestPassengerInfoRow(event_code: String,
                                           in_transit: Boolean,
                                           json_file: String)
 
+case class ArrivalRow(code: String,
+                      number: Int,
+                      destination: String,
+                      origin: String,
+                      terminal: String,
+                      gate: Option[String] = None,
+                      stand: Option[String] = None,
+                      status: String,
+                      scheduled: java.sql.Timestamp,
+                      estimated: Option[java.sql.Timestamp] = None,
+                      actual: Option[java.sql.Timestamp] = None,
+                      estimatedchox: Option[java.sql.Timestamp] = None,
+                      actualchox: Option[java.sql.Timestamp] = None,
+                      pcp: java.sql.Timestamp,
+                      totalpassengers: Option[Int] = None,
+                      pcppassengers: Option[Int] = None,
+                      scheduled_departure: Option[java.sql.Timestamp] = None)
+
+case class ArrivalStatsRow(portCode: String,
+                           terminal: String,
+                           date: String,
+                           daysAhead: Int,
+                           dataType: String,
+                           flights: Int,
+                           pax: Int,
+                           averageLoad: Double,
+                           createdAt: Long,
+                          )
+
 
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
 trait AggregatedDbTables {
@@ -58,25 +87,7 @@ trait AggregatedDbTables {
   // NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = VoyageManifestPassengerInfo.schema ++ ProcessedJson.schema ++ ProcessedZip.schema ++ Arrival.schema
-
-  case class ArrivalRow(code: String,
-                        number: Int,
-                        destination: String,
-                        origin: String,
-                        terminal: String,
-                        gate: Option[String] = None,
-                        stand: Option[String] = None,
-                        status: String,
-                        scheduled: java.sql.Timestamp,
-                        estimated: Option[java.sql.Timestamp] = None,
-                        actual: Option[java.sql.Timestamp] = None,
-                        estimatedchox: Option[java.sql.Timestamp] = None,
-                        actualchox: Option[java.sql.Timestamp] = None,
-                        pcp: java.sql.Timestamp,
-                        totalpassengers: Option[Int] = None,
-                        pcppassengers: Option[Int] = None,
-                        scheduled_departure: Option[java.sql.Timestamp] = None)
+  lazy val schema: profile.SchemaDescription = voyageManifestPassengerInfo.schema ++ processedJson.schema ++ processedZip.schema ++ arrival.schema
 
   private val maybeSchema = profile match {
     case _: PostgresProfile =>
@@ -142,7 +153,7 @@ trait AggregatedDbTables {
   }
 
   /** Table description of table arrival. Objects of this class serve as prototypes for rows in queries. */
-  class Arrival(_tableTag: Tag) extends {
+  class ArrivalTable(_tableTag: Tag) extends {
     private val maybeSchema = profile match {
       case _: PostgresProfile => Some("public")
       case _ => None
@@ -170,16 +181,16 @@ trait AggregatedDbTables {
 
     val pk = primaryKey("arrival_pkey", (number, destination, terminal, scheduled))
 
-    val index1 = index("code", code)
-    val index2 = index("number", number)
-    val index3 = index("origin", origin)
-    val index4 = index("pcp", pcp)
-    val index5 = index("scheduled", scheduled)
-    val index6 = index("terminal", terminal)
-    val index7 = index("scheduled_departure", scheduled_departure)
+    index("code", code)
+    index("number", number)
+    index("origin", origin)
+    index("pcp", pcp)
+    index("scheduled", scheduled)
+    index("terminal", terminal)
+    index("scheduled_departure", scheduled_departure)
   }
 
-  class User(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
+  class UserTable(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
     def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at, feedback_banner_closed_at, staff_planning_interval_minutes) <> (UserRow.tupled, UserRow.unapply)
 
     val id: Rep[String] = column[String]("id")
@@ -192,16 +203,35 @@ trait AggregatedDbTables {
     val created_at = column[Option[Timestamp]]("created_at")
     val feedback_banner_closed_at = column[Option[java.sql.Timestamp]]("feedback_banner_closed_at")
     val staff_planning_interval_minutes = column[Option[Int]]("staff_planning_interval_minutes")
+
     val pk = primaryKey("user_pkey", (id))
-    val index1 = index("username", userName)
-    val index2 = index("email", email)
-    val index3 = index("latest_login", latest_login)
+
+    index("username", userName)
+    index("email", email)
+    index("latest_login", latest_login)
+  }
+
+  class ArrivalStatsTable(_tableTag: Tag) extends profile.api.Table[ArrivalStatsRow](_tableTag, maybeSchema, "arrival_stats") {
+    val portCode: Rep[String] = column[String]("port_code")
+    val terminal: Rep[String] = column[String]("terminal")
+    val date: Rep[String] = column[String]("date")
+    val daysAhead: Rep[Int] = column[Int]("days_ahead")
+    val dataType: Rep[String] = column[String]("data_type")
+    val flights: Rep[Int] = column[Int]("flights")
+    val pax: Rep[Int] = column[Int]("pax")
+    val averageLoad: Rep[Double] = column[Double]("average_load")
+    val createdAt: Rep[Long] = column[Long]("created_at")
+
+    def * = (portCode, terminal, date, daysAhead, dataType, flights, pax, averageLoad, createdAt).mapTo[ArrivalStatsRow]
+
+    val pk = primaryKey("arrival_stats_pkey", (portCode, terminal, date, daysAhead, dataType))
   }
 
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */
-  lazy val VoyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfoTable(tag))
-  lazy val ProcessedJson = new TableQuery(tag => new ProcessedJsonTable(tag))
-  lazy val ProcessedZip = new TableQuery(tag => new ProcessedZipTable(tag))
-  lazy val Arrival = new TableQuery(tag => new Arrival(tag))
-  lazy val User = new TableQuery(tag => new User(tag))
+  lazy val voyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfoTable(tag))
+  lazy val processedJson = new TableQuery(tag => new ProcessedJsonTable(tag))
+  lazy val processedZip = new TableQuery(tag => new ProcessedZipTable(tag))
+  lazy val arrival = new TableQuery(tag => new ArrivalTable(tag))
+  lazy val arrivalStats = new TableQuery(tag => new ArrivalStatsTable(tag))
+  lazy val user = new TableQuery(tag => new UserTable(tag))
 }

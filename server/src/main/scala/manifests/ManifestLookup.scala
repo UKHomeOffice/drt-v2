@@ -244,7 +244,7 @@ case class ManifestLookup(tables: AggregatedDbTables)
   }
 
   private def paxForArrivalQuery(flightKeys: Vector[(String, String, String, Timestamp)]): Future[Seq[ManifestPassengerProfile]] = {
-    val q = tables.VoyageManifestPassengerInfo
+    val q = tables.voyageManifestPassengerInfo
       .filter { vm =>
         vm.event_code === "DC" && flightKeys.map {
           case (destination, origin, voyageNumberString, scheduled) =>

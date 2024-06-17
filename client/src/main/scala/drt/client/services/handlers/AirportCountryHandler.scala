@@ -8,7 +8,6 @@ import drt.shared.AirportInfo
 import uk.gov.homeoffice.drt.ports.PortCode
 import upickle.default.read
 
-import scala.collection.immutable.Map
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 

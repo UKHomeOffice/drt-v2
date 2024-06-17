@@ -3,12 +3,12 @@ package controllers.application.exports
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import play.api.http.{HttpChunk, HttpEntity, Writeable}
+import play.api.http.{HttpEntity, Writeable}
 import play.api.mvc.{ResponseHeader, Result}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 object CsvFileStreaming {
 
@@ -16,29 +16,26 @@ object CsvFileStreaming {
     ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
     HttpEntity.Strict(ByteString(data), Option("application/csv")))
 
-  def sourceToCsvResponse(exportSource: Source[String, NotUsed], fileName: String): Result = {
-    val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("text/csv"))
+  def sourceToCsvResponse(exportSource: Source[String, NotUsed], fileName: String): Result =
+    streamingResponse(exportSource, "text/csv", Option(fileName))
+
+  def sourceToJsonResponse(exportSource: Source[String, NotUsed]): Result =
+    streamingResponse(exportSource, "application/json", None)
+
+  private def streamingResponse(exportSource: Source[String, NotUsed], mimeType: String, maybeFileName: Option[String]): Result = {
+    val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option(mimeType))
+
+    val byteStringStream = exportSource.collect {
+      case s if s.nonEmpty => writeable.transform(s)
+    }
+
+    val headers = Map(
+      "Content-Type" -> mimeType,
+    ) ++ maybeFileName.map(fn => "Content-Disposition" -> s"attachment; filename=$fn")
 
     Result(
-      header = ResponseHeader(200, Map("Content-Type" -> "text/csv", "Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-      body = HttpEntity.Chunked(exportSource.collect {
-        case s if s.nonEmpty => s
-      }.map(c => {
-        HttpChunk.Chunk(writeable.transform(c))
-      }), writeable.contentType))
-  }
-
-  def sourceToJsonResponse(exportSource: Source[String, NotUsed]): Result = {
-    val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/json"))
-
-    Result(
-      header = ResponseHeader(200, Map("Content-Type" -> "application/json")),
-      body = HttpEntity.Chunked(
-        exportSource.collect {
-          case s if s.nonEmpty => HttpChunk.Chunk(writeable.transform(s))
-        },
-        writeable.contentType
-      )
+      header = ResponseHeader(200, headers),
+      body = HttpEntity.Streamed(byteStringStream, None, writeable.contentType)
     )
   }
 

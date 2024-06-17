@@ -7,6 +7,7 @@ import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared.airportconfig.Test
 import module.DrtModule
+import org.scalatest.BeforeAndAfter
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers.{OK, contentAsString, contentType, status}
@@ -20,17 +21,23 @@ import uk.gov.homeoffice.drt.ports.{FeedSource, ForecastFeedSource, LiveFeedSour
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.{FeaturesWithOneToManyValues, ModelPersistence, RegressionModel}
 import uk.gov.homeoffice.drt.service.ProdFeedService
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 
-class ForecastAccuracyControllerSpec extends PlaySpec {
+class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test-1")
   implicit val mat: Materializer = Materializer(system)
   implicit val ec: ExecutionContext = system.dispatcher
   implicit val timeout: akka.util.Timeout = 5.seconds
+  private val aggDb = AggregateDbH2
+
+  before {
+    aggDb.dropAndCreateH2Tables()
+  }
 
   "ForecastAccuracyController" should {
     val liveArrivalPax = 80
@@ -85,9 +92,10 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       val forecastPcp = forecastArrivalPax - forecastArrivalTransPax
       val fcstCapPct = forecastPcp.toDouble / maxPax * 100
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
+      val flights = 1
       contentAsString(result) must ===(
-        f"""Date,Act,Port Forecast,DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,DRT Forecast Cap%%,$modelId Cap%%
-           |2024-02-14,0,$forecastPcp,0,$mlPax,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
+        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
+           |2024-02-14,0,$flights,0.00,0,$forecastPcp,0.00,$mlPax,0.00,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f,0.00
            |""".stripMargin)
     }
 
@@ -103,9 +111,11 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
       val fcstCapPct = forecastPcp.toDouble / maxPax * 100
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
       val liveCapPct = liveArrivalPax.toDouble / maxPax * 100
+      val flights = 1
+      val fcstPaxDiff = (forecastPcp - liveArrivalPax).toDouble / liveArrivalPax * 100
       contentAsString(result) must ===(
-        f"""Date,Act,Port Forecast,DRT Forecast,$modelId,Act Cap%%,Port Forecast Cap%%,DRT Forecast Cap%%,$modelId Cap%%
-           |2023-01-01,$liveArrivalPax,$forecastPcp,0,$mlPax,$liveCapPct%.2f,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f
+        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
+           |2023-01-01,$flights,$flights,0.00,$liveArrivalPax,$forecastPcp,$fcstPaxDiff%.2f,$mlPax,87.50,$liveCapPct%.2f,$fcstCapPct%.2f,37.50,${mlPredCapPct.toDouble}%.2f,87.50
            |""".stripMargin)
     }
   }
@@ -160,7 +170,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec {
   }
 
   case class MockModelPersistence(pax: Int) extends ModelPersistence {
-    override def getModels(validModelNames: Seq[String]): PredictionModelActor.WithId => Future[PredictionModelActor.Models] =
+    override def getModels(validModelNames: Seq[String], maybePointInTime: Option[Long]): PredictionModelActor.WithId => Future[PredictionModelActor.Models] =
       _ => Future.successful(Models(Map("some-model-id" -> new ArrivalModelAndFeatures {
         override val model: RegressionModel = RegressionModel(Seq(), 1)
         override val features: FeaturesWithOneToManyValues = FeaturesWithOneToManyValues(List(), IndexedSeq())

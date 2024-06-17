@@ -125,7 +125,8 @@ class StaffingController @Inject()(cc: ControllerComponents,
             localDate,
             localDate,
             airportConfig.portCode
-          ))
+          ) + ".csv"
+        )
       }
     }
 }

@@ -23,7 +23,7 @@ import scala.concurrent.{Await, ExecutionContext}
 class MockPredictionModelActor(now: () => SDateLike,
                                category: ModelCategory,
                                identifier: WithId,
-                              ) extends PredictionModelActor(now, category, identifier) {
+                              ) extends PredictionModelActor(now, category, identifier, None) {
   private val model: RegressionModel = RegressionModel(Iterable(-4.491677337488966, 0.5758560689088016, 3.8006500547982798, 0.11517121378172734, 0.0), 0)
   private val features: FeaturesWithOneToManyValues = FeaturesWithOneToManyValues(
     List(DayOfWeek(), PartOfDay()),
@@ -39,8 +39,8 @@ case class MockFlightPersistence()
                                  val system: ActorSystem
                                 ) extends ActorModelPersistence {
   override val modelCategory: ModelCategory = FlightCategory
-  override val actorProvider: (ModelCategory, WithId) => ActorRef =
-    (modelCategory, identifier) => system.actorOf(Props(new MockPredictionModelActor(() => SDate.now(), modelCategory, identifier)))
+  override val actorProvider: (ModelCategory, WithId, Option[Long]) => ActorRef =
+    (modelCategory, identifier, _) => system.actorOf(Props(new MockPredictionModelActor(() => SDate.now(), modelCategory, identifier)))
 }
 
 
@@ -53,7 +53,7 @@ class ArrivalPredictionsSpec extends CrunchTestLike {
 
   val arrivalPredictions: ArrivalPredictions = ArrivalPredictions(
     modelKeysForArrival,
-    MockFlightPersistence().getModels(Seq(OffScheduleModelAndFeatures.targetName)),
+    MockFlightPersistence().getModels(Seq(OffScheduleModelAndFeatures.targetName), None),
     Map(OffScheduleModelAndFeatures.targetName -> minutesOffScheduledThreshold),
     10)
   val scheduledStr = "2022-05-01T12:00"

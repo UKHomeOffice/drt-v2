@@ -156,7 +156,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         simulationParams.date,
         simulationParams.date,
         airportConfig.portCode
-      )
+      ) + ".csv"
 
       val stream = StreamingDesksExport.deskRecsToCSVStreamWithHeaders(
         date.getLocalLastMidnight,

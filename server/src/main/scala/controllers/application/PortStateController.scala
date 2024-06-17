@@ -59,7 +59,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   }
 
   def forecastWeekSummary(terminalName: String, startDay: MillisSinceEpoch, periodInterval: Int): Action[AnyContent] = authByRole(DesksAndQueuesView) {
-    Action.async { request =>
+    Action.async {
       val terminal = Terminal(terminalName)
       val numberOfDays = 7
       val (startOfForecast, endOfForecast) = startAndEndForDay(startDay, numberOfDays)

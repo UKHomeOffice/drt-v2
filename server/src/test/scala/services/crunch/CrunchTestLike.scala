@@ -16,9 +16,6 @@ import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.{AfterAll, AfterEach}
-import slick.dbio.{DBIOAction, NoStream}
-import slick.jdbc.JdbcProfile
-import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.STN
 import uk.gov.homeoffice.drt.ports.PaxTypes._
@@ -33,30 +30,6 @@ import scala.collection.immutable
 import scala.collection.immutable.{Map, SortedMap}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Future}
-
-
-object H2AggregatedDbTables$ extends AggregatedDbTables {
-  override val profile: JdbcProfile = slick.jdbc.H2Profile
-  val db: profile.backend.Database = profile.api.Database.forConfig("h2-aggregated-db")
-
-  override def run[R](action: DBIOAction[R, NoStream, Nothing]): Future[R] = db.run[R](action)
-
-  import profile.api._
-
-  private val tables = Seq(
-    TableQuery[ProcessedZipTable],
-    TableQuery[ProcessedJsonTable],
-    TableQuery[VoyageManifestPassengerInfoTable],
-  )
-
-  def dropAndCreateH2Tables()
-                           (implicit ec: ExecutionContext): Unit =
-    Await.result(
-      run(DBIO.seq(tables.map(_.schema.dropIfExists): _*))
-        .flatMap(_ => run(DBIO.seq(tables.map(_.schema.create): _*))),
-      1.second
-    )
-}
 
 object TestDefaults {
   val airportConfig: AirportConfig = AirportConfig(

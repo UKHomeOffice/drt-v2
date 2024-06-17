@@ -2,7 +2,7 @@ package slickdb
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.arrivals.{Arrival => DrtArrival}
+import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
@@ -18,7 +18,7 @@ case class AggregatedArrivals(arrivals: Seq[AggregatedArrival])
 case class AggregatedArrival(code: String, scheduled: MillisSinceEpoch, origin: String, destination: String, terminalName: String)
 
 object AggregatedArrival {
-  def apply(arrival: DrtArrival, destination: String): AggregatedArrival = AggregatedArrival(
+  def apply(arrival: Arrival, destination: String): AggregatedArrival = AggregatedArrival(
     arrival.flightCodeString,
     arrival.Scheduled,
     arrival.Origin.toString,
@@ -31,9 +31,8 @@ case class ArrivalTable(portCode: PortCode, tables: AggregatedDbTables, paxFeedS
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import tables.profile.api._
-  import tables.{Arrival, ArrivalRow}
 
-  private val arrivalsTableQuery = TableQuery[Arrival]
+  private val arrivalsTableQuery = tables.arrival
 
   def selectAll: AggregatedArrivals = {
     val eventualArrivals = tables.run(arrivalsTableQuery.result).map(arrivalRows =>
@@ -52,7 +51,7 @@ case class ArrivalTable(portCode: PortCode, tables: AggregatedDbTables, paxFeedS
     }
   }
 
-  def insertOrUpdateArrival(f: DrtArrival): Future[Int] = {
+  def insertOrUpdateArrival(f: Arrival): Future[Int] = {
     tables.run(arrivalsTableQuery.insertOrUpdate(arrivalRow(f))) recover {
       case throwable =>
         log.error(s"insertOrUpdate failed", throwable)
@@ -60,13 +59,14 @@ case class ArrivalTable(portCode: PortCode, tables: AggregatedDbTables, paxFeedS
     }
   }
 
-  def matchIndex(number: Int, terminal: Terminal, scheduledTs: Timestamp): tables.Arrival => Rep[Boolean] = (arrival: Arrival) =>
-    arrival.number === number &&
-      arrival.terminal === terminal.toString &&
-      arrival.scheduled === scheduledTs &&
-      arrival.destination === portCode.toString
+  def matchIndex(number: Int, terminal: Terminal, scheduledTs: Timestamp): tables.ArrivalTable => Rep[Boolean] =
+    arrival =>
+      arrival.number === number &&
+        arrival.terminal === terminal.toString &&
+        arrival.scheduled === scheduledTs &&
+        arrival.destination === portCode.toString
 
-  def arrivalRow(f: uk.gov.homeoffice.drt.arrivals.Arrival): tables.ArrivalRow = {
+  def arrivalRow(f: uk.gov.homeoffice.drt.arrivals.Arrival): ArrivalRow = {
     val sch = new Timestamp(f.Scheduled)
     val est = f.Estimated.map(new Timestamp(_))
     val act = f.Actual.map(new Timestamp(_))

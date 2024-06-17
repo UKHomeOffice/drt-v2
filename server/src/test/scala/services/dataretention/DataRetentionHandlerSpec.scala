@@ -88,7 +88,7 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
       val persistenceIds = DataRetentionHandler
         .persistenceIdsForSequenceNumberPurge(retentionPeriod, maxForecastDays, terminals, Set(AclFeedSource))(UtcDate(2024, 5, 20))
 
-      persistenceIds.toSeq.sorted should === (Seq(
+      persistenceIds.toSeq.sorted should ===(Seq(
         "terminal-flights-t1-2024-05-13",
         "terminal-flights-t1-2024-05-14",
         "terminal-passengers-t1-2024-05-13",
@@ -117,6 +117,7 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
       val testProbeFullDelete = TestProbe()
       val testProbeSequenceNrDelete = TestProbe()
       val testProbeGetSequenceNumberBeforeRetentionPeriod = TestProbe()
+      val testProbeDeleteAggregatedArrivalsBeforeRetentionPeriod = TestProbe()
 
       val retentionPeriod = 7.days
       val today = UtcDate(2024, 5, 20)
@@ -124,7 +125,8 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
 
       val handler = DataRetentionHandler(
         persistenceIdsForSequenceNumberPurge = _ => Seq("partial-delete-pid-a", "partial-delete-pid-b"),
-        persistenceIdsForFullPurge = _ => Seq("full-delete-pid-a-2024-05-13", "full-delete-pid-b-2024-05-13"),
+        preRetentionPersistenceIdsForFullPurge = _ => Seq("full-delete-pid-a-2024-05-13", "full-delete-pid-b-2024-05-13"),
+        persistenceIdsForDate = _ => Seq.empty,
         retentionPeriod = retentionPeriod,
         now = () => SDate(today),
         deletePersistenceId = pid => {
@@ -139,6 +141,10 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
           testProbeGetSequenceNumberBeforeRetentionPeriod.ref ! (pid, rp)
           Future.successful(Option(lastSeqNrBeforeRetPeriod))
         },
+        deleteAggregatedArrivalsBeforeRetentionPeriod = () => {
+          testProbeDeleteAggregatedArrivalsBeforeRetentionPeriod.ref ! true
+          Future.successful(1)
+        },
       )
 
       handler.purgeDataOutsideRetentionPeriod()
@@ -149,6 +155,100 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
       testProbeSequenceNrDelete.expectMsg(("partial-delete-pid-b", lastSeqNrBeforeRetPeriod))
       testProbeGetSequenceNumberBeforeRetentionPeriod.expectMsg(("partial-delete-pid-a", retentionPeriod))
       testProbeGetSequenceNumberBeforeRetentionPeriod.expectMsg(("partial-delete-pid-b", retentionPeriod))
+      testProbeDeleteAggregatedArrivalsBeforeRetentionPeriod.expectMsg(true)
+    }
+  }
+
+  "persistenceIdsForDate" should {
+    "return a list of persistence ids with dates for the given terminals and sources" in {
+      val terminals = Seq(T1, T2)
+      val persistenceIds = DataRetentionHandler
+        .persistenceIdsForDate(terminals, Set(AclFeedSource))(UtcDate(2024, 5, 20))
+
+      val expectedPersistenceIds = Seq(
+        "terminal-flights-t1-2024-05-20",
+        "terminal-flights-t2-2024-05-20",
+        "terminal-passengers-t1-2024-05-20",
+        "terminal-passengers-t2-2024-05-20",
+        "terminal-queues-t1-2024-05-20",
+        "terminal-queues-t2-2024-05-20",
+        "terminal-staff-t1-2024-05-20",
+        "terminal-staff-t2-2024-05-20",
+        s"${AclFeedSource.id}-feed-arrivals-t1-2024-05-20",
+        s"${AclFeedSource.id}-feed-arrivals-t2-2024-05-20",
+      )
+      persistenceIds.toSeq.sorted should ===(expectedPersistenceIds.sorted)
+    }
+  }
+
+  "purgeDateRange" should {
+    "call deletePersistenceId for each date in the range" in {
+      val testProbeDeletePersistenceId = TestProbe()
+
+      val retentionPeriod = 7.days
+      val today = UtcDate(2024, 5, 20)
+
+      val handler = DataRetentionHandler(
+        persistenceIdsForSequenceNumberPurge = _ => Seq.empty,
+        preRetentionPersistenceIdsForFullPurge = _ => Seq.empty,
+        persistenceIdsForDate = date => Seq(s"full-delete-pid-a-${date.toISOString}", s"full-delete-pid-b-${date.toISOString}"),
+        retentionPeriod = retentionPeriod,
+        now = () => SDate(today),
+        deletePersistenceId = pid => {
+          testProbeDeletePersistenceId.ref ! pid
+          Future.successful(1)
+        },
+        deleteLowerSequenceNumbers = (_, _) => Future.successful((0, 0)),
+        getSequenceNumberBeforeRetentionPeriod = (_, _) => Future.successful(None),
+        deleteAggregatedArrivalsBeforeRetentionPeriod = () => Future.successful(0),
+      )
+
+      val start = UtcDate(2024, 5, 10)
+      val end = UtcDate(2024, 5, 12)
+
+      handler.purgeDateRange(start, end)
+
+      testProbeDeletePersistenceId.expectMsg("full-delete-pid-a-2024-05-10")
+      testProbeDeletePersistenceId.expectMsg("full-delete-pid-b-2024-05-10")
+      testProbeDeletePersistenceId.expectMsg("full-delete-pid-a-2024-05-11")
+      testProbeDeletePersistenceId.expectMsg("full-delete-pid-b-2024-05-11")
+      testProbeDeletePersistenceId.expectMsg("full-delete-pid-a-2024-05-12")
+      testProbeDeletePersistenceId.expectMsg("full-delete-pid-b-2024-05-12")
+    }
+  }
+
+  "dateIsSafeToPurge" should {
+    val retentionPeriod = 5 * 365.days
+    val today = UtcDate(2024, 5, 20)
+    val isSafe = DataRetentionHandler.dateIsSafeToPurge(retentionPeriod, () => SDate(today))
+
+    "return true if the date is outside the retention period" in {
+      isSafe(UtcDate(2019, 5, 21)) should ===(true)
+    }
+
+    "return false if the date is within the retention period" in {
+      isSafe(UtcDate(2019, 5, 22)) should ===(false)
+    }
+  }
+
+  "deleteAggregatedArrivalsBeforeRetentionPeriod" should {
+    "call the deletion function with the start date of the retention period" in {
+      val testProbeDeletePersistenceId = TestProbe()
+
+      val retentionPeriod = 5 * 365.days
+      val today = UtcDate(2024, 6, 3)
+
+      DataRetentionHandler.deleteAggregatedArrivalsBeforeRetentionPeriod(
+        deleteArrivalsBefore = date => {
+          testProbeDeletePersistenceId.ref ! date
+          Future.successful(1)
+        },
+        DataRetentionHandler.retentionStartDate(retentionPeriod, () => SDate(today)),
+      )()
+
+      val retentionStartDate = UtcDate(2019, 6, 5)
+
+      testProbeDeletePersistenceId.expectMsg(retentionStartDate)
     }
   }
 }

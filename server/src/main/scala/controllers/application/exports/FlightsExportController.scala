@@ -8,10 +8,10 @@ import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import com.google.inject.Inject
 import controllers.application.AuthController
-import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
+import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, streamingResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import play.api.http.{HttpChunk, HttpEntity, Writeable}
+import play.api.http.{HttpEntity, Writeable}
 import play.api.mvc._
 import services.exports.{FlightExports, GeneralExport}
 import services.exports.flights.ArrivalFeedExport
@@ -84,7 +84,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
         val getManifests = FlightExports.manifestsForLocalDateProvider(ctrl.applicationService.manifestsProvider)
         val toRows = FlightExports.dateAndFlightsToCsvRows(ctrl.airportConfig.portCode, terminal, ctrl.feedService.paxFeedSourceOrder, getManifests)
         val csvStream = GeneralExport.toCsv(start, end, getFlights, toRows)
-        val fileName = makeFileName("flights", Option(terminal), start, end, airportConfig.portCode)
+        val fileName = makeFileName("flights", Option(terminal), start, end, airportConfig.portCode) + ".csv"
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>
@@ -128,7 +128,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
           ctrl.applicationService.manifestsProvider(d, d).map(_._2).runFold(VoyageManifests.empty)(_ ++ _).map(m => (fws, m))
         }
         val csvStream = export.csvStream(flightsAndManifestsStream)
-        val fileName = makeFileName("flights", Option(export.terminal), export.start.toLocalDate, export.end.toLocalDate, airportConfig.portCode)
+        val fileName = makeFileName("flights", Option(export.terminal), export.start.toLocalDate, export.end.toLocalDate, airportConfig.portCode) + ".csv"
         Try(sourceToCsvResponse(csvStream, fileName)) match {
           case Success(value) => value
           case Failure(t) =>
@@ -190,13 +190,13 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
 
         val fileName = s"${
           airportConfig.portCode
-        }-$terminal-$feedSourceString-$periodString"
+        }-$terminal-$feedSourceString-$periodString.csv"
 
-        Result(
-          header = ResponseHeader(200, Map("Content-Disposition" -> s"attachment; filename=$fileName.csv")),
-          body = HttpEntity.Chunked(csvDataSource.collect {
-            case Some(s) => s
-          }.map(c => HttpChunk.Chunk(writeable.transform(c))), writeable.contentType))
+        val byteStringStream = csvDataSource.collect {
+          case Some(s) => s
+        }
+
+        sourceToCsvResponse(byteStringStream, fileName)
 
       case None =>
         NotFound(s"Unknown feed source $feedSourceString")

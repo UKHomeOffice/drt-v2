@@ -89,7 +89,7 @@ object FlightTable {
       case class Model(flaggedNationalities: Set[Country],
                        portStatePot: Pot[PortState],
                        flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
-                       arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])]
+                       arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                       )
 
       val flaggerConnect = SPACircuit.connect(m => Model(m.flaggedNationalities, m.portStatePot, m.flightManifestSummaries, m.arrivalSources))
@@ -97,8 +97,8 @@ object FlightTable {
 
       val filterFlightComponent = <.div(^.style := js.Dictionary("padding-right" -> "24px"), MuiTypography(sx = SxProps(Map("font-weight" -> "bold",
         "padding-bottom" -> "10px"
-      )))("Search by flight number"),
-        MuiTextField(label = "Enter flight number".toVdom, sx = SxProps(Map("minWidth" -> "199px", "font-weight" -> "bold")),
+      )))("Search by flight details"),
+        MuiTextField(label = "Enter flight details".toVdom, sx = SxProps(Map("minWidth" -> "199px", "font-weight" -> "bold")),
           InputProps = js.Dynamic.literal(
             "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
             "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],

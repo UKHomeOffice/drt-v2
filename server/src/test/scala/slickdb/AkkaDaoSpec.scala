@@ -3,7 +3,8 @@ package slickdb
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.homeoffice.drt.db.AkkaDbH2
+import slickdb.dao.AkkaDao
+import uk.gov.homeoffice.drt.testsystem.db.AkkaDbH2
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.Await
