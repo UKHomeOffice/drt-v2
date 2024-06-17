@@ -1,5 +1,6 @@
-import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport.*
-import sbt.*
+import Settings.versions.scalajsReact
+import org.portablescala.sbtplatformdeps.PlatformDepsPlugin.autoImport._
+import sbt._
 
 /**
  * Application settings. Configure the build for your application here.
@@ -76,7 +77,7 @@ object Settings {
     val jwtCore = "9.4.5"
   }
 
-  import versions.*
+  import versions._
 
   val clientNpmDependencies: Seq[(String, String)] = Seq(
     "react" -> react,
@@ -102,8 +103,7 @@ object Settings {
 //    "@emotion/styled"-> "11.11.5",
     "moment-timezone"-> "^0.5.40",
     "@types/react-dom" -> react,
-//    "drt-react" -> "github:UKHomeOffice/drt-react",
-    "drt-react" -> "/Users/nilesh/HO_DRT/drt-react",
+    "@drt/drt-react-components"-> "https://github.com/UKHomeOffice/drt-react.git"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

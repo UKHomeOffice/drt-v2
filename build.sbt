@@ -45,7 +45,7 @@ lazy val clientMacrosJS: Project = (project in file("client-macros"))
     libraryDependencies ++= Seq(
       "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact withSources(),
       "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact withSources()
-    )
+    ),
   )
 
 
