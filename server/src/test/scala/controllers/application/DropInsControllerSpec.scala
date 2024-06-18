@@ -53,7 +53,7 @@ class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAft
     "create drop-ins registration" in {
 
       val result = controller.createDropInRegistration().apply(FakeRequest().withTextBody(""""1"""")
-        .withHeaders("X-Auth-Email" -> "someone@test.com", "X-Auth-Roles" -> "border-force-staff,TEST"))
+        .withHeaders("X-Forwarded-Email" -> "someone@test.com", "X-Forwarded-Groups" -> "border-force-staff,TEST"))
 
       status(result) mustBe OK
 

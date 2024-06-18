@@ -18,7 +18,7 @@ class DataRetentionControllerSpec extends PlaySpec {
     "Have status Ok, and confirm the date range being deleted when the date is outside the retention period" in {
       val controller = dataRetentionController
 
-      val result = controller.purge("2019-05-21").apply(FakeRequest().withHeaders("X-Auth-Roles" -> "super-admin,TEST"))
+      val result = controller.purge("2019-05-21").apply(FakeRequest().withHeaders("X-Forwarded-Groups" -> "super-admin,TEST"))
 
       status(result) mustBe OK
 
@@ -29,7 +29,7 @@ class DataRetentionControllerSpec extends PlaySpec {
     "Have status BadRequest, and confirm the date range being deleted when the date is within the retention period" in {
       val controller = dataRetentionController
 
-      val result = controller.purge("2019-05-22").apply(FakeRequest().withHeaders("X-Auth-Roles" -> "super-admin,TEST"))
+      val result = controller.purge("2019-05-22").apply(FakeRequest().withHeaders("X-Forwarded-Groups" -> "super-admin,TEST"))
 
       status(result) mustBe BAD_REQUEST
 

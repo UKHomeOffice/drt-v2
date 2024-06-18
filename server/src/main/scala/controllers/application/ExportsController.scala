@@ -25,8 +25,8 @@ import scala.concurrent.Future
 class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def keyCloakClient(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
-    val token = headers.get("X-Auth-Token")
-      .getOrElse(throw new Exception("X-Auth-Token missing from headers, we need this to query the Key Cloak API."))
+    val token = headers.get("X-Forwarded-Access-Token")
+      .getOrElse(throw new Exception("X-Forwarded-Access-Token missing from headers, we need this to query the Key Cloak API."))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
       .getOrElse(throw new Exception("Missing key-cloak.url config value, we need this to query the Key Cloak API"))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
@@ -63,7 +63,7 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
     Action.async { implicit request =>
       val start = SDate(startDay.toLong, europeLondonTimeZone)
       val end = start.addDays(sixMonthsDays)
-      val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+      val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.userService.selectUser(userEmail.trim).flatMap { userRow =>
         val minutesInSlot: Int = userRow.flatMap(_.staff_planning_interval_minutes).getOrElse(60)
         val numberOfSlots = minutesInADay / minutesInSlot

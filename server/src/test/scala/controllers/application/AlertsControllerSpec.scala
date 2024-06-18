@@ -33,8 +33,8 @@ class AlertsControllerSpec extends PlaySpec with MockitoSugar {
       val jsonString: String = upickle.default.write(alert)
       val resultAdd = controller.addAlert().apply(FakeRequest(POST, "/alerts")
         .withTextBody(jsonString)
-        .withHeaders("X-Auth-Email" -> "test@test.com",
-          "X-Auth-Roles" -> "create-alerts,TEST",
+        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+          "X-Forwarded-Groups" -> "create-alerts,TEST",
           "Content-Type" -> "application/json"
         )
       )
@@ -54,8 +54,8 @@ class AlertsControllerSpec extends PlaySpec with MockitoSugar {
       val controller = new AlertsController(Helpers.stubControllerComponents(), drtSystemInterface)
 
       val result = controller.deleteAlerts().apply(FakeRequest(POST, "/alerts/delete")
-        .withHeaders("X-Auth-Email" -> "test@test.com",
-          "X-Auth-Roles" -> "create-alerts,TEST",
+        .withHeaders("X-Forwarded-Email" -> "test@test.com",
+          "X-Forwarded-Groups" -> "create-alerts,TEST",
           "Content-Type" -> "application/json"
         ))
 

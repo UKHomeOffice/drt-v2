@@ -12,20 +12,22 @@ trait UserRoleProviderLike {
 
   val userService: UserTableLike
 
-  def userRolesFromHeader(headers: Headers): Set[Role] = headers.get("X-Auth-Roles").map(_.split(",").flatMap(Roles.parse).toSet).getOrElse(Set.empty[Role])
+  def userRolesFromHeader(headers: Headers): Set[Role] = headers.get("X-Forwarded-Groups").map(_.split(",")).map(_.map(_.split("role:").last))
+      .map(_.flatMap(Roles.parse).toSet).getOrElse(Set.empty[Role])
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
 
   def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
+    log.info(s"Getting logged in user headers=$headers   session=$session")
     val baseRoles = Set()
     val roles: Set[Role] =
       getRoles(config, headers, session) ++ baseRoles
-    val email = headers.get("X-Auth-Email").getOrElse("Unknown")
+    val email = headers.get("X-Forwarded-Email").getOrElse("Unknown")
 
     LoggedInUser(
       email = email,
-      userName = headers.get("X-Auth-Username").getOrElse(email),
-      id = headers.get("X-Auth-Userid").getOrElse(email),
+      userName = headers.get("X-Forwarded-Preferred-Username").getOrElse(email),
+      id = headers.get("X-Forwarded-Preferred-Username").getOrElse(email),
       roles = roles)
   }
 }

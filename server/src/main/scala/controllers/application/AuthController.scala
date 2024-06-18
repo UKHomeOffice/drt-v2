@@ -68,14 +68,14 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
   }
 
   def closeBanner: Action[AnyContent] = Action.async { implicit request =>
-    val userEmail = request.headers.get("X-Auth-Email").getOrElse("Unknown")
+    val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
     val result: Future[Int] = ctrl.userService.updateCloseBanner(email = userEmail, at = new Timestamp(ctrl.now().millisSinceEpoch))
     result.map(_ => Ok("Successfully closed banner"))
   }
 
   def keyCloakClientWithHeader(headers: Headers): KeyCloakClient with ProdSendAndReceive = {
-    val token = headers.get("X-Auth-Token")
-      .getOrElse(throw Exception(JsError("X-Auth-Token missing from headers, we need this to query the Key Cloak API.")))
+    val token = headers.get("X-Forwarded-Access-Token")
+      .getOrElse(throw Exception(JsError("X-Forwarded-Access-Token missing from headers, we need this to query the Key Cloak API.")))
     val keyCloakUrl = config.getOptional[String]("key-cloak.url")
       .getOrElse(throw Exception(JsError("Missing key-cloak.url config value, we need this to query the Key Cloak API")))
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive

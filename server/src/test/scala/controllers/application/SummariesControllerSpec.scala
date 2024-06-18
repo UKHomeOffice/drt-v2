@@ -58,7 +58,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       Await.ready(drtInterface.minuteLookups.queueMinutesRouterActor.ask(minutes), 5.second)
       val controller = newController(drtInterface)
 
-      val authHeader = Headers(("X-Auth-Roles" -> "super-admin,LHR"))
+      val authHeader = Headers(("X-Forwarded-Groups" -> "super-admin,LHR"))
       val result = controller
         .populatePassengersForDate("2024-06-01")
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
@@ -74,7 +74,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   }
 
   "exportPassengersByTerminalForDateRangeApi" should {
-    val acceptHeader = Headers(("Accept", "text/csv"), ("X-Auth-Roles" -> "LHR"))
+    val acceptHeader = Headers(("Accept", "text/csv"), ("X-Forwarded-Groups" -> "LHR"))
     "generate a csv with the correct headers for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "", headers = acceptHeader, body = AnyContentAsEmpty)
@@ -146,7 +146,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   }
 
   "exportPassengersByTerminalForDateRangeApi" should {
-    val acceptHeader = Headers(("Accept", "application/json"), ("X-Auth-Roles" -> "LHR"))
+    val acceptHeader = Headers(("Accept", "application/json"), ("X-Forwarded-Groups" -> "LHR"))
     "generate a json response for the given port" in {
       val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "", headers = acceptHeader, body = AnyContentAsEmpty)
@@ -220,7 +220,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     Await.ready(drtInterface.minuteLookups.queueMinutesRouterActor.ask(minutes), 1.second)
     val controller = newController(drtInterface)
 
-    val request = FakeRequest(method = "PUT", uri = "", headers = Headers(("X-Auth-Roles", "super-admin,LHR")), body = AnyContentAsEmpty)
+    val request = FakeRequest(method = "PUT", uri = "", headers = Headers(("X-Forwarded-Groups", "super-admin,LHR")), body = AnyContentAsEmpty)
     Await.ready(controller.populatePassengersForDate(localDate.toISOString).apply(request), 1.second)
     controller
   }

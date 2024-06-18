@@ -22,10 +22,10 @@ class WalkTimeControllerSpec extends PlaySpec {
 
       val controller = new WalkTimeController(Helpers.stubControllerComponents(), module.provideDrtSystemInterface)
 
-      val result = controller.getWalkTimes.apply(FakeRequest().withHeaders("X-Auth-Email" -> "test@test.com",
-        "X-Auth-Username" -> "test",
-        "X-Auth-Userid" -> "test",
-        "X-Auth-Roles" -> s"TEST,${ArrivalsAndSplitsView.name}"))
+      val result = controller.getWalkTimes.apply(FakeRequest().withHeaders("X-Forwarded-Email" -> "test@test.com",
+        "X-Forwarded-Preferred-Username" -> "test",
+        "X-Forwarded-User" -> "test",
+        "X-Forwarded-Groups" -> s"role:TEST,role:${ArrivalsAndSplitsView.name}"))
 
       status(result) mustBe OK
 

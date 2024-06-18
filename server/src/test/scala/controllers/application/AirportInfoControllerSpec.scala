@@ -16,7 +16,7 @@ class AirportInfoControllerSpec extends PlaySpec {
       val controller = new AirportInfoController(Helpers.stubControllerComponents(), drtSystemInterface)
 
       val result = controller.getAirportInfo.apply(FakeRequest(GET, "/airport-info?portCode=EDI")
-        .withHeaders("X-Auth-Roles" -> s"${TEST.name},${ArrivalsAndSplitsView.name}")
+        .withHeaders("X-Forwarded-Groups" -> s"${TEST.name},${ArrivalsAndSplitsView.name}")
 
       )
 
