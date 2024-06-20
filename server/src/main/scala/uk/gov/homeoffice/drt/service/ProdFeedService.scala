@@ -243,10 +243,7 @@ trait FeedService {
               .values
               .groupBy(fws => fws.apiFlight.Terminal)
               .map {
-                case (terminal, flights) =>
-                  val t = extractValue(flights.map(_.apiFlight))
-                  println(s"\n${flights.size} arrivals, extracted value: $t\n")
-                  (terminal, t)
+                case (terminal, flights) => (terminal, extractValue(flights.map(_.apiFlight)))
               }
               .toSeq
           }
