@@ -289,34 +289,6 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         pct.getOrElse(0)
       }.sum.toDouble / arrivals.length
 
-  def getLateScheduledArrivals(terminalName: String, date: String): Action[AnyContent] =
-    Action.async { _ =>
-      val provider = ctrl.applicationService.flightsProvider.terminalDateScheduled
-      LocalDate.parse(date) match {
-        case Some(date) =>
-          val baseDate = SDate(date)
-          val pointInTimes = Seq(4, 3, 2, 1, 0, -1).map(days => baseDate.addDays(-days).millisSinceEpoch)
-          Future
-            .sequence {
-              pointInTimes.map(pointInTime => provider(Terminal(terminalName))(date, Option(pointInTime)).map(fs => (pointInTime, fs.filter(!_.apiFlight.Origin.isDomesticOrCta))))
-            }
-            .map { daysOfFlights =>
-              val startSet = daysOfFlights.take(1).headOption.map(_._2).getOrElse(Seq.empty)
-              daysOfFlights.drop(1).foldLeft((startSet, Seq.empty[String])) {
-                case ((acc, output), (pit, flights)) =>
-                  val newFlights = flights.filter(incoming => !acc.exists(_.apiFlight.unique == incoming.apiFlight.unique))
-                  val removedFlights = acc.filter(existing => !flights.exists(_.apiFlight.unique == existing.apiFlight.unique))
-                  val updatedAcc = acc.filterNot(existing => removedFlights.exists(_.apiFlight.unique == existing.apiFlight.unique)) ++ newFlights
-                  val outputLine = s"${SDate(pit).toISOString},${updatedAcc.size} total flights,${removedFlights.size} removed,${flightInfo(removedFlights)}, ${newFlights.size} new flights: ${flightInfo(newFlights)}"
-                  (updatedAcc, output :+ outputLine)
-              }
-            }
-            .map { case (_, output) => Ok(output.mkString("\n") + "\n") }
-        case None =>
-          Future.successful(BadRequest("Invalid date"))
-      }
-    }
-
   private def flightInfo(newFlights: Seq[ApiFlightWithSplits]) = {
     newFlights.sortBy(_.apiFlight.Scheduled).map(f => s"${f.apiFlight.flightCodeString}: ${SDate(f.apiFlight.Scheduled).toISOString}").mkString(", ")
   }
