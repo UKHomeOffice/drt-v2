@@ -95,7 +95,6 @@ GET           /forecast-accuracy/compare/:modelNames/:terminalName/:startDate/:e
 GET           /forecast-accuracy/:date                                                controllers.application.ForecastAccuracyController.getForecastAccuracy(date: String)
 GET           /export/forecast-accuracy/:daysForComparison/:daysAhead                 controllers.application.ForecastAccuracyController.forecastAccuracyExport(daysForComparison: Int, daysAhead: Int)
 
-
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                                     controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
 GET           /assets/images/*file                                                    controllers.Assets.at(path="/public/images", file)

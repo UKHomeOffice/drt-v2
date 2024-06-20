@@ -106,11 +106,11 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
           val sortedModels = models.models.toList.sortBy(_._1)
           val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
 
-          val futureMaybeModels: Future[Option[(Actuals, Forecast, List[ModelForecast])]] = Future.successful(None) /*if (!isNonHistoricDate) {
+          val futureMaybeModels = if (!isNonHistoricDate) {
             modelsFromCache(terminalName, daysAhead, localDate, sortedModels)
           } else {
             Future.successful(None)
-          }*/
+          }
 
           futureMaybeModels
             .flatMap {
