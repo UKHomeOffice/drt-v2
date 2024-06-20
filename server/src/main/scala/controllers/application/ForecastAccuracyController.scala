@@ -76,7 +76,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
 
           val headerRow = (Seq("Date", "Actual flights", "Forecast flights", "Unscheduled flights %", "Actual capacity", "Forecast capacity", "Capacity change %") ++ paxHeaders ++ loadHeaders).mkString(",") + "\n"
 
-          streamDateRange(startDate, endDate, terminalName, getModels)
+          streamDateRange(startDate, endDate, terminalName, getModels, modelNamesList.length)
             .prepend(Source(List(headerRow)))
         }
 
@@ -91,7 +91,9 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
   private def streamDateRange(startDate: LocalDate,
                               endDate: LocalDate,
                               terminalName: String,
-                              getModels: Option[Long] => Future[PredictionModelActor.Models]): Source[String, NotUsed] = {
+                              getModels: Option[Long] => Future[PredictionModelActor.Models],
+                              expectedModelCount: Int,
+                             ): Source[String, NotUsed] = {
     val terminal = Terminal(terminalName)
     val terminalFlights: (LocalDate, Option[Long]) => Future[Seq[ApiFlightWithSplits]] = {
       (date, maybePit) =>
@@ -140,7 +142,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
             }
             .map {
               case (actuals, fcst, modelFcsts) =>
-                csvRow(isNonHistoricDate, actuals, fcst, modelFcsts)
+                csvRow(isNonHistoricDate, actuals, fcst, modelFcsts, expectedModelCount)
             }
         }
       }
@@ -230,27 +232,39 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     (forecast, modelForecasts)
   }
 
-  private def csvRow(isNonHistoricDate: Boolean, actuals: Actuals, forecast: Forecast, modelForecasts: Seq[ModelForecast]): String = {
+  private def csvRow(isNonHistoricDate: Boolean, actuals: Actuals, forecast: Forecast, modelForecasts: Seq[ModelForecast], expectedModelCount: Int): String = {
 
-    val forecastPaxDiff = if (isNonHistoricDate) 0d else 100 * (forecast.pax - actuals.pax).toDouble / actuals.pax
-    val paxCells = Seq(actuals.pax.toString, forecast.pax.toString, f"$forecastPaxDiff%.2f") ++
-      modelForecasts.map { mf =>
-        val modelPaxDiff = if (isNonHistoricDate) 0d else 100 * (mf.pax - actuals.pax).toDouble / actuals.pax
-        f"${mf.pax},$modelPaxDiff%.2f"
+    val forecastPaxDiff = if (isNonHistoricDate) "" else percentOrNa(forecast.pax, actuals.pax)
+    val modelPax =
+      if (modelForecasts.size == expectedModelCount) modelForecasts.map { mf =>
+        val modelPaxDiff = if (isNonHistoricDate) "" else percentOrNa(mf.pax, actuals.pax)
+        f"${mf.pax},$modelPaxDiff"
       }
+      else Seq.fill(expectedModelCount)(",")
 
-    val forecastLoadDiff = if (isNonHistoricDate) 0d else 100 * (forecast.load - actuals.load) / actuals.load
-    val loadCells = Seq(f"${actuals.load}%.2f", f"${forecast.load}%.2f", f"$forecastLoadDiff%.2f") ++
-      modelForecasts.map { mf =>
-        val modelLoadDiff = if (isNonHistoricDate) 0d else 100 * (mf.load - actuals.load) / actuals.load
-        f"${mf.load}%.2f,$modelLoadDiff%.2f"
+    val paxCells = Seq(actuals.pax.toString, forecast.pax.toString, forecastPaxDiff) ++ modelPax
+
+    val forecastLoadDiff = if (isNonHistoricDate) "" else percentOrNa(forecast.load, actuals.load)
+    val modelLoad =
+      if (modelForecasts.size == expectedModelCount) modelForecasts.map { mf =>
+        val modelLoadDiff = if (isNonHistoricDate) "" else percentOrNa(mf.load, actuals.load)
+        f"${mf.load}%.2f,$modelLoadDiff"
       }
+      else Seq.fill(expectedModelCount)(",")
 
-    val unscheduledFlightsPct = if (isNonHistoricDate) 0d else 100 * (actuals.flights - forecast.flights).toDouble / forecast.flights
-    val capacityChange = if (isNonHistoricDate) 0d else 100 * (actuals.capacity - forecast.capacity).toDouble / forecast.capacity
+    val loadCells = Seq(f"${actuals.load}%.2f", f"${forecast.load}%.2f", forecastLoadDiff) ++ modelLoad
 
-    (Seq(actuals.date.toISOString, actuals.flights, forecast.flights, f"$unscheduledFlightsPct%.2f", actuals.capacity, forecast.capacity, f"$capacityChange%.2f") ++ paxCells ++ loadCells).mkString(",") + "\n"
+    val unscheduledFlightsPct = if (isNonHistoricDate) "" else percentOrNa(actuals.flights, forecast.flights)
+    val capacityChange = if (isNonHistoricDate) "" else percentOrNa(actuals.capacity, forecast.capacity)
+
+    (Seq(actuals.date.toISOString, actuals.flights, forecast.flights, unscheduledFlightsPct, actuals.capacity, forecast.capacity, capacityChange) ++ paxCells ++ loadCells).mkString(",") + "\n"
   }
+
+  private def percentOrNa(numerator: Int, denominator: Int): String = percentOrNa(numerator.toDouble, denominator.toDouble)
+
+  private def percentOrNa(numerator: Double, denominator: Double): String =
+    if (denominator > 0) f"${100 * (numerator - denominator) / denominator}%.2f"
+    else "n/a"
 
   private val defaultLoadPct = 80
 

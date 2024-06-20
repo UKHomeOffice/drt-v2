@@ -107,7 +107,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       val flights = 1
       contentAsString(result) must ===(
         f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual capacity,Forecast capacity,Capacity change %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
-           |2024-02-14,0,$flights,0.00,200,200,0.00,0,$forecastPcp,0.00,$mlPax,0.00,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f,0.00
+           |2024-02-14,0,$flights,,200,200,,0,$forecastPcp,,$mlPax,,0.00,$fcstCapPct%.2f,,${mlPredCapPct.toDouble}%.2f,
            |""".stripMargin)
     }
 
