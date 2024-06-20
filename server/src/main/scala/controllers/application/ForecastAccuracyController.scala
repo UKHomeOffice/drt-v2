@@ -119,13 +119,9 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                 Future.successful(models)
               case None =>
                 log.info(s"Calculating stats for $localDate")
-                ctrl.feedService.actualPaxNos(localDate).map {
-                  actuals => println(s"actuals for ${localDate.toISOString} are $actuals")
-                }
                 terminalFlights(localDate, None)
                   .flatMap { actualArrivals =>
                     val actuals = actualsStats(localDate, isNonHistoricDate, actualArrivals)
-                    println(s"${actualArrivals.size} with ${actuals.pax} pax for ${localDate.toISOString}")
                     if (localDate <= ctrl.now().toLocalDate) {
                       val pointInTime = SDate(localDate).addDays(-daysAhead)
                       terminalFlights(localDate, Option(pointInTime.millisSinceEpoch))
@@ -202,7 +198,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       }
     }
 
-  private def toOptionalList[A](options: List[Option[A]]) =
+  private def toOptionalList[A](options: List[Option[A]]): Option[List[A]] =
     if (options.forall(_.isDefined)) Some(options.map(_.get)) else None
 
   private def parseLocalDate(startDateStr: String) =
