@@ -30,6 +30,7 @@ class ArrivalStatsDaoTest extends AnyWordSpec with Matchers with BeforeAndAfter 
         dataType = "forecast",
         daysAhead = 1,
         flights = 10,
+        capacity = 1000,
         pax = 2000,
         averageLoad = 95.0,
         createdAt = SDate(2020, 1, 1).millisSinceEpoch,

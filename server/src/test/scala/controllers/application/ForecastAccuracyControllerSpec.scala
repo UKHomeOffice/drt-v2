@@ -26,7 +26,7 @@ import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test-1")
@@ -65,7 +65,6 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/plain"))
       contentAsString(result) must ===(s"""{"localDate":{"year":2023,"month":1,"day":1},"pax":[["uk.gov.homeoffice.drt.ports.Terminals.T1",{"1":[20],"14":[20],"3":[20],"30":[20],"7":[20]}]]}""".stripMargin)
-
     }
 
     "get forecast Accuracy prediction csv" in {
@@ -94,7 +93,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
       val flights = 1
       contentAsString(result) must ===(
-        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
+        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual capacity,Forecast capacity,Capacity change %,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
            |2024-02-14,0,$flights,0.00,0,$forecastPcp,0.00,$mlPax,0.00,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f,0.00
            |""".stripMargin)
     }
@@ -120,7 +119,12 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
     }
   }
 
-  private def forecastAccuracyController(forecastTotalPax: Int, mlFeedPax: Int, liveFeedPax: Int, mlPred: Int, flights: FlightsWithSplits) = {
+  private def forecastAccuracyController(forecastTotalPax: Int,
+                                         mlFeedPax: Int,
+                                         liveFeedPax: Int,
+                                         mlPred: Int,
+                                         flights: FlightsWithSplits,
+                                        ) = {
     val module: DrtModule = new TestDrtModule() {
       override val now: () => SDateLike = () => SDate("2023-02-01T00:00")
 
@@ -164,7 +168,6 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
         }
       }
     }
-
 
     new ForecastAccuracyController(Helpers.stubControllerComponents(), module.provideDrtSystemInterface)
   }

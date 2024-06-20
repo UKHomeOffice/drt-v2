@@ -33,7 +33,7 @@ object RunnableMergedArrivals {
     val existingMergedArrivals: UtcDate => Future[Set[UniqueArrival]] =
       (date: UtcDate) =>
         FlightsProvider(flightsRouterActor)
-          .allTerminalsDateRange(date, date).map(_._2.map(_.unique).toSet)
+          .allTerminalsDateRangeScheduledOrPcp(date, date).map(_._2.map(_.unique).toSet)
           .runWith(Sink.fold(Set[UniqueArrival]())(_ ++ _))
           .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
 

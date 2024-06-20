@@ -6,7 +6,6 @@ import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
 import play.api.mvc._
-import providers.FlightsProvider
 import services.accuracy.ForecastAccuracyCalculator
 import slickdb.ArrivalStatsRow
 import uk.gov.homeoffice.drt.actor.PredictionModelActor
@@ -75,7 +74,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
           val paxHeaders = comparisonHeaders(sortedModels, "pax")
           val loadHeaders = comparisonHeaders(sortedModels, "load")
 
-          val headerRow = (Seq("Date", "Actual flights", "Forecast flights", "Unscheduled flights %") ++ paxHeaders ++ loadHeaders).mkString(",") + "\n"
+          val headerRow = (Seq("Date", "Actual flights", "Forecast flights", "Unscheduled flights %", "Actual capacity", "Forecast capacity", "Capacity change %") ++ paxHeaders ++ loadHeaders).mkString(",") + "\n"
 
           streamDateRange(startDate, endDate, terminalName, getModels)
             .prepend(Source(List(headerRow)))
@@ -94,7 +93,11 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                               terminalName: String,
                               getModels: Option[Long] => Future[PredictionModelActor.Models]): Source[String, NotUsed] = {
     val terminal = Terminal(terminalName)
-    val terminalFlights = FlightsProvider(ctrl.actorService.flightsRouterActor).terminalLocalDate(ctrl.materializer)(terminal)
+    val terminalFlights: (LocalDate, Option[Long]) => Future[Seq[ApiFlightWithSplits]] = {
+      (date, maybePit) =>
+        ctrl.applicationService.flightsProvider.terminalDateScheduled(ctrl.materializer, ctrl.ec)(terminal)(date, maybePit)
+          .map(_.filter(fws => !fws.apiFlight.Origin.isDomesticOrCta && !fws.apiFlight.isCancelled))
+    }
     val daysAhead = 3
 
     Source(DateRange(startDate, endDate))
@@ -103,11 +106,11 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
           val sortedModels = models.models.toList.sortBy(_._1)
           val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
 
-          val futureMaybeModels = if (!isNonHistoricDate) {
+          val futureMaybeModels: Future[Option[(Actuals, Forecast, List[ModelForecast])]] = Future.successful(None) /*if (!isNonHistoricDate) {
             modelsFromCache(terminalName, daysAhead, localDate, sortedModels)
           } else {
             Future.successful(None)
-          }
+          }*/
 
           futureMaybeModels
             .flatMap {
@@ -116,16 +119,19 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                 Future.successful(models)
               case None =>
                 log.info(s"Calculating stats for $localDate")
+                ctrl.feedService.actualPaxNos(localDate).map {
+                  actuals => println(s"actuals for ${localDate.toISOString} are $actuals")
+                }
                 terminalFlights(localDate, None)
                   .flatMap { actualArrivals =>
-                    val (validActualArrivals, actuals) = validActualArrivalsAndStats(localDate, isNonHistoricDate, actualArrivals)
-
+                    val actuals = actualsStats(localDate, isNonHistoricDate, actualArrivals)
+                    println(s"${actualArrivals.size} with ${actuals.pax} pax for ${localDate.toISOString}")
                     if (localDate <= ctrl.now().toLocalDate) {
                       val pointInTime = SDate(localDate).addDays(-daysAhead)
                       terminalFlights(localDate, Option(pointInTime.millisSinceEpoch))
                         .map(forecastArrivals => (localDate, sortedModels, actuals, forecastArrivals))
                     } else
-                      Future.successful((localDate, sortedModels, actuals, validActualArrivals))
+                      Future.successful((localDate, sortedModels, actuals, actualArrivals))
                   }
                   .map {
                     case (localDate, sortedModels, actuals, forecastArrivals) =>
@@ -151,9 +157,9 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                                 fcst: Forecast,
                                 modelFcsts: Seq[ModelForecast],
                                ): Future[Seq[Int]] = {
-    val actRow = ArrivalStatsRow(airportConfig.portCode.iata, terminalName, localDate.toISOString, 0, "live", actuals.flights, actuals.pax, actuals.load, ctrl.now().millisSinceEpoch)
-    val fcstRow = ArrivalStatsRow(airportConfig.portCode.iata, terminalName, localDate.toISOString, daysAhead, "forecast", fcst.flights, fcst.pax, fcst.load, ctrl.now().millisSinceEpoch)
-    val modelFcstRows = modelFcsts.map(mf => ArrivalStatsRow(airportConfig.portCode.iata, terminalName, localDate.toISOString, daysAhead, mf.modelName, mf.flights, mf.pax, mf.load, ctrl.now().millisSinceEpoch))
+    val actRow = ArrivalStatsRow(airportConfig.portCode.iata, terminalName, localDate.toISOString, 0, "live", actuals.flights, actuals.capacity, actuals.pax, actuals.load, ctrl.now().millisSinceEpoch)
+    val fcstRow = ArrivalStatsRow(airportConfig.portCode.iata, terminalName, localDate.toISOString, daysAhead, "forecast", fcst.flights, fcst.capacity, fcst.pax, fcst.load, ctrl.now().millisSinceEpoch)
+    val modelFcstRows = modelFcsts.map(mf => ArrivalStatsRow(airportConfig.portCode.iata, terminalName, localDate.toISOString, daysAhead, mf.modelName, mf.flights, fcst.capacity, mf.pax, mf.load, ctrl.now().millisSinceEpoch))
     ctrl.applicationService.arrivalStats.addOrUpdate(actRow).flatMap(
       _ => ctrl.applicationService.arrivalStats.addOrUpdate(fcstRow).flatMap(
         _ => Future.sequence(modelFcstRows.map(mf => ctrl.applicationService.arrivalStats.addOrUpdate(mf)))
@@ -161,16 +167,15 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
     )
   }
 
-  private def validActualArrivalsAndStats(localDate: LocalDate,
-                                          isNonHistoricDate: Boolean,
-                                          actualArrivals: Seq[ApiFlightWithSplits],
-                                         ): (Seq[ApiFlightWithSplits], Actuals) = {
-    val validActualArrivals = actualArrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
-    val actualFlights = if (isNonHistoricDate) 0 else validActualArrivals.length
-    val actPax = if (isNonHistoricDate) 0 else feedPaxTotal(localDate, validActualArrivals, Seq(LiveFeedSource, ApiFeedSource))
-    val actLoadPct = if (isNonHistoricDate) 0d else feedLoadPctTotal(localDate, validActualArrivals, Seq(LiveFeedSource, ApiFeedSource))
-    val actuals = Actuals(localDate, actualFlights, actPax, actLoadPct)
-    (validActualArrivals, actuals)
+  private def actualsStats(localDate: LocalDate,
+                           isNonHistoricDate: Boolean,
+                           actualArrivals: Seq[ApiFlightWithSplits],
+                          ): Actuals = {
+    val actualFlights = if (isNonHistoricDate) 0 else actualArrivals.length
+    val actPax = if (isNonHistoricDate) 0 else feedPaxTotal(localDate, actualArrivals, ctrl.paxFeedSourceOrder)
+    val actLoadPct = if (isNonHistoricDate) 0d else feedLoadPctTotal(actualArrivals, ctrl.paxFeedSourceOrder)
+    val capacity = actualArrivals.map(_.apiFlight.MaxPax.getOrElse(0)).sum
+    Actuals(localDate, actualFlights, capacity, actPax, actLoadPct)
   }
 
   private def modelsFromCache(terminalName: String,
@@ -190,8 +195,8 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         forecast <- forecasts
         modelForecast <- toOptionalList(modelForecasts)
       } yield {
-        val act = Actuals(localDate, actual.flights, actual.pax, actual.averageLoad)
-        val fcst = Forecast(localDate, forecast.flights, forecast.pax, forecast.averageLoad, daysAhead)
+        val act = Actuals(localDate, actual.flights, actual.capacity, actual.pax, actual.averageLoad)
+        val fcst = Forecast(localDate, forecast.flights, forecast.pax, forecast.capacity, forecast.averageLoad, daysAhead)
         val pred = modelForecast.map(mf => ModelForecast(localDate, mf.flights, mf.pax, mf.averageLoad, mf.dataType, daysAhead))
         (act, fcst, pred)
       }
@@ -205,24 +210,24 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       .parse(startDateStr)
       .getOrElse(throw new Exception("Bad date format. Expected YYYY-mm-dd"))
 
-  case class Actuals(date: LocalDate, flights: Int, pax: Int, load: Double)
+  case class Actuals(date: LocalDate, flights: Int, capacity: Int, pax: Int, load: Double)
 
-  case class Forecast(date: LocalDate, flights: Int, pax: Int, load: Double, daysAhead: Int)
+  case class Forecast(date: LocalDate, flights: Int, capacity: Int, pax: Int, load: Double, daysAhead: Int)
 
   case class ModelForecast(date: LocalDate, flights: Int, pax: Int, load: Double, modelName: String, daysAhead: Int)
 
   private def generateForecastStats(localDate: LocalDate,
                                     sortedModelsForDate: List[(String, ModelAndFeatures)],
                                     forecastArrivals: Seq[ApiFlightWithSplits]): (Forecast, Seq[ModelForecast]) = {
-    val validForecastArrivals = forecastArrivals.filter(a => !a.apiFlight.Origin.isDomesticOrCta && !a.apiFlight.isCancelled)
-    val forecastFlights = validForecastArrivals.length
-    val forecastPax = feedPaxTotal(localDate, validForecastArrivals, Seq(ForecastFeedSource))
-    val forecastLoadPct = feedLoadPctTotal(localDate, validForecastArrivals, Seq(ForecastFeedSource))
-    val forecast = Forecast(localDate, forecastFlights, forecastPax, forecastLoadPct, 3)
+    val forecastFlights = forecastArrivals.length
+    val forecastPax = feedPaxTotal(localDate, forecastArrivals, Seq(ForecastFeedSource))
+    val forecastLoadPct = feedLoadPctTotal(forecastArrivals, Seq(ForecastFeedSource))
+    val capacity = forecastArrivals.map(_.apiFlight.MaxPax.getOrElse(0)).sum
+    val forecast = Forecast(localDate, forecastFlights, capacity, forecastPax, forecastLoadPct, 3)
 
     val modelForecasts: Seq[ModelForecast] = sortedModelsForDate.collect { case (modelName, model: ArrivalModelAndFeatures) =>
-      val pax = predictedPaxTotal(model, localDate, validForecastArrivals)
-      val load = predictedLoadPctTotal(model, localDate, validForecastArrivals)
+      val pax = predictedPaxTotal(model, localDate, forecastArrivals)
+      val load = predictedLoadPctTotal(model, localDate, forecastArrivals)
       ModelForecast(localDate, forecastFlights, pax, load, modelName, 3)
     }
 
@@ -246,8 +251,9 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       }
 
     val unscheduledFlightsPct = if (isNonHistoricDate) 0d else 100 * (actuals.flights - forecast.flights).toDouble / forecast.flights
+    val capacityChange = if (isNonHistoricDate) 0d else 100 * (actuals.capacity - forecast.capacity).toDouble / forecast.capacity
 
-    (Seq(actuals.date.toISOString, actuals.flights, forecast.flights, f"$unscheduledFlightsPct%.2f") ++ paxCells ++ loadCells).mkString(",") + "\n"
+    (Seq(actuals.date.toISOString, actuals.flights, forecast.flights, f"$unscheduledFlightsPct%.2f", actuals.capacity, forecast.capacity, f"$capacityChange%.2f") ++ paxCells ++ loadCells).mkString(",") + "\n"
   }
 
   private val defaultLoadPct = 80
@@ -277,7 +283,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         }
       }.sum
 
-  private def feedLoadPctTotal(localDate: LocalDate, arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Double =
+  private def feedLoadPctTotal(arrivals: Seq[ApiFlightWithSplits], feedsPreference: Seq[FeedSource]): Double =
     arrivals
       .map { fws =>
         val pct = for {
@@ -286,4 +292,36 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         } yield (100 * pcpPax.toDouble / maxPax).round.toInt
         pct.getOrElse(0)
       }.sum.toDouble / arrivals.length
+
+  def getLateScheduledArrivals(terminalName: String, date: String): Action[AnyContent] =
+    Action.async { _ =>
+      val provider = ctrl.applicationService.flightsProvider.terminalDateScheduled
+      LocalDate.parse(date) match {
+        case Some(date) =>
+          val baseDate = SDate(date)
+          val pointInTimes = Seq(4, 3, 2, 1, 0, -1).map(days => baseDate.addDays(-days).millisSinceEpoch)
+          Future
+            .sequence {
+              pointInTimes.map(pointInTime => provider(Terminal(terminalName))(date, Option(pointInTime)).map(fs => (pointInTime, fs.filter(!_.apiFlight.Origin.isDomesticOrCta))))
+            }
+            .map { daysOfFlights =>
+              val startSet = daysOfFlights.take(1).headOption.map(_._2).getOrElse(Seq.empty)
+              daysOfFlights.drop(1).foldLeft((startSet, Seq.empty[String])) {
+                case ((acc, output), (pit, flights)) =>
+                  val newFlights = flights.filter(incoming => !acc.exists(_.apiFlight.unique == incoming.apiFlight.unique))
+                  val removedFlights = acc.filter(existing => !flights.exists(_.apiFlight.unique == existing.apiFlight.unique))
+                  val updatedAcc = acc.filterNot(existing => removedFlights.exists(_.apiFlight.unique == existing.apiFlight.unique)) ++ newFlights
+                  val outputLine = s"${SDate(pit).toISOString},${updatedAcc.size} total flights,${removedFlights.size} removed,${flightInfo(removedFlights)}, ${newFlights.size} new flights: ${flightInfo(newFlights)}"
+                  (updatedAcc, output :+ outputLine)
+              }
+            }
+            .map { case (_, output) => Ok(output.mkString("\n") + "\n") }
+        case None =>
+          Future.successful(BadRequest("Invalid date"))
+      }
+    }
+
+  private def flightInfo(newFlights: Seq[ApiFlightWithSplits]) = {
+    newFlights.sortBy(_.apiFlight.Scheduled).map(f => s"${f.apiFlight.flightCodeString}: ${SDate(f.apiFlight.Scheduled).toISOString}").mkString(", ")
+  }
 }

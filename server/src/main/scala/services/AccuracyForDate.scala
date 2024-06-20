@@ -18,6 +18,8 @@ case class AccuracyForDate(forecast: (LocalDate, SDateLike) => Future[Map[Termin
     val dateIsHistoric = SDate(date).millisSinceEpoch <= SDate(today).millisSinceEpoch
     if (dateIsHistoric) {
       val eventualAccuracy = forecast(date, atDate).map { terminalForecasts =>
+        println(s"\n${date.toISOString} terminal actuals: $terminalActuals\n")
+        println(s"\n${date.toISOString} terminal forecasts: $terminalForecasts\n")
         terminalActuals.map {
           case (terminal, actual) => terminal -> accuracyPercentage(terminalForecasts.getOrElse(terminal, 0), actual)
         }

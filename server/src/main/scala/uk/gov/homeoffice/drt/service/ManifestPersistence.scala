@@ -61,7 +61,7 @@ object ManifestPersistence {
                                          ec: ExecutionContext,
                                          mat: Materializer,
                                         ): Iterable[ManifestLike] => Future[Done] = ManifestPersistence.persistSplitsFromManifest(
-    FlightsProvider(flightsRouterActor).allTerminalsSingleDate,
+    FlightsProvider(flightsRouterActor).allTerminalsDateScheduledOrPcp,
     splitsForManifest,
     FlightsRouterActor.persistSplits(flightsRouterActor),
   )
