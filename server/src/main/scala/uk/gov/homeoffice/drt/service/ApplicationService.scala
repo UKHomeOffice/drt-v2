@@ -170,8 +170,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   lazy val flightsProvider: FlightsProvider = FlightsProvider(actorService.flightsRouterActor)
 
-  lazy val terminalFlightsProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
-    flightsProvider.singleTerminal
   lazy val crunchMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] =
     MinutesProvider.singleTerminal(actorService.queuesRouterActor)
   lazy val staffMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
@@ -186,7 +184,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val crunchManagerActor: ActorRef = system.actorOf(CrunchManagerActor.props(flightsProvider.allTerminalsDateRange), name = "crunch-manager-actor")
+  val crunchManagerActor: ActorRef = system.actorOf(CrunchManagerActor.props(flightsProvider.allTerminalsDateRangeScheduledOrPcp), name = "crunch-manager-actor")
 
   val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
     ArrivalPredictions(

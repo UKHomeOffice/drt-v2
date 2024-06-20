@@ -216,11 +216,10 @@ trait FeedService {
     ApiFeedSource -> manifestsFeedStatusActor,
   )
 
-  private def flightValuesForDate[T](date: LocalDate,
-                                     maybeAtTime: Option[SDateLike],
-                                     flightIsRelevant: Arrival => Boolean,
-                                     extractValue: Iterable[Arrival] => T,
-                                    ): Future[Map[Terminal, T]] = {
+  private def flightValuesScheduledForDate[T](date: LocalDate,
+                                              maybeAtTime: Option[SDateLike],
+                                              extractValue: Iterable[Arrival] => T,
+                                             ): Future[Map[Terminal, T]] = {
     val start = SDate(date)
     val end = start.addDays(1).addMinutes(-1)
     val rangeRequest = GetStateForDateRange(start.millisSinceEpoch, end.millisSinceEpoch)
@@ -231,54 +230,54 @@ trait FeedService {
 
     flightLookups.flightsRouterActor.ask(request)
       .mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-      .flatMap { source =>
-        source.mapConcat {
-          case (_, flights) =>
-            flights.flights
+      .flatMap { flightsByDateStream =>
+        flightsByDateStream
+          .fold(FlightsWithSplits.empty)(_ ++ _._2)
+          .map { case FlightsWithSplits(flights) =>
+            flights
               .filter { case (_, ApiFlightWithSplits(apiFlight, _, _)) =>
                 val nonCtaOrDom = !apiFlight.Origin.isDomesticOrCta
-                nonCtaOrDom && flightIsRelevant(apiFlight)
+                val scheduledOnDate = SDate(apiFlight.Scheduled).toLocalDate == date
+                nonCtaOrDom && scheduledOnDate
               }
               .values
               .groupBy(fws => fws.apiFlight.Terminal)
               .map {
-                case (terminal, flights) =>
-                  (terminal, extractValue(flights.map(_.apiFlight)))
+                case (terminal, flights) => (terminal, extractValue(flights.map(_.apiFlight)))
               }
-        }.runWith(Sink.seq)
+              .toSeq
+          }
+          .runWith(Sink.seq)
+          .map(_.headOption.getOrElse(Seq.empty))
       }
       .map(_.toMap)
   }
 
   val forecastArrivals: (LocalDate, SDateLike) => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate, atTime: SDateLike) =>
-    flightValuesForDate(
+    flightValuesScheduledForDate(
       date,
       Option(atTime),
-      arrival => SDate(arrival.Scheduled).toLocalDate == date,
       arrivals => arrivals.toSeq
     )
 
   val actualArrivals: LocalDate => Future[Map[Terminal, Seq[Arrival]]] = (date: LocalDate) =>
-    flightValuesForDate(
+    flightValuesScheduledForDate(
       date,
       None,
-      arrival => SDate(arrival.Scheduled).toLocalDate == date,
       arrivals => arrivals.toSeq
     )
 
   val forecastPaxNos: (LocalDate, SDateLike) => Future[Map[Terminal, Double]] = (date: LocalDate, atTime: SDateLike) =>
-    flightValuesForDate(
+    flightValuesScheduledForDate(
       date,
       Option(atTime),
-      arrival => SDate(arrival.Scheduled).toLocalDate == date,
       arrivals => arrivals.map(arrival => arrival.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
     )
 
   val actualPaxNos: LocalDate => Future[Map[Terminal, Double]] = (date: LocalDate) =>
-    flightValuesForDate(
+    flightValuesScheduledForDate(
       date,
       None,
-      arrival => SDate(arrival.Scheduled).toLocalDate == date,
       arrivals => arrivals.map(arrival => arrival.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum
     )
 

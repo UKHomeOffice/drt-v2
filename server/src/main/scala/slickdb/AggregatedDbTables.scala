@@ -71,6 +71,7 @@ case class ArrivalStatsRow(portCode: String,
                            daysAhead: Int,
                            dataType: String,
                            flights: Int,
+                           capacity: Int,
                            pax: Int,
                            averageLoad: Double,
                            createdAt: Long,
@@ -218,11 +219,12 @@ trait AggregatedDbTables {
     val daysAhead: Rep[Int] = column[Int]("days_ahead")
     val dataType: Rep[String] = column[String]("data_type")
     val flights: Rep[Int] = column[Int]("flights")
+    val capacity: Rep[Int] = column[Int]("capacity")
     val pax: Rep[Int] = column[Int]("pax")
     val averageLoad: Rep[Double] = column[Double]("average_load")
     val createdAt: Rep[Long] = column[Long]("created_at")
 
-    def * = (portCode, terminal, date, daysAhead, dataType, flights, pax, averageLoad, createdAt).mapTo[ArrivalStatsRow]
+    def * = (portCode, terminal, date, daysAhead, dataType, flights, capacity, pax, averageLoad, createdAt).mapTo[ArrivalStatsRow]
 
     val pk = primaryKey("arrival_stats_pkey", (portCode, terminal, date, daysAhead, dataType))
   }

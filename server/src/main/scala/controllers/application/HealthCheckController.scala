@@ -11,12 +11,12 @@ import uk.gov.homeoffice.drt.time.SDate
 
 
 class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
-  private val apiHealthCheck: ApiHealthCheck = ApiHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRange)
-  private val landingTimesHealthCheck: LandingTimesHealthCheck = LandingTimesHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRange)
-  private val arrivalUpdatesHealthCheck: Int => ArrivalUpdatesHealthCheck = ArrivalUpdatesHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRange, ctrl.now)
+  private val apiHealthCheck: ApiHealthCheck = ApiHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp)
+  private val landingTimesHealthCheck: LandingTimesHealthCheck = LandingTimesHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp)
+  private val arrivalUpdatesHealthCheck: Int => ArrivalUpdatesHealthCheck = ArrivalUpdatesHealthCheck(ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp, ctrl.now)
   private val deskUpdatesHealthCheck: DeskUpdatesHealthCheck = DeskUpdatesHealthCheck(
     ctrl.now,
-    ctrl.applicationService.flightsProvider.allTerminalsDateRange,
+    ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp,
     MinutesProvider.allTerminals(ctrl.actorService.queuesRouterActor)
   )
 

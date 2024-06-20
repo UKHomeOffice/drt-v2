@@ -26,7 +26,7 @@ import uk.gov.homeoffice.drt.testsystem.{TestActorService, TestDrtSystem}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future}
 
 class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test-1")
@@ -37,6 +37,10 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
 
   before {
     aggDb.dropAndCreateH2Tables()
+  }
+
+  object NowProvider {
+    var now: SDateLike = SDate("2023-02-01")
   }
 
   "ForecastAccuracyController" should {
@@ -54,10 +58,15 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       LiveFeedSource -> Passengers(Option(liveArrivalPax), None),
       ForecastFeedSource -> Passengers(Option(forecastArrivalPax), Option(forecastArrivalTransPax))
     )
-    val arrival = ArrivalGenerator.live(maxPax = Option(maxPax)).toArrival(LiveFeedSource).copy(PassengerSources = paxSources)
+    val arrival = ArrivalGenerator
+      .live(maxPax = Option(maxPax), schDt = "2024-02-14T12:25", terminal = T1)
+      .toArrival(LiveFeedSource)
+      .copy(PassengerSources = paxSources, PcpTime = Option(SDate("2024-02-14T12:25").millisSinceEpoch))
     val flights = FlightsWithSplits(Seq(ApiFlightWithSplits(arrival, Set())))
     val controller: ForecastAccuracyController = forecastAccuracyController(forecastTotalPax, mlFeedPax, liveFeedPax, mlPredCapPct, flights)
     "get forecast accuracy percentage" in {
+      NowProvider.now = SDate("2023-02-01")
+
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Forwarded-Groups", "TEST")), body = AnyContentAsEmpty)
 
       val result = controller.getForecastAccuracy("2023-01-01").apply(request)
@@ -65,10 +74,11 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/plain"))
       contentAsString(result) must ===(s"""{"localDate":{"year":2023,"month":1,"day":1},"pax":[["uk.gov.homeoffice.drt.ports.Terminals.T1",{"1":[20],"14":[20],"3":[20],"30":[20],"7":[20]}]]}""".stripMargin)
-
     }
 
     "get forecast Accuracy prediction csv" in {
+      NowProvider.now = SDate("2023-02-01")
+
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Forwarded-Groups", "TEST")), body = AnyContentAsEmpty)
 
       val result = controller.forecastAccuracyExport(1, 1).apply(request)
@@ -82,6 +92,8 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
     }
 
     "get forecast comparison csv - future date does not include act pax" in {
+      NowProvider.now = SDate("2023-01-01")
+
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Forwarded-Groups", "TEST")), body = AnyContentAsEmpty)
 
       val modelId = "some-model-id"
@@ -94,16 +106,18 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
       val flights = 1
       contentAsString(result) must ===(
-        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
-           |2024-02-14,0,$flights,0.00,0,$forecastPcp,0.00,$mlPax,0.00,0.00,$fcstCapPct%.2f,0.00,${mlPredCapPct.toDouble}%.2f,0.00
+        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual capacity,Forecast capacity,Capacity change %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
+           |2024-02-14,0,$flights,,200,200,,0,$forecastPcp,,$mlPax,,0.00,$fcstCapPct%.2f,,${mlPredCapPct.toDouble}%.2f,
            |""".stripMargin)
     }
 
     "get forecast comparison csv - historic date does include act pax" in {
+      NowProvider.now = SDate("2024-02-15")
+
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Forwarded-Groups", "TEST")), body = AnyContentAsEmpty)
 
       val modelId = "some-model-id"
-      val result = controller.forecastModelComparison(modelId, "T1", "2023-01-01", "2023-01-01").apply(request)
+      val result = controller.forecastModelComparison(modelId, "T1", "2024-02-14", "2024-02-14").apply(request)
 
       status(result) must ===(OK)
       contentType(result) must ===(Some("text/csv"))
@@ -111,18 +125,22 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       val fcstCapPct = forecastPcp.toDouble / maxPax * 100
       val mlPax = (mlPredCapPct.toDouble * maxPax / 100).round.toInt
       val liveCapPct = liveArrivalPax.toDouble / maxPax * 100
-      val flights = 1
+      val flightsCount = 1
       val fcstPaxDiff = (forecastPcp - liveArrivalPax).toDouble / liveArrivalPax * 100
       contentAsString(result) must ===(
-        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
-           |2023-01-01,$flights,$flights,0.00,$liveArrivalPax,$forecastPcp,$fcstPaxDiff%.2f,$mlPax,87.50,$liveCapPct%.2f,$fcstCapPct%.2f,37.50,${mlPredCapPct.toDouble}%.2f,87.50
+        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual capacity,Forecast capacity,Capacity change %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
+           |2024-02-14,$flightsCount,$flightsCount,0.00,200,200,0.00,$liveArrivalPax,$forecastPcp,$fcstPaxDiff%.2f,$mlPax,87.50,$liveCapPct%.2f,$fcstCapPct%.2f,37.50,${mlPredCapPct.toDouble}%.2f,87.50
            |""".stripMargin)
     }
   }
 
-  private def forecastAccuracyController(forecastTotalPax: Int, mlFeedPax: Int, liveFeedPax: Int, mlPred: Int, flights: FlightsWithSplits) = {
+  private def forecastAccuracyController(forecastTotalPax: Int,
+                                         mlFeedPax: Int,
+                                         liveFeedPax: Int,
+                                         mlPred: Int,
+                                         flights: FlightsWithSplits) = {
     val module: DrtModule = new TestDrtModule() {
-      override val now: () => SDateLike = () => SDate("2023-02-01T00:00")
+      override val now: () => SDateLike = () => NowProvider.now
 
       override def provideDrtSystemInterface: TestDrtSystem = new TestDrtSystem(Test.config, drtParameters, now)(mat, ec, system, timeout) {
         lazy override val feedService: ProdFeedService = new ProdFeedService(journalType, airportConfig, now, params,
@@ -165,7 +183,6 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       }
     }
 
-
     new ForecastAccuracyController(Helpers.stubControllerComponents(), module.provideDrtSystemInterface)
   }
 
@@ -190,7 +207,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
 
   class MockFlightsRouter(flights: FlightsWithSplits) extends Actor {
     override def receive: Receive = {
-      case _ =>
+      case msg =>
         val date = UtcDate(2023, 1, 1)
         sender() ! Source(List((date, flights)))
     }
