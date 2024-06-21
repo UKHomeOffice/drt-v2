@@ -5,6 +5,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.sourceToCsvResponse
+import drt.shared.CodeShares
 import play.api.mvc._
 import services.accuracy.ForecastAccuracyCalculator
 import slickdb.ArrivalStatsRow
@@ -99,6 +100,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       (date, maybePit) =>
         ctrl.applicationService.flightsProvider.terminalDateScheduled(ctrl.materializer, ctrl.ec)(terminal)(date, maybePit)
           .map(_.filter(fws => !fws.apiFlight.Origin.isDomesticOrCta && !fws.apiFlight.isCancelled))
+          .map(fs => CodeShares.uniqueArrivals(ctrl.paxFeedSourceOrder)(fs).toSeq)
     }
     val daysAhead = 3
 
@@ -108,7 +110,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
           val sortedModels = models.models.toList.sortBy(_._1)
           val isNonHistoricDate = localDate >= ctrl.now().toLocalDate
 
-          val futureMaybeModels = if (!isNonHistoricDate) {
+          val futureMaybeModels: Future[Option[(Actuals, Forecast, List[ModelForecast])]] = if (!isNonHistoricDate) {
             modelsFromCache(terminalName, daysAhead, localDate, sortedModels)
           } else {
             Future.successful(None)
@@ -303,7 +305,4 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         pct.getOrElse(0)
       }.sum.toDouble / arrivals.length
 
-  private def flightInfo(newFlights: Seq[ApiFlightWithSplits]) = {
-    newFlights.sortBy(_.apiFlight.Scheduled).map(f => s"${f.apiFlight.flightCodeString}: ${SDate(f.apiFlight.Scheduled).toISOString}").mkString(", ")
-  }
 }
