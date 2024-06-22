@@ -18,10 +18,7 @@ trait UserRoleProviderLike {
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role]
 
   def getLoggedInUser(config: Configuration, headers: Headers, session: Session): LoggedInUser = {
-    log.info(s"Getting logged in user headers=$headers   session=$session")
-    val baseRoles = Set()
-    val roles: Set[Role] =
-      getRoles(config, headers, session) ++ baseRoles
+    val roles: Set[Role] = getRoles(config, headers, session)
     val email = headers.get("X-Forwarded-Email").getOrElse("Unknown")
 
     LoggedInUser(
