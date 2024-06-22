@@ -111,7 +111,7 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
            |""".stripMargin)
     }
 
-    "get forecast comparison csv - historic date does include act pax" in {
+    "get forecast comparison csv - historic date does include act pax, and cached values are used correctly" in {
       NowProvider.now = SDate("2024-02-15")
 
       val request = FakeRequest(method = "GET", uri = "", headers = Headers(("X-Forwarded-Groups", "TEST")), body = AnyContentAsEmpty)
@@ -128,6 +128,12 @@ class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
       val flightsCount = 1
       val fcstPaxDiff = (forecastPcp - liveArrivalPax).toDouble / liveArrivalPax * 100
       contentAsString(result) must ===(
+        f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual capacity,Forecast capacity,Capacity change %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
+           |2024-02-14,$flightsCount,$flightsCount,0.00,200,200,0.00,$liveArrivalPax,$forecastPcp,$fcstPaxDiff%.2f,$mlPax,87.50,$liveCapPct%.2f,$fcstCapPct%.2f,37.50,${mlPredCapPct.toDouble}%.2f,87.50
+           |""".stripMargin)
+
+      val resultCached = controller.forecastModelComparison(modelId, "T1", "2024-02-14", "2024-02-14").apply(request)
+      contentAsString(resultCached) must ===(
         f"""Date,Actual flights,Forecast flights,Unscheduled flights %%,Actual capacity,Forecast capacity,Capacity change %%,Actual pax,Port forecast pax,Port forecast pax %% diff,ML $modelId pax,ML $modelId pax %% diff,Actual load,Port forecast load,Port forecast load %% diff,ML $modelId load,ML $modelId load %% diff
            |2024-02-14,$flightsCount,$flightsCount,0.00,200,200,0.00,$liveArrivalPax,$forecastPcp,$fcstPaxDiff%.2f,$mlPax,87.50,$liveCapPct%.2f,$fcstCapPct%.2f,37.50,${mlPredCapPct.toDouble}%.2f,87.50
            |""".stripMargin)

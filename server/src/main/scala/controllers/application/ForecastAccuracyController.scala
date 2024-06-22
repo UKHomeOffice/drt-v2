@@ -52,7 +52,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         }
         .prepend(Source(List("Date,Terminal,Prediction RMSE,Legacy RMSE,Prediction Error,Legacy Error\n")))
 
-      sourceToCsvResponse(stream, "forecast-accuracy.csv")
+      sourceToCsvResponse(stream, s"forecast-accuracy-${airportConfig.portCode.iata}.csv")
     }
   }
 
@@ -81,7 +81,7 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
             .prepend(Source(List(headerRow)))
         }
 
-      sourceToCsvResponse(stream, "forecast-model-comparison.csv")
+      sourceToCsvResponse(stream, s"forecast-model-comparison-${airportConfig.portCode.iata}-$terminalName.csv")
     }
   }
 
@@ -157,9 +157,39 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                                 fcst: Forecast,
                                 modelFcsts: Seq[ModelForecast],
                                ): Future[Seq[Int]] = {
-    val actRow = ArrivalStatsRow(airportConfig.portCode.iata, terminalName, localDate.toISOString, 0, "live", actuals.flights, actuals.capacity, actuals.pax, actuals.load, ctrl.now().millisSinceEpoch)
-    val fcstRow = ArrivalStatsRow(airportConfig.portCode.iata, terminalName, localDate.toISOString, daysAhead, "forecast", fcst.flights, fcst.capacity, fcst.pax, fcst.load, ctrl.now().millisSinceEpoch)
-    val modelFcstRows = modelFcsts.map(mf => ArrivalStatsRow(airportConfig.portCode.iata, terminalName, localDate.toISOString, daysAhead, mf.modelName, mf.flights, fcst.capacity, mf.pax, mf.load, ctrl.now().millisSinceEpoch))
+    val actRow = ArrivalStatsRow(
+      portCode = airportConfig.portCode.iata,
+      terminal = terminalName,
+      date = localDate.toISOString,
+      daysAhead = 0,
+      dataType = "live",
+      flights = actuals.flights,
+      capacity = actuals.capacity,
+      pax = actuals.pax,
+      averageLoad = actuals.load,
+      createdAt = ctrl.now().millisSinceEpoch)
+    val fcstRow = ArrivalStatsRow(
+      portCode = airportConfig.portCode.iata,
+      terminal = terminalName,
+      date = localDate.toISOString,
+      daysAhead = daysAhead,
+      dataType = "forecast",
+      flights = fcst.flights,
+      capacity = fcst.capacity,
+      pax = fcst.pax,
+      averageLoad = fcst.load,
+      createdAt = ctrl.now().millisSinceEpoch)
+    val modelFcstRows = modelFcsts.map(mf => ArrivalStatsRow(
+      portCode = airportConfig.portCode.iata,
+      terminal = terminalName,
+      date = localDate.toISOString,
+      daysAhead = daysAhead,
+      dataType = mf.modelName,
+      flights = mf.flights,
+      capacity = fcst.capacity,
+      pax = mf.pax,
+      averageLoad = mf.load,
+      createdAt = ctrl.now().millisSinceEpoch))
     ctrl.applicationService.arrivalStats.addOrUpdate(actRow).flatMap(
       _ => ctrl.applicationService.arrivalStats.addOrUpdate(fcstRow).flatMap(
         _ => Future.sequence(modelFcstRows.map(mf => ctrl.applicationService.arrivalStats.addOrUpdate(mf)))
@@ -195,9 +225,24 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
         forecast <- forecasts
         modelForecast <- toOptionalList(modelForecasts)
       } yield {
-        val act = Actuals(localDate, actual.flights, actual.capacity, actual.pax, actual.averageLoad)
-        val fcst = Forecast(localDate, forecast.flights, forecast.pax, forecast.capacity, forecast.averageLoad, daysAhead)
-        val pred = modelForecast.map(mf => ModelForecast(localDate, mf.flights, mf.pax, mf.averageLoad, mf.dataType, daysAhead))
+        val act = Actuals(
+          date = localDate,
+          flights = actual.flights,
+          capacity = actual.capacity,
+          pax = actual.pax,
+          load = actual.averageLoad)
+        val fcst = Forecast(localDate,
+          flights = forecast.flights,
+          capacity = forecast.capacity,
+          pax = forecast.pax,
+          load = forecast.averageLoad,
+          daysAhead = daysAhead)
+        val pred = modelForecast.map(mf => ModelForecast(localDate,
+          flights = mf.flights,
+          pax = mf.pax,
+          load = mf.averageLoad,
+          modelName = mf.dataType,
+          daysAhead = daysAhead))
         (act, fcst, pred)
       }
     }
