@@ -9,13 +9,14 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer, PassengersMinute}
-import drt.shared.{CrunchApi, TQM}
+import drt.shared.{CodeShares, CrunchApi, TQM}
 import org.slf4j.LoggerFactory
 import slickdb.AggregatedDbTables
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
 import uk.gov.homeoffice.drt.db.serialisers.PassengersHourlySerialiser
 import uk.gov.homeoffice.drt.db.{PassengersHourly, PassengersHourlyRow}
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
@@ -101,5 +102,37 @@ object PassengersLiveView {
             log.error(s"Error populating pax for ${utcDate.toISOString}", t)
             Ack
         }
+    }
+
+  def populateCapacityForDate(flights: UtcDate => Future[Iterable[ApiFlightWithSplits]],
+                              paxFeedSourceOrder: List[FeedSource],
+                             )
+                             (implicit ec: ExecutionContext): UtcDate => Future[Map[Int, Int]] =
+    utcDate => {
+      flights(utcDate).map { flights =>
+        CodeShares.uniqueArrivals(paxFeedSourceOrder)(flights.toSeq).foldLeft(Map.empty[Int, Int]) {
+          case (acc, flight) =>
+            val capacity = flight.apiFlight.MaxPax.getOrElse(0)
+            val pcpStart = SDate(flight.apiFlight.PcpTime.getOrElse(0L))
+            val disembarkingMinutes = (capacity.toDouble / 20).ceil.toInt
+            val capMinutes = (1 to disembarkingMinutes).foldLeft(Map.empty[Long, Int]) {
+              case (acc, i) =>
+                val minuteMillis = pcpStart.addMinutes(i).millisSinceEpoch
+                val remainingCapacity = capacity - acc.values.sum
+                val pax = if (remainingCapacity > 20) 20 else remainingCapacity
+                acc.updated(minuteMillis, acc.getOrElse(minuteMillis, 0) + pax)
+            }
+            capMinutes.foldLeft(acc) {
+              case (acc, (minuteMillis, pax)) =>
+                val sdate = SDate(minuteMillis)
+                if (sdate.toUtcDate == utcDate) {
+                  val hour = sdate.getHours
+                  acc.updated(hour, acc.getOrElse(hour, 0) + pax)
+                } else {
+                  acc
+                }
+            }
+        }
+      }
     }
 }
