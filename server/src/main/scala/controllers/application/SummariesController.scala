@@ -174,6 +174,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           (Option(sdate.toLocalDate), Option(sdate.getHours))
         case _ => (None, None)
       }
-      PassengersSummary(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
+      PassengersSummary(regionName, portCodeStr, maybeTerminalName, 0, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
     }
 }
