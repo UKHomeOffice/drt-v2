@@ -67,7 +67,7 @@ object Settings {
     val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.1.16"
     val scalaTestVersion = "3.2.17"
-    val twirlApi = "1.6.3"
+    val twirlApi = "1.6.7"
     val mockitoVersion = "4.11.0"
     val rtVersion = "4.0.2"
     val jakartaXmlWsApi = "4.0.1"
