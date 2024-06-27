@@ -48,7 +48,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
             deskRecsProvider: PortDesksAndWaitsProviderLike,
             redListUpdatesProvider: () => Future[RedListUpdates],
             queueStatusProvider: DynamicQueueStatusProvider,
-            updateLivePaxView: MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]],
+            updateLivePaxView: (MinutesContainer[CrunchApi.PassengersMinute, TQM], Map[Terminal, Map[Int, Int]]) => Future[StatusReply[Done]],
             terminalSplits: Terminal => Option[Splits],
             queueLoadsActor: ActorRef,
             queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
@@ -78,13 +78,12 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
     crunchRequestQueueActor
   }
 
-
   def crunchRequestsToQueueMinutes(arrivalsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                                    portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                                    redListUpdatesProvider: () => Future[RedListUpdates],
                                    dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                                    queuesByTerminal: Map[Terminal, Iterable[Queue]],
-                                   updateLiveView: MinutesContainer[PassengersMinute, TQM] => Future[StatusReply[Done]],
+                                   updateLiveView: (MinutesContainer[CrunchApi.PassengersMinute, TQM], Map[Terminal, Map[Int, Int]]) => Future[StatusReply[Done]],
                                    paxFeedSourceOrder: List[FeedSource],
                                    terminalSplits: Terminal => Option[Splits],
                                   )

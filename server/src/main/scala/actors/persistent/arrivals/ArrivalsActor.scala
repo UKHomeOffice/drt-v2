@@ -25,6 +25,7 @@ import scala.collection.immutable.SortedMap
 abstract class ArrivalsActor(now: () => SDateLike,
                              expireAfterMillis: Int,
                              feedSource: FeedSource,
+                             override val maybePointInTime: Option[Long] = None,
                             ) extends RecoveryActorLike with PersistentDrtActor[ArrivalsState] {
 
   val restorer = new ArrivalsRestorer[Arrival]
@@ -46,7 +47,11 @@ abstract class ArrivalsActor(now: () => SDateLike,
 
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case diff: FlightsDiffMessage =>
-      consumeDiffsMessage(diff)
+      (maybePointInTime, diff.createdAt) match {
+        case (Some(pit), Some(createdAt)) if pit < createdAt =>
+          log.debug(s"Ignoring message created more recently than the recovery point in time")
+        case _ => consumeDiffsMessage(diff)
+      }
 
     case feedStatusMessage: FeedStatusMessage =>
       val status = feedStatusFromFeedStatusMessage(feedStatusMessage)

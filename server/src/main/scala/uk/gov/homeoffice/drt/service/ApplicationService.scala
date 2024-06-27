@@ -2,8 +2,9 @@ package uk.gov.homeoffice.drt.service
 
 import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddQueueHistoricPaxLookupSubscriber, AddQueueHistoricSplitsLookupSubscriber, AddRecalculateArrivalsSubscriber}
 import actors._
-import actors.daily.PassengersActor
+import actors.daily.{PassengersActor, RequestAndTerminate}
 import actors.persistent._
+import actors.persistent.arrivals.AclForecastArrivalsActor
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
@@ -43,6 +44,7 @@ import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, Termin
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.actor.serialisation.{ConfigDeserialiser, ConfigSerialiser, EmptyConfig}
+import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
@@ -132,8 +134,17 @@ case class ApplicationService(journalType: StreamingJournalLike,
     ManifestsProvider(manifestsRouterActorReadOnly)
 
   private lazy val updateLivePaxView = PassengersLiveView.updateLiveView(airportConfig.portCode, now, aggregatedDb)
+  private lazy val flightsForDate = PassengersLiveView.uniqueFlightsForDate(
+    d => flightsProvider.allTerminalsDateScheduledOrPcp(d).map(_._2).runWith(Sink.seq),
+    d => {
+      val actor = system.actorOf(Props(new AclForecastArrivalsActor(now, DrtStaticParameters.expireAfterMillis, Option(SDate(d).millisSinceEpoch))))
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, GetState)).mapTo[ArrivalsState]
+    },
+    feedService.paxFeedSourceOrder,
+  )
+  private lazy val getCapacities = PassengersLiveView.capacityForDate(flightsForDate)
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
-    PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
+    PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, getCapacities, updateLivePaxView)
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2.minutes)
 

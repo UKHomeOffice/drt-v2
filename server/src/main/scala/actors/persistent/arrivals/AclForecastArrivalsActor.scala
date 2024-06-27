@@ -19,7 +19,9 @@ object AclForecastArrivalsActor extends StreamingFeedStatusUpdates {
 }
 
 class AclForecastArrivalsActor(val now: () => SDateLike,
-                               expireAfterMillis: Int) extends ArrivalsActor(now, expireAfterMillis, AclFeedSource) {
+                               expireAfterMillis: Int,
+                               override val maybePointInTime: Option[Long],
+                              ) extends ArrivalsActor(now, expireAfterMillis, AclFeedSource, maybePointInTime) {
   override def persistenceId: String = AclForecastArrivalsActor.persistenceId
 
   override val maybeSnapshotInterval: Option[Int] = Option(100)
