@@ -96,7 +96,10 @@ object Settings {
     "@mui/lab" -> "5.0.0-alpha.119",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
-    "react-markdown" -> "9.0.1"
+    "react-markdown" -> "9.0.1",
+    "@types/react-dom" -> react,
+    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#8bdccd9423f66b20cd8dbf9c8a629f2d15650ccb"
+
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

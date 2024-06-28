@@ -1,0 +1,90 @@
+package drt.client.components
+
+import japgolly.scalajs.react._
+import japgolly.scalajs.react.vdom.{VdomElement, VdomNode}
+
+import scala.scalajs.js
+import scala.scalajs.js.annotation.JSImport
+
+
+
+@js.native
+trait SearchFilterPayload extends js.Object {
+  var showTransitPaxNumber: Boolean
+  var showNumberOfVisaNationals: Boolean
+  var selectedAgeGroups: js.Array[String]
+  var selectedNationalities: js.Array[String]
+  var flightNumber: String
+}
+
+object SearchFilterPayload {
+  def apply(
+             showTransitPaxNumber: Boolean,
+             showNumberOfVisaNationals: Boolean,
+             selectedAgeGroups: js.Array[String],
+             selectedNationalities: js.Array[String],
+             flightNumber: String
+           ): SearchFilterPayload = {
+    val p = (new js.Object).asInstanceOf[SearchFilterPayload]
+    p.showTransitPaxNumber = showTransitPaxNumber
+    p.showNumberOfVisaNationals = showNumberOfVisaNationals
+    p.selectedAgeGroups = selectedAgeGroups
+    p.selectedNationalities = selectedNationalities
+    p.flightNumber = flightNumber
+    p
+  }
+}
+
+
+@js.native
+trait FlightFlaggerFiltersProps extends js.Object {
+  var nationalities: js.Array[String] = js.native
+  var ageGroups: js.Array[String] = js.native
+  var submitCallback: js.Function1[js.Object, Unit] = js.native
+  var showAllCallback: js.Function1[js.Object, Unit] = js.native
+  var onChange: js.Function1[js.Object, Unit] = js.native
+}
+
+object FlightFlaggerFiltersProps {
+  def apply(
+             nationalities: js.Array[String],
+             ageGroups: js.Array[String],
+             submitCallback: js.Function1[js.Object, Unit],
+             showAllCallback: js.Function1[js.Object, Unit],
+             onChange: js.Function1[js.Object, Unit]
+           ): FlightFlaggerFiltersProps = {
+    val p = (new js.Object).asInstanceOf[FlightFlaggerFiltersProps]
+    p.nationalities = nationalities
+    p.ageGroups = ageGroups
+    p.submitCallback = submitCallback
+    p.showAllCallback = showAllCallback
+    p.onChange = onChange
+    p
+  }
+}
+
+object FlightFlaggerFilters {
+
+  @js.native
+  @JSImport("@drt/drt-react", "FlightFlaggerFilters")
+  object RawComponent extends js.Object
+
+  val component = JsFnComponent[FlightFlaggerFiltersProps, Children.None](RawComponent)
+
+  def apply(
+             nationalities: js.Array[String],
+             ageGroups: js.Array[String],
+             submitCallback: js.Function1[js.Object, Unit],
+             showAllCallback: js.Function1[js.Object, Unit],
+             onChange: js.Function1[js.Object, Unit]
+           ): VdomElement = {
+    val props = FlightFlaggerFiltersProps(
+      nationalities,
+      ageGroups,
+      submitCallback,
+      showAllCallback,
+      onChange
+    )
+    component(props)
+  }
+}

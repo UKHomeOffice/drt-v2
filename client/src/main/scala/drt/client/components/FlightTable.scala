@@ -3,7 +3,9 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions.{RemoveArrivalSources, SetFlightFilterMessage}
+import drt.client.components.DaySelectorComponent.State
 import drt.client.components.DropInDialog.StringExtended
+import drt.client.components.FlightChartComponent.State
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.modules.GoogleEventTracker
@@ -30,6 +32,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.immutable.HashSet
 import scala.scalajs.js
 import scala.scalajs.js.timers._
+import scala.scalajs.js.JSConverters._
 
 object FlightTable {
   case class Props(queueOrder: Seq[Queue],
@@ -52,12 +55,25 @@ object FlightTable {
                    paxFeedSourceOrder: List[FeedSource],
                    filterFlightNumber: String) extends UseValueEq
 
+  case class State(showTransitPaxNumber: Boolean,
+                   showNumberOfVisaNationals: Boolean,
+                   selectedAgeGroups: Seq[String],
+                   selectedNationalities: Seq[Country],
+                   flightNumber: String)
+
   implicit val reuseProps: Reusability[Props] = Reusability {
     (a, b) =>
       a.viewStart == b.viewStart &&
         a.viewEnd == b.viewEnd &&
         a.filterFlightNumber == b.filterFlightNumber
   }
+
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.showTransitPaxNumber == b.showTransitPaxNumber &&
+    a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
+    a.selectedAgeGroups == b.selectedAgeGroups &&
+    a.selectedNationalities == b.selectedNationalities &&
+    a.flightNumber == b.flightNumber)
+
 
   var typingSearchTimer: Option[SetTimeoutHandle] = None
   val doneSearchTypingInterval = 5000
@@ -72,11 +88,15 @@ object FlightTable {
     }
   }
 
+  val ageGroups: js.Array[String] = js.Array("0-9", "10-24", "25-49", "50-65", ">65")
+
+
   def apply(shortLabel: Boolean = false,
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-           ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .renderPS { (_, props, _) =>
+           ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
+    .initialState(State(false, false, Seq.empty, Seq.empty, ""))
+    .renderPS { (scope, props, state) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
       else
@@ -90,10 +110,36 @@ object FlightTable {
                        portStatePot: Pot[PortState],
                        flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                        arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
+                       airportInfos: Map[PortCode, Pot[AirportInfo]]
                       )
 
-      val flaggerConnect = SPACircuit.connect(m => Model(m.flaggedNationalities, m.portStatePot, m.flightManifestSummaries, m.arrivalSources))
+      val flaggerConnect = SPACircuit.connect(m => Model(m.flaggedNationalities, m.portStatePot, m.flightManifestSummaries, m.arrivalSources, m.airportInfos))
       val flightTableContent = FlightTableContent(shortLabel, originMapper, splitsGraphComponent)
+
+      val submitCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
+        // Handle the submit action here
+        val sfp = data.asInstanceOf[SearchFilterPayload]
+        val countriesCode: Seq[String] = sfp.selectedNationalities.map(_.split("\\(").last.split("\\)").head).toSeq
+        val selectedNationalities: Seq[Country] = CountryOptions.countries.filter(c => countriesCode.contains(c.threeLetterCode))
+        scope.modState(_.copy(sfp.showTransitPaxNumber, sfp.showNumberOfVisaNationals, sfp.selectedAgeGroups.toSeq, selectedNationalities, sfp.flightNumber))
+        updateState(sfp.flightNumber)
+        println(s"showCallback event: ${countriesCode} ${sfp.selectedAgeGroups} ${sfp.selectedNationalities} ${sfp.flightNumber}")
+
+      }
+
+      val showAllCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
+        // Handle the show all action here
+        val showFilter = data.asInstanceOf[Boolean]
+        println(s"showAllCallback event: ${showFilter}")
+
+      }
+
+      val onChange: js.Function1[js.Object, Unit] = (event: js.Object) => {
+        e: ReactEventFromInput =>
+          val searchTerm = e.target.value
+        println(s"onChange event: $searchTerm")
+      }
+
 
       val filterFlightComponent = <.div(^.style := js.Dictionary("padding-right" -> "24px"), MuiTypography(sx = SxProps(Map("font-weight" -> "bold",
         "padding-bottom" -> "10px"
@@ -128,12 +174,19 @@ object FlightTable {
           },
           <.div(^.style := js.Dictionary("backgroundColor" -> "#E6E9F1", "padding-left" -> "24px", "padding-top" -> "24px", "padding-bottom" -> "24px"),
             if (props.showFlagger) {
-              <.div(^.style := js.Dictionary("display" -> "flex"),
-                filterFlightComponent,
-                <.div(^.style := js.Dictionary("borderRight" -> "1px solid #000")),
-                <.div(^.style := js.Dictionary("padding-left" -> "24px"),
-                  NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)))
+              FlightFlaggerFilters(
+                CountryOptions.countries.map { c => s"${c.name} (${c.threeLetterCode})" }.toJSArray,
+                ageGroups,
+                submitCallback,
+                showAllCallback,
+                onChange
               )
+              //              <.div(^.style := js.Dictionary("display" -> "flex"),
+              //                filterFlightComponent,
+              //                <.div(^.style := js.Dictionary("borderRight" -> "1px solid #000")),
+              //                <.div(^.style := js.Dictionary("padding-left" -> "24px"),
+              //                  NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)))
+              //              )
             } else EmptyVdom
           ),
           <.div(
@@ -156,11 +209,11 @@ object FlightTable {
                   redListUpdates = props.redListUpdates,
                   airportConfig = props.airportConfig,
                   walkTimes = props.walkTimes,
-                  flaggedNationalities = model.flaggedNationalities,
+                  flaggedNationalities = state.selectedNationalities.toSet,
                   viewStart = props.viewStart,
                   viewEnd = props.viewEnd,
                   paxFeedSourceOrder = props.paxFeedSourceOrder,
-                  filterFlightNumber = props.filterFlightNumber
+                  filterFlightNumber = state.flightNumber
                 ))
             }
           ),
