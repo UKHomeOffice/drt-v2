@@ -11,7 +11,7 @@ import play.api.test.Helpers._
 import play.api.test._
 import slick.jdbc.H2Profile.api._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
+import uk.gov.homeoffice.drt.db.dao.PassengersHourlyDao
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T2, T3, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr

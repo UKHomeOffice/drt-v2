@@ -1,7 +1,7 @@
 package services.scenarios
 
 import actors.persistent.SortedActorRefSource
-import akka.NotUsed
+import akka.{Done, NotUsed}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.Materializer
@@ -63,10 +63,10 @@ object Scenarios {
       redListUpdatesProvider = redListUpdatesProvider,
       dynamicQueueStatusProvider = DynamicQueueStatusProvider(simulationAirportConfig, egateBanksProvider),
       queuesByTerminal = simulationAirportConfig.queuesByTerminal,
-      updateLiveView = (_, _) => Future.successful(StatusReply.Ack),
+      updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = splitsCalculator.terminalSplits,
-      updateCapacity = None,
+      updateCapacity = _ => Future.successful(Done),
     )
 
     class DummyPersistentActor extends Actor {

@@ -9,7 +9,7 @@ import play.api.mvc._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
+import uk.gov.homeoffice.drt.db.dao.PassengersHourlyDao
 import uk.gov.homeoffice.drt.jsonformats.PassengersSummaryFormat.JsonFormat
 import uk.gov.homeoffice.drt.models.PassengersSummary
 import uk.gov.homeoffice.drt.ports.Queues.Queue
