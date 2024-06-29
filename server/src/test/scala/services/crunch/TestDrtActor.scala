@@ -303,11 +303,13 @@ class TestDrtActor extends Actor {
           portDeskRecs,
           () => Future.successful(RedListUpdates.empty),
           DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
-          _ => Future.successful(StatusReply.Ack),
+          (_, _) => Future.successful(StatusReply.Ack),
           splitsCalculator.terminalSplits,
           minuteLookups.queueLoadsMinutesActor,
           tc.airportConfig.queuesByTerminal,
-          paxFeedSourceOrder)
+          paxFeedSourceOrder,
+          updateCapacity = None,
+        )
 
         val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
           TestProbe().ref,

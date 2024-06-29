@@ -46,7 +46,7 @@ class FlightExportsSpec extends CrunchTestLike {
       ))
 
     "Given a flights provider, and dateAndFlightsToCsvRows as an aggregator, when the range is a single day" >> {
-      val getFlights = FlightExports.flightsForLocalDateRangeProvider(utcFlightsProvider)
+      val getFlights = FlightExports.flightsForLocalDateRangeProvider(utcFlightsProvider, paxFeedSourceOrder)
       val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder, _ => Future.successful(VoyageManifests.empty))
       val csvStream = GeneralExport.toCsv(end, end, getFlights, toRows)
 
@@ -62,7 +62,7 @@ class FlightExportsSpec extends CrunchTestLike {
     }
 
     "Given a flights provider, and dateAndFlightsToCsvRows as an aggregator" >> {
-      val getFlights = FlightExports.flightsForLocalDateRangeProvider(utcFlightsProvider)
+      val getFlights = FlightExports.flightsForLocalDateRangeProvider(utcFlightsProvider, paxFeedSourceOrder)
       val toRows = FlightExports.dateAndFlightsToCsvRows(port, terminal, paxSourceOrder, _ => Future.successful(VoyageManifests.empty))
       val csvStream = GeneralExport.toCsv(start, end, getFlights, toRows)
 

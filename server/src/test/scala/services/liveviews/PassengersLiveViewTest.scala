@@ -7,16 +7,16 @@ import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, VoyageNumber}
 import uk.gov.homeoffice.drt.db.PassengersHourlyRow
-import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode}
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import java.sql.Timestamp
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 
 class PassengersLiveViewTest extends AnyWordSpec with Matchers {
   "minutesContainerToHourlyRow given a container with one minute" should {
@@ -136,7 +136,8 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
     "return the unique flights for the date" in {
       val flight1 = ArrivalGenerator.arrival(iata = "BA0001", origin = PortCode("JFK"), schDt = "2024-06-27T12:00", feedSource = AclFeedSource)
       val codeShare1 = flight1.copy(VoyageNumber = VoyageNumber(2))
-      val flight2 = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("CDG"), schDt = "2024-06-27T12:05", maxPax = Option(85), feedSource = AclFeedSource)
+      val flight2 = ArrivalGenerator.arrival(iata = "BA0003", origin = PortCode("CDG"), schDt = "2024-06-27T12:05", maxPax = Option(85),
+        feedSource = AclFeedSource)
 
       val flights = Iterable(flight1, codeShare1, flight2).map(flight => ApiFlightWithSplits(flight, Set(), None))
 

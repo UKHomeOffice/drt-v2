@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -48,11 +48,13 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
             deskRecsProvider: PortDesksAndWaitsProviderLike,
             redListUpdatesProvider: () => Future[RedListUpdates],
             queueStatusProvider: DynamicQueueStatusProvider,
-            updateLivePaxView: (MinutesContainer[CrunchApi.PassengersMinute, TQM], Map[Terminal, Map[Int, Int]]) => Future[StatusReply[Done]],
+            updateLivePaxView: MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]],
             terminalSplits: Terminal => Option[Splits],
             queueLoadsActor: ActorRef,
             queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
-            paxFeedSourceOrder: List[FeedSource])
+            paxFeedSourceOrder: List[FeedSource],
+            updateCapacity: UtcDate => Future[Done],
+           )
            (implicit ec: ExecutionContext, mat: Materializer): ActorRef = {
     val passengerLoadsFlow: Flow[ProcessingRequest, MinutesContainer[CrunchApi.PassengersMinute, TQM], NotUsed] =
       DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
@@ -64,6 +66,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         updateLiveView = updateLivePaxView,
         paxFeedSourceOrder = paxFeedSourceOrder,
         terminalSplits = terminalSplits,
+        updateCapacity = updateCapacity,
       )
 
     val (crunchRequestQueueActor, _: UniqueKillSwitch) =
@@ -83,9 +86,10 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
                                    redListUpdatesProvider: () => Future[RedListUpdates],
                                    dynamicQueueStatusProvider: DynamicQueueStatusProvider,
                                    queuesByTerminal: Map[Terminal, Iterable[Queue]],
-                                   updateLiveView: (MinutesContainer[CrunchApi.PassengersMinute, TQM], Map[Terminal, Map[Int, Int]]) => Future[StatusReply[Done]],
+                                   updateLiveView: MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]],
                                    paxFeedSourceOrder: List[FeedSource],
                                    terminalSplits: Terminal => Option[Splits],
+                                   updateCapacity: UtcDate => Future[Done],
                                   )
                                   (implicit
                                    ec: ExecutionContext,
@@ -98,7 +102,8 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
       .via(toPassengerLoads(portDesksAndWaitsProvider, redListUpdatesProvider, dynamicQueueStatusProvider, queuesByTerminal, terminalSplits))
       .wireTap { crWithPax =>
         log.info(s"${crWithPax._1} crunch request - ${crWithPax._2.minutes.size} minutes of passenger loads with ${crWithPax._2.minutes.map(_.toMinute.passengers.size).sum} passengers")
-        updateLiveView(crWithPax._2)
+        val datesToUpdate = Set(crWithPax._1.start.toUtcDate, crWithPax._1.end.toUtcDate)
+        datesToUpdate.foreach(updateCapacity)
       }
       .via(Flow[(ProcessingRequest, MinutesContainer[PassengersMinute, TQM])].map {
         case (_, paxMinutes) => paxMinutes

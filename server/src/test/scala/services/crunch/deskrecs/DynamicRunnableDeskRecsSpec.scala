@@ -158,12 +158,13 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
       dynamicQueueStatusProvider = DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
       queuesByTerminal = airportConfig.queuesByTerminal,
-      updateLiveView = _ => Future.successful(StatusReply.Ack),
+      updateLiveView = (_, _) => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = _ => Option(Splits(Set(
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None),
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EGate, 50, None, None),
       ), TerminalAverage, None, Percentage)),
+      updateCapacity = None,
     )
     val crunchRequest: MillisSinceEpoch => CrunchRequest =
       (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
