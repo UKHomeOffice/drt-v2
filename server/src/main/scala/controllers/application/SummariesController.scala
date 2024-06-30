@@ -116,7 +116,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       }
       stream(start, end)
         .map {
-          case (queues, cap, maybeDate) => queuesToContent(queues, maybeDate)
+          case (queues, capacity, maybeDate) => queuesToContent(queues, capacity, maybeDate)
         }
     }
 
@@ -160,14 +160,14 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
                 queue -> (qAcc.getOrElse(queue, 0) + count)
             }
             val newCapAcc = capAcc + capacity
-            (newQAcc, capAcc)
+            (newQAcc, newCapAcc)
         }
         .map { case (queueCounts, cap) =>
           (queueCounts, cap, None)
         }
 
-  private def passengersCsvRow[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Option[T]) => String =
-    (queueCounts, maybeDateOrDateHour) => {
+  private def passengersCsvRow[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Int, Option[T]) => String =
+    (queueCounts, capacity, maybeDateOrDateHour) => {
       val totalPcpPax = queueCounts.values.sum
       val queueCells = Queues.queueOrder
         .map(queue => queueCounts.getOrElse(queue, 0).toString)
@@ -179,14 +179,14 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       }
       maybeTerminalName match {
         case Some(terminalName) =>
-          (dateStr.toList ++ List(regionName, portCodeStr, terminalName, totalPcpPax, queueCells)).mkString(",") + "\n"
+          (dateStr.toList ++ List(regionName, portCodeStr, terminalName, capacity, totalPcpPax, queueCells)).mkString(",") + "\n"
         case None =>
-          (dateStr.toList ++ List(regionName, portCodeStr, totalPcpPax, queueCells)).mkString(",") + "\n"
+          (dateStr.toList ++ List(regionName, portCodeStr, capacity, totalPcpPax, queueCells)).mkString(",") + "\n"
       }
     }
 
-  private def passengersJson[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Option[T]) => String =
-    (queueCounts, maybeDateOrDateHour) => {
+  private def passengersJson[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Int, Option[T]) => String =
+    (queueCounts, capacity, maybeDateOrDateHour) => {
       val totalPcpPax = queueCounts.values.sum
       val (maybeDate, maybeHour) = maybeDateOrDateHour match {
         case Some(date: LocalDate) => (Option(date), None)
@@ -195,6 +195,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           (Option(sdate.toLocalDate), Option(sdate.getHours))
         case _ => (None, None)
       }
-      PassengersSummary(regionName, portCodeStr, maybeTerminalName, 0, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
+      PassengersSummary(regionName, portCodeStr, maybeTerminalName, capacity, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
     }
 }
