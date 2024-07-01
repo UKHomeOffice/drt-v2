@@ -11,6 +11,7 @@ import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PaxType
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable.NumericRange
+import scala.util.{Failure, Success, Try}
 
 object WholePassengerQueueSplits {
   private val log = LoggerFactory.getLogger(getClass)
@@ -62,7 +63,12 @@ object WholePassengerQueueSplits {
         val startMinute = SDate(flight.apiFlight.pcpRange(paxFeedSourceOrder).min)
         val terminalQueueFallbacks = (q: Queue, pt: PaxType) => queueFallbacks.availableFallbacks(flight.apiFlight.Terminal, q, pt).toList
         val wholePaxSplits = wholePassengerSplits(pcpPax, splitsToUse.splits)
-        wholePaxLoadsPerQueuePerMinute(minuteMillis, pcpPax, wholePaxSplits, processingTime, queueStatus, terminalQueueFallbacks, startMinute)
+        Try(wholePaxLoadsPerQueuePerMinute(minuteMillis, pcpPax, wholePaxSplits, processingTime, queueStatus, terminalQueueFallbacks, startMinute)) match {
+          case Success(paxDist) => paxDist
+          case Failure(e) =>
+            log.error(s"Failed to distribute pax over splits and minutes. Flight ${flight.apiFlight.flightCode} ${flight.apiFlight.Terminal.toString} @ ${SDate(flight.apiFlight.Scheduled)}. Splits: ${splitsToUse.splits}: ${e.getMessage}")
+            Map.empty
+        }
       case None =>
         log.error(s"No splits found for ${flight.apiFlight.flightCode}")
         Map.empty
