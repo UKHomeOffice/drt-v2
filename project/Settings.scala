@@ -98,7 +98,7 @@ object Settings {
     "react-flickity-component" -> "4.0.6",
     "react-markdown" -> "9.0.1",
     "@types/react-dom" -> react,
-    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#8bdccd9423f66b20cd8dbf9c8a629f2d15650ccb"
+    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#544cfde8ef2ca7db0b20413d2e850faf1c90d3d3"
 
   )
 

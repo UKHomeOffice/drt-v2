@@ -20,6 +20,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, _}
+import org.scalajs.dom.HTMLInputElement
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
@@ -71,8 +72,9 @@ object FlightTable {
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.showTransitPaxNumber == b.showTransitPaxNumber &&
     a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
     a.selectedAgeGroups == b.selectedAgeGroups &&
-    a.selectedNationalities == b.selectedNationalities &&
-    a.flightNumber == b.flightNumber)
+    a.selectedNationalities == b.selectedNationalities //&&
+//    a.flightNumber == b.flightNumber
+  )
 
 
   var typingSearchTimer: Option[SetTimeoutHandle] = None
@@ -83,6 +85,7 @@ object FlightTable {
     if (searchTerm.length > 1) {
       typingSearchTimer = Some(setTimeout(doneSearchTypingInterval) {
         println(s"Sending event for search term $searchTerm")
+//        scope.modState(s => s.copy(flightNumber = searchTerm)) //.runNow()
         Callback(GoogleEventTracker.sendEvent(portCode, "flightNumberSearch", searchTerm))
       })
     }
@@ -95,7 +98,7 @@ object FlightTable {
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .initialState(State(false, false, Seq.empty, Seq.empty, ""))
+    .initialStateFromProps( p => State(false, false, Seq.empty, Seq.empty, p.filterFlightNumber))
     .renderPS { (scope, props, state) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
@@ -121,44 +124,44 @@ object FlightTable {
         val sfp = data.asInstanceOf[SearchFilterPayload]
         val countriesCode: Seq[String] = sfp.selectedNationalities.map(_.split("\\(").last.split("\\)").head).toSeq
         val selectedNationalities: Seq[Country] = CountryOptions.countries.filter(c => countriesCode.contains(c.threeLetterCode))
-        scope.modState(_.copy(sfp.showTransitPaxNumber, sfp.showNumberOfVisaNationals, sfp.selectedAgeGroups.toSeq, selectedNationalities, sfp.flightNumber))
-        updateState(sfp.flightNumber)
+        scope.modState(_.copy(sfp.showTransitPaxNumber, sfp.showNumberOfVisaNationals, sfp.selectedAgeGroups.toSeq, selectedNationalities, sfp.flightNumber)).runNow()
+//        updateState(sfp.flightNumber)
         println(s"showCallback event: ${countriesCode} ${sfp.selectedAgeGroups} ${sfp.selectedNationalities} ${sfp.flightNumber}")
 
       }
 
-      val showAllCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
+      val showAllCallback: js.Function1[js.Object, Unit] = (event: js.Object) => {
         // Handle the show all action here
-        val showFilter = data.asInstanceOf[Boolean]
-        println(s"showAllCallback event: ${showFilter}")
+        val radioButtonValue = event.asInstanceOf[ReactEventFromInput].target.value
+        println(s"Radio button value: $radioButtonValue")
 
       }
 
-      val onChange: js.Function1[js.Object, Unit] = (event: js.Object) => {
-        e: ReactEventFromInput =>
-          val searchTerm = e.target.value
-        println(s"onChange event: $searchTerm")
+      val onChangeInput: js.Function1[js.Object, Unit] = (event: js.Object) => {
+          val searchTerm = event.asInstanceOf[String]
+        scope.modState(s => s.copy(flightNumber = searchTerm)).runNow()
+        println(s"onChange event: $searchTerm ${scope.state.flightNumber}")
       }
 
 
-      val filterFlightComponent = <.div(^.style := js.Dictionary("padding-right" -> "24px"), MuiTypography(sx = SxProps(Map("font-weight" -> "bold",
-        "padding-bottom" -> "10px"
-      )))("Search by flight details"),
-        MuiTextField(label = "Enter flight details".toVdom, sx = SxProps(Map("minWidth" -> "199px", "font-weight" -> "bold")),
-          InputProps = js.Dynamic.literal(
-            "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
-            "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],
-            "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer", "fontSize" -> "small")))
-            (onClick --> updateState(""), MuiIcons(Clear)()).rawNode.asInstanceOf[js.Object]
-          ))(^.`type` := "text",
-          ^.defaultValue := props.filterFlightNumber,
-          ^.autoFocus := true,
-          ^.onChange ==> { e: ReactEventFromInput =>
-            val searchTerm = e.target.value
-            submitSearchTermToAnalyticsAfterDelay(searchTerm, props.portCode.toString)
-            updateState(searchTerm)
-          })
-      )
+//      val filterFlightComponent = <.div(^.style := js.Dictionary("padding-right" -> "24px"), MuiTypography(sx = SxProps(Map("font-weight" -> "bold",
+//        "padding-bottom" -> "10px"
+//      )))("Search by flight details"),
+//        MuiTextField(label = "Enter flight details".toVdom, sx = SxProps(Map("minWidth" -> "199px", "font-weight" -> "bold")),
+//          InputProps = js.Dynamic.literal(
+//            "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
+//            "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],
+//            "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer", "fontSize" -> "small")))
+//            (onClick --> updateState(""), MuiIcons(Clear)()).rawNode.asInstanceOf[js.Object]
+//          ))(^.`type` := "text",
+//          ^.defaultValue := props.filterFlightNumber,
+//          ^.autoFocus := true,
+//          ^.onChange ==> { e: ReactEventFromInput =>
+//            val searchTerm = e.target.value
+//            submitSearchTermToAnalyticsAfterDelay(searchTerm, props.portCode.toString)
+//            updateState(searchTerm)
+//          })
+//      )
 
       flaggerConnect { flaggerProxy =>
         val model = flaggerProxy()
@@ -179,7 +182,7 @@ object FlightTable {
                 ageGroups,
                 submitCallback,
                 showAllCallback,
-                onChange
+                onChangeInput
               )
               //              <.div(^.style := js.Dictionary("display" -> "flex"),
               //                filterFlightComponent,
@@ -213,7 +216,7 @@ object FlightTable {
                   viewStart = props.viewStart,
                   viewEnd = props.viewEnd,
                   paxFeedSourceOrder = props.paxFeedSourceOrder,
-                  filterFlightNumber = state.flightNumber
+                  filterFlightNumber = scope.state.flightNumber
                 ))
             }
           ),

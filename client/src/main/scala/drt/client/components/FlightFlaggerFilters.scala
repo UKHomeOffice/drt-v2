@@ -42,7 +42,7 @@ trait FlightFlaggerFiltersProps extends js.Object {
   var ageGroups: js.Array[String] = js.native
   var submitCallback: js.Function1[js.Object, Unit] = js.native
   var showAllCallback: js.Function1[js.Object, Unit] = js.native
-  var onChange: js.Function1[js.Object, Unit] = js.native
+  var onChangeInput: js.Function1[js.Object, Unit] = js.native
 }
 
 object FlightFlaggerFiltersProps {
@@ -51,14 +51,14 @@ object FlightFlaggerFiltersProps {
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
-             onChange: js.Function1[js.Object, Unit]
+             onChangeInput: js.Function1[js.Object, Unit]
            ): FlightFlaggerFiltersProps = {
     val p = (new js.Object).asInstanceOf[FlightFlaggerFiltersProps]
     p.nationalities = nationalities
     p.ageGroups = ageGroups
     p.submitCallback = submitCallback
     p.showAllCallback = showAllCallback
-    p.onChange = onChange
+    p.onChangeInput = onChangeInput
     p
   }
 }
@@ -76,14 +76,14 @@ object FlightFlaggerFilters {
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
-             onChange: js.Function1[js.Object, Unit]
+             onChangeInput: js.Function1[js.Object, Unit]
            ): VdomElement = {
     val props = FlightFlaggerFiltersProps(
       nationalities,
       ageGroups,
       submitCallback,
       showAllCallback,
-      onChange
+      onChangeInput
     )
     component(props)
   }

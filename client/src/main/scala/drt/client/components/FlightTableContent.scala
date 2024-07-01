@@ -62,6 +62,7 @@ object FlightTableContent {
       a.portState.latestUpdate == b.portState.latestUpdate &&
         a.flightManifestSummaries == b.flightManifestSummaries &&
         a.flaggedNationalities == b.flaggedNationalities &&
+        a.filterFlightNumber == b.filterFlightNumber &&
         a.viewStart == b.viewStart &&
         a.viewEnd == b.viewEnd
   }
