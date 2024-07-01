@@ -176,8 +176,10 @@ class PassengersLiveViewTest extends AnyWordSpec with Matchers {
       val result = eventualCapacity(UtcDate(2024, 6, 27))
 
       val expected = Map(
-        0 -> 45,
-        12 -> 85,
+        T1 -> Map(
+          0 -> 45,
+          12 -> 85,
+        )
       )
 
       Await.result(result, 1.second) should ===(expected)
