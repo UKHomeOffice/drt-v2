@@ -66,7 +66,7 @@ object WholePassengerQueueSplits {
         Try(wholePaxLoadsPerQueuePerMinute(minuteMillis, pcpPax, wholePaxSplits, processingTime, queueStatus, terminalQueueFallbacks, startMinute)) match {
           case Success(paxDist) => paxDist
           case Failure(e) =>
-            log.error(s"Failed to distribute pax over splits and minutes. Flight ${flight.apiFlight.flightCode} ${flight.apiFlight.Terminal.toString} @ ${SDate(flight.apiFlight.Scheduled)}. Splits: $splitsToUse: ${e.getMessage}")
+            log.error(s"Failed to distribute pax over splits and minutes. Flight ${flight.apiFlight.flightCode} ${flight.apiFlight.Terminal.toString} @ ${SDate(flight.apiFlight.Scheduled)}. Splits: $splitsToUse: ${e.getMessage}. Best splits: ${flight.bestSplits}")
             Map.empty
         }
       case None =>
