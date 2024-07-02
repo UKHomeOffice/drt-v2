@@ -30,7 +30,7 @@ object FlightExports {
                               manifestsProvider: LocalDate => Future[VoyageManifests],
                              )
                              (implicit ec: ExecutionContext): (LocalDate, Seq[ApiFlightWithSplits]) => Future[Seq[String]] = {
-    val toCsv = FlightExports.flightsToCsvRows(port, terminal, paxFeedSourceOrder, manifestsProvider)
+    val toCsv = flightsToCsvRows(port, terminal, paxFeedSourceOrder, manifestsProvider)
     (date, flights) => toCsv(date, flights)
   }
 
@@ -107,6 +107,7 @@ object FlightExports {
       arrival.ActualChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
       arrival.differenceFromScheduled.map(_.toMinutes.toString).getOrElse(""),
       arrival.PcpTime.map(millisToLocalDateTimeString(_)).getOrElse(""),
+      arrival.MaxPax.map(_.toString).getOrElse("n/a"),
       arrival.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse(""),
       arrival.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse(""),
     )
