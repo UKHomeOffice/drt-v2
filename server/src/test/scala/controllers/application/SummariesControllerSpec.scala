@@ -3,20 +3,16 @@ package controllers.application
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.stream.Materializer
-import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import drt.shared.FlightsApi.Flights
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers._
 import play.api.test._
 import slick.jdbc.H2Profile.api._
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.CapacityHourlyRow
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
-import uk.gov.homeoffice.drt.ports.AclFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr
@@ -33,10 +29,12 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   implicit val system: ActorSystem = akka.actor.ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
 
-  val schema = CapacityHourlyDao.table.schema
+  val schemas = Seq(CapacityHourlyDao.table.schema, PassengersHourlyDao.table.schema)
 
   override def beforeEach(): Unit = {
-    Await.ready(AggregateDbH2.db.run(DBIO.seq(schema.dropIfExists, schema.createIfNotExists)), 10.second)
+    schemas.map { schema =>
+      Await.ready(AggregateDbH2.db.run(DBIO.seq(schema.dropIfExists, schema.createIfNotExists)), 10.second)
+    }
   }
 
   def generateMinutes(start: SDateLike, end: SDateLike, terminals: Seq[Terminal], queues: Seq[Queue], paxPerHour: Double): Seq[CrunchMinute] = {
