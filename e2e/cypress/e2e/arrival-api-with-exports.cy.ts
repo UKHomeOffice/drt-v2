@@ -28,7 +28,7 @@ describe('Arrival API with exports', () => {
     const actChoxDateTimeLocal = dateTimeString(actChoxTime)
     const pcpDateTimeLocal = dateTimeString(actChoxTime.add(13, "minutes"))
     const headersWithoutActApi = "IATA,ICAO,Origin,Gate/Stand,Status," +
-      "Scheduled,Predicted Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP," +
+      "Scheduled,Predicted Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Capacity," +
       "Total Pax,PCP Pax,Invalid API," +
       "API e-Gates,API EEA,API Non-EEA,API Fast Track," +
       "Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track," +
@@ -60,7 +60,7 @@ describe('Arrival API with exports', () => {
     const invalidApi = "";
 
     const csvRow = (diffFromScheduled: string, totalPax: string, apiEGates: string, terminalAverageEgates: string = "13") =>
-      `TS0123,TS0123,AMS,46/44R,On Chocks,${schDateTimeLocal},,${estDateTimeLocal},${actDateTimeLocal},${estChoxDateTimeLocal},${actChoxDateTimeLocal},${diffFromScheduled},${pcpDateTimeLocal},` +
+      `TS0123,TS0123,AMS,46/44R,On Chocks,${schDateTimeLocal},,${estDateTimeLocal},${actDateTimeLocal},${estChoxDateTimeLocal},${actChoxDateTimeLocal},${diffFromScheduled},${pcpDateTimeLocal},78,` +
       `${totalPax},${totalPax},${invalidApi},` +
       `${apiEGates},${eeaDesk},${nonEEADesk},,` +
       ",,,," +

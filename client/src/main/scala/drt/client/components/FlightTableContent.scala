@@ -112,7 +112,7 @@ object FlightTableContent {
           }
         val flightsForTerminal =
           flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
-        val flightsWithCodeShares = CodeShares.uniqueArrivalsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
+        val flightsWithCodeShares = CodeShares.uniqueFlightsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
 
         <.div(

@@ -22,8 +22,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class StreamingFlightsExportSpec extends CrunchTestLike {
-
-
   val flightWithAllTypesOfAPISplit: ApiFlightWithSplits = ApiFlightWithSplits(
     live(
       iata = "SA324",
@@ -210,7 +208,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   )
 
   private val flightHeadings =
-    """IATA,ICAO,Origin,Gate/Stand,Status,Scheduled,Predicted Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Total Pax,PCP Pax"""
+    """IATA,ICAO,Origin,Gate/Stand,Status,Scheduled,Predicted Arrival,Est Arrival,Act Arrival,Est Chox,Act Chox,Minutes off scheduled,Est PCP,Capacity,Total Pax,PCP Pax"""
   private val apiHeadings =
     """Invalid API,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
 
@@ -228,9 +226,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,98,98,Y,7,15,32,44,11,23,29,35,,,,
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,Y,30,60,10,,,,,,,,,
-          |SA0326,SA0326,JHD,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,Y,30,60,10,,,,,,,,,
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,98,98,Y,7,15,32,44,11,23,29,35,,,,
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,100,Y,30,60,10,,,,,,,,,
+          |SA0326,SA0326,JHD,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,100,Y,30,60,10,,,,,,,,,
           |""".stripMargin
 
     result === expected
@@ -263,9 +261,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings
-          |SA0326,SA0326,JHD,/,Scheduled,2017-01-01 20:00,,,,,,,2017-01-01 20:00,,,,,,,,,,,,,,,
-          |SA0327,SA0327,JHD,/,Scheduled,2017-01-01 21:00,,,,,,,2017-01-01 21:00,,,,,,,,,,,,,,,
-          |SA0328,SA0328,JHD,/,Scheduled,2017-01-01 22:00,,,,,,,2017-01-01 22:00,,,,,,,,,,,,,,,
+          |SA0326,SA0326,JHD,/,Scheduled,2017-01-01 20:00,,,,,,,2017-01-01 20:00,n/a,,,,,,,,,,,,,,,
+          |SA0327,SA0327,JHD,/,Scheduled,2017-01-01 21:00,,,,,,,2017-01-01 21:00,n/a,,,,,,,,,,,,,,,
+          |SA0328,SA0328,JHD,/,Scheduled,2017-01-01 22:00,,,,,,,2017-01-01 22:00,n/a,,,,,,,,,,,,,,,
           |""".stripMargin
 
     result === expected
@@ -280,8 +278,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,Y,30,60,10,,,,,,,,,
-          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,105,105,Y,32,62,11,,,,,,,,,
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,100,Y,30,60,10,,,,,,,,,
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,105,105,105,Y,32,62,11,,,,,,,,,
           |""".stripMargin
 
     result === expected
@@ -295,7 +293,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,98,98,Y,7,15,32,44,11,23,29,35,,,,
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,98,98,Y,7,15,32,44,11,23,29,35,,,,
           |""".stripMargin
 
     result === expected
@@ -328,9 +326,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,28,28,,2,4,9,13,3,7,8,10,,,,,2.0,1.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.0,4.0,7.0,6.0,"",""
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,Y,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
-          |SA0326,SA0326,JHD,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,,30,60,10,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,28,28,,2,4,9,13,3,7,8,10,,,,,2.0,1.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.0,4.0,7.0,6.0,"",""
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,100,Y,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
+          |SA0326,SA0326,JHD,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,100,,30,60,10,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
           |""".stripMargin
 
     result === expected
@@ -353,7 +351,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,98,98,Y,7,15,32,44,11,23,29,35,,,,,2.0,1.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.0,4.0,7.0,6.0,"FRA:2,GBR:1,USA:1","0-11:1,25-49:2,50-65:1"
+          |SA0324,SA0324,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,98,98,Y,7,15,32,44,11,23,29,35,,,,,2.0,1.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,5.0,4.0,7.0,6.0,"FRA:2,GBR:1,USA:1","0-11:1,25-49:2,50-65:1"
           |""".stripMargin
 
     result === expected
@@ -367,8 +365,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,Y,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
-          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,105,105,Y,32,62,11,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,100,Y,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,105,105,105,Y,32,62,11,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
           |""".stripMargin
 
     result === expected
@@ -386,8 +384,8 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
     val expected =
       s"""|$flightHeadings,$apiHeadings,$actualApiHeadings
-          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,Y,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
-          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,105,105,Y,32,62,11,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
+          |SA0325,SA0325,JHC,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,100,100,100,Y,30,60,10,,,,,,,,,,3.0,3.0,3.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,"",""
+          |SA0326,SA0326,JHB,/,Expected,2017-01-01 20:00,,2017-01-01 20:00,,,,,,105,105,105,Y,32,62,11,,,,,,,,,,30.0,30.0,30.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,10.0,0.0,0.0,"",""
           |""".stripMargin
 
     result === expected

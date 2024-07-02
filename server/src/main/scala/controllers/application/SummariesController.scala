@@ -9,7 +9,7 @@ import play.api.mvc._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.queries.PassengersHourlyDao
+import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
 import uk.gov.homeoffice.drt.jsonformats.PassengersSummaryFormat.JsonFormat
 import uk.gov.homeoffice.drt.models.PassengersSummary
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -94,6 +94,8 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val maybeTerminalName = maybeTerminal.map(_.toString)
       val queueTotals = PassengersHourlyDao.queueTotalsForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
       val queueTotalsQueryForDate: LocalDate => Future[Map[Queue, Int]] = date => ctrl.aggregatedDb.run(queueTotals(date))
+      val capacityTotals = CapacityHourlyDao.totalForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
+      val capacityTotalsForDate: LocalDate => Future[Int] = date => ctrl.aggregatedDb.run(capacityTotals(date))
 
       val queuesToContent = if (contentType == "text/csv")
         passengersCsvRow(regionName, portCodeStr, maybeTerminalName)
@@ -102,51 +104,70 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
       val stream = granularity match {
         case Some("hourly") =>
-          val hourlyQueueTotals = PassengersHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
-          val hourlyQueueTotalsQueryForDate = (date: LocalDate) => ctrl.aggregatedDb.run(hourlyQueueTotals(date))
-          hourlyStream(hourlyQueueTotalsQueryForDate)
+          val hourlyQueueTotalsQuery = PassengersHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
+          val hourlyQueueTotalsForDate = (date: LocalDate) => ctrl.aggregatedDb.run(hourlyQueueTotalsQuery(date))
+          val hourlyCapacityTotalsQuery = CapacityHourlyDao.hourlyForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
+          val hourlyCapacityTotalsForDate = (date: LocalDate) => ctrl.aggregatedDb.run(hourlyCapacityTotalsQuery(date))
+          hourlyStream(hourlyQueueTotalsForDate, hourlyCapacityTotalsForDate)
         case Some("daily") =>
-          dailyStream(queueTotalsQueryForDate)
+          dailyStream(queueTotalsQueryForDate, capacityTotalsForDate)
         case _ =>
-          totalsStream(queueTotalsQueryForDate)
+          totalsStream(queueTotalsQueryForDate, capacityTotalsForDate)
       }
       stream(start, end)
         .map {
-          case (queues, maybeDate) => queuesToContent(queues, maybeDate)
+          case (queues, capacity, maybeDate) => queuesToContent(queues, capacity, maybeDate)
         }
     }
 
-  private val hourlyStream: (LocalDate => Future[Map[Long, Map[Queue, Int]]]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Option[Long]), NotUsed] =
-    queueTotalsQueryForDate => (start, end) =>
-      Source(DateRange(start, end)).mapAsync(1) { date =>
-          queueTotalsQueryForDate(date).map {
-            _.toSeq.sortBy(_._1).map {
-              case (hour, queues) => (queues, Option(hour))
-            }
+  private val hourlyStream: (LocalDate => Future[Map[Long, Map[Queue, Int]]], LocalDate => Future[Map[Long, Int]]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Int, Option[Long]), NotUsed] =
+    (queueTotalsForDate, capacityTotalsForDate) => (start, end) =>
+      Source(DateRange(start, end))
+        .mapAsync(1) { date =>
+          capacityTotalsForDate(date).map { capacityTotals =>
+            (date, capacityTotals)
           }
+        }
+        .mapAsync(1) {
+          case (date, hourlyCaps) =>
+            queueTotalsForDate(date).map {
+              _.toSeq.sortBy(_._1).map {
+                case (hour, queues) => (queues, hourlyCaps.getOrElse(hour, 0), Option(hour))
+              }
+            }
         }
         .mapConcat(identity)
 
-  private val dailyStream: (LocalDate => Future[Map[Queue, Int]]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Option[LocalDate]), NotUsed] =
-    queueTotalsQueryForDate => (start, end) =>
+  private val dailyStream: (LocalDate => Future[Map[Queue, Int]], LocalDate => Future[Int]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Int, Option[LocalDate]), NotUsed] =
+    (queueTotalsForDate, capacityTotalForDate) => (start, end) =>
       Source(DateRange(start, end))
-        .mapAsync(1)(date => queueTotalsQueryForDate(date).map(queues => (queues, Option(date))))
-
-  private val totalsStream: (LocalDate => Future[Map[Queue, Int]]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Option[LocalDate]), NotUsed] =
-    queueTotalsQueryForDate => (start, end) =>
-      Source(DateRange(start, end))
-        .mapAsync(1)(date => queueTotalsQueryForDate(date))
-        .fold(Map[Queue, Int]()) {
-          case (acc, queueCounts) =>
-            acc ++ queueCounts.map {
-              case (queue, count) =>
-                queue -> (acc.getOrElse(queue, 0) + count)
-            }
+        .mapAsync(1)(date => capacityTotalForDate(date).map(capacity => (date, capacity)))
+        .mapAsync(1) { case (date, capacity) =>
+          queueTotalsForDate(date).map(queues => (queues, capacity, Option(date)))
         }
-        .map(queueCounts => (queueCounts, None))
 
-  private def passengersCsvRow[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Option[T]) => String =
-    (queueCounts, maybeDateOrDateHour) => {
+  private val totalsStream: (LocalDate => Future[Map[Queue, Int]], LocalDate => Future[Int]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Int, Option[LocalDate]), NotUsed] =
+    (queueTotalsForDate, capacityTotalForDate) => (start, end) =>
+      Source(DateRange(start, end))
+        .mapAsync(1)(date => capacityTotalForDate(date).map(capacity => (date, capacity)))
+        .mapAsync(1) { case (date, capacity) =>
+          queueTotalsForDate(date).map(queues => (queues, capacity))
+        }
+        .fold((Map[Queue, Int](), 0)) {
+          case ((qAcc, capAcc), (queueCounts, capacity)) =>
+            val newQAcc = qAcc ++ queueCounts.map {
+              case (queue, count) =>
+                queue -> (qAcc.getOrElse(queue, 0) + count)
+            }
+            val newCapAcc = capAcc + capacity
+            (newQAcc, newCapAcc)
+        }
+        .map { case (queueCounts, cap) =>
+          (queueCounts, cap, None)
+        }
+
+  private def passengersCsvRow[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Int, Option[T]) => String =
+    (queueCounts, capacity, maybeDateOrDateHour) => {
       val totalPcpPax = queueCounts.values.sum
       val queueCells = Queues.queueOrder
         .map(queue => queueCounts.getOrElse(queue, 0).toString)
@@ -158,14 +179,14 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       }
       maybeTerminalName match {
         case Some(terminalName) =>
-          (dateStr.toList ++ List(regionName, portCodeStr, terminalName, totalPcpPax, queueCells)).mkString(",") + "\n"
+          (dateStr.toList ++ List(regionName, portCodeStr, terminalName, capacity, totalPcpPax, queueCells)).mkString(",") + "\n"
         case None =>
-          (dateStr.toList ++ List(regionName, portCodeStr, totalPcpPax, queueCells)).mkString(",") + "\n"
+          (dateStr.toList ++ List(regionName, portCodeStr, capacity, totalPcpPax, queueCells)).mkString(",") + "\n"
       }
     }
 
-  private def passengersJson[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Option[T]) => String =
-    (queueCounts, maybeDateOrDateHour) => {
+  private def passengersJson[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Int, Option[T]) => String =
+    (queueCounts, capacity, maybeDateOrDateHour) => {
       val totalPcpPax = queueCounts.values.sum
       val (maybeDate, maybeHour) = maybeDateOrDateHour match {
         case Some(date: LocalDate) => (Option(date), None)
@@ -174,6 +195,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           (Option(sdate.toLocalDate), Option(sdate.getHours))
         case _ => (None, None)
       }
-      PassengersSummary(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
+      PassengersSummary(regionName, portCodeStr, maybeTerminalName, capacity, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
     }
 }

@@ -30,7 +30,7 @@ object FlightExports {
                               manifestsProvider: LocalDate => Future[VoyageManifests],
                              )
                              (implicit ec: ExecutionContext): (LocalDate, Seq[ApiFlightWithSplits]) => Future[Seq[String]] = {
-    val toCsv = FlightExports.flightsToCsvRows(port, terminal, paxFeedSourceOrder, manifestsProvider)
+    val toCsv = flightsToCsvRows(port, terminal, paxFeedSourceOrder, manifestsProvider)
     (date, flights) => toCsv(date, flights)
   }
 
@@ -63,16 +63,19 @@ object FlightExports {
     }
   }
 
-  private val relevantFlight: (LocalDate, Seq[ApiFlightWithSplits]) => Seq[ApiFlightWithSplits] =
-    (localDate, flights) =>
+  private val relevantFlight: List[FeedSource] => (LocalDate, Seq[ApiFlightWithSplits]) => Seq[ApiFlightWithSplits] =
+    paxFeedSourceOrder => (localDate, flights) =>
       flights.filter { fws =>
-        val pcpStart = SDate(fws.apiFlight.PcpTime.getOrElse(0L))
-        pcpStart.toLocalDate == localDate
+        val pcpRange = fws.apiFlight.pcpRange(paxFeedSourceOrder)
+        val pcpStart = SDate(pcpRange.min)
+        val pcpEnd = SDate(pcpRange.max)
+        pcpStart.toLocalDate == localDate || pcpEnd.toLocalDate == localDate
       }
 
   def flightsForLocalDateRangeProvider(utcFlightsProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                       paxFeedSourceOrder: List[FeedSource],
                                       ): (LocalDate, LocalDate) => Source[(LocalDate, Seq[ApiFlightWithSplits]), NotUsed] =
-    LocalDateStream(utcFlightsProvider, startBufferDays = 1, endBufferDays = 2, transformData = relevantFlight)
+    LocalDateStream(utcFlightsProvider, startBufferDays = 1, endBufferDays = 2, transformData = relevantFlight(paxFeedSourceOrder))
 
   def manifestsForLocalDateProvider(utcProvider: (UtcDate, UtcDate) => Source[(UtcDate, VoyageManifests), NotUsed])
                                    (implicit ec: ExecutionContext, mat: Materializer): LocalDate => Future[VoyageManifests] =
@@ -104,6 +107,7 @@ object FlightExports {
       arrival.ActualChox.map(millisToLocalDateTimeString(_)).getOrElse(""),
       arrival.differenceFromScheduled.map(_.toMinutes.toString).getOrElse(""),
       arrival.PcpTime.map(millisToLocalDateTimeString(_)).getOrElse(""),
+      arrival.MaxPax.map(_.toString).getOrElse("n/a"),
       arrival.bestPaxEstimate(paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse(""),
       arrival.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse(""),
     )

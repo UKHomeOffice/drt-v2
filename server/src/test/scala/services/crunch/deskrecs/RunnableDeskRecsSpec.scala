@@ -2,6 +2,7 @@ package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.SortedActorRefSource
+import akka.Done
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply
 import akka.stream.UniqueKillSwitch
@@ -120,6 +121,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = splitsCalc.terminalSplits,
+      updateCapacity = _ => Future.successful(Done),
     )
     val crunchRequest: MillisSinceEpoch => CrunchRequest =
       (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
