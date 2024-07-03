@@ -34,6 +34,7 @@ import scala.collection.immutable.HashSet
 import scala.scalajs.js
 import scala.scalajs.js.timers._
 import scala.scalajs.js.JSConverters._
+import scala.util.Try
 
 object FlightTable {
   case class Props(queueOrder: Seq[Queue],
@@ -60,7 +61,8 @@ object FlightTable {
                    showNumberOfVisaNationals: Boolean,
                    selectedAgeGroups: Seq[String],
                    selectedNationalities: Seq[Country],
-                   flightNumber: String)
+                   flightNumber: String,
+                   showHighlightedRows: Boolean)
 
   implicit val reuseProps: Reusability[Props] = Reusability {
     (a, b) =>
@@ -98,7 +100,7 @@ object FlightTable {
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .initialStateFromProps( p => State(false, false, Seq.empty, Seq.empty, p.filterFlightNumber))
+    .initialStateFromProps( p => State(false, false, Seq.empty, Seq.empty, p.filterFlightNumber, false))
     .renderPS { (scope, props, state) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
@@ -133,6 +135,7 @@ object FlightTable {
       val showAllCallback: js.Function1[js.Object, Unit] = (event: js.Object) => {
         // Handle the show all action here
         val radioButtonValue = event.asInstanceOf[ReactEventFromInput].target.value
+        scope.modState(s => s.copy(showHighlightedRows = Try(radioButtonValue.toBoolean).getOrElse(false))).runNow()
         println(s"Radio button value: $radioButtonValue")
 
       }
@@ -212,11 +215,12 @@ object FlightTable {
                   redListUpdates = props.redListUpdates,
                   airportConfig = props.airportConfig,
                   walkTimes = props.walkTimes,
-                  flaggedNationalities = state.selectedNationalities.toSet,
+                  flaggedNationalities = scope.state.selectedNationalities.toSet,
                   viewStart = props.viewStart,
                   viewEnd = props.viewEnd,
                   paxFeedSourceOrder = props.paxFeedSourceOrder,
-                  filterFlightNumber = scope.state.flightNumber
+                  filterFlightNumber = scope.state.flightNumber,
+                  showHighlightedRows = scope.state.showHighlightedRows,
                 ))
             }
           ),

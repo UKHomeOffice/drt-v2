@@ -227,14 +227,7 @@ object FlightTableRow {
         flaggedNationalities
           .map { country =>
             val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
-            if (pax > 0) Option(MuiChip(
-              label = VdomNode(s"($pax) ${country.threeLetterCode}"),
-              sx = SxProps(Map(
-                "color" -> "#FFFFFF",
-                "backgroundColor" -> "#316CCC",
-                "fontSize" -> DrtTheme.theme.typography.body2.fontSize,
-              ))
-            )())
+            if (pax > 0) Option(FlightHighlightChip(s"($pax) ${country.threeLetterCode}"))
             else None
           }
           .collect {
