@@ -246,7 +246,13 @@ object FlightTableRow {
   }
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
-    val gateOrStand = <.span(^.key := "gate-or-stand", ^.className := "no-wrap underline", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
+    val content = (arrival.Gate, arrival.Stand) match {
+      case (Some(gate), Some(stand)) => <.span(s"Gate $gate", <.br(), s"Stand $stand")
+      case (Some(gate), _) => <.span(s"Gate $gate")
+      case (_, Some(stand)) => <.span(s"Stand $stand")
+      case _ => <.span("Not available")
+    }
+    val gateOrStand = <.span(^.key := "gate-or-stand", ^.className := "no-wrap underline", content)
     val maybeActualWalkTime = walkTimes.maybeWalkTimeMinutes(arrival.Gate, arrival.Stand, arrival.Terminal)
 
     val description = (paxAreDiverted, maybeActualWalkTime.isDefined) match {

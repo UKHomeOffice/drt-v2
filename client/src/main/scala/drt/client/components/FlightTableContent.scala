@@ -236,8 +236,6 @@ object FlightTableContent {
           <.div(^.cls := "arrivals__table__flight-code-wrapper", label, " ", wbrFlightColorTooltip)
         )
         case (label, None) => <.th(label)
-        case (label, Some(className)) if className == "status" => <.th(label, ^.className := className)
-        case (label, Some(className)) if className == "gate-stand" => <.th(label, ^.className := className)
         case (label, Some(className)) if className == "country" => <.th(label, " ", countryTooltip, ^.className := className)
         case (label, Some(className)) => <.th(label, ^.className := className)
       }
