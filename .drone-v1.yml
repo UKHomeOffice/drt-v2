@@ -10,7 +10,7 @@ platform:
 steps:
   - name: Build app
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:latest
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:ae3a381cfbd73f4cadf1810f9717768fd5abaa2e
     commands:
       - /root/entrypoint.sh
       - sbt --error compile docker:stage
@@ -64,7 +64,7 @@ steps:
 
   - name: Unit tests
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:latest
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:ae3a381cfbd73f4cadf1810f9717768fd5abaa2e
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error test
@@ -81,7 +81,7 @@ steps:
 
   - name: Code coverage report
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:latest
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:ae3a381cfbd73f4cadf1810f9717768fd5abaa2e
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 --error coverage test | true
@@ -101,7 +101,7 @@ steps:
 
   - name: Scapegoat
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:latest
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:ae3a381cfbd73f4cadf1810f9717768fd5abaa2e
     commands:
       - /root/entrypoint.sh
       - sbt scapegoat | true
@@ -121,7 +121,7 @@ steps:
 
   - name: Dependency check
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:latest
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:ae3a381cfbd73f4cadf1810f9717768fd5abaa2e
     commands:
       - /root/entrypoint.sh
       - sbt -mem 4096 dependencyCheck

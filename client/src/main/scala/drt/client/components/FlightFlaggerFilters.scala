@@ -15,6 +15,7 @@ trait SearchFilterPayload extends js.Object {
   var selectedAgeGroups: js.Array[String]
   var selectedNationalities: js.Array[String]
   var flightNumber: String
+  var requireAllSelected: Boolean
 }
 
 object SearchFilterPayload {
@@ -23,7 +24,8 @@ object SearchFilterPayload {
              showNumberOfVisaNationals: Boolean,
              selectedAgeGroups: js.Array[String],
              selectedNationalities: js.Array[String],
-             flightNumber: String
+             flightNumber: String,
+             requireAllSelected: Boolean
            ): SearchFilterPayload = {
     val p = (new js.Object).asInstanceOf[SearchFilterPayload]
     p.showTransitPaxNumber = showTransitPaxNumber
@@ -31,6 +33,7 @@ object SearchFilterPayload {
     p.selectedAgeGroups = selectedAgeGroups
     p.selectedNationalities = selectedNationalities
     p.flightNumber = flightNumber
+    p.requireAllSelected = requireAllSelected
     p
   }
 }

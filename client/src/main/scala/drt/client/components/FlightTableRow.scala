@@ -9,7 +9,7 @@ import drt.client.components.styles.{ArrivalsPageStylesDefault, DrtTheme}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
-import drt.shared.api.{FlightManifestSummary, WalkTimes}
+import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist._
 import io.kinoplan.scalajs.react.material.ui.core.MuiChip
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
@@ -20,9 +20,11 @@ import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
 import org.scalajs.dom.html.{Div, Span}
 import scalacss.ScalaCssReact
+import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
+import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -56,6 +58,11 @@ object FlightTableRow {
                    includeIndirectRedListColumn: Boolean,
                    walkTimes: WalkTimes,
                    flaggedNationalities: Set[Country],
+                   flaggedAgeGroups: Set[PaxAgeRange],
+                   showTransitPaxNumber: Boolean,
+                   showNumberOfVisaNationals: Boolean,
+                   showHighlightedRows: Boolean,
+                   showRequireAllSelected: Boolean,
                    manifestSummary: Option[FlightManifestSummary],
                    paxFeedSourceOrder: List[FeedSource],
                   ) extends UseValueEq
@@ -172,7 +179,12 @@ object FlightTableRow {
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
         if (props.flaggedNationalities.nonEmpty)
-          <.td(^.className := "arrivals__table__flags-column", nationalityChips(props.flaggedNationalities, props.manifestSummary))
+          <.td(^.className := "arrivals__table__flags-column", highlightedChips(props.showTransitPaxNumber,
+            props.showNumberOfVisaNationals,
+            props.showRequireAllSelected,
+            props.flaggedAgeGroups,
+            props.flaggedNationalities,
+            props.manifestSummary))
         else EmptyVdom,
         <.td(gateOrStand(flight, props.airportConfig.defaultWalkTimeMillis(flight.Terminal), props.directRedListFlight.paxDiversion, props.walkTimes)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
@@ -220,7 +232,12 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  private def nationalityChips(flaggedNationalities: Set[Country], manifestSummary: Option[FlightManifestSummary]): html_<^.VdomNode = {
+  private def highlightedChips(showTransitPaxNumber: Boolean,
+                               showNumberOfVisaNationals: Boolean,
+                               showRequireAllSelected: Boolean,
+                               flaggedAgeGroups: Set[PaxAgeRange],
+                               flaggedNationalities: Set[Country],
+                               manifestSummary: Option[FlightManifestSummary]): html_<^.VdomNode = {
     manifestSummary.map { summary =>
       <.div(
         ^.style := js.Dictionary("display" -> "flex", "flexWrap" -> "wrap", "gap" -> "8px"),
@@ -233,9 +250,20 @@ object FlightTableRow {
           .collect {
             case Some(chip) => chip
           }
-          .toTagMod
+          .toTagMod,
+        flaggedAgeGroups
+          .map { ageRanges =>
+            val pax = summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0)
+            if (pax > 0) Option(FlightHighlightChip(s"($pax) ${ageRanges.title}"))
+            else None
+          }.collect {
+          case Some(chip) => chip
+        }.toTagMod,
+        Seq(if (showNumberOfVisaNationals && summary.paxTypes.getOrElse(VisaNational, 0) > 0) Option(FlightHighlightChip(s"(${summary.paxTypes(VisaNational)}) Visa Nationals")) else None).toTagMod,
+        Seq(if (showTransitPaxNumber && summary.paxTypes.getOrElse(Transit, 0) > 0) Option(FlightHighlightChip(s"(${summary.paxTypes(Transit)}) Transit")) else None).toTagMod
       )
     }.getOrElse(EmptyVdom)
+
   }
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {

@@ -10,7 +10,7 @@ import drt.client.logger.LoggerFactory
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
-import drt.shared.api.{FlightManifestSummary, WalkTimes}
+import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
@@ -51,11 +51,15 @@ object FlightTableContent {
                    airportConfig: AirportConfig,
                    walkTimes: WalkTimes,
                    flaggedNationalities: Set[Country],
+                   flaggedAgeGroups: Set[PaxAgeRange],
+                   showTransitPaxNumber: Boolean,
+                   showNumberOfVisaNationals: Boolean,
+                   showHighlightedRows: Boolean,
+                   showRequireAllSelected: Boolean,
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
                    paxFeedSourceOrder: List[FeedSource],
                    filterFlightNumber: String,
-                   showHighlightedRows: Boolean
                   ) extends UseValueEq
 
   implicit val reuseProps: Reusability[Props] = Reusability {
@@ -89,7 +93,7 @@ object FlightTableContent {
         flights.filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(filter.toLowerCase)
           || f.apiFlight.Origin.iata.toLowerCase.contains(filter.toLowerCase)
           || airportInfos.get(f.apiFlight.Origin).exists(airportInfo => airportInfo
-            .exists(_.country.toLowerCase.contains(filter.toLowerCase))))
+          .exists(_.country.toLowerCase.contains(filter.toLowerCase))))
       }
 
       modelRCP(modelMP => {
@@ -156,6 +160,11 @@ object FlightTableContent {
                         includeIndirectRedListColumn = redListPaxExist,
                         walkTimes = props.walkTimes,
                         flaggedNationalities = props.flaggedNationalities,
+                        flaggedAgeGroups = props.flaggedAgeGroups,
+                        showTransitPaxNumber = props.showTransitPaxNumber,
+                        showNumberOfVisaNationals = props.showNumberOfVisaNationals,
+                        showHighlightedRows = props.showNumberOfVisaNationals,
+                        showRequireAllSelected = props.showRequireAllSelected,
                         manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
                         paxFeedSourceOrder = props.paxFeedSourceOrder,
                       ))
