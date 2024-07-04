@@ -15,7 +15,7 @@ object ToolTips {
 
   val availableStaffDeploymentsTooltip = Tippy.infoHover("This view shows the minimum number of staff needed to help avoid breaching SLAs within the constraints of staff available.")
 
-  val countryTooltip = Tippy.info(<.span("Countries on COVID-19 red list are now underlined in red. This is an interim change to quickly highlight this information. We welcome your feedback."))
+  val countryTooltip = Tippy.info(<.span("In relevant historical time periods, countries on the COVID-19 UK red list are underlined in red."))
 
   val processingTimesTooltip = Tippy.info("Processing times are unique to each port. If they don't look right contact us and we'll get them changed for you.")
 
