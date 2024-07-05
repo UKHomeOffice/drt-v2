@@ -67,7 +67,12 @@ object FlightTableContent {
       a.portState.latestUpdate == b.portState.latestUpdate &&
         a.flightManifestSummaries == b.flightManifestSummaries &&
         a.flaggedNationalities == b.flaggedNationalities &&
+        a.flaggedAgeGroups == b.flaggedAgeGroups &&
         a.filterFlightNumber == b.filterFlightNumber &&
+        a.showTransitPaxNumber ==b.showTransitPaxNumber &&
+        a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
+        a.showHighlightedRows == b.showHighlightedRows &&
+        a.showRequireAllSelected == b.showRequireAllSelected &&
         a.viewStart == b.viewStart &&
         a.viewEnd == b.viewEnd
   }
