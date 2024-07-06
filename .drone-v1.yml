@@ -10,9 +10,9 @@ platform:
 steps:
   - name: Build app
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.1.3
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.2.0
     commands:
-      - /root/entrypoint.sh
+      - bash /app/entrypoint.sh
       - sbt --error compile docker:stage
     environment:
       ARTIFACTORY_PASSWORD:
@@ -64,9 +64,9 @@ steps:
 
   - name: Unit tests
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.1.3
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.2.0
     commands:
-      - /root/entrypoint.sh
+      - bash /app/entrypoint.sh
       - sbt -mem 4096 --error test
     environment:
       ARTIFACTORY_PASSWORD:
@@ -81,9 +81,9 @@ steps:
 
   - name: Code coverage report
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.1.3
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.2.0
     commands:
-      - /root/entrypoint.sh
+      - bash /app/entrypoint.sh
       - sbt -mem 4096 --error coverage test | true
       - sbt coverageReport
     environment:
@@ -101,9 +101,9 @@ steps:
 
   - name: Scapegoat
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.1.3
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.2.0
     commands:
-      - /root/entrypoint.sh
+      - bash /app/entrypoint.sh
       - sbt scapegoat | true
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
@@ -121,9 +121,9 @@ steps:
 
   - name: Dependency check
     pull: if-not-exists
-    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.1.3
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.2.0
     commands:
-      - /root/entrypoint.sh
+      - bash /app/entrypoint.sh
       - sbt -mem 4096 dependencyCheck
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
