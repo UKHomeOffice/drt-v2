@@ -12,7 +12,7 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.2.0-beta1
     commands:
-      - /root/entrypoint.sh
+#      - /root/entrypoint.sh
       - node --version
       - sbt --error compile docker:stage
     environment:
