@@ -1,6 +1,5 @@
 package actors.flights
 
-import actors.DateRange
 import actors.routing.FlightsRouterActor
 import actors.routing.FlightsRouterActor._
 import controllers.ArrivalGenerator

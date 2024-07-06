@@ -1,6 +1,5 @@
 package actors.persistent
 
-import actors.DateRange
 import actors.PartitionedPortStateActor._
 import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
 import actors.persistent.staffing.GetFeedStatuses

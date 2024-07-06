@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DateRange
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
@@ -16,7 +15,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
