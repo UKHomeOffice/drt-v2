@@ -5,7 +5,7 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.{LocalDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, UtcDate}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt

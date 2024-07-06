@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}
 
 import scala.collection.immutable
 import scala.concurrent.{ExecutionContext, Future}
