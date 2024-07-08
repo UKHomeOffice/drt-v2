@@ -15,6 +15,7 @@ steps:
       - /app/entrypoint.sh
       - sbt --error compile docker:stage
     environment:
+      NVD_BASE_URL: http://nvdmirror:8008
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
       ARTIFACTORY_USERNAME: drt_ci
