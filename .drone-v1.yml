@@ -66,7 +66,7 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.3.0
     commands:
-      - /root/entrypoint.sh
+      - /app/entrypoint.sh
       - sbt -mem 4096 --error test
     environment:
       ARTIFACTORY_PASSWORD:
@@ -83,7 +83,7 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.3.0
     commands:
-      - /root/entrypoint.sh
+      - /app/entrypoint.sh
       - sbt -mem 4096 --error coverage test | true
       - sbt coverageReport
     environment:
@@ -103,7 +103,7 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.3.0
     commands:
-      - /root/entrypoint.sh
+      - /app/entrypoint.sh
       - sbt scapegoat | true
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
@@ -123,7 +123,7 @@ steps:
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.3.0
     commands:
-      - /root/entrypoint.sh
+      - /app/entrypoint.sh
       - sbt -mem 4096 dependencyCheck
     environment:
       NVD_BASE_URL: http://nvdmirror:8008
