@@ -5,7 +5,7 @@ import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
 import drt.client.components.FlightComponents.{SplitsGraph, paxFeedSourceClass}
-import drt.client.components.styles.{ArrivalsPageStylesDefault, DrtTheme}
+import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
@@ -241,70 +241,42 @@ object FlightTableRow {
           else None
         }
 
-        val flaggedNationalitiesChips = flaggedNationalities.flatMap { country =>
+        val flaggedNationalitiesChips: Set[Option[VdomElement]] = flaggedNationalities.map { country =>
           val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
           generateChip(pax > 0, pax, country.threeLetterCode)
         }
 
-        val flaggedAgeGroupsChips = flaggedAgeGroups.flatMap { ageRanges =>
+        val flaggedAgeGroupsChips: Set[Option[VdomElement]] = flaggedAgeGroups.map { ageRanges =>
           val pax = summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0)
           generateChip(pax > 0, pax, ageRanges.title)
         }
 
-        val visaNationalsChip = generateChip(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0), "Visa Nationals")
-        val transitChip = generateChip(showTransitPaxNumber, summary.paxTypes.getOrElse(Transit, 0), "Transit")
+        val visaNationalsChip: Option[VdomElement] = generateChip(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0), "Visa Nationals")
+        val transitChip: Option[VdomElement] = generateChip(showTransitPaxNumber, summary.paxTypes.getOrElse(Transit, 0), "Transit")
 
-        val chips: Set[VdomElement] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ visaNationalsChip ++ transitChip
+        val chips: Set[Option[VdomElement]] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ Set(visaNationalsChip) ++ Set(transitChip)
+
+
         if (showRequireAllSelected) {
-          (flaggedNationalities.nonEmpty, flaggedAgeGroups.nonEmpty, showNumberOfVisaNationals, showTransitPaxNumber) match {
-            case (true, true, true, true) if (flaggedNationalitiesChips.nonEmpty && flaggedAgeGroupsChips.nonEmpty && visaNationalsChip.nonEmpty && transitChip.nonEmpty) =>
-              chips.toTagMod
-            case (true, true, true, false) if (flaggedNationalitiesChips.nonEmpty && flaggedAgeGroupsChips.nonEmpty && visaNationalsChip.nonEmpty) =>
-              (flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ visaNationalsChip).toTagMod
+          val conditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = List(
+            (flaggedNationalities.nonEmpty, flaggedNationalitiesChips),
+            (flaggedAgeGroups.nonEmpty, flaggedAgeGroupsChips),
+            (showNumberOfVisaNationals, Set(visaNationalsChip)),
+            (showTransitPaxNumber, Set(transitChip))
+          )
 
-            case (true, true, false, false) if (flaggedNationalitiesChips.nonEmpty && flaggedAgeGroupsChips.nonEmpty) =>
-              (flaggedNationalitiesChips ++ flaggedAgeGroupsChips).toTagMod
+          val trueConditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = conditionsAndChips.filter(_._1)
 
-            case (true, true, false, true) if (flaggedNationalitiesChips.nonEmpty && flaggedAgeGroupsChips.nonEmpty && transitChip.nonEmpty) =>
-              (flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ transitChip).toTagMod
-
-            case (true, false, true, true) if (flaggedNationalitiesChips.nonEmpty && visaNationalsChip.nonEmpty && transitChip.nonEmpty) =>
-              (flaggedNationalitiesChips ++ visaNationalsChip ++ transitChip).toTagMod
-
-            case (true, false, true, false) if (flaggedNationalitiesChips.nonEmpty && visaNationalsChip.nonEmpty) =>
-              (flaggedNationalitiesChips ++ visaNationalsChip).toTagMod
-
-            case (true, false, false, true) if (flaggedNationalitiesChips.nonEmpty && transitChip.nonEmpty) =>
-              (flaggedNationalitiesChips ++ transitChip).toTagMod
-
-            case (true, false, false, false) if (flaggedNationalitiesChips.nonEmpty) =>
-              flaggedNationalitiesChips.toTagMod
-
-            case (false, true, true, true) if (flaggedAgeGroupsChips.nonEmpty && visaNationalsChip.nonEmpty && transitChip.nonEmpty) =>
-              (flaggedAgeGroupsChips ++ visaNationalsChip ++ transitChip).toTagMod
-
-            case (false, true, true, false) if (flaggedAgeGroupsChips.nonEmpty && visaNationalsChip.nonEmpty) =>
-              (flaggedAgeGroupsChips ++ visaNationalsChip).toTagMod
-
-            case (false, true, false, false) if (flaggedAgeGroupsChips.nonEmpty) =>
-              flaggedAgeGroupsChips.toTagMod
-
-            case (false, false, true, true) if (visaNationalsChip.nonEmpty && transitChip.nonEmpty) =>
-              (visaNationalsChip ++ transitChip).toTagMod
-
-            case (false, false, true, false) if (visaNationalsChip.nonEmpty) =>
-              visaNationalsChip.toTagMod
-
-            case (false, false, false, true) if (transitChip.nonEmpty) =>
-              transitChip.toTagMod
-
-            case _ => EmptyVdom
+          if (trueConditionsAndChips.map(_._2).forall(_.exists(_.nonEmpty))) {
+            trueConditionsAndChips.flatMap(_._2).flatten.toTagMod
+          } else {
+            EmptyVdom
           }
         } else {
-          if (chips.nonEmpty) {
+          if (chips.exists(_.isDefined)) {
             <.div(
               ^.style := js.Dictionary("display" -> "flex", "flexWrap" -> "wrap", "gap" -> "8px"),
-              chips.toTagMod
+              chips.flatten.toTagMod
             )
           } else EmptyVdom
         }
