@@ -69,7 +69,7 @@ object FlightTableContent {
         a.flaggedNationalities == b.flaggedNationalities &&
         a.flaggedAgeGroups == b.flaggedAgeGroups &&
         a.filterFlightNumber == b.filterFlightNumber &&
-        a.showTransitPaxNumber ==b.showTransitPaxNumber &&
+        a.showTransitPaxNumber == b.showTransitPaxNumber &&
         a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
         a.showHighlightedRows == b.showHighlightedRows &&
         a.showRequireAllSelected == b.showRequireAllSelected &&
@@ -125,7 +125,10 @@ object FlightTableContent {
           flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
         val flightsWithCodeShares = CodeShares.uniqueArrivalsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
-
+        val isShowFlagger = props.flaggedNationalities.nonEmpty ||
+                            props.flaggedAgeGroups.nonEmpty ||
+                            props.showTransitPaxNumber ||
+                            props.showNumberOfVisaNationals
         <.div(
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
@@ -135,7 +138,7 @@ object FlightTableContent {
               } else <.div(),
               <.div(<.table(
                 ^.className := "arrivals-table table-striped",
-                tableHead(props, props.queueOrder, redListPaxExist, shortLabel, props.flaggedNationalities.nonEmpty),
+                tableHead(props, props.queueOrder, redListPaxExist, shortLabel, isShowFlagger),
                 <.tbody(
                   sortedFlights.zipWithIndex.map {
                     case ((flightWithSplits, codeShares), idx) =>

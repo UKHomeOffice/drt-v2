@@ -11,8 +11,6 @@ import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist._
-import io.kinoplan.scalajs.react.material.ui.core.MuiChip
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
@@ -20,7 +18,6 @@ import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
 import org.scalajs.dom.html.{Div, Span}
 import scalacss.ScalaCssReact
-import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
@@ -178,14 +175,13 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        if (props.flaggedNationalities.nonEmpty)
+        if (props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showTransitPaxNumber || props.showNumberOfVisaNationals)
           <.td(^.className := "arrivals__table__flags-column", highlightedChips(props.showTransitPaxNumber,
             props.showNumberOfVisaNationals,
             props.showRequireAllSelected,
             props.flaggedAgeGroups,
             props.flaggedNationalities,
-            props.manifestSummary))
-        else EmptyVdom,
+            props.manifestSummary)) else EmptyVdom,
         <.td(gateOrStand(flight, props.airportConfig.defaultWalkTimeMillis(flight.Terminal), props.directRedListFlight.paxDiversion, props.walkTimes)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
@@ -238,32 +234,81 @@ object FlightTableRow {
                                flaggedAgeGroups: Set[PaxAgeRange],
                                flaggedNationalities: Set[Country],
                                manifestSummary: Option[FlightManifestSummary]): html_<^.VdomNode = {
-    manifestSummary.map { summary =>
-      <.div(
-        ^.style := js.Dictionary("display" -> "flex", "flexWrap" -> "wrap", "gap" -> "8px"),
-        flaggedNationalities
-          .map { country =>
-            val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
-            if (pax > 0) Option(FlightHighlightChip(s"($pax) ${country.threeLetterCode}"))
-            else None
-          }
-          .collect {
-            case Some(chip) => chip
-          }
-          .toTagMod,
-        flaggedAgeGroups
-          .map { ageRanges =>
-            val pax = summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0)
-            if (pax > 0) Option(FlightHighlightChip(s"($pax) ${ageRanges.title}"))
-            else None
-          }.collect {
-          case Some(chip) => chip
-        }.toTagMod,
-        Seq(if (showNumberOfVisaNationals && summary.paxTypes.getOrElse(VisaNational, 0) > 0) Option(FlightHighlightChip(s"(${summary.paxTypes(VisaNational)}) Visa Nationals")) else None).toTagMod,
-        Seq(if (showTransitPaxNumber && summary.paxTypes.getOrElse(Transit, 0) > 0) Option(FlightHighlightChip(s"(${summary.paxTypes(Transit)}) Transit")) else None).toTagMod
-      )
-    }.getOrElse(EmptyVdom)
+    <.div(
+      manifestSummary.map { summary =>
+        def generateChip(condition: Boolean, pax: Int, label: String): Option[VdomElement] = {
+          if (condition && pax > 0) Option(FlightHighlightChip(s"($pax) $label"))
+          else None
+        }
 
+        val flaggedNationalitiesChips = flaggedNationalities.flatMap { country =>
+          val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
+          generateChip(pax > 0, pax, country.threeLetterCode)
+        }
+
+        val flaggedAgeGroupsChips = flaggedAgeGroups.flatMap { ageRanges =>
+          val pax = summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0)
+          generateChip(pax > 0, pax, ageRanges.title)
+        }
+
+        val visaNationalsChip = generateChip(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0), "Visa Nationals")
+        val transitChip = generateChip(showTransitPaxNumber, summary.paxTypes.getOrElse(Transit, 0), "Transit")
+
+        val chips: Set[VdomElement] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ visaNationalsChip ++ transitChip
+        if (showRequireAllSelected) {
+          (flaggedNationalities.nonEmpty, flaggedAgeGroups.nonEmpty, showNumberOfVisaNationals, showTransitPaxNumber) match {
+            case (true, true, true, true) if (flaggedNationalitiesChips.nonEmpty && flaggedAgeGroupsChips.nonEmpty && visaNationalsChip.nonEmpty && transitChip.nonEmpty) =>
+              chips.toTagMod
+            case (true, true, true, false) if (flaggedNationalitiesChips.nonEmpty && flaggedAgeGroupsChips.nonEmpty && visaNationalsChip.nonEmpty) =>
+              (flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ visaNationalsChip).toTagMod
+
+            case (true, true, false, false) if (flaggedNationalitiesChips.nonEmpty && flaggedAgeGroupsChips.nonEmpty) =>
+              (flaggedNationalitiesChips ++ flaggedAgeGroupsChips).toTagMod
+
+            case (true, true, false, true) if (flaggedNationalitiesChips.nonEmpty && flaggedAgeGroupsChips.nonEmpty && transitChip.nonEmpty) =>
+              (flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ transitChip).toTagMod
+
+            case (true, false, true, true) if (flaggedNationalitiesChips.nonEmpty && visaNationalsChip.nonEmpty && transitChip.nonEmpty) =>
+              (flaggedNationalitiesChips ++ visaNationalsChip ++ transitChip).toTagMod
+
+            case (true, false, true, false) if (flaggedNationalitiesChips.nonEmpty && visaNationalsChip.nonEmpty) =>
+              (flaggedNationalitiesChips ++ visaNationalsChip).toTagMod
+
+            case (true, false, false, true) if (flaggedNationalitiesChips.nonEmpty && transitChip.nonEmpty) =>
+              (flaggedNationalitiesChips ++ transitChip).toTagMod
+
+            case (true, false, false, false) if (flaggedNationalitiesChips.nonEmpty) =>
+              flaggedNationalitiesChips.toTagMod
+
+            case (false, true, true, true) if (flaggedAgeGroupsChips.nonEmpty && visaNationalsChip.nonEmpty && transitChip.nonEmpty) =>
+              (flaggedAgeGroupsChips ++ visaNationalsChip ++ transitChip).toTagMod
+
+            case (false, true, true, false) if (flaggedAgeGroupsChips.nonEmpty && visaNationalsChip.nonEmpty) =>
+              (flaggedAgeGroupsChips ++ visaNationalsChip).toTagMod
+
+            case (false, true, false, false) if (flaggedAgeGroupsChips.nonEmpty) =>
+              flaggedAgeGroupsChips.toTagMod
+
+            case (false, false, true, true) if (visaNationalsChip.nonEmpty && transitChip.nonEmpty) =>
+              (visaNationalsChip ++ transitChip).toTagMod
+
+            case (false, false, true, false) if (visaNationalsChip.nonEmpty) =>
+              visaNationalsChip.toTagMod
+
+            case (false, false, false, true) if (transitChip.nonEmpty) =>
+              transitChip.toTagMod
+
+            case _ => EmptyVdom
+          }
+        } else {
+          if (chips.nonEmpty) {
+            <.div(
+              ^.style := js.Dictionary("display" -> "flex", "flexWrap" -> "wrap", "gap" -> "8px"),
+              chips.toTagMod
+            )
+          } else EmptyVdom
+        }
+      }.getOrElse(EmptyVdom))
   }
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
