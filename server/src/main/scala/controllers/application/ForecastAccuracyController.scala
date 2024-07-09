@@ -1,6 +1,5 @@
 package controllers.application
 
-import actors.DateRange
 import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
@@ -16,7 +15,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.prediction.ModelAndFeatures
 import uk.gov.homeoffice.drt.prediction.arrival.ArrivalModelAndFeatures
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate}
 import upickle.default.write
 
 import scala.concurrent.Future

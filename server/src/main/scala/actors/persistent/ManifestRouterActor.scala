@@ -1,6 +1,5 @@
 package actors.persistent
 
-import actors.DateRange
 import actors.PartitionedPortStateActor._
 import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
 import actors.persistent.staffing.GetFeedStatuses
@@ -25,7 +24,7 @@ import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FeedStatusMessage
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.{VoyageManifestLatestFileNameMessage, VoyageManifestStateSnapshotMessage}
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion.{feedStatusFromFeedStatusMessage, feedStatusToMessage, feedStatusesFromFeedStatusesMessage, feedStatusesToMessage}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}

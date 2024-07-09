@@ -1,6 +1,5 @@
 package actors.routing
 
-import actors.DateRange
 import actors.PartitionedPortStateActor.{DateRangeMillisLike, PointInTimeQuery}
 import actors.daily.RequestAndTerminate
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
@@ -17,7 +16,7 @@ import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateRange, SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -1,17 +1,16 @@
 package services.dataretention
 
-import actors.DateRange
 import akka.Done
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import org.slf4j.LoggerFactory
 import slickdb.dao.{AggregatedDao, AkkaDao}
-import slickdb.{AggregatedDbTables, AkkaDbTables, dao}
-import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
+import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.prediction.ModelCategory
 import uk.gov.homeoffice.drt.prediction.category.FlightCategory
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
