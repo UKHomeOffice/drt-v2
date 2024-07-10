@@ -9,7 +9,6 @@ import drt.server.feeds.{ArrivalsFeedResponse, Feed}
 import drt.shared.CrunchApi._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus._
-import services.TryCrunchWholePax
 import uk.gov.homeoffice.drt.arrivals.FeedArrival
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -38,7 +37,6 @@ case class CrunchProps[FT](portStateActor: ActorRef,
                            arrivalsForecastFeed: Feed[FT],
                            arrivalsLiveBaseFeed: Feed[FT],
                            arrivalsLiveFeed: Feed[FT],
-                           optimiser: TryCrunchWholePax,
                            startDeskRecs: () => (ActorRef, ActorRef, ActorRef, ActorRef, Iterable[UniqueKillSwitch]),
                            passengerAdjustments: List[FeedArrival] => Future[List[FeedArrival]],
                            system: ActorSystem,

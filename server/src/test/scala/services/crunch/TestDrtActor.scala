@@ -395,7 +395,6 @@ class TestDrtActor extends Actor {
         arrivalsForecastFeed = Feed(forecastArrivals, 1.second, 5.second),
         arrivalsLiveBaseFeed = Feed(liveBaseArrivals, 1.second, 1.second),
         arrivalsLiveFeed = Feed(liveArrivals, 1.second, 500.millis),
-        optimiser = tc.cruncher,
         startDeskRecs = startDeskRecs,
         passengerAdjustments = tc.passengerAdjustments,
         system = system,

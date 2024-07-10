@@ -102,6 +102,9 @@ class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable
 
     case LookupHistoricPaxNos(um) =>
       queueLookups(um, maybeQueueHistoricPaxLookupSubscriber, historicPaxArrivalKeys, "historic pax nos")
+
+    case other =>
+      log.warn(s"CrunchManagerActor received unexpected message: $other")
   }
 
   private def queueLookups(millis: Set[Long], subscriber: Option[ActorRef], lookup: UtcDate => Future[Iterable[UniqueArrival]], label: String)

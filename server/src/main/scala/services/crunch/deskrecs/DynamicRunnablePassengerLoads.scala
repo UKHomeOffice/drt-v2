@@ -19,7 +19,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.collection.SortedSet
-import scala.collection.immutable.SortedMap
+import scala.collection.immutable.{NumericRange, SortedMap}
 import scala.concurrent.{ExecutionContext, Future}
 
 
