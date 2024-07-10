@@ -43,7 +43,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val params: DrtParameters
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
-    log.info(s"headers... ${headers.toSimpleMap}")
     if (params.isSuperUserMode) {
       system.log.debug(s"Using Super User Roles")
       Roles.availableRoles
