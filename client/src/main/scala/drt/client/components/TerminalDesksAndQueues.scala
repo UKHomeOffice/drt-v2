@@ -217,7 +217,7 @@ object TerminalDesksAndQueues {
             val maxPaxInQueues: Map[Queue, Int] = terminalCrunchMinutes
               .toList
               .flatMap {
-                case (minute, queuesAndMinutes) =>
+                case (_, queuesAndMinutes) =>
                   queuesAndMinutes.map {
                     case (queue, cm) => (queue, cm.maybePaxInQueue.getOrElse(0))
                   }
@@ -231,14 +231,7 @@ object TerminalDesksAndQueues {
             <.div(
               <.div(^.className := "desks-and-queues-top",
                 viewTypeControls(props.featureFlags.displayWaitTimesToggle),
-                if (props.loggedInUser.hasRole(SuperAdmin)) <.div(MuiButton(
-                  variant = "outlined",
-                  size = "medium",
-                  color = Color.primary
-                )(MuiIcons(RefreshOutlined)(),
-                  ^.onClick --> requestForecastRecrunch(),
-                  "Request re-crunch")
-                ) else EmptyVdom,
+                if (props.loggedInUser.hasRole(SuperAdmin)) adminRecrunchButton(requestForecastRecrunch _) else EmptyVdom,
                 StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
               ),
               if (state.displayType == ChartsView) {
@@ -286,6 +279,17 @@ object TerminalDesksAndQueues {
         }
       )
     }
+  }
+
+  private def adminRecrunchButton(requestForecastRecrunch: () => Callback): VdomTagOf[Div] = {
+    <.div(MuiButton(
+      variant = "outlined",
+      size = "medium",
+      color = Color.primary
+    )(MuiIcons(RefreshOutlined)(),
+      ^.onClick --> requestForecastRecrunch(),
+      "Request re-crunch")
+    )
   }
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
