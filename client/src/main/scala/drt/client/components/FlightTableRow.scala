@@ -256,22 +256,19 @@ object FlightTableRow {
 
         val chips: Set[Option[VdomElement]] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ Set(visaNationalsChip) ++ Set(transitChip)
 
+        val conditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = List(
+          (flaggedNationalities.nonEmpty, flaggedNationalitiesChips),
+          (flaggedAgeGroups.nonEmpty, flaggedAgeGroupsChips),
+          (showNumberOfVisaNationals, Set(visaNationalsChip)),
+          (showTransitPaxNumber, Set(transitChip))
+        )
+
+        val trueConditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = conditionsAndChips.filter(_._1)
 
         if (showRequireAllSelected) {
-          val conditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = List(
-            (flaggedNationalities.nonEmpty, flaggedNationalitiesChips),
-            (flaggedAgeGroups.nonEmpty, flaggedAgeGroupsChips),
-            (showNumberOfVisaNationals, Set(visaNationalsChip)),
-            (showTransitPaxNumber, Set(transitChip))
-          )
-
-          val trueConditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = conditionsAndChips.filter(_._1)
-
-          if (trueConditionsAndChips.map(_._2).forall(_.exists(_.nonEmpty))) {
+          if (trueConditionsAndChips.map(_._2).forall(_.exists(_.nonEmpty)))
             trueConditionsAndChips.flatMap(_._2).flatten.toTagMod
-          } else {
-            EmptyVdom
-          }
+          else EmptyVdom
         } else {
           if (chips.exists(_.isDefined)) {
             <.div(

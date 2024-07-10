@@ -11,7 +11,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import drt.shared.redlist.{DirectRedListFlight, IndirectRedListPax, LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.component.Scala.Component
@@ -22,6 +22,7 @@ import org.scalajs.dom
 import org.scalajs.dom.html.{Span, TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
@@ -107,6 +108,10 @@ object FlightTableContent {
         val flightsForWindow = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder)
         val flights: Seq[ApiFlightWithSplits] = filterFlights(flightsForWindow.flights.values.toList, props.filterFlightNumber, model.airportInfos)
 
+        def renderFlightTableRow(props: FlightTableRow.Props): VdomElement = {
+          FlightTableRow.component(props)
+        }
+
         flights
           .groupBy(f =>
             (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
@@ -126,9 +131,10 @@ object FlightTableContent {
         val flightsWithCodeShares = CodeShares.uniqueArrivalsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
         val isShowFlagger = props.flaggedNationalities.nonEmpty ||
-                            props.flaggedAgeGroups.nonEmpty ||
-                            props.showTransitPaxNumber ||
-                            props.showNumberOfVisaNationals
+          props.flaggedAgeGroups.nonEmpty ||
+          props.showTransitPaxNumber ||
+          props.showNumberOfVisaNationals
+
         <.div(
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
@@ -140,7 +146,7 @@ object FlightTableContent {
                 ^.className := "arrivals-table table-striped",
                 tableHead(props, props.queueOrder, redListPaxExist, shortLabel, isShowFlagger),
                 <.tbody(
-                  sortedFlights.zipWithIndex.map {
+                  sortedFlights.zipWithIndex.flatMap {
                     case ((flightWithSplits, codeShares), idx) =>
                       val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
                       val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
@@ -148,8 +154,18 @@ object FlightTableContent {
                         props.terminal,
                         flightWithSplits.apiFlight.Terminal,
                         isRedListOrigin)
+                      val manifestSummary: Option[FlightManifestSummary] = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight))
+                      val flaggedNationalitiesInSummary: Set[Option[Int]] = props.flaggedNationalities.map { country =>
+                        manifestSummary.map(_.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0))
+                      }
+                      val flaggedAgeGroupInSummary: Set[Option[Int]] = props.flaggedAgeGroups.map { ageRanges =>
+                        manifestSummary.map(_.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0))
+                      }
+                      val visaNationalsChip: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
+                      val transitChip: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(Transit, 0))
                       val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
-                      FlightTableRow.component(FlightTableRow.Props(
+
+                      def flightTableRow() = FlightTableRow.Props(
                         flightWithSplits = flightWithSplits,
                         codeShareFlightCodes = codeShares,
                         idx = idx,
@@ -174,10 +190,20 @@ object FlightTableContent {
                         showHighlightedRows = props.showNumberOfVisaNationals,
                         showRequireAllSelected = props.showRequireAllSelected,
                         manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
-                        paxFeedSourceOrder = props.paxFeedSourceOrder,
-                      ))
-                  }.toTagMod)
-              )))
+                        paxFeedSourceOrder = props.paxFeedSourceOrder)
+
+                      if (props.showHighlightedRows) {
+                        if (flaggedNationalitiesInSummary.flatten.sum > 0 ||
+                          flaggedAgeGroupInSummary.flatten.sum > 0 ||
+                          visaNationalsChip.getOrElse(0) > 0 ||
+                          transitChip.getOrElse(0) > 0) {
+                          Some(FlightTableRow.component(flightTableRow()))
+                        } else None
+                      } else {
+                        Some(FlightTableRow.component(flightTableRow()))
+                      }
+                  }.toTagMod
+                ))))
           } else <.div(^.style := js.Dictionary("padding-top" -> "16px", "padding-bottom" -> "16px"),
             if (flightsForWindow.flights.isEmpty) {
               <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
