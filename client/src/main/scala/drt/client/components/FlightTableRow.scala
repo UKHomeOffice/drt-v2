@@ -158,6 +158,13 @@ object FlightTableRow {
             flightCodeElement(flightCodes, props.directRedListFlight.outgoingDiversion, props.directRedListFlight.incomingDiversion),
             charts
           )),
+        if (props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showTransitPaxNumber || props.showNumberOfVisaNationals)
+          <.td(^.className := "arrivals__table__flags-column", highlightedChips(props.showTransitPaxNumber,
+            props.showNumberOfVisaNationals,
+            props.showRequireAllSelected,
+            props.flaggedAgeGroups,
+            props.flaggedNationalities,
+            props.manifestSummary)) else EmptyVdom,
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
@@ -175,13 +182,6 @@ object FlightTableRow {
           case NeboIndirectRedListPax(Some(pax)) => <.td(<.span(^.className := "badge", pax))
           case NeboIndirectRedListPax(None) => <.td(EmptyVdom)
         },
-        if (props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showTransitPaxNumber || props.showNumberOfVisaNationals)
-          <.td(^.className := "arrivals__table__flags-column", highlightedChips(props.showTransitPaxNumber,
-            props.showNumberOfVisaNationals,
-            props.showRequireAllSelected,
-            props.flaggedAgeGroups,
-            props.flaggedNationalities,
-            props.manifestSummary)) else EmptyVdom,
         <.td(gateOrStand(flight, props.airportConfig.defaultWalkTimeMillis(flight.Terminal), props.directRedListFlight.paxDiversion, props.walkTimes)),
         <.td(^.className := "no-wrap", if (isMobile) flight.displayStatusMobile.description else flight.displayStatus.description),
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),

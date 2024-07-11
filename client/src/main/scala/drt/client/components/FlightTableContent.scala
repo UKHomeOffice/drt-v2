@@ -11,9 +11,9 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
-import drt.shared.redlist.{DirectRedListFlight, IndirectRedListPax, LhrRedListDatesImpl, LhrTerminalTypes}
-import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
+import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -108,10 +108,6 @@ object FlightTableContent {
         val flightsForWindow = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder)
         val flights: Seq[ApiFlightWithSplits] = filterFlights(flightsForWindow.flights.values.toList, props.filterFlightNumber, model.airportInfos)
 
-        def renderFlightTableRow(props: FlightTableRow.Props): VdomElement = {
-          FlightTableRow.component(props)
-        }
-
         flights
           .groupBy(f =>
             (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
@@ -126,6 +122,7 @@ object FlightTableContent {
               }
             }
           }
+
         val flightsForTerminal =
           flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
         val flightsWithCodeShares = CodeShares.uniqueArrivalsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
@@ -161,8 +158,8 @@ object FlightTableContent {
                       val flaggedAgeGroupInSummary: Set[Option[Int]] = props.flaggedAgeGroups.map { ageRanges =>
                         manifestSummary.map(_.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0))
                       }
-                      val visaNationalsChip: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
-                      val transitChip: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(Transit, 0))
+                      val visaNationalsInSummary: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
+                      val transitInSummary: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(Transit, 0))
                       val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
 
                       def flightTableRow() = FlightTableRow.Props(
@@ -192,19 +189,33 @@ object FlightTableContent {
                         manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
                         paxFeedSourceOrder = props.paxFeedSourceOrder)
 
-                      if (props.showHighlightedRows) {
-                        if (flaggedNationalitiesInSummary.flatten.sum > 0 ||
-                          flaggedAgeGroupInSummary.flatten.sum > 0 ||
-                          visaNationalsChip.getOrElse(0) > 0 ||
-                          transitChip.getOrElse(0) > 0) {
+                      val conditionsAndFlaggedSummary: Seq[(Boolean, Set[Option[Int]])] = List(
+                        (props.flaggedNationalities.nonEmpty, flaggedNationalitiesInSummary),
+                        (props.flaggedAgeGroups.nonEmpty, flaggedAgeGroupInSummary),
+                        (props.showNumberOfVisaNationals, Set(visaNationalsInSummary)),
+                        (props.showTransitPaxNumber, Set(transitInSummary))
+                      )
+
+                      val trueConditionsAndChips: Seq[(Boolean, Set[Option[Int]])] = conditionsAndFlaggedSummary.filter(_._1)
+
+                      (props.showHighlightedRows, props.showRequireAllSelected) match {
+                        case (true, true) =>
+                          if (trueConditionsAndChips.map(_._2).forall(_.exists(a => a.sum > 0)))
+                              Some(FlightTableRow.component(flightTableRow()))
+                          else None
+                        case (true, false) => if (flaggedNationalitiesInSummary.flatten.sum > 0  && props.flaggedNationalities.nonEmpty ||
+                          flaggedAgeGroupInSummary.flatten.sum > 0 && props.flaggedAgeGroups.nonEmpty ||
+                          visaNationalsInSummary.getOrElse(0) > 0 && props.showNumberOfVisaNationals ||
+                          transitInSummary.getOrElse(0) > 0 && props.showTransitPaxNumber)  {
                           Some(FlightTableRow.component(flightTableRow()))
                         } else None
-                      } else {
+                        case (_, _) =>
                         Some(FlightTableRow.component(flightTableRow()))
                       }
                   }.toTagMod
                 ))))
-          } else <.div(^.style := js.Dictionary("padding-top" -> "16px", "padding-bottom" -> "16px"),
+          }
+          else <.div(^.style := js.Dictionary("padding-top" -> "16px", "padding-bottom" -> "16px"),
             if (flightsForWindow.flights.isEmpty) {
               <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
                 MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
@@ -291,10 +302,10 @@ object FlightTableContent {
   private def columnHeaders(shortLabel: Boolean, redListHeading: String, isMobile: Boolean, showFlagger: Boolean): Seq[(String, Option[String])] =
     List(
       Option(("Flight", Option("arrivals__table__flight-code"))),
+      if (showFlagger) Option(("Pax Info", Option("arrivals__table__flags-column"))) else None,
       Option((if (isMobile) "Ori" else "Origin", None)),
       Option(("Country", Option("country"))),
       Option((redListHeading, None)),
-      if (showFlagger) Option(("Pax Info", Option("arrivals__table__flags-column"))) else None,
       Option((if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand"))),
       Option(("Status", Option("status"))),
       Option((if (isMobile || shortLabel) "Sch" else "Scheduled", None)),

@@ -99,7 +99,7 @@ object Settings {
     "react-markdown" -> "9.0.1",
     "@types/react-dom" -> react,
     "css-loader" -> "6.7.2",
-    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#a2f67bbdaa2682438dc5e721b9cc841928877d06"
+    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#8560ed938b7206a740d7a430c82e87c97b2ab761"
 
   )
 
