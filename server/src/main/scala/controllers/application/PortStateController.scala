@@ -126,7 +126,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         to <- LocalDate.parse(toStr)
       } yield {
         val datesToReCrunch = DateRange(from, to).map { localDate => SDate(localDate).millisSinceEpoch }.toSet
-        ctrl.applicationService.crunchManagerActor ! datesToReCrunch
+        ctrl.applicationService.crunchManagerActor ! Recrunch(datesToReCrunch)
         Ok(s"Queued dates $from to $to for re-crunch")
       }
       maybeFuture.getOrElse(BadRequest(s"Unable to parse dates '$fromStr' or '$toStr'"))

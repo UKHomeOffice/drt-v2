@@ -1,12 +1,16 @@
 package drt.client.services.handlers
 
 import diode.{ActionResult, ModelRW}
-import drt.client.actions.Actions.{RequestForecastRecrunch, RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals}
+import drt.client.actions.Actions.{RequestDateRecrunch, RequestForecastRecrunch, RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals}
 import drt.client.services.{DrtApi, RootModel}
 import upickle.default.write
 
 class AppControlHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case RequestDateRecrunch(date) =>
+      DrtApi.post(s"control/crunch/recalculate/${date.toISOString}/${date.toISOString}", "")
+      noChange
+
     case RequestForecastRecrunch(recalculateSplits) =>
       DrtApi.post("control/crunch/recalculate", write(recalculateSplits))
       noChange

@@ -201,6 +201,8 @@ object Actions {
 
   case class RequestForecastRecrunch(recalculateSplits: Boolean) extends Action
 
+  case class RequestDateRecrunch(date: LocalDate) extends Action
+
   object RequestRecalculateArrivals extends Action
 
   object RequestMissingHistoricSplits extends Action

@@ -367,7 +367,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
       arrivalsLiveBaseFeed = feedService.liveBaseArrivalsSource(airportConfig.portCode),
       arrivalsLiveFeed = feedService.liveArrivalsSource(airportConfig.portCode),
       passengerAdjustments = PaxDeltas.applyAdjustmentsToArrivals(passengersActorProvider, aclPaxAdjustmentDays),
-      optimiser = optimiser,
       startDeskRecs = startUpdateGraphs,
       system = system,
     ))
