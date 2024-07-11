@@ -131,7 +131,8 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
     val allowAccess = loggedInUser.hasRole(allowedRole)
 
     if (allowAccess) {
-      auth(action)(request)
+      val eventualResult: Future[Result] = auth(action)(request)
+      eventualResult
     } else {
       log.warning("Unauthorized")
       Future(unauthorizedMessageJson(allowedRole))
@@ -141,7 +142,7 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
   def unauthorizedMessageJson(allowedRole: Role): Result =
     Forbidden(write(ErrorResponse(s"Permission denied, you need $allowedRole to access this resource")))
 
-  def auth[A](action: Action[A]): Action[A] = Action.async(action.parser) { request =>
+  def auth[A](action: Action[A]): Action[A] = Action.async(action.parser) { request: Request[A] =>
 
     val loggedInUser: LoggedInUser = ctrl.getLoggedInUser(config, request.headers, request.session)
     val portRole = airportConfig.role
