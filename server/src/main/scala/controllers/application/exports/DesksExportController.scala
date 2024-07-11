@@ -34,7 +34,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
             exportBetweenTimestampsCSV(
               deskRecsExportStreamForTerminalDates(pointInTime = Option(pit.millisSinceEpoch), start, end, Terminal(terminalName), periodMinutes(request)),
-              makeFileName(s"desks-and-queues-recs-at-${pit.toISOString}-for", Option(Terminal(terminalName)), start.toLocalDate, end.toLocalDate, airportConfig.portCode),
+              makeFileName(s"desks-and-queues-recs-at-${pit.toISOString}-for", Option(Terminal(terminalName)), start.toLocalDate, end.toLocalDate, airportConfig.portCode) + ".csv",
             )
           case _ =>
             Action(BadRequest(write(ErrorResponse("Invalid date format"))))
@@ -58,7 +58,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
             exportBetweenTimestampsCSV(
               deskRecsExportStreamForTerminalDates(pointInTime = None, start, end, Terminal(terminalName), periodMinutes(request)),
-              makeFileName("desks-and-queues-recs", Option(Terminal(terminalName)), start.toLocalDate, end.toLocalDate, airportConfig.portCode),
+              makeFileName("desks-and-queues-recs", Option(Terminal(terminalName)), start.toLocalDate, end.toLocalDate, airportConfig.portCode) + ".csv",
             )
           case _ =>
             Action(BadRequest(write(ErrorResponse("Invalid date format"))))
@@ -79,7 +79,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
             exportBetweenTimestampsCSV(
               deploymentsExportStreamForTerminalDates(pointInTime = Option(pit.millisSinceEpoch), start, end, Terminal(terminalName), periodMinutes(request)),
-              makeFileName(s"desks-and-queues-deps-at-${pit.toISOString}-for", Option(Terminal(terminalName)), start.toLocalDate, end.toLocalDate, airportConfig.portCode),
+              makeFileName(s"desks-and-queues-deps-at-${pit.toISOString}-for", Option(Terminal(terminalName)), start.toLocalDate, end.toLocalDate, airportConfig.portCode) + ".csv",
             )
           case _ =>
             Action(BadRequest(write(ErrorResponse("Invalid date format"))))
@@ -99,7 +99,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
             exportBetweenTimestampsCSV(
               deploymentsExportStreamForTerminalDates(pointInTime = None, start, end, Terminal(terminalName), periodMinutes(request)),
-              makeFileName("desks-and-queues-deps", Option(Terminal(terminalName)), start.toLocalDate, end.toLocalDate, airportConfig.portCode),
+              makeFileName("desks-and-queues-deps", Option(Terminal(terminalName)), start.toLocalDate, end.toLocalDate, airportConfig.portCode) + ".csv",
             )
           case _ =>
             Action(BadRequest(write(ErrorResponse("Invalid date format"))))
@@ -143,23 +143,6 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
                                                       terminal: Terminal,
                                                       periodMinutes: Int,
                                                      ): () => Source[String, NotUsed] =
-    () => StreamingDesksExport.deploymentsToCSVStreamWithHeaders(
-      start,
-      end,
-      terminal,
-      airportConfig.desksExportQueueOrder,
-      ctrl.minuteLookups.queuesLookup,
-      ctrl.minuteLookups.staffLookup,
-      pointInTime,
-      periodMinutes,
-    )
-
-  private def passengersExportStreamForTerminalDates(pointInTime: Option[MillisSinceEpoch],
-                                                     start: SDateLike,
-                                                     end: SDateLike,
-                                                     terminal: Terminal,
-                                                     periodMinutes: Int,
-                                                    ): () => Source[String, NotUsed] =
     () => StreamingDesksExport.deploymentsToCSVStreamWithHeaders(
       start,
       end,

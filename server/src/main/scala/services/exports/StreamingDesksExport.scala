@@ -147,8 +147,8 @@ object StreamingDesksExport {
   }
 
   private def deskRecsCsv(cm: CrunchMinute): String =
-    s"${Math.round(cm.paxLoad)},${cm.waitTime},${cm.deskRec},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
+    s"${cm.workLoad},${cm.waitTime},${cm.deskRec},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
 
   private def deploymentsCsv(cm: CrunchMinute): String =
-    s"${Math.round(cm.paxLoad)},${cm.deployedWait.getOrElse("")},${cm.deployedDesks.getOrElse(0)},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
+    s"${cm.workLoad},${cm.deployedWait.getOrElse("")},${cm.deployedDesks.getOrElse(0)},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
 }
