@@ -13,12 +13,13 @@ import uk.gov.homeoffice.drt.ports._
 
 
 object FlightComponents {
-  def paxFeedSourceClass(paxSource: PaxSource, isDomesticOrCta: Boolean): String =
+  def paxFeedSourceClass(paxSource: PaxSource, isDomesticOrCta: Boolean, hasLivePaxSource: Boolean): String =
     if (isDomesticOrCta)
       "pax-rag-cta"
     else
       paxSource.feedSource match {
-        case ApiFeedSource => "pax-rag-green"
+        case ApiFeedSource if hasLivePaxSource => "pax-rag-green"
+        case ApiFeedSource if !hasLivePaxSource => "pax-rag-neutral"
         case LiveFeedSource => "pax-rag-green"
         case HistoricApiFeedSource => "pax-rag-amber"
         case ForecastFeedSource => "pax-rag-amber"
@@ -54,11 +55,12 @@ object FlightComponents {
     )
   }
 
-  def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {
+  def splitsClass(flightWithSplits: ApiFlightWithSplits): String = {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
       "pax-no-splits"
     else flightWithSplits.bestSplits.map(_.source) match {
-      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if flightWithSplits.hasApi => "pax-rag-green"
+      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if flightWithSplits.hasLivePaxSource => "pax-rag-green"
+      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if !flightWithSplits.hasLivePaxSource => "pax-rag-neutral"
       case Some(SplitSources.Historical) => "pax-rag-amber"
       case _ => "pax-rag-red"
     }

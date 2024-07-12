@@ -180,13 +180,19 @@ object FlightTableRow {
         <.td(expectedContent),
       )
       val lastCells = List[TagMod](
-        <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(^.className := s"pcp-pax underline ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder), flight.Origin.isDomesticOrCta)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
+        <.td(
+          pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder),
+          ^.className := "arrivals__table__flight-est-pcp"
+        ),
+        <.td(
+          FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
+          ^.className := s"pcp-pax underline ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder), flight.Origin.isDomesticOrCta)}",
+        ),
       )
 
       val flightFields = firstCells ++ lastCells
 
-      val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
+      val splitsClass = FlightComponents.splitsClass(flightWithSplits)
 
       val flightId = flight.uniqueId.toString
 
@@ -196,7 +202,7 @@ object FlightTableRow {
 
       val queueSplits = props.splitsQueueOrder.map { q =>
         val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
-        <.td(^.className := s"queue-split $paxClass right",
+        <.td(^.className := s"queue-split $splitsClass right",
           <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax"))
       }.toTagMod
 
