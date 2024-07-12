@@ -165,7 +165,8 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         airportConfig.desksExportQueueOrder,
         (_, _) => Future.successful(Option(MinutesContainer(crunchMinutes.values.toSeq))),
         (_, _) => Future.successful(None),
-        None
+        None,
+        15,
       )
 
       val result: Result = Try(sourceToCsvResponse(stream, fileName)) match {
