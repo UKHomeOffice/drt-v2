@@ -87,7 +87,7 @@ object FlightTableContent {
         flights.filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(filter.toLowerCase)
           || f.apiFlight.Origin.iata.toLowerCase.contains(filter.toLowerCase)
           || airportInfos.get(f.apiFlight.Origin).exists(airportInfo => airportInfo
-            .exists(_.country.toLowerCase.contains(filter.toLowerCase))))
+          .exists(_.country.toLowerCase.contains(filter.toLowerCase))))
       }
 
       modelRCP(modelMP => {
@@ -188,10 +188,9 @@ object FlightTableContent {
     val portColumnThs = columnHeadersWithClasses(columns, props.hasEstChox, props.displayRedListInfo, redListPaxExist, redListHeading)
       .toTagMod
 
-    val queueDisplayNames = queues.map { q =>
-      val queueName: String = Queues.displayName(q)
-      <.th(queueName, " ", splitsTableTooltip)
-    }.toTagMod
+    val queueDisplayNames = <.th(<.span(^.className := "flex-uniform-size",
+      queues.map(q => <.div(Queues.displayName(q), " ", splitsTableTooltip)).toTagMod
+    ))
 
     val transferPaxTh = <.th("Transfer Pax")
 

@@ -1,6 +1,8 @@
 package drt.client.components
 
 import diode.UseValueEq
+import drt.client.components.FlightComponents.PcpPaxDataQuality.TrustedPortData
+import drt.client.components.FlightComponents.SplitsDataQuality.{CarrierData, HistoricalCarrierData, TerminalAverageData, TrustedCarrierData}
 import drt.shared.redlist.DirectRedListFlight
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
@@ -13,18 +15,50 @@ import uk.gov.homeoffice.drt.ports._
 
 
 object FlightComponents {
-  def paxFeedSourceClass(paxSource: PaxSource, isDomesticOrCta: Boolean, hasLivePaxSource: Boolean): String =
+
+  trait PcpPaxDataQuality {
+    val `type`: String
+    val text: String
+  }
+  object PcpPaxDataQuality {
+    object TrustedPortData extends PcpPaxDataQuality {
+      val `type`: String = "success"
+      val text: String = "Trusted Port Data"
+    }
+    object CarrierData extends PcpPaxDataQuality {
+      val `type`: String = "info"
+      val text: String = "Carrier data"
+    }
+    object PortForecastData extends PcpPaxDataQuality {
+      val `type`: String = "warning"
+      val text: String = "Port forecast data"
+    }
+    object HistoricalData extends PcpPaxDataQuality {
+      val `type`: String = "warning"
+      val text: String = "Historical carrier data"
+    }
+    object MlData extends PcpPaxDataQuality {
+      val `type`: String = "warning"
+      val text: String = "Historical carrier data"
+    }
+    object AclData extends PcpPaxDataQuality {
+      val `type`: String = "error"
+      val text: String = "Historical carrier data"
+    }
+
+  }
+  def paxFeedSourceClass(paxSource: PaxSource, isDomesticOrCta: Boolean): Option[PcpPaxDataQuality] =
     if (isDomesticOrCta)
-      "pax-rag-cta"
+      None
     else
       paxSource.feedSource match {
-        case ApiFeedSource if hasLivePaxSource => "pax-rag-green"
-        case ApiFeedSource if !hasLivePaxSource => "pax-rag-neutral"
-        case LiveFeedSource => "pax-rag-green"
-        case HistoricApiFeedSource => "pax-rag-amber"
-        case ForecastFeedSource => "pax-rag-amber"
-        case AclFeedSource => "pax-rag-red"
-        case _ => "pax-rag-red"
+        case LiveFeedSource => Option(PcpPaxDataQuality.TrustedPortData)
+        case ApiFeedSource => Option(PcpPaxDataQuality.CarrierData)
+        case ForecastFeedSource => Option(PcpPaxDataQuality.PortForecastData)
+        case HistoricApiFeedSource => Option(PcpPaxDataQuality.HistoricalData)
+        case MlFeedSource => Option(PcpPaxDataQuality.MlData)
+        case AclFeedSource => Option(PcpPaxDataQuality.AclData)
+        case _ => Option(PcpPaxDataQuality.AclData)
       }
 
   def paxComp(flightWithSplits: ApiFlightWithSplits,
@@ -40,11 +74,11 @@ object FlightComponents {
       else ""
 
     val pcpPaxNumber = if (!flightWithSplits.apiFlight.Origin.isDomesticOrCta)
-      flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")
+      s"${flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")} PCP pax"
     else "-"
 
     <.div(
-      ^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
+      ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData underline",
       <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", pcpPaxNumber))),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
@@ -55,14 +89,42 @@ object FlightComponents {
     )
   }
 
-  def splitsClass(flightWithSplits: ApiFlightWithSplits): String = {
+  trait SplitsDataQuality {
+    val `type`: String
+    val text: String
+  }
+
+  object SplitsDataQuality {
+
+    object TrustedCarrierData extends SplitsDataQuality {
+      val `type`: String = "success"
+      val text: String = "Trusted carrier data"
+    }
+
+    object CarrierData extends SplitsDataQuality {
+      val `type`: String = "info"
+      val text: String = "Carrier data"
+    }
+
+    object HistoricalCarrierData extends SplitsDataQuality {
+      val `type`: String = "warning"
+      val text: String = "Historical carrier data"
+    }
+
+    object TerminalAverageData extends SplitsDataQuality {
+      val `type`: String = "error"
+      val text: String = "Terminal average data"
+    }
+  }
+
+  def splitsDataQuality(flightWithSplits: ApiFlightWithSplits): Option[SplitsDataQuality] = {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
-      "pax-no-splits"
+      None
     else flightWithSplits.bestSplits.map(_.source) match {
-      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if flightWithSplits.hasLivePaxSource => "pax-rag-green"
-      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if !flightWithSplits.hasLivePaxSource => "pax-rag-neutral"
-      case Some(SplitSources.Historical) => "pax-rag-amber"
-      case _ => "pax-rag-red"
+      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if flightWithSplits.hasLivePaxSource => Option(TrustedCarrierData)
+      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if !flightWithSplits.hasLivePaxSource => Option(CarrierData)
+      case Some(SplitSources.Historical) => Option(HistoricalCarrierData)
+      case _ => Option(TerminalAverageData)
     }
   }
 

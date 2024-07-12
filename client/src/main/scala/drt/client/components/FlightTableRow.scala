@@ -179,6 +179,7 @@ object FlightTableRow {
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
         <.td(expectedContent),
       )
+      val pcpPaxDataQuality = paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder), flight.Origin.isDomesticOrCta)
       val lastCells = List[TagMod](
         <.td(
           pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder),
@@ -186,25 +187,30 @@ object FlightTableRow {
         ),
         <.td(
           FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
-          ^.className := s"pcp-pax underline ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder), flight.Origin.isDomesticOrCta)}",
+          pcpPaxDataQuality.map(dq => StatusTag(dq.`type`, dq.text)).getOrElse(EmptyVdom),
+          ^.className := s"pcp-pax",
         ),
       )
 
       val flightFields = firstCells ++ lastCells
 
-      val splitsClass = FlightComponents.splitsClass(flightWithSplits)
-
       val flightId = flight.uniqueId.toString
+
+      val splitsDataQuality = FlightComponents.splitsDataQuality(flightWithSplits)
+
+      val queueSplits = <.td(
+        <.span(^.className := "flex-uniform-size",
+          props.splitsQueueOrder.map { q =>
+            val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
+            <.div(s"$pax pax", ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
+          }.toTagMod,
+        ),
+        splitsDataQuality.map(dq => StatusTag(dq.`type`, dq.text)).getOrElse(EmptyVdom),
+      )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
       val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$noPcpPax"
-
-      val queueSplits = props.splitsQueueOrder.map { q =>
-        val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
-        <.td(^.className := s"queue-split $splitsClass right",
-          <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax"))
-      }.toTagMod
 
       if (props.hasTransfer) {
         <.tr(
@@ -253,9 +259,9 @@ object FlightTableRow {
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
     val content = (arrival.Gate, arrival.Stand) match {
-      case (Some(gate), Some(stand)) => <.span(s"Gate $gate", <.br(), s"Stand $stand")
-      case (Some(gate), _) => <.span(s"Gate $gate")
-      case (_, Some(stand)) => <.span(s"Stand $stand")
+      case (Some(gate), Some(stand)) => <.span(s"Gate: $gate", <.br(), s"Stand: $stand")
+      case (Some(gate), _) => <.span(s"Gate: $gate")
+      case (_, Some(stand)) => <.span(s"Stand: $stand")
       case _ => <.span("Not available")
     }
     val gateOrStand = <.span(^.key := "gate-or-stand", ^.className := "no-wrap underline", content)
