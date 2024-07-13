@@ -188,9 +188,12 @@ object FlightTableContent {
     val portColumnThs = columnHeadersWithClasses(columns, props.hasEstChox, props.displayRedListInfo, redListPaxExist, redListHeading)
       .toTagMod
 
-    val queueDisplayNames = <.th(<.span(^.className := "flex-uniform-size",
-      queues.map(q => <.div(Queues.displayName(q), " ", splitsTableTooltip)).toTagMod
-    ))
+    val queueDisplayNames = <.th(
+      <.span(^.className := "flex-uniform-size",
+        queues.map(q => <.div(Queues.displayName(q), " ", splitsTableTooltip, ^.className := "arrivals_table__splits__queue-pax")).toTagMod
+      ),
+      ^.className := "arrivals__table__flight-splits",
+    )
 
     val transferPaxTh = <.th("Transfer Pax")
 
@@ -243,7 +246,7 @@ object FlightTableContent {
   private def columnHeaders(shortLabel: Boolean, redListHeading: String, isMobile: Boolean, showFlagger: Boolean): Seq[(String, Option[String])] =
     List(
       Option(("Flight", Option("arrivals__table__flight-code"))),
-      Option((if (isMobile) "Ori" else "Origin", None)),
+      Option((if (isMobile) "Ori" else "Origin", Option("arrivals__table__flight-origin"))),
       Option(("Country", Option("country"))),
       Option((redListHeading, None)),
       if (showFlagger) Option(("Nationality ICAO code", Option("arrivals__table__flags-column"))) else None,

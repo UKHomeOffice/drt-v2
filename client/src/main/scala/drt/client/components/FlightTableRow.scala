@@ -12,7 +12,7 @@ import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist._
 import io.kinoplan.scalajs.react.material.ui.core.MuiChip
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
@@ -212,22 +212,13 @@ object FlightTableRow {
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
       val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
-      if (props.hasTransfer) {
-        <.tr(
-          ^.key := flightId,
-          ^.className := trClassName,
-          flightFields.toTagMod,
-          queueSplits,
-          <.td(FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder))
-        )
-      } else {
-        <.tr(
-          ^.key := flightId,
-          ^.className := trClassName,
-          flightFields.toTagMod,
-          queueSplits
-        )
-      }
+      ThemeProvider(DrtTheme.theme)(<.tr(
+        ^.key := flightId,
+        ^.className := trClassName,
+        flightFields.toTagMod,
+        queueSplits,
+        if (props.hasTransfer) <.td(FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder)) else EmptyVdom
+      ))
     }
     .configure(Reusability.shouldComponentUpdate)
     .build
