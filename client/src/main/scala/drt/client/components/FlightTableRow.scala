@@ -212,13 +212,13 @@ object FlightTableRow {
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
       val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
-      ThemeProvider(DrtTheme.theme)(<.tr(
+      <.tr(
         ^.key := flightId,
         ^.className := trClassName,
         flightFields.toTagMod,
         queueSplits,
         if (props.hasTransfer) <.td(FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder)) else EmptyVdom
-      ))
+      )
     }
     .configure(Reusability.shouldComponentUpdate)
     .build
