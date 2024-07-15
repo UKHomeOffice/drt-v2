@@ -29,7 +29,7 @@ object Settings {
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
-    val scalajsReact = "2.1.1"
+    val scalajsReact = "2.1.2"
     val scalaCSS = "1.0.0"
     val scalaJsMomentJs = "0.10.9"
     val booPickle = "1.3.3"
