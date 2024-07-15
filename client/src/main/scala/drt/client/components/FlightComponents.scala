@@ -74,7 +74,7 @@ object FlightComponents {
       else ""
 
     val pcpPaxNumber = if (!flightWithSplits.apiFlight.Origin.isDomesticOrCta)
-      s"${flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")} PCP pax"
+      s"${flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")} pax"
     else "-"
 
     <.div(
