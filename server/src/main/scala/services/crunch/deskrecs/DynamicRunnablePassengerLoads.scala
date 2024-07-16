@@ -10,16 +10,16 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinut
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.DynamicQueueStatusProvider
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.collection.SortedSet
-import scala.collection.immutable.{NumericRange, SortedMap}
+import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
 
 
@@ -36,6 +36,18 @@ trait DrtRunnableGraph {
     QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
   }
 
+  def setUpdatedAt(terminals: Iterable[Terminal],
+                   setUpdatedAtForDay: (Terminal, LocalDate, MillisSinceEpoch) => Future[Done],
+                   pr: ProcessingRequest): Unit =
+    pr match {
+      case TerminalUpdateRequest(terminal, localDate, _, _) =>
+        setUpdatedAtForDay(terminal, localDate, SDate.now().millisSinceEpoch)
+      case other =>
+        val localDate = LocalDate(other.date.year, other.date.month, other.date.day)
+        terminals.foreach { terminal =>
+          setUpdatedAtForDay(terminal, localDate, SDate.now().millisSinceEpoch)
+        }
+    }
 }
 
 object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
@@ -54,6 +66,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
             queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
             paxFeedSourceOrder: List[FeedSource],
             updateCapacity: UtcDate => Future[Done],
+            setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
            )
            (implicit ec: ExecutionContext, mat: Materializer): ActorRef = {
     val passengerLoadsFlow: Flow[ProcessingRequest, MinutesContainer[CrunchApi.PassengersMinute, TQM], NotUsed] =
@@ -67,6 +80,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         paxFeedSourceOrder = paxFeedSourceOrder,
         terminalSplits = terminalSplits,
         updateCapacity = updateCapacity,
+        setUpdatedAtForDay = setUpdatedAtForDay,
       )
 
     val (crunchRequestQueueActor, _: UniqueKillSwitch) =
@@ -90,6 +104,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
                                    paxFeedSourceOrder: List[FeedSource],
                                    terminalSplits: Terminal => Option[Splits],
                                    updateCapacity: UtcDate => Future[Done],
+                                   setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
                                   )
                                   (implicit
                                    ec: ExecutionContext,
@@ -106,13 +121,16 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         datesToUpdate.foreach(updateCapacity)
       }
       .via(Flow[(ProcessingRequest, MinutesContainer[PassengersMinute, TQM])].map {
-        case (_, paxMinutes) => paxMinutes
+        case (pr, paxMinutes) =>
+          setUpdatedAt(queuesByTerminal.keys, setUpdatedAtForDay, pr)
+          paxMinutes
       })
       .recover {
         case t =>
           log.error(s"Failed to process crunch request", t)
           MinutesContainer.empty[PassengersMinute, TQM]
       }
+
 
   def validApiPercentage(flights: Iterable[ApiFlightWithSplits]): Double = {
     val totalLiveSplits = flights.count(_.hasApi)

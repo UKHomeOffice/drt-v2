@@ -2,6 +2,7 @@ package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.SortedActorRefSource
+import akka.Done
 import akka.actor.{Actor, Props}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
@@ -53,7 +54,10 @@ class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
       OptimisationProviders.passengersProvider(mockProvider),
       OptimisationProviders.staffMinutesProvider(mockProvider, airportConfig.terminals),
       staffToDeskLimits,
-      desksAndWaitsProvider.loadsToSimulations)
+      desksAndWaitsProvider.loadsToSimulations,
+      airportConfig.terminals,
+      (_, _, _) => Future.successful(Done),
+    )
     val crunchRequest: MillisSinceEpoch => CrunchRequest =
       (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
     val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "deployments")

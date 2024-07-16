@@ -38,6 +38,7 @@ import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
+import slick.lifted.Rep
 import slickdb.dao.ArrivalStatsDao
 import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
@@ -48,7 +49,8 @@ import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
-import uk.gov.homeoffice.drt.db.AggregateDb
+import uk.gov.homeoffice.drt.db.dao.StatusDailyDao
+import uk.gov.homeoffice.drt.db.{AggregateDb, StatusDaily, StatusDailyTable}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -60,6 +62,7 @@ import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
 import uk.gov.homeoffice.drt.time._
 
+import java.sql.Timestamp
 import javax.inject.Singleton
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -243,12 +246,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
         airportConfig.portCode,
         actorService.flightsRouterActor,
         splitsCalculator.splitsForManifest,
-        manifestLookupService.maybeBestAvailableManifest)
+        manifestLookupService.maybeBestAvailableManifest,
+      )
 
       val (historicPaxQueueActor, historicPaxKillSwitch) = RunnableHistoricPax(
         airportConfig.portCode,
         actorService.flightsRouterActor,
-        manifestLookupService.maybeHistoricManifestPax)
+        manifestLookupService.maybeHistoricManifestPax,
+      )
 
       val (mergeArrivalsRequestQueueActor: ActorRef, mergeArrivalsKillSwitch: UniqueKillSwitch) = RunnableMergedArrivals(
         portCode = airportConfig.portCode,
@@ -259,7 +264,25 @@ case class ApplicationService(journalType: StreamingJournalLike,
         mergeArrivalsQueue = mergeArrivalsQueue,
         mergeArrivalRequest = mergeArrivalRequest,
         setPcpTimes = setPcpTimes,
-        addArrivalPredictions = addArrivalPredictions)
+        addArrivalPredictions = addArrivalPredictions,
+      )
+
+      def setUpdatedAt(columnToUpdate: StatusDailyTable => Rep[Option[Timestamp]],
+                       setUpdated: (StatusDaily, Long) => StatusDaily,
+                      ): (Terminal, LocalDate, Long) => Future[Done] = {
+        (terminal, date, updatedAt) => {
+          val setter = StatusDailyDao.setUpdatedAt(airportConfig.portCode)(columnToUpdate)
+          val inserter = StatusDailyDao.insertOrUpdate(airportConfig.portCode)
+          aggregatedDb.run(setter(terminal, date, updatedAt)).flatMap { count =>
+            if (count > 0) Future.successful(Done)
+            else {
+              val newStatus = StatusDaily(airportConfig.portCode, terminal, date, None, None, None, None)
+              val toInsert = setUpdated(newStatus, updatedAt)
+              aggregatedDb.run(inserter(toInsert)).map(_ => Done)
+            }
+          }
+        }
+      }
 
       val crunchRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
         crunchQueueActor = actors.crunchQueueActor,
@@ -274,37 +297,45 @@ case class ApplicationService(journalType: StreamingJournalLike,
         queueLoadsActor = minuteLookups.queueLoadsMinutesActor,
         queuesByTerminal = airportConfig.queuesByTerminal,
         paxFeedSourceOrder = feedService.paxFeedSourceOrder,
-        updateCapacity =  updateAndPersistCapacity
+        updateCapacity =  updateAndPersistCapacity,
+        setUpdatedAtForDay = setUpdatedAt(_.paxLoadsUpdatedAt, (status, updatedAt) => status.copy(paxLoadsUpdatedAt = Option(updatedAt))),
       )
 
       val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
-        actors.deskRecsQueueActor,
-        deskRecsQueue,
-        crunchRequest,
-        OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-        deskLimitsProviders,
-        portDeskRecs.loadsToDesks,
-        minuteLookups.queueMinutesRouterActor)
+        deskRecsQueueActor = actors.deskRecsQueueActor,
+        deskRecsQueue = deskRecsQueue,
+        crunchRequest = crunchRequest,
+        paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+        deskLimitsProvider = deskLimitsProviders,
+        loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+        queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
+        setUpdatedAtForDay = setUpdatedAt(_.deskRecommendationsUpdatedAt, (status, updatedAt) => status.copy(deskRecommendationsUpdatedAt = Option(updatedAt))),
+      )
 
       val (deploymentRequestQueueActor: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeployments(
-        actors.deploymentQueueActor,
-        deploymentQueue,
-        staffToDeskLimits,
-        crunchRequest,
-        OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-        OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
-        portDeskRecs.loadsToSimulations,
-        minuteLookups.queueMinutesRouterActor)
+        deploymentQueueActor = actors.deploymentQueueActor,
+        deploymentQueue = deploymentQueue,
+        staffToDeskLimits = staffToDeskLimits,
+        crunchRequest = crunchRequest,
+        paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+        staffMinutesProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
+        loadsToDeployments = portDeskRecs.loadsToSimulations,
+        terminals = airportConfig.terminals,
+        queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
+        setUpdatedAtForDay = setUpdatedAt(_.deskDeploymentsUpdatedAt, (status, updatedAt) => status.copy(deskDeploymentsUpdatedAt = Option(updatedAt))),
+      )
 
       val (staffingUpdateRequestQueue: ActorRef, staffingUpdateKillSwitch: UniqueKillSwitch) = RunnableStaffing(
-        actors.staffingQueueActor,
-        staffQueue,
-        crunchRequest,
-        actorService.liveShiftsReadActor,
-        actorService.liveFixedPointsReadActor,
-        actorService.liveStaffMovementsReadActor,
-        minuteLookups.staffMinutesRouterActor,
-        now)
+        staffingQueueActor = actors.staffingQueueActor,
+        staffQueue = staffQueue,
+        crunchRequest = crunchRequest,
+        shiftsActor = actorService.liveShiftsReadActor,
+        fixedPointsActor = actorService.liveFixedPointsReadActor,
+        movementsActor = actorService.liveStaffMovementsReadActor,
+        staffMinutesActor = minuteLookups.staffMinutesRouterActor,
+        now = now,
+        setUpdatedAtForDay = setUpdatedAt(_.staffUpdatedAt, (status, updatedAt) => status.copy(staffUpdatedAt = Option(updatedAt))),
+      )
 
       actorService.liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       actorService.liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
@@ -377,7 +408,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     splitsCalculator.splitsForManifest,
   )
 
-  val arrivalStats: ArrivalStatsDao = ArrivalStatsDao(aggregatedDb, now, airportConfig.portCode)
+  val arrivalStatsDao: ArrivalStatsDao = ArrivalStatsDao(aggregatedDb, now, airportConfig.portCode)
 
   private val daysInYear = 365
   private val retentionPeriod: FiniteDuration = (params.retainDataForYears * daysInYear).days
