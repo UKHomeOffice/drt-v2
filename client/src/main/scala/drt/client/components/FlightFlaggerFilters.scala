@@ -1,12 +1,23 @@
 package drt.client.components
 
 import japgolly.scalajs.react._
-import japgolly.scalajs.react.vdom.{VdomElement, VdomNode}
+import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 
 
+@js.native
+trait AutocompleteOption extends js.Object {
+  var title: String
+}
+object AutocompleteOption {
+  def apply(title: String): AutocompleteOption = {
+    val p = (new js.Object).asInstanceOf[AutocompleteOption]
+    p.title = title
+    p
+  }
+}
 
 @js.native
 trait SearchFilterPayload extends js.Object {
@@ -45,7 +56,8 @@ trait FlightFlaggerFiltersProps extends js.Object {
   var ageGroups: js.Array[String] = js.native
   var submitCallback: js.Function1[js.Object, Unit] = js.native
   var showAllCallback: js.Function1[js.Object, Unit] = js.native
-  var onChangeInput: js.Function1[js.Object, Unit] = js.native
+  var onChangeInput: js.Function1[String, Unit] = js.native
+  var initialState: js.UndefOr[js.Dynamic] = js.native
 }
 
 object FlightFlaggerFiltersProps {
@@ -54,7 +66,8 @@ object FlightFlaggerFiltersProps {
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
-             onChangeInput: js.Function1[js.Object, Unit]
+             onChangeInput: js.Function1[String, Unit],
+             initialState: js.UndefOr[js.Dynamic]
            ): FlightFlaggerFiltersProps = {
     val p = (new js.Object).asInstanceOf[FlightFlaggerFiltersProps]
     p.nationalities = nationalities
@@ -62,6 +75,7 @@ object FlightFlaggerFiltersProps {
     p.submitCallback = submitCallback
     p.showAllCallback = showAllCallback
     p.onChangeInput = onChangeInput
+    p.initialState = initialState
     p
   }
 }
@@ -79,14 +93,16 @@ object FlightFlaggerFilters {
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
-             onChangeInput: js.Function1[js.Object, Unit]
+             onChangeInput: js.Function1[String, Unit],
+             initialState: js.UndefOr[js.Dynamic]
            ): VdomElement = {
     val props = FlightFlaggerFiltersProps(
       nationalities,
       ageGroups,
       submitCallback,
       showAllCallback,
-      onChangeInput
+      onChangeInput,
+      initialState
     )
     component(props)
   }

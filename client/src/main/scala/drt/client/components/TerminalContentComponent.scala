@@ -13,7 +13,7 @@ import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared._
+import drt.shared.{FlightHighlight, _}
 import drt.shared.api.WalkTimes
 import drt.shared.redlist.RedList
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
@@ -72,6 +72,8 @@ object TerminalContentComponent {
   def airportWrapper(portCode: PortCode): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
   val flightFilterRCP: ReactConnectProxy[String] = SPACircuit.connect(_.filterFlightNumber)
+
+  val flightHighlightRCP: ReactConnectProxy[FlightHighlight] = SPACircuit.connect(_.flightHighlight)
 
   def originMapper(portCode: PortCode): VdomElement = airportWrapper(portCode) {
     proxy: ModelProxy[Pot[AirportInfo]] =>
@@ -195,30 +197,38 @@ object TerminalContentComponent {
                   redListUpdates <- props.redListUpdates
                   walkTimes <- props.walkTimes
                 } yield {
-                  flightFilterRCP((flightFilterProxy: ModelProxy[String]) =>
-                    arrivalsTableComponent(
-                      FlightTable.Props(
-                        queueOrder = queueOrder,
-                        hasEstChox = props.airportConfig.hasEstChox,
-                        loggedInUser = props.loggedInUser,
-                        viewMode = props.viewMode,
-                        defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
-                        hasTransfer = props.airportConfig.hasTransfer,
-                        displayRedListInfo = features.displayRedListInfo,
-                        redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
-                        terminal = terminal,
-                        portCode = props.airportConfig.portCode,
-                        redListPorts = redListPorts,
-                        airportConfig = props.airportConfig,
-                        redListUpdates = redListUpdates,
-                        walkTimes = walkTimes,
-                        viewStart = viewStart,
-                        viewEnd = viewEnd,
-                        showFlagger = true,
-                        paxFeedSourceOrder = props.paxFeedSourceOrder,
-                        filterFlightNumber = flightFilterProxy()
-                      ))
-                  )
+                  flightHighlightRCP{(flightHighlightProxy: ModelProxy[FlightHighlight]) =>
+                    val flightHighlight = flightHighlightProxy()
+                    flightFilterRCP((flightFilterProxy: ModelProxy[String]) =>
+                      arrivalsTableComponent(
+                        FlightTable.Props(
+                          queueOrder = queueOrder,
+                          hasEstChox = props.airportConfig.hasEstChox,
+                          loggedInUser = props.loggedInUser,
+                          viewMode = props.viewMode,
+                          defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
+                          hasTransfer = props.airportConfig.hasTransfer,
+                          displayRedListInfo = features.displayRedListInfo,
+                          redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                          terminal = terminal,
+                          portCode = props.airportConfig.portCode,
+                          redListPorts = redListPorts,
+                          airportConfig = props.airportConfig,
+                          redListUpdates = redListUpdates,
+                          walkTimes = walkTimes,
+                          viewStart = viewStart,
+                          viewEnd = viewEnd,
+                          showFlagger = true,
+                          paxFeedSourceOrder = props.paxFeedSourceOrder,
+                          filterFlightNumber = flightHighlight.flightNumber,
+                          selectedNationalities = flightHighlight.selectedNationalities,
+                          selectedAgeGroups = flightHighlight.selectedAgeGroups,
+                          showTransitPaxNumber= flightHighlight.showTransitPaxNumber,
+                          showNumberOfVisaNationals = flightHighlight.showNumberOfVisaNationals,
+                          showHighlightedRows = flightHighlight.showHighlightedRows,
+                          showRequireAllSelected= flightHighlight.showRequireAllSelected
+                        ))
+                    )}
                 }
                 maybeArrivalsComp.render(x => x)
               } else EmptyVdom

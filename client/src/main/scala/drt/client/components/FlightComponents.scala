@@ -42,8 +42,8 @@ object FlightComponents {
       flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")
     else "-"
 
-    <.div(
-      ^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData",
+    <.div(^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(paxFeedSourceOrder),
+        flightWithSplits.apiFlight.Origin.isDomesticOrCta)}",
       <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", pcpPaxNumber))),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =

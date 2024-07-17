@@ -62,6 +62,7 @@ object FlightTableRow {
                    showRequireAllSelected: Boolean,
                    manifestSummary: Option[FlightManifestSummary],
                    paxFeedSourceOrder: List[FeedSource],
+                   showHightLighted: Boolean,
                   ) extends UseValueEq
 
   implicit val propsReuse: Reusability[Props] = Reusability {
@@ -88,7 +89,7 @@ object FlightTableRow {
       else
         "arrivals__table__flight-code"
 
-      def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean): VdomTagOf[Span] =
+      def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean, highLighter: Boolean): VdomTagOf[Span] =
         if (props.loggedInUser.hasRole(ArrivalSource)) {
           val diversionClass = (outgoingDiversion, incomingDiversion) match {
             case (_, true) => "arrivals__table__flight-code-incoming-diversion"
@@ -107,13 +108,11 @@ object FlightTableRow {
                   GetArrivalSources(props.flightWithSplits.unique)
               }
             }),
-            flightCodes,
+            if (highLighter) FlightHighlightChip(flightCodes) else flightCodes,
           )
-        } else
-          <.span(
-            ^.cls := "arrivals__table__flight-code-value",
-            flightCodes
-          )
+        } else if (highLighter) <.span(^.cls := "arrivals__table__flight-code-value", FlightHighlightChip(flightCodes))
+        else <.span(^.cls := "arrivals__table__flight-code-value", flightCodes)
+
 
       val outgoingDiversion = props.directRedListFlight.outgoingDiversion
       val ctaOrRedListMarker = if (flight.Origin.isDomesticOrCta) "*" else ""
@@ -144,27 +143,38 @@ object FlightTableRow {
             val diff = pcpPax - manifestSummary.passengerCount
             (diff, diff.toDouble / pcpPax)
           }
-          if (maybePaxDiffAndPct.isEmpty || maybePaxDiffAndPct.exists(_._2 <= 1.05))
-            <.div(^.className := "arrivals__table__flight-code__info",
+          if (maybePaxDiffAndPct.isEmpty || maybePaxDiffAndPct.exists(_._2 <= 1.05)) {
+            if (props.showHightLighted)
+              <.div(^.className := "arrivals__table__flight-code__info-highlighted",
+                FlightChartComponent(FlightChartComponent.Props(manifestSummary, maybePaxDiffAndPct)))
+            else <.div(^.className := "arrivals__table__flight-code__info",
               FlightChartComponent(FlightChartComponent.Props(manifestSummary, maybePaxDiffAndPct)))
-          else EmptyVdom
+          } else EmptyVdom
         case _ => EmptyVdom
       }
 
+      val highlightedComponent = if (props.flaggedNationalities.nonEmpty ||
+        props.flaggedAgeGroups.nonEmpty || props.showTransitPaxNumber || props.showNumberOfVisaNationals) {
+        val chip = highlightedChips(props.showTransitPaxNumber,
+          props.showNumberOfVisaNationals,
+          props.showRequireAllSelected,
+          props.flaggedAgeGroups,
+          props.flaggedNationalities,
+          props.manifestSummary)
+        if (chip != EmptyVdom) Some(chip) else None
+      } else None
+
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
-          <.div(
-            ^.cls := "arrivals__table__flight-code-wrapper",
-            flightCodeElement(flightCodes, props.directRedListFlight.outgoingDiversion, props.directRedListFlight.incomingDiversion),
-            charts
-          )),
-        if (props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showTransitPaxNumber || props.showNumberOfVisaNationals)
-          <.td(^.className := "arrivals__table__flags-column", highlightedChips(props.showTransitPaxNumber,
-            props.showNumberOfVisaNationals,
-            props.showRequireAllSelected,
-            props.flaggedAgeGroups,
-            props.flaggedNationalities,
-            props.manifestSummary)) else EmptyVdom,
+          if (props.showHightLighted)
+            <.div(^.cls := "arrivals__table__flight-code-wrapper-with-highlight",
+              flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, true), charts)
+          else
+            <.div(^.cls := "arrivals__table__flight-code-wrapper",
+              flightCodeElement(flightCodes, props.directRedListFlight.outgoingDiversion, props.directRedListFlight.incomingDiversion, false),
+              charts
+            )),
+        highlightedComponent.map(<.td(^.className := "arrivals__table__flags-column", _)),
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
@@ -189,7 +199,7 @@ object FlightTableRow {
       )
       val lastCells = List[TagMod](
         <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(^.className := s"pcp-pax ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder), flight.Origin.isDomesticOrCta)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
+        <.td(^.className := s"pcp-pax", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
       )
 
       val flightFields = firstCells ++ lastCells
@@ -204,8 +214,8 @@ object FlightTableRow {
 
       val queueSplits = props.splitsQueueOrder.map { q =>
         val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
-        <.td(^.className := s"queue-split $paxClass right",
-          <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax"))
+        <.td(^.className := s"queue-split right",
+          <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax $paxClass"))
       }.toTagMod
 
       if (props.hasTransfer) {
@@ -237,30 +247,30 @@ object FlightTableRow {
     <.div(
       manifestSummary.map { summary =>
         def generateChip(condition: Boolean, pax: Int, label: String): Option[VdomElement] = {
-          if (condition && pax > 0) Option(FlightHighlightChip(s"($pax) $label"))
+          if (condition && pax > 0) Option(<.div(^.style := js.Dictionary("padding-bottom" -> "5px"), s"$pax $label"))
           else None
         }
 
         val flaggedNationalitiesChips: Set[Option[VdomElement]] = flaggedNationalities.map { country =>
           val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
-          generateChip(pax > 0, pax, country.threeLetterCode)
+          generateChip(pax > 0, pax, s"${country.name} (${country.threeLetterCode}) pax")
         }
 
         val flaggedAgeGroupsChips: Set[Option[VdomElement]] = flaggedAgeGroups.map { ageRanges =>
           val pax = summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0)
-          generateChip(pax > 0, pax, ageRanges.title)
+          generateChip(pax > 0, pax, s"pax aged ${ageRanges.title}")
         }
 
         val visaNationalsChip: Option[VdomElement] = generateChip(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0), "Visa Nationals")
-        val transitChip: Option[VdomElement] = generateChip(showTransitPaxNumber, summary.paxTypes.getOrElse(Transit, 0), "Transit")
+//        val transitChip: Option[VdomElement] = generateChip(showTransitPaxNumber, summary.paxTypes.getOrElse(Transit, 0), "Transit")
 
-        val chips: Set[Option[VdomElement]] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ Set(visaNationalsChip) ++ Set(transitChip)
+        val chips: Set[Option[VdomElement]] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ Set(visaNationalsChip) //++ Set(transitChip)
 
         val conditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = List(
           (flaggedNationalities.nonEmpty, flaggedNationalitiesChips),
           (flaggedAgeGroups.nonEmpty, flaggedAgeGroupsChips),
           (showNumberOfVisaNationals, Set(visaNationalsChip)),
-          (showTransitPaxNumber, Set(transitChip))
+//          (showTransitPaxNumber, Set(transitChip))
         )
 
         val trueConditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = conditionsAndChips.filter(_._1)
@@ -271,10 +281,7 @@ object FlightTableRow {
           else EmptyVdom
         } else {
           if (chips.exists(_.isDefined)) {
-            <.div(
-              ^.style := js.Dictionary("display" -> "flex", "flexWrap" -> "wrap", "gap" -> "8px"),
-              chips.flatten.toTagMod
-            )
+            <.div(chips.flatten.toTagMod)
           } else EmptyVdom
         }
       }.getOrElse(EmptyVdom))
