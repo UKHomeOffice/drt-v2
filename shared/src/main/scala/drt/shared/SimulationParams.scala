@@ -51,8 +51,8 @@ case class SimulationParams(
     FlightsWithSplits(flightsWithSplits.flights.flatMap {
       case (ua, fws) =>
         fws.apiFlight.PassengerSources.headOption.map { case (_, p) =>
-          val actualPax: Option[Int] = p.actual.map(_ * passengerWeighting.toInt)
-          val tranPax: Option[Int] = p.transit.map(_ * passengerWeighting.toInt)
+          val actualPax = p.actual.map(_ * passengerWeighting).map(_.round.toInt)
+          val tranPax = p.transit.map(_ * passengerWeighting).map(_.round.toInt)
           val updatedArrival = fws.apiFlight.copy(
             FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
             PassengerSources = Map(ScenarioSimulationSource -> Passengers(actualPax, tranPax))
