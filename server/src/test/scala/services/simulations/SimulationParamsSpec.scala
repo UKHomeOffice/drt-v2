@@ -26,7 +26,8 @@ class SimulationParamsSpec extends Specification {
     eGateBanksSizes = IndexedSeq(5, 5, 5),
     slaByQueue = testConfig.slaByQueue,
     crunchOffsetMinutes = 0,
-    eGateOpenHours = Seq()
+    eGateOpenHours = Seq(),
+    paxSourceOrderPreference = paxFeedSourceOrder,
   )
 
   "Given I am applying a simulation to an airport config" >> {

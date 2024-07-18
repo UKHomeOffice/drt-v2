@@ -5,7 +5,7 @@ import actors.routing.FlightsRouterActor
 import akka.NotUsed
 import akka.actor.Props
 import akka.pattern.ask
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
@@ -19,6 +19,7 @@ import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.CrunchRequest
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -44,7 +45,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     Action(parse.defaultBodyParser).async {
       request =>
         SimulationParams
-          .fromQueryStringParams(request.queryString) match {
+          .fromQueryStringParams(request.queryString, ctrl.paxFeedSourceOrder) match {
           case Success(simulationParams) =>
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
             val date = SDate(simulationParams.date)
@@ -85,7 +86,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         implicit val timeout: Timeout = new Timeout(10 minutes)
 
         SimulationParams
-          .fromQueryStringParams(request.queryString) match {
+          .fromQueryStringParams(request.queryString, ctrl.paxFeedSourceOrder) match {
           case Success(simulationParams) =>
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
 
@@ -96,20 +97,29 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
               simulationParams.terminal
             )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-            val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws => {
+            val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
               val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
+              val fwsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor)
+//              fwsProvider(CrunchRequest(LocalDate(2024, 7, 17), 0, 1440)).foreach {
+//                stream =>
+//                  stream
+//                    .map(
+//                      _.sortBy(_.apiFlight.pcpRange(ctrl.paxFeedSourceOrder).min)
+//                        .foreach(f => println(s"!!! ${f.apiFlight.flightCodeString} ${SDate(f.apiFlight.pcpRange(ctrl.paxFeedSourceOrder).min).toISOString}: ${f.splits.map(_.source).mkString(", ")}"))
+//                    )
+//                    .runWith(Sink.ignore)
+//              }
               Scenarios.simulationResult(
                 simulationParams = simulationParams,
                 simulationAirportConfig = simulationConfig,
                 sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
                 splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.queueAdjustments),
-                flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
+                flightsProvider = fwsProvider,
                 portStateActor = portStateActor,
                 redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
                 egateBanksProvider = () => ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
                 paxFeedSourceOrder = ctrl.feedService.paxFeedSourceOrder,
               )
-            }
             }.flatten
 
             futureDeskRecs.map(res => {
