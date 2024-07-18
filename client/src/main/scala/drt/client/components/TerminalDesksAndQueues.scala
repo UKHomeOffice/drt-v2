@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDisplayType, UrlViewType}
+import drt.client.actions.Actions.RequestDateRecrunch
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -9,15 +10,20 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 import org.scalajs.dom
 import org.scalajs.dom.DOMList
 import org.scalajs.dom.html.{Div, TableCell}
 import org.scalajs.dom.raw.Node
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
@@ -162,6 +168,10 @@ object TerminalDesksAndQueues {
         )
       }
 
+      def requestForecastRecrunch(): Callback = Callback {
+        SPACircuit.dispatch(RequestDateRecrunch(props.viewStart.toLocalDate))
+      }
+
       def viewTypeControls(displayWaitTimesToggle: Boolean): TagMod = {
         val deskTypeControls = List(
           <.div(^.className := s"controls-radio-wrapper",
@@ -207,7 +217,7 @@ object TerminalDesksAndQueues {
             val maxPaxInQueues: Map[Queue, Int] = terminalCrunchMinutes
               .toList
               .flatMap {
-                case (minute, queuesAndMinutes) =>
+                case (_, queuesAndMinutes) =>
                   queuesAndMinutes.map {
                     case (queue, cm) => (queue, cm.maybePaxInQueue.getOrElse(0))
                   }
@@ -221,6 +231,7 @@ object TerminalDesksAndQueues {
             <.div(
               <.div(^.className := "desks-and-queues-top",
                 viewTypeControls(props.featureFlags.displayWaitTimesToggle),
+                if (props.loggedInUser.hasRole(SuperAdmin)) adminRecrunchButton(requestForecastRecrunch _) else EmptyVdom,
                 StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
               ),
               if (state.displayType == ChartsView) {
@@ -268,6 +279,17 @@ object TerminalDesksAndQueues {
         }
       )
     }
+  }
+
+  private def adminRecrunchButton(requestForecastRecrunch: () => Callback): VdomTagOf[Div] = {
+    <.div(MuiButton(
+      variant = "outlined",
+      size = "medium",
+      color = Color.primary
+    )(MuiIcons(RefreshOutlined)(),
+      ^.onClick --> requestForecastRecrunch(),
+      "Request re-crunch")
+    )
   }
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")

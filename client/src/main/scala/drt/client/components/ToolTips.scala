@@ -11,13 +11,11 @@ object ToolTips {
 
   val apiDataTooltip = Tippy.info("Live API data should become available for all flights soon after they depart. However, there are occasionally circumstances where live API data is not made available.")
 
-  val arrivalStatusTooltip = Tippy.info("When no status is provided to DRT in any feeds an Unknown status (UNK) is displayed.")
-
   val availTooltip = Tippy.info("Use the + or - buttons to make adjustments to staff available (eg due to sickness and lunch breaks). You can select from a list of reasons when making the adjustment.")
 
   val availableStaffDeploymentsTooltip = Tippy.infoHover("This view shows the minimum number of staff needed to help avoid breaching SLAs within the constraints of staff available.")
 
-  val countryTooltip = Tippy.info(<.span("Countries on COVID-19 red list are now underlined in red. This is an interim change to quickly highlight this information. We welcome your feedback."))
+  val countryTooltip = Tippy.info(<.span("In relevant historical time periods, countries on the COVID-19 UK red list are underlined in red."))
 
   val processingTimesTooltip = Tippy.info("Processing times are unique to each port. If they don't look right contact us and we'll get them changed for you.")
 
@@ -46,18 +44,10 @@ object ToolTips {
     <.p("If a recommended number of staff is less than, but getting close to the maximum number of staff available, DRT will colour code it amber."))
   )
 
-  val snapshotTooltip = Tippy.infoHover("The Snapshot view uses the data that was available to DRT at the point in time selected.")
-
   val splitsTableTooltip = Tippy.info(<.div(<.p("RAG colours are used to indicate DRT's confidence levels in the accuracy of its passenger number forecasts. Confidence levels depend on the source of data being displayed."),
     <.p("green -> live API data is available for the flight and we have high confidence levels when applying splits to queues"),
     <.p("amber-> live API data is not available for the flight so we rely on historic API data and have lower confidence levels when applying splits to queues"),
     <.p("red -> both live and relevant historic API data are not available and we depend on an historic average for flights across the port")))
-
-  val totalPaxTooltip = Tippy.info(<.div(<.p("RAG colours are used to indicate DRT's confidence levels in the accuracy of its passenger number forecasts. Confidence levels depend on the source of data being displayed."),
-    <.p("green -> live API or Port data is available for the flight and we have high confidence levels"),
-    <.p("amber-> port forecast is available or historic API data is used as a fallback"),
-    <.p("red ->  acl Forecast data is available")))
-
 
   val staffMovementsTabTooltip = Tippy.infoHover("The Staff Movements tab provides more information about adjustments.")
 

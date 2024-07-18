@@ -19,7 +19,7 @@ import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
-import org.scalajs.dom.html.{Span, TableCell, TableSection}
+import org.scalajs.dom.html.{TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
@@ -125,7 +125,7 @@ object FlightTableContent {
 
         val flightsForTerminal =
           flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
-        val flightsWithCodeShares = CodeShares.uniqueArrivalsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
+        val flightsWithCodeShares = CodeShares.uniqueFlightsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
         val isShowFlagger = props.flaggedNationalities.nonEmpty ||
           props.flaggedAgeGroups.nonEmpty ||
@@ -288,7 +288,7 @@ object FlightTableContent {
       }
       .map {
         case (label, Some(className)) if label == "Est PCP Pax" => <.th(
-          <.div(^.cls := className, label, " ", totalPaxTooltip)
+          <.div(^.cls := className, label)
         )
         case (label, None) if label == "Expected" || label == "Exp" => <.th(
           <.div(label, " ", expTimeTooltip)
@@ -297,8 +297,6 @@ object FlightTableContent {
           <.div(^.cls := "arrivals__table__flight-code-wrapper", label, " ", wbrFlightColorTooltip)
         )
         case (label, None) => <.th(label)
-        case (label, Some(className)) if className == "status" => <.th(label, " ", arrivalStatusTooltip, ^.className := className)
-        case (label, Some(className)) if className == "gate-stand" => <.th(label, " ", gateOrStandTh, ^.className := className)
         case (label, Some(className)) if className == "country" => <.th(label, " ", countryTooltip, ^.className := className)
         case (label, Some(className)) => <.th(label, ^.className := className)
       }
@@ -320,11 +318,4 @@ object FlightTableContent {
     ).collect {
       case Some(column) => column
     }
-
-  private def gateOrStandTh: VdomTagOf[Span] =
-    <.span(
-      Tippy.info(
-        "Select any gate / stand below to see the walk time. If it's not correct, contact us and we'll change it for you."
-      )
-    )
 }

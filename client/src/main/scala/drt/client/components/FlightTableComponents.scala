@@ -17,7 +17,7 @@ object FlightTableComponents {
     dt match {
       case Some(millis) =>
         val sdate = SDate(millis)
-        val hhmm = sdate.toHoursAndMinutes
+        val hhmm = <.span(^.className := "underline", sdate.toHoursAndMinutes)
         val toolTip = maybeToolTip.getOrElse(<.div(sdate.toLocalDateTimeString))
         val timeElement = Tippy.describe(<.span(toolTip, ^.display := "inline"), hhmm)
         maybeInfo match {
@@ -60,7 +60,7 @@ object FlightTableComponents {
         s"Predicted walk time: $predictedWalkTime", <.br(),
         s"Actual walk time from gate to arrivals hall: $gateOrStandWalkTime", <.br(),
       )
-      val content = <.div(^.display := "grid", ^.whiteSpace := "nowrap",
+      val content = <.div(^.display := "grid", ^.whiteSpace := "nowrap", ^.className := "underline",
         sdateFrom.toHoursAndMinutes,
         " \u2192 ",
         sdateTo.toHoursAndMinutes,

@@ -61,7 +61,6 @@ object FeedsStatusPage {
         SPACircuit.dispatch(RequestMissingPaxNos)
       }
 
-
       modelRcp { proxy =>
 
         val model = proxy()

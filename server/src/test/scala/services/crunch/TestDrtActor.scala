@@ -10,6 +10,7 @@ import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovements
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
+import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.Supervision.Stop
@@ -307,7 +308,9 @@ class TestDrtActor extends Actor {
           splitsCalculator.terminalSplits,
           minuteLookups.queueLoadsMinutesActor,
           tc.airportConfig.queuesByTerminal,
-          paxFeedSourceOrder)
+          paxFeedSourceOrder,
+          updateCapacity = _ => Future.successful(Done),
+        )
 
         val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
           TestProbe().ref,
@@ -392,7 +395,6 @@ class TestDrtActor extends Actor {
         arrivalsForecastFeed = Feed(forecastArrivals, 1.second, 5.second),
         arrivalsLiveBaseFeed = Feed(liveBaseArrivals, 1.second, 1.second),
         arrivalsLiveFeed = Feed(liveArrivals, 1.second, 500.millis),
-        optimiser = tc.cruncher,
         startDeskRecs = startDeskRecs,
         passengerAdjustments = tc.passengerAdjustments,
         system = system,

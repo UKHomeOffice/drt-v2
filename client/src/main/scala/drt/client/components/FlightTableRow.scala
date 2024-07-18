@@ -199,7 +199,8 @@ object FlightTableRow {
       )
       val lastCells = List[TagMod](
         <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(^.className := s"pcp-pax", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
+//        <.td(^.className := s"pcp-pax", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
+        <.td(^.className := s"pcp-pax underline ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder), flight.Origin.isDomesticOrCta)}", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
       )
 
       val flightFields = firstCells ++ lastCells
@@ -288,7 +289,13 @@ object FlightTableRow {
   }
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
-    val gateOrStand = <.span(^.key := "gate-or-stand", ^.className := "no-wrap", s"${arrival.Gate.getOrElse("")} / ${arrival.Stand.getOrElse("")}")
+    val content = (arrival.Gate, arrival.Stand) match {
+      case (Some(gate), Some(stand)) => <.span(s"Gate $gate", <.br(), s"Stand $stand")
+      case (Some(gate), _) => <.span(s"Gate $gate")
+      case (_, Some(stand)) => <.span(s"Stand $stand")
+      case _ => <.span("Not available")
+    }
+    val gateOrStand = <.span(^.key := "gate-or-stand", ^.className := "no-wrap underline", content)
     val maybeActualWalkTime = walkTimes.maybeWalkTimeMinutes(arrival.Gate, arrival.Stand, arrival.Terminal)
 
     val description = (paxAreDiverted, maybeActualWalkTime.isDefined) match {

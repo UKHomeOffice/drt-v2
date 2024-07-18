@@ -14,7 +14,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PaxTypeAndQueue}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.LocalDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.immutable
 import scala.collection.immutable.{Map, NumericRange, SortedMap}
@@ -39,9 +39,11 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                   deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike],
                                   description: String)
                                  (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes] = {
-    loadsToDesks(minuteMillis, passengersByQueue, deskLimitProviders, description).map(deskRecMinutes =>
-      SimulationMinutes(deskRecsToSimulations(deskRecMinutes.minutes).values.toSeq)
-    )
+    loadsToDesks(minuteMillis, passengersByQueue, deskLimitProviders, description).map { deskRecMinutes =>
+      val simMinutes = deskRecsToSimulations(deskRecMinutes.minutes).values.toSeq
+      log.info(s"Deployments & waits calculated for ${SDate(minuteMillis.min).toISOString} to ${SDate(minuteMillis.max).toISOString}")
+      SimulationMinutes(simMinutes)
+    }
   }
 
   private def deskRecsToSimulations(terminalQueueDeskRecs: Iterable[DeskRecMinute]): Map[TQM, SimulationMinute] = terminalQueueDeskRecs

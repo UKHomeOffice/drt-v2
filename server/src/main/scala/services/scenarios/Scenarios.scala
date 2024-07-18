@@ -1,7 +1,7 @@
 package services.scenarios
 
 import actors.persistent.SortedActorRefSource
-import akka.NotUsed
+import akka.{Done, NotUsed}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.Materializer
@@ -9,7 +9,6 @@ import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.SimulationParams
-import manifests.passengers.{ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import queueus.DynamicQueueStatusProvider
 import services.OptimiserWithFlexibleProcessors
@@ -18,7 +17,7 @@ import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWait
 import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -67,6 +66,7 @@ object Scenarios {
       updateLiveView = _ => Future.successful(StatusReply.Ack),
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = splitsCalculator.terminalSplits,
+      updateCapacity = _ => Future.successful(Done),
     )
 
     class DummyPersistentActor extends Actor {
