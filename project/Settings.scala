@@ -92,7 +92,7 @@ object Settings {
     "moment" -> ">=2.29.4",
     "@mui/system" -> "5.11.16",
     "@mui/material" -> "5.11.16",
-    "@mui/icons-material" -> "5.11.16",
+//    "@mui/icons-material" -> "5.11.16",
     "@mui/lab" -> "5.0.0-alpha.119",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
