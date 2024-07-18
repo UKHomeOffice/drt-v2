@@ -15,6 +15,7 @@ steps:
       - /app/entrypoint.sh
       - rm -rf ./yarn.lock && yarn
       - npm uninstall -g yarn
+      - rm -rf /usr/local/bin/yarn
       - npm view yarn versions --json
       - npm install -g yarn@2.4.3
       - yarn --version
