@@ -13,8 +13,7 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.3.0-final
     commands:
       - /app/entrypoint.sh
-      - yarn cache clean
-      - npm cache clean
+      - npm cache clean --force
       - rm -rf /usr/local/share/.cache/yarn/v6/npm-@mui-icons-material-5.11.16-417fa773c56672e39d6ccfed9ac55591985f0d38-integrity/node_modules/@mui/icons-material
       - rm -rf node_modules
       - sbt clean
