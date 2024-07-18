@@ -13,8 +13,10 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.3.0a
     commands:
       - /app/entrypoint.sh
+      - rm -rf ./yarn.lock && yarn
       - yarn install
       - yarn upgrade
+      - yarn --version
       - node --version
       - git --version
       - sbt --error compile docker:stage
