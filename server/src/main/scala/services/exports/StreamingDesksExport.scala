@@ -112,8 +112,8 @@ object StreamingDesksExport {
       staffMinutes
     )
 
-    val minutesCount = (end.millisSinceEpoch - start.millisSinceEpoch).milliseconds.toMinutes.toInt
-    val numberOfPeriods = minutesCount / periodMinutes
+    val minutesInaDay = 1440d
+    val numberOfPeriods = (minutesInaDay / periodMinutes).ceil.toInt
 
     val terminalCrunchMinutes = portState
       .crunchSummary(SDate(utcDate), numberOfPeriods, periodMinutes, terminal, exportQueuesInOrder)
@@ -147,8 +147,8 @@ object StreamingDesksExport {
   }
 
   private def deskRecsCsv(cm: CrunchMinute): String =
-    s"${cm.paxLoad},${cm.waitTime},${cm.deskRec},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
+    s"${Math.round(cm.paxLoad)},${cm.waitTime},${cm.deskRec},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
 
   private def deploymentsCsv(cm: CrunchMinute): String =
-    s"${cm.paxLoad},${cm.deployedWait.getOrElse("")},${cm.deployedDesks.getOrElse(0)},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
+    s"${Math.round(cm.paxLoad)},${cm.deployedWait.getOrElse("")},${cm.deployedDesks.getOrElse(0)},${cm.actWait.getOrElse("")},${cm.actDesks.getOrElse("")}"
 }
