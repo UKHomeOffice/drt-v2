@@ -13,12 +13,12 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.3.0a
     commands:
       - /app/entrypoint.sh
-      - rm -rf ./yarn.lock && yarn
-      - npm uninstall -g yarn
-      - rm -rf /usr/local/bin/yarn /usr/local/bin/yarnpkg
-      - npm view yarn versions --json
-      - npm install -g yarn@2.4.3
-      - yarn --version
+#      - rm -rf ./yarn.lock && yarn
+#      - npm uninstall -g yarn
+#      - rm -rf /usr/local/bin/yarn /usr/local/bin/yarnpkg
+#      - npm view yarn versions --json
+#      - npm install -g yarn@2.4.3
+#      - yarn --version
       - node --version
       - git --version
       - sbt --error compile docker:stage

@@ -84,7 +84,7 @@ object Settings {
     "log4javascript" -> log4Javascript,
     "bootstrap" -> bootstrap,
     "@handsontable/react" -> reactHandsontable,
-    "handsontable" -> "6.2.2",
+    "handsontable" -> "7.2.2",
     "core-js" -> "3.6.5",
     "chart.js" -> "^3.6.0",
     "@tippyjs/react" -> "4.1.0",

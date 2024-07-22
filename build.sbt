@@ -72,7 +72,7 @@ lazy val client: Project = (project in file("client"))
     Compile / npmDependencies ++= Settings.clientNpmDependencies,
     Compile / npmDevDependencies += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
-    useYarn := true,
+//    useYarn := true,
     // yes, we want to package JS dependencies
     packageJSDependencies / skip := false,
     resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
