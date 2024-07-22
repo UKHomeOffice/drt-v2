@@ -54,10 +54,6 @@ object Scenarios {
         sla,
       )
 
-    val terminalEgatesProvider = (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
-
-//    val terminalDeskLimits = PortDeskLimits.flexed(simulationAirportConfig, terminalEgatesProvider)
-
     val paxLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = flightsProvider,
       portDesksAndWaitsProvider = portDesksAndWaitsProvider,

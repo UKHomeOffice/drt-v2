@@ -23,7 +23,7 @@ import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
-import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -39,38 +39,14 @@ import scala.util.{Failure, Success, Try}
 class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def simulationExport: Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
-    implicit val timeout: Timeout = new Timeout(10 minutes)
-
     Action(parse.defaultBodyParser).async {
       request =>
         SimulationParams
           .fromQueryStringParams(request.queryString, ctrl.paxFeedSourceOrder) match {
           case Success(simulationParams) =>
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
-            val date = SDate(simulationParams.date)
-            val start = date.getLocalLastMidnight
-            val end = date.getLocalNextMidnight
-            val eventualFlightsWithSplitsStream = (ctrl.actorService.portStateActor ? GetFlightsForTerminalDateRange(
-              start.millisSinceEpoch,
-              end.millisSinceEpoch,
-              simulationParams.terminal
-            )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-            val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
-              val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
-              Scenarios.simulationResult(
-                simulationParams = simulationParams,
-                simulationAirportConfig = simulationConfig,
-                sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
-                splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.queueAdjustments),
-                flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-                portStateActor = portStateActor,
-                redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-                egateBanksProvider = () => ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
-                paxFeedSourceOrder = ctrl.feedService.paxFeedSourceOrder,
-                deskLimitsProviders = ctrl.applicationService.deskLimitsProviders,
-              )
-            }.flatten
+            val futureDeskRecs = deskRecsForSimulation(simulationParams, simulationConfig)
 
             simulationResultAsCsv(simulationParams, simulationParams.terminal, futureDeskRecs)
           case Failure(e) =>
@@ -83,36 +59,11 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   def simulation: Action[AnyContent] = authByRole(ArrivalSimulationUpload) {
     Action(parse.defaultBodyParser).async {
       request =>
-        implicit val timeout: Timeout = new Timeout(10 minutes)
-
         SimulationParams
           .fromQueryStringParams(request.queryString, ctrl.paxFeedSourceOrder) match {
           case Success(simulationParams) =>
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
-
-            val date = SDate(simulationParams.date)
-            val eventualFlightsWithSplitsStream: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]] = (ctrl.actorService.portStateActor ? GetFlightsForTerminalDateRange(
-              date.getLocalLastMidnight.millisSinceEpoch,
-              date.getLocalNextMidnight.millisSinceEpoch,
-              simulationParams.terminal
-            )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
-
-            val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
-              val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
-              val fwsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor)
-              Scenarios.simulationResult(
-                simulationParams = simulationParams,
-                simulationAirportConfig = simulationConfig,
-                sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
-                splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.queueAdjustments),
-                flightsProvider = fwsProvider,
-                portStateActor = portStateActor,
-                redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-                egateBanksProvider = () => ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
-                paxFeedSourceOrder = ctrl.feedService.paxFeedSourceOrder,
-                deskLimitsProviders = ctrl.applicationService.deskLimitsProviders
-              )
-            }.flatten
+            val futureDeskRecs = deskRecsForSimulation(simulationParams, simulationConfig)
 
             futureDeskRecs.map(res => {
               Ok(write(SimulationResult(simulationParams, summary(res, simulationParams.terminal))))
@@ -122,6 +73,34 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             Future(BadRequest("Unable to parse parameters: " + e.getMessage))
         }
     }
+  }
+
+  private def deskRecsForSimulation(simulationParams: SimulationParams, simulationConfig: AirportConfig) = {
+    implicit val timeout: Timeout = new Timeout(10 minutes)
+
+    val date = SDate(simulationParams.date)
+    val eventualFlightsWithSplitsStream = (ctrl.actorService.portStateActor ? GetFlightsForTerminalDateRange(
+      date.getLocalLastMidnight.millisSinceEpoch,
+      date.getLocalNextMidnight.millisSinceEpoch,
+      simulationParams.terminal
+    )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
+
+    val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
+      val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
+      Scenarios.simulationResult(
+        simulationParams = simulationParams,
+        simulationAirportConfig = simulationConfig,
+        sla = (_: LocalDate, queue: Queue) => Future.successful(simulationParams.slaByQueue(queue)),
+        splitsCalculator = SplitsCalculator(ctrl.applicationService.paxTypeQueueAllocation, airportConfig.terminalPaxSplits, ctrl.queueAdjustments),
+        flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
+        portStateActor = portStateActor,
+        redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
+        egateBanksProvider = () => ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
+        paxFeedSourceOrder = ctrl.feedService.paxFeedSourceOrder,
+        deskLimitsProviders = ctrl.applicationService.deskLimitsProviders,
+      )
+    }.flatten
+    futureDeskRecs
   }
 
   def summary(mins: DeskRecMinutes, terminal: Terminal): Map[Queues.Queue, List[CrunchApi.CrunchMinute]] = {

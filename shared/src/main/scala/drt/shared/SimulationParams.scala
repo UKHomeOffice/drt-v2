@@ -20,7 +20,7 @@ case class SimulationParams(
                              slaByQueue: Map[Queue, Int],
                              crunchOffsetMinutes: Int,
                              eGateOpenHours: Seq[Int],
-                             paxSourceOrderPreference: Seq[FeedSource],
+                             paxFeedSourceOrder: Seq[FeedSource],
                            ) {
 
   def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
@@ -51,7 +51,7 @@ case class SimulationParams(
   def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits): FlightsWithSplits =
     FlightsWithSplits(flightsWithSplits.flights.map {
       case (ua, fws) =>
-        val paxSource = fws.apiFlight.bestPaxEstimate(paxSourceOrderPreference)
+        val paxSource = fws.apiFlight.bestPaxEstimate(paxFeedSourceOrder)
         val actualPax = paxSource.passengers.actual.map(_ * passengerWeighting).map(_.round.toInt)
         val tranPax = paxSource.passengers.transit.map(_ * passengerWeighting).map(_.round.toInt)
         val updatedArrival = fws.apiFlight.copy(
@@ -113,7 +113,7 @@ object SimulationParams {
         eGateOpenHours = eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
           case Success(i) => i
         },
-        paxSourceOrderPreference = paxSourceOrder,
+        paxFeedSourceOrder = paxSourceOrder,
       )
     }
 
