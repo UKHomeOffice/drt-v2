@@ -2,11 +2,12 @@ package drt.client.components
 
 import diode.data.{Empty, Pot}
 import diode.react.ReactConnectProxy
+import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, TrainingHubLoc}
 import drt.client.actions.Actions.SetSnackbarMessage
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{CloseFeatureGuideDialog, GetFeatureGuides, GetDropIns, GetViewedFeatureIds}
+import drt.client.services.handlers.{CloseFeatureGuideDialog, GetDropIns, GetFeatureGuides, GetViewedFeatureIds}
 import drt.shared.DropIn
 import io.kinoplan.scalajs.react.material.ui.core.internal.Origin
 import io.kinoplan.scalajs.react.material.ui.core.{MuiBadge, MuiSnackbar}
@@ -117,7 +118,7 @@ object Navbar {
                       },
                       <.div(^.className := "training-hub-link", props.ctl.link(TrainingHubLoc())(Icon.calendarO, " ", "Training Hub")),
                       <.div(<.a(Icon.signOut, "Log Out",
-                        ^.href := s"/oauth2/sign_out?redirect=" + BaseUrl.until_#.value,
+                        ^.href := SPAMain.urls.logoutUrlForPort(props.airportConfig.portCode.iata),
                         ^.onClick --> Callback(GoogleEventTracker.sendEvent(props.airportConfig.portCode.toString, "Log Out", props.loggedInUser.id))))
                     )
                   }
