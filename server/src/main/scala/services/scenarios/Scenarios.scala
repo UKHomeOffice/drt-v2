@@ -12,7 +12,7 @@ import drt.shared.SimulationParams
 import manifests.queues.SplitsCalculator
 import queueus.DynamicQueueStatusProvider
 import services.OptimiserWithFlexibleProcessors
-import services.crunch.desklimits.PortDeskLimits
+import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWaitsProvider, QueuedRequestProcessing}
 import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
@@ -38,6 +38,7 @@ object Scenarios {
                        redListUpdatesProvider: () => Future[RedListUpdates],
                        egateBanksProvider: () => Future[PortEgateBanksUpdates],
                        paxFeedSourceOrder: List[FeedSource],
+                       deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike],
                       )
                       (implicit system: ActorSystem, timeout: Timeout): Future[DeskRecMinutes] = {
 
@@ -52,10 +53,6 @@ object Scenarios {
         paxFeedSourceOrder,
         sla,
       )
-
-    val terminalEgatesProvider = (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
-
-    val terminalDeskLimits = PortDeskLimits.fixed(simulationAirportConfig, terminalEgatesProvider)
 
     val paxLoadsProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = flightsProvider,
@@ -79,7 +76,7 @@ object Scenarios {
 
     val desksProducer: Flow[LoadProcessingRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
       .mapAsync(1) { loads =>
-        portDesksAndWaitsProvider.loadsToDesks(request.minutesInMillis, loads.indexed, terminalDeskLimits, "scenarios")
+        portDesksAndWaitsProvider.loadsToDesks(request.minutesInMillis, loads.indexed, deskLimitsProviders, "scenarios")
       }
 
     val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))

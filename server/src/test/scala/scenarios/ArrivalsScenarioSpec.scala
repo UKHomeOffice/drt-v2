@@ -9,6 +9,8 @@ import drt.shared._
 import manifests.queues.SplitsCalculator
 import queueus.{B5JPlusTypeAllocator, ChildEGateAdjustments, PaxTypeQueueAllocation, TerminalQueueAllocatorWithFastTrack}
 import services.crunch.CrunchTestLike
+import services.crunch.TestDefaults.airportConfig
+import services.crunch.desklimits.PortDeskLimits
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
 import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
@@ -42,6 +44,13 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
   private val arrival: Arrival = ArrivalGenerator.arrival(schDt = "2021-03-08T00:00", totalPax = Option(100), feedSource = LiveFeedSource)
   val arrivals: List[Arrival] = List(arrival)
 
+  val egateBanksProvider: () => Future[PortEgateBanksUpdates] =
+    () => Future.successful(PortEgateBanksUpdates(defaultAirportConfig.eGateBankSizes.map {
+      case (terminal, banks) => (terminal, EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))
+    }))
+  val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] =
+    (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
+
   def flightsProvider(cr: ProcessingRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
     Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
 
@@ -61,10 +70,9 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       flightsProvider = flightsProvider,
       portStateActor = portStateActor,
       redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
-      egateBanksProvider = () => Future.successful(PortEgateBanksUpdates(defaultAirportConfig.eGateBankSizes.map {
-        case (terminal, banks) => (terminal, EgateBanksUpdates(List(EgateBanksUpdate(0L, EgateBank.fromAirportConfig(banks)))))
-      })),
+      egateBanksProvider = egateBanksProvider,
       paxFeedSourceOrder = paxFeedSourceOrder,
+      deskLimitsProviders = PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
     )
 
     val result = Await.result(futureResult, 1.second)
@@ -93,7 +101,8 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
       slaByQueue = airportConfig.slaByQueue,
       crunchOffsetMinutes = 0,
-      eGateOpenHours = SimulationParams.fullDay
+      eGateOpenHours = SimulationParams.fullDay,
+      paxFeedSourceOrder = paxFeedSourceOrder,
     )
   }
 

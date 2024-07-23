@@ -20,6 +20,7 @@ case class SimulationParams(
                              slaByQueue: Map[Queue, Int],
                              crunchOffsetMinutes: Int,
                              eGateOpenHours: Seq[Int],
+                             paxFeedSourceOrder: Seq[FeedSource],
                            ) {
 
   def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
@@ -48,24 +49,23 @@ case class SimulationParams(
   }
 
   def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits): FlightsWithSplits =
-    FlightsWithSplits(flightsWithSplits.flights.flatMap {
+    FlightsWithSplits(flightsWithSplits.flights.map {
       case (ua, fws) =>
-        fws.apiFlight.PassengerSources.headOption.map { case (_, p) =>
-          val actualPax: Option[Int] = p.actual.map(_ * passengerWeighting.toInt)
-          val tranPax: Option[Int] = p.transit.map(_ * passengerWeighting.toInt)
-          val updatedArrival = fws.apiFlight.copy(
-            FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
-            PassengerSources = Map(ScenarioSimulationSource -> Passengers(actualPax, tranPax))
-          )
-          ua -> fws.copy(apiFlight = updatedArrival)
-        }
+        val paxSource = fws.apiFlight.bestPaxEstimate(paxFeedSourceOrder)
+        val actualPax = paxSource.passengers.actual.map(_ * passengerWeighting).map(_.round.toInt)
+        val tranPax = paxSource.passengers.transit.map(_ * passengerWeighting).map(_.round.toInt)
+        val updatedArrival = fws.apiFlight.copy(
+          FeedSources = fws.apiFlight.FeedSources + ScenarioSimulationSource,
+          PassengerSources = Map(ScenarioSimulationSource -> Passengers(actualPax, tranPax))
+        )
+        ua -> fws.copy(apiFlight = updatedArrival)
     })
 }
 
 object SimulationParams {
   implicit val rw: ReadWriter[SimulationParams] = macroRW
 
-  val fullDay: Seq[Int] = Seq(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23)
+  val fullDay: Seq[Int] = 0 to 23
 
   val requiredFields: List[String] = List(
     "terminal",
@@ -76,7 +76,7 @@ object SimulationParams {
     "eGateOpenHours"
   )
 
-  def fromQueryStringParams(qsMap: Map[String, Seq[String]]): Try[SimulationParams] = Try {
+  def fromQueryStringParams(qsMap: Map[String, Seq[String]], paxSourceOrder: Seq[FeedSource]): Try[SimulationParams] = Try {
     val maybeSimulationFieldsStrings: Map[String, Option[String]] = requiredFields
       .map(f => f -> qsMap.get(f).flatMap(_.headOption)).toMap
 
@@ -101,18 +101,19 @@ object SimulationParams {
     } yield {
       val terminal = Terminal(terminalName)
       SimulationParams(
-        terminal,
-        localDate,
-        passengerWeightingString.toDouble,
-        procTimes,
-        qMinDesks,
-        qMaxDesks,
-        eGateBankSizeString.split(",").map(_.toInt),
-        qSlas,
-        crunchOffsetMinutes.toInt,
-        eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
+        terminal = terminal,
+        date = localDate,
+        passengerWeighting = passengerWeightingString.toDouble,
+        processingTimes = procTimes,
+        minDesks = qMinDesks,
+        maxDesks = qMaxDesks,
+        eGateBanksSizes = eGateBankSizeString.split(",").map(_.toInt),
+        slaByQueue = qSlas,
+        crunchOffsetMinutes = crunchOffsetMinutes.toInt,
+        eGateOpenHours = eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
           case Success(i) => i
-        }
+        },
+        paxFeedSourceOrder = paxSourceOrder,
       )
     }
 
