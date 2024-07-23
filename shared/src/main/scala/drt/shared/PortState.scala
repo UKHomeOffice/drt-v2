@@ -5,11 +5,13 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{readwriter, ReadWriter => RW}
 
 import scala.collection.immutable.{Map => IMap, SortedMap => ISortedMap}
 import scala.collection.{Map, SortedMap}
+import scala.concurrent.duration.DurationInt
 
 
 case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
@@ -65,16 +67,16 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
     ISortedMap[TM, StaffMinute]() ++ staffMinuteRange(startMillis, endMillis)
       .filterKeys { tm => terminals.contains(tm.terminal) }
 
-  def crunchSummary(start: SDateLike, periods: Long, periodSize: Long, terminal: Terminal, queues: List[Queue]): ISortedMap[Long, IMap[Queue, CrunchMinute]] = {
+  def crunchSummary(start: SDateLike, periods: Long, periodMinutes: Int, terminal: Terminal, queues: List[Queue]): ISortedMap[Long, IMap[Queue, CrunchMinute]] = {
     val startMillis = start.roundToMinute().millisSinceEpoch
-    val endMillis = startMillis + (periods * periodSize * 60000)
-    val periodMillis = periodSize * 60000
+    val endMillis = startMillis + (periods * periodMinutes.minutes).toMillis
+    val periodMillis = periodMinutes.minutes.toMillis
     ISortedMap[Long, IMap[Queue, CrunchMinute]]() ++ (startMillis until endMillis by periodMillis)
       .map { periodStart =>
         val queueMinutes = queues
           .map { queue =>
             val periodEnd = periodStart + periodMillis
-            val slotMinutes = (periodStart until periodEnd by 60000)
+            val slotMinutes = (periodStart until periodEnd by oneMinuteMillis)
               .map { minute => crunchMinutes.get(TQM(terminal, queue, minute)) }
               .collect { case Some(cm) => cm }
               .toList
