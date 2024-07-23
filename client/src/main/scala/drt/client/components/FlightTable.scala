@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.actions.Actions.{RemoveArrivalSources, SetFlightFilterMessage, UpdateFlightHighlight}
+import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.modules.GoogleEventTracker
@@ -24,7 +24,6 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.immutable.HashSet
 import scala.scalajs.js
 import scala.scalajs.js.JSConverters._
-import scala.scalajs.js.timers._
 import scala.util.Try
 
 object FlightTable {
@@ -54,56 +53,61 @@ object FlightTable {
                    showHighlightedRows: Boolean,
                    showRequireAllSelected: Boolean) extends UseValueEq
 
-  case class State(showTransitPaxNumber: Boolean,
-                   showNumberOfVisaNationals: Boolean,
-                   showRequireAllSelected: Boolean,
-                   showHighlightedRows: Boolean,
-                   selectedAgeGroups: Seq[String],
-                   selectedNationalities: Set[Country],
-                   flightNumber: String)
+  case class State(flightSearch: String, showHighlightedRows: Boolean)
 
   implicit val reuseProps: Reusability[Props] = Reusability {
     (a, b) =>
       a.viewStart == b.viewStart &&
         a.viewEnd == b.viewEnd &&
-        a.filterFlightNumber == b.filterFlightNumber
+        //        a.filterFlightNumber == b.filterFlightNumber &&
+        a.selectedNationalities == b.selectedNationalities &&
+        a.selectedAgeGroups == b.selectedAgeGroups &&
+        a.showTransitPaxNumber == b.showTransitPaxNumber &&
+        a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
+        //        a.showHighlightedRows == b.showHighlightedRows &&
+        a.showRequireAllSelected == b.showRequireAllSelected
   }
 
   implicit val stateReuse: Reusability[State] = Reusability.always
 
-  val ageGroups: js.Array[String] = js.Array(AgeRange(0, 9).title, AgeRange(10, 24).title, AgeRange(25, 49).title, AgeRange(50, 65).title, AgeRange(65, None).title)
+  val ageGroups: js.Array[String] =
+    js.Array(AgeRange(0, 9).title,
+      AgeRange(10, 24).title,
+      AgeRange(25, 49).title,
+      AgeRange(50, 65).title,
+      AgeRange(65, None).title)
 
 
   def apply(shortLabel: Boolean = false,
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .initialStateFromProps(p => State(p.showTransitPaxNumber,
-      p.showNumberOfVisaNationals,
-      p.showRequireAllSelected,
-      p.showHighlightedRows,
-      p.selectedAgeGroups,
-      p.selectedNationalities,
-      p.filterFlightNumber))
-    .renderPS { (scope, props, state) =>
+    .initialStateFromProps(p => State(p.filterFlightNumber, p.showHighlightedRows))
+    .renderPS { (scope, props, _) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
       else
         "* Passengers from CTA origins do not contribute to PCP workload"
 
       def updateState(value: String) {
-        SPACircuit.dispatch(SetFlightFilterMessage(value))
+        SPACircuit.dispatch(
+          UpdateFlightHighlight(
+            FlightHighlight(props.showTransitPaxNumber,
+              props.showNumberOfVisaNationals,
+              props.showRequireAllSelected,
+              scope.state.showHighlightedRows,
+              props.selectedAgeGroups.toSeq,
+              props.selectedNationalities,
+              value)))
       }
 
-      case class Model( //flightHighlight: FlightHighlight,
-                        portStatePot: Pot[PortState],
-                        flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
-                        arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                        airportInfos: Map[PortCode, Pot[AirportInfo]]
+      case class Model(portStatePot: Pot[PortState],
+                       flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                       arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
+                       airportInfos: Map[PortCode, Pot[AirportInfo]]
                       )
 
-      val flaggerConnect = SPACircuit.connect(m => Model( //m.flightHighlight,
-        m.portStatePot, m.flightManifestSummaries, m.arrivalSources, m.airportInfos))
+      val flaggerConnect = SPACircuit.connect(m => Model(m.portStatePot, m.flightManifestSummaries, m.arrivalSources, m.airportInfos))
       val flightTableContent = FlightTableContent(shortLabel, originMapper, splitsGraphComponent)
 
       val submitCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
@@ -115,38 +119,30 @@ object FlightTable {
             FlightHighlight(sfp.showTransitPaxNumber,
               sfp.showNumberOfVisaNationals,
               sfp.requireAllSelected,
-              props.showHighlightedRows,
+              scope.state.showHighlightedRows,
               sfp.selectedAgeGroups.toSeq,
-              selectedNationalities.toSet,
-              sfp.flightNumber)))
-        scope.modState(_.copy(
-          showTransitPaxNumber = sfp.showTransitPaxNumber,
-          showNumberOfVisaNationals = sfp.showNumberOfVisaNationals,
-          showRequireAllSelected = sfp.requireAllSelected,
-          showHighlightedRows = state.showHighlightedRows,
-          selectedAgeGroups = sfp.selectedAgeGroups.toSeq,
-          selectedNationalities = selectedNationalities,
-          flightNumber = sfp.flightNumber)).runNow()
+              selectedNationalities,
+              scope.state.flightSearch)))
         Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "flightFilter", sfp.toString))
       }
 
       val showAllCallback: js.Function1[js.Object, Unit] = (event: js.Object) => {
-        val radioButtonValue = event.asInstanceOf[ReactEventFromInput].target.value
+        val radioButtonValue: Boolean = Try(event.asInstanceOf[ReactEventFromInput].target.value.toBoolean).getOrElse(false)
+        scope.modState(s => s.copy(showHighlightedRows = radioButtonValue)).runNow()
         SPACircuit.dispatch(
           UpdateFlightHighlight(
             FlightHighlight(props.showTransitPaxNumber,
               props.showNumberOfVisaNationals,
               props.showRequireAllSelected,
-              Try(radioButtonValue.toBoolean).getOrElse(false),
+              radioButtonValue,
               props.selectedAgeGroups.toSeq,
               props.selectedNationalities,
-              props.filterFlightNumber)))
-        scope.modState(s => s.copy(showHighlightedRows = Try(radioButtonValue.toBoolean).getOrElse(false))).runNow()
+              scope.state.flightSearch)))
       }
 
       val onChangeInput: js.Function1[Object, Unit] = (event: Object) => {
         val searchTerm = event.asInstanceOf[String]
-        scope.modState(s => s.copy(flightNumber = searchTerm)).runNow()
+        scope.modState(s => s.copy(flightSearch = searchTerm)).runNow()
         updateState(searchTerm)
       }
 
@@ -166,12 +162,12 @@ object FlightTable {
             "padding-left" -> "24px", "padding-top" -> "36px", "padding-bottom" -> "24px", "padding-right" -> "24px"),
             if (props.showFlagger) {
               val initialState = js.Dynamic.literal(
-                showTransitPaxNumber = state.showTransitPaxNumber,
-                showNumberOfVisaNationals = state.showNumberOfVisaNationals,
-                selectedAgeGroups = state.selectedAgeGroups.map(AutocompleteOption(_)).toJSArray,
-                selectedNationalities = state.selectedNationalities.map(n => AutocompleteOption(n.threeLetterCode)).toJSArray,
-                flightNumber = state.flightNumber,
-                requireAllSelected = state.showRequireAllSelected
+                showTransitPaxNumber = props.showTransitPaxNumber,
+                showNumberOfVisaNationals = props.showNumberOfVisaNationals,
+                selectedAgeGroups = props.selectedAgeGroups.map(AutocompleteOption(_)).toJSArray,
+                selectedNationalities = props.selectedNationalities.map(n => AutocompleteOption(n.threeLetterCode)).toJSArray,
+                flightNumber = props.filterFlightNumber,
+                requireAllSelected = props.showRequireAllSelected
               )
 
               FlightFlaggerFilters(
@@ -204,16 +200,16 @@ object FlightTable {
                   redListUpdates = props.redListUpdates,
                   airportConfig = props.airportConfig,
                   walkTimes = props.walkTimes,
-                  flaggedNationalities = scope.state.selectedNationalities,
-                  flaggedAgeGroups = scope.state.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
-                  showTransitPaxNumber = scope.state.showTransitPaxNumber,
-                  showNumberOfVisaNationals = scope.state.showNumberOfVisaNationals,
+                  flaggedNationalities = props.selectedNationalities,
+                  flaggedAgeGroups = props.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
+                  showTransitPaxNumber = props.showTransitPaxNumber,
+                  showNumberOfVisaNationals = props.showNumberOfVisaNationals,
                   showHighlightedRows = scope.state.showHighlightedRows,
-                  showRequireAllSelected = scope.state.showRequireAllSelected,
+                  showRequireAllSelected = props.showRequireAllSelected,
                   viewStart = props.viewStart,
                   viewEnd = props.viewEnd,
                   paxFeedSourceOrder = props.paxFeedSourceOrder,
-                  filterFlightNumber = scope.state.flightNumber,
+                  filterFlightNumber = scope.state.flightSearch,
                 ))
             }
           ),
