@@ -123,7 +123,6 @@ object TerminalDashboardComponent {
                           viewEnd = end,
                           showFlagger = false,
                           paxFeedSourceOrder = props.paxFeedSourceOrder,
-                          //                        filterFlightNumber = "",
                           filterFlightNumber = flightHighlight.flightNumber,
                           selectedNationalities = flightHighlight.selectedNationalities,
                           selectedAgeGroups = flightHighlight.selectedAgeGroups,

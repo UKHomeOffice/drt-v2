@@ -59,12 +59,10 @@ object FlightTable {
     (a, b) =>
       a.viewStart == b.viewStart &&
         a.viewEnd == b.viewEnd &&
-        //        a.filterFlightNumber == b.filterFlightNumber &&
         a.selectedNationalities == b.selectedNationalities &&
         a.selectedAgeGroups == b.selectedAgeGroups &&
         a.showTransitPaxNumber == b.showTransitPaxNumber &&
         a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
-        //        a.showHighlightedRows == b.showHighlightedRows &&
         a.showRequireAllSelected == b.showRequireAllSelected
   }
 
