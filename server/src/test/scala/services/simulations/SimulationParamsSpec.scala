@@ -26,7 +26,8 @@ class SimulationParamsSpec extends Specification {
     eGateBanksSizes = IndexedSeq(5, 5, 5),
     slaByQueue = testConfig.slaByQueue,
     crunchOffsetMinutes = 0,
-    eGateOpenHours = Seq()
+    eGateOpenHours = Seq(),
+    paxFeedSourceOrder = paxFeedSourceOrder,
   )
 
   "Given I am applying a simulation to an airport config" >> {
@@ -140,17 +141,21 @@ class SimulationParamsSpec extends Specification {
     result.flights.values.head.apiFlight.FeedSources === Set(LiveFeedSource, ScenarioSimulationSource)
   }
 
-  "Given I am applying a passenger weighting of 2 to some flights then passenger numbers and trans numbers shoudl be doubled" >> {
-    val weightingOfTwo = simulation.copy(passengerWeighting = 2.0)
+  "Given I am applying a passenger weighting of 1.5 to some flights then passenger numbers and trans numbers shoudl be doubled" >> {
+    val weightingOfTwo = simulation.copy(passengerWeighting = 1.5)
 
     val fws = FlightsWithSplits(List(
       ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100), transPax = Option(50)).toArrival(LiveFeedSource), Set())
     ).map(a => a.apiFlight.unique -> a).toMap)
 
-    val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(200), transPax = Option(100)).toArrival(LiveFeedSource),Set())
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 
-    result.flights.values.head.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder) === flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder)
+    sumPcpPax(result) === (sumPcpPax(fws) * 1.5).toInt
   }
 
+
+  private def sumPcpPax(result: FlightsWithSplits): Int =
+    result.flights.values
+      .map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0))
+      .sum
 }
