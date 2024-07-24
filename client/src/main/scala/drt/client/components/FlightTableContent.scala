@@ -22,7 +22,7 @@ import org.scalajs.dom
 import org.scalajs.dom.html.{TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
+import uk.gov.homeoffice.drt.ports.PaxTypes.VisaNational
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
@@ -187,7 +187,6 @@ object FlightTableContent {
                         manifestSummary.map(_.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0))
                       }
                       val visaNationalsInSummary: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
-                      val transitInSummary: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(Transit, 0))
 
                       val conditionsAndFlaggedSummary: Seq[(Boolean, Set[Option[Int]])] = List(
                         (props.flaggedNationalities.nonEmpty, flaggedNationalitiesInSummary),

@@ -136,6 +136,19 @@ object FlightTable {
               scope.state.flightSearch)))
       }
 
+      val clearFiltersCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
+        scope.modState(s => s.copy(showHighlightedRows = false, flightSearch = "")).runNow()
+        SPACircuit.dispatch(
+          UpdateFlightHighlight(
+            FlightHighlight(
+              showNumberOfVisaNationals = false,
+              showRequireAllSelected = false,
+              showHighlightedRows = false,
+              selectedAgeGroups = Seq(),
+              selectedNationalities = Set(),
+              flightNumber = "")))
+      }
+
       val onChangeInput: js.Function1[Object, Unit] = (event: Object) => {
         val searchTerm = event.asInstanceOf[String]
         scope.modState(s => s.copy(flightSearch = searchTerm)).runNow()
@@ -170,6 +183,7 @@ object FlightTable {
                 ageGroups,
                 submitCallback,
                 showAllCallback,
+                clearFiltersCallback,
                 onChangeInput,
                 initialState
               )

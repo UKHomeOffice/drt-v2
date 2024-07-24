@@ -11,6 +11,7 @@ import scala.scalajs.js.annotation.JSImport
 trait AutocompleteOption extends js.Object {
   var title: String
 }
+
 object AutocompleteOption {
   def apply(title: String): AutocompleteOption = {
     val p = (new js.Object).asInstanceOf[AutocompleteOption]
@@ -56,6 +57,7 @@ trait FlightFlaggerFiltersProps extends js.Object {
   var ageGroups: js.Array[String] = js.native
   var submitCallback: js.Function1[js.Object, Unit] = js.native
   var showAllCallback: js.Function1[js.Object, Unit] = js.native
+  var clearFiltersCallback: js.Function1[js.Object, Unit] = js.native
   var onChangeInput: js.Function1[String, Unit] = js.native
   var initialState: js.UndefOr[js.Dynamic] = js.native
 }
@@ -66,6 +68,7 @@ object FlightFlaggerFiltersProps {
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
+             clearFiltersCallback: js.Function1[js.Object, Unit],
              onChangeInput: js.Function1[String, Unit],
              initialState: js.UndefOr[js.Dynamic]
            ): FlightFlaggerFiltersProps = {
@@ -74,6 +77,7 @@ object FlightFlaggerFiltersProps {
     p.ageGroups = ageGroups
     p.submitCallback = submitCallback
     p.showAllCallback = showAllCallback
+    p.clearFiltersCallback = clearFiltersCallback
     p.onChangeInput = onChangeInput
     p.initialState = initialState
     p
@@ -93,6 +97,7 @@ object FlightFlaggerFilters {
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
+             clearFiltersCallback: js.Function1[js.Object, Unit],
              onChangeInput: js.Function1[String, Unit],
              initialState: js.UndefOr[js.Dynamic]
            ): VdomElement = {
@@ -101,6 +106,7 @@ object FlightFlaggerFilters {
       ageGroups,
       submitCallback,
       showAllCallback,
+      clearFiltersCallback,
       onChangeInput,
       initialState
     )
