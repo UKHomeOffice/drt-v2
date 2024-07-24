@@ -61,6 +61,7 @@ object FlightTableContent {
                    viewEnd: SDateLike,
                    paxFeedSourceOrder: List[FeedSource],
                    filterFlightNumber: String,
+                   showFlagger: Boolean,
                   ) extends UseValueEq
 
   implicit val reuseProps: Reusability[Props] = Reusability {
@@ -304,7 +305,7 @@ object FlightTableContent {
 
   private def columnHeaders(shortLabel: Boolean, redListHeading: String, isMobile: Boolean, showFlagger: Boolean): Seq[(String, Option[String])] =
     List(
-      Option(("Flight", Option("arrivals__table__flight-code"))),
+      Option(("Flight", if (showFlagger) Option("arrivals__table__flight-code-with-highlight") else Option("arrivals__table__flight-code"))),
       if (showFlagger) Option(("Pax Info", Option("arrivals__table__flags-column"))) else None,
       Option((if (isMobile) "Ori" else "Origin", None)),
       Option(("Country", Option("country"))),

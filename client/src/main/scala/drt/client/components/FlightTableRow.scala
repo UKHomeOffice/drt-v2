@@ -84,10 +84,29 @@ object FlightTableRow {
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.paxFeedSourceOrder).getOrElse(Map[Queue, Int]())
 
+      val isHighterOptionExists = props.flaggedNationalities.nonEmpty ||
+        props.flaggedAgeGroups.nonEmpty || props.showTransitPaxNumber || props.showNumberOfVisaNationals
+
       val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
-        "arrivals__table__flight-code arrivals__table__flight-code--clickable"
-      else
-        "arrivals__table__flight-code"
+        if (props.showHightLighted && isHighterOptionExists)
+          "arrivals__table__flight-code arrivals__table__flight-code--clickable"
+        else
+          "arrivals__table__flight-code-with-highlight arrivals__table__flight-code--clickable"
+      else if (props.showHightLighted && isHighterOptionExists) "arrivals__table__flight-code-with-highlight"
+      else "arrivals__table__flight-code"
+
+
+      val addition = if (!props.showHightLighted && isHighterOptionExists) " arrivals__table__flight-code--highlighted" else ""
+
+      val highlightedComponent = if (isHighterOptionExists) {
+        val chip = highlightedChips(props.showTransitPaxNumber,
+          props.showNumberOfVisaNationals,
+          props.showRequireAllSelected,
+          props.flaggedAgeGroups,
+          props.flaggedNationalities,
+          props.manifestSummary)
+        if (chip != EmptyVdom) Some(chip) else None
+      } else None
 
       def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean, highLighter: Boolean): VdomTagOf[Span] =
         if (props.loggedInUser.hasRole(ArrivalSource)) {
@@ -108,7 +127,7 @@ object FlightTableRow {
                   GetArrivalSources(props.flightWithSplits.unique)
               }
             }),
-            if (highLighter) FlightHighlightChip(flightCodes) else flightCodes,
+            if (highLighter) FlightHighlightChip(flightCodes) else if (!props.showHightLighted && isHighterOptionExists) <.span(^.cls := "arrival__non__highter__row", flightCodes) else flightCodes
           )
         } else if (highLighter) <.span(^.cls := "arrivals__table__flight-code-value", FlightHighlightChip(flightCodes))
         else <.span(^.cls := "arrivals__table__flight-code-value", flightCodes)
@@ -153,24 +172,15 @@ object FlightTableRow {
         case _ => EmptyVdom
       }
 
-      val highlightedComponent = if (props.flaggedNationalities.nonEmpty ||
-        props.flaggedAgeGroups.nonEmpty || props.showTransitPaxNumber || props.showNumberOfVisaNationals) {
-        val chip = highlightedChips(props.showTransitPaxNumber,
-          props.showNumberOfVisaNationals,
-          props.showRequireAllSelected,
-          props.flaggedAgeGroups,
-          props.flaggedNationalities,
-          props.manifestSummary)
-        if (chip != EmptyVdom) Some(chip) else None
-      } else None
-
+      val wrapperClass = if (!props.showHightLighted && isHighterOptionExists) "arrivals__table__flight-code-wrapper-with-highlight"
+      else "arrivals__table__flight-code-wrapper"
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           if (props.showHightLighted)
             <.div(^.cls := "arrivals__table__flight-code-wrapper-with-highlight",
               flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, true), charts)
           else
-            <.div(^.cls := "arrivals__table__flight-code-wrapper",
+            <.div(^.cls := wrapperClass,
               flightCodeElement(flightCodes, props.directRedListFlight.outgoingDiversion, props.directRedListFlight.incomingDiversion, false),
               charts
             )),
@@ -262,7 +272,6 @@ object FlightTableRow {
         }
 
         val visaNationalsChip: Option[VdomElement] = generateChip(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0), "Visa Nationals")
-//        val transitChip: Option[VdomElement] = generateChip(showTransitPaxNumber, summary.paxTypes.getOrElse(Transit, 0), "Transit")
 
         val chips: Set[Option[VdomElement]] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ Set(visaNationalsChip) //++ Set(transitChip)
 
@@ -270,7 +279,6 @@ object FlightTableRow {
           (flaggedNationalities.nonEmpty, flaggedNationalitiesChips),
           (flaggedAgeGroups.nonEmpty, flaggedAgeGroupsChips),
           (showNumberOfVisaNationals, Set(visaNationalsChip)),
-//          (showTransitPaxNumber, Set(transitChip))
         )
 
         val trueConditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = conditionsAndChips.filter(_._1)

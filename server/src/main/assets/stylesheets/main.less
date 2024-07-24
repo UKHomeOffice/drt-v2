@@ -1858,12 +1858,15 @@ th h2 {
   white-space: break-spaces;
 }
 
-arrivals__table__flight-code__info-highlighted{
+.arrivals__table__flight-code__info-highlighted{
   font-size: inherit;
   float: left;
   margin-right: 2px;
 }
 
+.arrival__non__highter__row {
+  padding-left: 35px;
+}
 .arrivals__table__flight-code__info {
   font-size: inherit;
   float: right;
@@ -1889,7 +1892,11 @@ arrivals__table__flight-code__info-highlighted{
   width: 75px;
   display: inline-block;
 }
-
+.arrivals__table__flight-code-wrapper-with-non-highlight {
+  min-height: 40px;
+  width: 75px;
+  display: inline-flex;
+}
 .arrivals__table__flight-code-wrapper-with-highlight {
   width: 120px;
   display: flex;
@@ -1899,7 +1906,12 @@ arrivals__table__flight-code__info-highlighted{
 
 .arrivals__table__flight-code {
   white-space: nowrap;
-  width: 120px;
+  width: 95px;
+}
+
+.arrivals__table__flight-code-with-highlight {
+  white-space: nowrap;
+  width: 130px;
 }
 
 .arrivals__table__flight__chart-box {

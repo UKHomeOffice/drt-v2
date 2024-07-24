@@ -210,6 +210,7 @@ object FlightTable {
                   viewEnd = props.viewEnd,
                   paxFeedSourceOrder = props.paxFeedSourceOrder,
                   filterFlightNumber = scope.state.flightSearch,
+                  showFlagger = props.showFlagger,
                 ))
             }
           ),
