@@ -223,7 +223,6 @@ object TerminalContentComponent {
                           filterFlightNumber = flightHighlight.flightNumber,
                           selectedNationalities = flightHighlight.selectedNationalities,
                           selectedAgeGroups = flightHighlight.selectedAgeGroups,
-                          showTransitPaxNumber= flightHighlight.showTransitPaxNumber,
                           showNumberOfVisaNationals = flightHighlight.showNumberOfVisaNationals,
                           showHighlightedRows = flightHighlight.showHighlightedRows,
                           showRequireAllSelected= flightHighlight.showRequireAllSelected

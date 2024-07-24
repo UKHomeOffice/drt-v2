@@ -48,7 +48,6 @@ object FlightTable {
                    filterFlightNumber: String,
                    selectedNationalities: Set[Country],
                    selectedAgeGroups: Seq[String],
-                   showTransitPaxNumber: Boolean,
                    showNumberOfVisaNationals: Boolean,
                    showHighlightedRows: Boolean,
                    showRequireAllSelected: Boolean) extends UseValueEq
@@ -61,7 +60,6 @@ object FlightTable {
         a.viewEnd == b.viewEnd &&
         a.selectedNationalities == b.selectedNationalities &&
         a.selectedAgeGroups == b.selectedAgeGroups &&
-        a.showTransitPaxNumber == b.showTransitPaxNumber &&
         a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
         a.showRequireAllSelected == b.showRequireAllSelected
   }
@@ -90,7 +88,7 @@ object FlightTable {
       def updateState(value: String) {
         SPACircuit.dispatch(
           UpdateFlightHighlight(
-            FlightHighlight(props.showTransitPaxNumber,
+            FlightHighlight(
               props.showNumberOfVisaNationals,
               props.showRequireAllSelected,
               scope.state.showHighlightedRows,
@@ -114,7 +112,7 @@ object FlightTable {
         val selectedNationalities: Set[Country] = CountryOptions.countries.filter(c => countriesCode.contains(c.threeLetterCode)).toSet
         SPACircuit.dispatch(
           UpdateFlightHighlight(
-            FlightHighlight(sfp.showTransitPaxNumber,
+            FlightHighlight(
               sfp.showNumberOfVisaNationals,
               sfp.requireAllSelected,
               scope.state.showHighlightedRows,
@@ -129,7 +127,7 @@ object FlightTable {
         scope.modState(s => s.copy(showHighlightedRows = radioButtonValue)).runNow()
         SPACircuit.dispatch(
           UpdateFlightHighlight(
-            FlightHighlight(props.showTransitPaxNumber,
+            FlightHighlight(
               props.showNumberOfVisaNationals,
               props.showRequireAllSelected,
               radioButtonValue,
@@ -160,7 +158,6 @@ object FlightTable {
             "padding-left" -> "24px", "padding-top" -> "36px", "padding-bottom" -> "24px", "padding-right" -> "24px"),
             if (props.showFlagger) {
               val initialState = js.Dynamic.literal(
-                showTransitPaxNumber = props.showTransitPaxNumber,
                 showNumberOfVisaNationals = props.showNumberOfVisaNationals,
                 selectedAgeGroups = props.selectedAgeGroups.map(AutocompleteOption(_)).toJSArray,
                 selectedNationalities = props.selectedNationalities.map(n => AutocompleteOption(n.threeLetterCode)).toJSArray,
@@ -200,7 +197,6 @@ object FlightTable {
                   walkTimes = props.walkTimes,
                   flaggedNationalities = props.selectedNationalities,
                   flaggedAgeGroups = props.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
-                  showTransitPaxNumber = props.showTransitPaxNumber,
                   showNumberOfVisaNationals = props.showNumberOfVisaNationals,
                   showHighlightedRows = scope.state.showHighlightedRows,
                   showRequireAllSelected = props.showRequireAllSelected,

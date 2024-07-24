@@ -4,7 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
-import drt.client.components.FlightComponents.{SplitsGraph, paxFeedSourceClass}
+import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -21,7 +21,7 @@ import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
-import uk.gov.homeoffice.drt.ports.PaxTypes.{Transit, VisaNational}
+import uk.gov.homeoffice.drt.ports.PaxTypes.VisaNational
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -56,7 +56,6 @@ object FlightTableRow {
                    walkTimes: WalkTimes,
                    flaggedNationalities: Set[Country],
                    flaggedAgeGroups: Set[PaxAgeRange],
-                   showTransitPaxNumber: Boolean,
                    showNumberOfVisaNationals: Boolean,
                    showHighlightedRows: Boolean,
                    showRequireAllSelected: Boolean,
@@ -85,7 +84,7 @@ object FlightTableRow {
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.paxFeedSourceOrder).getOrElse(Map[Queue, Int]())
 
       val isHighterOptionExists = props.flaggedNationalities.nonEmpty ||
-        props.flaggedAgeGroups.nonEmpty || props.showTransitPaxNumber || props.showNumberOfVisaNationals
+        props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
 
       val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
         if (props.showHightLighted && isHighterOptionExists)
@@ -99,7 +98,7 @@ object FlightTableRow {
       val addition = if (!props.showHightLighted && isHighterOptionExists) " arrivals__table__flight-code--highlighted" else ""
 
       val highlightedComponent = if (isHighterOptionExists) {
-        val chip = highlightedChips(props.showTransitPaxNumber,
+        val chip = highlightedChips(
           props.showNumberOfVisaNationals,
           props.showRequireAllSelected,
           props.flaggedAgeGroups,
@@ -178,7 +177,7 @@ object FlightTableRow {
         <.td(^.className := flightCodeClass,
           if (props.showHightLighted)
             <.div(^.cls := "arrivals__table__flight-code-wrapper-with-highlight",
-              flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, true), charts)
+              flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, highLighter=true), charts)
           else
             <.div(^.cls := wrapperClass,
               flightCodeElement(flightCodes, props.directRedListFlight.outgoingDiversion, props.directRedListFlight.incomingDiversion, false),
@@ -248,8 +247,7 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  private def highlightedChips(showTransitPaxNumber: Boolean,
-                               showNumberOfVisaNationals: Boolean,
+  private def highlightedChips(showNumberOfVisaNationals: Boolean,
                                showRequireAllSelected: Boolean,
                                flaggedAgeGroups: Set[PaxAgeRange],
                                flaggedNationalities: Set[Country],

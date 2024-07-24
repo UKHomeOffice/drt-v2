@@ -181,7 +181,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
                      userSelectedPlanningTimePeriod: Pot[Int] = Empty,
-                     flightHighlight: FlightHighlight = FlightHighlight(false, false, false, false, Seq.empty, Set.empty[Country], "")
+                     flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], "")
                     )
 
 object PollDelay {

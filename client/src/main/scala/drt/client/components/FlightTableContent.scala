@@ -53,7 +53,6 @@ object FlightTableContent {
                    walkTimes: WalkTimes,
                    flaggedNationalities: Set[Country],
                    flaggedAgeGroups: Set[PaxAgeRange],
-                   showTransitPaxNumber: Boolean,
                    showNumberOfVisaNationals: Boolean,
                    showHighlightedRows: Boolean,
                    showRequireAllSelected: Boolean,
@@ -71,7 +70,6 @@ object FlightTableContent {
         a.flaggedNationalities == b.flaggedNationalities &&
         a.flaggedAgeGroups == b.flaggedAgeGroups &&
         a.filterFlightNumber == b.filterFlightNumber &&
-        a.showTransitPaxNumber == b.showTransitPaxNumber &&
         a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
         a.showHighlightedRows == b.showHighlightedRows &&
         a.showRequireAllSelected == b.showRequireAllSelected &&
@@ -130,7 +128,6 @@ object FlightTableContent {
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
         val isShowFlagger = props.flaggedNationalities.nonEmpty ||
           props.flaggedAgeGroups.nonEmpty ||
-          props.showTransitPaxNumber ||
           props.showNumberOfVisaNationals
 
         <.div(
@@ -176,7 +173,6 @@ object FlightTableContent {
                         walkTimes = props.walkTimes,
                         flaggedNationalities = props.flaggedNationalities,
                         flaggedAgeGroups = props.flaggedAgeGroups,
-                        showTransitPaxNumber = props.showTransitPaxNumber,
                         showNumberOfVisaNationals = props.showNumberOfVisaNationals,
                         showHighlightedRows = props.showNumberOfVisaNationals,
                         showRequireAllSelected = props.showRequireAllSelected,
@@ -196,16 +192,14 @@ object FlightTableContent {
                       val conditionsAndFlaggedSummary: Seq[(Boolean, Set[Option[Int]])] = List(
                         (props.flaggedNationalities.nonEmpty, flaggedNationalitiesInSummary),
                         (props.flaggedAgeGroups.nonEmpty, flaggedAgeGroupInSummary),
-                        (props.showNumberOfVisaNationals, Set(visaNationalsInSummary)),
-                        (props.showTransitPaxNumber, Set(transitInSummary))
+                        (props.showNumberOfVisaNationals, Set(visaNationalsInSummary))
                       )
 
                       val trueConditionsAndChips: Seq[(Boolean, Set[Option[Int]])] = conditionsAndFlaggedSummary.filter(_._1)
 
                       val isFlaggedInSummaryExists = flaggedNationalitiesInSummary.flatten.sum > 0 && props.flaggedNationalities.nonEmpty ||
                         flaggedAgeGroupInSummary.flatten.sum > 0 && props.flaggedAgeGroups.nonEmpty ||
-                        visaNationalsInSummary.getOrElse(0) > 0 && props.showNumberOfVisaNationals ||
-                        transitInSummary.getOrElse(0) > 0 && props.showTransitPaxNumber
+                        visaNationalsInSummary.getOrElse(0) > 0 && props.showNumberOfVisaNationals
 
                       (props.showHighlightedRows, props.showRequireAllSelected) match {
                         case (true, true) =>
