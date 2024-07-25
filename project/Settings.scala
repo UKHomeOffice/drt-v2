@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v20240724_1"
+    val drtLib = "v859"
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
@@ -84,8 +84,8 @@ object Settings {
     "log4javascript" -> log4Javascript,
     "bootstrap" -> bootstrap,
     "@handsontable/react" -> reactHandsontable,
-    "handsontable" -> "6.2.2",
-    "core-js" -> "3.6.5",
+    "handsontable" -> "7.2.2",
+    "core-js" -> "3.23.3",
     "chart.js" -> "^3.6.0",
     "@tippyjs/react" -> "4.1.0",
     "react-chartjs-2" -> "^4.0.0",
@@ -99,7 +99,7 @@ object Settings {
     "react-markdown" -> "9.0.1",
     "@types/react-dom" -> react,
     "css-loader" -> "6.7.2",
-    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#8560ed938b7206a740d7a430c82e87c97b2ab761"
+    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#33ebe6c0e0a59656b1571491c7d80f0ccd06026f"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

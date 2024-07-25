@@ -42,11 +42,12 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val airportConfig: AirportConfig
   val params: DrtParameters
 
-  def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] =
+  def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
     if (params.isSuperUserMode) {
       system.log.debug(s"Using Super User Roles")
       Roles.availableRoles
     } else userRolesFromHeader(headers)
+  }
 
 
   val now: () => SDateLike

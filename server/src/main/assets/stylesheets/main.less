@@ -1179,8 +1179,8 @@ p {
 }
 
 #arrivals .right {
-  text-align: right;
-  padding-right: 10%;
+  text-align: center;
+  padding-bottom: 5px;
 }
 
 .no-wrap {
@@ -1495,9 +1495,9 @@ p {
 }
 
 .arrivals_table__splits__queue-pax {
-  min-width: 40px;
-  text-align: left;
-  margin-bottom: 5px;
+  min-width: 60px;
+  text-align: right;
+  margin-bottom: 8px;
   white-space: nowrap;
 }
 
@@ -1562,17 +1562,55 @@ th h2 {
   height: 200px;
 }
 
-.pax-cell {
-  position: relative;
-  width: 100%;
-  display: inline-block;
-  color: black;
+.data-quality {
+  border: 1px solid #404252;
+  padding: 4px 8px 0px 8px;
   font-weight: 400;
+  text-align: left;
 }
 
-.pax-cell div {
-  padding-right: 5px;
+.data-quality > span {
+  display: flex;
+  gap: 5px;
+  justify-content: space-between;
 }
+
+.data-quality__more-info {
+  color: #404252;
+  font-size: 18px;
+}
+
+.data-quality__info {
+  background-color: #f3f5f9;
+  color: #404252;
+}
+
+.data-quality__success {
+  background-color: #f3f9de;
+  color: #2F4500;
+}
+
+.data-quality__warning {
+  background-color: #fff2e1;
+  color: #873200;
+}
+
+.data-quality__error {
+  background-color: #ffebee;
+  color: #99001E;
+}
+
+//.pax-cell {
+//  position: relative;
+//  width: 100%;
+//  display: inline-block;
+//  color: black;
+//  font-weight: 400;
+//}
+//
+//.pax-cell div {
+//  padding-right: 5px;
+//}
 
 @pax-bar-height: 20px;
 
@@ -1858,7 +1896,7 @@ th h2 {
 }
 
 .arrivals__table__flags-column {
-  width: 110px;
+  width: 150px;
 }
 
 .arrivals__table__flight-est-pcp {
@@ -1870,19 +1908,23 @@ th h2 {
 }
 
 .arrivals__table__flight-code-value {
-  min-width: 53px;
+  min-width: 103px;
   white-space: break-spaces;
 }
 
+.arrivals__table__flight-code__info-highlighted{
+  font-size: inherit;
+  float: left;
+  margin-right: 2px;
+}
+
+.arrival__non__highter__row {
+  padding-left: 35px;
+}
 .arrivals__table__flight-code__info {
   font-size: inherit;
   float: right;
   margin-right: 2px;
-}
-
-.arrivals__table__flight__pcp-pax {
-  margin-bottom: 5px;
-  font-weight: bold;
 }
 
 .arrivals__table__flight__pcp-pax svg {
@@ -1904,18 +1946,26 @@ th h2 {
   width: 75px;
   display: inline-block;
 }
+.arrivals__table__flight-code-wrapper-with-non-highlight {
+  min-height: 40px;
+  width: 75px;
+  display: inline-flex;
+}
+.arrivals__table__flight-code-wrapper-with-highlight {
+  width: 120px;
+  display: flex;
+  align-items: center;
+  margin-top:-7px;
+}
 
 .arrivals__table__flight-code {
   white-space: nowrap;
   width: 95px;
 }
 
-.arrivals__table__flight-origin {
-  width: 7%;
-}
-
-.arrivals__table__flight-splits {
-  width: 250px;
+.arrivals__table__flight-code-with-highlight {
+  white-space: nowrap;
+  width: 130px;
 }
 
 .arrivals__table__flight__chart-box {
@@ -1992,6 +2042,14 @@ th h2 {
   border-right: 1px solid #ccc;
 }
 
+.pcp-pax-value {
+  display: block;
+  min-width: 30px;
+  text-align: right;
+  font-weight: bold;
+  padding-bottom: 8px;
+}
+
 .pax-rag-green {
   border-bottom: 3px solid @reliability-high;
 }
@@ -2009,7 +2067,7 @@ th h2 {
 }
 
 #arrivals td, #arrivals th {
-  padding: 8px;
+  padding: 16px 8px 16px 8px;
   line-height: 1.4;
   vertical-align: top;
   border-top: 1px solid #ddd;
@@ -2036,7 +2094,7 @@ th h2 {
 }
 
 #arrivals table {
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 #arrivals table thead {

@@ -1,7 +1,6 @@
 package drt.client.components
 
 import diode.UseValueEq
-import drt.client.components.FlightComponents.PcpPaxDataQuality.TrustedPortData
 import drt.client.components.FlightComponents.SplitsDataQuality.{CarrierData, HistoricalCarrierData, TerminalAverageData, TrustedCarrierData}
 import drt.shared.redlist.DirectRedListFlight
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -16,34 +15,42 @@ import uk.gov.homeoffice.drt.ports._
 
 object FlightComponents {
 
-  trait PcpPaxDataQuality {
+  trait DataQuality {
+    val `type`: String
+    val text: String
+    val maybeTooltip: Option[String] = None
+  }
+
+  trait PcpPaxDataQuality extends DataQuality {
     val `type`: String
     val text: String
   }
   object PcpPaxDataQuality {
     object TrustedPortData extends PcpPaxDataQuality {
       val `type`: String = "success"
-      val text: String = "Trusted Port Data"
+      val text: String = "Port live data"
+      override val maybeTooltip: Option[String] = Option("Live data from the port operator")
     }
     object CarrierData extends PcpPaxDataQuality {
       val `type`: String = "info"
       val text: String = "Carrier data"
+      override val maybeTooltip: Option[String] = Option("Data from the airline")
     }
     object PortForecastData extends PcpPaxDataQuality {
       val `type`: String = "warning"
       val text: String = "Port forecast data"
     }
-    object HistoricalData extends PcpPaxDataQuality {
-      val `type`: String = "warning"
-      val text: String = "Historical carrier data"
-    }
     object MlData extends PcpPaxDataQuality {
       val `type`: String = "warning"
-      val text: String = "Historical carrier data"
+      val text: String = "DRT forecast"
+    }
+    object HistoricalData extends PcpPaxDataQuality {
+      val `type`: String = "warning"
+      val text: String = "Estimate"
     }
     object AclData extends PcpPaxDataQuality {
       val `type`: String = "error"
-      val text: String = "Historical carrier data"
+      val text: String = "Estimate"
     }
 
   }
@@ -74,12 +81,12 @@ object FlightComponents {
       else ""
 
     val pcpPaxNumber = if (!flightWithSplits.apiFlight.Origin.isDomesticOrCta)
-      s"${flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")} pax"
+      s"${flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")}"
     else "-"
 
     <.div(
       ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData underline",
-      <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", pcpPaxNumber))),
+      <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"pcp-pax-value $noPcpPaxClass", pcpPaxNumber))),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
           if (directRedListFlight.incomingDiversion) s"Passengers diverted from ${flightWithSplits.apiFlight.Terminal}"
@@ -89,7 +96,7 @@ object FlightComponents {
     )
   }
 
-  trait SplitsDataQuality {
+  trait SplitsDataQuality extends DataQuality {
     val `type`: String
     val text: String
   }
@@ -98,7 +105,7 @@ object FlightComponents {
 
     object TrustedCarrierData extends SplitsDataQuality {
       val `type`: String = "success"
-      val text: String = "Trusted carrier data"
+      val text: String = "Verified carrier data"
     }
 
     object CarrierData extends SplitsDataQuality {
