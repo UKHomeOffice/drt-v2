@@ -171,7 +171,7 @@ object FlightTableRow {
       }
 
       val wrapperClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper-with-highlight"
-      else if (!props.showHightLighted && highterOptionExists) "arrivals__table__flight-code-wrapper-with-highlight"
+      else if (!props.showHightLighted && highterOptionExists) "arrivals__table__flight-code-wrapper-with-non-highlighted-row"
       else "arrivals__table__flight-code-wrapper"
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
