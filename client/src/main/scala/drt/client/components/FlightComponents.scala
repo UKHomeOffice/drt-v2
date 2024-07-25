@@ -34,23 +34,27 @@ object FlightComponents {
     object CarrierData extends PcpPaxDataQuality {
       val `type`: String = "info"
       val text: String = "Carrier data"
-      override val maybeTooltip: Option[String] = Option("Data from the airline")
+      override val maybeTooltip: Option[String] = Option("Advance Passenger Information (API) from the carrier")
     }
     object PortForecastData extends PcpPaxDataQuality {
       val `type`: String = "warning"
       val text: String = "Port forecast data"
+      override val maybeTooltip: Option[String] = Option("Data from the port operator")
     }
     object MlData extends PcpPaxDataQuality {
       val `type`: String = "warning"
       val text: String = "DRT forecast"
+      override val maybeTooltip: Option[String] = Option("Machine learning from multiple information sources and historical trends")
     }
     object HistoricalData extends PcpPaxDataQuality {
       val `type`: String = "warning"
       val text: String = "Estimate"
+      override val maybeTooltip: Option[String] = Option("Based on an historical average or an estimated load factor")
     }
     object AclData extends PcpPaxDataQuality {
       val `type`: String = "error"
       val text: String = "Estimate"
+      override val maybeTooltip: Option[String] = Option("Based on an historical average or an estimated load factor")
     }
 
   }
@@ -106,21 +110,25 @@ object FlightComponents {
     object TrustedCarrierData extends SplitsDataQuality {
       val `type`: String = "success"
       val text: String = "Verified carrier data"
+      override val maybeTooltip: Option[String] = Option("Based on Advance Passenger Information (API) from the carrier")
     }
 
     object CarrierData extends SplitsDataQuality {
       val `type`: String = "info"
       val text: String = "Carrier data"
+      override val maybeTooltip: Option[String] = Option("Advance Passenger Information (API) from the carrier")
     }
 
     object HistoricalCarrierData extends SplitsDataQuality {
       val `type`: String = "warning"
       val text: String = "Historical carrier data"
+      override val maybeTooltip: Option[String] = Option("Based on historical Advance Passenger Information (API) from this flight or route")
     }
 
     object TerminalAverageData extends SplitsDataQuality {
       val `type`: String = "error"
       val text: String = "Terminal average data"
+      override val maybeTooltip: Option[String] = Option("Based on historical average pax splits for this terminal")
     }
   }
 

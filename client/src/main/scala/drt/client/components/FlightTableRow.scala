@@ -12,7 +12,6 @@ import drt.shared._
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist._
 import io.kinoplan.scalajs.react.material.ui.core.MuiTooltip
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Info
 import japgolly.scalajs.react.component.Scala.Component
@@ -248,12 +247,14 @@ object FlightTableRow {
     <.div(
       <.span(
         dq.text,
-        <.span(^.className := "data-quality__more-info",
-          MuiTooltip(
-            title = "Some useful text here about all sorts of interesting things",
-            placement = "bottom-end",
-          )(MuiIcons(Info)(fontSize = "inherit")),
-        ),
+        dq.maybeTooltip.map { tt =>
+          <.span(^.className := "data-quality__more-info",
+            MuiTooltip(
+              title = tt,
+              placement = "bottom-end",
+            )(MuiIcons(Info)(fontSize = "inherit")),
+          )
+        }
       ),
       ^.className := s"data-quality data-quality__${dq.`type`}",
     )
