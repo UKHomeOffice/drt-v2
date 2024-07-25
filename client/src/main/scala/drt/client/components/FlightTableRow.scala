@@ -43,7 +43,7 @@ object FlightTableRow {
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShareFlightCodes: Seq[String],
                    idx: Int,
-                   originMapper: PortCode => VdomNode = portCode => portCode.toString,
+                   originMapper: (PortCode, html_<^.TagMod) => VdomNode,// = portCode => portCode.toString,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
@@ -175,16 +175,16 @@ object FlightTableRow {
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(^.cls := wrapperClass,
-            flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHightLighted), charts)),
+            flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHightLighted), charts)
+        ),
         highlightedComponent.map(<.td(^.className := "arrivals__table__flags-column", _)),
-        <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
             proxy().renderEmpty(<.span()),
             proxy().render(ai => {
               val redListCountry = props.indirectRedListPax.isEnabled && isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)
-              val style = if (redListCountry) ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField) else EmptyVdom
-              <.span(style, ai.country)
+              val style: html_<^.TagMod = if (redListCountry) ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField) else EmptyVdom
+              props.originMapper(flight.Origin, style) //<.span(style, props.originMapper(flight.Origin), ai.country)
             })
           )
         }),
@@ -264,7 +264,7 @@ object FlightTableRow {
                                flaggedAgeGroups: Set[PaxAgeRange],
                                flaggedNationalities: Set[Country],
                                manifestSummary: Option[FlightManifestSummary]): html_<^.VdomNode = {
-    <.div(
+    <.div(^.minWidth := "150px",
       manifestSummary.map { summary =>
         def generateChip(condition: Boolean, pax: Int, label: String): Option[VdomElement] = {
           if (condition && pax > 0) Option(<.div(^.style := js.Dictionary("padding-bottom" -> "5px"), s"$pax $label"))

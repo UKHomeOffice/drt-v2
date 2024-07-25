@@ -15,7 +15,7 @@ import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
@@ -80,7 +80,7 @@ object FlightTableContent {
   case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]]) extends UseValueEq
 
   def apply(shortLabel: Boolean = false,
-            originMapper: PortCode => VdomNode = portCode => portCode.toString,
+            originMapper: (PortCode, html_<^.TagMod) => VdomNode,// = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTableContent")
     .render_PS { (props, _) =>
@@ -303,7 +303,6 @@ object FlightTableContent {
       Option(("Flight", if (showFlagger) Option("arrivals__table__flight-code-with-highlight") else Option("arrivals__table__flight-code"))),
       if (showFlagger) Option(("Pax Info", Option("arrivals__table__flags-column"))) else None,
       Option((if (isMobile) "Ori" else "Origin", Option("arrivals__table__flight-origin"))),
-      Option(("Country", Option("country"))),
       Option((redListHeading, None)),
       Option((if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand"))),
       Option(("Status", Option("status"))),

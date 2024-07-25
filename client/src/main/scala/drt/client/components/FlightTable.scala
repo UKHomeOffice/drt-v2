@@ -10,6 +10,7 @@ import drt.client.services._
 import drt.shared._
 import drt.shared.api.{AgeRange, FlightManifestSummary, PaxAgeRange, WalkTimes}
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, _}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
@@ -71,7 +72,7 @@ object FlightTable {
 
 
   def apply(shortLabel: Boolean = false,
-            originMapper: PortCode => VdomNode = portCode => portCode.toString,
+            originMapper: (PortCode, html_<^.TagMod) => VdomNode, // = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
     .initialStateFromProps(p => State(p.flightHighlight.filterFlightSearch, p.flightHighlight.showHighlightedRows))
