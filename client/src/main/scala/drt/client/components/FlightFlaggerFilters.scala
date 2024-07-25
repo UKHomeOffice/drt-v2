@@ -6,6 +6,20 @@ import japgolly.scalajs.react.vdom.VdomElement
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 
+@js.native
+trait Country extends js.Object {
+  var name: String
+  var code: String
+}
+
+object CountryJs {
+  def apply(name: String, code: String): Country = {
+    val p = (new js.Object).asInstanceOf[Country]
+    p.name = name
+    p.code = code
+    p
+  }
+}
 
 @js.native
 trait AutocompleteOption extends js.Object {
@@ -53,7 +67,7 @@ object SearchFilterPayload {
 
 @js.native
 trait FlightFlaggerFiltersProps extends js.Object {
-  var nationalities: js.Array[String] = js.native
+  var nationalities: js.Array[Country] = js.native
   var ageGroups: js.Array[String] = js.native
   var submitCallback: js.Function1[js.Object, Unit] = js.native
   var showAllCallback: js.Function1[js.Object, Unit] = js.native
@@ -64,7 +78,7 @@ trait FlightFlaggerFiltersProps extends js.Object {
 
 object FlightFlaggerFiltersProps {
   def apply(
-             nationalities: js.Array[String],
+             nationalities: js.Array[Country],
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
@@ -93,7 +107,7 @@ object FlightFlaggerFilters {
   val component = JsFnComponent[FlightFlaggerFiltersProps, Children.None](RawComponent)
 
   def apply(
-             nationalities: js.Array[String],
+             nationalities: js.Array[Country],
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
