@@ -83,21 +83,18 @@ object FlightTableRow {
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.paxFeedSourceOrder).getOrElse(Map[Queue, Int]())
 
-      val isHighterOptionExists = props.flaggedNationalities.nonEmpty ||
+      val highterOptionExists = props.flaggedNationalities.nonEmpty ||
         props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
 
       val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
-        if (props.showHightLighted && isHighterOptionExists)
+        if (props.showHightLighted && highterOptionExists)
           "arrivals__table__flight-code arrivals__table__flight-code--clickable"
         else
           "arrivals__table__flight-code-with-highlight arrivals__table__flight-code--clickable"
-      else if (props.showHightLighted && isHighterOptionExists) "arrivals__table__flight-code-with-highlight"
+      else if (props.showHightLighted && highterOptionExists) "arrivals__table__flight-code-with-highlight"
       else "arrivals__table__flight-code"
 
-
-      val addition = if (!props.showHightLighted && isHighterOptionExists) " arrivals__table__flight-code--highlighted" else ""
-
-      val highlightedComponent = if (isHighterOptionExists) {
+      val highlightedComponent = if (highterOptionExists) {
         val chip = highlightedChips(
           props.showNumberOfVisaNationals,
           props.showRequireAllSelected,
@@ -107,7 +104,7 @@ object FlightTableRow {
         if (chip != EmptyVdom) Some(chip) else None
       } else None
 
-      def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean, highLighter: Boolean): VdomTagOf[Span] =
+      def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean, showHighlighter: Boolean): VdomTagOf[Span] =
         if (props.loggedInUser.hasRole(ArrivalSource)) {
           val diversionClass = (outgoingDiversion, incomingDiversion) match {
             case (_, true) => "arrivals__table__flight-code-incoming-diversion"
@@ -126,9 +123,9 @@ object FlightTableRow {
                   GetArrivalSources(props.flightWithSplits.unique)
               }
             }),
-            if (highLighter) FlightHighlightChip(flightCodes) else if (!props.showHightLighted && isHighterOptionExists) <.span(^.cls := "arrival__non__highter__row", flightCodes) else flightCodes
+            if (showHighlighter) FlightHighlightChip(flightCodes) else if (!props.showHightLighted && highterOptionExists) <.span(^.cls := "arrival__non__highter__row", flightCodes) else flightCodes
           )
-        } else if (highLighter) <.span(^.cls := "arrivals__table__flight-code-value", FlightHighlightChip(flightCodes))
+        } else if (showHighlighter) <.span(^.cls := "arrivals__table__flight-code-value", FlightHighlightChip(flightCodes))
         else <.span(^.cls := "arrivals__table__flight-code-value", flightCodes)
 
 
@@ -162,27 +159,20 @@ object FlightTableRow {
             (diff, diff.toDouble / pcpPax)
           }
           if (maybePaxDiffAndPct.isEmpty || maybePaxDiffAndPct.exists(_._2 <= 1.05)) {
-            if (props.showHightLighted)
-              <.div(^.className := "arrivals__table__flight-code__info-highlighted",
-                FlightChartComponent(FlightChartComponent.Props(manifestSummary, maybePaxDiffAndPct)))
-            else <.div(^.className := "arrivals__table__flight-code__info",
+            val cls = if (props.showHightLighted) "arrivals__table__flight-code__info-highlighted" else "arrivals__table__flight-code__info"
+            <.div(^.className := cls,
               FlightChartComponent(FlightChartComponent.Props(manifestSummary, maybePaxDiffAndPct)))
           } else EmptyVdom
         case _ => EmptyVdom
       }
 
-      val wrapperClass = if (!props.showHightLighted && isHighterOptionExists) "arrivals__table__flight-code-wrapper-with-highlight"
+      val wrapperClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper-with-highlight"
+      else if (!props.showHightLighted && highterOptionExists) "arrivals__table__flight-code-wrapper-with-highlight"
       else "arrivals__table__flight-code-wrapper"
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
-          if (props.showHightLighted)
-            <.div(^.cls := "arrivals__table__flight-code-wrapper-with-highlight",
-              flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, highLighter=true), charts)
-          else
-            <.div(^.cls := wrapperClass,
-              flightCodeElement(flightCodes, props.directRedListFlight.outgoingDiversion, props.directRedListFlight.incomingDiversion, false),
-              charts
-            )),
+          <.div(^.cls := wrapperClass,
+            flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHightLighted), charts)),
         highlightedComponent.map(<.td(^.className := "arrivals__table__flags-column", _)),
         <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>

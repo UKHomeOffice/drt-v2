@@ -199,7 +199,6 @@ object TerminalContentComponent {
                 } yield {
                   flightHighlightRCP{(flightHighlightProxy: ModelProxy[FlightHighlight]) =>
                     val flightHighlight = flightHighlightProxy()
-                    flightFilterRCP((flightFilterProxy: ModelProxy[String]) =>
                       arrivalsTableComponent(
                         FlightTable.Props(
                           queueOrder = queueOrder,
@@ -220,13 +219,8 @@ object TerminalContentComponent {
                           viewEnd = viewEnd,
                           showFlagger = true,
                           paxFeedSourceOrder = props.paxFeedSourceOrder,
-                          filterFlightNumber = flightHighlight.flightNumber,
-                          selectedNationalities = flightHighlight.selectedNationalities,
-                          selectedAgeGroups = flightHighlight.selectedAgeGroups,
-                          showNumberOfVisaNationals = flightHighlight.showNumberOfVisaNationals,
-                          showHighlightedRows = flightHighlight.showHighlightedRows,
-                          showRequireAllSelected= flightHighlight.showRequireAllSelected
-                        ))
+                          flightHighlight = flightHighlight
+                        )
                     )}
                 }
                 maybeArrivalsComp.render(x => x)

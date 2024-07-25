@@ -45,12 +45,8 @@ object FlightTable {
                    viewEnd: SDateLike,
                    showFlagger: Boolean,
                    paxFeedSourceOrder: List[FeedSource],
-                   filterFlightNumber: String,
-                   selectedNationalities: Set[Country],
-                   selectedAgeGroups: Seq[String],
-                   showNumberOfVisaNationals: Boolean,
-                   showHighlightedRows: Boolean,
-                   showRequireAllSelected: Boolean) extends UseValueEq
+                   flightHighlight: FlightHighlight,
+                  ) extends UseValueEq
 
   case class State(flightSearch: String, showHighlightedRows: Boolean)
 
@@ -58,10 +54,10 @@ object FlightTable {
     (a, b) =>
       a.viewStart == b.viewStart &&
         a.viewEnd == b.viewEnd &&
-        a.selectedNationalities == b.selectedNationalities &&
-        a.selectedAgeGroups == b.selectedAgeGroups &&
-        a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
-        a.showRequireAllSelected == b.showRequireAllSelected
+        a.flightHighlight.selectedNationalities == b.flightHighlight.selectedNationalities &&
+        a.flightHighlight.selectedAgeGroups == b.flightHighlight.selectedAgeGroups &&
+        a.flightHighlight.showNumberOfVisaNationals == b.flightHighlight.showNumberOfVisaNationals &&
+        a.flightHighlight.showRequireAllSelected == b.flightHighlight.showRequireAllSelected
   }
 
   implicit val stateReuse: Reusability[State] = Reusability.always
@@ -78,23 +74,23 @@ object FlightTable {
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .initialStateFromProps(p => State(p.filterFlightNumber, p.showHighlightedRows))
+    .initialStateFromProps(p => State(p.flightHighlight.filterFlightSearch, p.flightHighlight.showHighlightedRows))
     .renderPS { (scope, props, _) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
       else
         "* Passengers from CTA origins do not contribute to PCP workload"
 
-      def updateState(value: String) {
+      def updateState(searchTerm: String) {
         SPACircuit.dispatch(
           UpdateFlightHighlight(
             FlightHighlight(
-              props.showNumberOfVisaNationals,
-              props.showRequireAllSelected,
+              props.flightHighlight.showNumberOfVisaNationals,
+              props.flightHighlight.showRequireAllSelected,
               scope.state.showHighlightedRows,
-              props.selectedAgeGroups.toSeq,
-              props.selectedNationalities,
-              value)))
+              props.flightHighlight.selectedAgeGroups.toSeq,
+              props.flightHighlight.selectedNationalities,
+              searchTerm)))
       }
 
       case class Model(portStatePot: Pot[PortState],
@@ -128,11 +124,11 @@ object FlightTable {
         SPACircuit.dispatch(
           UpdateFlightHighlight(
             FlightHighlight(
-              props.showNumberOfVisaNationals,
-              props.showRequireAllSelected,
+              props.flightHighlight.showNumberOfVisaNationals,
+              props.flightHighlight.showRequireAllSelected,
               radioButtonValue,
-              props.selectedAgeGroups.toSeq,
-              props.selectedNationalities,
+              props.flightHighlight.selectedAgeGroups.toSeq,
+              props.flightHighlight.selectedNationalities,
               scope.state.flightSearch)))
       }
 
@@ -146,7 +142,7 @@ object FlightTable {
               showHighlightedRows = false,
               selectedAgeGroups = Seq(),
               selectedNationalities = Set(),
-              flightNumber = "")))
+              filterFlightSearch = "")))
       }
 
       val onChangeInput: js.Function1[Object, Unit] = (event: Object) => {
@@ -171,11 +167,11 @@ object FlightTable {
             "padding-left" -> "24px", "padding-top" -> "36px", "padding-bottom" -> "24px", "padding-right" -> "24px"),
             if (props.showFlagger) {
               val initialState = js.Dynamic.literal(
-                showNumberOfVisaNationals = props.showNumberOfVisaNationals,
-                selectedAgeGroups = props.selectedAgeGroups.map(AutocompleteOption(_)).toJSArray,
-                selectedNationalities = props.selectedNationalities.map(n => AutocompleteOption(n.threeLetterCode)).toJSArray,
-                flightNumber = props.filterFlightNumber,
-                requireAllSelected = props.showRequireAllSelected
+                showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
+                selectedAgeGroups = props.flightHighlight.selectedAgeGroups.map(AutocompleteOption(_)).toJSArray,
+                selectedNationalities = props.flightHighlight.selectedNationalities.map(n => AutocompleteOption(n.threeLetterCode)).toJSArray,
+                flightNumber = props.flightHighlight.filterFlightSearch,
+                requireAllSelected = props.flightHighlight.showRequireAllSelected
               )
 
               FlightFlaggerFilters(
@@ -209,15 +205,15 @@ object FlightTable {
                   redListUpdates = props.redListUpdates,
                   airportConfig = props.airportConfig,
                   walkTimes = props.walkTimes,
-                  flaggedNationalities = props.selectedNationalities,
-                  flaggedAgeGroups = props.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
-                  showNumberOfVisaNationals = props.showNumberOfVisaNationals,
+                  flaggedNationalities = props.flightHighlight.selectedNationalities,
+                  flaggedAgeGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
+                  showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
                   showHighlightedRows = scope.state.showHighlightedRows,
-                  showRequireAllSelected = props.showRequireAllSelected,
+                  showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
                   viewStart = props.viewStart,
                   viewEnd = props.viewEnd,
                   paxFeedSourceOrder = props.paxFeedSourceOrder,
-                  filterFlightNumber = scope.state.flightSearch,
+                  filterFlightSearch = scope.state.flightSearch,
                   showFlagger = props.showFlagger,
                 ))
             }

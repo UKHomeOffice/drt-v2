@@ -7,4 +7,4 @@ case class FlightHighlight(showNumberOfVisaNationals: Boolean,
                            showHighlightedRows: Boolean,
                            selectedAgeGroups: Seq[String],
                            selectedNationalities: Set[Country],
-                           flightNumber: String)
+                           filterFlightSearch: String)

@@ -59,7 +59,7 @@ object FlightTableContent {
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
                    paxFeedSourceOrder: List[FeedSource],
-                   filterFlightNumber: String,
+                   filterFlightSearch: String,
                    showFlagger: Boolean,
                   ) extends UseValueEq
 
@@ -69,7 +69,7 @@ object FlightTableContent {
         a.flightManifestSummaries == b.flightManifestSummaries &&
         a.flaggedNationalities == b.flaggedNationalities &&
         a.flaggedAgeGroups == b.flaggedAgeGroups &&
-        a.filterFlightNumber == b.filterFlightNumber &&
+        a.filterFlightSearch == b.filterFlightSearch &&
         a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
         a.showHighlightedRows == b.showHighlightedRows &&
         a.showRequireAllSelected == b.showRequireAllSelected &&
@@ -105,7 +105,7 @@ object FlightTableContent {
         val model: Model = modelMP()
 
         val flightsForWindow = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder)
-        val flights: Seq[ApiFlightWithSplits] = filterFlights(flightsForWindow.flights.values.toList, props.filterFlightNumber, model.airportInfos)
+        val flights: Seq[ApiFlightWithSplits] = filterFlights(flightsForWindow.flights.values.toList, props.filterFlightSearch, model.airportInfos)
 
         flights
           .groupBy(f =>
@@ -126,7 +126,7 @@ object FlightTableContent {
           flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
         val flightsWithCodeShares = CodeShares.uniqueFlightsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
-        val isShowFlagger = props.flaggedNationalities.nonEmpty ||
+        val showFlagger = props.flaggedNationalities.nonEmpty ||
           props.flaggedAgeGroups.nonEmpty ||
           props.showNumberOfVisaNationals
 
@@ -134,12 +134,12 @@ object FlightTableContent {
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
-              if (props.filterFlightNumber.nonEmpty) {
+              if (props.filterFlightSearch.nonEmpty) {
                 <.div(MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))("Flights displayed : ", <.b(s"${sortedFlights.length}")))
               } else <.div(),
               <.div(<.table(
                 ^.className := "arrivals-table table-striped",
-                tableHead(props, props.queueOrder, redListPaxExist, shortLabel, isShowFlagger),
+                tableHead(props, props.queueOrder, redListPaxExist, shortLabel, showFlagger),
                 <.tbody(
                   sortedFlights.zipWithIndex.flatMap {
                     case ((flightWithSplits, codeShares), idx) =>
