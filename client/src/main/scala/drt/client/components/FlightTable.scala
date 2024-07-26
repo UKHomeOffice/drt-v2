@@ -104,8 +104,7 @@ object FlightTable {
 
       val submitCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
         val sfp = data.asInstanceOf[SearchFilterPayload]
-//                val countriesCode: Seq[String] = sfp.selectedNationalities.map(_).toSeq
-        val selectedNationalities: Set[Country] = CountryOptions.countries.filter(c => sfp.selectedNationalities.contains(c.threeLetterCode)).toSet
+        val selectedNationalities: Set[Country] = CountryOptions.countries.filter(c => sfp.selectedNationalities.map(_.code).contains(c.threeLetterCode)).toSet
         SPACircuit.dispatch(
           UpdateFlightHighlight(
             FlightHighlight(
@@ -169,13 +168,13 @@ object FlightTable {
               val initialState = js.Dynamic.literal(
                 showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
                 selectedAgeGroups = props.flightHighlight.selectedAgeGroups.map(AutocompleteOption(_)).toJSArray,
-                selectedNationalities = props.flightHighlight.selectedNationalities.map(n => AutocompleteOption(n.threeLetterCode)).toJSArray,
+                selectedNationalities = props.flightHighlight.selectedNationalities.map(n => CountryJS(n.name,n.threeLetterCode)).toJSArray,
                 flightNumber = props.flightHighlight.filterFlightSearch,
                 requireAllSelected = props.flightHighlight.showRequireAllSelected
               )
 
               FlightFlaggerFilters(
-                CountryOptions.countries.map { c => CountryJs(c.name, c.threeLetterCode) }.toJSArray,
+                CountryOptions.countries.map { c => CountryJS(c.name,c.threeLetterCode)}.toJSArray,
                 ageGroups,
                 submitCallback,
                 showAllCallback,
