@@ -2,7 +2,7 @@ package drt.client.services.handlers
 
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
-import drt.client.components.Country
+import drt.shared.Country
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

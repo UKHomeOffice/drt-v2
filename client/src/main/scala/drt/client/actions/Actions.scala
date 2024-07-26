@@ -3,10 +3,10 @@ package drt.client.actions
 import diode.Action
 import diode.data.Pot
 import drt.client.components.scenarios.SimulationFormFields
-import drt.client.components.{Country, FileUploadState, StaffAdjustmentDialogueState}
+import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
-import drt.shared._
+import drt.shared.{Country, _}
 import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
 import org.scalajs.dom.File
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
@@ -224,4 +224,8 @@ object Actions {
   case class SetFlightFilterMessage(message: String) extends Action
 
   case class UpdateNationalityFlaggerInputText(value: String) extends Action
+
+  case class UpdateFlightHighlight(flightHighlight: FlightHighlight) extends Action
+
+
 }

@@ -14,7 +14,6 @@ steps:
     commands:
       - /app/entrypoint.sh
       - node --version
-      - git --version
       - sbt --error compile docker:stage
     environment:
       ARTIFACTORY_PASSWORD:

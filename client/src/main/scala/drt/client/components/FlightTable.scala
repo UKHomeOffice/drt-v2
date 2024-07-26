@@ -2,20 +2,14 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.actions.Actions.{RemoveArrivalSources, SetFlightFilterMessage}
-import drt.client.components.DropInDialog.StringExtended
+import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared._
-import drt.shared.api.{FlightManifestSummary, WalkTimes}
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{MuiInputAdornment, MuiTextField, MuiTypography}
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{Clear, Search}
+import drt.shared.api.{AgeRange, FlightManifestSummary, PaxAgeRange, WalkTimes}
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{Callback, CtorType, _}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
@@ -29,7 +23,8 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.HashSet
 import scala.scalajs.js
-import scala.scalajs.js.timers._
+import scala.scalajs.js.JSConverters._
+import scala.util.Try
 
 object FlightTable {
   case class Props(queueOrder: Seq[Queue],
@@ -50,69 +45,110 @@ object FlightTable {
                    viewEnd: SDateLike,
                    showFlagger: Boolean,
                    paxFeedSourceOrder: List[FeedSource],
-                   filterFlightNumber: String) extends UseValueEq
+                   flightHighlight: FlightHighlight,
+                  ) extends UseValueEq
+
+  case class State(flightSearch: String, showHighlightedRows: Boolean)
 
   implicit val reuseProps: Reusability[Props] = Reusability {
     (a, b) =>
       a.viewStart == b.viewStart &&
         a.viewEnd == b.viewEnd &&
-        a.filterFlightNumber == b.filterFlightNumber
+        a.flightHighlight.selectedNationalities == b.flightHighlight.selectedNationalities &&
+        a.flightHighlight.selectedAgeGroups == b.flightHighlight.selectedAgeGroups &&
+        a.flightHighlight.showNumberOfVisaNationals == b.flightHighlight.showNumberOfVisaNationals &&
+        a.flightHighlight.showRequireAllSelected == b.flightHighlight.showRequireAllSelected
   }
 
-  var typingSearchTimer: Option[SetTimeoutHandle] = None
-  val doneSearchTypingInterval = 5000
+  implicit val stateReuse: Reusability[State] = Reusability.always
 
-  def submitSearchTermToAnalyticsAfterDelay(searchTerm: String, portCode: String): Unit = {
-    typingSearchTimer.foreach(clearTimeout)
-    if (searchTerm.length > 1) {
-      typingSearchTimer = Some(setTimeout(doneSearchTypingInterval) {
-        println(s"Sending event for search term $searchTerm")
-        Callback(GoogleEventTracker.sendEvent(portCode, "flightNumberSearch", searchTerm))
-      })
-    }
-  }
+  val ageGroups: js.Array[String] =
+    js.Array(AgeRange(0, 9).title,
+      AgeRange(10, 24).title,
+      AgeRange(25, 49).title,
+      AgeRange(50, 65).title,
+      AgeRange(65, None).title)
+
 
   def apply(shortLabel: Boolean = false,
             originMapper: PortCode => VdomNode = portCode => portCode.toString,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-           ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
-    .renderPS { (_, props, _) =>
+           ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
+    .initialStateFromProps(p => State(p.flightHighlight.filterFlightSearch, p.flightHighlight.showHighlightedRows))
+    .renderPS { (scope, props, _) =>
       val excludedPaxNote = if (props.redListOriginWorkloadExcluded)
         "* Passengers from CTA & Red List origins do not contribute to PCP workload"
       else
         "* Passengers from CTA origins do not contribute to PCP workload"
 
-      def updateState(value: String): CallbackTo[Unit] = {
-        Callback(SPACircuit.dispatch(SetFlightFilterMessage(value)))
+      def updateState(searchTerm: String) {
+        SPACircuit.dispatch(
+          UpdateFlightHighlight(
+            FlightHighlight(
+              props.flightHighlight.showNumberOfVisaNationals,
+              props.flightHighlight.showRequireAllSelected,
+              scope.state.showHighlightedRows,
+              props.flightHighlight.selectedAgeGroups.toSeq,
+              props.flightHighlight.selectedNationalities,
+              searchTerm)))
       }
 
-      case class Model(flaggedNationalities: Set[Country],
-                       portStatePot: Pot[PortState],
+      case class Model(portStatePot: Pot[PortState],
                        flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                        arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
+                       airportInfos: Map[PortCode, Pot[AirportInfo]]
                       )
 
-      val flaggerConnect = SPACircuit.connect(m => Model(m.flaggedNationalities, m.portStatePot, m.flightManifestSummaries, m.arrivalSources))
+      val flaggerConnect = SPACircuit.connect(m => Model(m.portStatePot, m.flightManifestSummaries, m.arrivalSources, m.airportInfos))
       val flightTableContent = FlightTableContent(shortLabel, originMapper, splitsGraphComponent)
 
-      val filterFlightComponent = <.div(^.style := js.Dictionary("padding-right" -> "24px"), MuiTypography(sx = SxProps(Map("font-weight" -> "bold",
-        "padding-bottom" -> "10px"
-      )))("Search by flight details"),
-        MuiTextField(label = "Enter flight details".toVdom, sx = SxProps(Map("minWidth" -> "199px", "font-weight" -> "bold")),
-          InputProps = js.Dynamic.literal(
-            "style" -> js.Dictionary("backgroundColor" -> "#FFFFFF"),
-            "startAdornment" -> MuiInputAdornment(position = "start")(MuiIcons(Search)()).rawNode.asInstanceOf[js.Object],
-            "endAdornment" -> MuiInputAdornment(position = "end", sx = SxProps(Map("cursor" -> "pointer", "fontSize" -> "small")))
-            (onClick --> updateState(""), MuiIcons(Clear)()).rawNode.asInstanceOf[js.Object]
-          ))(^.`type` := "text",
-          ^.defaultValue := props.filterFlightNumber,
-          ^.autoFocus := true,
-          ^.onChange ==> { e: ReactEventFromInput =>
-            val searchTerm = e.target.value
-            submitSearchTermToAnalyticsAfterDelay(searchTerm, props.portCode.toString)
-            updateState(searchTerm)
-          })
-      )
+      val submitCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
+        val sfp = data.asInstanceOf[SearchFilterPayload]
+        val selectedNationalities: Set[Country] = CountryOptions.countries.filter(c => sfp.selectedNationalities.map(_.code).contains(c.threeLetterCode)).toSet
+        SPACircuit.dispatch(
+          UpdateFlightHighlight(
+            FlightHighlight(
+              sfp.showNumberOfVisaNationals,
+              sfp.requireAllSelected,
+              scope.state.showHighlightedRows,
+              sfp.selectedAgeGroups.toSeq,
+              selectedNationalities,
+              scope.state.flightSearch)))
+        Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "flightFilter", sfp.toString))
+      }
+
+      val showAllCallback: js.Function1[js.Object, Unit] = (event: js.Object) => {
+        val radioButtonValue: Boolean = Try(event.asInstanceOf[ReactEventFromInput].target.value.toBoolean).getOrElse(false)
+        scope.modState(s => s.copy(showHighlightedRows = radioButtonValue)).runNow()
+        SPACircuit.dispatch(
+          UpdateFlightHighlight(
+            FlightHighlight(
+              props.flightHighlight.showNumberOfVisaNationals,
+              props.flightHighlight.showRequireAllSelected,
+              radioButtonValue,
+              props.flightHighlight.selectedAgeGroups.toSeq,
+              props.flightHighlight.selectedNationalities,
+              scope.state.flightSearch)))
+      }
+
+      val clearFiltersCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
+        scope.modState(s => s.copy(showHighlightedRows = false, flightSearch = "")).runNow()
+        SPACircuit.dispatch(
+          UpdateFlightHighlight(
+            FlightHighlight(
+              showNumberOfVisaNationals = false,
+              showRequireAllSelected = false,
+              showHighlightedRows = false,
+              selectedAgeGroups = Seq(),
+              selectedNationalities = Set(),
+              filterFlightSearch = "")))
+      }
+
+      val onChangeInput: js.Function1[Object, Unit] = (event: Object) => {
+        val searchTerm = event.asInstanceOf[String]
+        scope.modState(s => s.copy(flightSearch = searchTerm)).runNow()
+        updateState(searchTerm)
+      }
 
       flaggerConnect { flaggerProxy =>
         val model = flaggerProxy()
@@ -126,13 +162,25 @@ object FlightTable {
               )
             case _ => <.div()
           },
-          <.div(^.style := js.Dictionary("backgroundColor" -> "#E6E9F1", "padding-left" -> "24px", "padding-top" -> "24px", "padding-bottom" -> "24px"),
+          <.div(^.style := js.Dictionary("backgroundColor" -> "#E6E9F1",
+            "padding-left" -> "24px", "padding-top" -> "36px", "padding-bottom" -> "24px", "padding-right" -> "24px"),
             if (props.showFlagger) {
-              <.div(^.style := js.Dictionary("display" -> "flex"),
-                filterFlightComponent,
-                <.div(^.style := js.Dictionary("borderRight" -> "1px solid #000")),
-                <.div(^.style := js.Dictionary("padding-left" -> "24px"),
-                  NationalityFlaggingComponent.component(NationalityFlaggingComponent.Props(model.flaggedNationalities)))
+              val initialState = js.Dynamic.literal(
+                showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
+                selectedAgeGroups = props.flightHighlight.selectedAgeGroups.map(AutocompleteOption(_)).toJSArray,
+                selectedNationalities = props.flightHighlight.selectedNationalities.map(n => CountryJS(n.name,n.threeLetterCode)).toJSArray,
+                flightNumber = props.flightHighlight.filterFlightSearch,
+                requireAllSelected = props.flightHighlight.showRequireAllSelected
+              )
+
+              FlightFlaggerFilters(
+                CountryOptions.countries.map { c => CountryJS(c.name,c.threeLetterCode)}.toJSArray,
+                ageGroups,
+                submitCallback,
+                showAllCallback,
+                clearFiltersCallback,
+                onChangeInput,
+                initialState
               )
             } else EmptyVdom
           ),
@@ -156,11 +204,16 @@ object FlightTable {
                   redListUpdates = props.redListUpdates,
                   airportConfig = props.airportConfig,
                   walkTimes = props.walkTimes,
-                  flaggedNationalities = model.flaggedNationalities,
+                  flaggedNationalities = props.flightHighlight.selectedNationalities,
+                  flaggedAgeGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
+                  showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
+                  showHighlightedRows = scope.state.showHighlightedRows,
+                  showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
                   viewStart = props.viewStart,
                   viewEnd = props.viewEnd,
                   paxFeedSourceOrder = props.paxFeedSourceOrder,
-                  filterFlightNumber = props.filterFlightNumber
+                  filterFlightSearch = scope.state.flightSearch,
+                  showFlagger = props.showFlagger,
                 ))
             }
           ),

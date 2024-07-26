@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v858"
+    val drtLib = "v859"
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
@@ -65,7 +65,7 @@ object Settings {
     val slick = "3.4.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
-    val scalaJsReactMaterialUi = "0.1.16"
+    val scalaJsReactMaterialUi = "0.1.18"
     val scalaTestVersion = "3.2.17"
     val twirlApi = "1.6.3"
     val mockitoVersion = "4.11.0"
@@ -84,19 +84,22 @@ object Settings {
     "log4javascript" -> log4Javascript,
     "bootstrap" -> bootstrap,
     "@handsontable/react" -> reactHandsontable,
-    "handsontable" -> "6.2.2",
-    "core-js" -> "3.6.5",
+    "handsontable" -> "7.2.2",
+    "core-js" -> "3.23.3",
     "chart.js" -> "^3.6.0",
     "@tippyjs/react" -> "4.1.0",
     "react-chartjs-2" -> "^4.0.0",
     "moment" -> ">=2.29.4",
-    "@mui/system" -> "5.11.16",
-    "@mui/material" -> "5.11.16",
-    "@mui/icons-material" -> "5.11.16",
-    "@mui/lab" -> "5.0.0-alpha.119",
+    "@mui/system" -> "5.16.5",
+    "@mui/material" -> "5.16.5",
+    "@mui/icons-material" -> "5.16.5",
+    "@mui/lab" -> "5.0.0-alpha.173",
     "flickity" -> "2.3.0",
     "react-flickity-component" -> "4.0.6",
-    "react-markdown" -> "9.0.1"
+    "react-markdown" -> "9.0.1",
+    "@types/react-dom" -> react,
+    "css-loader" -> "6.7.2",
+    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#89347144c1031326d512469eb8a62b9097bbb50f"
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

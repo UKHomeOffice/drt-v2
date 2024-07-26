@@ -1,6 +1,5 @@
 package drt.client.components
 
-
 import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ReactConnectProxy
@@ -75,6 +74,7 @@ object TerminalDashboardComponent {
       )
 
       val portStateRCP: ReactConnectProxy[Pot[PortState]] = SPACircuit.connect(_.portStatePot)
+      val flightHighlightRCP: ReactConnectProxy[FlightHighlight] = SPACircuit.connect(_.flightHighlight)
 
       portStateRCP { portStateProxy =>
         val portStatePot = portStateProxy()
@@ -101,29 +101,32 @@ object TerminalDashboardComponent {
                 <.div(^.className := "dashboard-arrivals-popup",
                   <.h2("Arrivals"),
                   <.div(^.className := "terminal-dashboard__arrivals_popup_table", {
-                    flightTableComponent(
-                      FlightTable.Props(
-                        queueOrder = props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
-                        hasEstChox = props.airportConfig.hasEstChox,
-                        loggedInUser = props.loggedInUser,
-                        viewMode = ViewLive,
-                        defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
-                        hasTransfer = props.airportConfig.hasTransfer,
-                        displayRedListInfo = featureFlags.displayRedListInfo,
-                        redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
-                        terminal = terminal,
-                        portCode = props.airportConfig.portCode,
-                        redListPorts = redListPorts,
-                        airportConfig = props.airportConfig,
-                        redListUpdates = props.redListUpdates,
-                        walkTimes = walkTimes,
-                        viewStart = start,
-                        viewEnd = end,
-                        showFlagger = false,
-                        paxFeedSourceOrder = props.paxFeedSourceOrder,
-                        filterFlightNumber = ""
+                    flightHighlightRCP { flightHighlightProxy =>
+                      val flightHighlight = flightHighlightProxy()
+                      flightTableComponent(
+                        FlightTable.Props(
+                          queueOrder = props.airportConfig.queueTypeSplitOrder(props.terminalPageTabLoc.terminal),
+                          hasEstChox = props.airportConfig.hasEstChox,
+                          loggedInUser = props.loggedInUser,
+                          viewMode = ViewLive,
+                          defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
+                          hasTransfer = props.airportConfig.hasTransfer,
+                          displayRedListInfo = featureFlags.displayRedListInfo,
+                          redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                          terminal = terminal,
+                          portCode = props.airportConfig.portCode,
+                          redListPorts = redListPorts,
+                          airportConfig = props.airportConfig,
+                          redListUpdates = props.redListUpdates,
+                          walkTimes = walkTimes,
+                          viewStart = start,
+                          viewEnd = end,
+                          showFlagger = false,
+                          paxFeedSourceOrder = props.paxFeedSourceOrder,
+                          flightHighlight = flightHighlight
+                        )
                       )
-                    )
+                    }
                   }),
                   props.router.link(closeArrivalsPopupLink)(^.className := "close-arrivals-popup btn btn-default", "close")
                 ))
