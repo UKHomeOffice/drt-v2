@@ -240,12 +240,11 @@ object FlightTableContent {
     val isMobile = dom.window.innerWidth < 800
     val columns = columnHeaders(shortLabel, redListHeading, isMobile, showFlagger)
 
-    val portColumnThs = columnHeadersWithClasses(columns, props.hasEstChox, props.displayRedListInfo, redListPaxExist, redListHeading)
-      .toTagMod
+    val portColumnThs = columnHeadersWithClasses(columns, props.hasEstChox, props.displayRedListInfo, redListPaxExist, redListHeading).toTagMod
 
     val queueDisplayNames = <.th(
       <.span(^.className := "flex-uniform-size",
-        queues.map(q => <.div(Queues.displayName(q), " ", splitsTableTooltip, ^.className := "arrivals_table__splits__queue-pax")).toTagMod
+        queues.map(q => <.div(Queues.displayName(q), " ", splitsTableTooltip, ^.className := "arrivals_table__splits__queue-pax flex-horizontally")).toTagMod
       ),
       ^.className := "arrivals__table__flight-splits",
     )
@@ -287,7 +286,7 @@ object FlightTableContent {
           <.div(^.cls := className, label)
         )
         case (label, None) if label == "Expected" || label == "Exp" => <.th(
-          <.div(label, " ", expTimeTooltip)
+          <.div(^.className := "flex-horizonally", label, " ", expTimeTooltip)
         )
         case (label, None) if label == "Flight" => <.th(
           <.div(^.cls := "arrivals__table__flight-code-wrapper", label, " ", wbrFlightColorTooltip)

@@ -7,7 +7,7 @@ import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.Icon.Icon
-import drt.client.components.ToolTips._
+import drt.client.components.ToolTips.{staffMovementsTabTooltip, _}
 import drt.client.components.scenarios.ScenarioSimulationComponent
 import drt.client.logger.log
 import drt.client.modules.GoogleEventTracker
@@ -118,18 +118,19 @@ object TerminalContentComponent {
                   props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
                 }),
               <.li(^.className := desksAndQueuesActive,
-                <.a(^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
+                <.a(^.className := "flexed-anchor", ^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
                   GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                   props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
                 }),
               <.li(^.className := staffingActive,
-                <.a(^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", " ", staffMovementsTabTooltip), ^.onClick --> {
+                <.a(^.className := "flexed-anchor", ^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", staffMovementsTabTooltip),
+                ^.onClick --> {
                   GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                   props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
                 }),
               displayForRole(
                 <.li(^.className := simulationsActive,
-                  <.a(^.id := "simulationDayTab", VdomAttr("data-toggle") := "tab", "Simulate Day"), ^.onClick --> {
+                  <.a(^.className := "flexed-anchor", ^.id := "simulationDayTab", VdomAttr("data-toggle") := "tab", "Simulate Day"), ^.onClick --> {
                     GoogleEventTracker.sendEvent(terminalName, "Simulate Day", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
                     props.router.set(props.terminalPageTab.copy(subMode = "simulations"))
                   }),
@@ -170,7 +171,8 @@ object TerminalContentComponent {
                 StaffMovementsExport,
                 props.loggedInUser
               ),
-              MultiDayExportComponent(props.airportConfig.portCode, terminal, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser))),
+              MultiDayExportComponent(props.airportConfig.portCode, terminal, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser)))
+          ,
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
               if (state.activeTab == "desksAndQueues") {

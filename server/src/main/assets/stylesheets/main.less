@@ -210,17 +210,13 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
-  padding: 5px 15px;
-  border-radius: 5px;
+  gap: 12px;
+  padding: 12px;
   font-weight: bold;
-  background-color: #f6f6f6;
   border: 1px solid #e4e4e4;
 }
 
 .status-bar-item-value {
-  padding: 5px 15px;
-  border-radius: 5px;
   font-weight: bold;
 }
 
@@ -787,7 +783,7 @@ table.user-desk-recs thead tr th {
   text-align: center;
   margin-top: 5px;
   margin-bottom: 5px;
-  padding: 0px;
+  padding: 0px 5px;
 }
 
 table.user-desk-recs thead tr {
@@ -1244,7 +1240,7 @@ p {
 }
 
 .time-machine-switch {
-  width: 250px;
+  //width: 250px;
   display: flex;
   justify-content: flex-end;
   align-items: baseline;
@@ -1257,6 +1253,13 @@ p {
 
 .time-machine-switch-label {
   font-size: 1.25em;
+}
+
+.controls-radio-wrapper label, th div {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
 }
 
 .date-quick-days {
@@ -1563,7 +1566,7 @@ th h2 {
 
 .data-quality {
   border: 1px solid #404252;
-  padding: 4px 8px 0px 8px;
+  padding: 4px 8px 4px 8px;
   font-weight: 400;
   text-align: left;
 }
@@ -1578,6 +1581,23 @@ th h2 {
 .data-quality__more-info {
   color: #404252;
   font-size: 18px;
+}
+
+.tippy-info-icon {
+  display: block;
+}
+
+.nav-tabs li a {
+  display: flex !important;
+  gap: 8px;
+}
+
+.data-quality__more-info svg, .tippy-info-icon svg {
+  display: block;
+}
+
+.MuiTooltip-popper {
+  font-size: 20px !important;
 }
 
 .data-quality__info {
@@ -1912,7 +1932,7 @@ th h2 {
   white-space: break-spaces;
 }
 
-.arrivals__table__flight-code__info-highlighted{
+.arrivals__table__flight-code__info-highlighted {
   font-size: inherit;
   float: left;
   margin-right: 2px;
@@ -1921,6 +1941,7 @@ th h2 {
 .arrival__non__highter__row {
   padding-left: 35px;
 }
+
 .arrivals__table__flight-code__info {
   font-size: inherit;
   float: right;
@@ -1946,16 +1967,18 @@ th h2 {
   width: 75px;
   display: inline-block;
 }
+
 .arrivals__table__flight-code-wrapper-with-non-highlight {
   min-height: 40px;
   width: 75px;
   display: inline-flex;
 }
+
 .arrivals__table__flight-code-wrapper-with-highlight {
   width: 120px;
   display: flex;
   align-items: center;
-  margin-top:-7px;
+  margin-top: -7px;
 }
 
 .arrivals__table__flight-code-wrapper-with-non-highlighted-row {
@@ -2087,8 +2110,8 @@ th h2 {
   background-color: #00bcd4;
 }
 
-#arrivals thead th.gate-stand, #arrivals thead th.status {
-  width: 7%;
+.gate-stand {
+  white-space: nowrap;
 }
 
 #arrivals thead th.pcp {
@@ -2188,6 +2211,12 @@ a i.fa.fa-remove {
   align-content: flex-start;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.flex-horizontally {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .feed-status-container {

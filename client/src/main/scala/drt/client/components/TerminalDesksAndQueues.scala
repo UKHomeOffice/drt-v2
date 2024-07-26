@@ -101,16 +101,16 @@ object TerminalDesksAndQueues {
         val headings = state.deskType match {
           case Deployments =>
             val h = List(<.th(
-              s"Dep ${deskUnitLabel(queueName)}", " ", depBanksOrDesksTip(queueName), ^.className := queueColumnClass)
+              <.div(s"Dep ${deskUnitLabel(queueName)}", depBanksOrDesksTip(queueName)), ^.className := queueColumnClass)
             )
             if (showWaitColumn)
-              h :+ <.th("Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
+              h :+ <.th(<.div("Est wait", estWaitTooltip), ^.className := queueColumnClass)
             else
               h
           case Ideal =>
             val h = List(<.th(s"Rec ${deskUnitLabel(queueName)} ", recBanksOrDesksTip(queueName), ^.className := queueColumnClass))
             if (showWaitColumn)
-              h :+ <.th("Est wait", " ", estWaitTooltip, ^.className := queueColumnClass)
+              h :+ <.th(<.div("Est wait", " ", estWaitTooltip), ^.className := queueColumnClass)
             else
               h
         }
@@ -128,11 +128,11 @@ object TerminalDesksAndQueues {
         }.toTagMod
 
         List(queueSubHeadings,
-          <.th(^.className := "non-pcp", "Misc", " ", miscTooltip),
-          <.th(^.className := "non-pcp", "Moves", " ", movesTooltip),
-          <.th(^.className := "total-deployed", "Rec", " ", recToolTip),
+          <.th(^.className := "non-pcp", <.div("Misc", miscTooltip)),
+          <.th(^.className := "non-pcp", <.div("Moves", movesTooltip)),
+          <.th(^.className := "total-deployed", <.div("Rec", recToolTip)),
           <.th(^.className := "total-deployed", "Dep"),
-          <.th(^.className := "total-deployed", "Avail", " ", availTooltip, ^.colSpan := 2))
+          <.th(^.className := "total-deployed", <.div("Avail", availTooltip), ^.colSpan := 2))
       }
 
       def qth(queue: Queue, xs: TagMod*) = <.th((^.className := queue.toString.toLowerCase + "-user-desk-rec") :: xs.toList: _*)

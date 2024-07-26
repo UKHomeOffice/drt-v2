@@ -212,7 +212,7 @@ object TerminalComponent {
       ),
       if (loggedInUser.roles.contains(StaffEdit))
         <.li(^.className := tabClass(Staffing),
-          <.a(^.id := "monthlyStaffingTab", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip),
+          <.a(^.id := "monthlyStaffingTab", ^.className := "flex-forizontally", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip),
           ^.onClick ==> { e: ReactEventFromInput =>
             e.preventDefault()
             GoogleEventTracker.sendEvent(terminalName, "click", "Monthly Staffing")

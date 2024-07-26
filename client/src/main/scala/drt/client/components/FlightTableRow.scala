@@ -211,7 +211,7 @@ object FlightTableRow {
         ),
         <.td(^.textAlign := "left",
           FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
-          pcpPaxDataQuality.map(dq => dataQualityIndicator(dq, flight.Terminal, "pax-rag")).getOrElse(EmptyVdom),
+          pcpPaxDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "pax-rag")),
           ^.className := s"pcp-pax",
         ),
       )
@@ -229,7 +229,7 @@ object FlightTableRow {
             <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
           }.toTagMod,
         ),
-        splitsDataQuality.map(dq => dataQualityIndicator(dq, flight.Terminal, "splits-rag")).getOrElse(EmptyVdom),
+        splitsDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "splits-rag")),
       )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
@@ -247,25 +247,6 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  private def dataQualityIndicator(dq: FlightComponents.DataQuality, terminal: Terminal, classPrefix: String): VdomTagOf[Div] =
-    <.div(
-      <.span(
-        dq.text,
-        dq.maybeTooltip.map { tt =>
-          <.span(
-            ^.className := "data-quality__more-info",
-            MuiTooltip(
-              title = tt,
-              placement = "bottom-end",
-              onOpen = (_: ReactEventFromHtml) => Callback {
-                GoogleEventTracker.sendEvent(terminal.toString, "Info button click", "Data quality", dq.text)
-              },
-            )(MuiIcons(Info)(fontSize = "inherit")),
-          )
-        }
-      ),
-      ^.className := s"data-quality data-quality__${dq.`type`} $classPrefix-${dq.`type`}",
-    )
 
   private def highlightedChips(showNumberOfVisaNationals: Boolean,
                                showRequireAllSelected: Boolean,

@@ -3,6 +3,8 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.components.styles.DefaultToolTipsStyle
 import drt.client.logger.{Logger, LoggerFactory}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Info
 import japgolly.scalajs.react.Ref.Simple
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.vdom.html_<^._
@@ -125,16 +127,16 @@ object Tippy extends ScalaCssReactImplicits {
     apply(content, interactive = false, <.span(trigger))
 
   def interactiveInfo(content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    apply(content, interactive = true, trigger = Icon.infoCircle, triggerCallback = triggerCallback)
+    apply(content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerCallback = triggerCallback)
 
   def info(content: VdomElement) =
-    apply(content, interactive = true, trigger = Icon.infoCircle)
+    apply(content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
 
   def info(content: String) =
-    apply(<.div(content), interactive = true, trigger = Icon.infoCircle)
+    apply(<.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
 
   def infoHover(content: String) =
-    apply(<.div(content), interactive = true, trigger = Icon.infoCircle, triggerEvent = TriggerEvents.focusAndHover)
+    apply(<.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerEvent = TriggerEvents.focusAndHover)
 
 }
 
