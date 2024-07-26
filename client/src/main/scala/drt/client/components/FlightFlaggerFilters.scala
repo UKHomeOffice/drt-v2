@@ -12,7 +12,7 @@ trait Country extends js.Object {
   var code: String
 }
 
-object CountryJs {
+object CountryJS {
   def apply(name: String, code: String): Country = {
     val p = (new js.Object).asInstanceOf[Country]
     p.name = name
@@ -39,7 +39,7 @@ trait SearchFilterPayload extends js.Object {
   var showTransitPaxNumber: Boolean
   var showNumberOfVisaNationals: Boolean
   var selectedAgeGroups: js.Array[String]
-  var selectedNationalities: js.Array[String]
+  var selectedNationalities: js.Array[Country]
   var flightNumber: String
   var requireAllSelected: Boolean
 }
@@ -49,7 +49,7 @@ object SearchFilterPayload {
              showTransitPaxNumber: Boolean,
              showNumberOfVisaNationals: Boolean,
              selectedAgeGroups: js.Array[String],
-             selectedNationalities: js.Array[String],
+             selectedNationalities: js.Array[Country],
              flightNumber: String,
              requireAllSelected: Boolean
            ): SearchFilterPayload = {
