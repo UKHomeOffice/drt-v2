@@ -301,7 +301,7 @@ object FlightTableContent {
     List(
       Option(("Flight", if (showFlagger) Option("arrivals__table__flight-code-with-highlight") else Option("arrivals__table__flight-code"))),
       if (showFlagger) Option(("Pax Info", Option("arrivals__table__flags-column"))) else None,
-      Option((if (isMobile) "Ori" else "Origin", Option("arrivals__table__flight-origin"))),
+      Option((if (isMobile) "Ori" else "Origin, Country", Option("arrivals__table__flight-origin"))),
       Option((redListHeading, None)),
       Option((if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand"))),
       Option(("Status", Option("status"))),

@@ -1914,11 +1914,6 @@ th h2 {
   text-decoration-line: line-through;
 }
 
-.arrivals__table__flight-code-value {
-  min-width: 103px;
-  white-space: break-spaces;
-}
-
 .arrivals__table__flight-code__info-highlighted {
   font-size: inherit;
   float: left;
@@ -1952,43 +1947,31 @@ th h2 {
 .arrivals__table__flight-code-wrapper {
   min-height: 40px;
   width: 75px;
-  display: inline-block;
+  display: flex;
+  gap: 8px;
+  justify-content: left;
 }
 .arrivals__table__flight-code-wrapper-with-non-highlight {
   min-height: 40px;
   width: 75px;
-  display: inline-flex;
+  display: flex;
+  gap: 8px;
+  justify-content: left;
 }
 .arrivals__table__flight-code-wrapper-with-highlight {
   width: 120px;
-  display: flex;
   align-items: center;
   margin-top:-7px;
+  display: flex;
+  gap: 8px;
+  justify-content: left;
 }
 
 .arrivals__table__flight-code-wrapper-with-non-highlighted-row {
   width: 120px;
   display: flex;
-  align-items: center;
-}
-
-.arrivals__table__flight-code-wrapper-with-non-highlight {
-  min-height: 40px;
-  width: 75px;
-  display: inline-flex;
-}
-
-.arrivals__table__flight-code-wrapper-with-highlight {
-  width: 120px;
-  display: flex;
-  align-items: center;
-  margin-top: -7px;
-}
-
-.arrivals__table__flight-code-wrapper-with-non-highlighted-row {
-  width: 120px;
-  display: flex;
-  align-items: center;
+  gap: 8px;
+  justify-content: left;
 }
 
 .arrivals__table__flight-code {
