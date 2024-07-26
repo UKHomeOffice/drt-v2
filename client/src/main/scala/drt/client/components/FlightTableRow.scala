@@ -183,7 +183,7 @@ object FlightTableRow {
             proxy().render(ai => {
               val redListCountry = props.indirectRedListPax.isEnabled && isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)
               val style: html_<^.TagMod = if (redListCountry) ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField) else EmptyVdom
-              props.originMapper(flight.Origin, style) //<.span(style, props.originMapper(flight.Origin), ai.country)
+              props.originMapper(flight.Origin, style)
             })
           )
         }),
