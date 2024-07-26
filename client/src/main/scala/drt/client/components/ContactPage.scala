@@ -54,8 +54,8 @@ object ContactDetailsComponent {
               val oohPhone = details.oohPhone.getOrElse("OOH Contact Number Missing")
               val contactUsHeader = MuiGrid(item = true, xs = 12)(MuiTypography(sx = SxProps(Map(
                 "color" -> DrtTheme.theme.palette.primary.`700`,
-                "font-size" -> DrtTheme.theme.typography.h2.fontSize,
-                "font-weight" -> DrtTheme.theme.typography.h2.fontWeight
+                "fontSize" -> DrtTheme.theme.typography.h2.fontSize,
+                "fontWeight" -> DrtTheme.theme.typography.h2.fontWeight
               )))("Contacting the DRT team"))
 
               val emailHeader = "Email :"
@@ -65,7 +65,7 @@ object ContactDetailsComponent {
               val oohMesssage = MuiGrid(container = true, spacing = 2)(
                 contactUsHeader,
                 MuiGrid(item = true, xs = 2)(
-                  MuiTypography(variant = "h7", sx = SxProps(Map("font-weight" -> "bold")))(
+                  MuiTypography(variant = "h7", sx = SxProps(Map("fontWeight" -> "bold")))(
                     officeHourLabel
                   )
                 ),
@@ -75,7 +75,7 @@ object ContactDetailsComponent {
                   )
                 ),
                 MuiGrid(item = true, xs = 2)(
-                  MuiTypography(variant = "h7", sx = SxProps(Map("font-weight" -> "bold")))(
+                  MuiTypography(variant = "h7", sx = SxProps(Map("fontWeight" -> "bold")))(
                     emailHeader
                   )
                 ),
@@ -85,7 +85,7 @@ object ContactDetailsComponent {
                   )
                 ),
                 MuiGrid(item = true, xs = 6)(
-                  MuiTypography(variant = "h7", sx = SxProps(Map("font-weight" -> "bold")))(
+                  MuiTypography(variant = "h7", sx = SxProps(Map("fontWeight" -> "bold")))(
                     "Contact number (outside of office hours) :"
                   )
                 ),
@@ -99,7 +99,7 @@ object ContactDetailsComponent {
               val inHoursMessage = MuiGrid(container = true, spacing = 2)(
                 contactUsHeader,
                 MuiGrid(item = true, xs = 2)(
-                  MuiTypography(variant = "h7", sx = SxProps(Map("font-weight" -> "bold")))(
+                  MuiTypography(variant = "h7", sx = SxProps(Map("fontWeight" -> "bold")))(
                     officeHourLabel
                   )
                 ),
@@ -109,7 +109,7 @@ object ContactDetailsComponent {
                   )
                 ),
                 MuiGrid(item = true, xs = 2)(
-                  MuiTypography(variant = "h7", sx = SxProps(Map("font-weight" -> "bold")))(
+                  MuiTypography(variant = "h7", sx = SxProps(Map("fontWeight" -> "bold")))(
                     emailHeader
                   )
                 ),
@@ -153,7 +153,7 @@ object FeedBackComponent {
                 MuiPaper(sx = SxProps(Map("elevation" -> "4", "padding" -> "16px", "margin" -> "20px", "backgroundColor" -> "#0E2560")))(
                   MuiGrid(container = true, spacing = 2)(
                     MuiGrid(item = true, xs = 12)(
-                      MuiTypography(variant = "h4", sx = SxProps(Map("color" -> "white", "font-weight" -> "bold")))(
+                      MuiTypography(variant = "h4", sx = SxProps(Map("color" -> "white", "fontWeight" -> "bold")))(
                         bannerHead
                       )
                     ),
@@ -166,7 +166,7 @@ object FeedBackComponent {
                       MuiGrid(container = true, direction = "column")(
                         MuiGrid(item = true, xs = 12)(
                           MuiTypography(variant = "h7",
-                            sx = SxProps(Map("color" -> "white", "padding" -> "2px 0", "font-weight" -> "bold")))(
+                            sx = SxProps(Map("color" -> "white", "padding" -> "2px 0", "fontWeight" -> "bold")))(
                             "Your feedback improves how our data can:"
                           )
                         ),
@@ -185,8 +185,8 @@ object FeedBackComponent {
                       MuiButton(variant = "outlined", sx = SxProps(Map("textTransform" -> "none",
                         "border" -> "1px solid white",
                         "color" -> "white",
-                        "font-weight" -> "bold",
-                        "font-size" -> buttonTheme.typography.fontSize)))(
+                        "fontWeight" -> "bold",
+                        "fontSize" -> buttonTheme.typography.fontSize)))(
                         "Give feedback", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/contact-us/$aORbTest", "_blank")),
                       )
                     )

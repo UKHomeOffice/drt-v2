@@ -149,16 +149,16 @@ object FlightComponents {
         case (feedSource, pax) =>
           (pax.actual, pax.transit) match {
             case (Some(actual), Some(transit)) if transit > 0 =>
-              Option(<.p(s"${feedSource.displayName} - ${pax.getPcpPax.map(_.toString).getOrElse("")} (${actual.toString} - ${transit.toString} transit)"))
+              Option(<.p(^.key := feedSource.id, s"${feedSource.displayName} - ${pax.getPcpPax.map(_.toString).getOrElse("")} (${actual.toString} - ${transit.toString} transit)"))
             case (Some(actual), _) =>
-              Option(<.p(s"${feedSource.displayName} - $actual"))
+              Option(<.p(^.key := feedSource.id, s"${feedSource.displayName} - $actual"))
             case _ =>
-              Option(<.p(s"${feedSource.displayName} - n/a"))
+              Option(<.p(^.key := feedSource.id, s"${feedSource.displayName} - n/a"))
           }
       }
       .collect { case Some(source) => source }
 
-    val maxPax = <.p(s"Seats: ${flight.apiFlight.MaxPax.getOrElse("-")}")
+    val maxPax = <.p(^.key := "capacity", s"Seats: ${flight.apiFlight.MaxPax.getOrElse("-")}")
     <.span((paxSources :+ maxPax).toVdomArray)
   }
 

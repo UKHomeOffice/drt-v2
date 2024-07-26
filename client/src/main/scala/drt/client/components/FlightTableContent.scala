@@ -214,15 +214,15 @@ object FlightTableContent {
                   }.toTagMod
                 ))))
           }
-          else <.div(^.style := js.Dictionary("padding-top" -> "16px", "padding-bottom" -> "16px"),
+          else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
             if (flightsForWindow.flights.isEmpty) {
               <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
                 MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
-                (MuiTypography(sx = SxProps(Map("font-weight" -> "bold")))("No flights to display.")))
+                (MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights to display.")))
             } else {
               <.div(^.style := js.Dictionary("border" -> "1px solid #99001E"),
                 MuiAlert(variant = MuiAlert.Variant.standard, color = "error", severity = "error")(
-                  MuiTypography(sx = SxProps(Map("font-weight" -> "bold")))("No flights found."), "Check the flight number or time period."))
+                  MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights found."), "Check the flight number or time period."))
             }
           )
         )

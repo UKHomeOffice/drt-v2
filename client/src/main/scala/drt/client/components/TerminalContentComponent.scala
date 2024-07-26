@@ -71,8 +71,6 @@ object TerminalContentComponent {
 
   def airportWrapper(portCode: PortCode): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
-  val flightFilterRCP: ReactConnectProxy[String] = SPACircuit.connect(_.filterFlightNumber)
-
   val flightHighlightRCP: ReactConnectProxy[FlightHighlight] = SPACircuit.connect(_.flightHighlight)
 
   def originMapper(portCode: PortCode, style: html_<^.TagMod): VdomElement = airportWrapper(portCode) {
@@ -148,22 +146,26 @@ object TerminalContentComponent {
                 props.terminalPageTab.dateFromUrlOrNow,
                 terminalName,
                 ExportDeskRecs,
-                SPAMain.exportUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal)
+                SPAMain.exportUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal),
+                None,
+                "desk-recs",
               ),
               exportLink(
                 props.terminalPageTab.dateFromUrlOrNow,
                 terminalName,
                 ExportDeployments,
-                SPAMain.exportUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal)
+                SPAMain.exportUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal),
+                None,
+                "deployments"
               ),
               displayForRole(
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
                   ExportStaffMovements,
-                  SPAMain.absoluteUrl(
-                    s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"
-                  )
+                  SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
+                  None,
+                  "staff-movements",
                 ),
                 StaffMovementsExport,
                 props.loggedInUser
@@ -197,31 +199,32 @@ object TerminalContentComponent {
                   redListUpdates <- props.redListUpdates
                   walkTimes <- props.walkTimes
                 } yield {
-                  flightHighlightRCP{(flightHighlightProxy: ModelProxy[FlightHighlight]) =>
+                  flightHighlightRCP { (flightHighlightProxy: ModelProxy[FlightHighlight]) =>
                     val flightHighlight = flightHighlightProxy()
-                      arrivalsTableComponent(
-                        FlightTable.Props(
-                          queueOrder = queueOrder,
-                          hasEstChox = props.airportConfig.hasEstChox,
-                          loggedInUser = props.loggedInUser,
-                          viewMode = props.viewMode,
-                          defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
-                          hasTransfer = props.airportConfig.hasTransfer,
-                          displayRedListInfo = features.displayRedListInfo,
-                          redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
-                          terminal = terminal,
-                          portCode = props.airportConfig.portCode,
-                          redListPorts = redListPorts,
-                          airportConfig = props.airportConfig,
-                          redListUpdates = redListUpdates,
-                          walkTimes = walkTimes,
-                          viewStart = viewStart,
-                          viewEnd = viewEnd,
-                          showFlagger = true,
-                          paxFeedSourceOrder = props.paxFeedSourceOrder,
-                          flightHighlight = flightHighlight
-                        )
-                    )}
+                    arrivalsTableComponent(
+                      FlightTable.Props(
+                        queueOrder = queueOrder,
+                        hasEstChox = props.airportConfig.hasEstChox,
+                        loggedInUser = props.loggedInUser,
+                        viewMode = props.viewMode,
+                        defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
+                        hasTransfer = props.airportConfig.hasTransfer,
+                        displayRedListInfo = features.displayRedListInfo,
+                        redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                        terminal = terminal,
+                        portCode = props.airportConfig.portCode,
+                        redListPorts = redListPorts,
+                        airportConfig = props.airportConfig,
+                        redListUpdates = redListUpdates,
+                        walkTimes = walkTimes,
+                        viewStart = viewStart,
+                        viewEnd = viewEnd,
+                        showFlagger = true,
+                        paxFeedSourceOrder = props.paxFeedSourceOrder,
+                        flightHighlight = flightHighlight
+                      )
+                    )
+                  }
                 }
                 maybeArrivalsComp.render(x => x)
               } else EmptyVdom
@@ -263,19 +266,25 @@ object TerminalContentComponent {
                  terminalName: String,
                  exportType: ExportType,
                  exportUrl: String,
-                 maybeExtraIcon: Option[Icon] = None
-                ): WithPropsAndTagsMods = {
-    MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-      MuiIcons(GetApp)(fontSize = "small"),
-      s" $exportType",
-      maybeExtraIcon.getOrElse(EmptyVdom),
-      ^.className := "btn btn-default",
-      ^.href := exportUrl,
-      ^.target := "_blank",
-      ^.id := s"export-day-${exportType.toUrlString}",
-      ^.onClick --> {
-        Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", exportDay.toISODateOnly))
-      })
+                 maybeExtraIcon: Option[Icon] = None,
+                 title: String,
+                ): VdomTagOf[Div] = {
+    val keyValue = s"${title.toLowerCase.replace(" ", "-")}-${exportType.toUrlString}"
+    <.div(
+      ^.key := keyValue,
+      MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
+        MuiIcons(GetApp)(fontSize = "small"),
+        s" $exportType",
+        maybeExtraIcon.getOrElse(EmptyVdom),
+        ^.className := "btn btn-default",
+        ^.href := exportUrl,
+        ^.target := "_blank",
+        ^.id := s"export-day-${exportType.toUrlString}",
+        ^.onClick --> {
+          Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", exportDay.toISODateOnly))
+        }
+      )
+    )
   }
 
   def displayForRole(node: VdomNode, role: Role, loggedInUser: LoggedInUser): TagMod =
@@ -300,7 +309,6 @@ object TerminalContentComponent {
         val pageWithTime = s"$page/${timeRange(p.props).start}/${timeRange(p.props).end}"
         val pageWithDate = p.props.terminalPageTab.maybeViewDate.map(s => s"$page/$s/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
         GoogleEventTracker.sendPageView(pageWithDate)
-        log.info("terminal component didMount")
       }
     )
     .configure(Reusability.shouldComponentUpdate)

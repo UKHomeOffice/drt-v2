@@ -213,12 +213,12 @@ object MonthlyStaffing {
         maybeClockChangeDate(viewingDate).map { clockChangeDate =>
           val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
           MuiGrid(container = true, direction = "column", spacing = 1)(
-            MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("font-weight" -> "bold"))),
+            MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("fontWeight" -> "bold"))),
             MuiGrid(item = true)(<.span("Please ensure no staff are entered in the cells with a dash '-'. They are there to enable you to " +
               s"allocate staff in the additional hour on $prettyDate.")),
             MuiGrid(item = true)(<.span("If pasting from TAMS, " +
               "one solution is to first paste into a separate spreadsheet, then copy and paste the first 2 hours, and " +
-              "then the rest of the hours in 2 separate steps", ^.style := js.Dictionary("margin-bottom" -> "15px", "display" -> "block")))
+              "then the rest of the hours in 2 separate steps", ^.style := js.Dictionary("marginBottom" -> "15px", "display" -> "block")))
           )
         },
         <.div(^.className := "staffing-table",

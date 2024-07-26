@@ -97,14 +97,12 @@ object Tippy extends ScalaCssReactImplicits {
     .render_P(props => {
       val trigger = props.maybeOnClick match {
         case Some(onClick) => <.span(
-          ^.key := "tippy-trigger",
           ^.className := "tooltip-trigger-onclick",
           ^.onClick ==> onClick,
           props.trigger)
         case None => props.trigger
       }
       val triggerWithTabIndex = <.span(
-        ^.key := "tippy-trigger-wrapper",
         ^.className := "tooltip-trigger",
         DefaultToolTipsStyle.triggerHoverIndicator,
         trigger,

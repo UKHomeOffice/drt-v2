@@ -87,7 +87,6 @@ object PcpPaxSummariesComponent {
 
   val component = ScalaComponent.builder[Props]("PcpPaxSummariesComponent")
     .renderBackend[PcpPaxSummariesComponent.Backend]
-    .componentDidMount(_ => Callback.log(s"PcpPaxSummaries component didMount"))
     .build
 
   def apply(viewMode: ViewMode, minuteTicker: Int): VdomElement =

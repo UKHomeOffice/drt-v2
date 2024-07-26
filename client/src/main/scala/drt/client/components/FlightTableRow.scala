@@ -6,6 +6,7 @@ import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
 import drt.client.components.FlightComponents.{SplitsGraph, paxFeedSourceClass}
 import drt.client.components.styles.ArrivalsPageStylesDefault
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
@@ -26,6 +27,7 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.PaxTypes.VisaNational
 import uk.gov.homeoffice.drt.ports.Queues.Queue
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.splits.ApiSplitsToSplitRatio
@@ -146,9 +148,11 @@ object FlightTableRow {
         case (name, Some(time)) => name -> time
       }
 
-      val timesPopUp = arrivalTimes.map(t => <.div(
-        <.span(^.display := "inline-block", ^.width := "120px", t._1), <.span(SDate(t._2).toLocalDateTimeString.takeRight(5))
-      )).toTagMod
+      val timesPopUp = arrivalTimes.map { case (label, time) =>
+        <.div(^.key := label.toLowerCase.replaceAll(" ", "-"),
+          <.span(^.display := "inline-block", ^.width := "120px", label), <.span(SDate(time).toLocalDateTimeString.takeRight(5))
+        )
+      }.toTagMod
 
       val bestExpectedTime = arrivalTimes.reverse.headOption.map(_._2)
 
@@ -207,7 +211,7 @@ object FlightTableRow {
         ),
         <.td(^.textAlign := "left",
           FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
-          pcpPaxDataQuality.map(dataQualityIndicator).getOrElse(EmptyVdom),
+          pcpPaxDataQuality.map(dq => dataQualityIndicator(dq, flight.Terminal)).getOrElse(EmptyVdom),
           ^.className := s"pcp-pax",
         ),
       )
@@ -225,7 +229,7 @@ object FlightTableRow {
             <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
           }.toTagMod,
         ),
-        splitsDataQuality.map(dataQualityIndicator).getOrElse(EmptyVdom),
+        splitsDataQuality.map(dq => dataQualityIndicator(dq, flight.Terminal)).getOrElse(EmptyVdom),
       )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
@@ -243,7 +247,7 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  private def dataQualityIndicator(dq: FlightComponents.DataQuality): VdomTagOf[Div] =
+  private def dataQualityIndicator(dq: FlightComponents.DataQuality, terminal: Terminal): VdomTagOf[Div] =
     <.div(
       <.span(
         dq.text,
@@ -252,6 +256,9 @@ object FlightTableRow {
             MuiTooltip(
               title = tt,
               placement = "bottom-end",
+              onOpen = (_: ReactEventFromHtml) => Callback {
+                GoogleEventTracker.sendEvent(terminal.toString, "Info button click", "Data quality", dq.text)
+              },
             )(MuiIcons(Info)(fontSize = "inherit")),
           )
         }
@@ -267,7 +274,7 @@ object FlightTableRow {
     <.div(^.minWidth := "150px",
       manifestSummary.map { summary =>
         def generateChip(condition: Boolean, pax: Int, label: String): Option[VdomElement] = {
-          if (condition && pax > 0) Option(<.div(^.style := js.Dictionary("padding-bottom" -> "5px"), s"$pax $label"))
+          if (condition && pax > 0) Option(<.div(^.style := js.Dictionary("paddingBottom" -> "5px"), s"$pax $label"))
           else None
         }
 
@@ -324,10 +331,10 @@ object FlightTableRow {
     }
     val walkTime = maybeActualWalkTime.getOrElse((terminalWalkTime / oneMinuteMillis).toInt)
     val walkTimeString = MinuteAsAdjective(walkTime).display + " " + description
-    <.span(^.className := "no-wrap", Tippy.interactive(<.span(^.key := "walk-time", walkTimeString), gateOrStand))
+    <.span(^.className := "no-wrap", ^.key := "walk-time", Tippy.interactive(<.span(walkTimeString), gateOrStand))
   }
 
-  def offScheduleClass(arrival: Arrival): String = {
+  private def offScheduleClass(arrival: Arrival): String = {
     val eta = arrival.bestArrivalTime(considerPredictions = true)
     val differenceFromScheduled = eta - arrival.Scheduled
     val hourInMillis = 3600000
@@ -337,7 +344,7 @@ object FlightTableRow {
     offScheduleClass
   }
 
-  def isRedListCountry(country: String, date: SDateLike, redListUpdates: RedListUpdates): Boolean =
+  private def isRedListCountry(country: String, date: SDateLike, redListUpdates: RedListUpdates): Boolean =
     redListUpdates.countryCodesByName(date.millisSinceEpoch).keys.exists(_.toLowerCase == country.toLowerCase)
 
 }

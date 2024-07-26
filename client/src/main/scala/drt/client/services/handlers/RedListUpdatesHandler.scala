@@ -16,7 +16,7 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class RedListUpdatesHandler[M](modelRW: ModelRW[M, Pot[RedListUpdates]]) extends LoggingActionHandler(modelRW) {
-  val requestFrequency: FiniteDuration = 60 seconds
+  val requestFrequency: FiniteDuration = 5.minutes
 
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetRedListUpdates =>

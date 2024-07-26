@@ -43,11 +43,11 @@ class ApplicationVersionHandler[M](modelRW: ModelRW[M, Pot[ClientServerVersions]
       effectOnly(nextCallEffect + effect)
 
     case SetApplicationVersion(newVersion) =>
-      log.info(s"Setting application version to $newVersion")
+      log.info(s"Application version is $newVersion")
       updated(Ready(ClientServerVersions(newVersion, newVersion)))
 
     case UpdateServerApplicationVersion(newServerVersion) =>
-      log.info(s"Updating server application version to $newServerVersion")
+      log.info(s"Server application version is $newServerVersion")
       val newClientServerVersions = value.map(_.copy(server = newServerVersion))
       updated(newClientServerVersions)
   }

@@ -170,7 +170,7 @@ object SPAMain {
 
   case object ForecastFileUploadLoc extends Loc
 
-  def requestInitialActions(): Unit = {
+  def initialRequests(): Unit = {
     val initActions = Seq(
       GetApplicationVersion,
       GetContactDetails,
@@ -340,7 +340,7 @@ object SPAMain {
     ArrivalsPageStylesDefault.addToDocument()
     DefaultScenarioSimulationStyle.addToDocument()
 
-    requestInitialActions()
+    initialRequests()
 
     val router = Router(BaseUrl.until_#, routerConfig.logToConsole)
     router().renderIntoDOM(dom.document.getElementById("root"))
