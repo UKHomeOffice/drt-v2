@@ -247,7 +247,7 @@ describe('Arrivals page', () => {
               ]
             ), csrfToken.toString())
         })
-        .get(paxRagGreenSelector)
+        .get('.arrivals_table__splits__queue-pax')
         .contains("2")
     });
 });
