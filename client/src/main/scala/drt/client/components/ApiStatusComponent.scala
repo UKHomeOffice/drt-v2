@@ -39,14 +39,15 @@ object ApiStatusComponent {
 
   case class Props(canValidate: Boolean, terminal: Terminal)
 
-  case class ApiDataQuality(percentage: Option[Int], info: String) extends DataQuality {
-    override val text: String = s"Received: ${percentage.map(_.toString).getOrElse("n/a")}%"
+  case class ApiDataQuality(percentage: Option[Int], label: String, info: String) extends DataQuality {
+    override val text: String = s"$label: ${percentage.map(_.toString).getOrElse("n/a")}%"
     override val `type`: String = percentage match {
       case Some(p) if p < 80 => "error"
       case Some(p) if p < 90 => "warning"
       case Some(_) => "success"
       case None => "info"
     }
+    override val maybeTooltip: Option[String] = Option(info)
   }
 
   private val receivedInfoText = "The percentage of landed flights that have received API data"
@@ -65,9 +66,9 @@ object ApiStatusComponent {
             val apiFeedStatus = ApiFeedStatus(flights, SDate.now().millisSinceEpoch, props.canValidate, terminalFlightsPot().paxFeedSourceOrder)
 
             <.div(^.className := "status-bar-item", "API (Advance Passenger Information)",
-              DataQualityIndicator(ApiDataQuality(apiFeedStatus.receivedPct.map(_.round.toInt), receivedInfoText), props.terminal, "api-received"),
+              DataQualityIndicator(ApiDataQuality(apiFeedStatus.receivedPct.map(_.round.toInt), "Received", receivedInfoText), props.terminal, "api-received"),
               if (props.canValidate)
-                DataQualityIndicator(ApiDataQuality(apiFeedStatus.validPct.map(_.round.toInt), validatedInfoText), props.terminal, "api-valid")
+                DataQualityIndicator(ApiDataQuality(apiFeedStatus.validPct.map(_.round.toInt), "Valid", validatedInfoText), props.terminal, "api-valid")
               else EmptyVdom,
             )
           })

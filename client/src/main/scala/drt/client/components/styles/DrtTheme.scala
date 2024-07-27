@@ -94,4 +94,14 @@ object DrtTheme extends StyleSheet.Inline with ScalaCssReactImplicits {
       )
     )
   )
+
+  def tooltipTheme: Theme = createTheme(
+    options = ThemeOptions(
+      typography = TypographyOptions(
+        fontSize = 18,
+        htmlFontSize = 10,
+        fontFamily = "Arial",
+      ),
+    )
+  )
 }

@@ -83,18 +83,18 @@ object FlightTableRow {
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.paxFeedSourceOrder).getOrElse(Map[Queue, Int]())
 
-      val highterOptionExists = props.flaggedNationalities.nonEmpty ||
+      val highlighterIsActive = props.flaggedNationalities.nonEmpty ||
         props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
 
       val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
-        if (props.showHightLighted && highterOptionExists)
+        if (props.showHightLighted && highlighterIsActive)
           "arrivals__table__flight-code arrivals__table__flight-code--clickable"
         else
           "arrivals__table__flight-code-with-highlight arrivals__table__flight-code--clickable"
-      else if (props.showHightLighted && highterOptionExists) "arrivals__table__flight-code-with-highlight"
+      else if (props.showHightLighted && highlighterIsActive) "arrivals__table__flight-code-with-highlight"
       else "arrivals__table__flight-code"
 
-      val highlightedComponent = if (highterOptionExists) {
+      val highlightedComponent = if (highlighterIsActive) {
         val chip = highlightedChips(
           props.showNumberOfVisaNationals,
           props.showRequireAllSelected,
@@ -123,7 +123,7 @@ object FlightTableRow {
                   GetArrivalSources(props.flightWithSplits.unique)
               }
             }),
-            if (showHighlighter) FlightHighlightChip(flightCodes) else if (!props.showHightLighted && highterOptionExists) <.span(^.cls := "arrival__non__highter__row", flightCodes) else flightCodes
+            if (showHighlighter) FlightHighlightChip(flightCodes) else if (!props.showHightLighted && highlighterIsActive) <.span(^.cls := "arrival__non__highter__row", flightCodes) else flightCodes
           )
         } else if (showHighlighter) <.span(^.cls := "arrivals__table__flight-code-value", FlightHighlightChip(flightCodes))
         else <.span(^.cls := "arrivals__table__flight-code-value", flightCodes)
@@ -168,12 +168,15 @@ object FlightTableRow {
         case _ => EmptyVdom
       }
 
-      val wrapperClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper-with-highlight"
-      else if (!props.showHightLighted && highterOptionExists) "arrivals__table__flight-code-wrapper-with-non-highlighted-row"
-      else "arrivals__table__flight-code-wrapper"
+      val highlighterClass = s"arrivals__table__flight-code__highlighter-${if (highlighterIsActive) "on" else "off"}"
+      val isHighlightedClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper__highlighted" else ""
+
+//      val wrapperClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper__highlighted"
+//      else if (!props.showHightLighted && highlighterIsActive) "arrivals__table__flight-code-wrapper__non-highlighted"
+//      else "arrivals__table__flight-code-wrapper__highlighter-inactive"
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
-          <.div(^.cls := wrapperClass,
+          <.div(^.cls := s"$highlighterClass $isHighlightedClass arrivals__table__flight-code-wrapper",
             flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHightLighted), charts)
         ),
         highlightedComponent.map(<.td(^.className := "arrivals__table__flags-column", _)),
