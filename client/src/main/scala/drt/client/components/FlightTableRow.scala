@@ -90,8 +90,8 @@ object FlightTableRow {
         if (props.showHightLighted && highlighterIsActive)
           "arrivals__table__flight-code arrivals__table__flight-code--clickable"
         else
-          "arrivals__table__flight-code-with-highlight arrivals__table__flight-code--clickable"
-      else if (props.showHightLighted && highlighterIsActive) "arrivals__table__flight-code-with-highlight"
+          "arrivals__table__flight-code--clickable"
+      else if (props.showHightLighted && highlighterIsActive) ""
       else "arrivals__table__flight-code"
 
       val highlightedComponent = if (highlighterIsActive) {
