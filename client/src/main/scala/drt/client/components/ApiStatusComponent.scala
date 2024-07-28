@@ -71,7 +71,13 @@ object ApiStatusComponent {
                 DataQualityIndicator(ApiDataQuality(apiFeedStatus.validPct.map(_.round.toInt), "Valid", validatedInfoText), props.terminal, "api-valid")
               else EmptyVdom,
             )
-          })
+          },
+          terminalFlightsPot().flights.renderPending(_ =>
+            <.div(^.className := "status-bar-item", "API (Advance Passenger Information)",
+              DataQualityIndicator(ApiDataQuality(None, "Received", receivedInfoText), props.terminal, "api-received"),
+            )
+          ),
+        )
       }
     }
     .build
