@@ -72,7 +72,7 @@ object FlightTable {
 
 
   def apply(shortLabel: Boolean = false,
-            originMapper: (PortCode, html_<^.TagMod) => VdomNode, // = portCode => portCode.toString,
+            originMapper: (PortCode, html_<^.TagMod) => VdomNode,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTable")
     .initialStateFromProps(p => State(p.flightHighlight.filterFlightSearch, p.flightHighlight.showHighlightedRows))

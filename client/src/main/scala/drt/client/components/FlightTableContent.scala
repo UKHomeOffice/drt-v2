@@ -80,7 +80,7 @@ object FlightTableContent {
   case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]]) extends UseValueEq
 
   def apply(shortLabel: Boolean = false,
-            originMapper: (PortCode, html_<^.TagMod) => VdomNode,// = portCode => portCode.toString,
+            originMapper: (PortCode, html_<^.TagMod) => VdomNode,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTableContent")
     .render_PS { (props, _) =>
