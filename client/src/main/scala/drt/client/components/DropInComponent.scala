@@ -7,13 +7,13 @@ import diode.react.ReactConnectProxy
 import drt.client.components.styles.{DrtTheme, WithScalaCssImplicits}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{GetDropInRegistrations, CreateDropInRegistration}
+import drt.client.services.handlers.{CreateDropInRegistration, GetDropInRegistrations}
 import drt.shared.{DropIn, DropInRegistration}
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
 
 import scala.language.postfixOps
 
@@ -95,15 +95,15 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
                     )))(
                       MuiGrid(sx = SxProps(Map(
                         "padding-top" -> "24px",
-                        "font-size" -> DrtTheme.theme.typography.h3.fontSize,
-                        "font-weight" -> DrtTheme.theme.typography.h3.fontWeight
+                        "fontSize" -> DrtTheme.theme.typography.h3.fontSize,
+                        "fontWeight" -> DrtTheme.theme.typography.h3.fontWeight
                       )))(<.span(s"Book a Drop-in Session")),
                     )),
                   MuiGrid(sx = SxProps(Map(
                     "backgroundColor" -> "#FFFFFF",
-                    "padding-top" -> "24px",
-                    "padding-left" -> "12px",
-                    "padding-right" -> "12px",
+                    "paddingTop" -> "24px",
+                    "paddingLeft" -> "12px",
+                    "paddingRight" -> "12px",
                     "overflow" -> "hidden"
                   )))(<.span(s"To book a drop-in session, please click the 'Book' button on the row that is most convenient for you."),
                     MuiGrid(container = true, spacing = 2, sx = SxProps(Map("width" -> "60%")))(
@@ -114,9 +114,9 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
                           MuiTable()(
                             MuiTableHead()(
                               MuiTableRow()(
-                                MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Date"),
-                                MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Time"),
-                                MuiTableCell(sx = SxProps(Map("font-weight" -> "bold")))("Duration"),
+                                MuiTableCell(sx = SxProps(Map("fontWeight" -> "bold")))("Date"),
+                                MuiTableCell(sx = SxProps(Map("fontWeight" -> "bold")))("Time"),
+                                MuiTableCell(sx = SxProps(Map("fontWeight" -> "bold")))("Duration"),
                                 MuiTableCell()(""),
                               )
                             ),
@@ -144,8 +144,8 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
                 )
               case false =>
                 MuiTypography(variant = "h6", sx = SxProps(
-                  Map("padding-top" -> "24px",
-                    "padding-bottom" -> "24px",
+                  Map("paddingTop" -> "24px",
+                    "paddingBottom" -> "24px",
                     "display" -> "flex",
                     "justifyContent" -> "center",
                     "alignItems" -> "center")

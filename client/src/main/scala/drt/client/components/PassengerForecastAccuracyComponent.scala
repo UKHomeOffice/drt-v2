@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.client.components.FlightComponents.DataQuality
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.SPACircuit
 import japgolly.scalajs.react.component.Scala.Component
@@ -15,6 +16,20 @@ object PassengerForecastAccuracyComponent {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(terminal: Terminal)
+
+  case class ForecastAccuracyDataQuality(daysOut: Int, errorPct: Option[Int]) extends DataQuality {
+    private val label = s"$daysOut day${if (daysOut > 1) "s" else ""}"
+
+    override val text: String = errorPct match {
+      case Some(error) =>
+        val sign = if (error >= 0) "+" else ""
+        s"$label: $sign$error%"
+      case None =>
+        s"$label: N/A"
+    }
+
+    override val `type`: String = "info"
+  }
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ApiStatus")
     .render_P { props =>
@@ -34,13 +49,7 @@ object PassengerForecastAccuracyComponent {
               )),
               accuracy.pax.getOrElse(props.terminal, SortedMap[Int, Option[Double]]()).map {
                 case (daysAhead, accuracyPct) =>
-                  val accuracyPctString = accuracyPct match {
-                    case Some(accPct) =>
-                      val sign = if (accPct > 0) "+" else ""
-                      s"$sign${Math.round(accPct).toInt}%"
-                    case None => "N/A"
-                  }
-                  <.div(^.className := "status-bar-item-value neutral", s"$daysAhead day${if (daysAhead != 1) "s" else ""}: $accuracyPctString")
+                  DataQualityIndicator(ForecastAccuracyDataQuality(daysAhead, accuracyPct.map(p => p.round.toInt)), props.terminal, s"$daysAhead-day-forecast")
               }.toTagMod
             )
           })

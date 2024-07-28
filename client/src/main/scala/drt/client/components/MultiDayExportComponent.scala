@@ -55,8 +55,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
         endDate = StateDate(p.selectedDate.toLocalDate)
       )
     }
-    .renderPS((scope, props, state) => {
-
+    .renderPS { (scope, props, state) =>
       val showClass = if (state.showDialogue) "show" else "fade"
 
       def datePickerWithLabel(setDate: ReactEventFromInput => CallbackTo[Unit], label: String, currentDate: LocalDate): html_<^.VdomElement = {
@@ -134,7 +133,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                           case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
                           case _ => List(ExportArrivals)
                         }
-                        exportLinksGroup(props, state, exports, "Arrivals")
+                        exportLinksGroup(props, state, exports, "Arrivals1")
                       } else EmptyVdom,
                       if (props.loggedInUser.hasRole(DesksAndQueuesView))
                         exportLinksGroup(props, state, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
@@ -148,6 +147,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                     ^.className := "modal-footer",
                     ^.id := "multi-day-export-modal-footer",
                     <.button(
+                      ^.key := "export-button",
                       ^.className := "btn btn-link",
                       VdomAttr("data-dismiss") := "modal", "Close",
                       ^.onClick --> scope.modState(_.copy(showDialogue = false))
@@ -158,7 +158,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             ))
         )
       else EmptyVdom
-    })
+    }
     .build
 
 
@@ -171,7 +171,9 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             props.selectedDate,
             props.terminal.toString,
             export,
-            SPAMain.exportDatesUrl(export, state.startDate.date, state.endDate.date, props.terminal)
+            SPAMain.exportDatesUrl(export, state.startDate.date, state.endDate.date, props.terminal),
+            None,
+            title
           )
         ).toVdomArray
       )

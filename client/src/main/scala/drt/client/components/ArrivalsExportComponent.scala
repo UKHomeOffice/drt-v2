@@ -95,7 +95,7 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
       MuiGrid(container = true, spacing = 2)(
         exports.map(export =>
           MuiGrid(item = true, xs = 4)(
-            exportLink(date, terminal.toString, export, SPAMain.exportUrl(export, viewMode, terminal))
+            exportLink(date, terminal.toString, export, SPAMain.exportUrl(export, viewMode, terminal), None, "arrivals")
           )).toVdomArray
       ))
 
@@ -129,6 +129,8 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
       date,
       term.toString,
       ExportArrivals,
-      SPAMain.exportUrl(ExportArrivals, viewMode, term)
+      SPAMain.exportUrl(ExportArrivals, viewMode, term),
+      None,
+      "arrivals",
     ).apply()
 }

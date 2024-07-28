@@ -10,6 +10,8 @@ import drt.client.services.{LoadingState, ViewDay}
 import drt.client.util.DateUtil.isNotValidDate
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Info
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{RouterCtl, SetRouteVia}
 import japgolly.scalajs.react.vdom.html_<^.{^, _}
@@ -184,9 +186,9 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           MuiDivider()(),
           <.div(^.className := "time-machine",
             <.div(^.className := "time-machine-switch",
-              <.div(^.className := "time-machine-switch-label",
+              <.div(^.className := "time-machine-switch-label flex-horizontally",
                 "Time machine",
-                Tippy(interactive = true, trigger = Icon.infoCircle,
+                Tippy(interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")),
                   content = <.div(
                     <.p("See what DRT was showing for this day on a specific date & time in the past."),
                     <.p("This can be useful to compare what DRT forecasted for a date compared to what ended up happening."),

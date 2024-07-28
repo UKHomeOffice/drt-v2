@@ -39,7 +39,6 @@ object Layout {
         LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails)
       }
       layoutModelItemsRCP { modelProxy =>
-        console.log("rendering layout")
         <.div({
           val model = modelProxy()
           val content = for {
@@ -60,7 +59,7 @@ object Layout {
                 MuiPaper(sx = SxProps(Map("elevation" -> "4", "padding" -> "16px", "margin" -> "20px", "backgroundColor" -> "#0E2560")))(
                   MuiGrid(container = true)(
                     MuiGrid(item = true, xs = gridItem1)(
-                      MuiTypography(variant = "h4", sx = SxProps(Map("color" -> "white", "font-weight" -> "bold")))(
+                      MuiTypography(variant = "h4", sx = SxProps(Map("color" -> "white", "fontWeight" -> "bold")))(
                         bannerHead
                       )
                     ),
@@ -69,17 +68,19 @@ object Layout {
                       ("Takes 2 minutes to complete")
                     ),
                     MuiGrid(item = true, xs = gridItem3)(
-                      MuiButton(variant = "outlined", sx = SxProps(Map("textTransform" -> "none",
+                      MuiButton(variant = "outlined", sx = SxProps(Map(
+                        "textTransform" -> "none",
                         "border" -> "1px solid white",
                         "color" -> "white",
-                        "font-weight" -> "bold",
-                        "font-size" -> buttonTheme.typography.button.fontSize)))(
-                        "Give feedback", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest", "_blank")),
+                        "fontWeight" -> "bold",
+                        "fontSize" -> buttonTheme.typography.button.fontSize))
+                      )(
+                        "Give feedback", ^.onClick --> Callback(dom.window.open(s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest", "_blank"))
                       )
                     ),
                     MuiGrid(item = true, xs = 1)(
                       <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "justifyContent" -> "right"),
-                        MuiIconButton(sx = SxProps(Map("color" -> "white", "font-weight" -> "bold", "display" -> "flex", "justifyContent" -> "right")))
+                        MuiIconButton(sx = SxProps(Map("color" -> "white", "fontWeight" -> "bold", "display" -> "flex", "justifyContent" -> "right")))
                         (^.onClick --> Callback(SPACircuit.dispatch(CloseBanner())), ^.aria.label := "Close", Icon.close)
                       ))
                   ))
@@ -87,7 +88,7 @@ object Layout {
               <.div(^.className := "topbar",
                 <.div(^.className := "main-logo"),
                 AlertsComponent(),
-                <.div(^.className := "contact", ^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "padding-right" -> "20px"),
+                <.div(^.className := "contact", ^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "paddingRight" -> "20px"),
                   <.span("Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)))
               ),
               <.div(

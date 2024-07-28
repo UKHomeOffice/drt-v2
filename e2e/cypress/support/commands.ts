@@ -33,9 +33,9 @@ const portOperatorRoles = ["port-operator-staff",
   "api:view-port-arrivals"
 ]
 
-export const paxRagGreenSelector = '.pax-rag-green'
-export const paxRagAmberSelector = '.pax-rag-amber'
-export const paxRagRedSelector = '.pax-rag-red'
+export const paxRagGreenSelector = '.pax-rag-success'
+export const paxRagAmberSelector = '.pax-rag-warning'
+export const paxRagRedSelector = '.pax-rag-error'
 
 export const eGatesCellSelector = '.egate-queue-pax';
 export const eeaCellSelector = '.eeadesk-queue-pax';

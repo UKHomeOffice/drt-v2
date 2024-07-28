@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
+import drt.client.components.FlightComponents.SplitsDataQuality.{CarrierData, HistoricalCarrierData, TerminalAverageData, TrustedCarrierData}
 import drt.shared.redlist.DirectRedListFlight
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.TrendingFlat
@@ -13,17 +14,62 @@ import uk.gov.homeoffice.drt.ports._
 
 
 object FlightComponents {
-  def paxFeedSourceClass(paxSource: PaxSource, isDomesticOrCta: Boolean): String =
+
+  trait DataQuality {
+    val `type`: String
+    val text: String
+    val maybeTooltip: Option[String] = None
+  }
+
+  trait PcpPaxDataQuality extends DataQuality {
+    val `type`: String
+    val text: String
+  }
+  object PcpPaxDataQuality {
+    object TrustedPortData extends PcpPaxDataQuality {
+      val `type`: String = "success"
+      val text: String = "Port live data"
+      override val maybeTooltip: Option[String] = Option("Live data from the port operator")
+    }
+    object CarrierData extends PcpPaxDataQuality {
+      val `type`: String = "info"
+      val text: String = "Carrier data"
+      override val maybeTooltip: Option[String] = Option("Advance Passenger Information (API) from the carrier")
+    }
+    object PortForecastData extends PcpPaxDataQuality {
+      val `type`: String = "warning"
+      val text: String = "Port forecast data"
+      override val maybeTooltip: Option[String] = Option("Data from the port operator")
+    }
+    object MlData extends PcpPaxDataQuality {
+      val `type`: String = "warning"
+      val text: String = "DRT forecast"
+      override val maybeTooltip: Option[String] = Option("Machine learning from multiple information sources and historical trends")
+    }
+    object HistoricalData extends PcpPaxDataQuality {
+      val `type`: String = "warning"
+      val text: String = "Estimate"
+      override val maybeTooltip: Option[String] = Option("Based on an historical average or an estimated load factor")
+    }
+    object AclData extends PcpPaxDataQuality {
+      val `type`: String = "error"
+      val text: String = "Estimate"
+      override val maybeTooltip: Option[String] = Option("Based on an historical average or an estimated load factor")
+    }
+
+  }
+  def paxFeedSourceClass(paxSource: PaxSource, isDomesticOrCta: Boolean): Option[PcpPaxDataQuality] =
     if (isDomesticOrCta)
-      "pax-rag-cta"
+      None
     else
       paxSource.feedSource match {
-        case ApiFeedSource => "pax-rag-green"
-        case LiveFeedSource => "pax-rag-green"
-        case HistoricApiFeedSource => "pax-rag-amber"
-        case ForecastFeedSource => "pax-rag-amber"
-        case AclFeedSource => "pax-rag-red"
-        case _ => "pax-rag-red"
+        case LiveFeedSource => Option(PcpPaxDataQuality.TrustedPortData)
+        case ApiFeedSource => Option(PcpPaxDataQuality.CarrierData)
+        case ForecastFeedSource => Option(PcpPaxDataQuality.PortForecastData)
+        case HistoricApiFeedSource => Option(PcpPaxDataQuality.HistoricalData)
+        case MlFeedSource => Option(PcpPaxDataQuality.MlData)
+        case AclFeedSource => Option(PcpPaxDataQuality.AclData)
+        case _ => Option(PcpPaxDataQuality.AclData)
       }
 
   def paxComp(flightWithSplits: ApiFlightWithSplits,
@@ -39,12 +85,12 @@ object FlightComponents {
       else ""
 
     val pcpPaxNumber = if (!flightWithSplits.apiFlight.Origin.isDomesticOrCta)
-      flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")
+      s"${flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).map(_.toString).getOrElse("n/a")}"
     else "-"
 
-    <.div(^.className := s"right arrivals__table__flight__pcp-pax $diversionClass $isNotApiData ${paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(paxFeedSourceOrder),
-        flightWithSplits.apiFlight.Origin.isDomesticOrCta)}",
-      <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"$noPcpPaxClass", pcpPaxNumber))),
+    <.div(
+      ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData underline",
+      <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"pcp-pax-value $noPcpPaxClass", pcpPaxNumber))),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
           if (directRedListFlight.incomingDiversion) s"Passengers diverted from ${flightWithSplits.apiFlight.Terminal}"
@@ -54,13 +100,46 @@ object FlightComponents {
     )
   }
 
-  def paxClassFromSplits(flightWithSplits: ApiFlightWithSplits): String = {
+  trait SplitsDataQuality extends DataQuality {
+    val `type`: String
+    val text: String
+  }
+
+  object SplitsDataQuality {
+
+    object TrustedCarrierData extends SplitsDataQuality {
+      val `type`: String = "success"
+      val text: String = "Verified carrier data"
+      override val maybeTooltip: Option[String] = Option("Based on Advance Passenger Information (API) from the carrier")
+    }
+
+    object CarrierData extends SplitsDataQuality {
+      val `type`: String = "info"
+      val text: String = "Carrier data"
+      override val maybeTooltip: Option[String] = Option("Advance Passenger Information (API) from the carrier")
+    }
+
+    object HistoricalCarrierData extends SplitsDataQuality {
+      val `type`: String = "warning"
+      val text: String = "Historical carrier data"
+      override val maybeTooltip: Option[String] = Option("Based on historical Advance Passenger Information (API) from this flight or route")
+    }
+
+    object TerminalAverageData extends SplitsDataQuality {
+      val `type`: String = "error"
+      val text: String = "Terminal average data"
+      override val maybeTooltip: Option[String] = Option("Based on historical average pax splits for this terminal")
+    }
+  }
+
+  def splitsDataQuality(flightWithSplits: ApiFlightWithSplits): Option[SplitsDataQuality] = {
     if (flightWithSplits.apiFlight.Origin.isDomesticOrCta)
-      "pax-no-splits"
+      None
     else flightWithSplits.bestSplits.map(_.source) match {
-      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if flightWithSplits.hasApi => "pax-rag-green"
-      case Some(SplitSources.Historical) => "pax-rag-amber"
-      case _ => "pax-rag-red"
+      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if flightWithSplits.hasLivePaxSource => Option(TrustedCarrierData)
+      case Some(SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages) if !flightWithSplits.hasLivePaxSource => Option(CarrierData)
+      case Some(SplitSources.Historical) => Option(HistoricalCarrierData)
+      case _ => Option(TerminalAverageData)
     }
   }
 
@@ -70,16 +149,16 @@ object FlightComponents {
         case (feedSource, pax) =>
           (pax.actual, pax.transit) match {
             case (Some(actual), Some(transit)) if transit > 0 =>
-              Option(<.p(s"${feedSource.displayName} - ${pax.getPcpPax.map(_.toString).getOrElse("")} (${actual.toString} - ${transit.toString} transit)"))
+              Option(<.p(^.key := feedSource.id, s"${feedSource.displayName} - ${pax.getPcpPax.map(_.toString).getOrElse("")} (${actual.toString} - ${transit.toString} transit)"))
             case (Some(actual), _) =>
-              Option(<.p(s"${feedSource.displayName} - $actual"))
+              Option(<.p(^.key := feedSource.id, s"${feedSource.displayName} - $actual"))
             case _ =>
-              Option(<.p(s"${feedSource.displayName} - n/a"))
+              Option(<.p(^.key := feedSource.id, s"${feedSource.displayName} - n/a"))
           }
       }
       .collect { case Some(source) => source }
 
-    val maxPax = <.p(s"Seats: ${flight.apiFlight.MaxPax.getOrElse("-")}")
+    val maxPax = <.p(^.key := "capacity", s"Seats: ${flight.apiFlight.MaxPax.getOrElse("-")}")
     <.span((paxSources :+ maxPax).toVdomArray)
   }
 

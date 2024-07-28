@@ -62,7 +62,7 @@ object FlightTableComponents {
       )
       val content = <.div(^.display := "grid", ^.whiteSpace := "nowrap", ^.className := "underline",
         sdateFrom.toHoursAndMinutes,
-        " \u2192 ",
+        " - ",
         sdateTo.toHoursAndMinutes,
       )
       Tippy.describe(postTouchdownTimes, content).vdomElement

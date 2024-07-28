@@ -51,7 +51,7 @@ object NationalityFlaggingComponent {
       val clearFlags = flagCount match {
         case 0 => EmptyVdom
         case _ =>
-          <.div(^.style := js.Dictionary("padding-top" -> "22px"),
+          <.div(^.style := js.Dictionary("paddingTop" -> "22px"),
             MuiLink(variant = MuiButton.Variant.text, sx = SxProps(Map("minWidth" -> "40px")))(
               MuiTypography(variant = "body1", sx = SxProps(Map("fontWeight" -> "bold")))("Clear all"),
               ^.href := "#",
@@ -61,10 +61,10 @@ object NationalityFlaggingComponent {
               }
               }))
       }
-      <.div(^.style := js.Dictionary("padding-top" -> "0px"),
+      <.div(^.style := js.Dictionary("paddingTop" -> "0px"),
         <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center", "gap" -> "16px"),
           <.div(
-            MuiTypography(sx = SxProps(Map("font-weight" -> "bold", "padding-bottom" -> "10px")))("Flag flights by pax nationality"),
+            MuiTypography(sx = SxProps(Map("fontWeight" -> "bold", "paddingBottom" -> "10px")))("Flag flights by pax nationality"),
             MuiAutocomplete[MuiAutocompleteOption](
               options = options,
               renderInput = acTextInput,
@@ -90,7 +90,7 @@ object NationalityFlaggingComponent {
             )(),
           ), clearFlags
         ),
-        <.div(^.style := js.Dictionary("padding-top" -> "16px", "display" -> "wrap", "alignItems" -> "center"),
+        <.div(^.style := js.Dictionary("paddingTop" -> "16px", "display" -> "wrap", "alignItems" -> "center"),
           <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "16px"),
             props.flaggedNationalities.toList
               .sortBy(_.name)

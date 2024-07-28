@@ -30,7 +30,6 @@ class GateStandWalkTimePortsHandler[M](modelRW: ModelRW[M, Pot[WalkTimes]]) exte
 
 
     case UpdateGateStandWalktime(walkTimes) =>
-      log.info(s"Received stand and gate walkTimes.")
       updated(Ready(walkTimes))
 
   }

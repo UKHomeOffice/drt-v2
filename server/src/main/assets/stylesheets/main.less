@@ -210,17 +210,13 @@ ul.dropdown-menu > li.dropdown-item > span.port {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: 10px;
-  padding: 5px 15px;
-  border-radius: 5px;
+  gap: 12px;
+  padding: 12px;
   font-weight: bold;
-  background-color: #f6f6f6;
   border: 1px solid #e4e4e4;
 }
 
 .status-bar-item-value {
-  padding: 5px 15px;
-  border-radius: 5px;
   font-weight: bold;
 }
 
@@ -787,7 +783,7 @@ table.user-desk-recs thead tr th {
   text-align: center;
   margin-top: 5px;
   margin-bottom: 5px;
-  padding: 0px;
+  padding: 0px 5px;
 }
 
 table.user-desk-recs thead tr {
@@ -1244,7 +1240,6 @@ p {
 }
 
 .time-machine-switch {
-  width: 250px;
   display: flex;
   justify-content: flex-end;
   align-items: baseline;
@@ -1257,6 +1252,13 @@ p {
 
 .time-machine-switch-label {
   font-size: 1.25em;
+}
+
+.controls-radio-wrapper label, th div {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
 }
 
 .date-quick-days {
@@ -1276,6 +1278,14 @@ p {
   text-align: right;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+}
+
+.flex-uniform-size {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  flex: 1;
   justify-content: space-between;
 }
 
@@ -1486,6 +1496,12 @@ p {
   gap: 0px;
 }
 
+.arrivals_table__splits__queue-pax {
+  min-width: 60px;
+  text-align: right;
+  margin-bottom: 8px;
+}
+
 // Usage table
 
 .usage-table {
@@ -1547,16 +1563,65 @@ th h2 {
   height: 200px;
 }
 
-.pax-cell {
-  position: relative;
-  width: 100%;
-  display: inline-block;
-  color: black;
+.data-quality {
+  border: 1px solid #404252;
+  padding: 4px 8px 4px 8px;
   font-weight: 400;
+  text-align: left;
 }
 
-.pax-cell div {
-  padding-right: 5px;
+.data-quality > span {
+  min-width: 80px;
+  display: flex;
+  gap: 5px;
+  justify-content: space-between;
+}
+
+.data-quality__more-info a {
+  color: #404252;
+  font-size: 20px;
+}
+
+.tippy-info-icon {
+  color: inherit;
+  display: block;
+}
+
+.nav-tabs li a {
+  display: flex !important;
+  gap: 8px;
+}
+
+.nav-tabs .tooltip-trigger {
+  color: #404252;
+}
+
+.data-quality__more-info svg, .tippy-info-icon svg {
+  display: block;
+}
+
+.MuiTooltip-popper {
+  font-size: 20px !important;
+}
+
+.data-quality__info {
+  background-color: #f3f5f9;
+  color: #404252;
+}
+
+.data-quality__success {
+  background-color: #f3f9de;
+  color: #2F4500;
+}
+
+.data-quality__warning {
+  background-color: #fff2e1;
+  color: #873200;
+}
+
+.data-quality__error {
+  background-color: #ffebee;
+  color: #99001E;
 }
 
 @pax-bar-height: 20px;
@@ -1854,20 +1919,16 @@ th h2 {
   text-decoration-line: line-through;
 }
 
-.arrivals__table__flight-code-value {
-  min-width: 103px;
-  white-space: break-spaces;
-}
-
-.arrivals__table__flight-code__info-highlighted{
+.arrivals__table__flight-code__info-highlighted {
   font-size: inherit;
   float: left;
   margin-right: 2px;
 }
 
 .arrival__non__highter__row {
-  padding-left: 35px;
+  padding-left: 31px;
 }
+
 .arrivals__table__flight-code__info {
   font-size: inherit;
   float: right;
@@ -1889,26 +1950,24 @@ th h2 {
 }
 
 .arrivals__table__flight-code-wrapper {
-  min-height: 40px;
-  width: 75px;
-  display: inline-block;
-}
-.arrivals__table__flight-code-wrapper-with-non-highlight {
-  min-height: 40px;
-  width: 75px;
-  display: inline-flex;
-}
-.arrivals__table__flight-code-wrapper-with-highlight {
-  width: 120px;
   display: flex;
   align-items: center;
-  margin-top:-7px;
+  justify-content: space-between;
+  gap: 5px;
 }
 
-.arrivals__table__flight-code-wrapper-with-non-highlighted-row {
-  width: 120px;
-  display: flex;
-  align-items: center;
+.arrivals__table__flight-code-wrapper__highlighter-off {
+  width: 90px;
+}
+
+.arrivals__table__flight-code-wrapper__highlighter-on {
+  width: 131px;
+}
+
+.arrivals__table__flight-code-wrapper__highlighted {
+  width: 141px;
+  margin-top:-7px;
+  margin-left: -8px;
 }
 
 .arrivals__table__flight-code {
@@ -1995,6 +2054,14 @@ th h2 {
   border-right: 1px solid #ccc;
 }
 
+.pcp-pax-value {
+  display: block;
+  min-width: 30px;
+  text-align: right;
+  font-weight: bold;
+  padding-bottom: 8px;
+}
+
 .pax-rag-green {
   border-bottom: 3px solid @reliability-high;
 }
@@ -2012,11 +2079,10 @@ th h2 {
 }
 
 #arrivals td, #arrivals th {
-  padding: 8px;
+  padding: 16px 8px 16px 8px;
   line-height: 1.4;
   vertical-align: top;
   border-top: 1px solid #ddd;
-  padding-right: 0px;
 }
 
 #arrivals tbody:nth-child(odd) {
@@ -2027,8 +2093,8 @@ th h2 {
   background-color: #00bcd4;
 }
 
-#arrivals thead th.gate-stand, #arrivals thead th.status {
-  width: 7%;
+.gate-stand {
+  white-space: nowrap;
 }
 
 #arrivals thead th.pcp {
@@ -2040,7 +2106,7 @@ th h2 {
 }
 
 #arrivals table {
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 #arrivals table thead {
@@ -2128,6 +2194,12 @@ a i.fa.fa-remove {
   align-content: flex-start;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.flex-horizontally {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 .feed-status-container {

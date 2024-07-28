@@ -29,7 +29,6 @@ class SlaConfigsHandler[M](modelRW: ModelRW[M, Pot[SlaConfigs]]) extends Logging
         case Ready(configs) if configs == slaConfigs =>
           effectOnly(poll)
         case _ =>
-          log.info(s"SLA configs updated: $slaConfigs")
           updated(Ready(slaConfigs), poll)
       }
 

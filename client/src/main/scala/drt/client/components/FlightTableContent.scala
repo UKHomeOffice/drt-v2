@@ -15,7 +15,7 @@ import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
@@ -80,7 +80,7 @@ object FlightTableContent {
   case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]]) extends UseValueEq
 
   def apply(shortLabel: Boolean = false,
-            originMapper: PortCode => VdomNode = portCode => portCode.toString,
+            originMapper: (PortCode, html_<^.TagMod) => VdomNode,
             splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
            ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTableContent")
     .render_PS { (props, _) =>
@@ -214,15 +214,15 @@ object FlightTableContent {
                   }.toTagMod
                 ))))
           }
-          else <.div(^.style := js.Dictionary("padding-top" -> "16px", "padding-bottom" -> "16px"),
+          else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
             if (flightsForWindow.flights.isEmpty) {
               <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
                 MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
-                (MuiTypography(sx = SxProps(Map("font-weight" -> "bold")))("No flights to display.")))
+                (MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights to display.")))
             } else {
               <.div(^.style := js.Dictionary("border" -> "1px solid #99001E"),
                 MuiAlert(variant = MuiAlert.Variant.standard, color = "error", severity = "error")(
-                  MuiTypography(sx = SxProps(Map("font-weight" -> "bold")))("No flights found."), "Check the flight number or time period."))
+                  MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights found."), "Check the flight number or time period."))
             }
           )
         )
@@ -240,13 +240,14 @@ object FlightTableContent {
     val isMobile = dom.window.innerWidth < 800
     val columns = columnHeaders(shortLabel, redListHeading, isMobile, showFlagger)
 
-    val portColumnThs = columnHeadersWithClasses(columns, props.hasEstChox, props.displayRedListInfo, redListPaxExist, redListHeading)
-      .toTagMod
+    val portColumnThs = columnHeadersWithClasses(columns, props.hasEstChox, props.displayRedListInfo, redListPaxExist, redListHeading).toTagMod
 
-    val queueDisplayNames = queues.map { q =>
-      val queueName: String = Queues.displayName(q)
-      <.th(queueName, " ", splitsTableTooltip)
-    }.toTagMod
+    val queueDisplayNames = <.th(
+      <.span(^.className := "flex-uniform-size",
+        queues.map(q => <.div(Queues.displayName(q), " ", splitsTableTooltip, ^.className := "arrivals_table__splits__queue-pax flex-horizontally")).toTagMod
+      ),
+      ^.className := "arrivals__table__flight-splits",
+    )
 
     val transferPaxTh = <.th("Transfer Pax")
 
@@ -285,7 +286,7 @@ object FlightTableContent {
           <.div(^.cls := className, label)
         )
         case (label, None) if label == "Expected" || label == "Exp" => <.th(
-          <.div(label, " ", expTimeTooltip)
+          <.div(^.className := "flex-horizonally", label, " ", expTimeTooltip)
         )
         case (label, None) if label == "Flight" => <.th(
           <.div(^.cls := "arrivals__table__flight-code-wrapper", label, " ", wbrFlightColorTooltip)
@@ -300,8 +301,7 @@ object FlightTableContent {
     List(
       Option(("Flight", if (showFlagger) Option("arrivals__table__flight-code-with-highlight") else Option("arrivals__table__flight-code"))),
       if (showFlagger) Option(("Pax Info", Option("arrivals__table__flags-column"))) else None,
-      Option((if (isMobile) "Ori" else "Origin", None)),
-      Option(("Country", Option("country"))),
+      Option((if (isMobile) "Ori" else "Origin, Country", Option("arrivals__table__flight-origin"))),
       Option((redListHeading, None)),
       Option((if (isMobile || shortLabel) "Gt/St" else "Gate / Stand", Option("gate-stand"))),
       Option(("Status", Option("status"))),

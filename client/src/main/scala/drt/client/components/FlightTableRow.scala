@@ -4,7 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
-import drt.client.components.FlightComponents.SplitsGraph
+import drt.client.components.FlightComponents.{SplitsGraph, paxFeedSourceClass}
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -40,7 +40,7 @@ object FlightTableRow {
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShareFlightCodes: Seq[String],
                    idx: Int,
-                   originMapper: PortCode => VdomNode = portCode => portCode.toString,
+                   originMapper: (PortCode, html_<^.TagMod) => VdomNode, // = portCode => portCode.toString,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
@@ -83,18 +83,18 @@ object FlightTableRow {
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.paxFeedSourceOrder).getOrElse(Map[Queue, Int]())
 
-      val highterOptionExists = props.flaggedNationalities.nonEmpty ||
+      val highlighterIsActive = props.flaggedNationalities.nonEmpty ||
         props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
 
       val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
-        if (props.showHightLighted && highterOptionExists)
+        if (props.showHightLighted && highlighterIsActive)
           "arrivals__table__flight-code arrivals__table__flight-code--clickable"
         else
-          "arrivals__table__flight-code-with-highlight arrivals__table__flight-code--clickable"
-      else if (props.showHightLighted && highterOptionExists) "arrivals__table__flight-code-with-highlight"
+          "arrivals__table__flight-code--clickable"
+      else if (props.showHightLighted && highlighterIsActive) ""
       else "arrivals__table__flight-code"
 
-      val highlightedComponent = if (highterOptionExists) {
+      val highlightedComponent = if (highlighterIsActive) {
         val chip = highlightedChips(
           props.showNumberOfVisaNationals,
           props.showRequireAllSelected,
@@ -123,7 +123,7 @@ object FlightTableRow {
                   GetArrivalSources(props.flightWithSplits.unique)
               }
             }),
-            if (showHighlighter) FlightHighlightChip(flightCodes) else if (!props.showHightLighted && highterOptionExists) <.span(^.cls := "arrival__non__highter__row", flightCodes) else flightCodes
+            if (showHighlighter) FlightHighlightChip(flightCodes) else if (!props.showHightLighted && highlighterIsActive) <.span(^.cls := "arrival__non__highter__row", flightCodes) else flightCodes
           )
         } else if (showHighlighter) <.span(^.cls := "arrivals__table__flight-code-value", FlightHighlightChip(flightCodes))
         else <.span(^.cls := "arrivals__table__flight-code-value", flightCodes)
@@ -143,9 +143,11 @@ object FlightTableRow {
         case (name, Some(time)) => name -> time
       }
 
-      val timesPopUp = arrivalTimes.map(t => <.div(
-        <.span(^.display := "inline-block", ^.width := "120px", t._1), <.span(SDate(t._2).toLocalDateTimeString.takeRight(5))
-      )).toTagMod
+      val timesPopUp = arrivalTimes.map { case (label, time) =>
+        <.div(^.key := label.toLowerCase.replaceAll(" ", "-"),
+          <.span(^.display := "inline-block", ^.width := "120px", label), <.span(SDate(time).toLocalDateTimeString.takeRight(5))
+        )
+      }.toTagMod
 
       val bestExpectedTime = arrivalTimes.reverse.headOption.map(_._2)
 
@@ -166,22 +168,25 @@ object FlightTableRow {
         case _ => EmptyVdom
       }
 
-      val wrapperClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper-with-highlight"
-      else if (!props.showHightLighted && highterOptionExists) "arrivals__table__flight-code-wrapper-with-non-highlighted-row"
-      else "arrivals__table__flight-code-wrapper"
+      val highlighterClass = s"arrivals__table__flight-code__highlighter-${if (highlighterIsActive) "on" else "off"}"
+      val isHighlightedClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper__highlighted" else ""
+
+//      val wrapperClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper__highlighted"
+//      else if (!props.showHightLighted && highlighterIsActive) "arrivals__table__flight-code-wrapper__non-highlighted"
+//      else "arrivals__table__flight-code-wrapper__highlighter-inactive"
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
-          <.div(^.cls := wrapperClass,
-            flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHightLighted), charts)),
+          <.div(^.cls := s"$highlighterClass $isHighlightedClass arrivals__table__flight-code-wrapper",
+            flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHightLighted), charts)
+        ),
         highlightedComponent.map(<.td(^.className := "arrivals__table__flags-column", _)),
-        <.td(props.originMapper(flight.Origin)),
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
             proxy().renderEmpty(<.span()),
             proxy().render(ai => {
               val redListCountry = props.indirectRedListPax.isEnabled && isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)
-              val style = if (redListCountry) ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField) else EmptyVdom
-              <.span(style, ai.country)
+              val style: html_<^.TagMod = if (redListCountry) ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField) else EmptyVdom
+              props.originMapper(flight.Origin, style)
             })
           )
         }),
@@ -196,43 +201,46 @@ object FlightTableRow {
         <.td(maybeLocalTimeWithPopup(Option(flight.Scheduled))),
         <.td(expectedContent),
       )
+      val pcpPaxDataQuality = paxFeedSourceClass(flightWithSplits.apiFlight.bestPaxEstimate(props.paxFeedSourceOrder), flight.Origin.isDomesticOrCta)
       val lastCells = List[TagMod](
-        <.td(pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder), ^.className := "arrivals__table__flight-est-pcp"),
-        <.td(^.className := s"pcp-pax underline", FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
+        <.td(
+          pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder),
+          ^.className := "arrivals__table__flight-est-pcp"
+        ),
+        <.td(^.textAlign := "left",
+          FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
+          pcpPaxDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "pax-rag")),
+          ^.className := s"pcp-pax",
+        ),
       )
 
       val flightFields = firstCells ++ lastCells
 
-      val paxClass = FlightComponents.paxClassFromSplits(flightWithSplits)
-
       val flightId = flight.uniqueId.toString
+
+      val splitsDataQuality = FlightComponents.splitsDataQuality(flightWithSplits)
+
+      val queueSplits = <.td(
+        <.span(^.className := "flex-uniform-size",
+          props.splitsQueueOrder.map { q =>
+            val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
+            <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
+          }.toTagMod,
+        ),
+        splitsDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "splits-rag")),
+      )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
       val noPcpPax = if (flight.Origin.isCta || outgoingDiversion) " arrival-cta" else ""
       val trClassName = s"${offScheduleClass(flight)} $timeIndicatorClass$cancelledClass$noPcpPax"
 
-      val queueSplits = props.splitsQueueOrder.map { q =>
-        val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
-        <.td(^.className := s"queue-split right",
-          <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax $paxClass"))
-      }.toTagMod
-
-      if (props.hasTransfer) {
-        <.tr(
-          ^.key := flightId,
-          ^.className := trClassName,
-          flightFields.toTagMod,
-          queueSplits,
-          <.td(FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder))
-        )
-      } else {
-        <.tr(
-          ^.key := flightId,
-          ^.className := trClassName,
-          flightFields.toTagMod,
-          queueSplits
-        )
-      }
+      <.tr(
+        ^.key := flightId,
+        ^.className := trClassName,
+        flightFields.toTagMod,
+        queueSplits,
+        if (props.hasTransfer) <.td(FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder)) else EmptyVdom
+      )
     }
     .configure(Reusability.shouldComponentUpdate)
     .build
@@ -242,10 +250,10 @@ object FlightTableRow {
                                flaggedAgeGroups: Set[PaxAgeRange],
                                flaggedNationalities: Set[Country],
                                manifestSummary: Option[FlightManifestSummary]): html_<^.VdomNode = {
-    <.div(
+    <.div(^.minWidth := "150px",
       manifestSummary.map { summary =>
         def generateChip(condition: Boolean, pax: Int, label: String): Option[VdomElement] = {
-          if (condition && pax > 0) Option(<.div(^.style := js.Dictionary("padding-bottom" -> "5px"), s"$pax $label"))
+          if (condition && pax > 0) Option(<.div(^.style := js.Dictionary("paddingBottom" -> "5px"), s"$pax $label"))
           else None
         }
 
@@ -285,9 +293,9 @@ object FlightTableRow {
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
     val content = (arrival.Gate, arrival.Stand) match {
-      case (Some(gate), Some(stand)) => <.span(s"Gate $gate", <.br(), s"Stand $stand")
-      case (Some(gate), _) => <.span(s"Gate $gate")
-      case (_, Some(stand)) => <.span(s"Stand $stand")
+      case (Some(gate), Some(stand)) => <.span(s"Gate: $gate", <.br(), s"Stand: $stand")
+      case (Some(gate), _) => <.span(s"Gate: $gate")
+      case (_, Some(stand)) => <.span(s"Stand: $stand")
       case _ => <.span("Not available")
     }
     val gateOrStand = <.span(^.key := "gate-or-stand", ^.className := "no-wrap underline", content)
@@ -302,10 +310,10 @@ object FlightTableRow {
     }
     val walkTime = maybeActualWalkTime.getOrElse((terminalWalkTime / oneMinuteMillis).toInt)
     val walkTimeString = MinuteAsAdjective(walkTime).display + " " + description
-    <.span(^.className := "no-wrap", Tippy.interactive(<.span(^.key := "walk-time", walkTimeString), gateOrStand))
+    <.span(^.className := "no-wrap", ^.key := "walk-time", Tippy.interactive(<.span(walkTimeString), gateOrStand))
   }
 
-  def offScheduleClass(arrival: Arrival): String = {
+  private def offScheduleClass(arrival: Arrival): String = {
     val eta = arrival.bestArrivalTime(considerPredictions = true)
     val differenceFromScheduled = eta - arrival.Scheduled
     val hourInMillis = 3600000
@@ -315,7 +323,7 @@ object FlightTableRow {
     offScheduleClass
   }
 
-  def isRedListCountry(country: String, date: SDateLike, redListUpdates: RedListUpdates): Boolean =
+  private def isRedListCountry(country: String, date: SDateLike, redListUpdates: RedListUpdates): Boolean =
     redListUpdates.countryCodesByName(date.millisSinceEpoch).keys.exists(_.toLowerCase == country.toLowerCase)
 
 }
