@@ -206,31 +206,31 @@ object FlightTableContent {
     .build
 
   private def maybeFlightRowHighlighted(props: Props, manifestSummary: Option[FlightManifestSummary]): Option[Boolean] = {
-    val flaggedNationalitiesInSummary: Set[Option[Int]] = props.flaggedNationalities.map { country =>
+    val nationalityMaybeMatchCounts: Set[Option[Int]] = props.flaggedNationalities.map { country =>
       manifestSummary.map(_.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0))
     }
-    val flaggedAgeGroupInSummary: Set[Option[Int]] = props.flaggedAgeGroups.map { ageRanges =>
+    val ageGroupMaybeMatchCounts: Set[Option[Int]] = props.flaggedAgeGroups.map { ageRanges =>
       manifestSummary.map(_.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0))
     }
-    val visaNationalsInSummary: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
+    val maybeVisaNationalCount: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
 
-    val isFlaggedInSummaryExists = flaggedNationalitiesInSummary.flatten.sum > 0 && props.flaggedNationalities.nonEmpty ||
-      flaggedAgeGroupInSummary.flatten.sum > 0 && props.flaggedAgeGroups.nonEmpty ||
-      visaNationalsInSummary.getOrElse(0) > 0 && props.showNumberOfVisaNationals
+    val atLeastOneMatch = nationalityMaybeMatchCounts.flatten.sum > 0 && props.flaggedNationalities.nonEmpty ||
+      ageGroupMaybeMatchCounts.flatten.sum > 0 && props.flaggedAgeGroups.nonEmpty ||
+      maybeVisaNationalCount.getOrElse(0) > 0 && props.showNumberOfVisaNationals
 
     (props.showOnlyHighlightedRows, props.showRequireAllSelected) match {
       case (true, true) =>
-        val allSelectedConditionsMatch = allConditionsMatch(props, flaggedNationalitiesInSummary, flaggedAgeGroupInSummary, visaNationalsInSummary)
+        val allSelectedConditionsMatch = allConditionsMatch(props, nationalityMaybeMatchCounts, ageGroupMaybeMatchCounts, maybeVisaNationalCount)
 
         if (allSelectedConditionsMatch)
           Some(true)
         else None
 
       case (true, false) =>
-        if (isFlaggedInSummaryExists) Some(true) else None
+        if (atLeastOneMatch) Some(true) else None
 
       case (_, _) =>
-        Some(isFlaggedInSummaryExists)
+        Some(atLeastOneMatch)
     }
   }
 
