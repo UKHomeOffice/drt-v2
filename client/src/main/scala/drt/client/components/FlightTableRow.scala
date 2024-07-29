@@ -39,7 +39,6 @@ object FlightTableRow {
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShareFlightCodes: Seq[String],
-                   idx: Int,
                    originMapper: (PortCode, html_<^.TagMod) => VdomNode, // = portCode => portCode.toString,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],

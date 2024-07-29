@@ -54,7 +54,7 @@ object FlightTableContent {
                    flaggedNationalities: Set[Country],
                    flaggedAgeGroups: Set[PaxAgeRange],
                    showNumberOfVisaNationals: Boolean,
-                   showHighlightedRows: Boolean,
+                   showOnlyHighlightedRows: Boolean,
                    showRequireAllSelected: Boolean,
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
@@ -71,7 +71,7 @@ object FlightTableContent {
         a.flaggedAgeGroups == b.flaggedAgeGroups &&
         a.filterFlightSearch == b.filterFlightSearch &&
         a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
-        a.showHighlightedRows == b.showHighlightedRows &&
+        a.showOnlyHighlightedRows == b.showOnlyHighlightedRows &&
         a.showRequireAllSelected == b.showRequireAllSelected &&
         a.viewStart == b.viewStart &&
         a.viewEnd == b.viewEnd
@@ -141,77 +141,52 @@ object FlightTableContent {
                 ^.className := "arrivals-table table-striped",
                 tableHead(props, props.queueOrder, redListPaxExist, shortLabel, showFlagger),
                 <.tbody(
-                  sortedFlights.zipWithIndex.flatMap {
-                    case ((flightWithSplits, codeShares), idx) =>
-                      val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
-                      val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
-                        props.portCode,
-                        props.terminal,
-                        flightWithSplits.apiFlight.Terminal,
-                        isRedListOrigin)
-                      val manifestSummary: Option[FlightManifestSummary] = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight))
+                  sortedFlights
+                    .map {
+                      case (fws, cs) =>
+                        val manifestSummary: Option[FlightManifestSummary] = props.flightManifestSummaries.get(ArrivalKey(fws.apiFlight))
+                        (fws, cs, maybeFlightRowHighlighted(props, manifestSummary))
+                    }
+                    .collect {
+                      case (fws, cs, maybeShowFlight) if maybeShowFlight.nonEmpty => (fws, cs, maybeShowFlight.getOrElse(false))
+                    }
+                    .map {
+                      case (flightWithSplits, codeShares, isHighlighted) =>
+                        val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
+                        val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
+                          props.portCode,
+                          props.terminal,
+                          flightWithSplits.apiFlight.Terminal,
+                          isRedListOrigin)
 
-                      val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
+                        val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
 
-                      def flightTableRow(showHightlighted: Boolean) = FlightTableRow.Props(
-                        flightWithSplits = flightWithSplits,
-                        codeShareFlightCodes = codeShares,
-                        idx = idx,
-                        originMapper = originMapper,
-                        splitsGraphComponent = splitsGraphComponent,
-                        splitsQueueOrder = props.queueOrder,
-                        hasEstChox = props.hasEstChox,
-                        loggedInUser = props.loggedInUser,
-                        viewMode = props.viewMode,
-                        defaultWalkTime = props.defaultWalkTime,
-                        hasTransfer = props.hasTransfer,
-                        indirectRedListPax = redListPaxInfo,
-                        directRedListFlight = directRedListFlight,
-                        airportConfig = props.airportConfig,
-                        redListUpdates = props.redListUpdates,
-                        includeIndirectRedListColumn = redListPaxExist,
-                        walkTimes = props.walkTimes,
-                        flaggedNationalities = props.flaggedNationalities,
-                        flaggedAgeGroups = props.flaggedAgeGroups,
-                        showNumberOfVisaNationals = props.showNumberOfVisaNationals,
-                        showHighlightedRows = props.showNumberOfVisaNationals,
-                        showRequireAllSelected = props.showRequireAllSelected,
-                        manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
-                        paxFeedSourceOrder = props.paxFeedSourceOrder,
-                        showHightLighted = showHightlighted)
-
-                      val flaggedNationalitiesInSummary: Set[Option[Int]] = props.flaggedNationalities.map { country =>
-                        manifestSummary.map(_.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0))
-                      }
-                      val flaggedAgeGroupInSummary: Set[Option[Int]] = props.flaggedAgeGroups.map { ageRanges =>
-                        manifestSummary.map(_.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0))
-                      }
-                      val visaNationalsInSummary: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
-
-                      val conditionsAndFlaggedSummary: Seq[(Boolean, Set[Option[Int]])] = List(
-                        (props.flaggedNationalities.nonEmpty, flaggedNationalitiesInSummary),
-                        (props.flaggedAgeGroups.nonEmpty, flaggedAgeGroupInSummary),
-                        (props.showNumberOfVisaNationals, Set(visaNationalsInSummary))
-                      )
-
-                      val trueConditionsAndChips: Seq[(Boolean, Set[Option[Int]])] = conditionsAndFlaggedSummary.filter(_._1)
-
-                      val isFlaggedInSummaryExists = flaggedNationalitiesInSummary.flatten.sum > 0 && props.flaggedNationalities.nonEmpty ||
-                        flaggedAgeGroupInSummary.flatten.sum > 0 && props.flaggedAgeGroups.nonEmpty ||
-                        visaNationalsInSummary.getOrElse(0) > 0 && props.showNumberOfVisaNationals
-
-                      (props.showHighlightedRows, props.showRequireAllSelected) match {
-                        case (true, true) =>
-                          if (trueConditionsAndChips.map(_._2).forall(_.exists(a => a.sum > 0)))
-                            Some(FlightTableRow.component(flightTableRow(true)))
-                          else None
-                        case (true, false) => if (isFlaggedInSummaryExists) {
-                          Some(FlightTableRow.component(flightTableRow(true)))
-                        } else None
-                        case (_, _) =>
-                          Some(FlightTableRow.component(flightTableRow(isFlaggedInSummaryExists)))
-                      }
-                  }.toTagMod
+                        FlightTableRow.component(FlightTableRow.Props(
+                          flightWithSplits = flightWithSplits,
+                          codeShareFlightCodes = codeShares,
+                          originMapper = originMapper,
+                          splitsGraphComponent = splitsGraphComponent,
+                          splitsQueueOrder = props.queueOrder,
+                          hasEstChox = props.hasEstChox,
+                          loggedInUser = props.loggedInUser,
+                          viewMode = props.viewMode,
+                          defaultWalkTime = props.defaultWalkTime,
+                          hasTransfer = props.hasTransfer,
+                          indirectRedListPax = redListPaxInfo,
+                          directRedListFlight = directRedListFlight,
+                          airportConfig = props.airportConfig,
+                          redListUpdates = props.redListUpdates,
+                          includeIndirectRedListColumn = redListPaxExist,
+                          walkTimes = props.walkTimes,
+                          flaggedNationalities = props.flaggedNationalities,
+                          flaggedAgeGroups = props.flaggedAgeGroups,
+                          showNumberOfVisaNationals = props.showNumberOfVisaNationals,
+                          showHighlightedRows = props.showNumberOfVisaNationals,
+                          showRequireAllSelected = props.showRequireAllSelected,
+                          manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
+                          paxFeedSourceOrder = props.paxFeedSourceOrder,
+                          showHightLighted = isHighlighted))
+                    }.toTagMod
                 ))))
           }
           else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
@@ -229,6 +204,53 @@ object FlightTableContent {
       })
     }.configure(Reusability.shouldComponentUpdate)
     .build
+
+  private def maybeFlightRowHighlighted(props: Props, manifestSummary: Option[FlightManifestSummary]): Option[Boolean] = {
+    val flaggedNationalitiesInSummary: Set[Option[Int]] = props.flaggedNationalities.map { country =>
+      manifestSummary.map(_.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0))
+    }
+    val flaggedAgeGroupInSummary: Set[Option[Int]] = props.flaggedAgeGroups.map { ageRanges =>
+      manifestSummary.map(_.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0))
+    }
+    val visaNationalsInSummary: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
+
+    val isFlaggedInSummaryExists = flaggedNationalitiesInSummary.flatten.sum > 0 && props.flaggedNationalities.nonEmpty ||
+      flaggedAgeGroupInSummary.flatten.sum > 0 && props.flaggedAgeGroups.nonEmpty ||
+      visaNationalsInSummary.getOrElse(0) > 0 && props.showNumberOfVisaNationals
+
+    (props.showOnlyHighlightedRows, props.showRequireAllSelected) match {
+      case (true, true) =>
+        val allSelectedConditionsMatch = allConditionsMatch(props, flaggedNationalitiesInSummary, flaggedAgeGroupInSummary, visaNationalsInSummary)
+
+        if (allSelectedConditionsMatch)
+          Some(true)
+        else None
+
+      case (true, false) =>
+        if (isFlaggedInSummaryExists) Some(true) else None
+
+      case (_, _) =>
+        Some(isFlaggedInSummaryExists)
+    }
+  }
+
+  private def allConditionsMatch(props: Props,
+                                 flaggedNationalitiesInSummary: Set[Option[Int]],
+                                 flaggedAgeGroupInSummary: Set[Option[Int]],
+                                 visaNationalsInSummary: Option[Int],
+                                ): Boolean = {
+    val conditionsAndFlaggedSummary: Seq[(Boolean, Set[Option[Int]])] = List(
+      (props.flaggedNationalities.nonEmpty, flaggedNationalitiesInSummary),
+      (props.flaggedAgeGroups.nonEmpty, flaggedAgeGroupInSummary),
+      (props.showNumberOfVisaNationals, Set(visaNationalsInSummary))
+    )
+
+    val allSelectedConditionsMatch = conditionsAndFlaggedSummary
+      .filter(_._1)
+      .map(_._2)
+      .forall(_.exists(a => a.sum > 0))
+    allSelectedConditionsMatch
+  }
 
   def tableHead(props: Props,
                 queues: Seq[Queue],
