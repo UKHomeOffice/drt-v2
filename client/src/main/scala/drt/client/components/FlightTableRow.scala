@@ -279,31 +279,30 @@ object FlightTableRow {
                                flaggedNationalities: Set[Country],
                                manifestSummary: Option[FlightManifestSummary]): Seq[Boolean] = {
     manifestSummary.map { summary =>
-      def generateChip(condition: Boolean, pax: Int): Boolean = {
+      def paxExits(condition: Boolean, pax: Int): Boolean = {
         if (condition && pax > 0) true
         else false
       }
 
       val flaggedNationalitiesExits: Set[Boolean] = flaggedNationalities.map { country =>
         val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
-        generateChip(pax > 0, pax)
+        paxExits(pax > 0, pax)
       }
 
       val flaggedAgeGroupsExists: Set[Boolean] = flaggedAgeGroups.map { ageRanges =>
         val pax = summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0)
-        generateChip(pax > 0, pax)
+        paxExits(pax > 0, pax)
       }
 
-      val visaNationalsExists: Boolean =
-        generateChip(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0)) //, "Visa Nationals")
+      val visaNationalsExists: Boolean = paxExits(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0))
 
       val conditionsAndChips: Seq[(Boolean, Set[Boolean])] = List(
         (flaggedNationalities.nonEmpty, flaggedNationalitiesExits),
         (flaggedAgeGroups.nonEmpty, flaggedAgeGroupsExists),
         (showNumberOfVisaNationals, Set(visaNationalsExists)),
       )
-
-      conditionsAndChips.filter(_._1).flatMap(_._2)
+      val paxExistSets: Seq[(Boolean, Set[Boolean])] = conditionsAndChips.filter(_._1)
+      paxExistSets.map(_._2.exists(_ == true))
     }.getOrElse(Seq.empty)
   }
 
