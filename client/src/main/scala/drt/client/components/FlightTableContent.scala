@@ -222,9 +222,7 @@ object FlightTableContent {
       case (true, true) =>
         val allSelectedConditionsMatch = allConditionsMatch(props, nationalityMaybeMatchCounts, ageGroupMaybeMatchCounts, maybeVisaNationalCount)
 
-        if (allSelectedConditionsMatch)
-          Some(true)
-        else None
+        if (allSelectedConditionsMatch) Some(true) else None
 
       case (true, false) =>
         if (atLeastOneMatch) Some(true) else None
