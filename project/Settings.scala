@@ -64,7 +64,7 @@ object Settings {
     val akkaHttp = "10.5.2"
     val slick = "3.4.1"
     val censorinus = "2.1.16"
-    val janinoVersion = "3.1.9"
+    val janinoVersion = "3.1.12"
     val scalaJsReactMaterialUi = "0.1.18"
     val scalaTestVersion = "3.2.17"
     val twirlApi = "1.6.3"
