@@ -83,18 +83,28 @@ object FlightTableRow {
       val queuePax: Map[Queue, Int] = ApiSplitsToSplitRatio
         .paxPerQueueUsingBestSplitsAsRatio(flightWithSplits, props.paxFeedSourceOrder).getOrElse(Map[Queue, Int]())
 
-      val highlighterIsActive = props.flaggedNationalities.nonEmpty ||
-        props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
+      val highlighterIsActive = props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
 
-      val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
-        if (props.showHightLighted && highlighterIsActive)
-          "arrivals__table__flight-code arrivals__table__flight-code--clickable"
-        else
-          "arrivals__table__flight-code--clickable"
-      else if (props.showHightLighted && highlighterIsActive) ""
-      else "arrivals__table__flight-code"
+      val allSelectedHighlightPaxExists: Boolean = {
+        val trueConditionsAndChips: Seq[Boolean] = highlightedLogic(props.showNumberOfVisaNationals,
+          props.flaggedAgeGroups,
+          props.flaggedNationalities,
+          props.manifestSummary)
+        if (props.showRequireAllSelected && trueConditionsAndChips.nonEmpty) {
+          trueConditionsAndChips.forall(_ == true)
+        } else false
+      }
 
-      val highlightedComponent = if (highlighterIsActive) {
+      val anyHighlightPaxExists: Boolean = {
+        val trueConditionsAndChips: Seq[Boolean] = highlightedLogic(props.showNumberOfVisaNationals,
+          props.flaggedAgeGroups,
+          props.flaggedNationalities,
+          props.manifestSummary)
+
+        if (trueConditionsAndChips.nonEmpty) trueConditionsAndChips.contains(true) else false
+      }
+
+      val highlightedComponent = if (props.showHightLighted && highlighterIsActive) {
         val chip = highlightedChips(
           props.showNumberOfVisaNationals,
           props.showRequireAllSelected,
@@ -103,6 +113,14 @@ object FlightTableRow {
           props.manifestSummary)
         if (chip != EmptyVdom) Some(chip) else None
       } else None
+
+      val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
+        if (props.showHightLighted && highlighterIsActive)
+          "arrivals__table__flight-code arrivals__table__flight-code--clickable"
+        else
+          "arrivals__table__flight-code--clickable"
+      else if (props.showHightLighted && highlighterIsActive) ""
+      else "arrivals__table__flight-code"
 
       def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean, showHighlighter: Boolean): VdomTagOf[Span] =
         if (props.loggedInUser.hasRole(ArrivalSource)) {
@@ -123,10 +141,20 @@ object FlightTableRow {
                   GetArrivalSources(props.flightWithSplits.unique)
               }
             }),
-            if (showHighlighter) FlightHighlightChip(flightCodes) else if (!props.showHightLighted && highlighterIsActive) <.span(^.cls := "arrival__non__highter__row", flightCodes) else flightCodes
-          )
-        } else if (showHighlighter) <.span(^.cls := "arrivals__table__flight-code-value", FlightHighlightChip(flightCodes))
-        else <.span(^.cls := "arrivals__table__flight-code-value", flightCodes)
+            (props.showRequireAllSelected, allSelectedHighlightPaxExists, anyHighlightPaxExists) match {
+              case (true, true, _) =>
+                FlightHighlightChip(flightCodes)
+              case (true, false, _) =>
+                <.span(^.cls := "arrival__non__highter__row", flightCodes)
+              case (false, _, true) =>
+                FlightHighlightChip(flightCodes)
+              case (false, _, false) =>
+                if (highlighterIsActive)
+                  <.span(^.cls := "arrival__non__highter__row", flightCodes)
+                else flightCodes
+              case _ => flightCodes
+            })
+        } else <.span(^.cls := "arrivals__table__flight-code-value", flightCodes)
 
 
       val outgoingDiversion = props.directRedListFlight.outgoingDiversion
@@ -169,17 +197,17 @@ object FlightTableRow {
       }
 
       val highlighterClass = s"arrivals__table__flight-code__highlighter-${if (highlighterIsActive) "on" else "off"}"
-      val isHighlightedClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper__highlighted" else ""
+      val isHighlightedClass = if (highlighterIsActive) "arrivals__table__flight-code-wrapper__highlighted" else ""
 
-//      val wrapperClass = if (props.showHightLighted) "arrivals__table__flight-code-wrapper__highlighted"
-//      else if (!props.showHightLighted && highlighterIsActive) "arrivals__table__flight-code-wrapper__non-highlighted"
-//      else "arrivals__table__flight-code-wrapper__highlighter-inactive"
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(^.cls := s"$highlighterClass $isHighlightedClass arrivals__table__flight-code-wrapper",
             flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHightLighted), charts)
         ),
-        highlightedComponent.map(<.td(^.className := "arrivals__table__flags-column", _)),
+        highlightedComponent.map(<.td(^.className := "arrivals__table__flags-column", _))
+          .getOrElse {
+            if (highlighterIsActive) <.td(^.className := "arrivals__table__flags-column", "") else EmptyVdom
+          },
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
             proxy().renderEmpty(<.span()),
@@ -245,6 +273,38 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
+
+  private def highlightedLogic(showNumberOfVisaNationals: Boolean,
+                               flaggedAgeGroups: Set[PaxAgeRange],
+                               flaggedNationalities: Set[Country],
+                               manifestSummary: Option[FlightManifestSummary]): Seq[Boolean] = {
+    manifestSummary.map { summary =>
+      def paxExits(condition: Boolean, pax: Int): Boolean = {
+        if (condition && pax > 0) true
+        else false
+      }
+
+      val flaggedNationalitiesExits: Set[Boolean] = flaggedNationalities.map { country =>
+        summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0) > 0
+      }
+
+      val flaggedAgeGroupsExists: Set[Boolean] = flaggedAgeGroups.map { ageRanges =>
+        summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0) > 0
+      }
+
+      val visaNationalsExists: Boolean = paxExits(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0))
+
+      val conditionsAndChips: Seq[(Boolean, Set[Boolean])] = List(
+        (flaggedNationalities.nonEmpty, flaggedNationalitiesExits),
+        (flaggedAgeGroups.nonEmpty, flaggedAgeGroupsExists),
+        (showNumberOfVisaNationals, Set(visaNationalsExists)),
+      )
+      val paxExistSets: Seq[(Boolean, Set[Boolean])] = conditionsAndChips.filter(_._1)
+      paxExistSets.map(_._2.exists(_ == true))
+    }.getOrElse(Seq.empty)
+  }
+
+
   private def highlightedChips(showNumberOfVisaNationals: Boolean,
                                showRequireAllSelected: Boolean,
                                flaggedAgeGroups: Set[PaxAgeRange],
@@ -269,7 +329,7 @@ object FlightTableRow {
 
         val visaNationalsChip: Option[VdomElement] = generateChip(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0), "Visa Nationals")
 
-        val chips: Set[Option[VdomElement]] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ Set(visaNationalsChip) //++ Set(transitChip)
+        val chips: Set[Option[VdomElement]] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ Set(visaNationalsChip)
 
         val conditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = List(
           (flaggedNationalities.nonEmpty, flaggedNationalitiesChips),
