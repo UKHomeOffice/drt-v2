@@ -85,7 +85,7 @@ object FlightTableRow {
 
       val highlighterIsActive = props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
 
-      val isAllSelectedPaxExists: Boolean = {
+      val allSelectedHighlightPaxExists: Boolean = {
         val trueConditionsAndChips: Seq[Boolean] = highlightedLogic(props.showNumberOfVisaNationals,
           props.flaggedAgeGroups,
           props.flaggedNationalities,
@@ -95,13 +95,13 @@ object FlightTableRow {
         } else false
       }
 
-      val isAnyHightlightedPaxExists: Boolean = {
+      val anyHighlightPaxExists: Boolean = {
         val trueConditionsAndChips: Seq[Boolean] = highlightedLogic(props.showNumberOfVisaNationals,
           props.flaggedAgeGroups,
           props.flaggedNationalities,
           props.manifestSummary)
 
-        if (trueConditionsAndChips.nonEmpty) trueConditionsAndChips.exists(_ == true) else false
+        if (trueConditionsAndChips.nonEmpty) trueConditionsAndChips.contains(true) else false
       }
 
       val highlightedComponent = if (props.showHightLighted && highlighterIsActive) {
@@ -141,7 +141,7 @@ object FlightTableRow {
                   GetArrivalSources(props.flightWithSplits.unique)
               }
             }),
-            (props.showRequireAllSelected, isAllSelectedPaxExists, isAnyHightlightedPaxExists) match {
+            (props.showRequireAllSelected, allSelectedHighlightPaxExists, anyHighlightPaxExists) match {
               case (true, true, _) =>
                 FlightHighlightChip(flightCodes)
               case (true, false, _) =>
@@ -285,13 +285,11 @@ object FlightTableRow {
       }
 
       val flaggedNationalitiesExits: Set[Boolean] = flaggedNationalities.map { country =>
-        val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
-        paxExits(pax > 0, pax)
+        summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0) > 0
       }
 
       val flaggedAgeGroupsExists: Set[Boolean] = flaggedAgeGroups.map { ageRanges =>
-        val pax = summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0)
-        paxExits(pax > 0, pax)
+        summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0) > 0
       }
 
       val visaNationalsExists: Boolean = paxExits(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0))
