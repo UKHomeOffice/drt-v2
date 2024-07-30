@@ -66,7 +66,7 @@ object Settings {
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.1.18"
-    val scalaTestVersion = "3.2.17"
+    val scalaTestVersion = "3.2.19"
     val twirlApi = "1.6.3"
     val mockitoVersion = "4.11.0"
     val rtVersion = "4.0.2"
