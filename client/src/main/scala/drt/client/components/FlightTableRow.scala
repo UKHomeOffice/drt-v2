@@ -165,8 +165,8 @@ object FlightTableRow {
         "Predicted" -> flight.predictedTouchdown,
         "Estimated" -> flight.Estimated,
         "Touchdown" -> flight.Actual,
-        "Estimated Chox" -> flight.EstimatedChox,
-        "Actual Chox" -> flight.ActualChox,
+        "Estimated Chocks" -> flight.EstimatedChox,
+        "Actual Chocks" -> flight.ActualChox,
       ).collect {
         case (name, Some(time)) => name -> time
       }

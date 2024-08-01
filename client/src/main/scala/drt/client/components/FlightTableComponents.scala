@@ -51,12 +51,12 @@ object FlightTableComponents {
       } else "n/a"
 
       val postTouchdownTimes = <.span(
-        <.h3("Minutes to chox from touchdown"),
+        <.h3("Minutes to chocks from touchdown"),
         s"DRT predicted: ${fws.apiFlight.Predictions.predictions.get(ToChoxModelAndFeatures.targetName).map(c => s"${c.toString}m").getOrElse("-")}", <.br(),
         s"Feed estimated: ${estMinutesToChox(fws.apiFlight).map(c => s"${c.toString}m").getOrElse("-")}", <.br(),
         s"Feed actual: ${actualMinutesToChox(fws.apiFlight).map(c => s"${c.toString}m").getOrElse("-")}", <.br(),
         <.h3("Other times"),
-        s"Chox to doors open: ${firstPaxOffMillis / oneMinuteMillis}m", <.br(),
+        s"Chocks to doors open: ${firstPaxOffMillis / oneMinuteMillis}m", <.br(),
         s"Predicted walk time: $predictedWalkTime", <.br(),
         s"Actual walk time from gate to arrivals hall: $gateOrStandWalkTime", <.br(),
       )
