@@ -50,7 +50,7 @@ class ArrivalDataSanitiserSpec extends Specification {
     saneArrival.Estimated === None
   }
 
-  "Given a base live arrival with an estimated chox time that is outside the threshold " +
+  "Given a base live arrival with an estimated chocks time that is outside the threshold " +
     "Then the estimated time should be ignored" >> {
     val arrivalWithIrrationalEstimation = arrival(estChox = Option(scheduled.addHours(5).millisSinceEpoch))
     val sanitiser = ArrivalDataSanitiser(Option(4), None)
@@ -59,8 +59,8 @@ class ArrivalDataSanitiserSpec extends Specification {
     saneArrival.EstimatedChox === None
   }
 
-  "Given a base live arrival with an estimated chox time that is before the estimated arrival time " +
-    "Then the estimated chox time should be ignored" >> {
+  "Given a base live arrival with an estimated chocks time that is before the estimated arrival time " +
+    "Then the estimated chocks time should be ignored" >> {
     val arrivalWithIrrationalEstimation = arrival(
       estChox = Option(scheduled.addHours(-1).millisSinceEpoch),
       estimated = Option(scheduled.millisSinceEpoch)
@@ -71,8 +71,8 @@ class ArrivalDataSanitiserSpec extends Specification {
     saneArrival.EstimatedChox === None
   }
 
-  "Given a base live arrival with an estimated chox time that is outside the taxi threshold " +
-    "Then the estimated chox time should be ignored" >> {
+  "Given a base live arrival with an estimated chocks time that is outside the taxi threshold " +
+    "Then the estimated chocks time should be ignored" >> {
     val arrivalWithIrrationalEstimation = arrival(
       estChox = Option(scheduled.addMinutes(25).millisSinceEpoch),
       estimated = Option(scheduled.millisSinceEpoch)
@@ -83,8 +83,8 @@ class ArrivalDataSanitiserSpec extends Specification {
     saneArrival.EstimatedChox === None
   }
 
-  "Given a base live arrival with an estimated chox time that is the same as the estimated touch down time " +
-    "Then the estimated chox time should be ignored" >> {
+  "Given a base live arrival with an estimated chocks time that is the same as the estimated touch down time " +
+    "Then the estimated chocks time should be ignored" >> {
     val arrivalWithIrrationalEstimation = arrival(
       estChox = Option(scheduled.millisSinceEpoch),
       estimated = Option(scheduled.millisSinceEpoch)

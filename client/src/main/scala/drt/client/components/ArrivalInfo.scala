@@ -47,8 +47,8 @@ object ArrivalInfo {
       ("Scheduled", None),
       ("Estimated", None),
       ("Act", None),
-      ("Est Chock", None),
-      ("Act Chock", None),
+      ("Est Chocks", None),
+      ("Act Chocks", None),
       ("Total Pax", None),
       ("Trans Pax", None)
     )

@@ -52,7 +52,7 @@ class AggregatedDaoSpec extends AnyWordSpec with Matchers with BeforeAndAfter {
       terminal = "T1",
       gate = Option("G1"),
       stand = Option("S1"),
-      status = "On Chox",
+      status = "On Chocks",
       scheduled = new Timestamp(scheduled.millisSinceEpoch),
       estimated = Option(new Timestamp(scheduled.addMinutes(5).millisSinceEpoch)),
       actual = Option(new Timestamp(scheduled.addMinutes(6).millisSinceEpoch)),
