@@ -89,7 +89,7 @@ Cypress.Commands.add('asABorderForceOfficerWithRoles', (roles = [], csrfToken) =
 Cypress.Commands.add('addFlight', (params, csrfToken = 'nocheck') => {
   const defaults = {
     "Operator": "TestAir",
-    "Status": "On Chox",
+    "Status": "On Chocks",
     "EstDT": todayAtString(12, 0),
     "ActDT": todayAtString(12, 0),
     "EstChoxDT": todayAtString(12, 0),

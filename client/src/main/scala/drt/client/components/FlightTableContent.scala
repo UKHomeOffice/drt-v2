@@ -273,7 +273,7 @@ object FlightTableContent {
                                        displayRedListInfo: Boolean,
                                        redListPaxExist: Boolean,
                                        redListHeading: String): Seq[VdomTagOf[TableCell]] = {
-    val estChoxHeading = "Est Chox"
+    val estChoxHeading = "Est Chocks"
     columns
       .filter {
         case (label, _) => label != estChoxHeading || hasEstChox

@@ -181,7 +181,7 @@ class LCYFlightTransformSpec extends CrunchTestLike {
   }
 
 
-  "Given a LCYFlight, I should get an Arrival back with the same fields - we should not use Est Chox" >> {
+  "Given a LCYFlight, I should get an Arrival back with the same fields - we should not use Est Chocks" >> {
     val estimatedOnBlocksTimeString = "2018-09-01T23:05:00.000Z"
     val actualOnBlocksTimeString = "2018-09-01T23:06:00.000Z"
     val estimatedTouchDownTimeString = "2018-09-01T23:07:00.000Z"

@@ -14,7 +14,7 @@ class PcpArrivalSpec extends SpecificationLike {
   "bestChoxTime" >> {
     val flight = live(schDt = schStr).toArrival(LiveFeedSource)
     "Given an Arrival with only a scheduled time, " +
-      "when we ask for the best chox time, " +
+      "when we ask for the best chocks time, " +
       "then we should get the scheduled time plus the time to chox in millis" >> {
       val result = flight.bestArrivalTime(considerPredictions = true)
       val expected = sch.addMinutes(Arrival.defaultMinutesToChox).millisSinceEpoch
@@ -23,7 +23,7 @@ class PcpArrivalSpec extends SpecificationLike {
     }
 
     "Given an Arrival with an estimated time, " +
-      "when we ask for the best chox time, " +
+      "when we ask for the best chocks time, " +
       "then we should get the estimated time plus the time to chox in millis" >> {
       val est = sch.addMinutes(1)
       val result = flight.copy(Estimated = Option(est.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
@@ -33,7 +33,7 @@ class PcpArrivalSpec extends SpecificationLike {
     }
 
     "Given an Arrival with a touchdown (act) time, " +
-      "when we ask for the best chox time, " +
+      "when we ask for the best chocks time, " +
       "then we should get the touchdown time plus the time to chox in millis" >> {
       val touchdown = sch.addMinutes(2)
       val result = flight.copy(Actual = Option(touchdown.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
@@ -43,8 +43,8 @@ class PcpArrivalSpec extends SpecificationLike {
     }
 
     "Given an Arrival with an estimated chox time, " +
-      "when we ask for the best chox time, " +
-      "then we should get the estimated chox time in millis" >> {
+      "when we ask for the best chocks time, " +
+      "then we should get the estimated chocks time in millis" >> {
       val estChox = sch.addMinutes(2)
       val result = flight.copy(EstimatedChox = Option(estChox.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
       val expected = estChox.millisSinceEpoch
@@ -52,9 +52,9 @@ class PcpArrivalSpec extends SpecificationLike {
       result === expected
     }
 
-    "Given an Arrival with an actual chox time, " +
-      "when we ask for the best chox time, " +
-      "then we should get the actual chox time in millis" >> {
+    "Given an Arrival with an actual chocks time, " +
+      "when we ask for the best chocks time, " +
+      "then we should get the actual chocks time in millis" >> {
       val actChox = sch.addMinutes(2)
       val result = flight.copy(ActualChox = Option(actChox.millisSinceEpoch)).bestArrivalTime(considerPredictions = true)
       val expected = actChox.millisSinceEpoch
