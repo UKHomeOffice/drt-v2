@@ -5,10 +5,12 @@ import diode.data.Pot
 import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
 import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
+import drt.client.components.styles.DrtTheme.buttonSecondaryTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{AgeRange, FlightManifestSummary, PaxAgeRange, WalkTimes}
+import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
@@ -179,7 +181,7 @@ object FlightTable {
                 flightNumber = props.flightHighlight.filterFlightSearch,
                 requireAllSelected = props.flightHighlight.showRequireAllSelected
               )
-
+              ThemeProvider(buttonSecondaryTheme)(
               FlightFlaggerFilters(
                 CountryOptions.countries.map { c => CountryJS(c.name,c.threeLetterCode)}.toJSArray,
                 ageGroups,
@@ -188,7 +190,7 @@ object FlightTable {
                 clearFiltersCallback,
                 onChangeInput,
                 initialState
-              )
+              ))
             } else EmptyVdom
           ),
           <.div(
