@@ -244,7 +244,7 @@ object FlightTableContent {
 
     val queueDisplayNames = <.th(
       <.span(^.className := "flex-uniform-size",
-        queues.map(q => <.div(Queues.displayName(q), " ", splitsTableTooltip, ^.className := "arrivals_table__splits__queue-pax flex-horizontally")).toTagMod
+        queues.map(q => <.div(Queues.displayName(q), " ", ^.className := "arrivals_table__splits__queue-pax flex-horizontally")).toTagMod
       ),
       ^.className := "arrivals__table__flight-splits",
     )
