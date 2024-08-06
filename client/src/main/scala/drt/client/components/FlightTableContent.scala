@@ -130,12 +130,48 @@ object FlightTableContent {
           props.flaggedAgeGroups.nonEmpty ||
           props.showNumberOfVisaNationals
 
+        val highlightedFlightsCount: Int = {
+          val flightManifestSummary: Seq[FlightManifestSummary] = sortedFlights.flatMap {
+            case (flightWithSplits, _) => props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight))
+          }
+          val flaggedInSummary: Seq[Option[Int]] = flightManifestSummary.map { manifestSummary =>
+            val flaggedNationalitiesInSummary: Set[Option[Int]] =
+              props.flaggedNationalities
+                .map { country =>
+                  manifestSummary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2)
+                }
+
+            val flaggedAgeGroupInSummary: Set[Option[Int]] = props.flaggedAgeGroups.map { ageRanges =>
+              manifestSummary.ageRanges.find(n => n._1 == ageRanges).map(_._2)
+            }
+
+            val visaNationalsInSummary: Set[Option[Int]] = Set(manifestSummary.paxTypes.get(VisaNational))
+
+            val conditionsAndFlaggedSummary = List(
+              (props.flaggedNationalities.nonEmpty, flaggedNationalitiesInSummary),
+              (props.flaggedAgeGroups.nonEmpty, flaggedAgeGroupInSummary),
+              (props.showNumberOfVisaNationals, visaNationalsInSummary)
+            )
+
+            (props.showHighlightedRows, props.showRequireAllSelected) match {
+              case (_, true) =>
+                if (conditionsAndFlaggedSummary.map(_._2).forall(_.exists(a => a.sum > 0))) Some(1)
+                else None
+              case (_, _) =>
+                if (conditionsAndFlaggedSummary.filter(_._1).flatMap(_._2).filter(_.isDefined).flatten.sum > 0) Some(1)
+                else None
+            }
+          }
+
+          flaggedInSummary.flatten.sum
+        }
+
         <.div(
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
-              if (props.filterFlightSearch.nonEmpty) {
-                <.div(MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))("Flights displayed : ", <.b(s"${sortedFlights.length}")))
+              if (props.filterFlightSearch.nonEmpty || highlightedFlightsCount > 0) {
+                <.div(MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))("Flights displayed : ", <.b(s"${if (props.filterFlightSearch.nonEmpty) sortedFlights.length else 0}"), <.b(s" ($highlightedFlightsCount highlighted)")))
               } else <.div(),
               <.div(<.table(
                 ^.className := "arrivals-table table-striped",
