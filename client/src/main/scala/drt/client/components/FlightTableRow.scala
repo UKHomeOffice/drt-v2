@@ -29,8 +29,6 @@ import uk.gov.homeoffice.drt.splits.ApiSplitsToSplitRatio
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.scalajs.js
-
 object FlightTableRow {
 
   import FlightTableComponents._
@@ -91,27 +89,9 @@ object FlightTableRow {
         props.showNumberOfVisaNationals,
         props.showHighlightedRows,
         props.showRequireAllSelected).contains(true)
-      //{
-      //        val trueConditionsAndChips: Seq[Boolean] = FlightHighlighter.highlightedChipLogic(props.showNumberOfVisaNationals,
-      //          props.flaggedAgeGroups,
-      //          props.flaggedNationalities,
-      //          props.manifestSummary)
-      //        if (props.showRequireAllSelected && trueConditionsAndChips.nonEmpty) {
-      //          trueConditionsAndChips.forall(_ == true)
-      //        } else false
-      //      }
-      //
-      //      val anyHighlightPaxExists: Boolean = {
-      //        val trueConditionsAndChips: Seq[Boolean] = FlightHighlighter.highlightedChipLogic(props.showNumberOfVisaNationals,
-      //          props.flaggedAgeGroups,
-      //          props.flaggedNationalities,
-      //          props.manifestSummary)
-      //
-      //        if (trueConditionsAndChips.nonEmpty) trueConditionsAndChips.contains(true) else false
-      //      }
 
       val highlightedComponent = if (props.showHightLighted && highlighterIsActive) {
-        val chip = FlightHighlighter.highlightedChips(
+        val chip = FlightHighlighter.highlightedColumnData(
           props.showNumberOfVisaNationals,
           props.showRequireAllSelected,
           props.flaggedAgeGroups,
@@ -153,19 +133,6 @@ object FlightTableRow {
               <.span(^.cls := "arrival__non__highter__row", flightCodes)
             else flightCodes)
 
-          //            (props.showRequireAllSelected, allSelectedHighlightPaxExists,) match {
-          //              case (true, true) =>
-          //                FlightHighlightChip(flightCodes)
-          //              case (true, false) =>
-          //                <.span(^.cls := "arrival__non__highter__row", flightCodes)
-          //              case (_, true) =>
-          //                FlightHighlightChip(flightCodes)
-          //              case (false, _) =>
-          //                if (highlighterIsActive)
-          //                  <.span(^.cls := "arrival__non__highter__row", flightCodes)
-          //                else flightCodes
-          //              case _ => flightCodes
-          //            })
         } else <.span(^.cls := "arrivals__table__flight-code-value", flightCodes)
 
 
