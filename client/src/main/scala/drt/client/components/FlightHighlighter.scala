@@ -72,10 +72,14 @@ object FlightHighlighter {
     val isFlaggedInSummaryExists = conditionsAndFlaggedSummary.filter(_._1).flatMap(_._2).filter(_.isDefined).flatten.sum > 0
 
     (showHighlightedRows, showRequireAllSelected) match {
-      case (_, true) =>
+      case (true, true) =>
         if (trueConditionsAndChips.map(_._2).forall(_.exists(a => a.sum > 0)))
           Some(true)
         else None
+      case (false, true) =>
+        if (trueConditionsAndChips.map(_._2).forall(_.exists(a => a.sum > 0)))
+          Some(true)
+        else Some(false)
       case (true, false) => if (isFlaggedInSummaryExists) {
         Some(true)
       } else None

@@ -193,9 +193,9 @@ object FlightTableContent {
                         props.flaggedAgeGroups,
                         props.showNumberOfVisaNationals,
                         props.showHighlightedRows,
-                        props.showRequireAllSelected).map { hl: Boolean =>
-                        FlightTableRow.component(flightTableRow(hl))
-                      }
+                        props.showRequireAllSelected)
+                        .map(h => FlightTableRow.component(flightTableRow(h)))
+
                   }.toTagMod
                 ))))
           }
