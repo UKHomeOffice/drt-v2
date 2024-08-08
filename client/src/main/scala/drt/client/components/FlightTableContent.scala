@@ -22,7 +22,6 @@ import org.scalajs.dom
 import org.scalajs.dom.html.{TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
-import uk.gov.homeoffice.drt.ports.PaxTypes.VisaNational
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
@@ -130,12 +129,21 @@ object FlightTableContent {
           props.flaggedAgeGroups.nonEmpty ||
           props.showNumberOfVisaNationals
 
+        val highlightedFlightsCount: Int = FlightHighlighter
+          .findHighlightedFlightsCount(sortedFlights,
+            props.flightManifestSummaries,
+            props.flaggedNationalities,
+            props.flaggedAgeGroups,
+            props.showNumberOfVisaNationals,
+            props.showHighlightedRows,
+            props.showRequireAllSelected)
+
         <.div(
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
-              if (props.filterFlightSearch.nonEmpty) {
-                <.div(MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))("Flights displayed : ", <.b(s"${sortedFlights.length}")))
+              if (props.filterFlightSearch.nonEmpty || highlightedFlightsCount > 0) {
+                <.div(MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))("Flights displayed : ", <.b(s"${if (props.filterFlightSearch.nonEmpty) sortedFlights.length else 0}"), <.b(s" ($highlightedFlightsCount flights highlighted)")))
               } else <.div(),
               <.div(<.table(
                 ^.className := "arrivals-table table-striped",
@@ -180,37 +188,14 @@ object FlightTableContent {
                         paxFeedSourceOrder = props.paxFeedSourceOrder,
                         showHightLighted = showHightlighted)
 
-                      val flaggedNationalitiesInSummary: Set[Option[Int]] = props.flaggedNationalities.map { country =>
-                        manifestSummary.map(_.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0))
-                      }
-                      val flaggedAgeGroupInSummary: Set[Option[Int]] = props.flaggedAgeGroups.map { ageRanges =>
-                        manifestSummary.map(_.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0))
-                      }
-                      val visaNationalsInSummary: Option[Int] = manifestSummary.map(_.paxTypes.getOrElse(VisaNational, 0))
+                      FlightHighlighter.highlightedFlight(manifestSummary,
+                        props.flaggedNationalities,
+                        props.flaggedAgeGroups,
+                        props.showNumberOfVisaNationals,
+                        props.showHighlightedRows,
+                        props.showRequireAllSelected)
+                        .map(h => FlightTableRow.component(flightTableRow(h)))
 
-                      val conditionsAndFlaggedSummary: Seq[(Boolean, Set[Option[Int]])] = List(
-                        (props.flaggedNationalities.nonEmpty, flaggedNationalitiesInSummary),
-                        (props.flaggedAgeGroups.nonEmpty, flaggedAgeGroupInSummary),
-                        (props.showNumberOfVisaNationals, Set(visaNationalsInSummary))
-                      )
-
-                      val trueConditionsAndChips: Seq[(Boolean, Set[Option[Int]])] = conditionsAndFlaggedSummary.filter(_._1)
-
-                      val isFlaggedInSummaryExists = flaggedNationalitiesInSummary.flatten.sum > 0 && props.flaggedNationalities.nonEmpty ||
-                        flaggedAgeGroupInSummary.flatten.sum > 0 && props.flaggedAgeGroups.nonEmpty ||
-                        visaNationalsInSummary.getOrElse(0) > 0 && props.showNumberOfVisaNationals
-
-                      (props.showHighlightedRows, props.showRequireAllSelected) match {
-                        case (true, true) =>
-                          if (trueConditionsAndChips.map(_._2).forall(_.exists(a => a.sum > 0)))
-                            Some(FlightTableRow.component(flightTableRow(true)))
-                          else None
-                        case (true, false) => if (isFlaggedInSummaryExists) {
-                          Some(FlightTableRow.component(flightTableRow(true)))
-                        } else None
-                        case (_, _) =>
-                          Some(FlightTableRow.component(flightTableRow(isFlaggedInSummaryExists)))
-                      }
                   }.toTagMod
                 ))))
           }

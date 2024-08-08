@@ -29,8 +29,6 @@ import uk.gov.homeoffice.drt.splits.ApiSplitsToSplitRatio
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.scalajs.js
-
 object FlightTableRow {
 
   import FlightTableComponents._
@@ -85,27 +83,15 @@ object FlightTableRow {
 
       val highlighterIsActive = props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
 
-      val allSelectedHighlightPaxExists: Boolean = {
-        val trueConditionsAndChips: Seq[Boolean] = highlightedLogic(props.showNumberOfVisaNationals,
-          props.flaggedAgeGroups,
-          props.flaggedNationalities,
-          props.manifestSummary)
-        if (props.showRequireAllSelected && trueConditionsAndChips.nonEmpty) {
-          trueConditionsAndChips.forall(_ == true)
-        } else false
-      }
-
-      val anyHighlightPaxExists: Boolean = {
-        val trueConditionsAndChips: Seq[Boolean] = highlightedLogic(props.showNumberOfVisaNationals,
-          props.flaggedAgeGroups,
-          props.flaggedNationalities,
-          props.manifestSummary)
-
-        if (trueConditionsAndChips.nonEmpty) trueConditionsAndChips.contains(true) else false
-      }
+      val highlightPaxExists: Boolean = FlightHighlighter.highlightedFlight(props.manifestSummary,
+        props.flaggedNationalities,
+        props.flaggedAgeGroups,
+        props.showNumberOfVisaNationals,
+        props.showHighlightedRows,
+        props.showRequireAllSelected).contains(true)
 
       val highlightedComponent = if (props.showHightLighted && highlighterIsActive) {
-        val chip = highlightedChips(
+        val chip = FlightHighlighter.highlightedColumnData(
           props.showNumberOfVisaNationals,
           props.showRequireAllSelected,
           props.flaggedAgeGroups,
@@ -141,19 +127,12 @@ object FlightTableRow {
                   GetArrivalSources(props.flightWithSplits.unique)
               }
             }),
-            (props.showRequireAllSelected, allSelectedHighlightPaxExists, anyHighlightPaxExists) match {
-              case (true, true, _) =>
-                FlightHighlightChip(flightCodes)
-              case (true, false, _) =>
-                <.span(^.cls := "arrival__non__highter__row", flightCodes)
-              case (false, _, true) =>
-                FlightHighlightChip(flightCodes)
-              case (false, _, false) =>
-                if (highlighterIsActive)
-                  <.span(^.cls := "arrival__non__highter__row", flightCodes)
-                else flightCodes
-              case _ => flightCodes
-            })
+            if (highlightPaxExists)
+              FlightHighlightChip(flightCodes)
+            else if (highlighterIsActive)
+              <.span(^.cls := "arrival__non__highter__row", flightCodes)
+            else flightCodes)
+
         } else <.span(^.cls := "arrivals__table__flight-code-value", flightCodes)
 
 
@@ -273,83 +252,6 @@ object FlightTableRow {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-
-  private def highlightedLogic(showNumberOfVisaNationals: Boolean,
-                               flaggedAgeGroups: Set[PaxAgeRange],
-                               flaggedNationalities: Set[Country],
-                               manifestSummary: Option[FlightManifestSummary]): Seq[Boolean] = {
-    manifestSummary.map { summary =>
-      def paxExits(condition: Boolean, pax: Int): Boolean = {
-        if (condition && pax > 0) true
-        else false
-      }
-
-      val flaggedNationalitiesExits: Set[Boolean] = flaggedNationalities.map { country =>
-        summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0) > 0
-      }
-
-      val flaggedAgeGroupsExists: Set[Boolean] = flaggedAgeGroups.map { ageRanges =>
-        summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0) > 0
-      }
-
-      val visaNationalsExists: Boolean = paxExits(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0))
-
-      val conditionsAndChips: Seq[(Boolean, Set[Boolean])] = List(
-        (flaggedNationalities.nonEmpty, flaggedNationalitiesExits),
-        (flaggedAgeGroups.nonEmpty, flaggedAgeGroupsExists),
-        (showNumberOfVisaNationals, Set(visaNationalsExists)),
-      )
-      val paxExistSets: Seq[(Boolean, Set[Boolean])] = conditionsAndChips.filter(_._1)
-      paxExistSets.map(_._2.exists(_ == true))
-    }.getOrElse(Seq.empty)
-  }
-
-
-  private def highlightedChips(showNumberOfVisaNationals: Boolean,
-                               showRequireAllSelected: Boolean,
-                               flaggedAgeGroups: Set[PaxAgeRange],
-                               flaggedNationalities: Set[Country],
-                               manifestSummary: Option[FlightManifestSummary]): html_<^.VdomNode = {
-    <.div(^.minWidth := "150px",
-      manifestSummary.map { summary =>
-        def generateChip(condition: Boolean, pax: Int, label: String): Option[VdomElement] = {
-          if (condition && pax > 0) Option(<.div(^.style := js.Dictionary("paddingBottom" -> "5px"), s"$pax $label"))
-          else None
-        }
-
-        val flaggedNationalitiesChips: Set[Option[VdomElement]] = flaggedNationalities.map { country =>
-          val pax = summary.nationalities.find(n => n._1.code == country.threeLetterCode).map(_._2).getOrElse(0)
-          generateChip(pax > 0, pax, s"${country.name} (${country.threeLetterCode}) pax")
-        }
-
-        val flaggedAgeGroupsChips: Set[Option[VdomElement]] = flaggedAgeGroups.map { ageRanges =>
-          val pax = summary.ageRanges.find(n => n._1 == ageRanges).map(_._2).getOrElse(0)
-          generateChip(pax > 0, pax, s"pax aged ${ageRanges.title}")
-        }
-
-        val visaNationalsChip: Option[VdomElement] = generateChip(showNumberOfVisaNationals, summary.paxTypes.getOrElse(VisaNational, 0), "Visa Nationals")
-
-        val chips: Set[Option[VdomElement]] = flaggedNationalitiesChips ++ flaggedAgeGroupsChips ++ Set(visaNationalsChip)
-
-        val conditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = List(
-          (flaggedNationalities.nonEmpty, flaggedNationalitiesChips),
-          (flaggedAgeGroups.nonEmpty, flaggedAgeGroupsChips),
-          (showNumberOfVisaNationals, Set(visaNationalsChip)),
-        )
-
-        val trueConditionsAndChips: Seq[(Boolean, Set[Option[VdomElement]])] = conditionsAndChips.filter(_._1)
-
-        if (showRequireAllSelected) {
-          if (trueConditionsAndChips.map(_._2).forall(_.exists(_.nonEmpty)))
-            trueConditionsAndChips.flatMap(_._2).flatten.toTagMod
-          else EmptyVdom
-        } else {
-          if (chips.exists(_.isDefined)) {
-            <.div(chips.flatten.toTagMod)
-          } else EmptyVdom
-        }
-      }.getOrElse(EmptyVdom))
-  }
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
     val content = (arrival.Gate, arrival.Stand) match {
