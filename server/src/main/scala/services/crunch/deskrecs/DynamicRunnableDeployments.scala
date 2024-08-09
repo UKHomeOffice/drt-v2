@@ -98,7 +98,7 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
           loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal, "deployments")
             .map { minutes =>
               log.info(s"[deployments] Optimising complete. Took ${SDate.now().millisSinceEpoch - started}ms")
-              setUpdatedAt(terminals, setUpdatedAtForDay, request)
+              setUpdatedAtForTerminals(terminals, setUpdatedAtForDay, request)
               Option(minutes)
             }
             .recover {

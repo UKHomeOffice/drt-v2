@@ -38,7 +38,6 @@ import services.metrics.ApiValidityReporter
 import services.prediction.ArrivalPredictions
 import services.staffing.StaffMinutesChecker
 import services.{OptimiserWithFlexibleProcessors, PaxDeltas, TryCrunchWholePax}
-import slick.lifted.Rep
 import slickdb.dao.ArrivalStatsDao
 import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
@@ -49,8 +48,7 @@ import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
-import uk.gov.homeoffice.drt.db.dao.StatusDailyDao
-import uk.gov.homeoffice.drt.db.{AggregateDb, StatusDaily, StatusDailyTable}
+import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -62,7 +60,6 @@ import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
 import uk.gov.homeoffice.drt.time._
 
-import java.sql.Timestamp
 import javax.inject.Singleton
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
@@ -97,7 +94,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
   private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
 
-  val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
+  private val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val crunchRequestProvider: LocalDate => CrunchRequest =
     date => CrunchRequest(date, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
@@ -206,7 +203,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val crunchManagerActor: ActorRef = system.actorOf(CrunchManagerActor.props(flightsProvider.allTerminalsDateRangeScheduledOrPcp), name = "crunch-manager-actor")
+  val crunchManagerActor: ActorRef = system.actorOf(
+    CrunchManagerActor.props(flightsProvider.allTerminalsDateRangeScheduledOrPcp),
+    name = "crunch-manager-actor")
 
   val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
     ArrivalPredictions(
@@ -267,22 +266,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
         addArrivalPredictions = addArrivalPredictions,
       )
 
-      def setUpdatedAt(columnToUpdate: StatusDailyTable => Rep[Option[Timestamp]],
-                       setUpdated: (StatusDaily, Long) => StatusDaily,
-                      ): (Terminal, LocalDate, Long) => Future[Done] = {
-        (terminal, date, updatedAt) => {
-          val setter = StatusDailyDao.setUpdatedAt(airportConfig.portCode)(columnToUpdate)
-          val inserter = StatusDailyDao.insertOrUpdate(airportConfig.portCode)
-          aggregatedDb.run(setter(terminal, date, updatedAt)).flatMap { count =>
-            if (count > 0) Future.successful(Done)
-            else {
-              val newStatus = StatusDaily(airportConfig.portCode, terminal, date, None, None, None, None)
-              val toInsert = setUpdated(newStatus, updatedAt)
-              aggregatedDb.run(inserter(toInsert)).map(_ => Done)
-            }
-          }
-        }
-      }
 
       val crunchRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
         crunchQueueActor = actors.crunchQueueActor,
@@ -297,8 +280,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
         queueLoadsActor = minuteLookups.queueLoadsMinutesActor,
         queuesByTerminal = airportConfig.queuesByTerminal,
         paxFeedSourceOrder = feedService.paxFeedSourceOrder,
-        updateCapacity =  updateAndPersistCapacity,
-        setUpdatedAtForDay = setUpdatedAt(_.paxLoadsUpdatedAt, (status, updatedAt) => status.copy(paxLoadsUpdatedAt = Option(updatedAt))),
+        updateCapacity = updateAndPersistCapacity,
+        setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
+          airportConfig.portCode,
+          aggregatedDb,
+          _.paxLoadsUpdatedAt,
+          (status, updatedAt) => status.copy(paxLoadsUpdatedAt = Option(updatedAt))),
       )
 
       val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
@@ -309,7 +296,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
         deskLimitsProvider = deskLimitsProviders,
         loadsToQueueMinutes = portDeskRecs.loadsToDesks,
         queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
-        setUpdatedAtForDay = setUpdatedAt(_.deskRecommendationsUpdatedAt, (status, updatedAt) => status.copy(deskRecommendationsUpdatedAt = Option(updatedAt))),
+        setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
+          airportConfig.portCode,
+          aggregatedDb,
+          _.deskRecommendationsUpdatedAt,
+          (status, updatedAt) => status.copy(deskRecommendationsUpdatedAt = Option(updatedAt))),
       )
 
       val (deploymentRequestQueueActor: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeployments(
@@ -322,7 +313,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
         loadsToDeployments = portDeskRecs.loadsToSimulations,
         terminals = airportConfig.terminals,
         queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
-        setUpdatedAtForDay = setUpdatedAt(_.deskDeploymentsUpdatedAt, (status, updatedAt) => status.copy(deskDeploymentsUpdatedAt = Option(updatedAt))),
+        setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
+          airportConfig.portCode,
+          aggregatedDb,
+          _.deskDeploymentsUpdatedAt,
+          (status, updatedAt) => status.copy(deskDeploymentsUpdatedAt = Option(updatedAt))),
       )
 
       val (staffingUpdateRequestQueue: ActorRef, staffingUpdateKillSwitch: UniqueKillSwitch) = RunnableStaffing(
@@ -334,7 +329,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
         movementsActor = actorService.liveStaffMovementsReadActor,
         staffMinutesActor = minuteLookups.staffMinutesRouterActor,
         now = now,
-        setUpdatedAtForDay = setUpdatedAt(_.staffUpdatedAt, (status, updatedAt) => status.copy(staffUpdatedAt = Option(updatedAt))),
+        setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
+          airportConfig.portCode,
+          aggregatedDb,
+          _.staffUpdatedAt,
+          (status, updatedAt) => status.copy(staffUpdatedAt = Option(updatedAt))),
       )
 
       actorService.liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)

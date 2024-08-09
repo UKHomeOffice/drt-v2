@@ -75,7 +75,7 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
           log.info(s"[desk-recs] Optimising ${request.duration.toMinutes} minutes (${request.start.toISOString} to ${request.end.toISOString})")
           loadsToQueueMinutes(request.minutesInMillis, loads, maxDesksProviders, "desk-recs")
             .map { minutes =>
-              setUpdatedAt(maxDesksProviders.keys, setUpdatedAtForDay, request)
+              setUpdatedAtForTerminals(maxDesksProviders.keys, setUpdatedAtForDay, request)
               Option(minutes)
             }
             .recover {
