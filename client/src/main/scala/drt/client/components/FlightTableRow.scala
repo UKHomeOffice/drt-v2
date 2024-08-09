@@ -21,7 +21,6 @@ import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
-import uk.gov.homeoffice.drt.ports.PaxTypes.VisaNational
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -216,7 +215,8 @@ object FlightTableRow {
         ),
         <.td(^.textAlign := "left",
           FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
-          pcpPaxDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "pax-rag")),
+          pcpPaxDataQuality.map(dq =>
+            DataCarrierQualityIndicator(dq, flight.Terminal, "pax-rag")),
           ^.className := s"pcp-pax",
         ),
       )
@@ -234,7 +234,8 @@ object FlightTableRow {
             <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
           }.toTagMod,
         ),
-        splitsDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "splits-rag")),
+        splitsDataQuality.map(dq =>
+          DataCarrierQualityIndicator(dq, flight.Terminal, "splits-rag")),
       )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""

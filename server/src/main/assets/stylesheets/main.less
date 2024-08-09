@@ -1257,8 +1257,8 @@ p {
 .controls-radio-wrapper label, th div {
   display: flex;
   gap: 8px;
-  justify-content: center;
-  align-items: center;
+  //justify-content: center;
+  //align-items: center;
 }
 
 .date-quick-days {
@@ -1498,7 +1498,7 @@ p {
 
 .arrivals_table__splits__queue-pax {
   min-width: 60px;
-  text-align: right;
+  //text-align: right;
   margin-bottom: 8px;
 }
 
@@ -1564,7 +1564,7 @@ th h2 {
 }
 
 .data-quality {
-  border: 1px solid #404252;
+  //border: 1px solid #404252;
   padding: 4px 8px 4px 8px;
   font-weight: 400;
   text-align: left;
@@ -1581,6 +1581,10 @@ th h2 {
   color: #404252;
   font-size: 20px;
 }
+
+//.data-quality__more-info:hover {
+//  background-color: #404252;
+//}
 
 .tippy-info-icon {
   color: inherit;
@@ -1941,6 +1945,10 @@ th h2 {
   margin-left: 5px;
 }
 
+.arrivals__table__flight__pcp-pax__header{
+  text-align: left;
+}
+
 .arrivals__table__flight__pcp-pax__incoming svg {
   transform: rotate(135deg);
 }
@@ -2052,12 +2060,13 @@ th h2 {
 
 .pcp-pax {
   border-right: 1px solid #ccc;
+  border-left: 1px solid #ccc;
 }
 
 .pcp-pax-value {
   display: block;
   min-width: 30px;
-  text-align: right;
+  text-align: left;
   font-weight: bold;
   padding-bottom: 8px;
 }

@@ -38,7 +38,7 @@ object FlightComponents {
     }
     object PortForecastData extends PcpPaxDataQuality {
       val `type`: String = "warning"
-      val text: String = "Port forecast data"
+      val text: String = "Port forecast"
       override val maybeTooltip: Option[String] = Option("Data from the port operator")
     }
     object MlData extends PcpPaxDataQuality {
@@ -90,7 +90,9 @@ object FlightComponents {
 
     <.div(
       ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData underline",
-      <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"pcp-pax-value $noPcpPaxClass", pcpPaxNumber))),
+      <.span(Tippy.describe(
+        paxNumberSources(flightWithSplits), <.span(^.className := s"pcp-pax-value $noPcpPaxClass", pcpPaxNumber))
+      ),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
           if (directRedListFlight.incomingDiversion) s"Passengers diverted from ${flightWithSplits.apiFlight.Terminal}"
@@ -121,7 +123,7 @@ object FlightComponents {
 
     object HistoricalCarrierData extends SplitsDataQuality {
       val `type`: String = "warning"
-      val text: String = "Historical carrier data"
+      val text: String = "Past carrier data"
       override val maybeTooltip: Option[String] = Option("Based on historical Advance Passenger Information (API) from this flight or route")
     }
 
