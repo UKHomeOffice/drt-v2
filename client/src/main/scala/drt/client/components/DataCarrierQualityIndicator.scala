@@ -20,13 +20,12 @@ object DataCarrierQualityIndicator {
     .renderPS { case (_, props, _) =>
       ThemeProvider(DrtTheme.tooltipTheme)(
         <.div(^.className := s"data-quality data-quality__${props.dq.`type`} pax-rag-${props.dq.`type`}",
-          <.dfn(^.className := "data-quality__more-info",
-            <.abbr(^.style := js.Dictionary("font-style" -> "normal"),
+          <.dfn(^.className := "data-quality-indicator",
               ^.title := props.dq.maybeTooltip.getOrElse(""),
               ^.onPointerEnter --> Callback {
                 GoogleEventTracker.sendEvent(props.terminal.toString, "Info button click", "Data quality", props.dq.text)
               },
-              props.dq.text))))
+              props.dq.text)))
     }
     .build
 
