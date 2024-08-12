@@ -316,8 +316,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
         setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
           airportConfig.portCode,
           aggregatedDb,
-          _.deskDeploymentsUpdatedAt,
-          (status, updatedAt) => status.copy(deskDeploymentsUpdatedAt = Option(updatedAt))),
+          _.staffDeploymentsUpdatedAt,
+          (status, updatedAt) => status.copy(staffDeploymentsUpdatedAt = Option(updatedAt))),
       )
 
       val (staffingUpdateRequestQueue: ActorRef, staffingUpdateKillSwitch: UniqueKillSwitch) = RunnableStaffing(
