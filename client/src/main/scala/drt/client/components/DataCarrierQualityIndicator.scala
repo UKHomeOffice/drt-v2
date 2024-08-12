@@ -43,6 +43,9 @@ object DataCarrierQualityIndicator {
                 scope.modState(s => s.copy(showTooltip = !s.showTooltip))
               }
             },
+            ^.onPointerOut ==> { _ =>
+              scope.modState(s => s.copy(showTooltip = false))
+            },
           )),
         ^.className := s"data-quality data-quality__${props.dq.`type`} ${props.classPrefix}-${props.dq.`type`}",
       )
