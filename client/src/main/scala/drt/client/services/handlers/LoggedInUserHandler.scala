@@ -37,29 +37,18 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
     })
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-
     case GetLoggedInUser =>
-      log.info(s"Getting logged in user")
       val url = SPAMain.absoluteUrl("data/user")
-
       val eventualRequest: Future[XMLHttpRequest] = dom.ext.Ajax.get(url = url)
-      effectOnly(Effect(eventualRequest.map(r => {
+      effectOnly(Effect(eventualRequest.map(r => SetLoggedInUser(read[LoggedInUser](r.responseText)))))
 
-        val loggedInUser: LoggedInUser = read[LoggedInUser](r.responseText)
-
-        SetLoggedInUser(loggedInUser)
-      }
-      )))
     case SetLoggedInUser(loggedInUser) =>
       updated(Ready(loggedInUser))
 
     case TrackUser() => {
       val url = SPAMain.absoluteUrl("data/track-user")
       val eventualRequest: Future[XMLHttpRequest] = dom.ext.Ajax.get(url = url)
-      effectOnly(Effect(eventualRequest.map { _ =>
-        log.info(s"Tracking user")
-        NoAction
-      }))
+      effectOnly(Effect(eventualRequest.map(_ => NoAction)))
     }
   }
 }

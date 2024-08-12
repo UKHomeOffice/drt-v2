@@ -7,7 +7,7 @@ import uk.gov.homeoffice.drt.prediction.arrival.ToChoxModelAndFeatures
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 
 class PcpUtilsSpec extends Specification {
-  "Given an arrival, time to chox and the first pax off time, PcpUtils " should {
+  "Given an arrival, time to chocks and the first pax off time, PcpUtils " should {
     val givenTime = 1000L
     val pcpTime = 2000L
     val millisToChox = Arrival.defaultMinutesToChox * oneMinuteMillis
@@ -29,11 +29,11 @@ class PcpUtilsSpec extends Specification {
       }
 
       val walkTimeWithoutChoxRemoved = pcpTime - (givenTime + firstPaxOff)
-      "When the arrival has an estimated chox time" in {
+      "When the arrival has an estimated chocks time" in {
         val arrival = ArrivalGenerator.arrival(estChox = givenTime).toArrival(LiveFeedSource).copy(PcpTime = Option(pcpTime), Predictions = predictions)
         arrival.walkTime(firstPaxOff, considerPredictions = true) === Option(walkTimeWithoutChoxRemoved)
       }
-      "When the arrival has an actual chox time" in {
+      "When the arrival has an actual chocks time" in {
         val arrival = ArrivalGenerator.arrival(actChox = givenTime).toArrival(LiveFeedSource).copy(PcpTime = Option(pcpTime), Predictions = predictions)
         arrival.walkTime(firstPaxOff, considerPredictions = true) === Option(walkTimeWithoutChoxRemoved)
       }

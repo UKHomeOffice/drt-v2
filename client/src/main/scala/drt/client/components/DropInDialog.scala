@@ -47,8 +47,8 @@ object DropInDialog extends WithScalaCssImplicits {
               MuiGrid(item = true, xs = 11)(
                 MuiDialogTitle(sx = SxProps(centeredStyle ++ Map(
                   "color" -> "#FFFFFF",
-                  "font-size" -> DrtTheme.theme.typography.h3.fontSize,
-                  "font-weight" -> DrtTheme.theme.typography.h3.fontWeight
+                  "fontSize" -> DrtTheme.theme.typography.h3.fontSize,
+                  "fontWeight" -> DrtTheme.theme.typography.h3.fontWeight
                 )))(<.span(props.title))),
               MuiGrid(item = true, xs = 1)(
                 MuiDialogActions()(
@@ -70,13 +70,13 @@ object DropInDialog extends WithScalaCssImplicits {
                     "color" -> "black"
                   )))()),
                   MuiGrid(item = true, xs = 4, sx = SxProps(centeredStyle ++ Map(
-                    "padding-top" -> "16px")))(props.date),
+                    "paddingTop" -> "16px")))(props.date),
                   MuiGrid(item = true, xs = 4, sx = SxProps(centeredStyle ++ Map(
-                    "padding-top" -> "16px")))(props.startTime),
+                    "paddingTop" -> "16px")))(props.startTime),
                   MuiGrid(item = true, xs = 4, sx = SxProps(centeredStyle ++ Map(
-                    "padding-top" -> "16px")))(props.duration),
+                    "paddingTop" -> "16px")))(props.duration),
                   MuiGrid(item = true, xs = 12)(MuiDivider(sx = SxProps(Map(
-                    "padding-top" -> "16px",
+                    "paddingTop" -> "16px",
                     "color" -> "black",
                   )))()),
                 )),

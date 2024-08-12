@@ -33,9 +33,9 @@ const portOperatorRoles = ["port-operator-staff",
   "api:view-port-arrivals"
 ]
 
-export const paxRagGreenSelector = '.pax-rag-green'
-export const paxRagAmberSelector = '.pax-rag-amber'
-export const paxRagRedSelector = '.pax-rag-red'
+export const paxRagGreenSelector = '.pax-rag-success'
+export const paxRagAmberSelector = '.pax-rag-warning'
+export const paxRagRedSelector = '.pax-rag-error'
 
 export const eGatesCellSelector = '.egate-queue-pax';
 export const eeaCellSelector = '.eeadesk-queue-pax';
@@ -89,7 +89,7 @@ Cypress.Commands.add('asABorderForceOfficerWithRoles', (roles = [], csrfToken) =
 Cypress.Commands.add('addFlight', (params, csrfToken = 'nocheck') => {
   const defaults = {
     "Operator": "TestAir",
-    "Status": "On Chox",
+    "Status": "On Chocks",
     "EstDT": todayAtString(12, 0),
     "ActDT": todayAtString(12, 0),
     "EstChoxDT": todayAtString(12, 0),

@@ -158,9 +158,9 @@ object TerminalPlanningComponent {
             MuiFormControl()(
               <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center"),
                 MuiFormLabel(sx = SxProps(Map("size" -> "16px",
-                  "padding-right" -> "10px",
+                  "paddingRight" -> "10px",
                   "color" -> DrtTheme.theme.palette.grey.`900`,
-                  "font-weight" -> "bold")))(<.span("Time Period")),
+                  "fontWeight" -> "bold")))(<.span("Time Period")),
                 MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
                   scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
                     Callback(SPACircuit.dispatch(SendSelectedTimeInterval(e.target.value.toInt))) >>

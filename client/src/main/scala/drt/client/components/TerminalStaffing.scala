@@ -109,7 +109,6 @@ object TerminalStaffing {
           else
             defaultExamples
 
-          log.info(s"Rendering fixed points form")
           <.div(
             <.h2("Miscellaneous Staff"),
             if (props.loggedInUser.roles.contains(StaffEdit)) {

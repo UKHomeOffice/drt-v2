@@ -83,8 +83,8 @@ class DebugController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterfa
                   "<td>Terminal</td>" +
                   "<td>Scheduled</td>" +
                   "<td>Est</td>" +
-                  "<td>Est Chox</td>" +
-                  "<td>Act Chox</td>" +
+                  "<td>Est Chocks</td>" +
+                  "<td>Act Chocks</td>" +
                   "<td>Est PCP</td>" +
                   "<td>Status</td>" +
                   "<td>Gate</td>" +

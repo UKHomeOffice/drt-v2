@@ -269,8 +269,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     success
   }
 
-  "Given a flight with an estimated touchdown, no estimated chox time, and scheduledTaxiInMinutes" +
-    " we should not calculate estimated chox time" >> {
+  "Given a flight with an estimated touchdown, no estimated chocks time, and scheduledTaxiInMinutes" +
+    " we should not calculate estimated chocks time" >> {
     val estimatedRunwayArrivalTime = "2019-07-15T11:05:00.000Z"
     val ciriumFlight = basicCiriumFlightStatus
       .copy(
@@ -287,8 +287,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     result === expected
   }
 
-  "Given a flight with an actual touchdown, no estimated chox time, and scheduledTaxiInMinutes" +
-    " we should calculate estimated chox time" >> {
+  "Given a flight with an actual touchdown, no estimated chocks time, and scheduledTaxiInMinutes" +
+    " we should calculate estimated chocks time" >> {
     val actualRunwayTime = "2019-07-15T11:05:00.000Z"
     val ciriumFlight = basicCiriumFlightStatus
       .copy(
@@ -305,8 +305,8 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
     result === expected
   }
 
-  "Given a flight with an estimated chox time, and no estimated touch down time " +
-    "the estimated time should be the est chox minus 5 minutes" >> {
+  "Given a flight with an estimated chocks time, and no estimated touch down time " +
+    "the estimated time should be the est chocks minus 5 minutes" >> {
     val estimatedChoxTime = "2019-07-15T11:05:00.000Z"
     val ciriumFlight = basicCiriumFlightStatus
       .copy(

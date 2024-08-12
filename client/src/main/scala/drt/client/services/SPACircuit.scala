@@ -3,12 +3,12 @@ package drt.client.services
 import diode._
 import diode.data._
 import diode.react.ReactConnector
-import drt.client.components.{Country, FileUploadState, StaffAdjustmentDialogueState}
+import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared._
+import drt.shared.{Country, _}
 import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
 import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
@@ -181,6 +181,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
                      userSelectedPlanningTimePeriod: Pot[Int] = Empty,
+                     flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], "")
                     )
 
 object PollDelay {
@@ -261,8 +262,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ABFeatureHandler(zoomRW(_.abFeatures)((m, v) => m.copy(abFeatures = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
-      new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v)),
-      )
+      new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v))),
+      new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v)))
     )
     composedHandlers
   }

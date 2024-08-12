@@ -1,6 +1,7 @@
 package drt.client.components
 
-case class Country(name: String, twoLetterCode: String, threeLetterCode: String, id: Int)
+import drt.shared.Country
+
 
 object CountryOptions {
   def countries: Seq[Country] = Seq(

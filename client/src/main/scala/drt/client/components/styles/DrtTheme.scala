@@ -90,8 +90,27 @@ object DrtTheme extends StyleSheet.Inline with ScalaCssReactImplicits {
     options = ThemeOptions(
       typography = typographyOptions,
       palette = PaletteOptions(
-        primary = ColorPartial(`500` = "#335096"),
+        primary = ColorPartial(`500` = "#335096")
       )
+    )
+  )
+
+  def buttonSecondaryTheme: Theme = createTheme(
+    options = ThemeOptions(
+      typography = typographyOptions,
+      palette = PaletteOptions(
+        secondary = ColorPartial(`A400` = "#1D70B8")
+      )
+    )
+  )
+
+  def tooltipTheme: Theme = createTheme(
+    options = ThemeOptions(
+      typography = TypographyOptions(
+        fontSize = 18,
+        htmlFontSize = 10,
+        fontFamily = "Arial",
+      ),
     )
   )
 }

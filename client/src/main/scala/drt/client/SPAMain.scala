@@ -170,30 +170,27 @@ object SPAMain {
 
   case object ForecastFileUploadLoc extends Loc
 
-  def requestInitialActions(): Unit = {
-    val initActions = Seq(
-      GetApplicationVersion,
-      GetContactDetails,
-      GetLoggedInUser,
-      GetUserHasPortAccess,
-      GetLoggedInStatus,
-      GetAirportConfig,
-      GetPaxFeedSourceOrder,
-      UpdateMinuteTicker,
-      GetFeedSourceStatuses(),
-      GetAlerts(0L),
-      GetRedListUpdates,
-      GetPortEgateBanksUpdates,
-      GetOohStatus,
-      GetFeatureFlags,
-      GetGateStandWalktime,
-      GetManifestSummariesForDate(SDate.now().toUtcDate),
-      GetManifestSummariesForDate(SDate.now().addDays(-1).toUtcDate),
-      GetSlaConfigs,
-    )
-
-    initActions.foreach(SPACircuit.dispatch(_))
-  }
+  private val initialRequestsActions = Seq(
+    GetApplicationVersion,
+    GetContactDetails,
+    GetLoggedInUser,
+    GetUserHasPortAccess,
+    GetLoggedInStatus,
+    GetAirportConfig,
+    GetPaxFeedSourceOrder,
+    UpdateMinuteTicker,
+    GetFeedSourceStatuses(),
+    GetAlerts(0L),
+    GetRedListUpdates,
+    GetPortEgateBanksUpdates,
+    GetOohStatus,
+    GetFeatureFlags,
+    GetGateStandWalktime,
+    GetManifestSummariesForDate(SDate.now().toUtcDate),
+    GetManifestSummariesForDate(SDate.now().addDays(-1).toUtcDate),
+    GetSlaConfigs,
+  )
+  def sendInitialRequests(): Unit = initialRequestsActions.foreach(SPACircuit.dispatch(_))
 
   val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc]
     .buildConfig { dsl: RouterConfigDsl[Loc, Unit] =>
@@ -340,7 +337,7 @@ object SPAMain {
     ArrivalsPageStylesDefault.addToDocument()
     DefaultScenarioSimulationStyle.addToDocument()
 
-    requestInitialActions()
+    sendInitialRequests()
 
     val router = Router(BaseUrl.until_#, routerConfig.logToConsole)
     router().renderIntoDOM(dom.document.getElementById("root"))
