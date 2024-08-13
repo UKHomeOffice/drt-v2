@@ -74,8 +74,8 @@ object TerminalContentComponent {
   def originMapper(portCode: PortCode, style: html_<^.TagMod): VdomElement = airportWrapper(portCode) {
     proxy: ModelProxy[Pot[AirportInfo]] =>
       <.span(^.className := "flight-origin", style,
-        proxy().render(ai => <.span(Tippy.describe(<.span(s"${ai.airportName}, ${ai.city}, ${ai.country}"),
-          <.abbr(^.className := "underline", s"${portCode.toString},")), ai.country)),
+        proxy().render(ai => <.dfn(Tippy.describe(<.span(s"${ai.airportName}, ${ai.city}, ${ai.country}"),
+          <.abbr(^.className := "dotted-underline", s"${portCode.toString}")), s", ${ai.country}")),
         proxy().renderEmpty(<.span(portCode.toString))
       )
   }

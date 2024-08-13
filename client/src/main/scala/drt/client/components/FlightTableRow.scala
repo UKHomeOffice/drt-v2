@@ -247,7 +247,9 @@ object FlightTableRow {
         ^.className := trClassName,
         flightFields.toTagMod,
         queueSplits,
-        if (props.hasTransfer) <.td(FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder)) else EmptyVdom
+        if (props.hasTransfer)
+          <.td(^.className := "arrivals__table__flight_transfer-pax", FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder))
+        else EmptyVdom
       )
     }
     .configure(Reusability.shouldComponentUpdate)
