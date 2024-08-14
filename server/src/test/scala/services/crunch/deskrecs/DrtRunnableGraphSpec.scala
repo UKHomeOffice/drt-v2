@@ -35,7 +35,8 @@ class DrtRunnableGraphSpec extends AnyWordSpec with Matchers with BeforeAndAfter
       val updatedAt = 1610617200000L
 
       val result = Await.result(
-        setUpdatedAt(terminal, date, updatedAt).flatMap(_ => aggDb.run(StatusDailyTable.filter(_.terminal === terminal.toString).result)),
+        setUpdatedAt(terminal, date, updatedAt).flatMap(_ => aggDb.run(aggDb.statusDaily.filter(s =>
+          s.terminal === terminal.toString && s.port === portCode.iata && s.dateLocal === date.toISOString).result)),
         1.second,
       )
 
