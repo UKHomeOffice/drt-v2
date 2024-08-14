@@ -58,7 +58,7 @@ import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, Pa
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
-import uk.gov.homeoffice.drt.time._
+import uk.gov.homeoffice.drt.time.{LocalDate, _}
 
 import javax.inject.Singleton
 import scala.collection.SortedSet
@@ -109,6 +109,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   val portDeskRecs: PortDesksAndWaitsProviderLike =
     PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, Slas.slaProvider(slasActor))
+
+  val deploymentSlas: (LocalDate, Queue) => Future[Int] =
+    (_, _) => Future.successful(5)
+  val portDeployments: PortDesksAndWaitsProviderLike =
+    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
 
   val paxTypeQueueAllocation: PaxTypeQueueAllocation = paxTypeQueueAllocator(airportConfig)
 
@@ -293,7 +298,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         crunchRequest,
         OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
         OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
-        portDeskRecs.loadsToSimulations,
+        portDeployments.loadsToSimulations,
         minuteLookups.queueMinutesRouterActor)
 
       val (staffingUpdateRequestQueue: ActorRef, staffingUpdateKillSwitch: UniqueKillSwitch) = RunnableStaffing(
