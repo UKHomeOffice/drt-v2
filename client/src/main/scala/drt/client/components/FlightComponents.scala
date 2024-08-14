@@ -166,9 +166,7 @@ object FlightComponents {
 
   def paxTransferComponent(flight: Arrival, paxFeedSourceOrder: List[FeedSource]): VdomTagOf[Div] = {
     val transPax = if (flight.Origin.isCta) "-" else flight.bestPaxEstimate(paxFeedSourceOrder).passengers.transit.getOrElse("-")
-    <.div(
-      s"$transPax"
-    )
+    <.div(^.className := "arrivals_table__Splits__split-number", s"$transPax")
   }
 
   def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.displayName}"

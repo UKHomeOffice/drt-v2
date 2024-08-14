@@ -232,7 +232,9 @@ object FlightTableRow {
         <.span(^.className := "flex-uniform-size",
           props.splitsQueueOrder.map { q =>
             val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
-            <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
+            <.div(
+              <.div(^.className := "arrivals_table__Splits__split-number", pax),
+              ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
           }.toTagMod,
         ),
         splitsDataQuality.map(dq =>
