@@ -213,12 +213,13 @@ object FlightTableRow {
           pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder),
           ^.className := "arrivals__table__flight-est-pcp"
         ),
-        <.td(^.textAlign := "left",
-          FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
+        <.td(
+          <.div(^.className := "flight-pax",
+            FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
           pcpPaxDataQuality.map(dq =>
-            DataCarrierQualityIndicator(dq, flight.Terminal, "pax-rag")),
+            DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false)),
           ^.className := s"pcp-pax",
-        ),
+        )
       )
 
       val flightFields = firstCells ++ lastCells
@@ -235,7 +236,7 @@ object FlightTableRow {
           }.toTagMod,
         ),
         splitsDataQuality.map(dq =>
-          DataCarrierQualityIndicator(dq, flight.Terminal, "splits-rag")),
+          DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false)),
       )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""

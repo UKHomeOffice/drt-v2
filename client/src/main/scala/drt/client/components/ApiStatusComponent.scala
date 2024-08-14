@@ -66,15 +66,15 @@ object ApiStatusComponent {
             val apiFeedStatus = ApiFeedStatus(flights, SDate.now().millisSinceEpoch, props.canValidate, terminalFlightsPot().paxFeedSourceOrder)
 
             <.div(^.className := "status-bar-item", "API (Advance Passenger Information)",
-              DataQualityIndicator(ApiDataQuality(apiFeedStatus.receivedPct.map(_.round.toInt), "Received", receivedInfoText), props.terminal, "api-received"),
+              DataQualityIndicator(ApiDataQuality(apiFeedStatus.receivedPct.map(_.round.toInt), "Received", receivedInfoText), props.terminal, "api-received", icon = true),
               if (props.canValidate)
-                DataQualityIndicator(ApiDataQuality(apiFeedStatus.validPct.map(_.round.toInt), "Valid", validatedInfoText), props.terminal, "api-valid")
+                DataQualityIndicator(ApiDataQuality(apiFeedStatus.validPct.map(_.round.toInt), "Valid", validatedInfoText), props.terminal, "api-valid", icon = true)
               else EmptyVdom,
             )
           },
           terminalFlightsPot().flights.renderPending(_ =>
             <.div(^.className := "status-bar-item", "API (Advance Passenger Information)",
-              DataQualityIndicator(ApiDataQuality(None, "Received", receivedInfoText), props.terminal, "api-received"),
+              DataQualityIndicator(ApiDataQuality(None, "Received", receivedInfoText), props.terminal, "api-received", icon = true),
             )
           ),
         )
