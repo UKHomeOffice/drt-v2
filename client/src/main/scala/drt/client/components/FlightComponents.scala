@@ -167,7 +167,6 @@ object FlightComponents {
   def paxTransferComponent(flight: Arrival, paxFeedSourceOrder: List[FeedSource]): VdomTagOf[Div] = {
     val transPax = if (flight.Origin.isCta) "-" else flight.bestPaxEstimate(paxFeedSourceOrder).passengers.transit.getOrElse("-")
     <.div(
-      ^.className := "right",
       s"$transPax"
     )
   }

@@ -1507,12 +1507,10 @@ p {
 
 .arrivals_table__splits__queue-pax {
   min-width: 60px;
-  //text-align: right;
   margin-bottom: 8px;
 }
 
 // Usage table
-
 .usage-table {
   min-height: 1px;
   overflow-x: auto;
@@ -1573,7 +1571,6 @@ th h2 {
 }
 
 .data-quality {
-  //border: 1px solid #404252;
   padding: 4px 8px 4px 8px;
   font-weight: 400;
   text-align: left;
@@ -1590,10 +1587,6 @@ th h2 {
   color: #404252;
   font-size: 20px;
 }
-
-//.data-quality__more-info:hover {
-//  background-color: #404252;
-//}
 
 .tippy-info-icon {
   color: inherit;
@@ -1954,8 +1947,13 @@ th h2 {
   margin-left: 5px;
 }
 
-.arrivals__table__flight__pcp-pax__header{
+.arrivals__table__flight__pcp-pax__header {
   text-align: left;
+}
+
+.arrivals__table__flight__pcp-pax__header_column {
+  border-left: 1px solid #C0C7DE;
+  border-right: 1px solid #C0C7DE;
 }
 
 .arrivals__table__flight__pcp-pax__incoming svg {
@@ -2649,6 +2647,10 @@ div.access-restricted {
   }
 }
 
+.arrivals__table__flight_transfer-pax {
+  border-left: 1px solid #C0C7DE;
+}
+
 .sr-only {
   height: 1px;
   width: 1px;
@@ -2665,4 +2667,9 @@ div.access-restricted {
 
 .underline {
   text-decoration: underline;
+}
+
+.dotted-underline {
+  text-decoration: underline;
+  text-decoration-style: dotted;
 }
