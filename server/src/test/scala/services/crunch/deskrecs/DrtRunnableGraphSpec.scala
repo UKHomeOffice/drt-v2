@@ -1,15 +1,15 @@
 package services.crunch.deskrecs
 
-import akka.Done
 import org.scalatest.BeforeAndAfter
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import uk.gov.homeoffice.drt.db.{StatusDaily, StatusDailyTable}
+import uk.gov.homeoffice.drt.db.{StatusDaily, StatusDailyRow, StatusDailyTable}
 import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.LocalDate
 
+import java.sql.Timestamp
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
@@ -23,24 +23,32 @@ class DrtRunnableGraphSpec extends AnyWordSpec with Matchers with BeforeAndAfter
   }
 
   "setUpdatedAt" should {
-    "update the status daily table" in {
-      val portCode = PortCode("LHR")
+    "Update only the requested port, terminal & date" in {
+      val portTerminalDateUpdates = Seq(
+        (PortCode("LHR"), T1, LocalDate(2021, 1, 1), 1L),
+        (PortCode("LHR"), T2, LocalDate(2021, 1, 2), 2L),
+        (PortCode("LGW"), T1, LocalDate(2021, 1, 1), 3L),
+      )
       val columnToUpdate = (statusDaily: StatusDailyTable) => statusDaily.staffUpdatedAt
       val setUpdated = (statusDaily: StatusDaily, updatedAt: Long) => statusDaily.copy(staffUpdatedAt = Some(updatedAt))
 
-      val setUpdatedAt = DrtRunnableGraph.setUpdatedAt(portCode, aggDb, columnToUpdate, setUpdated)
+      portTerminalDateUpdates.foreach {
+        case (portCode, terminal, date, updatedAt) =>
+          val setUpdatedAt = DrtRunnableGraph.setUpdatedAt(portCode, aggDb, columnToUpdate, setUpdated)
+          Await.result(setUpdatedAt(terminal, date, updatedAt), 1.second)
+      }
 
-      val terminal = T1
-      val date = LocalDate(2021, 1, 1)
-      val updatedAt = 1610617200000L
-
-      val result = Await.result(
-        setUpdatedAt(terminal, date, updatedAt).flatMap(_ => aggDb.run(aggDb.statusDaily.filter(s =>
-          s.terminal === terminal.toString && s.port === portCode.iata && s.dateLocal === date.toISOString).result)),
-        1.second,
-      )
-
-      result should ===(Done)
+      portTerminalDateUpdates.foreach {
+        case (portCode, terminal, date, updatedAt) =>
+          val result = Await.result(
+            aggDb.run(aggDb.statusDaily.filter(
+              s => s.terminal === terminal.toString && s.port === portCode.iata && s.dateLocal === date.toISOString).result),
+            1.second,
+          )
+          result should ===(Vector(
+            StatusDailyRow(portCode.iata, terminal.toString, date.toISOString, None, None, None, Some(new Timestamp(updatedAt))),
+          ))
+      }
     }
   }
 }
