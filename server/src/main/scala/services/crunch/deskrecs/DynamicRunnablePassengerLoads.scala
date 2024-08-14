@@ -1,6 +1,5 @@
 package services.crunch.deskrecs
 
-import actors.persistent.SortedActorRefSource
 import akka.actor.ActorRef
 import akka.pattern.StatusReply
 import akka.stream.scaladsl.{Flow, Source}
@@ -10,81 +9,18 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinut
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.DynamicQueueStatusProvider
-import slick.lifted.Rep
-import slickdb.AggregatedDbTables
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.db.dao.StatusDailyDao
-import uk.gov.homeoffice.drt.db.{StatusDaily, StatusDailyTable}
-import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
-import java.sql.Timestamp
 import scala.collection.SortedSet
 import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
 
-
-trait DrtRunnableGraph {
-  def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[ProcessingRequest, A, NotUsed],
-                                           persistentQueueActor: ActorRef,
-                                           initialQueue: SortedSet[ProcessingRequest],
-                                           sinkActor: ActorRef,
-                                           graphName: String,
-                                           processingRequest: MillisSinceEpoch => ProcessingRequest,
-                                          )
-                                          (implicit mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource(persistentQueueActor, processingRequest, initialQueue, graphName)
-    QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
-  }
-
-  def setUpdatedAtForTerminals(terminals: Iterable[Terminal],
-                               setUpdatedAtForDay: (Terminal, LocalDate, MillisSinceEpoch) => Future[Done],
-                               pr: ProcessingRequest): Unit =
-    pr match {
-      case TerminalUpdateRequest(terminal, localDate, _, _) =>
-        setUpdatedAtForDay(terminal, localDate, SDate.now().millisSinceEpoch)
-      case other =>
-        val localDate = LocalDate(other.date.year, other.date.month, other.date.day)
-        terminals.foreach { terminal =>
-          setUpdatedAtForDay(terminal, localDate, SDate.now().millisSinceEpoch)
-        }
-    }
-}
-
-object DrtRunnableGraph extends DrtRunnableGraph {
-  private val log = LoggerFactory.getLogger(getClass)
-
-  def setUpdatedAt(portCode: PortCode,
-                   aggregatedDb: AggregatedDbTables,
-                   columnToUpdate: StatusDailyTable => Rep[Option[Timestamp]],
-                   setUpdated: (StatusDaily, Long) => StatusDaily,
-                  )
-                  (implicit ec: ExecutionContext): (Terminal, LocalDate, Long) => Future[Done] = {
-    (terminal, date, updatedAt) => {
-      val setter = StatusDailyDao.setUpdatedAt(portCode)(columnToUpdate)
-      val inserter = StatusDailyDao.insertOrUpdate(portCode)
-      aggregatedDb
-        .run(setter(terminal, date, updatedAt))
-        .flatMap { count =>
-          if (count > 0) Future.successful(Done)
-          else {
-            val newStatus = StatusDaily(portCode, terminal, date, None, None, None, None)
-            val toInsert = setUpdated(newStatus, updatedAt)
-            aggregatedDb.run(inserter(toInsert)).map(_ => Done)
-          }
-        }
-        .recover {
-          case t =>
-            log.error(s"Failed to update status for $terminal on $date", t)
-            Done
-        }
-    }
-  }
-}
 
 object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
   private val log: Logger = LoggerFactory.getLogger(getClass)

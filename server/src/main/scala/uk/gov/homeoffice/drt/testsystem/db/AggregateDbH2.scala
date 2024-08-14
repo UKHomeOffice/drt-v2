@@ -20,6 +20,7 @@ object AggregateDbH2 extends AggregatedDbTables {
     arrivalStats,
     processedZip,
     processedJson,
+    statusDaily,
     voyageManifestPassengerInfo,
   )
 

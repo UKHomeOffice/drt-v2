@@ -3,6 +3,7 @@ package slickdb
 
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
+import uk.gov.homeoffice.drt.db.StatusDailyTable
 
 import java.sql.Timestamp
 import scala.concurrent.Future
@@ -236,4 +237,5 @@ trait AggregatedDbTables {
   lazy val arrival = new TableQuery(tag => new ArrivalTable(tag))
   lazy val arrivalStats = new TableQuery(tag => new ArrivalStatsTable(tag))
   lazy val user = new TableQuery(tag => new UserTable(tag))
+  lazy val statusDaily = new TableQuery(tag => new StatusDailyTable(tag))
 }
