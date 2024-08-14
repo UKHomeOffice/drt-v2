@@ -21,7 +21,6 @@ object DataCarrierQualityIndicator {
       <.div(
         ThemeProvider(DrtTheme.tooltipTheme)(
           <.dfn(^.className := "data-quality-indicator question-hover",
-            props.dq.text,
             props.dq.maybeTooltip.map { tt =>
               <.span(
                 ^.className := "data-quality__more-info",
@@ -35,13 +34,16 @@ object DataCarrierQualityIndicator {
                   onClose = (_: ReactEventFromHtml) => scope.modState(s => s.copy(showTooltip = false)),
                   sx = SxProps(Map("fontSize" -> "inherit")),
                 )
+                (
+                  props.dq.text,
+                  ^.onClick ==> {
+                    e => {
+                      e.preventDefault()
+                      scope.modState(s => s.copy(showTooltip = !s.showTooltip))
+                    }
+                  },
+                )
               )
-            },
-            ^.onClick ==> {
-              e => {
-                e.preventDefault()
-                scope.modState(s => s.copy(showTooltip = !s.showTooltip))
-              }
             },
           )),
         ^.className := s"data-quality data-quality__${props.dq.`type`} ${props.classPrefix}-${props.dq.`type`}",
