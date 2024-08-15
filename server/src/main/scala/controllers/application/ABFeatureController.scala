@@ -4,7 +4,7 @@ import com.google.inject.Inject
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.ABFeatureRow
+import uk.gov.homeoffice.drt.db.tables.ABFeatureRow
 import upickle.default._
 
 import java.sql.Timestamp

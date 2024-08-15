@@ -12,7 +12,7 @@ import play.api.mvc.{Headers, Session}
 import slickdb._
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, DrtSystemInterface}
-import uk.gov.homeoffice.drt.db._
+import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.FeedService
 import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
