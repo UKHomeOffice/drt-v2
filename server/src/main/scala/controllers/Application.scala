@@ -15,7 +15,7 @@ import slickdb._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
