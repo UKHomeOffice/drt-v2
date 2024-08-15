@@ -1,5 +1,6 @@
 package services.crunch.staffing
 
+import akka.Done
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
 import akka.testkit.TestProbe
@@ -69,7 +70,7 @@ class RunnableStaffingTest extends CrunchTestLike {
     val someFixedPoints: ProcessingRequest => Future[FixedPointAssignments] = (_: ProcessingRequest) => Future.successful(fixedPoints)
     val someMovements: ProcessingRequest => Future[StaffMovements] = (_: ProcessingRequest) => Future.successful(movements)
 
-    val staffFlow = RunnableStaffing.staffMinutesFlow(someShifts, someFixedPoints, someMovements, () => updateDate)
+    val staffFlow = RunnableStaffing.staffMinutesFlow(someShifts, someFixedPoints, someMovements, () => updateDate, (_, _, _) => Future.successful(Done))
     val source = Source.queue[TerminalUpdateRequest](1, OverflowStrategy.fail)
     val queue = staffFlow.to(Sink.actorRef(probe.ref, "Done", _ => ())).runWith(source)
     queue

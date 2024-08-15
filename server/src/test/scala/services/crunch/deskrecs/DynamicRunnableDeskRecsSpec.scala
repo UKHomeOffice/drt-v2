@@ -165,6 +165,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EGate, 50, None, None),
       ), TerminalAverage, None, Percentage)),
       updateCapacity = _ => Future.successful(Done),
+      setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
     )
     val crunchRequest: MillisSinceEpoch => CrunchRequest =
       (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)

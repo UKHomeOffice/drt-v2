@@ -297,49 +297,57 @@ class TestDrtActor extends Actor {
           addArrivalPredictions = tc.addArrivalPredictions)
 
         val crunchRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
-          TestProbe().ref,
-          SortedSet.empty[ProcessingRequest],
-          crunchRequest,
-          OptimisationProviders.flightsWithSplitsProvider(portStateActor),
-          portDeskRecs,
-          () => Future.successful(RedListUpdates.empty),
-          DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
-          _ => Future.successful(StatusReply.Ack),
-          splitsCalculator.terminalSplits,
-          minuteLookups.queueLoadsMinutesActor,
-          tc.airportConfig.queuesByTerminal,
-          paxFeedSourceOrder,
+          crunchQueueActor = TestProbe().ref,
+          crunchQueue = SortedSet.empty[ProcessingRequest],
+          crunchRequest = crunchRequest,
+          flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
+          deskRecsProvider = portDeskRecs,
+          redListUpdatesProvider = () => Future.successful(RedListUpdates.empty),
+          queueStatusProvider = DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
+          updateLivePaxView = _ => Future.successful(StatusReply.Ack),
+          terminalSplits = splitsCalculator.terminalSplits,
+          queueLoadsActor = minuteLookups.queueLoadsMinutesActor,
+          queuesByTerminal = tc.airportConfig.queuesByTerminal,
+          paxFeedSourceOrder = paxFeedSourceOrder,
           updateCapacity = _ => Future.successful(Done),
+          setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
         )
 
         val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
-          TestProbe().ref,
-          SortedSet.empty[ProcessingRequest],
-          crunchRequest,
-          OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-          deskLimitsProviders,
-          portDeskRecs.loadsToDesks,
-          portStateActor)
+          deskRecsQueueActor = TestProbe().ref,
+          deskRecsQueue = SortedSet.empty[ProcessingRequest],
+          crunchRequest = crunchRequest,
+          paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+          deskLimitsProvider = deskLimitsProviders,
+          loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+          queueMinutesSinkActor = portStateActor,
+          setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
+        )
 
         val (deploymentRequestActor, deploymentsKillSwitch) = DynamicRunnableDeployments(
-          TestProbe().ref,
-          SortedSet.empty[ProcessingRequest],
-          staffToDeskLimits,
-          crunchRequest,
-          OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-          OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, tc.airportConfig.terminals),
-          portDeskRecs.loadsToSimulations,
-          portStateActor)
+          deploymentQueueActor = TestProbe().ref,
+          deploymentQueue = SortedSet.empty[ProcessingRequest],
+          staffToDeskLimits = staffToDeskLimits,
+          crunchRequest = crunchRequest,
+          paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+          staffMinutesProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, tc.airportConfig.terminals),
+          loadsToDeployments = portDeskRecs.loadsToSimulations,
+          terminals = tc.airportConfig.terminals,
+          queueMinutesSinkActor = portStateActor,
+          setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
+        )
 
         val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = RunnableStaffing(
-          TestProbe().ref,
-          SortedSet.empty[ProcessingRequest],
-          crunchRequest,
-          liveShiftsReadActor,
-          liveFixedPointsReadActor,
-          liveStaffMovementsReadActor,
-          portStateActor,
-          tc.now)
+          staffingQueueActor = TestProbe().ref,
+          staffQueue = SortedSet.empty[ProcessingRequest],
+          crunchRequest = crunchRequest,
+          shiftsActor = liveShiftsReadActor,
+          fixedPointsActor = liveFixedPointsReadActor,
+          movementsActor = liveStaffMovementsReadActor,
+          staffMinutesActor = portStateActor,
+          now = tc.now,
+          setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
+        )
 
         liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
         liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)

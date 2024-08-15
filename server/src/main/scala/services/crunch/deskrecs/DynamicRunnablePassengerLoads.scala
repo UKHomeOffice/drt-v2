@@ -1,6 +1,5 @@
 package services.crunch.deskrecs
 
-import actors.persistent.SortedActorRefSource
 import akka.actor.ActorRef
 import akka.pattern.StatusReply
 import akka.stream.scaladsl.{Flow, Source}
@@ -16,27 +15,12 @@ import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.collection.SortedSet
-import scala.collection.immutable.{NumericRange, SortedMap}
+import scala.collection.immutable.SortedMap
 import scala.concurrent.{ExecutionContext, Future}
 
-
-trait DrtRunnableGraph {
-  def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[ProcessingRequest, A, NotUsed],
-                                           persistentQueueActor: ActorRef,
-                                           initialQueue: SortedSet[ProcessingRequest],
-                                           sinkActor: ActorRef,
-                                           graphName: String,
-                                           processingRequest: MillisSinceEpoch => ProcessingRequest,
-                                          )
-                                          (implicit mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource(persistentQueueActor, processingRequest, initialQueue, graphName)
-    QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
-  }
-
-}
 
 object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
   private val log: Logger = LoggerFactory.getLogger(getClass)
@@ -54,6 +38,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
             queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
             paxFeedSourceOrder: List[FeedSource],
             updateCapacity: UtcDate => Future[Done],
+            setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
            )
            (implicit ec: ExecutionContext, mat: Materializer): ActorRef = {
     val passengerLoadsFlow: Flow[ProcessingRequest, MinutesContainer[CrunchApi.PassengersMinute, TQM], NotUsed] =
@@ -67,6 +52,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         paxFeedSourceOrder = paxFeedSourceOrder,
         terminalSplits = terminalSplits,
         updateCapacity = updateCapacity,
+        setUpdatedAtForDay = setUpdatedAtForDay,
       )
 
     val (crunchRequestQueueActor, _: UniqueKillSwitch) =
@@ -90,6 +76,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
                                    paxFeedSourceOrder: List[FeedSource],
                                    terminalSplits: Terminal => Option[Splits],
                                    updateCapacity: UtcDate => Future[Done],
+                                   setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
                                   )
                                   (implicit
                                    ec: ExecutionContext,
@@ -106,13 +93,16 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         datesToUpdate.foreach(updateCapacity)
       }
       .via(Flow[(ProcessingRequest, MinutesContainer[PassengersMinute, TQM])].map {
-        case (_, paxMinutes) => paxMinutes
+        case (pr, paxMinutes) =>
+          setUpdatedAtForTerminals(queuesByTerminal.keys, setUpdatedAtForDay, pr)
+          paxMinutes
       })
       .recover {
         case t =>
           log.error(s"Failed to process crunch request", t)
           MinutesContainer.empty[PassengersMinute, TQM]
       }
+
 
   def validApiPercentage(flights: Iterable[ApiFlightWithSplits]): Double = {
     val totalLiveSplits = flights.count(_.hasApi)

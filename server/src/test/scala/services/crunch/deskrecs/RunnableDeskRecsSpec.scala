@@ -122,6 +122,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = splitsCalc.terminalSplits,
       updateCapacity = _ => Future.successful(Done),
+      setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
     )
     val crunchRequest: MillisSinceEpoch => CrunchRequest =
       (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)

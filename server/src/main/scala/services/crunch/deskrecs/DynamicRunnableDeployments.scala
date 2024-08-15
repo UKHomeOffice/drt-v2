@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import akka.NotUsed
+import akka.{Done, NotUsed}
 import akka.actor.ActorRef
 import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.Flow
@@ -12,7 +12,7 @@ import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff
 import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.{Map, NumericRange}
@@ -29,13 +29,18 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
             paxProvider: ProcessingRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
             staffMinutesProvider: ProcessingRequest => Future[Map[Terminal, List[Int]]],
             loadsToDeployments: PassengersToQueueMinutes,
-            queueMinutesSinkActor: ActorRef)
+            terminals: Iterable[Terminal],
+            queueMinutesSinkActor: ActorRef,
+            setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
+           )
            (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
     val deploymentsFlow = DynamicRunnableDeployments.crunchRequestsToDeployments(
       loadsProvider = paxProvider,
       staffProvider = staffMinutesProvider,
       staffToDeskLimits = staffToDeskLimits,
       loadsToQueueMinutes = loadsToDeployments,
+      terminals = terminals,
+      setUpdatedAtForDay = setUpdatedAtForDay,
     )
 
     val (deploymentRequestQueueActor, deploymentsKillSwitch) =
@@ -56,7 +61,10 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
   def crunchRequestsToDeployments(loadsProvider: ProcessingRequest => Future[Map[TQM, PassengersMinute]],
                                   staffProvider: ProcessingRequest => Future[Map[Terminal, List[Int]]],
                                   staffToDeskLimits: StaffToDeskLimits,
-                                  loadsToQueueMinutes: PassengersToQueueMinutes)
+                                  loadsToQueueMinutes: PassengersToQueueMinutes,
+                                  terminals: Iterable[Terminal],
+                                  setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
+                                 )
                                  (implicit executionContext: ExecutionContext): Flow[ProcessingRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
     Flow[ProcessingRequest]
       .mapAsync(1) { request =>
@@ -90,6 +98,7 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
           loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal, "deployments")
             .map { minutes =>
               log.info(s"[deployments] Optimising complete. Took ${SDate.now().millisSinceEpoch - started}ms")
+              setUpdatedAtForTerminals(terminals, setUpdatedAtForDay, request)
               Option(minutes)
             }
             .recover {

@@ -234,7 +234,7 @@ object FlightTableContent {
       ^.className := "arrivals__table__flight-splits",
     )
 
-    val transferPaxTh = <.th("Transfer Pax")
+    val transferPaxTh = <.th(^.className := "arrivals__table__flight_transfer-pax","Transfer Pax")
 
     <.thead(
       ^.className := "sticky-top",
@@ -267,7 +267,7 @@ object FlightTableContent {
         case (label, _) => label != redListHeading || (displayRedListInfo && redListPaxExist)
       }
       .map {
-        case (label, Some(className)) if label == "Est PCP Pax" => <.th(
+        case (label, Some(className)) if label == "Est PCP Pax" => <.th(^.className := "arrivals__table__flight__pcp-pax__header_column",
           <.div(^.cls := className, label)
         )
         case (label, None) if label == "Expected" || label == "Exp" => <.th(

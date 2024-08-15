@@ -1257,8 +1257,17 @@ p {
 .controls-radio-wrapper label, th div {
   display: flex;
   gap: 8px;
-  justify-content: center;
-  align-items: center;
+}
+
+.question-hover {
+  position: relative;
+  cursor: help;
+}
+
+.data-quality-indicator {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  font-style: normal;
 }
 
 .date-quick-days {
@@ -1498,12 +1507,17 @@ p {
 
 .arrivals_table__splits__queue-pax {
   min-width: 60px;
-  text-align: right;
   margin-bottom: 8px;
+  text-align: left;
 }
 
-// Usage table
+.arrivals_table__Splits__split-number {
+  width: 25px;
+  text-align: right;
+}
 
+
+// Usage table
 .usage-table {
   min-height: 1px;
   overflow-x: auto;
@@ -1564,7 +1578,6 @@ th h2 {
 }
 
 .data-quality {
-  border: 1px solid #404252;
   padding: 4px 8px 4px 8px;
   font-weight: 400;
   text-align: left;
@@ -1941,6 +1954,15 @@ th h2 {
   margin-left: 5px;
 }
 
+.arrivals__table__flight__pcp-pax__header {
+  text-align: left;
+}
+
+.arrivals__table__flight__pcp-pax__header_column {
+  border-left: 1px solid #C0C7DE;
+  border-right: 1px solid #C0C7DE;
+}
+
 .arrivals__table__flight__pcp-pax__incoming svg {
   transform: rotate(135deg);
 }
@@ -2050,14 +2072,27 @@ th h2 {
   display: block;
 }
 
+.flight-origin-dfn {
+  font-style: normal;
+}
+
+.dotted-underline {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.flight-pax {
+  max-width: 25px;
+  text-align: right;
+}
+
 .pcp-pax {
   border-right: 1px solid #ccc;
+  border-left: 1px solid #ccc;
 }
 
 .pcp-pax-value {
   display: block;
-  min-width: 30px;
-  text-align: right;
   font-weight: bold;
   padding-bottom: 8px;
 }
@@ -2629,6 +2664,10 @@ div.access-restricted {
   @media (max-width: 800px) {
     width: 100%;
   }
+}
+
+.arrivals__table__flight_transfer-pax {
+  border-left: 1px solid #C0C7DE;
 }
 
 .sr-only {

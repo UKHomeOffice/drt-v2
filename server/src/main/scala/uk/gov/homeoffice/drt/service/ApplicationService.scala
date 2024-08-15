@@ -94,7 +94,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
   private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
 
-  val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
+  private val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val crunchRequestProvider: LocalDate => CrunchRequest =
     date => CrunchRequest(date, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
@@ -203,7 +203,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private val egatesProvider: () => Future[PortEgateBanksUpdates] = () => egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates]
 
-  val crunchManagerActor: ActorRef = system.actorOf(CrunchManagerActor.props(flightsProvider.allTerminalsDateRangeScheduledOrPcp), name = "crunch-manager-actor")
+  val crunchManagerActor: ActorRef = system.actorOf(
+    CrunchManagerActor.props(flightsProvider.allTerminalsDateRangeScheduledOrPcp),
+    name = "crunch-manager-actor")
 
   val addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] =
     ArrivalPredictions(
@@ -243,12 +245,14 @@ case class ApplicationService(journalType: StreamingJournalLike,
         airportConfig.portCode,
         actorService.flightsRouterActor,
         splitsCalculator.splitsForManifest,
-        manifestLookupService.maybeBestAvailableManifest)
+        manifestLookupService.maybeBestAvailableManifest,
+      )
 
       val (historicPaxQueueActor, historicPaxKillSwitch) = RunnableHistoricPax(
         airportConfig.portCode,
         actorService.flightsRouterActor,
-        manifestLookupService.maybeHistoricManifestPax)
+        manifestLookupService.maybeHistoricManifestPax,
+      )
 
       val (mergeArrivalsRequestQueueActor: ActorRef, mergeArrivalsKillSwitch: UniqueKillSwitch) = RunnableMergedArrivals(
         portCode = airportConfig.portCode,
@@ -259,7 +263,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
         mergeArrivalsQueue = mergeArrivalsQueue,
         mergeArrivalRequest = mergeArrivalRequest,
         setPcpTimes = setPcpTimes,
-        addArrivalPredictions = addArrivalPredictions)
+        addArrivalPredictions = addArrivalPredictions,
+      )
+
 
       val crunchRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
         crunchQueueActor = actors.crunchQueueActor,
@@ -274,37 +280,61 @@ case class ApplicationService(journalType: StreamingJournalLike,
         queueLoadsActor = minuteLookups.queueLoadsMinutesActor,
         queuesByTerminal = airportConfig.queuesByTerminal,
         paxFeedSourceOrder = feedService.paxFeedSourceOrder,
-        updateCapacity =  updateAndPersistCapacity
+        updateCapacity = updateAndPersistCapacity,
+        setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
+          airportConfig.portCode,
+          aggregatedDb,
+          _.paxLoadsUpdatedAt,
+          (status, updatedAt) => status.copy(paxLoadsUpdatedAt = Option(updatedAt))),
       )
 
       val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
-        actors.deskRecsQueueActor,
-        deskRecsQueue,
-        crunchRequest,
-        OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-        deskLimitsProviders,
-        portDeskRecs.loadsToDesks,
-        minuteLookups.queueMinutesRouterActor)
+        deskRecsQueueActor = actors.deskRecsQueueActor,
+        deskRecsQueue = deskRecsQueue,
+        crunchRequest = crunchRequest,
+        paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+        deskLimitsProvider = deskLimitsProviders,
+        loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+        queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
+        setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
+          airportConfig.portCode,
+          aggregatedDb,
+          _.deskRecommendationsUpdatedAt,
+          (status, updatedAt) => status.copy(deskRecommendationsUpdatedAt = Option(updatedAt))),
+      )
 
       val (deploymentRequestQueueActor: ActorRef, deploymentsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeployments(
-        actors.deploymentQueueActor,
-        deploymentQueue,
-        staffToDeskLimits,
-        crunchRequest,
-        OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-        OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
-        portDeskRecs.loadsToSimulations,
-        minuteLookups.queueMinutesRouterActor)
+        deploymentQueueActor = actors.deploymentQueueActor,
+        deploymentQueue = deploymentQueue,
+        staffToDeskLimits = staffToDeskLimits,
+        crunchRequest = crunchRequest,
+        paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
+        staffMinutesProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
+        loadsToDeployments = portDeskRecs.loadsToSimulations,
+        terminals = airportConfig.terminals,
+        queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
+        setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
+          airportConfig.portCode,
+          aggregatedDb,
+          _.staffDeploymentsUpdatedAt,
+          (status, updatedAt) => status.copy(staffDeploymentsUpdatedAt = Option(updatedAt))),
+      )
 
       val (staffingUpdateRequestQueue: ActorRef, staffingUpdateKillSwitch: UniqueKillSwitch) = RunnableStaffing(
-        actors.staffingQueueActor,
-        staffQueue,
-        crunchRequest,
-        actorService.liveShiftsReadActor,
-        actorService.liveFixedPointsReadActor,
-        actorService.liveStaffMovementsReadActor,
-        minuteLookups.staffMinutesRouterActor,
-        now)
+        staffingQueueActor = actors.staffingQueueActor,
+        staffQueue = staffQueue,
+        crunchRequest = crunchRequest,
+        shiftsActor = actorService.liveShiftsReadActor,
+        fixedPointsActor = actorService.liveFixedPointsReadActor,
+        movementsActor = actorService.liveStaffMovementsReadActor,
+        staffMinutesActor = minuteLookups.staffMinutesRouterActor,
+        now = now,
+        setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
+          airportConfig.portCode,
+          aggregatedDb,
+          _.staffUpdatedAt,
+          (status, updatedAt) => status.copy(staffUpdatedAt = Option(updatedAt))),
+      )
 
       actorService.liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       actorService.liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
@@ -377,7 +407,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     splitsCalculator.splitsForManifest,
   )
 
-  val arrivalStats: ArrivalStatsDao = ArrivalStatsDao(aggregatedDb, now, airportConfig.portCode)
+  val arrivalStatsDao: ArrivalStatsDao = ArrivalStatsDao(aggregatedDb, now, airportConfig.portCode)
 
   private val daysInYear = 365
   private val retentionPeriod: FiniteDuration = (params.retainDataForYears * daysInYear).days
