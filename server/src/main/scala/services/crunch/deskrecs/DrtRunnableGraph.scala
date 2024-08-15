@@ -1,17 +1,17 @@
 package services.crunch.deskrecs
 
 import actors.persistent.SortedActorRefSource
-import akka.{Done, NotUsed}
 import akka.actor.ActorRef
-import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.Flow
+import akka.stream.{Materializer, UniqueKillSwitch}
+import akka.{Done, NotUsed}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
 import slick.lifted.Rep
 import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
-import uk.gov.homeoffice.drt.db.{StatusDaily, StatusDailyTable}
 import uk.gov.homeoffice.drt.db.dao.StatusDailyDao
+import uk.gov.homeoffice.drt.db.tables.{StatusDaily, StatusDailyTable}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
