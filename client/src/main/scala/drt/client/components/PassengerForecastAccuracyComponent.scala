@@ -49,7 +49,7 @@ object PassengerForecastAccuracyComponent {
               )),
               accuracy.pax.getOrElse(props.terminal, SortedMap[Int, Option[Double]]()).map {
                 case (daysAhead, accuracyPct) =>
-                  DataQualityIndicator(ForecastAccuracyDataQuality(daysAhead, accuracyPct.map(p => p.round.toInt)), props.terminal, s"$daysAhead-day-forecast")
+                  DataQualityIndicator(ForecastAccuracyDataQuality(daysAhead, accuracyPct.map(p => p.round.toInt)), props.terminal, s"$daysAhead-day-forecast", icon = true)
               }.toTagMod
             )
           })

@@ -21,7 +21,6 @@ import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
-import uk.gov.homeoffice.drt.ports.PaxTypes.VisaNational
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -214,11 +213,13 @@ object FlightTableRow {
           pcpTimeRange(flightWithSplits, props.airportConfig.firstPaxOffMillis, props.walkTimes, props.paxFeedSourceOrder),
           ^.className := "arrivals__table__flight-est-pcp"
         ),
-        <.td(^.textAlign := "left",
-          FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
-          pcpPaxDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "pax-rag")),
+        <.td(
+          <.div(^.className := "flight-pax",
+            FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
+          pcpPaxDataQuality.map(dq =>
+            DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false)),
           ^.className := s"pcp-pax",
-        ),
+        )
       )
 
       val flightFields = firstCells ++ lastCells
@@ -231,10 +232,13 @@ object FlightTableRow {
         <.span(^.className := "flex-uniform-size",
           props.splitsQueueOrder.map { q =>
             val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
-            <.div(pax, ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
+            <.div(
+              <.div(^.className := "arrivals_table__Splits__split-number", pax),
+              ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
           }.toTagMod,
         ),
-        splitsDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "splits-rag")),
+        splitsDataQuality.map(dq =>
+          DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false)),
       )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
@@ -246,7 +250,9 @@ object FlightTableRow {
         ^.className := trClassName,
         flightFields.toTagMod,
         queueSplits,
-        if (props.hasTransfer) <.td(FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder)) else EmptyVdom
+        if (props.hasTransfer)
+          <.td(^.className := "arrivals__table__flight_transfer-pax", FlightComponents.paxTransferComponent(flight, props.paxFeedSourceOrder))
+        else EmptyVdom
       )
     }
     .configure(Reusability.shouldComponentUpdate)

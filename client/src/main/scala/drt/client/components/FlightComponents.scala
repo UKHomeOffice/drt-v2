@@ -38,7 +38,7 @@ object FlightComponents {
     }
     object PortForecastData extends PcpPaxDataQuality {
       val `type`: String = "warning"
-      val text: String = "Port forecast data"
+      val text: String = "Port forecast"
       override val maybeTooltip: Option[String] = Option("Data from the port operator")
     }
     object MlData extends PcpPaxDataQuality {
@@ -90,7 +90,9 @@ object FlightComponents {
 
     <.div(
       ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData underline",
-      <.span(Tippy.describe(paxNumberSources(flightWithSplits), <.span(^.className := s"pcp-pax-value $noPcpPaxClass", pcpPaxNumber))),
+      <.span(Tippy.describe(
+        paxNumberSources(flightWithSplits), <.span(^.className := s"pcp-pax-value $noPcpPaxClass", pcpPaxNumber))
+      ),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
           if (directRedListFlight.incomingDiversion) s"Passengers diverted from ${flightWithSplits.apiFlight.Terminal}"
@@ -121,7 +123,7 @@ object FlightComponents {
 
     object HistoricalCarrierData extends SplitsDataQuality {
       val `type`: String = "warning"
-      val text: String = "Historical carrier data"
+      val text: String = "Past carrier data"
       override val maybeTooltip: Option[String] = Option("Based on historical Advance Passenger Information (API) from this flight or route")
     }
 
@@ -164,10 +166,7 @@ object FlightComponents {
 
   def paxTransferComponent(flight: Arrival, paxFeedSourceOrder: List[FeedSource]): VdomTagOf[Div] = {
     val transPax = if (flight.Origin.isCta) "-" else flight.bestPaxEstimate(paxFeedSourceOrder).passengers.transit.getOrElse("-")
-    <.div(
-      ^.className := "right",
-      s"$transPax"
-    )
+    <.div(^.className := "arrivals_table__Splits__split-number", s"$transPax")
   }
 
   def paxTypeAndQueueString(ptqc: PaxTypeAndQueue) = s"${ptqc.displayName}"
