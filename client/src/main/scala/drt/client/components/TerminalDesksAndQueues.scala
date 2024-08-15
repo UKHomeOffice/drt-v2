@@ -195,7 +195,7 @@ object TerminalDesksAndQueues {
 
         <.div(^.className := "view-controls",
           <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod),
-          <.div(^.className := "display-view-controls-selector", displayTypeControls.toTagMod),
+          <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod),
         )
       }
 
