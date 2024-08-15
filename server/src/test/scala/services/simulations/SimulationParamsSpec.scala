@@ -121,32 +121,31 @@ class SimulationParamsSpec extends Specification {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
     val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100),transPax = Option(50)).toArrival(LiveFeedSource), Set())
-    val flights = FlightsWithSplits(List(
-      flightWithSplits
-    ).map(a => a.apiFlight.unique -> a).toMap)
+    val flights = FlightsWithSplits(Seq(flightWithSplits))
 
     val result = weightingOfOne.applyPassengerWeighting(flights)
 
-    result.flights.values.head.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder) === flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder)
+    sumPcpPax(result) === sumPcpPax(flights)
   }
 
   "Given I am applying a passenger weighting to a flight, it should have the ScenarioSimulationSource added to it" >> {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
     val flights = FlightsWithSplits(
-      List(ApiFlightWithSplits(ArrivalGenerator.live(totalPax = None).toArrival(LiveFeedSource), Set())).map(a => a.apiFlight.unique -> a).toMap)
+      List(ApiFlightWithSplits(ArrivalGenerator.live(totalPax = None).toArrival(LiveFeedSource), Set()))
+    )
 
     val result = weightingOfOne.applyPassengerWeighting(flights)
 
     result.flights.values.head.apiFlight.FeedSources === Set(LiveFeedSource, ScenarioSimulationSource)
   }
 
-  "Given I am applying a passenger weighting of 1.5 to some flights then passenger numbers and trans numbers shoudl be doubled" >> {
+  "Given I am applying a passenger weighting of 1.5 to some flights then pcp numbers increase by that factor" >> {
     val weightingOfTwo = simulation.copy(passengerWeighting = 1.5)
 
     val fws = FlightsWithSplits(List(
       ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100), transPax = Option(50)).toArrival(LiveFeedSource), Set())
-    ).map(a => a.apiFlight.unique -> a).toMap)
+    ))
 
     val result = weightingOfTwo.applyPassengerWeighting(fws)
 

@@ -64,6 +64,7 @@ object Scenarios {
       paxFeedSourceOrder = paxFeedSourceOrder,
       terminalSplits = splitsCalculator.terminalSplits,
       updateCapacity = _ => Future.successful(Done),
+      setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
     )
 
     class DummyPersistentActor extends Actor {
