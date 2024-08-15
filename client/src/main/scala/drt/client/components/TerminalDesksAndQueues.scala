@@ -186,16 +186,16 @@ object TerminalDesksAndQueues {
         val displayTypeControls = List(
           <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.displayType == TableView, ^.onChange ==> toggleDisplayType(TableView), ^.id := "display-table"),
-            <.label(^.`for` := "display-table", "Table view", " ", Tippy.infoHover("View queue data in a table"))
+            <.label(^.`for` := "display-table", "Table view")
           ),
           <.div(^.className := s"controls-radio-wrapper",
             <.input.radio(^.checked := state.displayType == ChartsView, ^.onChange ==> toggleDisplayType(ChartsView), ^.id := "display-charts"),
-            <.label(^.`for` := "display-charts", "Charts view", " ", Tippy.infoHover("View queue data in visual charts"))
+            <.label(^.`for` := "display-charts", "Charts view")
           ))
 
         <.div(^.className := "view-controls",
           <.div(^.className := "view-controls-selector", deskTypeControls.toTagMod),
-          <.div(^.className := "view-controls-selector", displayTypeControls.toTagMod),
+          <.div(^.className := "display-view-controls-selector", displayTypeControls.toTagMod),
         )
       }
 
