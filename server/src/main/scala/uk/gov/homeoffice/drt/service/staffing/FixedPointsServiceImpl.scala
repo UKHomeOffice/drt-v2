@@ -1,6 +1,7 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import actors.persistent.staffing.{FixedPointsReadActor, SetFixedPoints}
+import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
+import actors.persistent.staffing.FixedPointsReadActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask
 import akka.util.Timeout

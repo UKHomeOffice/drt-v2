@@ -1,5 +1,6 @@
 package services.staffing
 
+import akka.Done
 import akka.actor.ActorSystem
 import akka.testkit.TestProbe
 import akka.util.Timeout
@@ -9,7 +10,7 @@ import uk.gov.homeoffice.drt.ports.config.Lhr
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.concurrent.duration.DurationInt
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
 class StaffMinutesCheckerSpec extends Specification {
   "Given a StaffMinutesChecker with LHR's config and max-forecast-days of 2" >> {
@@ -21,7 +22,7 @@ class StaffMinutesCheckerSpec extends Specification {
 
       val today = SDate("2023-01-08T10:00")
       val forecastMaxDays = 3
-      val checker = StaffMinutesChecker(() => today, testProbe.ref, forecastMaxDays, Lhr.config)
+      val checker = StaffMinutesChecker(() => today, testProbe.ref, forecastMaxDays, Lhr.config, (_, _) => Future.successful(Done))
       checker.calculateForecastStaffMinutes()
 
       val expected = for {

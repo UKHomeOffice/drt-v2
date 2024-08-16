@@ -3,7 +3,7 @@ package actors.persistent.staffing
 import actors._
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
-import actors.persistent.staffing.StaffMovementsActor.{staffMovementMessagesToStaffMovements, terminalUpdateRequests}
+import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements, staffMovementMessagesToStaffMovements, terminalUpdateRequests}
 import actors.routing.SequentialWritesActor
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
@@ -78,6 +78,13 @@ trait StaffMovementsActorLike {
 
 object StaffMovementsActor extends StaffMovementsActorLike {
 
+  trait MovementUpdate
+
+  case class AddStaffMovements(movementsToAdd: Seq[StaffMovement]) extends MovementUpdate
+
+  case class RemoveStaffMovements(movementUuidsToRemove: String) extends MovementUpdate
+
+
   def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements =
     StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
@@ -120,12 +127,6 @@ case class StaffMovementsState(staffMovements: StaffMovements) {
 
   def -(movementsToRemove: Seq[String]): StaffMovementsState = copy(staffMovements = staffMovements - movementsToRemove)
 }
-
-trait MovementUpdate
-
-case class AddStaffMovements(movementsToAdd: Seq[StaffMovement]) extends MovementUpdate
-
-case class RemoveStaffMovements(movementUuidsToRemove: String) extends MovementUpdate
 
 
 class StaffMovementsActor(val now: () => SDateLike,
@@ -206,10 +207,6 @@ class StaffMovementsActor(val now: () => SDateLike,
 
     case SaveSnapshotFailure(md, cause) =>
       log.error(s"Save snapshot failure: $md", cause)
-
-    case SaveSnapshot =>
-      log.info(s"Received request to snapshot")
-      takeSnapshot(stateToMessage)
 
     case StreamCompleted => log.warn("Received shutdown")
 

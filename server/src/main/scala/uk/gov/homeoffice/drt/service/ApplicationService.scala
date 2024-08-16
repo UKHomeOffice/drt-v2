@@ -366,7 +366,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
       log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString}")
 
-      val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
+//      val setConfiguredMinimumStaff: (Terminal, LocalDate) => Future[Done] =
+//        (terminal, date) => {
+//          actorService.liveShiftsReadActor.ask()
+//        }
+      val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig, (_, _) => Future.successful(Done))
 
       system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
 

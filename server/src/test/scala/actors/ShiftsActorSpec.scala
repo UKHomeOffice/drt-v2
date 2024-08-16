@@ -1,6 +1,7 @@
 package actors
 
-import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor, UpdateShifts}
+import actors.persistent.staffing.ShiftsActor.UpdateShifts
+import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern.StatusReply
 import akka.testkit.ImplicitSender

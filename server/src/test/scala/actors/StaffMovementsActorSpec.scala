@@ -1,6 +1,7 @@
 package actors
 
 
+import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements}
 import actors.persistent.staffing._
 import akka.actor.{PoisonPill, Props}
 import akka.pattern.StatusReply

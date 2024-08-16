@@ -4,7 +4,7 @@ import actors.DrtStaticParameters.startOfTheMonth
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
-import actors.persistent.staffing.ShiftsActor.applyUpdatedShifts
+import actors.persistent.staffing.ShiftsActor.{ReplaceAllShifts, UpdateShifts, applyUpdatedShifts}
 import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
 import actors.routing.SequentialWritesActor
 import actors.{ExpiryActorLike, StreamingJournalLike}
@@ -30,13 +30,7 @@ import scala.util.Try
 
 case object GetFeedStatuses
 
-trait ShiftUpdate
-
-case class ReplaceAllShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
-
-case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
-
-case object SaveSnapshot
+//case object SaveSnapshot
 
 trait ShiftsActorLike {
   def persistenceId = "shifts-store"
@@ -102,6 +96,12 @@ trait ShiftsActorLike {
 
 object ShiftsActor extends ShiftsActorLike {
   val snapshotInterval = 5000
+
+  trait ShiftUpdate
+
+  case class ReplaceAllShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
+
+  case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = shiftsToUpdate
@@ -228,10 +228,6 @@ class ShiftsActor(val now: () => SDateLike,
 
     case SaveSnapshotFailure(md, cause) =>
       log.error(s"Save snapshot failure: $md", cause)
-
-    case SaveSnapshot =>
-      log.info(s"Received request to snapshot")
-      takeSnapshot(stateToMessage)
 
     case StreamCompleted => log.warn("Received shutdown")
 
