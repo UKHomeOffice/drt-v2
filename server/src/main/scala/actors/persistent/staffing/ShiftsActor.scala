@@ -22,7 +22,7 @@ import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable
 import scala.util.Try
@@ -122,6 +122,41 @@ object ShiftsActor extends ShiftsActorLike {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
+
+  def updateMinimum(newMin: Int, previousMin: Option[Int], currentStaff: Int): Int = (previousMin, newMin) match {
+    case (None, n) =>
+      if (currentStaff <= n) n else currentStaff
+    case (Some(o), n) =>
+      val threshold = if (o > n) o else n
+      if (currentStaff <= threshold) n else currentStaff
+  }
+
+  def updateMinimumStaff(terminal: Terminal, date: LocalDate, newMinimum: Int, previousMinimum: Option[Int], assignments: ShiftAssignments): ShiftAssignments = {
+    val startMinute = SDate(date).millisSinceEpoch
+    val endMinute = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
+    val threshold = (previousMinimum, newMinimum) match {
+      case (None, n) => n
+      case (Some(o), n) => if (o > n) o else n
+    }
+
+    (startMinute to endMinute by MilliTimes.oneMinuteMillis).foldLeft(assignments) {
+      case (currentAssignments, minute) =>
+        currentAssignments.assignments.find(sa => sa.terminal == terminal && sa.start <= minute && sa.end >= minute) match {
+          case Some(existingAssignment) if previousMinimum.exists(pm => pm > existingAssignment.numberOfStaff) =>
+          case None =>
+            val newAssignment = StaffAssignment("", terminal, minute, minute + MilliTimes.oneMinuteMillis, newMinimum, None)
+            ShiftAssignments(applyUpdatedShifts(currentAssignments.assignments, Seq(newAssignment)))
+          case Some(existingAssignment) if previousMinimum.contains(existingAssignment.numberOfStaff) =>
+            val newStaff = existingAssignment.numberOfStaff - previousMinimum.getOrElse(0) + newMinimum
+            val newAssignment = StaffAssignment("", terminal, minute, minute + MilliTimes.oneMinuteMillis, newStaff, None)
+            ShiftAssignments(applyUpdatedShifts(currentAssignments.assignments, Seq(newAssignment)))
+        }
+        val currentStaff = currentAssignments.terminalStaffAt(terminal, SDate(minute), SDate.apply)
+        val newStaff = currentStaff - previousMinimum.getOrElse(0) + newMinimum
+        val newAssignment = StaffAssignment("", terminal, minute, minute + MilliTimes.oneMinuteMillis, newStaff, None)
+        ShiftAssignments(applyUpdatedShifts(currentAssignments.assignments, Seq(newAssignment)))
+    }
+  }
 }
 
 

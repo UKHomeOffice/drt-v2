@@ -171,6 +171,24 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
   }
 
+  "updateMinimum" should {
+    "update the existing level if the new minimum is above the existing level" in {
+      ShiftsActor.updateMinimum(10, Option(15), 9) === 10
+      ShiftsActor.updateMinimum(10, Option(15), 14) === 10
+      ShiftsActor.updateMinimum(10, Option(15), 15) === 10
+      ShiftsActor.updateMinimum(10, Option(15), 16) === 16
+
+      ShiftsActor.updateMinimum(10, Option(5), 4) === 10
+      ShiftsActor.updateMinimum(10, Option(5), 5) === 10
+      ShiftsActor.updateMinimum(10, Option(5), 6) === 10
+      ShiftsActor.updateMinimum(10, Option(5), 11) === 11
+
+      ShiftsActor.updateMinimum(10, None, 9) === 10
+      ShiftsActor.updateMinimum(10, None, 10) === 10
+      ShiftsActor.updateMinimum(10, None, 11) === 11
+    }
+  }
+
   def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsActor(now, expiryDateXDaysFrom(now, 1), 10)))
   def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsReadActor(now(), expiryDateXDaysFrom(now, 1))))
 
