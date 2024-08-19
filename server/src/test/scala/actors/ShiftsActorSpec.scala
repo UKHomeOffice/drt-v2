@@ -191,7 +191,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
   "updateMinimumStaff" should {
     "create shift assignments with the minimum level where there are none existing" in {
-      val shifts = updateMinimumStaff(T1, LocalDate(2024, 8, 18), 10, None, ShiftAssignments.empty)
+      val shifts = updateMinimumStaff(T1, LocalDate(2024, 8, 18), LocalDate(2024, 8, 18), 10, None, ShiftAssignments.empty)
 
       shifts.assignments.length === 96
       shifts.assignments.forall(_.numberOfStaff === 10) === true
@@ -202,7 +202,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
         val endTime = startTime.addMinutes(14)
         StaffAssignment(s"Shift $i", T1, startTime.millisSinceEpoch, endTime.millisSinceEpoch, 5, None)
       })
-      val shifts = updateMinimumStaff(T1, LocalDate(2024, 8, 18), 10, Option(5), ShiftAssignments(existingShifts))
+      val shifts = updateMinimumStaff(T1, LocalDate(2024, 8, 18), LocalDate(2024, 8, 18), 10, Option(5), existingShifts)
 
       shifts.assignments.length === 96
       shifts.assignments.forall(_.numberOfStaff === 10) === true

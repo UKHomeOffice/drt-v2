@@ -96,11 +96,11 @@ class StaffingController @Inject()(cc: ControllerComponents,
     }
   }
 
-  def getMinimumStaff(terminalStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
+  def getMinimumStaff(terminalName: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async {
-      ctrl.applicationService.getTerminalConfig(Terminal(terminalStr)).map {
+      ctrl.applicationService.getTerminalConfig(Terminal(terminalName)).map {
         case Some(config) =>
-          Ok(write(TerminalMinimumStaff(terminalStr, config.minimumRosteredStaff.getOrElse(0))))
+          Ok(write(TerminalMinimumStaff(terminalName, config.minimumRosteredStaff.getOrElse(0))))
         case None =>
           NotFound
       }
