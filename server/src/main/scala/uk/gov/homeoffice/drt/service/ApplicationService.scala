@@ -5,6 +5,7 @@ import actors._
 import actors.daily.{PassengersActor, RequestAndTerminate}
 import actors.persistent._
 import actors.persistent.arrivals.AclForecastArrivalsActor
+import actors.persistent.staffing.ShiftsActor
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
@@ -49,6 +50,8 @@ import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeP
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.db.AggregateDb
+import uk.gov.homeoffice.drt.db.dao.PortTerminalConfigDao
+import uk.gov.homeoffice.drt.db.tables.PortTerminalConfig
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -153,6 +156,16 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
     PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
+
+  val getTerminalConfig: Terminal => Future[Option[PortTerminalConfig]] =
+    terminal => {
+      aggregatedDb.run(PortTerminalConfigDao.get(airportConfig.portCode)(ec)(terminal))
+    }
+
+  val updateTerminalConfig: PortTerminalConfig => Future[Int] =
+    portTerminalConfig => {
+      aggregatedDb.run(PortTerminalConfigDao.insertOrUpdate(airportConfig.portCode)(portTerminalConfig))
+    }
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2.minutes)
 
@@ -366,11 +379,17 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
       log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString}")
 
-//      val setConfiguredMinimumStaff: (Terminal, LocalDate) => Future[Done] =
-//        (terminal, date) => {
-//          actorService.liveShiftsReadActor.ask()
-//        }
-      val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig, (_, _) => Future.successful(Done))
+      val setConfiguredMinimumStaff: (Terminal, LocalDate) => Future[Done] =
+        (terminal, date) => {
+          aggregatedDb.run(PortTerminalConfigDao.get(airportConfig.portCode)(ec)(terminal))
+            .map(_.flatMap(_.minimumRosteredStaff))
+            .flatMap { minStaff =>
+              log.info(s"Setting configured minimum staff for $terminal on $date to $minStaff")
+              actorService.shiftsSequentialWritesActor.ask(ShiftsActor.SetMinimumStaff(terminal, date, date, minStaff, None)).mapTo[Done]
+            }
+        }
+
+      val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig, setConfiguredMinimumStaff)
 
       system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
 

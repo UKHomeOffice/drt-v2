@@ -4,7 +4,7 @@ import actors.DrtStaticParameters.startOfTheMonth
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
-import actors.persistent.staffing.ShiftsActor.{ReplaceAllShifts, UpdateShifts, applyUpdatedShifts}
+import actors.persistent.staffing.ShiftsActor.{ReplaceAllShifts, SetMinimumStaff, UpdateShifts, applyUpdatedShifts}
 import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
 import actors.routing.SequentialWritesActor
 import actors.{ExpiryActorLike, StreamingJournalLike}
@@ -104,6 +104,8 @@ object ShiftsActor extends ShiftsActorLike {
 
   case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
+  case class SetMinimumStaff(terminal: Terminal, startDate: LocalDate, endDate: LocalDate, newMinimum: Option[Int], previousMinimum: Option[Int]) extends ShiftUpdate
+
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = shiftsToUpdate
     .foldLeft(existingAssignments) {
@@ -132,9 +134,9 @@ object ShiftsActor extends ShiftsActorLike {
       if (currentStaff <= threshold) n else currentStaff
   }
 
-  def updateMinimumStaff(terminal: Terminal, date: LocalDate, newMinimum: Int, previousMinimum: Option[Int], assignments: ShiftAssignments): ShiftAssignments = {
-    val startMinute = SDate(date).millisSinceEpoch
-    val endMinute = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
+  def updateMinimumStaff(terminal: Terminal, startDate: LocalDate, endDate: LocalDate, newMinimum: Int, previousMinimum: Option[Int], assignments: ShiftAssignments): ShiftAssignments = {
+    val startMinute = SDate(startDate).millisSinceEpoch
+    val endMinute = SDate(endDate).addDays(1).addMinutes(-1).millisSinceEpoch
 
     val fifteenMinutes = 15.minutes
     val fourteenMinutes = 14.minutes
@@ -250,6 +252,22 @@ class ShiftsActor(val now: () => SDateLike,
       } else {
         log.info(s"No change. Nothing to persist")
         sender() ! Iterable()
+      }
+
+    case SetMinimumStaff(terminal, startDate, endDate, maybeNewMinimum, maybePreviousMinimum) =>
+      maybeNewMinimum match {
+        case Some(newMin) =>
+          log.info(s"Setting minimum staff for $terminal on $startDate to $newMin")
+          val updatedAssignments = ShiftsActor.updateMinimumStaff(terminal, startDate, endDate, newMin, maybePreviousMinimum, state)
+          purgeExpiredAndUpdateState(updatedAssignments)
+
+          val createdAt = now()
+          val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(updatedAssignments, createdAt), Option(createdAt.millisSinceEpoch))
+
+          persistAndMaybeSnapshotWithAck(shiftsMessage, List((sender(), StatusReply.Ack)))
+        case None =>
+          log.error(s"To be implemented if required")
+          sender() ! StatusReply.Ack
       }
 
     case SaveSnapshotSuccess(md) =>

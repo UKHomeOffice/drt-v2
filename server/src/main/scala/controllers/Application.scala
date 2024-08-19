@@ -15,7 +15,9 @@ import slickdb._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao, PortTerminalConfigDao}
+import uk.gov.homeoffice.drt.db.tables.PortTerminalConfig
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
@@ -86,7 +88,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   private val isSecure: Boolean = config.get[Boolean]("drt.use-https")
 
-
   log.info(s"Starting DRTv2 build ${BuildInfo.version}")
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
@@ -117,8 +118,8 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       val periodInterval: Int = request.body.asText.getOrElse("60").toInt
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.userService.updateStaffPlanningIntervalMinutes(userEmail, periodInterval).map {
-        case _ => Ok("Updated period")
-      }
+          case _ => Ok("Updated period")
+        }
         .recover {
           case t =>
             log.error(s"Failed to update UpdateStaff Planning Time Period: ${t.getMessage}")

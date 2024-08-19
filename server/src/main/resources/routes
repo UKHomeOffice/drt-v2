@@ -67,6 +67,8 @@ GET           /logged-in                                                        
 
 GET           /shifts/:localDate                                                      controllers.application.StaffingController.getShifts(localDate: String)
 POST          /shifts                                                                 controllers.application.StaffingController.saveShifts
+GET           /shifts/minimum-staff                                                   controllers.application.StaffingController.getMinimumStaff
+POST          /shifts/minimum-staff                                                   controllers.application.StaffingController.saveMinimumStaff
 GET           /shifts-for-month/:monthMillis                                          controllers.application.StaffingController.getShiftsForMonth(monthMillis: Long)
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
@@ -110,7 +112,7 @@ GET           /data/should-user-view-banner                                     
 
 GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
 
-PUT          /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod()
+PUT           /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod()
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
