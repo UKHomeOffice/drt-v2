@@ -1,8 +1,6 @@
 package controllers.application
 
-import actors.persistent.staffing.ShiftsActor
 import akka.NotUsed
-import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
@@ -12,9 +10,8 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.tables.PortTerminalConfig
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaffingService, ShiftsService, StaffMovementsService}
 import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
 
@@ -26,6 +23,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
                                    shiftsService: ShiftsService,
                                    fixedPointsService: FixedPointsService,
                                    movementsService: StaffMovementsService,
+                                   minimumStaffingService: MinimumStaffingService,
                                   ) extends AuthController(cc, ctrl) {
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
@@ -61,34 +59,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
         case Some(text) =>
           val terminalMinStaff = read[MinimumStaff](text)
           val terminal = Terminal(terminalName)
-          ctrl.applicationService.getTerminalConfig(terminal)
-            .flatMap { maybeConfig =>
-              val maybeExistingMinStaff = maybeConfig.flatMap(_.minimumRosteredStaff)
-              val updatedConfig = maybeConfig match {
-                case Some(config) =>
-                  config.copy(minimumRosteredStaff = Some(terminalMinStaff.minimumStaff))
-                case None =>
-                  PortTerminalConfig(
-                    port = ctrl.airportConfig.portCode,
-                    terminal = terminal,
-                    minimumRosteredStaff = Some(terminalMinStaff.minimumStaff),
-                    updatedAt = ctrl.now().millisSinceEpoch
-                  )
-              }
-              ctrl.applicationService.updateTerminalConfig(updatedConfig)
-                .flatMap { _ =>
-                  val today = ctrl.now()
-                  val lastDayOfForecast = today.addDays(ctrl.params.forecastMaxDays).toLocalDate
-                  val request = ShiftsActor.SetMinimumStaff(
-                    terminal,
-                    today.toLocalDate,
-                    lastDayOfForecast,
-                    Option(terminalMinStaff.minimumStaff),
-                    maybeExistingMinStaff
-                  )
-                  ctrl.actorService.shiftsSequentialWritesActor.ask(request)
-                }
-            }
+          minimumStaffingService.setMinimum(terminal, Option(terminalMinStaff.minimumStaff))
           Accepted
         case None =>
           BadRequest
@@ -98,7 +69,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
 
   def getMinimumStaff(terminalName: String): Action[AnyContent] =
     Action.async {
-      ctrl.applicationService.getTerminalConfig(Terminal(terminalName)).map {
+      minimumStaffingService.getTerminalConfig(Terminal(terminalName)).map {
         case Some(config) =>
           Ok(write(MinimumStaff(config.minimumRosteredStaff.getOrElse(0))))
         case None =>
