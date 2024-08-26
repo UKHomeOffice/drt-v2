@@ -102,7 +102,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
         case Some(config) =>
           Ok(write(MinimumStaff(config.minimumRosteredStaff.getOrElse(0))))
         case None =>
-          println(s"not found for ${airportConfig.portCode.iata}, ${T1.toString}")
           NotFound
       }
     }
