@@ -11,7 +11,7 @@ import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaffingService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaff, MinimumStaffingService, ShiftsService, StaffMovementsService}
 import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
 
@@ -45,12 +45,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
           BadRequest
       }
     }
-  }
-
-  case class MinimumStaff(minimumStaff: Int)
-
-  private object MinimumStaff {
-    implicit val rw: ReadWriter[MinimumStaff] = macroRW
   }
 
   def saveMinimumStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
