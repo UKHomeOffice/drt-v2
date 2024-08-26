@@ -13,7 +13,7 @@ import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.tables.PortTerminalConfig
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, ShiftsService, StaffMovementsService}
 import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
@@ -49,18 +49,18 @@ class StaffingController @Inject()(cc: ControllerComponents,
     }
   }
 
-  case class TerminalMinimumStaff(terminal: String, minimumStaff: Int)
+  case class MinimumStaff(minimumStaff: Int)
 
-  object TerminalMinimumStaff {
-    implicit val rw: ReadWriter[TerminalMinimumStaff] = macroRW
+  private object MinimumStaff {
+    implicit val rw: ReadWriter[MinimumStaff] = macroRW
   }
 
-  def saveMinimumStaff: Action[AnyContent] = authByRole(StaffEdit) {
+  def saveMinimumStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
     Action { request =>
       request.body.asText match {
         case Some(text) =>
-          val terminalMinStaff = read[TerminalMinimumStaff](text)
-          val terminal = Terminal(terminalMinStaff.terminal)
+          val terminalMinStaff = read[MinimumStaff](text)
+          val terminal = Terminal(terminalName)
           ctrl.applicationService.getTerminalConfig(terminal)
             .flatMap { maybeConfig =>
               val maybeExistingMinStaff = maybeConfig.flatMap(_.minimumRosteredStaff)
@@ -96,16 +96,16 @@ class StaffingController @Inject()(cc: ControllerComponents,
     }
   }
 
-  def getMinimumStaff(terminalName: String): Action[AnyContent] = authByRole(FixedPointsView) {
+  def getMinimumStaff(terminalName: String): Action[AnyContent] =
     Action.async {
       ctrl.applicationService.getTerminalConfig(Terminal(terminalName)).map {
         case Some(config) =>
-          Ok(write(TerminalMinimumStaff(terminalName, config.minimumRosteredStaff.getOrElse(0))))
+          Ok(write(MinimumStaff(config.minimumRosteredStaff.getOrElse(0))))
         case None =>
+          println(s"not found for ${airportConfig.portCode.iata}, ${T1.toString}")
           NotFound
       }
     }
-  }
 
   def getShiftsForMonth(month: MillisSinceEpoch): Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
