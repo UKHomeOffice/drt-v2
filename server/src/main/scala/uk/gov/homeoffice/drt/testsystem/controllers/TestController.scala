@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
-import actors.persistent.staffing.ReplaceAllShifts
+import actors.persistent.staffing.ShiftsActor.ReplaceAllShifts
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import akka.actor.ActorSystem
 import akka.pattern.ask

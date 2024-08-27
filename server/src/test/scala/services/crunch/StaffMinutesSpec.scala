@@ -1,11 +1,13 @@
 package services.crunch
 
-import actors.persistent.staffing.{AddStaffMovements, SetFixedPoints, UpdateShifts}
+import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
+import actors.persistent.staffing.ShiftsActor.UpdateShifts
+import actors.persistent.staffing.StaffMovementsActor.AddStaffMovements
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared._
-import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.time.SDate
 
 import java.util.UUID
 import scala.collection.immutable.{List, SortedMap}

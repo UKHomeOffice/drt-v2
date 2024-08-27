@@ -3,6 +3,7 @@ package actors.persistent.staffing
 import actors.StreamingJournalLike
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
+import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
 import actors.persistent.staffing.FixedPointsMessageParser.fixedPointMessagesToFixedPoints
 import actors.routing.SequentialWritesActor
 import akka.actor.{ActorRef, ActorSystem, Props}
@@ -90,6 +91,10 @@ trait FixedPointsActorLike {
 }
 
 object FixedPointsActor extends FixedPointsActorLike {
+  trait FixedPointsUpdate
+
+  case class SetFixedPoints(newFixedPoints: Seq[StaffAssignmentLike]) extends FixedPointsUpdate
+
   def sequentialWritesProps(now: () => SDateLike,
                             requestAndTerminateActor: ActorRef,
                             system: ActorSystem
@@ -100,10 +105,6 @@ object FixedPointsActor extends FixedPointsActorLike {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 }
-
-trait FixedPointsUpdate
-
-case class SetFixedPoints(newFixedPoints: Seq[StaffAssignmentLike]) extends FixedPointsUpdate
 
 
 class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with PersistentDrtActor[FixedPointAssignments] {
@@ -171,10 +172,6 @@ class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with Pers
 
     case SaveSnapshotFailure(md, cause) =>
       log.error(s"Save snapshot failure: $md", cause)
-
-    case SaveSnapshot =>
-      log.info(s"Received request to snapshot")
-      takeSnapshot(stateToMessage)
 
     case StreamCompleted => log.warn("Received shutdown")
 

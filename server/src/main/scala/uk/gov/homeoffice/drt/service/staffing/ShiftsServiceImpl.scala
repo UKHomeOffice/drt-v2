@@ -2,7 +2,8 @@ package uk.gov.homeoffice.drt.service.staffing
 
 import actors.DrtStaticParameters.time48HoursAgo
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import actors.persistent.staffing.{ShiftsReadActor, UpdateShifts}
+import actors.persistent.staffing.ShiftsActor.UpdateShifts
+import actors.persistent.staffing.ShiftsReadActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.util.Timeout

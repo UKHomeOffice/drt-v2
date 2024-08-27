@@ -4,17 +4,18 @@ import actors.DrtParameters
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import drt.shared.DropIn
-import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
-import slickdb.{DropInRow, DropInTableLike, DropInsRegistrationRow, DropInsRegistrationTableLike, FeatureGuideRow, FeatureGuideTableLike, FeatureGuideViewLike, UserRow, UserTableLike}
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import slickdb._
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
-import uk.gov.homeoffice.drt.db.{ABFeatureRow, IABFeatureDao, IUserFeedbackDao, UserFeedbackRow}
+import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.sql.Timestamp
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, Future}
 
 case class MockManifestLookupService() extends ManifestLookupLike {
   override def maybeBestAvailableManifest(arrivalPort: PortCode,

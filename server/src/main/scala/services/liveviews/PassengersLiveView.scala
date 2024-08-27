@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
 import uk.gov.homeoffice.drt.db.serialisers.{CapacityHourlySerialiser, PassengersHourlySerialiser}
-import uk.gov.homeoffice.drt.db.{CapacityHourly, PassengersHourly, PassengersHourlyRow}
+import uk.gov.homeoffice.drt.db.tables.{CapacityHourly, PassengersHourly, PassengersHourlyRow}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone

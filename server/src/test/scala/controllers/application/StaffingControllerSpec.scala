@@ -11,9 +11,11 @@ import play.api.mvc.{AnyContentAsEmpty, AnyContentAsText, Headers}
 import play.api.test.Helpers._
 import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.Terminals.T1
+import uk.gov.homeoffice.drt.db.tables.PortTerminalConfig
+import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaff, MinimumStaffingService, ShiftsService, StaffMovementsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import upickle.default.write
 
@@ -192,6 +194,45 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
   }
 
+  "getMinimumStaffing" should {
+    "return the minimum staffing from the mock service as json" in {
+      val authHeader = Headers("X-Forwarded-Groups" -> "LHR")
+      val result = controller
+        .getMinimumStaff("t2")
+        .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
+
+      status(result) must ===(OK)
+      contentAsString(result) must ===(write(MinimumStaff(10)))
+    }
+  }
+
+  "saveMinimumStaffing" should {
+    "return Accepted given the correct permission and a valid value" in {
+      val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
+      val result = controller
+        .saveMinimumStaff("t2")
+        .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsText(write(MinimumStaff(10)))))
+
+      status(result) must ===(ACCEPTED)
+    }
+    "return BadRequest given the correct permission but an invalid value" in {
+      val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
+      val result = controller
+        .saveMinimumStaff("t2")
+        .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsEmpty))
+
+      status(result) must ===(BAD_REQUEST)
+    }
+    "return Forbidden given incorrect permissions" in {
+      val authHeader = Headers("X-Forwarded-Groups" -> "LHR")
+      val result = controller
+        .saveMinimumStaff("t2")
+        .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsEmpty))
+
+      status(result) must ===(FORBIDDEN)
+    }
+  }
+
   "when called without necessary role header, the endpoints" should {
     "return Forbidden for getShifts" in {
       val result = controller
@@ -264,10 +305,17 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
       interface,
       MockShiftsService(shifts),
       MockFixedPointsService(fixedPoints),
-      MockStaffMovementsService(movements)
+      MockStaffMovementsService(movements),
+      MockMinimumStaffingService(),
     )
 
   private def newDrtInterface(): DrtSystemInterface = {
     new TestDrtModule(Lhr.config).provideDrtSystemInterface
   }
+}
+
+case class MockMinimumStaffingService() extends MinimumStaffingService {
+  override val getTerminalConfig: Terminal => Future[Option[PortTerminalConfig]] = _ => Future.successful(Option(PortTerminalConfig(PortCode("STN"), T1, Option(10), 0)))
+
+  override def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[Done] = Future.successful(Done)
 }

@@ -3,7 +3,7 @@ package slickdb
 
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
-import uk.gov.homeoffice.drt.db.StatusDailyTable
+import uk.gov.homeoffice.drt.db.tables.StatusDailyTable
 
 import java.sql.Timestamp
 import scala.concurrent.Future

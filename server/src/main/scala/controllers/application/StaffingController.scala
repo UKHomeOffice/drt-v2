@@ -11,9 +11,9 @@ import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaff, MinimumStaffingService, ShiftsService, StaffMovementsService}
 import uk.gov.homeoffice.drt.time.SDate
-import upickle.default.{read, write}
+import upickle.default._
 
 import scala.concurrent.Future
 
@@ -23,6 +23,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
                                    shiftsService: ShiftsService,
                                    fixedPointsService: FixedPointsService,
                                    movementsService: StaffMovementsService,
+                                   minimumStaffingService: MinimumStaffingService,
                                   ) extends AuthController(cc, ctrl) {
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
@@ -45,6 +46,30 @@ class StaffingController @Inject()(cc: ControllerComponents,
       }
     }
   }
+
+  def saveMinimumStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
+    Action { request =>
+      request.body.asText match {
+        case Some(text) =>
+          val terminalMinStaff = read[MinimumStaff](text)
+          val terminal = Terminal(terminalName)
+          minimumStaffingService.setMinimum(terminal, Option(terminalMinStaff.minimumStaff))
+          Accepted
+        case None =>
+          BadRequest
+      }
+    }
+  }
+
+  def getMinimumStaff(terminalName: String): Action[AnyContent] =
+    Action.async {
+      minimumStaffingService.getTerminalConfig(Terminal(terminalName)).map {
+        case Some(config) =>
+          Ok(write(MinimumStaff(config.minimumRosteredStaff.getOrElse(0))))
+        case None =>
+          NotFound
+      }
+    }
 
   def getShiftsForMonth(month: MillisSinceEpoch): Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {

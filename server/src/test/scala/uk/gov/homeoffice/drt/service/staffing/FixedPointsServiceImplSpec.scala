@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import actors.persistent.staffing.SetFixedPoints
+import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
 import akka.Done
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{TestKit, TestProbe}
