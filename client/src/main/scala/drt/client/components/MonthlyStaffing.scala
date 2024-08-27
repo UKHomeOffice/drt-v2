@@ -172,6 +172,11 @@ object MonthlyStaffing {
 
       val viewingDate = SDate.firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
       <.div(
+        MinStaffWarning(IMinStaffWarning("Your minimum staff cover in DRT is ",
+          "You can now more accurately reflect your minimum staff cover in DRT",
+          Some(23), () => {
+            println("add min staff handle clicked")
+          })),
         <.div(
           ^.className := "terminal-content-header",
           <.div(^.className := "staffing-controls-wrapper",
