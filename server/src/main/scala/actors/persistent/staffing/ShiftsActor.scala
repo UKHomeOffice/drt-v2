@@ -31,8 +31,6 @@ import scala.util.Try
 
 case object GetFeedStatuses
 
-//case object SaveSnapshot
-
 trait ShiftsActorLike {
   def persistenceId = "shifts-store"
 
