@@ -104,7 +104,11 @@ object ShiftsActor extends ShiftsActorLike {
 
   case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
-  case class SetMinimumStaff(terminal: Terminal, startDate: LocalDate, endDate: LocalDate, newMinimum: Option[Int], previousMinimum: Option[Int]) extends ShiftUpdate
+  case class SetMinimumStaff(terminal: Terminal,
+                             startDate: LocalDate,
+                             endDate: LocalDate,
+                             newMinimum: Option[Int],
+                             previousMinimum: Option[Int]) extends ShiftUpdate
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = shiftsToUpdate
@@ -126,12 +130,11 @@ object ShiftsActor extends ShiftsActorLike {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 
-  def applyMinimumStaff(newMin: Int, previousMin: Option[Int], currentStaff: Int): Int = (previousMin, newMin) match {
-    case (None, n) =>
-      if (currentStaff <= n) n else currentStaff
-    case (Some(o), n) =>
-      val threshold = if (o > n) o else n
-      if (currentStaff <= threshold) n else currentStaff
+  def applyMinimumStaff(newMin: Int, previousMin: Option[Int], currentStaff: Int): Int = previousMin match {
+    case None =>
+      if (currentStaff == 0) newMin else currentStaff
+    case Some(oldMin) =>
+      if (currentStaff == oldMin) newMin else currentStaff
   }
 
   def updateMinimumStaff(terminal: Terminal, startDate: LocalDate, endDate: LocalDate, newMinimum: Int, previousMinimum: Option[Int], assignments: ShiftAssignments): ShiftAssignments = {

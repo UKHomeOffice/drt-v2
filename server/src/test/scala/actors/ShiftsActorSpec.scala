@@ -173,18 +173,18 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
   "updateMinimum" should {
     "update the existing level if the new minimum is above the existing level" in {
-      ShiftsActor.applyMinimumStaff(10, Option(15), 9) === 10
-      ShiftsActor.applyMinimumStaff(10, Option(15), 14) === 10
+      ShiftsActor.applyMinimumStaff(10, Option(15), 9) === 9
+      ShiftsActor.applyMinimumStaff(10, Option(15), 14) === 14
       ShiftsActor.applyMinimumStaff(10, Option(15), 15) === 10
       ShiftsActor.applyMinimumStaff(10, Option(15), 16) === 16
 
-      ShiftsActor.applyMinimumStaff(10, Option(5), 4) === 10
+      ShiftsActor.applyMinimumStaff(10, Option(5), 4) === 4
       ShiftsActor.applyMinimumStaff(10, Option(5), 5) === 10
-      ShiftsActor.applyMinimumStaff(10, Option(5), 6) === 10
+      ShiftsActor.applyMinimumStaff(10, Option(5), 6) === 6
       ShiftsActor.applyMinimumStaff(10, Option(5), 11) === 11
 
-      ShiftsActor.applyMinimumStaff(10, None, 9) === 10
-      ShiftsActor.applyMinimumStaff(10, None, 10) === 10
+      ShiftsActor.applyMinimumStaff(10, None, 0) === 10
+      ShiftsActor.applyMinimumStaff(10, None, 1) === 1
       ShiftsActor.applyMinimumStaff(10, None, 11) === 11
     }
   }
