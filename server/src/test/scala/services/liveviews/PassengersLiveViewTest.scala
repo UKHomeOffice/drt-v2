@@ -6,7 +6,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, VoyageNumber}
-import uk.gov.homeoffice.drt.db.PassengersHourlyRow
+import uk.gov.homeoffice.drt.db.tables.PassengersHourlyRow
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, PortCode}

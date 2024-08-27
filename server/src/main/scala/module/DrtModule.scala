@@ -1,7 +1,10 @@
 package module
 
 import actors.DrtParameters
+import actors.persistent.staffing.ShiftsActor
+import akka.Done
 import akka.actor.ActorSystem
+import akka.pattern.ask
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.util.Timeout
 import com.google.inject.{AbstractModule, Provides}
@@ -114,4 +117,17 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtParameters.govNotifyApiKey)
+
+  @Provides
+  def minimumStaffingService: MinimumStaffingServiceImpl = MinimumStaffingServiceImpl(
+    portCode = airportConfig.portCode,
+    now = now,
+    forecastMaxDays = drtParameters.forecastMaxDays,
+    getTerminalConfig = provideDrtSystemInterface.applicationService.getTerminalConfig,
+    updateTerminalConfig = provideDrtSystemInterface.applicationService.updateTerminalConfig,
+    updateStaffingNumbers = (terminal, start, end, newValue, oldValue) => {
+      val request = ShiftsActor.SetMinimumStaff(terminal, start, end, newValue, oldValue)
+      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request).map(_ => Done)
+    },
+  )
 }

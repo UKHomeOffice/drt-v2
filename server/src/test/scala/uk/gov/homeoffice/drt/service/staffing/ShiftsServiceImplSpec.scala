@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.drt.service.staffing
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
-import actors.persistent.staffing.UpdateShifts
+import actors.persistent.staffing.ShiftsActor.UpdateShifts
 import akka.Done
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{TestKit, TestProbe}

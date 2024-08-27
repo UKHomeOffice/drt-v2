@@ -1,5 +1,6 @@
 package actors
 
+import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
 import actors.persistent.staffing._
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern.StatusReply

@@ -1,6 +1,7 @@
 package actors
 
-import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor, UpdateShifts}
+import actors.persistent.staffing.ShiftsActor.{UpdateShifts, updateMinimumStaff}
+import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor}
 import akka.actor.{ActorRef, PoisonPill, Props}
 import akka.pattern.StatusReply
 import akka.testkit.ImplicitSender
@@ -8,7 +9,7 @@ import drt.shared._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, TimeZoneHelper}
 
 import scala.concurrent.duration._
 
@@ -168,6 +169,44 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       result === expected
     }
 
+  }
+
+  "updateMinimum" should {
+    "update the existing level if the new minimum is above the existing level" in {
+      ShiftsActor.applyMinimumStaff(10, Option(15), 9) === 9
+      ShiftsActor.applyMinimumStaff(10, Option(15), 14) === 14
+      ShiftsActor.applyMinimumStaff(10, Option(15), 15) === 10
+      ShiftsActor.applyMinimumStaff(10, Option(15), 16) === 16
+
+      ShiftsActor.applyMinimumStaff(10, Option(5), 4) === 4
+      ShiftsActor.applyMinimumStaff(10, Option(5), 5) === 10
+      ShiftsActor.applyMinimumStaff(10, Option(5), 6) === 6
+      ShiftsActor.applyMinimumStaff(10, Option(5), 11) === 11
+
+      ShiftsActor.applyMinimumStaff(10, None, 0) === 10
+      ShiftsActor.applyMinimumStaff(10, None, 1) === 1
+      ShiftsActor.applyMinimumStaff(10, None, 11) === 11
+    }
+  }
+
+  "updateMinimumStaff" should {
+    "create shift assignments with the minimum level where there are none existing" in {
+      val shifts = updateMinimumStaff(T1, LocalDate(2024, 8, 18), LocalDate(2024, 8, 18), 10, None, ShiftAssignments.empty)
+
+      shifts.assignments.length === 96
+      shifts.assignments.forall(_.numberOfStaff === 10) === true
+    }
+    "update existing shift assignments with the new minimum level where they equal the old minimum" in {
+      val existingShifts = ShiftAssignments((0 until 96).map { i =>
+        val startTime = SDate("2024-08-18T00:00", TimeZoneHelper.europeLondonTimeZone).addMinutes(i * 15)
+        val endTime = startTime.addMinutes(14)
+        StaffAssignment(s"Shift $i", T1, startTime.millisSinceEpoch, endTime.millisSinceEpoch, 5, None)
+      })
+      val shifts = updateMinimumStaff(T1, LocalDate(2024, 8, 18), LocalDate(2024, 8, 18), 10, Option(5), existingShifts)
+
+      shifts.assignments.length === 96
+      shifts.assignments.forall(_.numberOfStaff === 10) === true
+    }
   }
 
   def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsActor(now, expiryDateXDaysFrom(now, 1), 10)))

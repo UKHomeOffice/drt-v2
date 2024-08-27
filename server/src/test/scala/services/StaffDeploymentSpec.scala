@@ -1,12 +1,12 @@
 package services
 
-import actors.persistent.staffing.{SetFixedPoints, UpdateShifts}
+import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
+import actors.persistent.staffing.ShiftsActor.UpdateShifts
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
-import services.graphstages.StaffDeploymentCalculator.Deployer
-import services.graphstages.{StaffAssignmentService, StaffSources}
 import services.graphstages.StaffDeploymentCalculator._
+import services.graphstages.{StaffAssignmentService, StaffSources}
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, visaNationalToDesk}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue

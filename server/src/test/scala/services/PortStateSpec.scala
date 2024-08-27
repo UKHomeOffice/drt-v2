@@ -1,6 +1,6 @@
 package services
 
-import actors.persistent.staffing.UpdateShifts
+import actors.persistent.staffing.ShiftsActor.UpdateShifts
 import akka.actor.Actor
 import akka.pattern.after
 import controllers.ArrivalGenerator
