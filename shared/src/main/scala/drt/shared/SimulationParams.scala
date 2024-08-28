@@ -26,7 +26,6 @@ case class SimulationParams(
   def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
     val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
       case (q, (origMinDesks, origMaxDesks)) =>
-
         val newMaxDesks = origMaxDesks.map(d => maxDesks.getOrElse(q, d))
         val newMinDesks = origMinDesks.map(d => minDesks.getOrElse(q, d))
         q -> (newMinDesks, newMaxDesks)
@@ -71,7 +70,7 @@ object SimulationParams {
     "terminal",
     "date",
     "passengerWeighting",
-    "eGateBankSizes",
+//    "eGateBankSizes",
     "crunchOffsetMinutes",
     "eGateOpenHours"
   )
