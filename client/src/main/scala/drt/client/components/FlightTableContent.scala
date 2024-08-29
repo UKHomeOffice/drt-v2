@@ -53,7 +53,7 @@ object FlightTableContent {
                    flaggedNationalities: Set[Country],
                    flaggedAgeGroups: Set[PaxAgeRange],
                    showNumberOfVisaNationals: Boolean,
-                   showHighlightedRows: Boolean,
+                   showOnlyHighlightedRows: Boolean,
                    showRequireAllSelected: Boolean,
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
@@ -70,7 +70,7 @@ object FlightTableContent {
         a.flaggedAgeGroups == b.flaggedAgeGroups &&
         a.filterFlightSearch == b.filterFlightSearch &&
         a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
-        a.showHighlightedRows == b.showHighlightedRows &&
+        a.showOnlyHighlightedRows == b.showOnlyHighlightedRows &&
         a.showRequireAllSelected == b.showRequireAllSelected &&
         a.viewStart == b.viewStart &&
         a.viewEnd == b.viewEnd
@@ -135,7 +135,7 @@ object FlightTableContent {
             props.flaggedNationalities,
             props.flaggedAgeGroups,
             props.showNumberOfVisaNationals,
-            props.showHighlightedRows,
+            props.showOnlyHighlightedRows,
             props.showRequireAllSelected)
 
         <.div(
@@ -143,10 +143,15 @@ object FlightTableContent {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
               <.div {
-                val flightCount = s"${sortedFlights.length} flights shown"
-                val highlightCount = if (props.filterFlightSearch.nonEmpty || highlightedFlightsCount > 0)
-                  <.span(" | ", <.b(s"$highlightedFlightsCount flights highlighted")) else EmptyVdom
-                MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCount, highlightCount)
+                val flaggerInUse = props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
+                val flightCounts = if (flaggerInUse && props.showOnlyHighlightedRows)
+                  <.span(s"$highlightedFlightsCount flights shown and highlighted")
+                else if (flaggerInUse)
+                  <.span(s"${sortedFlights.length} flights shown", " | ", <.b(s"$highlightedFlightsCount flights highlighted"))
+                else
+                  <.span(s"${sortedFlights.length} flights shown")
+                  
+                MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
               },
               <.div(<.table(
                 ^.className := "arrivals-table table-striped",
@@ -192,11 +197,11 @@ object FlightTableContent {
                         showHightLighted = showHightlighted)
 
                       FlightHighlighter.highlightedFlight(manifestSummary,
-                        props.flaggedNationalities,
-                        props.flaggedAgeGroups,
-                        props.showNumberOfVisaNationals,
-                        props.showHighlightedRows,
-                        props.showRequireAllSelected)
+                          props.flaggedNationalities,
+                          props.flaggedAgeGroups,
+                          props.showNumberOfVisaNationals,
+                          props.showOnlyHighlightedRows,
+                          props.showRequireAllSelected)
                         .map(h => FlightTableRow.component(flightTableRow(h)))
 
                   }.toTagMod
@@ -237,7 +242,7 @@ object FlightTableContent {
       ^.className := "arrivals__table__flight-splits",
     )
 
-    val transferPaxTh = <.th(^.className := "arrivals__table__flight_transfer-pax","Transfer Pax")
+    val transferPaxTh = <.th(^.className := "arrivals__table__flight_transfer-pax", "Transfer Pax")
 
     <.thead(
       ^.className := "sticky-top",

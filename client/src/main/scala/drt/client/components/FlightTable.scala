@@ -219,7 +219,7 @@ object FlightTable {
                   flaggedNationalities = props.flightHighlight.selectedNationalities,
                   flaggedAgeGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
                   showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
-                  showHighlightedRows = scope.state.showHighlightedRows,
+                  showOnlyHighlightedRows = scope.state.showHighlightedRows,
                   showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
                   viewStart = props.viewStart,
                   viewEnd = props.viewEnd,
