@@ -142,9 +142,12 @@ object FlightTableContent {
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
-              if (props.filterFlightSearch.nonEmpty || highlightedFlightsCount > 0) {
-                <.div(MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))("Flights displayed : ", <.b(s"${if (props.filterFlightSearch.nonEmpty) sortedFlights.length else 0}"), <.b(s" ($highlightedFlightsCount flights highlighted)")))
-              } else <.div(),
+              <.div {
+                val flightCount = s"${sortedFlights.length} flights shown"
+                val highlightCount = if (props.filterFlightSearch.nonEmpty || highlightedFlightsCount > 0)
+                  <.span(" | ", <.b(s"$highlightedFlightsCount flights highlighted")) else EmptyVdom
+                MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCount, highlightCount)
+              },
               <.div(<.table(
                 ^.className := "arrivals-table table-striped",
                 tableHead(props, props.queueOrder, redListPaxExist, shortLabel, showFlagger),

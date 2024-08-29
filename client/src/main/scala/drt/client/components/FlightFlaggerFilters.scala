@@ -22,19 +22,6 @@ object CountryJS {
 }
 
 @js.native
-trait AutocompleteOption extends js.Object {
-  var title: String
-}
-
-object AutocompleteOption {
-  def apply(title: String): AutocompleteOption = {
-    val p = (new js.Object).asInstanceOf[AutocompleteOption]
-    p.title = title
-    p
-  }
-}
-
-@js.native
 trait SearchFilterPayload extends js.Object {
   var showTransitPaxNumber: Boolean
   var showNumberOfVisaNationals: Boolean
@@ -73,7 +60,7 @@ trait FlightFlaggerFiltersProps extends js.Object {
   var showAllCallback: js.Function1[js.Object, Unit] = js.native
   var clearFiltersCallback: js.Function1[js.Object, Unit] = js.native
   var onChangeInput: js.Function1[String, Unit] = js.native
-  var initialState: js.UndefOr[js.Dynamic] = js.native
+  var maybeInitialState: js.UndefOr[js.Dynamic] = js.native
 }
 
 object FlightFlaggerFiltersProps {
@@ -93,7 +80,7 @@ object FlightFlaggerFiltersProps {
     p.showAllCallback = showAllCallback
     p.clearFiltersCallback = clearFiltersCallback
     p.onChangeInput = onChangeInput
-    p.initialState = initialState
+    p.maybeInitialState = initialState
     p
   }
 }
