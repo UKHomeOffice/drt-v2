@@ -9,7 +9,7 @@ import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
-import drt.client.services.handlers.GetUserPreferenceIntervalMinutes
+import drt.client.services.handlers.{GetMinStaff, GetUserPreferenceIntervalMinutes, TerminalMinStaff}
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -54,6 +54,7 @@ object TerminalComponent {
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
+                                   minStaff: Pot[TerminalMinStaff]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -79,10 +80,10 @@ object TerminalComponent {
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
+        minStaff = model.minStaff
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
-
       <.div(
         dialogueStateRCP(dialogueStateMP => <.div(dialogueStateMP().map(dialogueState => StaffAdjustmentDialogue(dialogueState)()).whenDefined)),
         modelRCP(modelMP => {
@@ -153,7 +154,9 @@ object TerminalComponent {
                     })
                   case Staffing if loggedInUser.roles.contains(StaffEdit) =>
                     model.potMonthOfShifts.render { ms =>
-                      MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
+                      model.minStaff.render { minStaff =>
+                        MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router, minStaff)
+                      }
                     }
                 }
               )
@@ -162,8 +165,9 @@ object TerminalComponent {
         }.getOrElse(LoadingOverlay())
         ))
     }
-    .componentDidMount(_ =>
-      Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes()))
+    .componentDidMount(p =>
+      Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
+        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString)))
     )
     .configure(Reusability.shouldComponentUpdate)
     .build

@@ -7,6 +7,39 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 
 @js.native
+trait IMinStaffForm extends js.Object {
+  var port: String = js.native
+  var terminal: String = js.native
+  var minStaffNumber: Int = js.native
+  var handleSubmit: js.Function1[Int, Boolean] = js.native
+  var continueCallback: js.Function0[Unit] = js.native
+}
+
+object IMinStaffForm {
+  def apply(port: String, terminal: String, minStaffNumber: Int, handleSubmit: js.Function1[Int, Boolean],continueCallback: js.Function0[Unit]): IMinStaffForm = {
+    val p = (new js.Object).asInstanceOf[IMinStaffForm]
+    p.port = port
+    p.terminal = terminal
+    p.minStaffNumber = minStaffNumber
+    p.handleSubmit = handleSubmit
+    p.continueCallback = continueCallback
+    p
+  }
+}
+
+object MinStaffForm {
+  @js.native
+  @JSImport("@drt/drt-react", "MinStaffForm")
+  object RawComponent extends js.Object
+
+  val component = JsFnComponent[IMinStaffForm, Children.None](RawComponent)
+
+  def apply(props: IMinStaffForm): VdomElement = {
+    component(props)
+  }
+}
+
+@js.native
 trait IMinStaffWarning extends js.Object {
   var message1: String = js.native
   var message2: String = js.native
