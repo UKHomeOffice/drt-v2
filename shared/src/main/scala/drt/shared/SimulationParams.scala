@@ -70,7 +70,7 @@ object SimulationParams {
     "terminal",
     "date",
     "passengerWeighting",
-//    "eGateBankSizes",
+    "eGateBankSizes",
     "crunchOffsetMinutes",
     "eGateOpenHours"
   )
