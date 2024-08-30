@@ -150,7 +150,7 @@ object FlightTableContent {
                   <.span(s"${sortedFlights.length} flights shown", " | ", <.b(s"$highlightedFlightsCount flights highlighted"))
                 else
                   <.span(s"${sortedFlights.length} flights shown")
-                  
+
                 MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
               },
               <.div(<.table(
