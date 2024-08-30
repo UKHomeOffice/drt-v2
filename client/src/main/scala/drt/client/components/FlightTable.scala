@@ -108,15 +108,16 @@ object FlightTable {
       val submitCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
         val sfp = data.asInstanceOf[SearchFilterPayload]
         val selectedNationalities: Set[Country] = CountryOptions.countries.filter(c => sfp.selectedNationalities.map(_.code).contains(c.threeLetterCode)).toSet
-        SPACircuit.dispatch(
-          UpdateFlightHighlight(
-            FlightHighlight(
-              sfp.showNumberOfVisaNationals,
-              sfp.requireAllSelected,
-              scope.state.showHighlightedRows,
-              sfp.selectedAgeGroups.toSeq,
-              selectedNationalities,
-              scope.state.flightSearch)))
+        val highlight = FlightHighlight(
+          sfp.showNumberOfVisaNationals,
+          sfp.requireAllSelected,
+          scope.state.showHighlightedRows,
+          sfp.selectedAgeGroups.toSeq,
+          selectedNationalities,
+          scope.state.flightSearch)
+
+        SPACircuit.dispatch(UpdateFlightHighlight(highlight))
+
         Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "flightFilter", sfp.toString))
       }
 
@@ -176,21 +177,21 @@ object FlightTable {
             if (props.showFlagger) {
               val initialState = js.Dynamic.literal(
                 showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
-                selectedAgeGroups = props.flightHighlight.selectedAgeGroups.map(AutocompleteOption(_)).toJSArray,
-                selectedNationalities = props.flightHighlight.selectedNationalities.map(n => CountryJS(n.name,n.threeLetterCode)).toJSArray,
+                requireAllSelected = props.flightHighlight.showRequireAllSelected,
                 flightNumber = props.flightHighlight.filterFlightSearch,
-                requireAllSelected = props.flightHighlight.showRequireAllSelected
+                selectedNationalities = props.flightHighlight.selectedNationalities.map(n => CountryJS(n.name, n.threeLetterCode)).toJSArray,
+                selectedAgeGroups = props.flightHighlight.selectedAgeGroups.toJSArray,
               )
               ThemeProvider(buttonSecondaryTheme)(
-              FlightFlaggerFilters(
-                CountryOptions.countries.map { c => CountryJS(c.name,c.threeLetterCode)}.toJSArray,
-                ageGroups,
-                submitCallback,
-                showAllCallback,
-                clearFiltersCallback,
-                onChangeInput,
-                initialState
-              ))
+                FlightFlaggerFilters(
+                  CountryOptions.countries.map { c => CountryJS(c.name, c.threeLetterCode) }.toJSArray,
+                  ageGroups,
+                  submitCallback,
+                  showAllCallback,
+                  clearFiltersCallback,
+                  onChangeInput,
+                  initialState
+                ))
             } else EmptyVdom
           ),
           <.div(
@@ -216,7 +217,7 @@ object FlightTable {
                   flaggedNationalities = props.flightHighlight.selectedNationalities,
                   flaggedAgeGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
                   showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
-                  showHighlightedRows = scope.state.showHighlightedRows,
+                  showOnlyHighlightedRows = scope.state.showHighlightedRows,
                   showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
                   viewStart = props.viewStart,
                   viewEnd = props.viewEnd,
