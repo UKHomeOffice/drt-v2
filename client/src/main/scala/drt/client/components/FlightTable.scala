@@ -116,8 +116,6 @@ object FlightTable {
           selectedNationalities,
           scope.state.flightSearch)
 
-        println(s"submitCallback: $highlight")
-
         SPACircuit.dispatch(UpdateFlightHighlight(highlight))
 
         Callback(GoogleEventTracker.sendEvent(props.terminal.toString, "flightFilter", sfp.toString))
