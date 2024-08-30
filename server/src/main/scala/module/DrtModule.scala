@@ -119,7 +119,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtParameters.govNotifyApiKey)
 
   @Provides
-  def minimumStaffingService: MinimumStaffingServiceImpl = MinimumStaffingServiceImpl(
+  def minimumStaffingService: MinimumStaffingService = MinimumStaffingServiceImpl(
     portCode = airportConfig.portCode,
     now = now,
     forecastMaxDays = drtParameters.forecastMaxDays,
