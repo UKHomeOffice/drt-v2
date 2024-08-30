@@ -13,6 +13,7 @@ import io.kinoplan.scalajs.react.material.ui.core.{MuiDivider, MuiGrid}
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.vdom.HtmlAttrs.onClick.Event
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
@@ -146,7 +147,7 @@ object MonthlyStaffing {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff &&  a.showMinStaffForm == b.showMinStaffForm && a.timeSlots == b.timeSlots && a.colHeadings == b.colHeadings && a.rowHeadings == b.rowHeadings && a.changes == b.changes)
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm && a.timeSlots == b.timeSlots && a.colHeadings == b.colHeadings && a.rowHeadings == b.rowHeadings && a.changes == b.changes)
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(stateFromProps)
@@ -177,24 +178,24 @@ object MonthlyStaffing {
 
       val viewingDate = SDate.firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
 
-      def changeState(value: TerminalMinStaff) = {
-        scope.modState(state => state.copy(terminalMinStaff = value)).runNow()
-      }
-
-      def SpaCalls(minStaff:Int) = {
-        Callback(SPACircuit.dispatch(SaveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff))))).runNow()
+      def saveMinStaff(terminalMinStaff: TerminalMinStaff) = {
+        Callback(SPACircuit.dispatch(SaveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, terminalMinStaff.minStaff)))).runNow()
+        scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff)).runNow()
         Callback(SPACircuit.dispatch(GetMinStaff(props.terminalPageTab.terminal.toString))).runNow()
       }
+
+      val handleOnEdit = (e: Event) => Callback {
+        e.preventDefault()
+        scope.modState(state => state.copy(showMinStaffForm = true)).runNow()
+      }
+
       if (state.showMinStaffForm) {
         <.div(^.className := "terminal-staffing-header",
           MinStaffForm(IMinStaffForm("DRT", props.terminalPageTab.terminal.toString, 0, (minStaff) => {
-            println(s"clicked add min staff $minStaff")
-            SpaCalls(minStaff)
-            changeState(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff)))
+            saveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff)))
             true;
           }, () => {
             scope.modState(state => state.copy(showMinStaffForm = false)).runNow()
-            println("continue clicked")
           })))
       } else {
         <.div(^.className := "terminal-staffing-header",
@@ -203,8 +204,10 @@ object MonthlyStaffing {
               "You can now more accurately reflect your minimum staff cover in DRT",
               props.terminalMinStaff.minStaff, () => {
                 scope.modState(state => state.copy(showMinStaffForm = true)).runNow()
-                println("add min staff handle clicked")
-              })) else <.div(^.className := "terminal-staffing-header", s"Minimum staff : ${state.terminalMinStaff.minStaff.getOrElse(0)}"),
+              })) else <.div(^.className := "terminal-staffing-header",
+            <.div(^.className := "terminal-min-staffing", s"Minimum staff : ${state.terminalMinStaff.minStaff.getOrElse(0)}"),
+            <.span(s"Update latest min staff ", <.a(^.href := "#", Icon.edit, " Edit", ^.onClick ==> handleOnEdit))
+          ),
           <.div(^.className := "terminal-content-header",
             <.div(^.className := "staffing-controls-wrapper",
               <.div(^.className := "staffing-controls-row",
