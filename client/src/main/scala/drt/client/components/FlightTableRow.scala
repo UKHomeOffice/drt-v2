@@ -37,7 +37,7 @@ object FlightTableRow {
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShareFlightCodes: Seq[String],
                    idx: Int,
-                   originMapper: (PortCode, html_<^.TagMod) => VdomNode, // = portCode => portCode.toString,
+                   originMapper: (PortCode, html_<^.TagMod) => VdomNode,
                    splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                    splitsQueueOrder: Seq[Queue],
                    hasEstChox: Boolean,
@@ -188,12 +188,12 @@ object FlightTableRow {
           },
         <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
           <.span(
-            proxy().renderEmpty(<.span()),
-            proxy().render(ai => {
+            proxy().renderEmpty(props.originMapper(flight.Origin, EmptyVdom)),
+            proxy().render { ai =>
               val redListCountry = props.indirectRedListPax.isEnabled && isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)
               val style: html_<^.TagMod = if (redListCountry) ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField) else EmptyVdom
               props.originMapper(flight.Origin, style)
-            })
+            }
           )
         }),
         props.indirectRedListPax match {
