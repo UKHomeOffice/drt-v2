@@ -24,7 +24,7 @@ import uk.gov.homeoffice.drt.time.LocalDate
 import scala.scalajs.js
 import scala.util.Try
 
-//http://127.0.0.1:9000/export/desk-rec-simulation?terminal=T1&date=2023-10-11&passengerWeighting=5&eGateBankSizes=10,10,10&crunchOffsetMinutes=0&eGateOpenHours=0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23&NonVisaNational_NonEeaDesk=75&EeaMachineReadable_EGate=45&B5JPlusNational_EeaDesk=50&GBRNational_EeaDesk=26&EeaBelowEGateAge_EeaDesk=33&B5JPlusNational_EGate=45&B5JPlusNationalBelowEGateAge_EeaDesk=50&EeaNonMachineReadable_EeaDesk=33&GBRNational_EGate=45&GBRNationalBelowEgateAge_EeaDesk=26&VisaNational_NonEeaDesk=89&EeaMachineReadable_EeaDesk=600&EGate_min=1&EeaDesk_min=1&NonEeaDesk_min=1&EGate_max=3&EeaDesk_max=13&NonEeaDesk_max=8&EeaDesk_sla=3&EGate_sla=5&NonEeaDesk_sla=45
+
 object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
   val steps: Seq[String] = List("Passenger numbers", "Processing Times", "Queue SLAs", "Configure Desk Availability")
@@ -49,9 +49,9 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
     .initialStateFromProps(p =>
       State(SimulationFormFields(p.terminal, p.date, p.airportConfig, p.slaConfigs), Map())
     )
-    .renderS {
+    .renderPS {
 
-      (scope, state) =>
+      (scope, props, state) =>
 
         def changePassengerWeighting(e: ReactEventFromInput): Callback = {
           val maybeValue = Try(e.target.value.toDouble).toOption
@@ -88,18 +88,18 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             val updatedMinDesks = state.copy(
               simulationFormFields = state
                 .simulationFormFields
-                .copy(minDesks = state.simulationFormFields.minDesks + (q -> maybeValue))
+                .copy(minDesksByQueue = state.simulationFormFields.minDesksByQueue + (q -> maybeValue))
             )
             scope.setState(updatedMinDesks)
         }
 
-        def changeMaxDesks(q: Queues.Queue): ReactEventFromInput => Callback = {
+        def changeTerminalDesks: ReactEventFromInput => Callback = {
           (e: ReactEventFromInput) =>
             val maybeValue = Try(e.target.value.toInt).toOption
             val updatedMaxDesks = state.copy(
               simulationFormFields = state
                 .simulationFormFields
-                .copy(maxDesks = state.simulationFormFields.maxDesks + (q -> maybeValue))
+                .copy(terminalDesks = maybeValue.getOrElse(state.simulationFormFields.terminalDesks))
             )
             scope.setState(updatedMaxDesks)
         }
@@ -164,52 +164,49 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
           )
         }
 
-        def minMaxDesksFields: VdomTagOf[Div] = {
+        def desksAndBanksFields: VdomTagOf[Div] = {
           <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
-            state.simulationFormFields.minDesks.keys.map { q =>
+            MuiTextField(
+              label = s"Total desks".toVdom,
+            )(
+              `type` := "number",
+              id := s"terminal-desks",
+              value := state.simulationFormFields.terminalDesks.toString,
+              onChange ==> changeTerminalDesks,
+            ),
+            state.simulationFormFields.minDesksByQueue.keys.map { q =>
               <.div(^.key := q.toString,
-                MuiFormLabel()(
-                  s"${Queues.displayName(q)}"
-                ),
                 <.div(
-                  ^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
                   MuiTextField(
-                    label = s"Min".toVdom,
+                    label = s"Minimum ${Queues.displayName(q)} ${if (q == EGate) "banks" else "desks"}".toVdom
                   )(
                     `type` := "number",
                     id := s"${q}_min",
-                    value := state.simulationFormFields.minDesks(q).map(_.toString).getOrElse(""),
+                    value := state.simulationFormFields.minDesksByQueue(q).map(_.toString).getOrElse(""),
                     onChange ==> changeMinDesks(q)
-                  ),
-                  MuiTextField(
-                    label = s"Max".toVdom,
-                  )(
-                    `type` := "number",
-                    id := s"${q}_max",
-                    value := state.simulationFormFields.maxDesks(q).map(_.toString).getOrElse(""),
-                    onChange ==> changeMaxDesks(q)
                   ),
                 )
               )
             }.toTagMod,
-            <.div(
-              MuiFormLabel()(
-                s"${Queues.displayName(EGate)}"
-              ),
-              <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
-                state.simulationFormFields.eGateBanksSizes.zipWithIndex.map { case (bankSize, idx) =>
-                  MuiTextField(
-                    label = s"e-Gates in bank ${idx + 1}".toVdom,
-                  )(
-                    ^.key := s"bank-size-$idx",
-                    `type` := "number",
-                    id := s"egate-bank-size-$idx",
-                    value := bankSize.map(_.toString).getOrElse(""),
-                    onChange ==> changeBankSize(idx)
-                  )
-                }.toTagMod
-              )
-            ),
+            if (state.simulationFormFields.eGateBanksSizes.nonEmpty)
+              <.div(
+                MuiFormLabel()(
+                  s"${Queues.displayName(EGate)} bank sizes"
+                ),
+                <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
+                  state.simulationFormFields.eGateBanksSizes.zipWithIndex.map { case (bankSize, idx) =>
+                    MuiTextField(
+                      label = s"Bank ${idx + 1} gates".toVdom,
+                    )(
+                      ^.key := s"bank-size-$idx",
+                      `type` := "number",
+                      id := s"egate-bank-size-$idx",
+                      value := bankSize.map(_.toString).getOrElse(""),
+                      onChange ==> changeBankSize(idx)
+                    )
+                  }.toTagMod
+                )
+              ) else <.div(),
           )
         }
 
@@ -233,6 +230,8 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
         def isOpen(panel: String): Boolean = state.isOpen(panel)
 
         val showCharts: Callback = Callback(SPACircuit.dispatch(GetSimulation(state.simulationFormFields)))
+
+        val terminalHasEgates = props.airportConfig.queuesByTerminal(props.terminal).contains(EGate)
 
         <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
           MuiAccordion(expanded = isOpen("passengerWeighting"))(
@@ -270,21 +269,23 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
             MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
               MuiTypography(variant = MuiTypography.Variant.inherit)(
                 ^.id := "adjust_available_desks",
-                "Adjust Available Desks"
+                if (terminalHasEgates) "Adjust Desks & Egate banks" else "Adjust Desks"
               )
             ),
-            MuiAccordionDetails()(minMaxDesksFields)
+            MuiAccordionDetails()(desksAndBanksFields)
           ),
-          MuiAccordion(expanded = isOpen("configureEGatesFields"))(
-            onChange --> togglePanel("configureEGatesFields"),
-            MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
-              MuiTypography(variant = MuiTypography.Variant.inherit)(
-                ^.id := "adjust_egate_open_times",
-                "Adjust eGate Open Times"
-              )
-            ),
-            MuiAccordionDetails()(eGatesOpen)
-          ),
+          if (terminalHasEgates)
+            MuiAccordion(expanded = isOpen("configureEGatesFields"))(
+              onChange --> togglePanel("configureEGatesFields"),
+              MuiAccordionSummary(expandIcon = MuiIcons(MuiIconsModule.ExpandMore)()())(
+                MuiTypography(variant = MuiTypography.Variant.inherit)(
+                  ^.id := "adjust_egate_open_times",
+                  "Adjust eGate Open Times"
+                )
+              ),
+              MuiAccordionDetails()(eGatesOpen)
+            )
+          else <.div(),
           MuiDivider(variant = MuiDivider.Variant.middle)(),
           <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
             submitButton(showCharts, state.simulationFormFields),

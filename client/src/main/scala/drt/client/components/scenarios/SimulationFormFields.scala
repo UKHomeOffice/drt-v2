@@ -7,14 +7,14 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxTypeAndQueue, Queues}
-import uk.gov.homeoffice.drt.time.{LocalDate}
+import uk.gov.homeoffice.drt.time.LocalDate
 
 case class SimulationFormFields(terminal: Terminal,
                                 date: LocalDate,
                                 passengerWeighting: Option[Double],
                                 processingTimes: Map[PaxTypeAndQueue, Option[Int]],
-                                minDesks: Map[Queue, Option[Int]],
-                                maxDesks: Map[Queue, Option[Int]],
+                                minDesksByQueue: Map[Queue, Option[Int]],
+                                terminalDesks: Int,
                                 eGateBanksSizes: IndexedSeq[Option[Int]],
                                 slaByQueue: Map[Queue, Option[Int]],
                                 crunchOffsetMinutes: Int,
@@ -23,13 +23,12 @@ case class SimulationFormFields(terminal: Terminal,
   val isValid: Boolean = {
     passengerWeighting.isDefined &&
       processingTimes.forall(_._2.isDefined) &&
-      minDesks.forall(_._2.isDefined) &&
-      maxDesks.forall(_._2.isDefined) &&
+      minDesksByQueue.forall(_._2.isDefined) &&
       eGateBanksSizes.forall(_.isDefined) &&
       slaByQueue.forall(_._2.isDefined)
   }
 
-  def eGateOpenAt(hour: Int): Boolean = eGateOpenHours.contains(hour)
+  private def eGateOpenAt(hour: Int): Boolean = eGateOpenHours.contains(hour)
 
   def toggleEgateHour(hour: Int): SimulationFormFields = if (eGateOpenAt(hour))
     copy(eGateOpenHours = eGateOpenHours.filter(_ != hour))
@@ -45,19 +44,22 @@ case class SimulationFormFields(terminal: Terminal,
       s"terminal=$terminal",
       s"date=$date",
       s"passengerWeighting=${passengerWeighting.getOrElse("")}",
-      s"eGateBankSizes=${eGateBanksSizes.map(_.getOrElse("")).mkString(",")}",
       s"crunchOffsetMinutes=$crunchOffsetMinutes",
       s"eGateOpenHours=${eGateOpenHours.mkString(",")}"
     ) ::
+      (if (eGateBanksSizes.nonEmpty) {
+        //s"eGateBankSizes=${eGateBanksSizes.map(_.getOrElse("")).mkString(",")}",
+        List(s"eGateBanksSizes=${eGateBanksSizes.flatten.mkString(",")}")
+      } else {
+        List()
+      }) ::
       processingTimes.map {
         case (ptq, value) => s"${ptq.key}=${value.getOrElse("")}"
       } ::
-      minDesks.map {
+      minDesksByQueue.map {
         case (q, value) => s"${q}_min=${value.getOrElse("")}"
       } ::
-      maxDesks.map {
-        case (q, value) => s"${q}_max=${value.getOrElse("")}"
-      } ::
+      List(s"desks=$terminalDesks") ::
       slaByQueue.map {
         case (q, value) => s"${q}_sla=${value.getOrElse("")}"
       } :: Nil
@@ -75,9 +77,7 @@ object SimulationFormFields {
     val minDesks: Map[Queue, Option[Int]] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
       case (q, (min, _)) => q -> Option(min.max)
     }
-    val maxDesks: Map[Queue, Option[Int]] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-      case (q, (_, max)) => q -> Option(max.max)
-    }
+    val terminalDesks = airportConfig.desksByTerminal.getOrElse(terminal, 0)
     val egateBankSizes: IndexedSeq[Option[Int]] = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq.map(Option(_))
     val slas: Map[Queue, Option[Int]] = slaConfigs.configForDate(SDate(date).millisSinceEpoch)
       .getOrElse(airportConfig.slaByQueue)
@@ -91,7 +91,7 @@ object SimulationFormFields {
       Option(1.0),
       processingTimes,
       minDesks,
-      maxDesks,
+      terminalDesks,
       eGateBanksSizes = egateBankSizes,
       slaByQueue = slas,
       crunchOffsetMinutes = 0,

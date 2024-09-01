@@ -15,11 +15,10 @@ case class SimulationParams(terminal: Terminal,
                             processingTimes: Map[PaxTypeAndQueue, Int],
                             minDesksByQueue: Map[Queue, Int],
                             maxDesks: Int,
-                            eGateBanksSizes: Option[IndexedSeq[Int]],
+                            eGateBanksSizes: IndexedSeq[Int],
                             slaByQueue: Map[Queue, Int],
                             crunchOffsetMinutes: Int,
                             eGateOpenHours: Seq[Int],
-                            paxFeedSourceOrder: Seq[FeedSource],
                            ) {
 
   def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
@@ -29,12 +28,9 @@ case class SimulationParams(terminal: Terminal,
         q -> (newMinDesks, origMaxDesks)
     }
 
-    val originalEgateBanks = airportConfig.eGateBankSizes.getOrElse(terminal, throw new Exception(s"Missing eGateBankSizes for terminal $terminal"))
-
     airportConfig.copy(
       minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs + (terminal -> openDesks),
       desksByTerminal = airportConfig.desksByTerminal + (terminal -> maxDesks),
-      eGateBankSizes = Map(terminal -> eGateBanksSizes.getOrElse(originalEgateBanks)),
       slaByQueue = airportConfig.slaByQueue.map {
         case (q, v) => q -> slaByQueue.getOrElse(q, v)
       },
@@ -48,7 +44,7 @@ case class SimulationParams(terminal: Terminal,
     )
   }
 
-  def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits): FlightsWithSplits =
+  def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits, paxFeedSourceOrder: Seq[FeedSource]): FlightsWithSplits =
     FlightsWithSplits(flightsWithSplits.flights.map {
       case (ua, fws) =>
         val paxSource = fws.apiFlight.bestPaxEstimate(paxFeedSourceOrder)
@@ -71,17 +67,17 @@ object SimulationParams {
     "terminal",
     "date",
     "passengerWeighting",
-    "eGateBankSizes",
+    "eGateBanksSizes",
     "crunchOffsetMinutes",
     "eGateOpenHours"
   )
 
-  def fromQueryStringParams(qsMap: Map[String, Seq[String]], paxSourceOrder: Seq[FeedSource]): Try[SimulationParams] = Try {
+  def fromQueryStringParams(qsMap: Map[String, Seq[String]]): Try[SimulationParams] = Try {
     val maybeSimulationFieldsStrings: Map[String, Option[String]] = requiredFields
       .map(f => f -> qsMap.get(f).flatMap(_.headOption)).toMap
 
     val qMinDesks = queueParams(qsMap, "_min")
-    val qMaxDesks = queueParams(qsMap, "_max")
+    val qMaxDesks = qsMap.get("desks").flatMap(_.headOption.map(_.toInt)).getOrElse(throw new Exception("Missing desks"))
     val qSlas = queueParams(qsMap, "_sla")
 
     val procTimes: Map[PaxTypeAndQueue, Int] = PaxTypesAndQueues.inOrder.map(ptq => {
@@ -95,11 +91,14 @@ object SimulationParams {
       dateString: String <- maybeSimulationFieldsStrings("date")
       localDate <- LocalDate.parse(dateString)
       passengerWeightingString: String <- maybeSimulationFieldsStrings("passengerWeighting")
-      eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSizes")
       crunchOffsetMinutes: String <- maybeSimulationFieldsStrings("crunchOffsetMinutes")
       eGateOpenHours: String <- maybeSimulationFieldsStrings("eGateOpenHours")
     } yield {
       val terminal = Terminal(terminalName)
+      val maybeEGateBankSizes = maybeSimulationFieldsStrings("eGateBanksSizes")
+      val splitEgateBankSizes = maybeEGateBankSizes.getOrElse("").split(",").toList.filterNot(_.isEmpty)
+      val eGateBankSizes: IndexedSeq[Int] = splitEgateBankSizes.map(_.toInt).toIndexedSeq
+
       SimulationParams(
         terminal = terminal,
         date = localDate,
@@ -107,13 +106,12 @@ object SimulationParams {
         processingTimes = procTimes,
         minDesksByQueue = qMinDesks,
         maxDesks = qMaxDesks,
-        eGateBanksSizes = eGateBankSizeString.split(",").map(_.toInt),
+        eGateBanksSizes = eGateBankSizes,
         slaByQueue = qSlas,
         crunchOffsetMinutes = crunchOffsetMinutes.toInt,
         eGateOpenHours = eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
           case Success(i) => i
         },
-        paxFeedSourceOrder = paxSourceOrder,
       )
     }
 
