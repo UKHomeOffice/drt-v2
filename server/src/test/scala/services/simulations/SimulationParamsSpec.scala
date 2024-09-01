@@ -21,7 +21,7 @@ class SimulationParamsSpec extends Specification {
     date = LocalDate(2020, 3, 27),
     passengerWeighting = 1.0,
     processingTimes = testConfig.terminalProcessingTimes(terminal).view.mapValues(_ => 60).toMap,
-    minDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
+    minDesksByQueue = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
     maxDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
     eGateBanksSizes = IndexedSeq(5, 5, 5),
     slaByQueue = testConfig.slaByQueue,
@@ -66,7 +66,7 @@ class SimulationParamsSpec extends Specification {
 
     "Simulation supplied min desks should be applied to each queue" >> {
 
-      val simulationWithMinDesks = simulation.copy(minDesks = Map(Queues.EGate -> 8))
+      val simulationWithMinDesks = simulation.copy(minDesksByQueue = Map(Queues.EGate -> 8))
 
       val expected = List.fill(24)(8)
 

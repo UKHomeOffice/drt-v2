@@ -9,31 +9,32 @@ import upickle.default.{ReadWriter, macroRW}
 
 import scala.util.{Success, Try}
 
-case class SimulationParams(
-                             terminal: Terminal,
-                             date: LocalDate,
-                             passengerWeighting: Double,
-                             processingTimes: Map[PaxTypeAndQueue, Int],
-                             minDesks: Map[Queue, Int],
-                             maxDesks: Map[Queue, Int],
-                             eGateBanksSizes: IndexedSeq[Int],
-                             slaByQueue: Map[Queue, Int],
-                             crunchOffsetMinutes: Int,
-                             eGateOpenHours: Seq[Int],
-                             paxFeedSourceOrder: Seq[FeedSource],
+case class SimulationParams(terminal: Terminal,
+                            date: LocalDate,
+                            passengerWeighting: Double,
+                            processingTimes: Map[PaxTypeAndQueue, Int],
+                            minDesksByQueue: Map[Queue, Int],
+                            maxDesks: Int,
+                            eGateBanksSizes: Option[IndexedSeq[Int]],
+                            slaByQueue: Map[Queue, Int],
+                            crunchOffsetMinutes: Int,
+                            eGateOpenHours: Seq[Int],
+                            paxFeedSourceOrder: Seq[FeedSource],
                            ) {
 
   def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
     val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
       case (q, (origMinDesks, origMaxDesks)) =>
-        val newMaxDesks = origMaxDesks.map(d => maxDesks.getOrElse(q, d))
-        val newMinDesks = origMinDesks.map(d => minDesks.getOrElse(q, d))
-        q -> (newMinDesks, newMaxDesks)
+        val newMinDesks = origMinDesks.map(d => minDesksByQueue.getOrElse(q, d))
+        q -> (newMinDesks, origMaxDesks)
     }
+
+    val originalEgateBanks = airportConfig.eGateBankSizes.getOrElse(terminal, throw new Exception(s"Missing eGateBankSizes for terminal $terminal"))
 
     airportConfig.copy(
       minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs + (terminal -> openDesks),
-      eGateBankSizes = Map(terminal -> eGateBanksSizes),
+      desksByTerminal = airportConfig.desksByTerminal + (terminal -> maxDesks),
+      eGateBankSizes = Map(terminal -> eGateBanksSizes.getOrElse(originalEgateBanks)),
       slaByQueue = airportConfig.slaByQueue.map {
         case (q, v) => q -> slaByQueue.getOrElse(q, v)
       },
@@ -104,7 +105,7 @@ object SimulationParams {
         date = localDate,
         passengerWeighting = passengerWeightingString.toDouble,
         processingTimes = procTimes,
-        minDesks = qMinDesks,
+        minDesksByQueue = qMinDesks,
         maxDesks = qMaxDesks,
         eGateBanksSizes = eGateBankSizeString.split(",").map(_.toInt),
         slaByQueue = qSlas,
