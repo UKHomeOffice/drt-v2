@@ -47,11 +47,7 @@ case class SimulationFormFields(terminal: Terminal,
       s"crunchOffsetMinutes=$crunchOffsetMinutes",
       s"eGateOpenHours=${eGateOpenHours.mkString(",")}"
     ) ::
-      (if (eGateBankSizes.nonEmpty) {
-        List(s"eGateBankSizes=${eGateBankSizes.flatten.mkString(",")}")
-      } else {
-        List()
-      }) ::
+      (if (eGateBankSizes.nonEmpty) List(s"eGateBankSizes=${eGateBankSizes.flatten.mkString(",")}") else List()) ::
       processingTimes.map {
         case (ptq, value) => s"${ptq.key}=${value.getOrElse("")}"
       } ::
