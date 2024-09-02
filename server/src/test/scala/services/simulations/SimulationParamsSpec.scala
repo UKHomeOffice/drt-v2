@@ -22,12 +22,11 @@ class SimulationParamsSpec extends Specification {
     passengerWeighting = 1.0,
     processingTimes = testConfig.terminalProcessingTimes(terminal).view.mapValues(_ => 60).toMap,
     minDesksByQueue = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
-    maxDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
+    maxDesks = 20,
     eGateBanksSizes = IndexedSeq(5, 5, 5),
     slaByQueue = testConfig.slaByQueue,
     crunchOffsetMinutes = 0,
     eGateOpenHours = Seq(),
-    paxFeedSourceOrder = paxFeedSourceOrder,
   )
 
   "Given I am applying a simulation to an airport config" >> {
@@ -77,9 +76,9 @@ class SimulationParamsSpec extends Specification {
       result === expected
     }
 
-    "Simulation supplied max desks should be applied to each queue" >> {
+    "Simulation supplied terminal desks should be applied to the total number of desks available" >> {
 
-      val simulationWithMinDesks = simulation.copy(maxDesks = Map(Queues.EGate -> 25))
+      val simulationWithMinDesks = simulation.copy(maxDesks = 25)
 
       val expected = List.fill(24)(25)
 
@@ -123,7 +122,7 @@ class SimulationParamsSpec extends Specification {
     val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100),transPax = Option(50)).toArrival(LiveFeedSource), Set())
     val flights = FlightsWithSplits(Seq(flightWithSplits))
 
-    val result = weightingOfOne.applyPassengerWeighting(flights)
+    val result = weightingOfOne.applyPassengerWeighting(flights, paxFeedSourceOrder)
 
     sumPcpPax(result) === sumPcpPax(flights)
   }
@@ -135,7 +134,7 @@ class SimulationParamsSpec extends Specification {
       List(ApiFlightWithSplits(ArrivalGenerator.live(totalPax = None).toArrival(LiveFeedSource), Set()))
     )
 
-    val result = weightingOfOne.applyPassengerWeighting(flights)
+    val result = weightingOfOne.applyPassengerWeighting(flights, paxFeedSourceOrder)
 
     result.flights.values.head.apiFlight.FeedSources === Set(LiveFeedSource, ScenarioSimulationSource)
   }
@@ -147,7 +146,7 @@ class SimulationParamsSpec extends Specification {
       ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100), transPax = Option(50)).toArrival(LiveFeedSource), Set())
     ))
 
-    val result = weightingOfTwo.applyPassengerWeighting(fws)
+    val result = weightingOfTwo.applyPassengerWeighting(fws, paxFeedSourceOrder)
 
     sumPcpPax(result) === (sumPcpPax(fws) * 1.5).toInt
   }

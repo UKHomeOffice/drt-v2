@@ -59,7 +59,9 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     val simulationParams = defaultSimulationParams(Terminals.T1, crunchDate, defaultAirportConfig)
 
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(
-      simulationParams.applyPassengerWeighting(FlightsWithSplits(arrivals.map(a => ApiFlightWithSplits(a, Set())))
+      simulationParams.applyPassengerWeighting(
+        FlightsWithSplits(arrivals.map(a => ApiFlightWithSplits(a, Set()))),
+        paxFeedSourceOrder,
       ))))
 
     val futureResult: Future[CrunchApi.DeskRecMinutes] = Scenarios.simulationResult(
@@ -95,14 +97,11 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
         case (q, (min, _)) => q -> min.max
       },
-      airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-        case (q, (_, max)) => q -> max.max
-      },
+      maxDesks = airportConfig.desksByTerminal(terminal),
       eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
       slaByQueue = airportConfig.slaByQueue,
       crunchOffsetMinutes = 0,
       eGateOpenHours = SimulationParams.fullDay,
-      paxFeedSourceOrder = paxFeedSourceOrder,
     )
   }
 

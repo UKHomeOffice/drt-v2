@@ -23,15 +23,14 @@ class SimulationQueryStringSpec extends Specification {
         passengerWeighting = 1.0,
         processingTimes = Map(),
         minDesksByQueue = Map(),
-        maxDesks = Map(),
+        maxDesks = 10,
         eGateBanksSizes = IndexedSeq.fill(5)(5),
         slaByQueue = Map(),
         crunchOffsetMinutes = 0,
         eGateOpenHours = Seq(1, 2),
-        paxFeedSourceOrder = paxFeedSourceOrder,
       ))
 
-      val result = SimulationParams.fromQueryStringParams(qsValues, paxFeedSourceOrder)
+      val result = SimulationParams.fromQueryStringParams(qsValues)
 
       expected === result
     }
@@ -54,15 +53,14 @@ class SimulationQueryStringSpec extends Specification {
       passengerWeighting = 1.0,
       processingTimes = Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60, PaxTypesAndQueues.eeaMachineReadableToEGate -> 30),
       minDesksByQueue = Map(Queues.EGate -> 1, Queues.NonEeaDesk -> 1),
-      maxDesks = Map(Queues.EGate -> 3, Queues.NonEeaDesk -> 3),
+      maxDesks = 6,
       eGateBanksSizes = IndexedSeq.fill(5)(5),
       slaByQueue = Map(Queues.EGate -> 10, Queues.EeaDesk -> 15),
       crunchOffsetMinutes = 0,
       eGateOpenHours = Seq(1, 2),
-      paxFeedSourceOrder = paxFeedSourceOrder,
     ))
 
-    val result = SimulationParams.fromQueryStringParams(qsValues, paxFeedSourceOrder)
+    val result = SimulationParams.fromQueryStringParams(qsValues)
 
     expected === result
   }
@@ -84,15 +82,14 @@ class SimulationQueryStringSpec extends Specification {
       passengerWeighting = 1.0,
       processingTimes = Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60),
       minDesksByQueue = Map(Queues.EGate -> 1),
-      maxDesks = Map(Queues.EGate -> 3),
+      maxDesks = 3,
       eGateBanksSizes = IndexedSeq.fill(5)(5),
       slaByQueue = Map(Queues.EGate -> 10),
       crunchOffsetMinutes = 0,
       eGateOpenHours = Seq(1, 2),
-      paxFeedSourceOrder = paxFeedSourceOrder,
     ))
 
-    val result = SimulationParams.fromQueryStringParams(qsValues, paxFeedSourceOrder)
+    val result = SimulationParams.fromQueryStringParams(qsValues)
 
     expected === result
   }
@@ -114,15 +111,14 @@ class SimulationQueryStringSpec extends Specification {
       passengerWeighting = 1.0,
       processingTimes = Map(PaxTypesAndQueues.eeaMachineReadableToDesk -> 60),
       minDesksByQueue = Map(Queues.EGate -> 1),
-      maxDesks = Map(Queues.EGate -> 3),
+      maxDesks = 3,
       eGateBanksSizes = IndexedSeq.fill(5)(5),
       slaByQueue = Map(Queues.EGate -> 10),
       crunchOffsetMinutes = 0,
       eGateOpenHours = Seq(),
-      paxFeedSourceOrder = paxFeedSourceOrder,
     ))
 
-    val result = SimulationParams.fromQueryStringParams(qsValues, paxFeedSourceOrder)
+    val result = SimulationParams.fromQueryStringParams(qsValues)
 
     expected === result
   }
@@ -136,7 +132,7 @@ class SimulationQueryStringSpec extends Specification {
     val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
     val qsValues: Map[String, Seq[String]] = fakeRequest.queryString
 
-    val result = SimulationParams.fromQueryStringParams(qsValues, paxFeedSourceOrder)
+    val result = SimulationParams.fromQueryStringParams(qsValues)
 
     result.isInstanceOf[Failure[SimulationParams]]
   }
