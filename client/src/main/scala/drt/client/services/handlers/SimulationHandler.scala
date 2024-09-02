@@ -19,10 +19,11 @@ class SimulationHandler[M](simulationResult: ModelRW[M, Pot[SimulationResult]]) 
         case _ =>
           Future(RetryActionAfter(GetSimulation(params), PollDelay.recoveryDelay))
       }))
+
     case SetSimulation(simulation) =>
       updated(Ready(simulation))
-    case ReSetSimulation =>
 
+    case ReSetSimulation =>
       updated(Empty)
   }
 }

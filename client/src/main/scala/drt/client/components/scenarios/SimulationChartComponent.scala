@@ -138,45 +138,6 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
     }
   }
 
-//  def minutesToQueueDataSets(cms: List[CrunchApi.CrunchMinute]): Seq[ChartJsDataSet] = {
-//    val paxPerSlot = cms.map(m => Math.round(m.paxLoad).toDouble)
-//    val paxDataSet = ChartJsDataSet(
-//      data = paxPerSlot.toJSArray,
-//      label = "Pax arriving at PCP",
-//      backgroundColor = "rgba(102,102,255,0.2)",
-//      borderColor = "rgba(102,102,255,1)",
-//      borderWidth = 1,
-//      hoverBackgroundColor = "rgba(102,102,255,0.4)",
-//      hoverBorderColor = "rgba(102,102,255,1)",
-//    )
-//
-//    val workPerSlot = cms.map(m => Math.round(m.workLoad).toDouble)
-//    val workDataSet = ChartJsDataSet(
-//      data = workPerSlot.toJSArray,
-//      label = "Workload",
-//      backgroundColor = "rgba(160,160,160,0.2)",
-//      borderColor = "rgba(160,160,160,1)",
-//      borderWidth = 1,
-//      hoverBackgroundColor = "rgba(160,160,160,0.4)",
-//      hoverBorderColor = "rgba(160,160,160,1)",
-//      `type` = "line"
-//    )
-//
-//    val waitTime = cms.map(m => Math.round(m.waitTime).toDouble)
-//    val waitDataSet = ChartJsDataSet(
-//      data = waitTime.toJSArray,
-//      label = "Wait Times",
-//      backgroundColor = "rgba(255,51,51,0.2)",
-//      borderColor = "rgba(255,51,51,1)",
-//      borderWidth = 1,
-//      hoverBackgroundColor = "rgba(255,51,51,0.4)",
-//      hoverBorderColor = "rgba(255,51,51,1)",
-//      `type` = "line"
-//    )
-//
-//    Seq(paxDataSet, workDataSet, waitDataSet)
-//  }
-
   def apply(simulationParams: SimulationFormFields,
             airportConfig: AirportConfig,
             terminal: Terminal,

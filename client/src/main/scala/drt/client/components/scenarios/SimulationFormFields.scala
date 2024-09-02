@@ -48,7 +48,6 @@ case class SimulationFormFields(terminal: Terminal,
       s"eGateOpenHours=${eGateOpenHours.mkString(",")}"
     ) ::
       (if (eGateBankSizes.nonEmpty) {
-        //s"eGateBankSizes=${eGateBankSizes.map(_.getOrElse("")).mkString(",")}",
         List(s"eGateBankSizes=${eGateBankSizes.flatten.mkString(",")}")
       } else {
         List()
@@ -59,7 +58,7 @@ case class SimulationFormFields(terminal: Terminal,
       minDesksByQueue.map {
         case (q, value) => s"${q}_min=${value.getOrElse("")}"
       } ::
-      List(s"desks=$terminalDesks") ::
+      List(s"terminalDesks=$terminalDesks") ::
       slaByQueue.map {
         case (q, value) => s"${q}_sla=${value.getOrElse("")}"
       } :: Nil

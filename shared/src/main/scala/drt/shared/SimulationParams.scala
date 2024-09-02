@@ -77,7 +77,7 @@ object SimulationParams {
       .map(f => f -> qsMap.get(f).flatMap(_.headOption)).toMap
 
     val qMinDesks = queueParams(qsMap, "_min")
-    val qMaxDesks = qsMap.get("desks").flatMap(_.headOption.map(_.toInt)).getOrElse(throw new Exception("Missing desks"))
+    val qMaxDesks = qsMap.get("terminalDesks").flatMap(_.headOption.map(_.toInt)).getOrElse(throw new Exception("Missing desks"))
     val qSlas = queueParams(qsMap, "_sla")
 
     val procTimes: Map[PaxTypeAndQueue, Int] = PaxTypesAndQueues.inOrder.map(ptq => {
