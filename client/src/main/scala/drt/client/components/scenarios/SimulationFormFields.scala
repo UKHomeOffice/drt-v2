@@ -15,7 +15,7 @@ case class SimulationFormFields(terminal: Terminal,
                                 processingTimes: Map[PaxTypeAndQueue, Option[Int]],
                                 minDesksByQueue: Map[Queue, Option[Int]],
                                 terminalDesks: Int,
-                                eGateBanksSizes: IndexedSeq[Option[Int]],
+                                eGateBankSizes: IndexedSeq[Option[Int]],
                                 slaByQueue: Map[Queue, Option[Int]],
                                 crunchOffsetMinutes: Int,
                                 eGateOpenHours: Seq[Int],
@@ -24,7 +24,7 @@ case class SimulationFormFields(terminal: Terminal,
     passengerWeighting.isDefined &&
       processingTimes.forall(_._2.isDefined) &&
       minDesksByQueue.forall(_._2.isDefined) &&
-      eGateBanksSizes.forall(_.isDefined) &&
+      eGateBankSizes.forall(_.isDefined) &&
       slaByQueue.forall(_._2.isDefined)
   }
 
@@ -47,9 +47,9 @@ case class SimulationFormFields(terminal: Terminal,
       s"crunchOffsetMinutes=$crunchOffsetMinutes",
       s"eGateOpenHours=${eGateOpenHours.mkString(",")}"
     ) ::
-      (if (eGateBanksSizes.nonEmpty) {
-        //s"eGateBankSizes=${eGateBanksSizes.map(_.getOrElse("")).mkString(",")}",
-        List(s"eGateBanksSizes=${eGateBanksSizes.flatten.mkString(",")}")
+      (if (eGateBankSizes.nonEmpty) {
+        //s"eGateBankSizes=${eGateBankSizes.map(_.getOrElse("")).mkString(",")}",
+        List(s"eGateBankSizes=${eGateBankSizes.flatten.mkString(",")}")
       } else {
         List()
       }) ::
@@ -92,7 +92,7 @@ object SimulationFormFields {
       processingTimes,
       minDesks,
       terminalDesks,
-      eGateBanksSizes = egateBankSizes,
+      eGateBankSizes = egateBankSizes,
       slaByQueue = slas,
       crunchOffsetMinutes = 0,
       eGateOpenHours = egateOpeningHours

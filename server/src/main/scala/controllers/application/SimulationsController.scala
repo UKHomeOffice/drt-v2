@@ -109,14 +109,14 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
   private def portEgateBanksFromParams(simulationParams: SimulationParams): () => Future[PortEgateBanksUpdates] =
     () => {
-      val banks = simulationParams.eGateBanksSizes.map(bankSize => EgateBank(IndexedSeq.fill(bankSize)(true)))
+      val banks = simulationParams.eGateBankSizes.map(bankSize => EgateBank(IndexedSeq.fill(bankSize)(true)))
       val banksUpdates = EgateBanksUpdates(List(EgateBanksUpdate(0L, banks)))
       Future.successful(PortEgateBanksUpdates(Map(simulationParams.terminal -> banksUpdates)))
     }
 
   private def terminalEgateBanksFromParams(simulationParams: SimulationParams): Terminal => Future[EgateBanksUpdates] =
     _ => {
-      val banks = simulationParams.eGateBanksSizes.map(bankSize => EgateBank(IndexedSeq.fill(bankSize)(true)))
+      val banks = simulationParams.eGateBankSizes.map(bankSize => EgateBank(IndexedSeq.fill(bankSize)(true)))
       val banksUpdates = EgateBanksUpdates(List(EgateBanksUpdate(0L, banks)))
       Future.successful(banksUpdates)
     }

@@ -98,7 +98,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
         case (q, (min, _)) => q -> min.max
       },
       maxDesks = airportConfig.desksByTerminal(terminal),
-      eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
+      eGateBankSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
       slaByQueue = airportConfig.slaByQueue,
       crunchOffsetMinutes = 0,
       eGateOpenHours = SimulationParams.fullDay,

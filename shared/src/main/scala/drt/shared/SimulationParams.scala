@@ -15,7 +15,7 @@ case class SimulationParams(terminal: Terminal,
                             processingTimes: Map[PaxTypeAndQueue, Int],
                             minDesksByQueue: Map[Queue, Int],
                             maxDesks: Int,
-                            eGateBanksSizes: IndexedSeq[Int],
+                            eGateBankSizes: IndexedSeq[Int],
                             slaByQueue: Map[Queue, Int],
                             crunchOffsetMinutes: Int,
                             eGateOpenHours: Seq[Int],
@@ -67,7 +67,7 @@ object SimulationParams {
     "terminal",
     "date",
     "passengerWeighting",
-    "eGateBanksSizes",
+    "eGateBankSizes",
     "crunchOffsetMinutes",
     "eGateOpenHours"
   )
@@ -95,7 +95,7 @@ object SimulationParams {
       eGateOpenHours: String <- maybeSimulationFieldsStrings("eGateOpenHours")
     } yield {
       val terminal = Terminal(terminalName)
-      val maybeEGateBankSizes = maybeSimulationFieldsStrings("eGateBanksSizes")
+      val maybeEGateBankSizes = maybeSimulationFieldsStrings("eGateBankSizes")
       val splitEgateBankSizes = maybeEGateBankSizes.getOrElse("").split(",").toList.filterNot(_.isEmpty)
       val eGateBankSizes: IndexedSeq[Int] = splitEgateBankSizes.map(_.toInt).toIndexedSeq
 
@@ -106,7 +106,7 @@ object SimulationParams {
         processingTimes = procTimes,
         minDesksByQueue = qMinDesks,
         maxDesks = qMaxDesks,
-        eGateBanksSizes = eGateBankSizes,
+        eGateBankSizes = eGateBankSizes,
         slaByQueue = qSlas,
         crunchOffsetMinutes = crunchOffsetMinutes.toInt,
         eGateOpenHours = eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {

@@ -60,10 +60,10 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
 
         def changeBankSize(bankIndex: Int)(e: ReactEventFromInput): Callback = {
           val maybeValue = Try(e.target.value.toInt).toOption
-          val updatedBankSizes = state.simulationFormFields.eGateBanksSizes.indices.zip(state.simulationFormFields.eGateBanksSizes).map {
+          val updatedBankSizes = state.simulationFormFields.eGateBankSizes.indices.zip(state.simulationFormFields.eGateBankSizes).map {
             case (idx, existingBankSize) => if (idx == bankIndex) maybeValue else existingBankSize
           }
-          scope.setState(state.copy(simulationFormFields = state.simulationFormFields.copy(eGateBanksSizes = updatedBankSizes)))
+          scope.setState(state.copy(simulationFormFields = state.simulationFormFields.copy(eGateBankSizes = updatedBankSizes)))
         }
 
         def changeProcessingTimes(ptq: PaxTypeAndQueue): ReactEventFromInput => Callback = (e: ReactEventFromInput) => {
@@ -188,13 +188,13 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
                 )
               )
             }.toTagMod,
-            if (state.simulationFormFields.eGateBanksSizes.nonEmpty)
+            if (state.simulationFormFields.eGateBankSizes.nonEmpty)
               <.div(
                 MuiFormLabel()(
                   s"${Queues.displayName(EGate)} bank sizes"
                 ),
                 <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px"),
-                  state.simulationFormFields.eGateBanksSizes.zipWithIndex.map { case (bankSize, idx) =>
+                  state.simulationFormFields.eGateBankSizes.zipWithIndex.map { case (bankSize, idx) =>
                     MuiTextField(
                       label = s"Bank ${idx + 1} gates".toVdom,
                     )(
