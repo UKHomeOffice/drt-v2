@@ -24,9 +24,9 @@ import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, UtcDate}
 import upickle.default.write
@@ -108,11 +108,10 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   }
 
   private def portEgateBanksFromParams(simulationParams: SimulationParams): () => Future[PortEgateBanksUpdates] =
-    () => {
-      val banks = simulationParams.eGateBankSizes.map(bankSize => EgateBank(IndexedSeq.fill(bankSize)(true)))
-      val banksUpdates = EgateBanksUpdates(List(EgateBanksUpdate(0L, banks)))
-      Future.successful(PortEgateBanksUpdates(Map(simulationParams.terminal -> banksUpdates)))
-    }
+    () =>
+      terminalEgateBanksFromParams(simulationParams)(simulationParams.terminal).map {
+        case EgateBanksUpdates(updates) => PortEgateBanksUpdates(Map(simulationParams.terminal -> EgateBanksUpdates(updates)))
+      }
 
   private def terminalEgateBanksFromParams(simulationParams: SimulationParams): Terminal => Future[EgateBanksUpdates] =
     _ => {

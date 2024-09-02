@@ -63,7 +63,7 @@ object SimulationParams {
 
   val fullDay: Seq[Int] = 0 to 23
 
-  val requiredFields: List[String] = List(
+  private val requiredFields: List[String] = List(
     "terminal",
     "date",
     "passengerWeighting",
@@ -127,7 +127,7 @@ object SimulationParams {
 
   }
 
-  def queueParams(qsMap: Map[String, Seq[String]], suffix: String): Map[Queue, Int] = qsMap
+  private def queueParams(qsMap: Map[String, Seq[String]], suffix: String): Map[Queue, Int] = qsMap
     .collect {
       case (k, value) if k.contains(suffix) =>
         Queue(k.replace(suffix, "")) -> value.headOption.flatMap(s => Try(s.toInt).toOption)
