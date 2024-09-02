@@ -4,7 +4,7 @@ import drt.shared._
 import org.specs2.mutable.Specification
 import play.api.test.FakeRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{FeedSource, LiveFeedSource, PaxTypesAndQueues, Queues}
+import uk.gov.homeoffice.drt.ports.{PaxTypesAndQueues, Queues}
 import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.util.{Failure, Success}
@@ -12,7 +12,7 @@ import scala.util.{Failure, Success}
 class SimulationQueryStringSpec extends Specification {
   "When parsing a query string back into a simulations params object" >> {
     "Given a query string map containing all require fields then I should get back a successful SimulationParams" >> {
-      val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&eGateOpenHours=1,2&desks=10"
+      val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&eGateOpenHours=1,2&terminalDesks=10"
       val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
       val qsValues: Map[String, Seq[String]] = fakeRequest.queryString
 
@@ -40,7 +40,7 @@ class SimulationQueryStringSpec extends Specification {
       "eGateOpenHours=1,2&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=30&" +
       "EGate_min=1&NonEeaDesk_min=1&" +
-      "desks=6&" +
+      "terminalDesks=6&" +
       "EGate_sla=10&EeaDesk_sla=15"
 
     val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
@@ -69,7 +69,7 @@ class SimulationQueryStringSpec extends Specification {
       "eGateOpenHours=1,2&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=x&" +
       "EGate_min=1&NonEeaDesk_min=x&" +
-      "desks=3&" +
+      "terminalDesks=3&" +
       "EGate_sla=10&EeaDesk_sla=x"
 
     val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
@@ -98,7 +98,7 @@ class SimulationQueryStringSpec extends Specification {
       "eGateOpenHours=&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=x&" +
       "EGate_min=1&NonEeaDesk_min=x&" +
-      "desks=3&" +
+      "terminalDesks=3&" +
       "EGate_sla=10&EeaDesk_sla=x"
 
     val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
@@ -126,7 +126,7 @@ class SimulationQueryStringSpec extends Specification {
     val qs = "date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&" +
       "EeaMachineReadable_EeaDesk=60&EeaMachineReadable_EGate=x&" +
       "EGate_min=1&NonEeaDesk_min=x&" +
-      "desks=x&" +
+      "terminalDesks=x&" +
       "EGate_sla=10&EeaDesk_sla=x"
     val fakeRequest = FakeRequest("GET", s"/endpoint?$qs")
     val qsValues: Map[String, Seq[String]] = fakeRequest.queryString
