@@ -45,7 +45,6 @@ class MinStaffHandler[M](modelRW: ModelRW[M, Pot[TerminalMinStaff]]) extends Log
       effectOnly(apiCallEffect)
 
     case SaveMinStaff(minStaff) =>
-      println(s"Saving min staff: $minStaff")
       val apiCallEffect = Effect(DrtApi.post(s"shifts/minimum-staff/${minStaff.terminal.toString}", s"""{"minimumStaff":"${minStaff.minStaff.getOrElse(0)}"}""")
         .map(_ => SetMinStaff(minStaff))
         .recoverWith {

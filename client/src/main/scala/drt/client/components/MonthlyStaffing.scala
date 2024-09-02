@@ -147,7 +147,7 @@ object MonthlyStaffing {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm && a.timeSlots == b.timeSlots && a.colHeadings == b.colHeadings && a.rowHeadings == b.rowHeadings && a.changes == b.changes)
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm)
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(stateFromProps)
