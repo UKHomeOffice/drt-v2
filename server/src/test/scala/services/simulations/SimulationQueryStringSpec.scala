@@ -10,7 +10,6 @@ import uk.gov.homeoffice.drt.time.LocalDate
 import scala.util.{Failure, Success}
 
 class SimulationQueryStringSpec extends Specification {
-//  private val paxFeedSourceOrder: Seq[FeedSource] = Seq(LiveFeedSource)
   "When parsing a query string back into a simulations params object" >> {
     "Given a query string map containing all require fields then I should get back a successful SimulationParams" >> {
       val qs = "terminal=T1&date=2020-02-02&passengerWeighting=1.0&eGateBankSizes=5,5,5,5,5&crunchOffsetMinutes=0&eGateOpenHours=1,2&desks=10"
