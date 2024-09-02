@@ -9,31 +9,28 @@ import upickle.default.{ReadWriter, macroRW}
 
 import scala.util.{Success, Try}
 
-case class SimulationParams(
-                             terminal: Terminal,
-                             date: LocalDate,
-                             passengerWeighting: Double,
-                             processingTimes: Map[PaxTypeAndQueue, Int],
-                             minDesks: Map[Queue, Int],
-                             maxDesks: Map[Queue, Int],
-                             eGateBanksSizes: IndexedSeq[Int],
-                             slaByQueue: Map[Queue, Int],
-                             crunchOffsetMinutes: Int,
-                             eGateOpenHours: Seq[Int],
-                             paxFeedSourceOrder: Seq[FeedSource],
+case class SimulationParams(terminal: Terminal,
+                            date: LocalDate,
+                            passengerWeighting: Double,
+                            processingTimes: Map[PaxTypeAndQueue, Int],
+                            minDesksByQueue: Map[Queue, Int],
+                            maxDesks: Int,
+                            eGateBankSizes: IndexedSeq[Int],
+                            slaByQueue: Map[Queue, Int],
+                            crunchOffsetMinutes: Int,
+                            eGateOpenHours: Seq[Int],
                            ) {
 
   def applyToAirportConfig(airportConfig: AirportConfig): AirportConfig = {
     val openDesks: Map[Queues.Queue, (List[Int], List[Int])] = airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
       case (q, (origMinDesks, origMaxDesks)) =>
-        val newMaxDesks = origMaxDesks.map(d => maxDesks.getOrElse(q, d))
-        val newMinDesks = origMinDesks.map(d => minDesks.getOrElse(q, d))
-        q -> (newMinDesks, newMaxDesks)
+        val newMinDesks = origMinDesks.map(d => minDesksByQueue.getOrElse(q, d))
+        q -> (newMinDesks, origMaxDesks)
     }
 
     airportConfig.copy(
       minMaxDesksByTerminalQueue24Hrs = airportConfig.minMaxDesksByTerminalQueue24Hrs + (terminal -> openDesks),
-      eGateBankSizes = Map(terminal -> eGateBanksSizes),
+      desksByTerminal = airportConfig.desksByTerminal + (terminal -> maxDesks),
       slaByQueue = airportConfig.slaByQueue.map {
         case (q, v) => q -> slaByQueue.getOrElse(q, v)
       },
@@ -47,7 +44,7 @@ case class SimulationParams(
     )
   }
 
-  def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits): FlightsWithSplits =
+  def applyPassengerWeighting(flightsWithSplits: FlightsWithSplits, paxFeedSourceOrder: Seq[FeedSource]): FlightsWithSplits =
     FlightsWithSplits(flightsWithSplits.flights.map {
       case (ua, fws) =>
         val paxSource = fws.apiFlight.bestPaxEstimate(paxFeedSourceOrder)
@@ -66,7 +63,7 @@ object SimulationParams {
 
   val fullDay: Seq[Int] = 0 to 23
 
-  val requiredFields: List[String] = List(
+  private val requiredFields: List[String] = List(
     "terminal",
     "date",
     "passengerWeighting",
@@ -75,12 +72,12 @@ object SimulationParams {
     "eGateOpenHours"
   )
 
-  def fromQueryStringParams(qsMap: Map[String, Seq[String]], paxSourceOrder: Seq[FeedSource]): Try[SimulationParams] = Try {
+  def fromQueryStringParams(qsMap: Map[String, Seq[String]]): Try[SimulationParams] = Try {
     val maybeSimulationFieldsStrings: Map[String, Option[String]] = requiredFields
       .map(f => f -> qsMap.get(f).flatMap(_.headOption)).toMap
 
     val qMinDesks = queueParams(qsMap, "_min")
-    val qMaxDesks = queueParams(qsMap, "_max")
+    val qMaxDesks = qsMap.get("terminalDesks").flatMap(_.headOption.map(_.toInt)).getOrElse(throw new Exception("Missing desks"))
     val qSlas = queueParams(qsMap, "_sla")
 
     val procTimes: Map[PaxTypeAndQueue, Int] = PaxTypesAndQueues.inOrder.map(ptq => {
@@ -94,25 +91,27 @@ object SimulationParams {
       dateString: String <- maybeSimulationFieldsStrings("date")
       localDate <- LocalDate.parse(dateString)
       passengerWeightingString: String <- maybeSimulationFieldsStrings("passengerWeighting")
-      eGateBankSizeString: String <- maybeSimulationFieldsStrings("eGateBankSizes")
       crunchOffsetMinutes: String <- maybeSimulationFieldsStrings("crunchOffsetMinutes")
       eGateOpenHours: String <- maybeSimulationFieldsStrings("eGateOpenHours")
     } yield {
       val terminal = Terminal(terminalName)
+      val maybeEGateBankSizes = maybeSimulationFieldsStrings("eGateBankSizes")
+      val splitEgateBankSizes = maybeEGateBankSizes.getOrElse("").split(",").toList.filterNot(_.isEmpty)
+      val eGateBankSizes: IndexedSeq[Int] = splitEgateBankSizes.map(_.toInt).toIndexedSeq
+
       SimulationParams(
         terminal = terminal,
         date = localDate,
         passengerWeighting = passengerWeightingString.toDouble,
         processingTimes = procTimes,
-        minDesks = qMinDesks,
+        minDesksByQueue = qMinDesks,
         maxDesks = qMaxDesks,
-        eGateBanksSizes = eGateBankSizeString.split(",").map(_.toInt),
+        eGateBankSizes = eGateBankSizes,
         slaByQueue = qSlas,
         crunchOffsetMinutes = crunchOffsetMinutes.toInt,
         eGateOpenHours = eGateOpenHours.split(",").map(s => Try(s.toInt)).collect {
           case Success(i) => i
         },
-        paxFeedSourceOrder = paxSourceOrder,
       )
     }
 
@@ -128,7 +127,7 @@ object SimulationParams {
 
   }
 
-  def queueParams(qsMap: Map[String, Seq[String]], suffix: String): Map[Queue, Int] = qsMap
+  private def queueParams(qsMap: Map[String, Seq[String]], suffix: String): Map[Queue, Int] = qsMap
     .collect {
       case (k, value) if k.contains(suffix) =>
         Queue(k.replace(suffix, "")) -> value.headOption.flatMap(s => Try(s.toInt).toOption)

@@ -14,6 +14,7 @@ import drt.shared.CrunchApi._
 import drt.shared._
 import manifests.queues.SplitsCalculator
 import play.api.mvc._
+import services.crunch.desklimits.PortDeskLimits
 import services.crunch.deskrecs.OptimisationProviders
 import services.exports.StreamingDesksExport
 import services.imports.ArrivalCrunchSimulationActor
@@ -22,10 +23,10 @@ import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
-import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
+import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, UtcDate}
 import upickle.default.write
@@ -42,7 +43,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     Action(parse.defaultBodyParser).async {
       request =>
         SimulationParams
-          .fromQueryStringParams(request.queryString, ctrl.paxFeedSourceOrder) match {
+          .fromQueryStringParams(request.queryString) match {
           case Success(simulationParams) =>
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
 
@@ -60,7 +61,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     Action(parse.defaultBodyParser).async {
       request =>
         SimulationParams
-          .fromQueryStringParams(request.queryString, ctrl.paxFeedSourceOrder) match {
+          .fromQueryStringParams(request.queryString) match {
           case Success(simulationParams) =>
             val simulationConfig = simulationParams.applyToAirportConfig(airportConfig)
             val futureDeskRecs = deskRecsForSimulation(simulationParams, simulationConfig)
@@ -75,7 +76,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     }
   }
 
-  private def deskRecsForSimulation(simulationParams: SimulationParams, simulationConfig: AirportConfig) = {
+  private def deskRecsForSimulation(simulationParams: SimulationParams, simulationConfig: AirportConfig): Future[DeskRecMinutes] = {
     implicit val timeout: Timeout = new Timeout(10 minutes)
 
     val date = SDate(simulationParams.date)
@@ -85,8 +86,12 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       simulationParams.terminal
     )).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
 
-    val futureDeskRecs: Future[DeskRecMinutes] = FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
-      val portStateActor = actorSystem.actorOf(Props(new ArrivalCrunchSimulationActor(simulationParams.applyPassengerWeighting(fws))))
+    FlightsRouterActor.runAndCombine(eventualFlightsWithSplitsStream).map { fws =>
+      val props = Props(new ArrivalCrunchSimulationActor(
+        simulationParams.applyPassengerWeighting(fws, ctrl.paxFeedSourceOrder),
+      ))
+      val portStateActor = actorSystem.actorOf(props)
+      val deskLimits = PortDeskLimits.flexed(simulationConfig, terminalEgateBanksFromParams(simulationParams))
       Scenarios.simulationResult(
         simulationParams = simulationParams,
         simulationAirportConfig = simulationConfig,
@@ -95,13 +100,25 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         flightsProvider = OptimisationProviders.flightsWithSplitsProvider(portStateActor),
         portStateActor = portStateActor,
         redListUpdatesProvider = () => ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
-        egateBanksProvider = () => ctrl.applicationService.egateBanksUpdatesActor.ask(GetState).mapTo[PortEgateBanksUpdates],
+        egateBanksProvider = portEgateBanksFromParams(simulationParams),
         paxFeedSourceOrder = ctrl.feedService.paxFeedSourceOrder,
-        deskLimitsProviders = ctrl.applicationService.deskLimitsProviders,
+        deskLimitsProviders = deskLimits,
       )
     }.flatten
-    futureDeskRecs
   }
+
+  private def portEgateBanksFromParams(simulationParams: SimulationParams): () => Future[PortEgateBanksUpdates] =
+    () =>
+      terminalEgateBanksFromParams(simulationParams)(simulationParams.terminal).map {
+        case EgateBanksUpdates(updates) => PortEgateBanksUpdates(Map(simulationParams.terminal -> EgateBanksUpdates(updates)))
+      }
+
+  private def terminalEgateBanksFromParams(simulationParams: SimulationParams): Terminal => Future[EgateBanksUpdates] =
+    _ => {
+      val banks = simulationParams.eGateBankSizes.map(bankSize => EgateBank(IndexedSeq.fill(bankSize)(true)))
+      val banksUpdates = EgateBanksUpdates(List(EgateBanksUpdate(0L, banks)))
+      Future.successful(banksUpdates)
+    }
 
   def summary(mins: DeskRecMinutes, terminal: Terminal): Map[Queues.Queue, List[CrunchApi.CrunchMinute]] = {
     val ps = PortState(List(), mins.minutes.map(_.toMinute), List())

@@ -28,6 +28,7 @@ import queueus._
 import services.PcpArrival.pcpFrom
 import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits, RunnableMergedArrivals}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
+import services.crunch.desklimits.flexed.FlexedTerminalDeskLimits
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
@@ -401,9 +402,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)
 
-  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks")) {
+  val deskLimitsProviders: Map[Terminal, TerminalDeskLimitsLike] = if (config.get[Boolean]("crunch.flex-desks"))
     PortDeskLimits.flexed(airportConfig, terminalEgatesProvider)
-  }
   else
     PortDeskLimits.fixed(airportConfig, terminalEgatesProvider)
 

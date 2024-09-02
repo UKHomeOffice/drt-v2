@@ -82,7 +82,6 @@ object Scenarios {
 
     val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
 
-
     val crunchRequest: MillisSinceEpoch => CrunchRequest =
       (millis: MillisSinceEpoch) => CrunchRequest(millis, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
 
