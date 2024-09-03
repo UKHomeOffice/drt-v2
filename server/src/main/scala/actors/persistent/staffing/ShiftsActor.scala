@@ -109,7 +109,7 @@ object ShiftsActor extends ShiftsActorLike {
                              previousMinimum: Option[Int]) extends ShiftUpdate
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
-                           shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
+                         shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
     val existingIndexed = existingAssignments.map(a => (a.terminal, a.start) -> a).toMap
     val updatedIndexed = shiftsToUpdate.map(a => (a.terminal, a.start) -> a).toMap
 
