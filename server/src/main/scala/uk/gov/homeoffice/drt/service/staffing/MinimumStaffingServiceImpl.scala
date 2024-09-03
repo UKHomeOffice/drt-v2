@@ -35,7 +35,7 @@ case class MinimumStaffingServiceImpl(portCode: PortCode,
         val maybeExistingMinStaff = maybeConfig.flatMap(_.minimumRosteredStaff)
         val updatedConfig = maybeConfig match {
           case Some(config) =>
-            config.copy(minimumRosteredStaff = newMinimum)
+            config.copy(minimumRosteredStaff = newMinimum, updatedAt = now().millisSinceEpoch)
           case None =>
             PortTerminalConfig(
               port = portCode,
