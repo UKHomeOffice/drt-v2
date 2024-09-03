@@ -10,10 +10,10 @@ case class Terminate(actor: ActorRef)
 
 case class RequestAndTerminate(actor: ActorRef, request: Any)
 
-class RequestAndTerminateActor(implicit timeout: Timeout) extends Actor {
+class RequestAndTerminateActor(implicit defaultTimeout: Timeout) extends Actor {
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   val log: Logger = LoggerFactory.getLogger(getClass)
-  var deathWatchReplyToAndResponse: Map[ActorRef, (ActorRef, Any)] = Map[ActorRef, (ActorRef, Any)]()
+  private var deathWatchReplyToAndResponse: Map[ActorRef, (ActorRef, Any)] = Map[ActorRef, (ActorRef, Any)]()
 
   override def receive: Receive = {
     case Terminate(actor) =>
@@ -21,11 +21,7 @@ class RequestAndTerminateActor(implicit timeout: Timeout) extends Actor {
       self ! ActorReplyToResponse(actor, replyTo, StatusReply.Ack)
 
     case RequestAndTerminate(actor, request) =>
-      val replyTo = sender()
-      val eventualDiff = actor.ask(request)
-      eventualDiff.foreach { response =>
-        self ! ActorReplyToResponse(actor, replyTo, response)
-      }
+      executeRequest(actor, request)
 
     case ActorReplyToResponse(actor, replyTo, response) =>
       deathWatchReplyToAndResponse = deathWatchReplyToAndResponse + (actor -> ((replyTo, response)))
@@ -33,13 +29,26 @@ class RequestAndTerminateActor(implicit timeout: Timeout) extends Actor {
       actor ! PoisonPill
 
     case Terminated(terminatedActor) =>
-      log.debug("Actor terminated. Replying to sender")
       deathWatchReplyToAndResponse.get(terminatedActor) match {
         case None => log.error("Failed to find a matching terminated actor to respond to")
         case Some((replyTo, response)) =>
           deathWatchReplyToAndResponse = deathWatchReplyToAndResponse - terminatedActor
-          log.debug(s"Sending response to sender")
           replyTo ! response
+      }
+  }
+
+  private def executeRequest(actor: ActorRef, request: Any): Unit = {
+    val replyTo = sender()
+    val eventualResponse = actor.ask(request)
+    eventualResponse
+      .foreach { response =>
+        self ! ActorReplyToResponse(actor, replyTo, response)
+      }
+    eventualResponse
+      .recover {
+        case e: Throwable =>
+          log.error(s"Failed to get a response from actor $actor", e)
+          self ! ActorReplyToResponse(actor, replyTo, StatusReply.Error(e))
       }
   }
 }

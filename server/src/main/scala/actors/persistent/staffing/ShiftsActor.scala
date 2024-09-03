@@ -109,13 +109,14 @@ object ShiftsActor extends ShiftsActorLike {
                              previousMinimum: Option[Int]) extends ShiftUpdate
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
-                         shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = shiftsToUpdate
-    .foldLeft(existingAssignments) {
-      case (assignmentsSoFar, updatedAssignment) =>
-        assignmentsSoFar.filterNot { existing =>
-          existing.start == updatedAssignment.start && existing.terminal == updatedAssignment.terminal
-        }
-    } ++ shiftsToUpdate
+                           shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
+    val existingIndexed = existingAssignments.map(a => (a.terminal, a.start) -> a).toMap
+    val updatedIndexed = shiftsToUpdate.map(a => (a.terminal, a.start) -> a).toMap
+
+    updatedIndexed.foldLeft(existingIndexed) {
+      case (assignmentsSoFar, (key, updatedAssignment)) => assignmentsSoFar + (key -> updatedAssignment)
+    }.values.toSeq
+  }
 
   def sequentialWritesProps(now: () => SDateLike,
                             expireBefore: () => SDateLike,
@@ -142,19 +143,18 @@ object ShiftsActor extends ShiftsActorLike {
     val fifteenMinutes = 15.minutes
     val fourteenMinutes = 14.minutes
 
-    (startMinute to endMinute by fifteenMinutes.toMillis).foldLeft(assignments) {
-      case (currentAssignments, minute) =>
-        val updatedAssignments = currentAssignments.assignments.find(sa => sa.terminal == terminal && sa.start <= minute && sa.end >= minute) match {
-          case Some(existingAssignment) =>
-            val updatedStaffLevel = applyMinimumStaff(newMinimum, previousMinimum, existingAssignment.numberOfStaff)
-            val updatedAssignment = StaffAssignment("", terminal, minute, minute + fourteenMinutes.toMillis, updatedStaffLevel, None)
-            applyUpdatedShifts(currentAssignments.assignments, Seq(updatedAssignment))
-          case None =>
-            val newAssignment = StaffAssignment("", terminal, minute, minute + fourteenMinutes.toMillis, newMinimum, None)
-            applyUpdatedShifts(currentAssignments.assignments, Seq(newAssignment))
-        }
-        ShiftAssignments(updatedAssignments)
+    val indexed = assignments.assignments.filter(_.terminal == terminal).map(a => a.start -> a).toMap
+
+    val updatedAssignments = (startMinute to endMinute by fifteenMinutes.toMillis).map { minute =>
+      indexed.get(minute) match {
+        case Some(existingAssignment) =>
+          val updatedStaffLevel = applyMinimumStaff(newMinimum, previousMinimum, existingAssignment.numberOfStaff)
+          StaffAssignment("", terminal, minute, minute + fourteenMinutes.toMillis, updatedStaffLevel, None)
+        case None =>
+          StaffAssignment("", terminal, minute, minute + fourteenMinutes.toMillis, newMinimum, None)
+      }
     }
+    ShiftAssignments(updatedAssignments)
   }
 }
 
