@@ -19,6 +19,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.window.confirm
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -42,7 +43,8 @@ object MonthlyStaffing {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(shifts: ShiftAssignments,
+  case class Props(portCode: PortCode,
+                   shifts: ShiftAssignments,
                    terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
                    terminalMinStaff: TerminalMinStaff) {
@@ -191,7 +193,7 @@ object MonthlyStaffing {
 
       if (state.showMinStaffForm) {
         <.div(^.className := "terminal-staffing-header",
-          MinStaffForm(IMinStaffForm("DRT", props.terminalPageTab.terminal.toString, 0, (minStaff) => {
+          MinStaffForm(IMinStaffForm(props.portCode.toString, props.terminalPageTab.terminal.toString, 0, (minStaff) => {
             saveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff)))
             true;
           }, () => {
@@ -357,9 +359,10 @@ object MonthlyStaffing {
     State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map(), false, props.terminalMinStaff)
   }
 
-  def apply(shifts: ShiftAssignments,
+  def apply(portCode: PortCode,
+            shifts: ShiftAssignments,
             terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             terminalMinStaff: TerminalMinStaff
-           ): Unmounted[Props, State, Unit] = component(Props(shifts, terminalPageTab, router, terminalMinStaff))
+           ): Unmounted[Props, State, Unit] = component(Props(portCode, shifts, terminalPageTab, router, terminalMinStaff))
 }
