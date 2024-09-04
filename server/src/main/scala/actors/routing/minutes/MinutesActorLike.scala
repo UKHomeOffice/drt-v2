@@ -35,6 +35,8 @@ object MinutesActorLike {
 
   case object ProcessNextUpdateRequest
 
+  case object FinishedProcessingRequest
+
   case class QueueUpdateRequest[U](update: U, replyTo: ActorRef)
 
 }
@@ -205,11 +207,11 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor, U](terminals: Iterable
 }
 
 abstract class MinutesActorLike2[A, B <: WithTimeAccessor, U](terminals: Iterable[Terminal],
-                                                           lookup: MinutesLookup[A, B],
-                                                           updateMinutes: MinutesUpdate[A, B, U],
-                                                           splitByResource: MinutesContainer[A, B] => Map[(Terminal, UtcDate), MinutesContainer[A, B]],
-                                                           shouldSendEffects: MinutesContainer[A, B] => Boolean,
-                                                          ) extends RouterActorLike2[MinutesContainer[A, B], (Terminal, UtcDate), U] {
+                                                              lookup: MinutesLookup[A, B],
+                                                              updateMinutes: MinutesUpdate[A, B, U],
+                                                              splitByResource: MinutesContainer[A, B] => Map[(Terminal, UtcDate), MinutesContainer[A, B]],
+                                                              shouldSendEffects: MinutesContainer[A, B] => Boolean,
+                                                             ) extends RouterActorLike2[MinutesContainer[A, B], (Terminal, UtcDate), U] {
   override val sequentialUpdatesActor: ActorRef = context.actorOf(Props(new SequentialAccessActor(updateMinutes, splitByResource) {
     override def shouldSendEffectsToSubscribers(request: MinutesContainer[A, B]): Boolean = {
       shouldSendEffects(request)

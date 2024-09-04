@@ -207,6 +207,18 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       shifts.assignments.length === 96
       shifts.assignments.forall(_.numberOfStaff === 10) === true
     }
+    "return in a reasonable time when updating 6 months of shifts" in {
+      val existingShifts = ShiftAssignments((0 until 96 * 30 * 6).map { i =>
+        val startTime = SDate("2024-08-18T00:00", TimeZoneHelper.europeLondonTimeZone).addMinutes(i * 15)
+        val endTime = startTime.addMinutes(14)
+        StaffAssignment(s"Shift $i", T1, startTime.millisSinceEpoch, endTime.millisSinceEpoch, 5, None)
+      })
+      val start = System.currentTimeMillis()
+      updateMinimumStaff(T1, LocalDate(2024, 8, 18), LocalDate(2025, 2, 18), 10, Option(5), existingShifts)
+      val end = System.currentTimeMillis()
+
+      (end - start) < 1000 === true
+    }
   }
 
   def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsActor(now, expiryDateXDaysFrom(now, 1), 10)))
