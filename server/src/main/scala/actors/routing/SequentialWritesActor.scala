@@ -1,6 +1,6 @@
 package actors.routing
 
-import actors.routing.minutes.MinutesActorLike.{ProcessNextUpdateRequest, QueueUpdateRequest}
+import actors.routing.minutes.MinutesActorLike.{FinishedProcessingRequest, ProcessNextUpdateRequest, QueueUpdateRequest}
 import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.pattern.StatusReply
 import akka.stream.Materializer
@@ -38,9 +38,7 @@ class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor wi
     eventualAck
   }
 
-  override def receive: Receive =
-    receiveProcessRequest orElse
-      receiveUpdates
+  override def receive: Receive = receiveProcessRequest orElse receiveUpdates
 
   private def receiveProcessRequest: Receive = {
     case ProcessNextUpdateRequest =>
@@ -53,6 +51,10 @@ class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor wi
             log.debug("Update requests queue is empty. Nothing to do")
         }
       }
+
+    case FinishedProcessingRequest =>
+      processingRequest = false
+      self ! ProcessNextUpdateRequest
   }
 
   private def receiveUpdates: Receive = {
