@@ -13,12 +13,12 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class SimulationHandler[M](simulationResult: ModelRW[M, Pot[SimulationResult]]) extends LoggingActionHandler(simulationResult) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetSimulation(params) =>
-
       updated(Pending(), Effect(DrtApi.get(s"desk-rec-simulation?${params.toQueryStringParams}")
-        .map(r => SetSimulation(read[SimulationResult](r.responseText))).recoverWith {
-        case _ =>
-          Future(RetryActionAfter(GetSimulation(params), PollDelay.recoveryDelay))
-      }))
+        .map(r => SetSimulation(read[SimulationResult](r.responseText)))
+        .recoverWith {
+          case _ =>
+            Future(RetryActionAfter(GetSimulation(params), PollDelay.recoveryDelay))
+        }))
 
     case SetSimulation(simulation) =>
       updated(Ready(simulation))

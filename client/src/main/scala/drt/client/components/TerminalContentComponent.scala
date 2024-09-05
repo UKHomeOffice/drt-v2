@@ -47,12 +47,13 @@ object TerminalContentComponent {
                    showActuals: Boolean,
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
-                   minuteTicker: Int,
                    featureFlags: Pot[FeatureFlags],
                    redListPorts: Pot[HashSet[PortCode]],
                    redListUpdates: Pot[RedListUpdates],
                    walkTimes: Pot[WalkTimes],
                    paxFeedSourceOrder: List[FeedSource],
+                   portState: Pot[PortState],
+                   airportInfo: Map[PortCode, Pot[AirportInfo]],
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)

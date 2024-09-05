@@ -1,12 +1,13 @@
 package drt.client.components
 
 import diode.UseValueEq
+import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.CrunchMinute
+import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import japgolly.scalajs.react.{Callback, ScalaComponent}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -36,7 +37,7 @@ object PcpPaxSummary {
 
 object PcpPaxSummariesComponent {
 
-  case class Props(viewMode: ViewMode, minuteTicker: Int) extends UseValueEq
+  case class Props(viewMode: ViewMode, minuteTicker: Pot[Int], crunchMinutesPot: Pot[Seq[CrunchMinute]]) extends UseValueEq
 
   class Backend {
     def render(props: Props): html_<^.VdomNode = {
@@ -45,30 +46,25 @@ object PcpPaxSummariesComponent {
       val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
       val boxes = Seq("next 5 minutes", "5-10 minutes", "10-15 minutes")
       if (props.viewMode.isLive) {
-
-        val crunchMinutesRCP = SPACircuit.connect(_.portStatePot.map(_.crunchMinutes.values))
-
-        crunchMinutesRCP { crunchMinutesProxy =>
-          <.div(
-            crunchMinutesProxy().render { crunchMinutes =>
-              <.div(
-                ^.className := "pcp-pax-summaries",
-                boxes.zipWithIndex.map {
-                  case (label, box) =>
-                    val start = now.addMinutes(box * 5)
-                    val summary = PcpPaxSummary(start, fiveMinutes, crunchMinutes.toSeq, queues.toSet)
-                    summaryBox(box, label, start, queues, summary)
-                }.toVdomArray
-              )
-            }
-          )
-        }
+        props.crunchMinutesPot.render(cms =>
+          <.div {
+            <.div(
+              ^.className := "pcp-pax-summaries",
+              boxes.zipWithIndex.map {
+                case (label, box) =>
+                  val start = now.addMinutes(box * 5)
+                  val summary = PcpPaxSummary(start, fiveMinutes, cms, queues.toSet)
+                  summaryBox(box, label, start, queues, summary)
+              }.toVdomArray
+            )
+          }
+        )
       }
       else EmptyVdom
     }
   }
 
-  def summaryBox(boxNumber: Int, label: String, now: SDateLike, queues: Seq[Queue], summary: PcpPaxSummary): TagOf[Div] = {
+  private def summaryBox(boxNumber: Int, label: String, now: SDateLike, queues: Seq[Queue], summary: PcpPaxSummary): TagOf[Div] = {
     <.div(^.className := s"pcp-pax-summary b$boxNumber", ^.key := boxNumber,
       <.div(^.className := "total", s"${summary.totalPax}"),
       <.div(^.className := "queues",
@@ -89,6 +85,6 @@ object PcpPaxSummariesComponent {
     .renderBackend[PcpPaxSummariesComponent.Backend]
     .build
 
-  def apply(viewMode: ViewMode, minuteTicker: Int): VdomElement =
-    component(Props(viewMode, minuteTicker))
+  def apply(viewMode: ViewMode, minuteTicker: Pot[Int], crunchMinutes: Pot[Seq[CrunchMinute]]): VdomElement =
+    component(Props(viewMode, minuteTicker, crunchMinutes))
 }

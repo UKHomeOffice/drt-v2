@@ -64,9 +64,9 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
         viewMode.maybePointInTime.map(pit => s"?pointInTime=$pit").getOrElse("")
 
       val apiCallEffect = Effect(DrtApi.get(uri)
-        .map(res => {
+        .map { res =>
           SetStaffMovementsAndPollIfLiveView(viewMode, StaffMovements(read[List[StaffMovement]](res.responseText)))
-        })
+        }
         .recover {
           case _ =>
             log.error(s"Failed to get Staff Movements. Re-requesting after ${PollDelay.recoveryDelay}")

@@ -10,16 +10,17 @@ import upickle.default.read
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class OohForSupportHandler[M](modelRW: ModelRW[M, Pot[OutOfHoursStatus]]) extends LoggingActionHandler(modelRW) {
+class OohForSupportHandler[M](modelRW: ModelRW[M, Pot[OutOfHoursStatus]]) extends PotActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetOohStatus =>
-
-      updated(Pending(), Effect(DrtApi.get("ooh-status")
+      effectOnly(Effect(DrtApi.get("ooh-status")
         .map(r => UpdateOohStatus(read[OutOfHoursStatus](r.responseText))).recoverWith {
         case _ =>
           Future(RetryActionAfter(GetOohStatus, PollDelay.recoveryDelay))
       }))
+
     case UpdateOohStatus(oohStatus) =>
-      updated(Ready(oohStatus), Effect(Future(RetryActionAfter(GetOohStatus, PollDelay.oohSupportUpdateDelay))))
+      val poll = Effect(Future(RetryActionAfter(GetOohStatus, PollDelay.oohSupportUpdateDelay)))
+      updateIfChanged(oohStatus, poll)
   }
 }

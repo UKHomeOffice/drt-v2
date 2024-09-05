@@ -130,9 +130,7 @@ object Actions {
   case class SetManifestSummaries(summaries: Set[FlightManifestSummary]) extends Action
 
   case object GetPassengerInfoForFlights extends Action
-
-  case class UpdateAirportInfo(code: PortCode, info: Option[AirportInfo]) extends Action
-
+  
   case class UpdateAirportInfos(infos: Map[PortCode, AirportInfo]) extends Action
 
   case class GetArrivalSources(unique: UniqueArrival) extends Action

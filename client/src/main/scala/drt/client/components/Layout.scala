@@ -119,11 +119,12 @@ object Layout {
         })
       }
     }).componentDidMount(_ =>
-    Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
-      Callback(SPACircuit.dispatch(TrackUser())) >>
-      Callback(SPACircuit.dispatch(GetABFeature("feedback"))) >>
-      Callback(SPACircuit.dispatch(ShouldViewBanner()))
-  ).build
+      Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
+        Callback(SPACircuit.dispatch(TrackUser())) >>
+        Callback(SPACircuit.dispatch(GetABFeature("feedback"))) >>
+        Callback(SPACircuit.dispatch(ShouldViewBanner())
+        )
+    ).build
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))
 }

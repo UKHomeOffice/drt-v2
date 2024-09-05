@@ -29,7 +29,8 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
       """.stripMargin
 
     }, (s: Value) => {
-      LoggedInUser(s("userName").toString(),
+      LoggedInUser(
+        s("userName").toString(),
         s("id").toString(),
         s("email").toString(),
         s("roles").arr.map(r => Roles.parse(r.value.toString)).collect { case Some(r) => r }.toSet,
@@ -43,6 +44,7 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
       effectOnly(Effect(eventualRequest.map(r => SetLoggedInUser(read[LoggedInUser](r.responseText)))))
 
     case SetLoggedInUser(loggedInUser) =>
+      println(s"setting logged in user: $loggedInUser")
       updated(Ready(loggedInUser))
 
     case TrackUser() => {

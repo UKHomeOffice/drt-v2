@@ -149,7 +149,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      showActualIfAvailable: Boolean = false,
                      loggedInUserPot: Pot[LoggedInUser] = Empty,
                      userHasPortAccess: Pot[Boolean] = Empty,
-                     minuteTicker: Int = 0,
+                     minuteTicker: Pot[Int] = Empty,
                      keyCloakUsers: Pot[List[KeyCloakUser]] = Empty,
                      selectedUserGroups: Pot[Set[KeyCloakGroup]] = Empty,
                      feedStatuses: Pot[Seq[FeedSourceStatuses]] = Empty,
@@ -185,16 +185,15 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                     )
 
 object PollDelay {
-  val recoveryDelay: FiniteDuration = 10 seconds
-  val loginCheckDelay: FiniteDuration = 30 seconds
-  val updatesDelay: FiniteDuration = 10 seconds
-  val oohSupportUpdateDelay: FiniteDuration = 1 minute
-  val checkFeatureFlagsDelay: FiniteDuration = 10 minutes
+  val recoveryDelay: FiniteDuration = 10.seconds
+  val loginCheckDelay: FiniteDuration = 10.seconds
+  val updatesDelay: FiniteDuration = 10.seconds
+  val minuteTickerDelay: FiniteDuration = 1.seconds
+  val oohSupportUpdateDelay: FiniteDuration = 10.seconds
+  val checkFeatureFlagsDelay: FiniteDuration = 10.seconds
 }
 
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
-  val blockWidth = 15
-
   override protected def initialModel: RootModel = RootModel()
 
   def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
