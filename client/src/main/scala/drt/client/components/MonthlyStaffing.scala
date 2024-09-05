@@ -39,6 +39,7 @@ object MonthlyStaffing {
                    rowHeadings: Seq[String],
                    changes: Map[(Int, Int), Int],
                    showMinStaffForm: Boolean,
+                   showMinStaffSuccess: Boolean,
                    terminalMinStaff: TerminalMinStaff)
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -149,7 +150,7 @@ object MonthlyStaffing {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm)
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm && a.showMinStaffSuccess == b.showMinStaffSuccess)
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(stateFromProps)
@@ -182,8 +183,10 @@ object MonthlyStaffing {
 
       def saveMinStaff(terminalMinStaff: TerminalMinStaff) = {
         Callback(SPACircuit.dispatch(SaveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, terminalMinStaff.minStaff)))).runNow()
-        scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff)).runNow()
         Callback(SPACircuit.dispatch(GetMinStaff(props.terminalPageTab.terminal.toString))).runNow()
+        scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff)).runNow()
+        scope.modState(state => state.copy(showMinStaffSuccess = true, showMinStaffForm = false)).runNow()
+        //        scope.modState(state => state.copy(showMinStaffForm = false)).runNow()
       }
 
       val handleOnEdit = (e: Event) => Callback {
@@ -192,15 +195,18 @@ object MonthlyStaffing {
       }
 
       if (state.showMinStaffForm) {
+        val message = s"This number will be applied to all future dates. It will overwrite all staff numbers that are currently ${if (props.terminalMinStaff.minStaff.isEmpty) "zero" else "exists"} with your new specified number"
         <.div(^.className := "terminal-staffing-header",
-          MinStaffForm(IMinStaffForm(props.portCode.toString, props.terminalPageTab.terminal.toString, 0, (minStaff) => {
+          MinStaffForm(IMinStaffForm(props.portCode.toString, props.terminalPageTab.terminal.toString, message, 0, (minStaff) => {
             saveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff)))
-            true;
-          }, () => {
-            scope.modState(state => state.copy(showMinStaffForm = false)).runNow()
           })))
       } else {
         <.div(^.className := "terminal-staffing-header",
+        if (state.showMinStaffSuccess)
+          MinStaffSuccess(IMinStaffSuccess(state.terminalMinStaff.minStaff.getOrElse(0), "You updated the minimum staff number to ", () => {
+            scope.modState(state => state.copy(showMinStaffSuccess = false)).runNow()
+          })) else EmptyVdom,
+        <.div(^.className := "terminal-staffing-header-1",
           if (props.terminalMinStaff.minStaff.isEmpty)
             MinStaffWarning(IMinStaffWarning("Your minimum staff cover in DRT is ",
               "You can now more accurately reflect your minimum staff cover in DRT",
@@ -273,7 +279,7 @@ object MonthlyStaffing {
               ^.className := "btn btn-primary",
               ^.onClick ==> confirmAndSave(viewingDate)
             )
-          ))
+          )))
       }
     }
     .configure(Reusability.shouldComponentUpdate)
@@ -356,7 +362,7 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map(), false, props.terminalMinStaff)
+    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map(), false, false, props.terminalMinStaff)
   }
 
   def apply(portCode: PortCode,
