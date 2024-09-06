@@ -44,7 +44,6 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
       effectOnly(Effect(eventualRequest.map(r => SetLoggedInUser(read[LoggedInUser](r.responseText)))))
 
     case SetLoggedInUser(loggedInUser) =>
-      println(s"setting logged in user: $loggedInUser")
       updated(Ready(loggedInUser))
 
     case TrackUser() => {

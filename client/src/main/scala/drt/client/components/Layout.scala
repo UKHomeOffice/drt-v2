@@ -15,7 +15,6 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom
-import org.scalajs.dom.console
 import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -34,7 +33,7 @@ object Layout {
                               contactDetails: Pot[ContactDetails]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
-    .renderP((_, props: Props) => {
+    .renderP { (_, props: Props) =>
       val layoutModelItemsRCP = SPACircuit.connect { m =>
         LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails)
       }
@@ -115,16 +114,16 @@ object Layout {
               )
             )
           }
-          content.getOrElse(<.div("Loading..."))
+          content.getOrElse(LoadingOverlay())
         })
       }
-    }).componentDidMount(_ =>
+    }.componentDidMount { _ =>
       Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
         Callback(SPACircuit.dispatch(TrackUser())) >>
         Callback(SPACircuit.dispatch(GetABFeature("feedback"))) >>
-        Callback(SPACircuit.dispatch(ShouldViewBanner())
-        )
-    ).build
+        Callback(SPACircuit.dispatch(ShouldViewBanner())) >>
+        Callback(println(s"Layout mounted"))
+    }.build
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))
 }

@@ -30,7 +30,6 @@ class UserFeedbackBannerHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends Lo
       effectOnly(apiCallEffect)
 
     case SetViewBanner(status) =>
-      println(s"setting view banner to $status")
       updated(Ready(status))
 
     case CloseBanner() =>

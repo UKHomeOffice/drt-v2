@@ -12,6 +12,7 @@ import drt.client.components.scenarios.ScenarioSimulationComponent
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.RedList
@@ -23,9 +24,9 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import japgolly.scalajs.react.{Callback, CtorType, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import org.scalajs.dom.html.Div
-import uk.gov.homeoffice.drt.arrivals.UniqueArrival
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -53,27 +54,23 @@ object TerminalContentComponent {
                    redListUpdates: Pot[RedListUpdates],
                    walkTimes: Pot[WalkTimes],
                    paxFeedSourceOrder: List[FeedSource],
-                   portState: Pot[PortState],
+                   flights: Pot[Seq[ApiFlightWithSplits]],
                    airportInfos: Map[PortCode, Pot[AirportInfo]],
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
+                   simulationResult: Pot[SimulationResult],
+                   flightHighlight: FlightHighlight,
+                   viewStart: SDateLike,
+                   viewEnd: SDateLike,
+                   hoursToView: Int,
+                   windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
+                   dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
+                   windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
 
-  implicit val stateReuse: Reusability[State] = Reusability.derive[State]
-  implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
-
-  def viewStartAndEnd(day: LocalDate, range: TimeRangeHours): (SDateLike, SDateLike) = {
-    val startOfDay = SDate(day)
-    val startOfView = startOfDay.addHours(range.start)
-    val endOfView = startOfDay.addHours(range.end)
-    (startOfView, endOfView)
-  }
-
   def airportWrapper(portCode: PortCode): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
-
-  val flightHighlightRCP: ReactConnectProxy[FlightHighlight] = SPACircuit.connect(_.flightHighlight)
 
   def originMapper(portCode: PortCode, style: html_<^.TagMod): VdomElement = airportWrapper(portCode) {
     proxy: ModelProxy[Pot[AirportInfo]] =>
@@ -86,9 +83,7 @@ object TerminalContentComponent {
       )
   }
 
-  class Backend() {
-    private val arrivalsTableComponent = FlightTable(shortLabel = false, originMapper, splitsGraphComponentColoured)
-
+  class Backend {
     def render(props: Props, state: State): TagOf[Div] = {
       val terminal = props.terminalPageTab.terminal
       val queueOrder: Seq[Queue] = props.airportConfig.queueTypeSplitOrder(terminal)
@@ -102,12 +97,8 @@ object TerminalContentComponent {
       val arrivalsPanelActive = if (state.activeTab == "arrivals") "active" else "fade"
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
-
-      val timeRangeHours: CustomWindow = timeRange(props)
-
-      val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeRangeHours)
       val terminalName = terminal.toString
-      val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, viewStart)
+      val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, props.viewStart)
       val movementsExportDate: LocalDate = props.viewMode match {
         case ViewLive => SDate.now().toLocalDate
         case ViewDay(localDate, _) => localDate
@@ -181,13 +172,12 @@ object TerminalContentComponent {
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
               if (state.activeTab == "desksAndQueues") {
-                val hoursToView = timeRangeHours.end - timeRangeHours.start
                 props.featureFlags.render(features => {
                   TerminalDesksAndQueues(
                     TerminalDesksAndQueues.Props(
                       router = props.router,
-                      viewStart = viewStart,
-                      hoursToView = hoursToView,
+                      viewStart = props.viewStart,
+                      hoursToView = props.hoursToView,
                       airportConfig = props.airportConfig,
                       slaConfigs = props.slaConfigs,
                       terminalPageTab = props.terminalPageTab,
@@ -195,7 +185,9 @@ object TerminalContentComponent {
                       viewMode = props.viewMode,
                       loggedInUser = props.loggedInUser,
                       featureFlags = features,
-                      portState = props.portState,
+                      windowCrunchSummaries = props.windowCrunchSummaries,
+                      dayCrunchSummaries = props.dayCrunchSummaries,
+                      windowStaffSummaries = props.windowStaffSummaries,
                     )
                   )
                 })
@@ -209,35 +201,35 @@ object TerminalContentComponent {
                   redListUpdates <- props.redListUpdates
                   walkTimes <- props.walkTimes
                 } yield {
-                  flightHighlightRCP { (flightHighlightProxy: ModelProxy[FlightHighlight]) =>
-                    val flightHighlight = flightHighlightProxy()
-                    arrivalsTableComponent(
-                      FlightTable.Props(
-                        queueOrder = queueOrder,
-                        hasEstChox = props.airportConfig.hasEstChox,
-                        loggedInUser = props.loggedInUser,
-                        viewMode = props.viewMode,
-                        defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
-                        hasTransfer = props.airportConfig.hasTransfer,
-                        displayRedListInfo = features.displayRedListInfo,
-                        redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
-                        terminal = terminal,
-                        portCode = props.airportConfig.portCode,
-                        redListPorts = redListPorts,
-                        airportConfig = props.airportConfig,
-                        redListUpdates = redListUpdates,
-                        walkTimes = walkTimes,
-                        viewStart = viewStart,
-                        viewEnd = viewEnd,
-                        showFlagger = true,
-                        paxFeedSourceOrder = props.paxFeedSourceOrder,
-                        flightHighlight = flightHighlight,
-                        portState = props.portState,
-                        flightManifestSummaries = props.flightManifestSummaries,
-                        arrivalSources = props.arrivalSources,
-                      )
+                  FlightTable(
+                    FlightTable.Props(
+                      queueOrder = queueOrder,
+                      hasEstChox = props.airportConfig.hasEstChox,
+                      loggedInUser = props.loggedInUser,
+                      viewMode = props.viewMode,
+                      defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
+                      hasTransfer = props.airportConfig.hasTransfer,
+                      displayRedListInfo = features.displayRedListInfo,
+                      redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
+                      terminal = terminal,
+                      portCode = props.airportConfig.portCode,
+                      redListPorts = redListPorts,
+                      airportConfig = props.airportConfig,
+                      redListUpdates = redListUpdates,
+                      walkTimes = walkTimes,
+                      viewStart = props.viewStart,
+                      viewEnd = props.viewEnd,
+                      showFlagger = true,
+                      paxFeedSourceOrder = props.paxFeedSourceOrder,
+                      flightHighlight = props.flightHighlight,
+                      flights = props.flights,
+                      airportInfos = props.airportInfos,
+                      flightManifestSummaries = props.flightManifestSummaries,
+                      arrivalSources = props.arrivalSources,
+                      originMapper = originMapper,
+                      splitsGraphComponent = splitsGraphComponentColoured,
                     )
-                  }
+                  )
                 }
                 maybeArrivalsComp.render(x => x)
               } else EmptyVdom
@@ -252,6 +244,7 @@ object TerminalContentComponent {
                         props.terminalPageTab.terminal,
                         props.airportConfig,
                         slaConfigs,
+                        props.simulationResult,
                       )
                     )
                   )
@@ -310,26 +303,19 @@ object TerminalContentComponent {
     else
       EmptyVdom
 
-  private def timeRange(props: Props): CustomWindow = {
-    TimeRangeHours(
-      props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
-      props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
-    )
-  }
-
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("TerminalContentComponent")
     .initialStateFromProps(p => State(p.terminalPageTab.subMode))
     .renderBackend[TerminalContentComponent.Backend]
-    .componentDidMount(p =>
+    .componentDidMount { p =>
       Callback {
+        val hours = p.props.defaultTimeRangeHours
         val page = s"${p.props.terminalPageTab.terminal}/${p.props.terminalPageTab.mode}/${p.props.terminalPageTab.subMode}"
-        val pageWithTime = s"$page/${timeRange(p.props).start}/${timeRange(p.props).end}"
+        val pageWithTime = s"$page/${hours.start}/${hours.end}"
         val pageWithDate = p.props.terminalPageTab.maybeViewDate
-          .map(s => s"$page/$s/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
+          .map(s => s"$page/$s/${hours.start}/${hours.end}").getOrElse(pageWithTime)
         GoogleEventTracker.sendPageView(pageWithDate)
       }
-    )
-    .configure(Reusability.shouldComponentUpdate)
+    }
     .build
 
   def apply(props: Props): VdomElement = component(props)

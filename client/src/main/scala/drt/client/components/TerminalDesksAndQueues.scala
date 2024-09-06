@@ -7,7 +7,6 @@ import drt.client.actions.Actions.RequestDateRecrunch
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
@@ -30,8 +29,6 @@ import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.immutable.SortedMap
-
 
 object TerminalDesksAndQueues {
 
@@ -53,7 +50,9 @@ object TerminalDesksAndQueues {
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
                    featureFlags: FeatureFlags,
-                   portState: Pot[PortState],
+                   windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
+                   dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
+                   windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                   ) extends UseValueEq
 
   sealed trait DeskType {
@@ -205,16 +204,16 @@ object TerminalDesksAndQueues {
 
       <.div {
         val renderPot = for {
-          portState <- props.portState
+          windowCrunchMinutes <- props.windowCrunchSummaries
+          windowStaffMinutes <- props.windowStaffSummaries
+          dayCrunchMinutes <- props.dayCrunchSummaries
           slaConfigs <- props.slaConfigs
         } yield {
           val slas = slaConfigs.configForDate(props.viewStart.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
           val queues = props.airportConfig.nonTransferQueues(terminal).toList
-          val terminalCrunchMinutes = portState.crunchSummary(props.viewStart, props.hoursToView * 4, 15, terminal, queues)
-          val terminalStaffMinutes = portState.staffSummary(props.viewStart, props.hoursToView * 4, 15, terminal)
           val viewMinutes = props.viewStart.millisSinceEpoch until (props.viewStart.millisSinceEpoch + (props.hoursToView * 60 * 60000)) by 15 * 60000
 
-          val maxPaxInQueues: Map[Queue, Int] = terminalCrunchMinutes
+          val maxPaxInQueues: Map[Queue, Int] = windowCrunchMinutes
             .toList
             .flatMap {
               case (_, queuesAndMinutes) =>
@@ -232,13 +231,11 @@ object TerminalDesksAndQueues {
             <.div(^.className := "desks-and-queues-top",
               viewTypeControls(props.featureFlags.displayWaitTimesToggle),
               if (props.loggedInUser.hasRole(SuperAdmin)) adminRecrunchButton(requestForecastRecrunch _) else EmptyVdom,
-              StaffMissingWarningComponent(terminalStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
+              StaffMissingWarningComponent(windowStaffMinutes, props.loggedInUser, props.router, props.terminalPageTab)
             ),
             if (state.displayType == ChartsView) {
               props.airportConfig.queuesByTerminal(props.terminalPageTab.terminal).filterNot(_ == Transfer).map { queue =>
-                val dayStart = SDate(props.viewStart.getLocalLastMidnight.millisSinceEpoch)
-                val sortedCrunchMinuteSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])] =
-                  portState.crunchSummary(dayStart, 96, 15, terminal, queues).toList.sortBy(_._1)
+                val sortedCrunchMinuteSummaries = dayCrunchMinutes.toList.sortBy(_._1)
                 QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), state.deskType))
               }.toTagMod
             } else {
@@ -254,8 +251,8 @@ object TerminalDesksAndQueues {
                     viewMinutes.map { millis =>
                       val rowProps = TerminalDesksAndQueuesRow.Props(
                         minuteMillis = millis,
-                        queueMinutes = queues.map(q => terminalCrunchMinutes(millis)(q)),
-                        staffMinute = terminalStaffMinutes.getOrElse(millis, StaffMinute.empty),
+                        queueMinutes = queues.map(q => windowCrunchMinutes(millis)(q)),
+                        staffMinute = windowStaffMinutes.getOrElse(millis, StaffMinute.empty),
                         maxPaxInQueues = maxPaxInQueues,
                         airportConfig = props.airportConfig,
                         slaConfigs = props.slaConfigs,
