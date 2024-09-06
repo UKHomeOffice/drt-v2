@@ -65,14 +65,6 @@ object FlightTableContent {
 
   case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]]) extends UseValueEq
 
-//  implicit val reuseProps: Reusability[Props] = Reusability {
-//    (a, b) =>
-//      a.viewStart == b.viewStart &&
-//        a.viewEnd == b.viewEnd &&
-//        a.flights == b.flights
-//  }
-
-
   class Backend {
     def render(props: Props): VdomElement = {
       val flightDisplayFilter = props.airportConfig.portCode match {

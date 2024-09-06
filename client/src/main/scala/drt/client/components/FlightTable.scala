@@ -59,15 +59,7 @@ object FlightTable {
                   ) extends UseValueEq
 
   case class State(showHighlightedRows: Boolean)
-
-  implicit val reuseProps: Reusability[Props] = Reusability {
-    (a, b) =>
-      a.viewStart == b.viewStart &&
-        a.viewEnd == b.viewEnd &&
-        a.flights == b.flights &&
-        a.flightHighlight == b.flightHighlight
-  }
-
+  
   implicit val stateReuse: Reusability[State] = Reusability.always
 
   val ageGroups: js.Array[String] =
@@ -224,7 +216,6 @@ object FlightTable {
   val component = ScalaComponent.builder[Props]("ArrivalsTable")
     .initialStateFromProps(p => State(p.flightHighlight.showHighlightedRows))
     .renderBackend[Backend]
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): Unmounted[Props, State, Backend] = component(props)
