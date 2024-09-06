@@ -186,7 +186,6 @@ object MonthlyStaffing {
         Callback(SPACircuit.dispatch(GetMinStaff(props.terminalPageTab.terminal.toString))).runNow()
         scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff)).runNow()
         scope.modState(state => state.copy(showMinStaffSuccess = true, showMinStaffForm = false)).runNow()
-        //        scope.modState(state => state.copy(showMinStaffForm = false)).runNow()
       }
 
       val handleOnEdit = (e: Event) => Callback {
@@ -201,69 +200,66 @@ object MonthlyStaffing {
             saveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff)))
           })))
       } else {
-        <.div(^.className := "terminal-staffing-header",
-        if (state.showMinStaffSuccess)
-          MinStaffSuccess(IMinStaffSuccess(state.terminalMinStaff.minStaff.getOrElse(0), "You updated the minimum staff number to ", () => {
-            scope.modState(state => state.copy(showMinStaffSuccess = false)).runNow()
-          })) else EmptyVdom,
-        <.div(^.className := "terminal-staffing-header-1",
-          if (props.terminalMinStaff.minStaff.isEmpty)
-            MinStaffWarning(IMinStaffWarning("Your minimum staff cover in DRT is ",
-              "You can now more accurately reflect your minimum staff cover in DRT",
-              props.terminalMinStaff.minStaff, () => {
-                scope.modState(state => state.copy(showMinStaffForm = true)).runNow()
-              })) else <.div(^.className := "terminal-staffing-header",
-            <.div(^.className := "terminal-min-staffing", s"Minimum staff : ${state.terminalMinStaff.minStaff.getOrElse(0)}"),
-            <.span(s"Update latest min staff ", <.a(^.href := "#", Icon.edit, " Edit", ^.onClick ==> handleOnEdit))
-          ),
-          <.div(^.className := "terminal-content-header",
-            <.div(^.className := "staffing-controls-wrapper",
-              <.div(^.className := "staffing-controls-row",
-                <.label("Choose Month", ^.className := "staffing-controls-label"),
-                <.div(^.className := "staffing-controls-select",
-                  drawSelect(
-                    values = monthOptions.map(_.toISOString),
-                    names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
-                    defaultValue = viewingDate.toISOString,
-                    callback = (e: ReactEventFromInput) => {
-                      props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
-                    })
+        <.div(
+          if (state.showMinStaffSuccess)
+            MinStaffSuccess(IMinStaffSuccess(state.terminalMinStaff.minStaff.getOrElse(0), "You updated the minimum staff number to ", () => {
+              scope.modState(state => state.copy(showMinStaffSuccess = false)).runNow()
+            })) else EmptyVdom,
+          <.div(^.className := "terminal-staffing-content-header",
+            if (props.terminalMinStaff.minStaff.isEmpty)
+              MinStaffWarning(IMinStaffWarning("Your minimum staff cover in DRT is ",
+                "You can now more accurately reflect your minimum staff cover in DRT",
+                props.terminalMinStaff.minStaff, () => {
+                  scope.modState(state => state.copy(showMinStaffForm = true)).runNow()
+                })) else <.div(^.className := "terminal-staffing-header",
+              <.div(^.className := "terminal-min-staffing", s"Minimum staff : ${state.terminalMinStaff.minStaff.getOrElse(0)}"),
+              <.span(s"Update latest min staff ", <.a(^.href := "#", Icon.edit, " Edit", ^.onClick ==> handleOnEdit))
+            ),
+            <.div(^.className := "terminal-staffing-content-header",
+              <.div(^.className := "staffing-controls-wrapper",
+                <.div(^.className := "staffing-controls-row",
+                  <.label("Choose Month", ^.className := "staffing-controls-label"),
+                  <.div(^.className := "staffing-controls-select",
+                    drawSelect(
+                      values = monthOptions.map(_.toISOString),
+                      names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
+                      defaultValue = viewingDate.toISOString,
+                      callback = (e: ReactEventFromInput) => {
+                        props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
+                      })
+                  ),
                 ),
-              ),
-              <.div(^.className := "staffing-controls-row",
-                <.label("Time Resolution", ^.className := "staffing-controls-label"),
-                <.div(^.className := "staffing-controls-select",
-                  drawSelect(
-                    values = Seq("15", "30", "60"),
-                    names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
-                    defaultValue = s"${props.timeSlotMinutes}",
-                    callback = (e: ReactEventFromInput) =>
-                      props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
-                  )
-                ),
-              ),
-              MuiDivider()(),
-              <.div(^.className := "staffing-controls-row",
-                <.div(
-                  <.input.button(^.value := "Save Changes",
-                    ^.className := "btn btn-primary",
-                    ^.onClick ==> confirmAndSave(viewingDate)
-                  )
-                )
-              )
-            )
+                <.div(^.className := "staffing-controls-row",
+                  <.label("Time Resolution", ^.className := "staffing-controls-label"),
+                  <.div(^.className := "staffing-controls-select",
+                    drawSelect(
+                      values = Seq("15", "30", "60"),
+                      names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
+                      defaultValue = s"${props.timeSlotMinutes}",
+                      callback = (e: ReactEventFromInput) =>
+                        props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
+                    )
+                  ),
+                )))),
+          <.div(^.className := "staffing-controls-save",
+            <.div(<.strong(s"Staff numbers in  ${props.terminalPageTab.dateFromUrlOrNow.getMonthString} ${props.terminalPageTab.dateFromUrlOrNow.getFullYear}")),
+            <.div("Staff numbers can be entered into the table below. Numbers can be duplicated by selecting and dragging a cell."),
+            maybeClockChangeDate(viewingDate).map { clockChangeDate =>
+              val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
+              <.div(^.className := "staff-daylight-month-warning", MuiGrid(container = true, direction = "column", spacing = 1)(
+                MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("fontWeight" -> "bold"))),
+                MuiGrid(item = true)(<.span("Please ensure no staff are entered in the cells with a dash '-'. They are there to enable you to " +
+                  s"allocate staff in the additional hour on $prettyDate.")),
+                MuiGrid(item = true)(<.span("If pasting from TAMS, " +
+                  "one solution is to first paste into a separate spreadsheet, then copy and paste the first 2 hours, and " +
+                  "then the rest of the hours in 2 separate steps", ^.style := js.Dictionary("marginBottom" -> "15px", "display" -> "block")))
+              ))
+            },
+            <.div(<.input.button(^.value := "Save staff updates",
+              ^.className := "btn btn-primary",
+              ^.onClick ==> confirmAndSave(viewingDate)
+            ))
           ),
-          maybeClockChangeDate(viewingDate).map { clockChangeDate =>
-            val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
-            MuiGrid(container = true, direction = "column", spacing = 1)(
-              MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("fontWeight" -> "bold"))),
-              MuiGrid(item = true)(<.span("Please ensure no staff are entered in the cells with a dash '-'. They are there to enable you to " +
-                s"allocate staff in the additional hour on $prettyDate.")),
-              MuiGrid(item = true)(<.span("If pasting from TAMS, " +
-                "one solution is to first paste into a separate spreadsheet, then copy and paste the first 2 hours, and " +
-                "then the rest of the hours in 2 separate steps", ^.style := js.Dictionary("marginBottom" -> "15px", "display" -> "block")))
-            )
-          },
           <.div(^.className := "staffing-table",
             HotTable.component(HotTable.props(
               state.timeSlots,
@@ -274,12 +270,12 @@ object MonthlyStaffing {
               }
             ))
           ),
-          <.div(^.className := "terminal-content-header",
-            <.input.button(^.value := "Save Changes",
+          <.div(^.className := "terminal-staffing-content-header",
+            <.input.button(^.value := "Save staff updates",
               ^.className := "btn btn-primary",
               ^.onClick ==> confirmAndSave(viewingDate)
             )
-          )))
+          ))
       }
     }
     .configure(Reusability.shouldComponentUpdate)
