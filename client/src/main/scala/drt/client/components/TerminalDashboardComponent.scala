@@ -11,12 +11,13 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, ViewLive}
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
-import drt.shared.api.WalkTimes
+import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.RedList
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -33,7 +34,7 @@ import scala.util.Try
 object TerminalDashboardComponent {
   case class Props(terminalPageTabLoc: TerminalPageTabLoc,
                    airportConfig: AirportConfig,
-                   slaConfigs: SlaConfigs,
+                   slaConfigs: Pot[SlaConfigs],
                    router: RouterCtl[Loc],
                    featureFlags: Pot[FeatureFlags],
                    loggedInUser: LoggedInUser,
@@ -41,9 +42,12 @@ object TerminalDashboardComponent {
                    redListUpdates: RedListUpdates,
                    walkTimes: Pot[WalkTimes],
                    paxFeedSourceOrder: List[FeedSource],
+                   portState: Pot[PortState],
+                   flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                   ) extends UseValueEq
 
-  val defaultSlotSize = 120
+  private val defaultSlotSize = 120
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalDashboard")
     .render_P { props =>
@@ -65,24 +69,19 @@ object TerminalDashboardComponent {
 
       val terminal = props.terminalPageTabLoc.terminal
 
-      def slas: Map[Queue, Int] = props.slaConfigs.configForDate(startPoint.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
-
       val flightTableComponent = FlightTable.apply(
         shortLabel = true,
         originMapper = originMapper,
         splitsGraphComponent = splitsGraphComponentColoured
       )
 
-      val portStateRCP: ReactConnectProxy[Pot[PortState]] = SPACircuit.connect(_.portStatePot)
       val flightHighlightRCP: ReactConnectProxy[FlightHighlight] = SPACircuit.connect(_.flightHighlight)
 
-      portStateRCP { portStateProxy =>
-        val portStatePot = portStateProxy()
         val pot = for {
           featureFlags <- props.featureFlags
           redListPorts <- props.redListPorts
           walkTimes <- props.walkTimes
-          portState <- portStatePot
+          portState <- props.portState
         } yield {
           val currentSlotPs = portState.window(start, end, props.paxFeedSourceOrder)
           val prevSlotPs = portState.window(prevSlotStart, start, props.paxFeedSourceOrder)
@@ -123,7 +122,10 @@ object TerminalDashboardComponent {
                           viewEnd = end,
                           showFlagger = false,
                           paxFeedSourceOrder = props.paxFeedSourceOrder,
-                          flightHighlight = flightHighlight
+                          flightHighlight = flightHighlight,
+                          portState = props.portState,
+                          flightManifestSummaries = props.flightManifestSummaries,
+                          arrivalSources = props.arrivalSources
                         )
                       )
                     }
@@ -148,13 +150,17 @@ object TerminalDashboardComponent {
                     case _ => Icon.arrowRight
                   }
 
-                  <.dl(^.aria.label := s"Passenger joining queue ${Queues.displayName(q)}",
-                    ^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, slas(q))}",
-                    <.dt(^.className := "queue-name", s"${Queues.displayName(q)}"),
-                    <.dd(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
-                    <.dd(^.className := "queue-box-text", Icon.clockO, s"${MinuteAsAdjective(qWait).display} wait"),
-                    <.dd(^.className := "queue-box-text", waitIcon, s"queue time")
-                  )
+                  props.slaConfigs.render { slaConfigs =>
+                    def slas: Map[Queue, Int] = slaConfigs.configForDate(startPoint.millisSinceEpoch).getOrElse(props.airportConfig.slaByQueue)
+
+                    <.dl(^.aria.label := s"Passengers joining queue ${Queues.displayName(q)}",
+                      ^.className := s"queue-box col ${q.toString.toLowerCase} ${TerminalDesksAndQueuesRow.slaRagStatus(qWait, slas(q))}",
+                      <.dt(^.className := "queue-name", s"${Queues.displayName(q)}"),
+                      <.dd(^.className := "queue-box-text", Icon.users, s"$qPax pax joining"),
+                      <.dd(^.className := "queue-box-text", Icon.clockO, s"${MinuteAsAdjective(qWait).display} wait"),
+                      <.dd(^.className := "queue-box-text", waitIcon, s"queue time")
+                    )
+                  }
                 }).toTagMod
               ),
               <.div(^.className := "tb-bar-wrapper",
@@ -192,46 +198,23 @@ object TerminalDashboardComponent {
           )
         }
         <.div(pot.render(identity))
-      }
     }
     .componentDidMount(p => Callback {
       GoogleEventTracker.sendPageView(page = s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}")
     })
     .build
 
-  def cmsForTerminalAndQueue(ps: PortStateLike, queue: Queue, terminal: Terminal): Iterable[CrunchMinute] = ps
+  private def cmsForTerminalAndQueue(ps: PortStateLike, queue: Queue, terminal: Terminal): Iterable[CrunchMinute] = ps
     .crunchMinutes
     .collect {
       case (tqm, cm) if tqm.queue == queue && tqm.terminal == terminal => cm
     }
 
-  def maxWaitInPeriod(cru: Iterable[CrunchApi.CrunchMinute]): Int = if (cru.nonEmpty)
+  private def maxWaitInPeriod(cru: Iterable[CrunchApi.CrunchMinute]): Int = if (cru.nonEmpty)
     cru.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
   else 0
 
-  def apply(terminalPageTabLoc: TerminalPageTabLoc,
-            airportConfig: AirportConfig,
-            slaConfigs: SlaConfigs,
-            router: RouterCtl[Loc],
-            featureFlags: Pot[FeatureFlags],
-            loggedInUser: LoggedInUser,
-            redListPorts: Pot[HashSet[PortCode]],
-            redListUpdates: RedListUpdates,
-            walkTimes: Pot[WalkTimes],
-            paxFeedSourceOrder: List[FeedSource],
-           ): VdomElement =
-    component(Props(
-      terminalPageTabLoc,
-      airportConfig,
-      slaConfigs,
-      router,
-      featureFlags,
-      loggedInUser,
-      redListPorts,
-      redListUpdates,
-      walkTimes,
-      paxFeedSourceOrder,
-    ))
+  def apply(props: Props): VdomElement = component(props)
 
   def timeSlotForTime(slotSize: Int)(sd: SDateLike): SDateLike = {
     val offset: Int = sd.getMinutes % slotSize

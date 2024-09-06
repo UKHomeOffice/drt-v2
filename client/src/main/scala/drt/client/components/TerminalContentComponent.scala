@@ -12,9 +12,9 @@ import drt.client.components.scenarios.ScenarioSimulationComponent
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.api.WalkTimes
-import drt.shared.redlist.RedList
 import drt.shared._
+import drt.shared.api.{FlightManifestSummary, WalkTimes}
+import drt.shared.redlist.RedList
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -25,6 +25,7 @@ import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import japgolly.scalajs.react.{Callback, CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Div
+import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -40,7 +41,7 @@ object TerminalContentComponent {
                    potFixedPoints: Pot[FixedPointAssignments],
                    potStaffMovements: Pot[StaffMovements],
                    airportConfig: AirportConfig,
-                   slaConfigs: SlaConfigs,
+                   slaConfigs: Pot[SlaConfigs],
                    terminalPageTab: TerminalPageTabLoc,
                    defaultTimeRangeHours: TimeRangeHours,
                    router: RouterCtl[Loc],
@@ -53,7 +54,9 @@ object TerminalContentComponent {
                    walkTimes: Pot[WalkTimes],
                    paxFeedSourceOrder: List[FeedSource],
                    portState: Pot[PortState],
-                   airportInfo: Map[PortCode, Pot[AirportInfo]],
+                   airportInfos: Map[PortCode, Pot[AirportInfo]],
+                   flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -84,7 +87,7 @@ object TerminalContentComponent {
   }
 
   class Backend() {
-    val arrivalsTableComponent = FlightTable(shortLabel = false, originMapper, splitsGraphComponentColoured)
+    private val arrivalsTableComponent = FlightTable(shortLabel = false, originMapper, splitsGraphComponentColoured)
 
     def render(props: Props, state: State): TagOf[Div] = {
       val terminal = props.terminalPageTab.terminal
@@ -178,21 +181,24 @@ object TerminalContentComponent {
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
               if (state.activeTab == "desksAndQueues") {
-                props.featureFlags.render(features =>
+                val hoursToView = timeRangeHours.end - timeRangeHours.start
+                props.featureFlags.render(features => {
                   TerminalDesksAndQueues(
                     TerminalDesksAndQueues.Props(
                       router = props.router,
                       viewStart = viewStart,
-                      hoursToView = timeRangeHours.end - timeRangeHours.start,
+                      hoursToView = hoursToView,
                       airportConfig = props.airportConfig,
                       slaConfigs = props.slaConfigs,
                       terminalPageTab = props.terminalPageTab,
                       showActuals = props.showActuals,
                       viewMode = props.viewMode,
                       loggedInUser = props.loggedInUser,
-                      featureFlags = features
+                      featureFlags = features,
+                      portState = props.portState,
                     )
-                  ))
+                  )
+                })
               } else ""
             ),
             <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
@@ -225,7 +231,10 @@ object TerminalContentComponent {
                         viewEnd = viewEnd,
                         showFlagger = true,
                         paxFeedSourceOrder = props.paxFeedSourceOrder,
-                        flightHighlight = flightHighlight
+                        flightHighlight = flightHighlight,
+                        portState = props.portState,
+                        flightManifestSummaries = props.flightManifestSummaries,
+                        arrivalSources = props.arrivalSources,
                       )
                     )
                   }
@@ -236,11 +245,15 @@ object TerminalContentComponent {
             displayForRole(
               <.div(^.id := "simulations", ^.className := s"tab-pane in $simulationsActive", {
                 if (state.activeTab == "simulations") {
-                  ScenarioSimulationComponent(
-                    props.viewMode.dayStart.toLocalDate,
-                    props.terminalPageTab.terminal,
-                    props.airportConfig,
-                    props.slaConfigs,
+                  props.slaConfigs.render(slaConfigs =>
+                    ScenarioSimulationComponent(
+                      ScenarioSimulationComponent.Props(
+                        props.viewMode.dayStart.toLocalDate,
+                        props.terminalPageTab.terminal,
+                        props.airportConfig,
+                        slaConfigs,
+                      )
+                    )
                   )
                 } else "not rendering"
               }),
@@ -291,13 +304,13 @@ object TerminalContentComponent {
     )
   }
 
-  def displayForRole(node: VdomNode, role: Role, loggedInUser: LoggedInUser): TagMod =
+  private def displayForRole(node: VdomNode, role: Role, loggedInUser: LoggedInUser): TagMod =
     if (loggedInUser.hasRole(role))
       node
     else
       EmptyVdom
 
-  def timeRange(props: Props): CustomWindow = {
+  private def timeRange(props: Props): CustomWindow = {
     TimeRangeHours(
       props.terminalPageTab.timeRangeStart.getOrElse(props.defaultTimeRangeHours.start),
       props.terminalPageTab.timeRangeEnd.getOrElse(props.defaultTimeRangeHours.end)
@@ -311,7 +324,8 @@ object TerminalContentComponent {
       Callback {
         val page = s"${p.props.terminalPageTab.terminal}/${p.props.terminalPageTab.mode}/${p.props.terminalPageTab.subMode}"
         val pageWithTime = s"$page/${timeRange(p.props).start}/${timeRange(p.props).end}"
-        val pageWithDate = p.props.terminalPageTab.maybeViewDate.map(s => s"$page/$s/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
+        val pageWithDate = p.props.terminalPageTab.maybeViewDate
+          .map(s => s"$page/$s/${timeRange(p.props).start}/${timeRange(p.props).end}").getOrElse(pageWithTime)
         GoogleEventTracker.sendPageView(pageWithDate)
       }
     )

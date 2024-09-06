@@ -49,6 +49,9 @@ object FlightTable {
                    showFlagger: Boolean,
                    paxFeedSourceOrder: List[FeedSource],
                    flightHighlight: FlightHighlight,
+                   portState: Pot[PortState],
+                   flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                   arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                   ) extends UseValueEq
 
   case class State(flightSearch: String, showHighlightedRows: Boolean)
@@ -84,7 +87,7 @@ object FlightTable {
       else
         "* Passengers from CTA origins do not contribute to PCP workload"
 
-      def updateState(searchTerm: String) {
+      def updateState(searchTerm: String): Unit = {
         SPACircuit.dispatch(
           UpdateFlightHighlight(
             FlightHighlight(
@@ -96,13 +99,6 @@ object FlightTable {
               searchTerm)))
       }
 
-      case class Model(portStatePot: Pot[PortState],
-                       flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
-                       arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                       airportInfos: Map[PortCode, Pot[AirportInfo]]
-                      )
-
-      val flaggerConnect = SPACircuit.connect(m => Model(m.portStatePot, m.flightManifestSummaries, m.arrivalSources, m.airportInfos))
       val flightTableContent = FlightTableContent(shortLabel, originMapper, splitsGraphComponent)
 
       val submitCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
@@ -135,7 +131,7 @@ object FlightTable {
               scope.state.flightSearch)))
       }
 
-      val clearFiltersCallback: js.Function1[js.Object, Unit] = (data: js.Object) => {
+      val clearFiltersCallback: js.Function1[js.Object, Unit] = (_: js.Object) => {
         scope.modState(s => s.copy(showHighlightedRows = false, flightSearch = "")).runNow()
         SPACircuit.dispatch(
           UpdateFlightHighlight(
@@ -154,82 +150,79 @@ object FlightTable {
         updateState(searchTerm)
       }
 
-      flaggerConnect { flaggerProxy =>
-        val model = flaggerProxy()
+      <.div(
+        (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
+          case (true, Some((_, sourcesPot))) =>
+            <.div(^.tabIndex := 0,
+              <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
+              <.div(^.className := "dashboard-arrivals-popup",
+                ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.airportConfig, props.paxFeedSourceOrder)))
+            )
+          case _ => <.div()
+        },
         <.div(
-          (props.loggedInUser.hasRole(ArrivalSource), model.arrivalSources) match {
-            case (true, Some((_, sourcesPot))) =>
-              <.div(^.tabIndex := 0,
-                <.div(^.className := "popover-overlay", ^.onClick --> Callback(SPACircuit.dispatch(RemoveArrivalSources))),
-                <.div(^.className := "dashboard-arrivals-popup",
-                  ArrivalInfo.SourcesTable(ArrivalInfo.Props(sourcesPot, props.airportConfig, props.paxFeedSourceOrder)))
-              )
-            case _ => <.div()
-          },
-          <.div(
-            ^.style := js.Dictionary(
-              "backgroundColor" -> "#E6E9F1",
-              "paddingLeft" -> "24px",
-              "paddingTop" -> "36px",
-              "paddingBottom" -> "24px",
-              "paddingRight" -> "24px"
-            ),
-            if (props.showFlagger) {
-              val initialState = js.Dynamic.literal(
+          ^.style := js.Dictionary(
+            "backgroundColor" -> "#E6E9F1",
+            "paddingLeft" -> "24px",
+            "paddingTop" -> "36px",
+            "paddingBottom" -> "24px",
+            "paddingRight" -> "24px"
+          ),
+          if (props.showFlagger) {
+            val initialState = js.Dynamic.literal(
+              showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
+              requireAllSelected = props.flightHighlight.showRequireAllSelected,
+              flightNumber = props.flightHighlight.filterFlightSearch,
+              selectedNationalities = props.flightHighlight.selectedNationalities.map(n => CountryJS(n.name, n.threeLetterCode)).toJSArray,
+              selectedAgeGroups = props.flightHighlight.selectedAgeGroups.toJSArray,
+            )
+            ThemeProvider(buttonSecondaryTheme)(
+              FlightFlaggerFilters(
+                CountryOptions.countries.map { c => CountryJS(c.name, c.threeLetterCode) }.toJSArray,
+                ageGroups,
+                submitCallback,
+                showAllCallback,
+                clearFiltersCallback,
+                onChangeInput,
+                initialState
+              ))
+          } else EmptyVdom
+        ),
+        <.div(
+          props.portState.render { portState =>
+            flightTableContent(
+              FlightTableContent.Props(
+                portState = portState,
+                flightManifestSummaries = props.flightManifestSummaries,
+                queueOrder = props.queueOrder,
+                hasEstChox = props.hasEstChox,
+                loggedInUser = props.loggedInUser,
+                viewMode = props.viewMode,
+                defaultWalkTime = props.defaultWalkTime,
+                hasTransfer = props.hasTransfer,
+                displayRedListInfo = props.displayRedListInfo,
+                redListOriginWorkloadExcluded = props.redListOriginWorkloadExcluded,
+                terminal = props.terminal,
+                portCode = props.portCode,
+                redListPorts = props.redListPorts,
+                redListUpdates = props.redListUpdates,
+                airportConfig = props.airportConfig,
+                walkTimes = props.walkTimes,
+                flaggedNationalities = props.flightHighlight.selectedNationalities,
+                flaggedAgeGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
                 showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
-                requireAllSelected = props.flightHighlight.showRequireAllSelected,
-                flightNumber = props.flightHighlight.filterFlightSearch,
-                selectedNationalities = props.flightHighlight.selectedNationalities.map(n => CountryJS(n.name, n.threeLetterCode)).toJSArray,
-                selectedAgeGroups = props.flightHighlight.selectedAgeGroups.toJSArray,
-              )
-              ThemeProvider(buttonSecondaryTheme)(
-                FlightFlaggerFilters(
-                  CountryOptions.countries.map { c => CountryJS(c.name, c.threeLetterCode) }.toJSArray,
-                  ageGroups,
-                  submitCallback,
-                  showAllCallback,
-                  clearFiltersCallback,
-                  onChangeInput,
-                  initialState
-                ))
-            } else EmptyVdom
-          ),
-          <.div(
-            model.portStatePot.render { portState =>
-              flightTableContent(
-                FlightTableContent.Props(
-                  portState = portState,
-                  flightManifestSummaries = model.flightManifestSummaries,
-                  queueOrder = props.queueOrder,
-                  hasEstChox = props.hasEstChox,
-                  loggedInUser = props.loggedInUser,
-                  viewMode = props.viewMode,
-                  defaultWalkTime = props.defaultWalkTime,
-                  hasTransfer = props.hasTransfer,
-                  displayRedListInfo = props.displayRedListInfo,
-                  redListOriginWorkloadExcluded = props.redListOriginWorkloadExcluded,
-                  terminal = props.terminal,
-                  portCode = props.portCode,
-                  redListPorts = props.redListPorts,
-                  redListUpdates = props.redListUpdates,
-                  airportConfig = props.airportConfig,
-                  walkTimes = props.walkTimes,
-                  flaggedNationalities = props.flightHighlight.selectedNationalities,
-                  flaggedAgeGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
-                  showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
-                  showOnlyHighlightedRows = scope.state.showHighlightedRows,
-                  showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
-                  viewStart = props.viewStart,
-                  viewEnd = props.viewEnd,
-                  paxFeedSourceOrder = props.paxFeedSourceOrder,
-                  filterFlightSearch = scope.state.flightSearch,
-                  showFlagger = props.showFlagger,
-                ))
-            }
-          ),
-          excludedPaxNote
-        )
-      }
+                showOnlyHighlightedRows = scope.state.showHighlightedRows,
+                showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
+                viewStart = props.viewStart,
+                viewEnd = props.viewEnd,
+                paxFeedSourceOrder = props.paxFeedSourceOrder,
+                filterFlightSearch = scope.state.flightSearch,
+                showFlagger = props.showFlagger,
+              ))
+          }
+        ),
+        excludedPaxNote
+      )
     }
     .configure(Reusability.shouldComponentUpdate)
     .build

@@ -51,8 +51,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
       GoogleEventTracker.sendPageView(s"Arrival Simulations Page")
     }).build
 
-  def apply(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig, slaConfigs: SlaConfigs): VdomElement =
-    component(Props(date, terminal, airportConfig, slaConfigs))
+  def apply(props: Props): VdomElement = component(props)
 }
 
 
