@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.client.components.TerminalComponent.viewStartAndEnd
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
 import drt.shared.PortState
@@ -9,8 +10,6 @@ import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, LiveFeedSource, Q
 import utest.{TestSuite, _}
 
 object FilterCrunchByRangeTests extends TestSuite {
-
-  import TerminalContentComponent._
 
   val paxFeedSourceOrder: List[FeedSource] = List(ApiFeedSource, LiveFeedSource)
 

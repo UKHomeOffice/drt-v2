@@ -57,7 +57,7 @@ object TerminalComponent {
                                   ) extends UseValueEq
 
   private val activeClass = "active"
-  
+
   private def timeRange(terminalPageTab: TerminalPageTabLoc, defaultTimeRangeHours: TimeRangeHours): CustomWindow =
     TimeRangeHours(
       terminalPageTab.timeRangeStart.getOrElse(defaultTimeRangeHours.start),

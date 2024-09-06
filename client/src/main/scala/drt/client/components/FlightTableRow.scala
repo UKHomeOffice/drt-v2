@@ -4,7 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
-import drt.client.components.FlightComponents.{SplitsGraph, paxFeedSourceClass}
+import drt.client.components.FlightComponents.paxFeedSourceClass
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -13,10 +13,10 @@ import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
+import japgolly.scalajs.react.vdom.{TagMod, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
-import org.scalajs.dom.html.{Div, Span, TableRow}
+import org.scalajs.dom.html.{Span, TableRow}
 import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -31,8 +31,6 @@ import uk.gov.homeoffice.drt.time.SDateLike
 object FlightTableRow {
 
   import FlightTableComponents._
-
-  type SplitsGraphComponentFn = SplitsGraph.Props => TagOf[Div]
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShareFlightCodes: Seq[String],
@@ -104,7 +102,7 @@ object FlightTableRow {
       else if (props.showHighLighted && highlighterIsActive) ""
       else "arrivals__table__flight-code"
 
-      def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean, showHighlighter: Boolean): VdomTagOf[Span] =
+      def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean): VdomTagOf[Span] =
         if (props.loggedInUser.hasRole(ArrivalSource)) {
           val diversionClass = (outgoingDiversion, incomingDiversion) match {
             case (_, true) => "arrivals__table__flight-code-incoming-diversion"
@@ -177,7 +175,7 @@ object FlightTableRow {
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(^.cls := s"$highlighterClass $isHighlightedClass arrivals__table__flight-code-wrapper",
-            flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHighLighted), charts)
+            flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion), charts)
         ),
         highlightedComponent.map(<.td(^.className := "arrivals__table__flags-column", _))
           .getOrElse {
