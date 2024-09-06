@@ -219,8 +219,6 @@ object Actions {
 
   case object ClearFlaggedNationalities extends Action
 
-  case class SetFlightFilterQuery(message: String) extends Action
-
   case class UpdateNationalityFlaggerInputText(value: String) extends Action
 
   case class UpdateFlightHighlight(flightHighlight: FlightHighlight) extends Action
