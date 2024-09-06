@@ -5,7 +5,6 @@ import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.Icon.Icon
 import drt.client.components.ToolTips.staffMovementsTabTooltip
 import drt.client.components.scenarios.ScenarioSimulationComponent
@@ -55,13 +54,11 @@ object TerminalContentComponent {
                    walkTimes: Pot[WalkTimes],
                    paxFeedSourceOrder: List[FeedSource],
                    flights: Pot[Seq[ApiFlightWithSplits]],
-                   airportInfos: Map[PortCode, Pot[AirportInfo]],
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    simulationResult: Pot[SimulationResult],
                    flightHighlight: FlightHighlight,
                    viewStart: SDateLike,
-                   viewEnd: SDateLike,
                    hoursToView: Int,
                    windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
@@ -172,7 +169,7 @@ object TerminalContentComponent {
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
               if (state.activeTab == "desksAndQueues") {
-                props.featureFlags.render(features => {
+                props.featureFlags.render { features =>
                   TerminalDesksAndQueues(
                     TerminalDesksAndQueues.Props(
                       router = props.router,
@@ -190,7 +187,7 @@ object TerminalContentComponent {
                       windowStaffSummaries = props.windowStaffSummaries,
                     )
                   )
-                })
+                }
               } else ""
             ),
             <.div(^.id := "arrivals", ^.className := s"tab-pane in $arrivalsPanelActive", {
@@ -207,7 +204,6 @@ object TerminalContentComponent {
                       hasEstChox = props.airportConfig.hasEstChox,
                       loggedInUser = props.loggedInUser,
                       viewMode = props.viewMode,
-                      defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTab.terminal),
                       hasTransfer = props.airportConfig.hasTransfer,
                       displayRedListInfo = features.displayRedListInfo,
                       redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
@@ -217,17 +213,13 @@ object TerminalContentComponent {
                       airportConfig = props.airportConfig,
                       redListUpdates = redListUpdates,
                       walkTimes = walkTimes,
-                      viewStart = props.viewStart,
-                      viewEnd = props.viewEnd,
                       showFlagger = true,
                       paxFeedSourceOrder = props.paxFeedSourceOrder,
                       flightHighlight = props.flightHighlight,
                       flights = props.flights,
-                      airportInfos = props.airportInfos,
                       flightManifestSummaries = props.flightManifestSummaries,
                       arrivalSources = props.arrivalSources,
                       originMapper = originMapper,
-                      splitsGraphComponent = splitsGraphComponentColoured,
                     )
                   )
                 }

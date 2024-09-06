@@ -57,9 +57,7 @@ object TerminalComponent {
                                   ) extends UseValueEq
 
   private val activeClass = "active"
-
-
-
+  
   private def timeRange(terminalPageTab: TerminalPageTabLoc, defaultTimeRangeHours: TimeRangeHours): CustomWindow =
     TimeRangeHours(
       terminalPageTab.timeRangeStart.getOrElse(defaultTimeRangeHours.start),
@@ -152,7 +150,7 @@ object TerminalComponent {
 
                   val terminal = props.terminalPageTab.terminal
                   val queues = model.airportConfig.map(_.nonTransferQueues(terminal).toList)
-                  val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, 15, terminal, q)))
+                  val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, 15, terminal, q).toMap))
                   val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, 15, terminal, q)))
                   val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, 15, terminal).toMap)
 
@@ -188,13 +186,11 @@ object TerminalComponent {
                           walkTimes = model.walkTimes,
                           paxFeedSourceOrder = model.paxFeedSourceOrder,
                           flights = flightsForWindow,
-                          airportInfos = ai,
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
                           simulationResult = simRes,
                           flightHighlight = fhl,
                           viewStart = viewStart,
-                          viewEnd = viewEnd,
                           hoursToView = hoursToView,
                           windowCrunchSummaries = windowCrunchSummaries,
                           dayCrunchSummaries = dayCrunchSummaries,
@@ -219,10 +215,7 @@ object TerminalComponent {
                           crunchMinutes = crunchMinutesForWindow,
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
-                          airportInfos = ai,
                           flightHighlight = fhl,
-                          viewStart = viewStart,
-                          viewEnd = viewEnd,
                         )
                       )
 

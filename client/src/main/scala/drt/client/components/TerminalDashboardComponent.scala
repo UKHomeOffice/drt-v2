@@ -3,7 +3,6 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.TerminalContentComponent.originMapper
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -46,10 +45,7 @@ object TerminalDashboardComponent {
                    flights: Pot[Seq[ApiFlightWithSplits]],
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                   airportInfos: Map[PortCode, Pot[AirportInfo]],
                    flightHighlight: FlightHighlight,
-                   viewStart: SDateLike,
-                   viewEnd: SDateLike,
                   ) extends UseValueEq
 
   private val defaultSlotSize = 120
@@ -104,7 +100,6 @@ object TerminalDashboardComponent {
                       hasEstChox = props.airportConfig.hasEstChox,
                       loggedInUser = props.loggedInUser,
                       viewMode = ViewLive,
-                      defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
                       hasTransfer = props.airportConfig.hasTransfer,
                       displayRedListInfo = featureFlags.displayRedListInfo,
                       redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
@@ -114,17 +109,13 @@ object TerminalDashboardComponent {
                       airportConfig = props.airportConfig,
                       redListUpdates = props.redListUpdates,
                       walkTimes = walkTimes,
-                      viewStart = start,
-                      viewEnd = end,
                       showFlagger = false,
                       paxFeedSourceOrder = props.paxFeedSourceOrder,
                       flightHighlight = props.flightHighlight,
                       flights = props.flights,
                       flightManifestSummaries = props.flightManifestSummaries,
                       arrivalSources = props.arrivalSources,
-                      airportInfos = props.airportInfos,
                       originMapper = originMapper,
-                      splitsGraphComponent = splitsGraphComponentColoured,
                     )
                   )
                 ),
