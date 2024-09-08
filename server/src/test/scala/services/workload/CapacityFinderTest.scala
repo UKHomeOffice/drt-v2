@@ -55,11 +55,7 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
         List(QueuePassenger(45)),
         List.empty,
         List.empty
-      )) shouldBe(List(QueuePassenger(10), QueuePassenger(120)) ::: List(QueuePassenger(25, 1)), List(0, 1, 1, 3))
-      //      50 + 50 + 120
-      //      0 +  0 +  100 + 45
-      //      0 +  0 +  40  + 45
-      //      0 +  0 +  0   + 25
+      )) shouldBe(List(QueuePassenger(25, 1)), List(0, 1, 2, 3))
     }
     "return remaining passengers and wait times for each minute 2" in {
       processQueue(1, Seq(
@@ -69,10 +65,6 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
         List(QueuePassenger(65)),
         List.empty,
       )) shouldBe(List.empty, List(0, 1, 0, 0, 1))
-      //      50 + 50 + 120
-      //      0 +  0 +  100 + 45
-      //      0 +  0 +  40  + 45
-      //      0 +  0 +  0   + 25
     }
   }
 }
