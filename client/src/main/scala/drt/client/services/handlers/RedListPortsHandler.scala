@@ -13,7 +13,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class RedListPortsHandler[M](modelRW: ModelRW[M, Pot[HashSet[PortCode]]]) extends LoggingActionHandler(modelRW) {
+class RedListPortsHandler[M](modelRW: ModelRW[M, Pot[HashSet[PortCode]]]) extends PotActionHandler(modelRW) {
   val requestFrequency: FiniteDuration = 60.seconds
 
   override def handle: PartialFunction[Any, ActionResult[M]] = {
@@ -27,8 +27,8 @@ class RedListPortsHandler[M](modelRW: ModelRW[M, Pot[HashSet[PortCode]]]) extend
           case _ => Future(RetryActionAfter(GetRedListPorts(date), PollDelay.recoveryDelay))
         }))
 
-    case UpdateRedListPorts(infos, date) =>
-      val effect = Effect(Future(GetRedListPorts(date))).after(requestFrequency)
-      updated(Ready(infos), effect)
+    case UpdateRedListPorts(ports, date) =>
+      val poll = Effect(Future(GetRedListPorts(date))).after(requestFrequency)
+      updateIfChanged(ports, poll)
   }
 }

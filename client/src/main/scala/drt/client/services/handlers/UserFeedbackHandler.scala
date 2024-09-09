@@ -22,9 +22,7 @@ object UserFeedbackRow {
 }
 
 class UserFeedbackHandler[M](modelRW: ModelRW[M, Pot[Seq[UserFeedback]]]) extends LoggingActionHandler(modelRW) {
-  override
-  protected def handle: PartialFunction[Any, ActionResult[M]] = {
-
+  override protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetUserFeedback(userFeedbacks) =>
       updated(Ready(userFeedbacks))
 

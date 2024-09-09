@@ -13,12 +13,15 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class ContactDetailsHandler[M](modelRW: ModelRW[M, Pot[ContactDetails]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetContactDetails =>
+      val effect = Effect(DrtApi.get("contact-details")
+        .map(r => UpdateContactDetails(read[ContactDetails](r.responseText)))
+        .recoverWith {
+          case _ =>
+            Future(RetryActionAfter(GetContactDetails, PollDelay.recoveryDelay))
+        })
 
-      updated(Pending(), Effect(DrtApi.get("contact-details")
-        .map(r => UpdateContactDetails(read[ContactDetails](r.responseText))).recoverWith {
-        case _ =>
-          Future(RetryActionAfter(GetContactDetails, PollDelay.recoveryDelay))
-      }))
+      effectOnly(effect)
+
     case UpdateContactDetails(contactDetails) =>
       updated(Ready(contactDetails))
   }

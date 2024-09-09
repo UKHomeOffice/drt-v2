@@ -131,8 +131,6 @@ object Actions {
 
   case object GetPassengerInfoForFlights extends Action
 
-  case class UpdateAirportInfo(code: PortCode, info: Option[AirportInfo]) extends Action
-
   case class UpdateAirportInfos(infos: Map[PortCode, AirportInfo]) extends Action
 
   case class GetArrivalSources(unique: UniqueArrival) extends Action
@@ -220,8 +218,6 @@ object Actions {
   case class RemoveFlaggedNationality(country: Country) extends Action
 
   case object ClearFlaggedNationalities extends Action
-
-  case class SetFlightFilterMessage(message: String) extends Action
 
   case class UpdateNationalityFlaggerInputText(value: String) extends Action
 

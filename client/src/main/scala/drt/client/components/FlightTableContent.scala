@@ -7,17 +7,15 @@ import drt.client.components.FlightComponents.SplitsGraph
 import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.ToolTips._
 import drt.client.logger.LoggerFactory
-import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
-import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.{TagOf, html_<^}
+import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom
 import org.scalajs.dom.html.{TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
@@ -28,13 +26,13 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.SDateLike
 
-import scala.collection.immutable.HashSet
+import scala.collection.immutable.{HashSet, Seq}
 import scala.scalajs.js
 
 object FlightTableContent {
   private val log = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(portState: PortState,
+  case class Props(flights: Pot[Seq[ApiFlightWithSplits]],
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    queueOrder: Seq[Queue],
                    hasEstChox: Boolean,
@@ -58,71 +56,28 @@ object FlightTableContent {
                    viewStart: SDateLike,
                    viewEnd: SDateLike,
                    paxFeedSourceOrder: List[FeedSource],
-                   filterFlightSearch: String,
                    showFlagger: Boolean,
+                   airportInfos: Map[PortCode, Pot[AirportInfo]],
+                   shortLabel: Boolean = false,
+                   originMapper: (PortCode, html_<^.TagMod) => VdomNode,
+                   splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                   ) extends UseValueEq
 
-  implicit val reuseProps: Reusability[Props] = Reusability {
-    (a, b) =>
-      a.portState.latestUpdate == b.portState.latestUpdate &&
-        a.flightManifestSummaries == b.flightManifestSummaries &&
-        a.flaggedNationalities == b.flaggedNationalities &&
-        a.flaggedAgeGroups == b.flaggedAgeGroups &&
-        a.filterFlightSearch == b.filterFlightSearch &&
-        a.showNumberOfVisaNationals == b.showNumberOfVisaNationals &&
-        a.showOnlyHighlightedRows == b.showOnlyHighlightedRows &&
-        a.showRequireAllSelected == b.showRequireAllSelected &&
-        a.viewStart == b.viewStart &&
-        a.viewEnd == b.viewEnd
-  }
-
   case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]]) extends UseValueEq
-
-  def apply(shortLabel: Boolean = false,
-            originMapper: (PortCode, html_<^.TagMod) => VdomNode,
-            splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div()
-           ): Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ArrivalsTableContent")
-    .render_PS { (props, _) =>
-      val modelRCP = SPACircuit.connect(m => Model(airportInfos = m.airportInfos))
-
+  
+  class Backend {
+    def render(props: Props): VdomElement = {
       val flightDisplayFilter = props.airportConfig.portCode match {
         case PortCode("LHR") => LhrFlightDisplayFilter(props.redListUpdates, (portCode, _, _) =>
           props.redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
         case _ => DefaultFlightDisplayFilter
       }
 
-      def filterFlights(flights: List[ApiFlightWithSplits],
-                        filter: String,
-                        airportInfos: Map[PortCode, Pot[AirportInfo]]): List[ApiFlightWithSplits] = {
-        flights.filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(filter.toLowerCase)
-          || f.apiFlight.Origin.iata.toLowerCase.contains(filter.toLowerCase)
-          || airportInfos.get(f.apiFlight.Origin).exists(airportInfo => airportInfo
-          .exists(_.country.toLowerCase.contains(filter.toLowerCase))))
-      }
 
-      modelRCP(modelMP => {
-        val model: Model = modelMP()
-
-        val flightsForWindow = props.portState.window(props.viewStart, props.viewEnd, props.paxFeedSourceOrder)
-        val flights: Seq[ApiFlightWithSplits] = filterFlights(flightsForWindow.flights.values.toList, props.filterFlightSearch, model.airportInfos)
-
-        flights
-          .groupBy(f =>
-            (f.apiFlight.Scheduled, f.apiFlight.Terminal, f.apiFlight.Origin)
-          )
-          .foreach { case (_, flights) =>
-            if (flights.size > 1) {
-              flights.foreach { f =>
-                val flightCode = f.apiFlight.flightCodeString
-                val paxSources = f.apiFlight.PassengerSources.map(ps => s"${ps._1.name}: ${ps._2.actual}").mkString(", ")
-                val splitSources = f.splits.map(s => s"${s.source.toString}: ${s.totalPax}").mkString(", ")
-                log.info(s"Codeshare flight ${SDate(f.apiFlight.Scheduled).prettyDateTime} $flightCode :: $paxSources :: $splitSources")
-              }
-            }
-          }
-
-        val flightsForTerminal =
-          flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
+      val content = for {
+        flights <- props.flights
+      } yield {
+        val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
         val flightsWithCodeShares = CodeShares.uniqueFlightsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
         val showFlagger = props.flaggedNationalities.nonEmpty ||
@@ -155,7 +110,7 @@ object FlightTableContent {
               },
               <.div(<.table(
                 ^.className := "arrivals-table table-striped",
-                tableHead(props, props.queueOrder, redListPaxExist, shortLabel, showFlagger),
+                tableHead(props, props.queueOrder, redListPaxExist, props.shortLabel, showFlagger),
                 <.tbody(
                   sortedFlights.zipWithIndex.flatMap {
                     case ((flightWithSplits, codeShares), idx) =>
@@ -173,8 +128,8 @@ object FlightTableContent {
                         flightWithSplits = flightWithSplits,
                         codeShareFlightCodes = codeShares,
                         idx = idx,
-                        originMapper = originMapper,
-                        splitsGraphComponent = splitsGraphComponent,
+                        originMapper = props.originMapper,
+                        splitsGraphComponent = props.splitsGraphComponent,
                         splitsQueueOrder = props.queueOrder,
                         hasEstChox = props.hasEstChox,
                         loggedInUser = props.loggedInUser,
@@ -194,7 +149,7 @@ object FlightTableContent {
                         showRequireAllSelected = props.showRequireAllSelected,
                         manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
                         paxFeedSourceOrder = props.paxFeedSourceOrder,
-                        showHightLighted = showHightlighted)
+                        showHighLighted = showHightlighted)
 
                       FlightHighlighter.highlightedFlight(manifestSummary,
                           props.flaggedNationalities,
@@ -208,7 +163,7 @@ object FlightTableContent {
                 ))))
           }
           else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
-            if (flightsForWindow.flights.isEmpty) {
+            if (flights.isEmpty) {
               <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
                 MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
                 (MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights to display.")))
@@ -219,9 +174,19 @@ object FlightTableContent {
             }
           )
         )
-      })
-    }.configure(Reusability.shouldComponentUpdate)
+      }
+      content.getOrElse(<.div())
+    }
+  }
+
+  val component = ScalaComponent.builder[Props]("FlightTableContent")
+    .renderBackend[Backend]
+    .componentDidMount(_ => Callback {
+      log.info("FlightTableContent mounted")
+    })
     .build
+
+  def apply(props: Props): VdomElement = component(props)
 
   def tableHead(props: Props,
                 queues: Seq[Queue],

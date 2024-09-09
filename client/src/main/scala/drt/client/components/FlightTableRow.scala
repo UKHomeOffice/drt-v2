@@ -16,7 +16,7 @@ import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, TagOf, html_<^}
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
-import org.scalajs.dom.html.{Div, Span}
+import org.scalajs.dom.html.{Div, Span, TableRow}
 import scalacss.ScalaCssReact
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -58,18 +58,19 @@ object FlightTableRow {
                    showRequireAllSelected: Boolean,
                    manifestSummary: Option[FlightManifestSummary],
                    paxFeedSourceOrder: List[FeedSource],
-                   showHightLighted: Boolean,
+                   showHighLighted: Boolean,
                   ) extends UseValueEq
 
   implicit val propsReuse: Reusability[Props] = Reusability {
     (a, b) =>
       a.flightWithSplits.lastUpdated == b.flightWithSplits.lastUpdated &&
         a.manifestSummary == b.manifestSummary &&
-        a.flaggedNationalities == b.flaggedNationalities
+        a.flaggedNationalities == b.flaggedNationalities &&
+        a.flaggedAgeGroups == b.flaggedAgeGroups
   }
 
-  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
-    .render_P { props =>
+  class Backend {
+    def render(props: Props): VdomTagOf[TableRow] = {
       val isMobile = dom.window.innerWidth < 800
       val flightWithSplits = props.flightWithSplits
       val flight = flightWithSplits.apiFlight
@@ -89,7 +90,7 @@ object FlightTableRow {
         props.showHighlightedRows,
         props.showRequireAllSelected).contains(true)
 
-      val highlightedComponent = if (props.showHightLighted && highlighterIsActive) {
+      val highlightedComponent = if (props.showHighLighted && highlighterIsActive) {
         val chip = FlightHighlighter.highlightedColumnData(
           props.showNumberOfVisaNationals,
           props.showRequireAllSelected,
@@ -100,11 +101,11 @@ object FlightTableRow {
       } else None
 
       val flightCodeClass = if (props.loggedInUser.hasRole(ArrivalSource))
-        if (props.showHightLighted && highlighterIsActive)
+        if (props.showHighLighted && highlighterIsActive)
           "arrivals__table__flight-code arrivals__table__flight-code--clickable"
         else
           "arrivals__table__flight-code--clickable"
-      else if (props.showHightLighted && highlighterIsActive) ""
+      else if (props.showHighLighted && highlighterIsActive) ""
       else "arrivals__table__flight-code"
 
       def flightCodeElement(flightCodes: String, outgoingDiversion: Boolean, incomingDiversion: Boolean, showHighlighter: Boolean): VdomTagOf[Span] =
@@ -167,7 +168,7 @@ object FlightTableRow {
             (diff, diff.toDouble / pcpPax)
           }
           if (maybePaxDiffAndPct.isEmpty || maybePaxDiffAndPct.exists(_._2 <= 1.05)) {
-            val cls = if (props.showHightLighted) "arrivals__table__flight-code__info-highlighted" else "arrivals__table__flight-code__info"
+            val cls = if (props.showHighLighted) "arrivals__table__flight-code__info-highlighted" else "arrivals__table__flight-code__info"
             <.div(^.className := cls,
               FlightChartComponent(FlightChartComponent.Props(manifestSummary, maybePaxDiffAndPct)))
           } else EmptyVdom
@@ -180,7 +181,7 @@ object FlightTableRow {
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(^.cls := s"$highlighterClass $isHighlightedClass arrivals__table__flight-code-wrapper",
-            flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHightLighted), charts)
+            flightCodeElement(flightCodes, outgoingDiversion, props.directRedListFlight.incomingDiversion, showHighlighter = props.showHighLighted), charts)
         ),
         highlightedComponent.map(<.td(^.className := "arrivals__table__flags-column", _))
           .getOrElse {
@@ -255,9 +256,12 @@ object FlightTableRow {
         else EmptyVdom
       )
     }
+  }
+
+  val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
+    .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build
-
 
   private def gateOrStand(arrival: Arrival, terminalWalkTime: Long, paxAreDiverted: Boolean, walkTimes: WalkTimes): VdomTagOf[Span] = {
     val content = (arrival.Gate, arrival.Stand) match {

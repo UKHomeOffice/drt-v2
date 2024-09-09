@@ -15,9 +15,7 @@ case class GetFeatureGuides() extends Action
 case class SetFeatureGuides(trainingDataTemplates: Seq[FeatureGuide]) extends Action
 
 class FeatureGuidesHandler[M](modelRW: ModelRW[M, Pot[Seq[FeatureGuide]]]) extends LoggingActionHandler(modelRW) {
-  override
-  protected def handle: PartialFunction[Any, ActionResult[M]] = {
-
+  override protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetFeatureGuides(trainingDataTemplates) =>
       updated(Ready(trainingDataTemplates))
 
