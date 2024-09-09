@@ -102,6 +102,34 @@ case class QueueCapacity(capacity: List[Int]) {
 
     ProcessedQueue(sla, passengersByMinute.size, processedMinutes, leftOver, queueSizeByMinute.reverse)
   }
+
+//  def processPassengers2(sla: Int, passengersByMinute: Iterable[Iterable[Double]]): ProcessedQueue = {
+//    if (capacity.length != passengersByMinute.size) {
+//      throw new Exception(s"capacity & work lengths don't match: ${capacity.length} vs ${passengersByMinute.size}")
+//    }
+//
+//    val workWithDesks: Iterable[(Iterable[Work], Capacity)] = passengersByMinute.zipWithIndex
+//      .map { case (passengers, minute) => (minute, passengers.map(paxWorkLoad => Work(paxWorkLoad, minute))) }
+//      .zip(capacity)
+//      .map { case ((minute, passengers), d) => (passengers, Capacity(d, minute)) }
+//
+//    def recursiveProcess(workBatch: BatchOfWork) = {
+//      val (processedBatch, _) = desksOpen.process(spillover + passengers.toList)
+//      val processedBatches = processedBatchesSoFar :+ ProcessedBatchOfWork(desksOpen.availableAt, processedBatch)
+//      val paxInQueue = processedBatch.outstanding.loads.size
+//    }
+//
+//    val (processedMinutes, queueSizeByMinute, leftOver) = workWithDesks
+//      .foldLeft((List[ProcessedBatchOfWork](), List[Double](), BatchOfWork(List()))) {
+//        case ((processedBatchesSoFar, queueSizeByMinute, spillover), (passengers, desksOpen)) =>
+//          val (processedBatch, _) = desksOpen.process(spillover + passengers.toList)
+//          val processedBatches = processedBatchesSoFar :+ ProcessedBatchOfWork(desksOpen.availableAt, processedBatch)
+//          val paxInQueue = processedBatch.outstanding.loads.size
+//          (processedBatches, paxInQueue :: queueSizeByMinute, processedBatch.outstanding)
+//      }
+//
+//    ProcessedQueue(sla, passengersByMinute.size, processedMinutes, leftOver, queueSizeByMinute.reverse)
+//  }
 }
 
 case class Capacity(value: Double, availableAt: Int) {

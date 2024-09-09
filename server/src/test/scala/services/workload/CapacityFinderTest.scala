@@ -3,6 +3,8 @@ package services.workload
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import services.workload.CapacityFinder.processQueue
+import services.{OptimiserConfig, TryRenjin, WorkloadProcessorsProvider}
+import uk.gov.homeoffice.drt.egates.Desk
 
 class CapacityFinderTest extends AnyWordSpec with Matchers {
   "applyCapacity" should {
@@ -27,11 +29,11 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
       assertQueueAndWait(60, List(QueuePassenger(30, 0), QueuePassenger(40, 0)), 0)(
         expQueue = List(QueuePassenger(10, 0)), expWait = 0)
     }
-    "return a wait time of the current minute minus the join time of the processed passenger" in {
-      val joinTime = 1
+    "return the max wait time of any of the passengers processed at the particular minute" in {
+      val oldestJoinTime = 1
       val minute = 5
-      assertQueueAndWait(60, List(QueuePassenger(30, 0), QueuePassenger(40, joinTime)), 5)(
-        expQueue = List(QueuePassenger(10, joinTime)), expWait = minute - joinTime)
+      assertQueueAndWait(60, List(QueuePassenger(30, oldestJoinTime), QueuePassenger(40, 2)), minute)(
+        expQueue = List(QueuePassenger(10, oldestJoinTime)), expWait = minute - oldestJoinTime)
     }
   }
 
@@ -44,10 +46,10 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
 
   "processQueue" should {
     "return an empty queue and no wait times given no passengers" in {
-      processQueue(1, Seq.empty) shouldBe(List.empty, List.empty)
+      processQueue(1, Seq.empty) shouldBe(List.empty, List.empty, List.empty)
     }
     "return an empty queue with a one minute wait time of the passenger with over a 60s load" in {
-      processQueue(1, Seq(List(QueuePassenger(65)), List.empty)) shouldBe(List.empty, List(0, 1))
+      processQueue(1, Seq(List(QueuePassenger(65)), List.empty)) shouldBe(List.empty, List(0, 1), List(1, 0))
     }
     "return remaining passengers and wait times for each minute" in {
       processQueue(1, Seq(
@@ -55,7 +57,7 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
         List(QueuePassenger(45)),
         List.empty,
         List.empty
-      )) shouldBe(List(QueuePassenger(25, 1)), List(0, 1, 2, 3))
+      )) shouldBe(List(QueuePassenger(25, 1)), List(0, 1, 2, 3), List(2, 2, 2, 1))
     }
     "return remaining passengers and wait times for each minute 2" in {
       processQueue(1, Seq(
@@ -64,7 +66,40 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
         List.empty,
         List(QueuePassenger(65)),
         List.empty,
-      )) shouldBe(List.empty, List(0, 1, 0, 0, 1))
+      )) shouldBe(List.empty, List(0, 1, 0, 0, 1), List(1, 0, 0, 1, 0))
     }
   }
+
+  "processQueue" should {
+    "give a result in a reasonable amount of time" in {
+      val incomingPax = randomPassengersForDay
+      val start = System.currentTimeMillis()
+      val desks = 15
+      val (queue, waitTimes, queueSizes) = processQueue(desks, incomingPax)
+      val timeTaken = System.currentTimeMillis() - start
+      println(s"Time taken: $timeTaken ms. Queue size: ${queue.size}, max wait time: ${waitTimes.max}")
+
+//      val start2 = System.currentTimeMillis()
+//      QueueCapacity(List.fill(1440)(desks)).processPassengers(60, incomingPax.map(_.map(_.load.toDouble)))
+//      val timeTaken2 = System.currentTimeMillis() - start2
+//      println(s"Time taken: $timeTaken2 ms.")
+
+      val start3 = System.currentTimeMillis()
+      val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(1440)(List.fill(desks)(Desk))))
+      TryRenjin.runSimulationOfWork(incomingPax.map(_.map(_.load).sum), List.fill(1440)(desks), config)
+      val timeTaken3 = System.currentTimeMillis() - start3
+      println(s"Time taken: $timeTaken3 ms.")
+
+      assert(timeTaken < 1000)
+    }
+  }
+
+  private def randomPassengersForDay: Seq[List[QueuePassenger]] =
+    (0 until 1440).map(_ => randomPassengersForMinute)
+
+  private def randomPassengersForMinute: List[QueuePassenger] =
+    (0 to (Math.random() * 20).toInt).map(_ => QueuePassenger(randomProcessingSeconds)).toList
+
+  private def randomProcessingSeconds: Int =
+    (Math.random() * 100).toInt + 40
 }
