@@ -120,8 +120,7 @@ object Layout {
       Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
         Callback(SPACircuit.dispatch(TrackUser())) >>
         Callback(SPACircuit.dispatch(GetABFeature("feedback"))) >>
-        Callback(SPACircuit.dispatch(ShouldViewBanner())) >>
-        Callback(println(s"Layout mounted"))
+        Callback(SPACircuit.dispatch(ShouldViewBanner()))
     }
     .build
 

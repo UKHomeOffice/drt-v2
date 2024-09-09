@@ -24,7 +24,6 @@ object UserFeedbackRow {
 class UserFeedbackHandler[M](modelRW: ModelRW[M, Pot[Seq[UserFeedback]]]) extends LoggingActionHandler(modelRW) {
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case SetUserFeedback(userFeedbacks) =>
-      println("setting user feedback")
       updated(Ready(userFeedbacks))
 
     case GetUserFeedback() =>
