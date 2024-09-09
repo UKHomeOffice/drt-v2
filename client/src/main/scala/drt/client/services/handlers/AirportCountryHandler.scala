@@ -33,9 +33,5 @@ class AirportCountryHandler[M](modelRW: ModelRW[M, Map[PortCode, Pot[AirportInfo
           noChange
 
       }
-
-//    case UpdateAirportInfo(code, Some(airportInfo)) =>
-//      val newValue = value + (code -> Ready(airportInfo))
-//      updated(newValue)
   }
 }

@@ -39,7 +39,6 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       val effects = Effect(Future(ShowLoader())) + Effect(eventualAction)
       updated((Pending(), 0L, 0L, 0L, Pending()), effects)
-//      effectOnly(effects)
 
     case SetPortState(viewMode, _) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring out of date view response")

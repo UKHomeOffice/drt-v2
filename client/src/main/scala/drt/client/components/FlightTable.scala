@@ -224,7 +224,6 @@ object FlightTable {
   val component = ScalaComponent.builder[Props]("ArrivalsTable")
     .initialStateFromProps(p => State(p.flightHighlight.showHighlightedRows))
     .renderBackend[Backend]
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   def apply(props: Props): Unmounted[Props, State, Backend] = component(props)
