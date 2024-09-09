@@ -4,6 +4,7 @@ import diode.data.Pot
 import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
 import drt.client.SPAMain._
+import drt.client.actions.Actions.GetShiftsForMonth
 import drt.client.components.TerminalDesksAndQueues.Ideal
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
@@ -167,7 +168,8 @@ object TerminalComponent {
     }
     .componentDidMount(p =>
       Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
-        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString)))
+        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString))) >>
+        Callback(SPACircuit.dispatch(GetShiftsForMonth(p.props.terminalPageTab.dateFromUrlOrNow)))
     )
     .configure(Reusability.shouldComponentUpdate)
     .build

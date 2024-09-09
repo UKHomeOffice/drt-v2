@@ -1,13 +1,14 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
-import drt.client.actions.Actions.UpdateShifts
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlMinStaffUpdateConfirm}
+import drt.client.actions.Actions.{GetShiftsForMonth, UpdateShifts}
 import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers.{GetMinStaff, SaveMinStaff, TerminalMinStaff}
 import drt.client.services.{JSDateConversions, SPACircuit}
+import drt.client.spa.TerminalPageModes.Staffing
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiDivider, MuiGrid}
 import japgolly.scalajs.react.callback.Callback
@@ -15,6 +16,7 @@ import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.HtmlAttrs.onClick.Event
 import japgolly.scalajs.react.vdom.TagOf
+import japgolly.scalajs.react.vdom.all.scope
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Select
@@ -150,7 +152,7 @@ object MonthlyStaffing {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm && a.showMinStaffSuccess == b.showMinStaffSuccess)
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm && a.showMinStaffSuccess == b.showMinStaffSuccess && a.changes == b.changes)
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(stateFromProps)
@@ -183,9 +185,14 @@ object MonthlyStaffing {
 
       def saveMinStaff(terminalMinStaff: TerminalMinStaff) = {
         Callback(SPACircuit.dispatch(SaveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, terminalMinStaff.minStaff)))).runNow()
-        Callback(SPACircuit.dispatch(GetMinStaff(props.terminalPageTab.terminal.toString))).runNow()
-        scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff)).runNow()
-        scope.modState(state => state.copy(showMinStaffSuccess = true, showMinStaffForm = false)).runNow()
+        Callback(SPACircuit.dispatch(GetShiftsForMonth(props.terminalPageTab.dateFromUrlOrNow))).runNow()
+        scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff, showMinStaffForm = false)).runNow()
+
+        props.router.set(props.terminalPageTab.update(
+            mode = Staffing,
+            subMode = "15",
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlMinStaffUpdateConfirm(Some("true"))).queryParams
+        )).runNow()
       }
 
       val handleOnEdit = (e: Event) => Callback {
@@ -198,6 +205,8 @@ object MonthlyStaffing {
         <.div(^.className := "terminal-staffing-header",
           MinStaffForm(IMinStaffForm(props.portCode.toString, props.terminalPageTab.terminal.toString, message, 0, (minStaff) => {
             saveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff)))
+          }, () => {
+            scope.modState(state => state.copy(showMinStaffSuccess = false, showMinStaffForm = false)).runNow()
           })))
       } else {
         <.div(
@@ -343,7 +352,7 @@ object MonthlyStaffing {
     val terminal = props.terminalPageTab.terminal
     val terminalShifts = props.shifts.forTerminal(terminal)
     val shiftAssignments = ShiftAssignments(terminalShifts)
-
+    val showMinStaffSuccess = props.terminalPageTab.updateMinStaffConfirm
     val daysInMonth: Seq[SDateLike] = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
 
     val staffTimeSlots: Seq[Seq[Any]] = daysInMonthByTimeSlot((viewingDate, props.timeSlotMinutes)).map(_.map {
@@ -358,7 +367,7 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map(), false, false, props.terminalMinStaff)
+    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map(), false, showMinStaffSuccess, props.terminalMinStaff)
   }
 
   def apply(portCode: PortCode,

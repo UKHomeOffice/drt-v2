@@ -13,16 +13,18 @@ trait IMinStaffForm extends js.Object {
   var message: String = js.native
   var minStaffNumber: Int = js.native
   var handleSubmit: js.Function1[Int, Unit] = js.native
+  var cancelHandler: js.Function0[Unit] = js.native
 }
 
 object IMinStaffForm {
-  def apply(port: String, terminal: String, message: String, minStaffNumber: Int, handleSubmit: js.Function1[Int, Unit]): IMinStaffForm = {
+  def apply(port: String, terminal: String, message: String, minStaffNumber: Int, handleSubmit: js.Function1[Int, Unit], cancelHandler: js.Function0[Unit]): IMinStaffForm = {
     val p = (new js.Object).asInstanceOf[IMinStaffForm]
     p.port = port
     p.terminal = terminal
     p.message = message
     p.minStaffNumber = minStaffNumber
     p.handleSubmit = handleSubmit
+    p.cancelHandler = cancelHandler
     p
   }
 }
