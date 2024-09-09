@@ -2,7 +2,7 @@ package services.workload
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import services.workload.CapacityFinder.processQueue
+import services.workload.CapacityFinder.{processQueue, processQueue2}
 import services.{OptimiserConfig, TryRenjin, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.egates.Desk
 
@@ -86,11 +86,52 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
 
       val start3 = System.currentTimeMillis()
       val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(1440)(List.fill(desks)(Desk))))
-      TryRenjin.runSimulationOfWork(incomingPax.map(_.map(_.load).sum), List.fill(1440)(desks), config)
+      val result = TryRenjin.runSimulationOfWork(incomingPax.map(_.map(_.load).sum), List.fill(1440)(desks), config)
       val timeTaken3 = System.currentTimeMillis() - start3
-      println(s"Time taken: $timeTaken3 ms.")
+      println(s"Time taken: $timeTaken3 ms. Queue size: n/a, max wait time: ${result.max}")
 
       assert(timeTaken < 1000)
+    }
+  }
+
+  "processQueue2" should {
+    "give a result in a reasonable amount of time" in {
+      val incomingPax = randomPassengersForDay
+      val start = System.currentTimeMillis()
+      val desks = 18
+      val desksByMinute = IndexedSeq.fill(1440)(List.fill(desks)(60))
+      val (queue, waitTimes, queueSizes) = processQueue2(desksByMinute, incomingPax)
+      val timeTaken = System.currentTimeMillis() - start
+      println(s"Time taken: $timeTaken ms. Queue size: ${queue.size}, max wait time: ${waitTimes.max}")
+
+//      val start2 = System.currentTimeMillis()
+//      QueueCapacity(List.fill(1440)(desksByMinute)).processPassengers(60, incomingPax.map(_.map(_.load.toDouble)))
+//      val timeTaken2 = System.currentTimeMillis() - start2
+//      println(s"Time taken: $timeTaken2 ms.")
+
+      val start3 = System.currentTimeMillis()
+      val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(1440)(List.fill(desks)(Desk))))
+      val result = TryRenjin.runSimulationOfWork(incomingPax.map(_.map(_.load).sum.toDouble / 60), List.fill(1440)(desks), config)
+      val timeTaken3 = System.currentTimeMillis() - start3
+      println(s"Time taken: $timeTaken3 ms. Queue size: n/a, max wait time: ${result.max}")
+
+      assert(timeTaken < 1000)
+    }
+    "wait times should match TryRenjin" in {
+      val incomingPax = Seq(
+        List(QueuePassenger(50), QueuePassenger(50), QueuePassenger(30), QueuePassenger(120)),
+        List(),
+        List(),
+        List(QueuePassenger(50), QueuePassenger(50), QueuePassenger(30), QueuePassenger(120)),
+        List(),
+        List(),
+      )
+      val desks = 1
+      val desksByMinute = IndexedSeq.fill(incomingPax.size)(List.fill(desks)(60))
+      val (_, waitTimes, _) = processQueue2(desksByMinute, incomingPax)
+      val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(incomingPax.size)(List.fill(desks)(Desk))))
+      val result = TryRenjin.runSimulationOfWork(incomingPax.map(_.map(_.load).sum.toDouble / 60), List.fill(incomingPax.size)(desks), config)
+      waitTimes should===(result)
     }
   }
 
