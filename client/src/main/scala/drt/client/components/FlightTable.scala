@@ -3,18 +3,16 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
-import drt.client.components.FlightComponents.SplitsGraph
-import drt.client.components.FlightTableRow.SplitsGraphComponentFn
 import drt.client.components.styles.DrtTheme.buttonSecondaryTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared._
-import drt.shared.api.{AgeRange, FlightManifestSummary, PaxAgeRange, WalkTimes}
+import drt.shared.api.{AgeRange, FlightManifestSummary, WalkTimes}
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
-import japgolly.scalajs.react.component.Scala.Unmounted
+import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
-import japgolly.scalajs.react.{Callback, _}
+import japgolly.scalajs.react.{Callback, CtorType, _}
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -23,7 +21,6 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.collection.immutable.HashSet
 import scala.scalajs.js
@@ -35,7 +32,6 @@ object FlightTable {
                    hasEstChox: Boolean,
                    loggedInUser: LoggedInUser,
                    viewMode: ViewMode,
-                   defaultWalkTime: Long,
                    hasTransfer: Boolean,
                    displayRedListInfo: Boolean,
                    redListOriginWorkloadExcluded: Boolean,
@@ -45,28 +41,16 @@ object FlightTable {
                    redListUpdates: RedListUpdates,
                    airportConfig: AirportConfig,
                    walkTimes: WalkTimes,
-                   viewStart: SDateLike,
-                   viewEnd: SDateLike,
                    showFlagger: Boolean,
                    paxFeedSourceOrder: List[FeedSource],
                    flightHighlight: FlightHighlight,
                    flights: Pot[Seq[ApiFlightWithSplits]],
-                   airportInfos: Map[PortCode, Pot[AirportInfo]],
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    originMapper: (PortCode, html_<^.TagMod) => VdomNode,
-                   splitsGraphComponent: SplitsGraphComponentFn = (_: SplitsGraph.Props) => <.div(),
                   ) extends UseValueEq
 
   case class State(showHighlightedRows: Boolean)
-
-  implicit val reuseProps: Reusability[Props] = Reusability {
-    (a, b) =>
-      a.viewStart == b.viewStart &&
-        a.viewEnd == b.viewEnd &&
-        a.flights == b.flights &&
-        a.flightHighlight == b.flightHighlight
-  }
 
   implicit val stateReuse: Reusability[State] = Reusability.always
 
@@ -133,7 +117,7 @@ object FlightTable {
             FlightHighlight(
               showNumberOfVisaNationals = false,
               showRequireAllSelected = false,
-              showHighlightedRows = false,
+              showOnlyHighlightedRows = false,
               selectedAgeGroups = Seq(),
               selectedNationalities = Set(),
               filterFlightSearch = "")))
@@ -191,28 +175,17 @@ object FlightTable {
               hasEstChox = props.hasEstChox,
               loggedInUser = props.loggedInUser,
               viewMode = props.viewMode,
-              defaultWalkTime = props.defaultWalkTime,
               hasTransfer = props.hasTransfer,
               displayRedListInfo = props.displayRedListInfo,
-              redListOriginWorkloadExcluded = props.redListOriginWorkloadExcluded,
               terminal = props.terminal,
               portCode = props.portCode,
               redListPorts = props.redListPorts,
               redListUpdates = props.redListUpdates,
               airportConfig = props.airportConfig,
               walkTimes = props.walkTimes,
-              flaggedNationalities = props.flightHighlight.selectedNationalities,
-              flaggedAgeGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet,
-              showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
-              showOnlyHighlightedRows = state.showHighlightedRows,
-              showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
-              viewStart = props.viewStart,
-              viewEnd = props.viewEnd,
               paxFeedSourceOrder = props.paxFeedSourceOrder,
-              showFlagger = props.showFlagger,
               originMapper = props.originMapper,
-              splitsGraphComponent = props.splitsGraphComponent,
-              airportInfos = props.airportInfos,
+              flightHighlight = props.flightHighlight,
             )
           )
         },
@@ -221,10 +194,11 @@ object FlightTable {
     }
   }
 
-  val component = ScalaComponent.builder[Props]("ArrivalsTable")
-    .initialStateFromProps(p => State(p.flightHighlight.showHighlightedRows))
-    .renderBackend[Backend]
-    .build
+  val component: Component[Props, State, Backend, CtorType.Props] =
+    ScalaComponent.builder[Props]("ArrivalsTable")
+      .initialStateFromProps(p => State(p.flightHighlight.showOnlyHighlightedRows))
+      .renderBackend[Backend]
+      .build
 
   def apply(props: Props): Unmounted[Props, State, Backend] = component(props)
 }

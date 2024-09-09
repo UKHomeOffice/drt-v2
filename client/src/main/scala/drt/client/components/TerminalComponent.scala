@@ -58,8 +58,6 @@ object TerminalComponent {
 
   private val activeClass = "active"
 
-
-
   private def timeRange(terminalPageTab: TerminalPageTabLoc, defaultTimeRangeHours: TimeRangeHours): CustomWindow =
     TimeRangeHours(
       terminalPageTab.timeRangeStart.getOrElse(defaultTimeRangeHours.start),
@@ -128,37 +126,32 @@ object TerminalComponent {
 
                 rcp { mp =>
                   val (mt, ps, ai, slas, manSums, arrSources, simRes, fhl) = mp()
-                  def filterFlights(flights: List[ApiFlightWithSplits],
-                                    filter: String,
-                                    airportInfos: Map[PortCode, Pot[AirportInfo]]): List[ApiFlightWithSplits] = {
-                    flights.filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(filter.toLowerCase)
-                      || f.apiFlight.Origin.iata.toLowerCase.contains(filter.toLowerCase)
-                      || airportInfos.get(f.apiFlight.Origin).exists(airportInfo => airportInfo
-                      .exists(_.country.toLowerCase.contains(filter.toLowerCase))))
-                  }
-
-                  val flightsForWindow =
-                    ps.map { ps =>
-                      val psw = ps.window(viewStart, viewEnd, model.paxFeedSourceOrder)
-                      filterFlights(psw.flights.values.toList, fhl.filterFlightSearch, ai)
-                    }
-
-                  val crunchMinutesForWindow =
-                    ps.map { ps =>
-                      ps.window(viewStart, viewEnd, model.paxFeedSourceOrder).crunchMinutes
-                    }
-
-                  val hoursToView = timeWindow.end - timeWindow.start
-
-                  val terminal = props.terminalPageTab.terminal
-                  val queues = model.airportConfig.map(_.nonTransferQueues(terminal).toList)
-                  val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, 15, terminal, q)))
-                  val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, 15, terminal, q)))
-                  val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, 15, terminal).toMap)
 
                   props.terminalPageTab.mode match {
                     case Current =>
                       val headerClass = if (model.timeMachineEnabled) "terminal-content-header__time-machine" else ""
+
+                      def filterFlights(flights: List[ApiFlightWithSplits],
+                                        filter: String,
+                                        airportInfos: Map[PortCode, Pot[AirportInfo]]): List[ApiFlightWithSplits] = {
+                        flights.filter(f => f.apiFlight.flightCodeString.toLowerCase.contains(filter.toLowerCase)
+                          || f.apiFlight.Origin.iata.toLowerCase.contains(filter.toLowerCase)
+                          || airportInfos.get(f.apiFlight.Origin).exists(airportInfo => airportInfo
+                          .exists(_.country.toLowerCase.contains(filter.toLowerCase))))
+                      }
+
+                      def flightsForWindow(start: SDateLike, end: SDateLike): Pot[List[ApiFlightWithSplits]] = ps.map { ps =>
+                        val psw = ps.window(start, end, model.paxFeedSourceOrder)
+                        filterFlights(psw.flights.values.toList, fhl.filterFlightSearch, ai)
+                      }
+
+                      val hoursToView = timeWindow.end - timeWindow.start
+
+                      val terminal = props.terminalPageTab.terminal
+                      val queues = model.airportConfig.map(_.nonTransferQueues(terminal).toList)
+                      val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, 15, terminal, q).toMap))
+                      val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, 15, terminal, q)))
+                      val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, 15, terminal).toMap)
 
                       <.div(
                         <.div(^.className := s"terminal-content-header $headerClass",
@@ -187,14 +180,12 @@ object TerminalComponent {
                           redListUpdates = model.redListUpdates,
                           walkTimes = model.walkTimes,
                           paxFeedSourceOrder = model.paxFeedSourceOrder,
-                          flights = flightsForWindow,
-                          airportInfos = ai,
+                          flights = flightsForWindow(viewStart, viewEnd),
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
                           simulationResult = simRes,
                           flightHighlight = fhl,
                           viewStart = viewStart,
-                          viewEnd = viewEnd,
                           hoursToView = hoursToView,
                           windowCrunchSummaries = windowCrunchSummaries,
                           dayCrunchSummaries = dayCrunchSummaries,
@@ -215,14 +206,10 @@ object TerminalComponent {
                           redListUpdates = redListUpdates,
                           walkTimes = model.walkTimes,
                           paxFeedSourceOrder = model.paxFeedSourceOrder,
-                          flights = flightsForWindow,
-                          crunchMinutes = crunchMinutesForWindow,
+                          portState = ps,
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
-                          airportInfos = ai,
                           flightHighlight = fhl,
-                          viewStart = viewStart,
-                          viewEnd = viewEnd,
                         )
                       )
 

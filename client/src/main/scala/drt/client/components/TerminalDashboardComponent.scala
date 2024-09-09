@@ -3,7 +3,6 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.components.FlightComponents.SplitsGraph.splitsGraphComponentColoured
 import drt.client.components.TerminalContentComponent.originMapper
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -16,7 +15,7 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -42,14 +41,10 @@ object TerminalDashboardComponent {
                    redListUpdates: RedListUpdates,
                    walkTimes: Pot[WalkTimes],
                    paxFeedSourceOrder: List[FeedSource],
-                   crunchMinutes: Pot[SortedMap[TQM, CrunchMinute]],
-                   flights: Pot[Seq[ApiFlightWithSplits]],
+                   portState: Pot[PortState],
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                   airportInfos: Map[PortCode, Pot[AirportInfo]],
                    flightHighlight: FlightHighlight,
-                   viewStart: SDateLike,
-                   viewEnd: SDateLike,
                   ) extends UseValueEq
 
   private val defaultSlotSize = 120
@@ -74,14 +69,16 @@ object TerminalDashboardComponent {
 
       val terminal = props.terminalPageTabLoc.terminal
 
+      val portStateForWindow = props.portState.map(_.window(start, end, props.paxFeedSourceOrder))
+
       val pot = for {
         featureFlags <- props.featureFlags
         redListPorts <- props.redListPorts
         walkTimes <- props.walkTimes
-        crunchMinutes <- props.crunchMinutes
+        portState <- portStateForWindow
       } yield {
-        val currentSlotPs = crunchMinutes.filter(k => start.millisSinceEpoch <= k._1.minute && k._1.minute < end.millisSinceEpoch)
-        val prevSlotPs = crunchMinutes.filter(k => prevSlotStart.millisSinceEpoch <= k._1.minute && k._1.minute < start.millisSinceEpoch)
+        val currentSlotPs = portState.crunchMinutes.filter(k => start.millisSinceEpoch <= k._1.minute && k._1.minute < end.millisSinceEpoch)
+        val prevSlotPs = portState.crunchMinutes.filter(k => prevSlotStart.millisSinceEpoch <= k._1.minute && k._1.minute < start.millisSinceEpoch)
 
         val terminalPax = currentSlotPs.collect {
           case (_, cm) if cm.terminal == props.terminalPageTabLoc.terminal => cm.paxLoad
@@ -104,7 +101,6 @@ object TerminalDashboardComponent {
                       hasEstChox = props.airportConfig.hasEstChox,
                       loggedInUser = props.loggedInUser,
                       viewMode = ViewLive,
-                      defaultWalkTime = props.airportConfig.defaultWalkTimeMillis(props.terminalPageTabLoc.terminal),
                       hasTransfer = props.airportConfig.hasTransfer,
                       displayRedListInfo = featureFlags.displayRedListInfo,
                       redListOriginWorkloadExcluded = RedList.redListOriginWorkloadExcluded(props.airportConfig.portCode, terminal),
@@ -114,17 +110,13 @@ object TerminalDashboardComponent {
                       airportConfig = props.airportConfig,
                       redListUpdates = props.redListUpdates,
                       walkTimes = walkTimes,
-                      viewStart = start,
-                      viewEnd = end,
                       showFlagger = false,
                       paxFeedSourceOrder = props.paxFeedSourceOrder,
                       flightHighlight = props.flightHighlight,
-                      flights = props.flights,
+                      flights = portStateForWindow.map(_.flights.values.toSeq),
                       flightManifestSummaries = props.flightManifestSummaries,
                       arrivalSources = props.arrivalSources,
-                      airportInfos = props.airportInfos,
                       originMapper = originMapper,
-                      splitsGraphComponent = splitsGraphComponentColoured,
                     )
                   )
                 ),

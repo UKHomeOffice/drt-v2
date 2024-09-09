@@ -26,14 +26,14 @@ object Layout {
 
   case class Props(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]) extends UseValueEq
 
-  case class LayoutModelItems(user: Pot[LoggedInUser],
-                              airportConfig: Pot[AirportConfig],
-                              abFeatures: Pot[Seq[ABFeature]],
-                              showFeedbackBanner: Pot[Boolean],
-                              contactDetails: Pot[ContactDetails]) extends UseValueEq
+  private case class LayoutModelItems(user: Pot[LoggedInUser],
+                                      airportConfig: Pot[AirportConfig],
+                                      abFeatures: Pot[Seq[ABFeature]],
+                                      showFeedbackBanner: Pot[Boolean],
+                                      contactDetails: Pot[ContactDetails]) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
-    .renderP { (_, props: Props) =>
+    .render_P { props: Props =>
       val layoutModelItemsRCP = SPACircuit.connect { m =>
         LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails)
       }
@@ -91,38 +91,38 @@ object Layout {
                   <.span("Contact: ", <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", email)))
               ),
               <.div(
-                <.div(
-                  Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
-                  <.div(^.className := "main-container",
-                    <.div(^.className := "sub-nav-bar",
-                      props.currentLoc.page match {
-                        case TerminalPageTabLoc(terminalName, _, _, _) =>
-                          val terminal = Terminal(terminalName)
-                          <.div(^.className := "status-bar",
-                            ApiStatusComponent(ApiStatusComponent.Props(
-                              !airportConfig.noLivePortFeed,
-                              terminal)),
-                            PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
-                          )
-                        case _ => EmptyVdom
-                      },
-                    ),
-                    <.div(<.div(props.currentLoc.render()))
+                Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
+                <.div(^.className := "main-container",
+                  <.div(^.className := "sub-nav-bar",
+                    props.currentLoc.page match {
+                      case TerminalPageTabLoc(terminalName, _, _, _) =>
+                        val terminal = Terminal(terminalName)
+                        <.div(^.className := "status-bar",
+                          ApiStatusComponent(ApiStatusComponent.Props(
+                            !airportConfig.noLivePortFeed,
+                            terminal)),
+                          PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
+                        )
+                      case _ => EmptyVdom
+                    },
                   ),
-                  VersionUpdateNotice()
-                )
+                  <.div(<.div(props.currentLoc.render()))
+                ),
+                VersionUpdateNotice()
               )
             )
           }
           content.getOrElse(LoadingOverlay())
         })
       }
-    }.componentDidMount { _ =>
+    }
+    .componentDidMount { _ =>
       Callback(SPACircuit.dispatch(IsNewFeatureAvailable())) >>
         Callback(SPACircuit.dispatch(TrackUser())) >>
         Callback(SPACircuit.dispatch(GetABFeature("feedback"))) >>
         Callback(SPACircuit.dispatch(ShouldViewBanner()))
-    }.build
+    }
+    .build
 
   def apply(ctl: RouterCtl[Loc], currentLoc: Resolution[Loc]): VdomElement = component(Props(ctl, currentLoc))
 }
