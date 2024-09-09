@@ -67,16 +67,16 @@ object FlightTableContent {
         val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
         val flightsWithCodeShares = CodeShares.uniqueFlightsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
         val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
-        val groups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet
+        val ageGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet
         val showFlagger = props.flightHighlight.selectedNationalities.nonEmpty ||
-          groups.nonEmpty ||
+          ageGroups.nonEmpty ||
           props.flightHighlight.showNumberOfVisaNationals
 
         val highlightedFlightsCount: Int = FlightHighlighter
           .findHighlightedFlightsCount(sortedFlights,
             props.flightManifestSummaries,
             props.flightHighlight.selectedNationalities,
-            groups,
+            ageGroups,
             props.flightHighlight.showNumberOfVisaNationals,
             props.flightHighlight.showOnlyHighlightedRows,
             props.flightHighlight.showRequireAllSelected)
@@ -86,7 +86,7 @@ object FlightTableContent {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
               <.div {
-                val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || groups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals
+                val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || ageGroups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals
                 val flightCounts = if (flaggerInUse && props.flightHighlight.showOnlyHighlightedRows)
                   <.span(s"$highlightedFlightsCount flights shown and highlighted")
                 else if (flaggerInUse)
@@ -127,7 +127,7 @@ object FlightTableContent {
                         includeIndirectRedListColumn = redListPaxExist,
                         walkTimes = props.walkTimes,
                         flaggedNationalities = props.flightHighlight.selectedNationalities,
-                        flaggedAgeGroups = groups,
+                        flaggedAgeGroups = ageGroups,
                         showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
                         showHighlightedRows = props.flightHighlight.showNumberOfVisaNationals,
                         showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
@@ -138,7 +138,7 @@ object FlightTableContent {
 
                       FlightHighlighter.highlightedFlight(manifestSummary,
                           props.flightHighlight.selectedNationalities,
-                          groups,
+                          ageGroups,
                           props.flightHighlight.showNumberOfVisaNationals,
                           props.flightHighlight.showOnlyHighlightedRows,
                           props.flightHighlight.showRequireAllSelected)
