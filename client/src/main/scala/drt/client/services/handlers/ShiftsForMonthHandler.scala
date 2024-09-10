@@ -25,6 +25,7 @@ class ShiftsForMonthHandler[M](modelRW: ModelRW[M, Pot[MonthOfShifts]]) extends 
       updated(Pending(), apiCallEffect)
 
     case SetShiftsForMonth(monthOfRawShifts) =>
+      println(s"**Setting shifts for the month")
       updated(Ready(monthOfRawShifts))
   }
 }

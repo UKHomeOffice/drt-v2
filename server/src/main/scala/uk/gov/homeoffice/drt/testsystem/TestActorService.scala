@@ -11,6 +11,8 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.testsystem.TestActors._
 import uk.gov.homeoffice.drt.time.SDateLike
 
+import scala.concurrent.ExecutionContext
+
 case class TestActorService(journalType: StreamingJournalLike,
                             airportConfig: AirportConfig,
                             now: () => SDateLike,
@@ -18,7 +20,7 @@ case class TestActorService(journalType: StreamingJournalLike,
                             flightLookups: FlightLookupsLike,
                             minuteLookups: MinuteLookupsLike,
                            )
-                           (implicit system: ActorSystem, timeout: Timeout) extends ActorsServiceLike {
+                           (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext) extends ActorsServiceLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "request-and-terminate-actor")
   override val liveShiftsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(
     journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")

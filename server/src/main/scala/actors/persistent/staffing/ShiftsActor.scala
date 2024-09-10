@@ -25,6 +25,7 @@ import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
@@ -123,10 +124,14 @@ object ShiftsActor extends ShiftsActorLike {
                             requestAndTerminateActor: ActorRef,
                             system: ActorSystem
                            )
-                           (implicit timeout: Timeout): Props =
+                           (implicit timeout: Timeout, ec: ExecutionContext): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
+        .map { response =>
+          println(s"\n\nshifts-actor-writes response: $response")
+          response
+        }
     }))
 
   def applyMinimumStaff(newMin: Int, previousMin: Option[Int], currentStaff: Int): Int = previousMin match {
@@ -265,7 +270,7 @@ class ShiftsActor(val now: () => SDateLike,
           val createdAt = now()
           val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(updatedAssignments, createdAt), Option(createdAt.millisSinceEpoch))
 
-          persistAndMaybeSnapshotWithAck(shiftsMessage, List((sender(), StatusReply.Ack)))
+          persistAndMaybeSnapshotWithAck(shiftsMessage, List((sender(), state)))
         case None =>
           log.error(s"To be implemented if required")
           sender() ! StatusReply.Ack

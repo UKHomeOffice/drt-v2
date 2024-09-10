@@ -10,13 +10,12 @@ import drt.client.services.handlers.{GetMinStaff, SaveMinStaff, TerminalMinStaff
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.client.spa.TerminalPageModes.Staffing
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiDivider, MuiGrid}
+import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.HtmlAttrs.onClick.Event
 import japgolly.scalajs.react.vdom.TagOf
-import japgolly.scalajs.react.vdom.all.scope
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Select
@@ -42,7 +41,9 @@ object MonthlyStaffing {
                    changes: Map[(Int, Int), Int],
                    showMinStaffForm: Boolean,
                    showMinStaffSuccess: Boolean,
-                   terminalMinStaff: TerminalMinStaff)
+                   terminalMinStaff: TerminalMinStaff,
+                   origShifts: ShiftAssignments,
+                  )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
@@ -152,7 +153,7 @@ object MonthlyStaffing {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm && a.showMinStaffSuccess == b.showMinStaffSuccess && a.changes == b.changes)
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm && a.showMinStaffSuccess == b.showMinStaffSuccess)
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(stateFromProps)
@@ -184,15 +185,25 @@ object MonthlyStaffing {
       val viewingDate = SDate.firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
 
       def saveMinStaff(terminalMinStaff: TerminalMinStaff) = {
-        Callback(SPACircuit.dispatch(SaveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, terminalMinStaff.minStaff)))).runNow()
-        Callback(SPACircuit.dispatch(GetShiftsForMonth(props.terminalPageTab.dateFromUrlOrNow))).runNow()
-        scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff, showMinStaffForm = false)).runNow()
+        Callback(SPACircuit.dispatch(SaveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, terminalMinStaff.minStaff), props.terminalPageTab.dateFromUrlOrNow))).runNow()
+        scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff, showMinStaffForm = false, showMinStaffSuccess = true)).runNow()
 
-        props.router.set(props.terminalPageTab.update(
-            mode = Staffing,
-            subMode = "15",
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlMinStaffUpdateConfirm(Some("true"))).queryParams
-        )).runNow()
+        //        props.router.set(props.terminalPageTab.update(
+        //          mode = Staffing,
+        //          subMode = "15",
+        //          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlMinStaffUpdateConfirm(Some("true"))).queryParams
+        //        )).runNow()
+      }
+
+      if (state.origShifts != props.shifts) {
+        println(s"Shifts have changed with no changes recorded. Resetting state")
+        scope.modState { _ =>
+          println(s"Resetting state")
+          stateFromProps(props)
+        }.runNow()
+      }
+      if (state.changes.nonEmpty) {
+        println(s"Changes: ${state.changes}")
       }
 
       val handleOnEdit = (e: Event) => Callback {
@@ -289,8 +300,8 @@ object MonthlyStaffing {
     }
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount { p =>
-      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")) >>
-        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString)))
+      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")) //>>
+      //        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString, p.props.terminalPageTab.dateFromUrlOrNow)))
     }
     .build
 
@@ -352,7 +363,7 @@ object MonthlyStaffing {
     val terminal = props.terminalPageTab.terminal
     val terminalShifts = props.shifts.forTerminal(terminal)
     val shiftAssignments = ShiftAssignments(terminalShifts)
-    val showMinStaffSuccess = props.terminalPageTab.updateMinStaffConfirm
+    //    val showMinStaffSuccess = props.terminalPageTab.updateMinStaffConfirm
     val daysInMonth: Seq[SDateLike] = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
 
     val staffTimeSlots: Seq[Seq[Any]] = daysInMonthByTimeSlot((viewingDate, props.timeSlotMinutes)).map(_.map {
@@ -367,7 +378,7 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map(), false, showMinStaffSuccess, props.terminalMinStaff)
+    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map(), false, false, props.terminalMinStaff, props.shifts)
   }
 
   def apply(portCode: PortCode,

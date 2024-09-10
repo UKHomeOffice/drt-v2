@@ -24,8 +24,8 @@ class SequentialWritesActor[U](performUpdate: U => Future[Any]) extends Actor wi
     eventualAck
       .onComplete { tryResponse =>
         tryResponse match {
-          case Success(_) =>
-            replyTo ! StatusReply.Ack
+          case Success(r) =>
+            replyTo ! r
           case Failure(exception) =>
             log.error(exception, s"Failed to handle update $update. Re-queuing ${update.getClass.getSimpleName}")
             replyTo ! StatusReply.Error(exception)

@@ -10,7 +10,7 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaff, MinimumStaffingService, ShiftsService, StaffMovementsService}
 import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
@@ -48,15 +48,15 @@ class StaffingController @Inject()(cc: ControllerComponents,
   }
 
   def saveMinimumStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
-    Action { request =>
+    Action.async { request =>
       request.body.asText match {
         case Some(text) =>
           val terminalMinStaff = read[MinimumStaff](text)
           val terminal = Terminal(terminalName)
           minimumStaffingService.setMinimum(terminal, Option(terminalMinStaff.minimumStaff))
-          Accepted
+            .map(monthOfShifts => Accepted(write(monthOfShifts)))
         case None =>
-          BadRequest
+          Future.successful(BadRequest)
       }
     }
   }
