@@ -16,29 +16,27 @@ import scala.concurrent.duration.{FiniteDuration, _}
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class AlertsHandler[M](modelRW: ModelRW[M, Pot[List[Alert]]]) extends LoggingActionHandler(modelRW) {
+class AlertsHandler[M](modelRW: ModelRW[M, Pot[List[Alert]]]) extends PotActionHandler(modelRW) {
 
   val alertsRequestFrequency: FiniteDuration = 10 seconds
+
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case GetAlerts(since: MillisSinceEpoch) =>
-      effectOnly(Effect(DrtApi.get(s"alerts/$since").map(r => {
-        val alerts = read[List[Alert]](r.responseText)
-        SetAlerts(alerts, since)
-      }).recoverWith {
-        case _ =>
-          log.info(s"Alerts request failed. Re-requesting after ${PollDelay.recoveryDelay}")
-          Future(RetryActionAfter(GetAlerts(since), PollDelay.recoveryDelay))
-      }))
+      effectOnly(Effect(DrtApi.get(s"alerts/$since")
+        .map { r =>
+          val alerts = read[List[Alert]](r.responseText)
+          SetAlerts(alerts, since)
+        }
+        .recoverWith {
+          case _ =>
+            log.info(s"Alerts request failed. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(GetAlerts(since), PollDelay.recoveryDelay))
+        }))
 
     case SetAlerts(alerts, since) =>
-      val effect = Effect(Future(GetAlerts(since))).after(alertsRequestFrequency)
-      val pot = if (alerts.isEmpty) Empty else Ready(alerts)
-      if (modelRW.value.isPending && since <= SDate.now().addMinutes(-1).millisSinceEpoch) {
-        effectOnly(effect)
-      } else {
-        updated(pot, effect)
-      }
+      val poll = Effect(Future(GetAlerts(since))).after(alertsRequestFrequency)
+      updateIfChanged(alerts, poll)
 
     case DeleteAllAlerts =>
       val responseFuture = DrtApi.delete("alerts")

@@ -19,7 +19,6 @@ class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[Int]]) extends LoggingAc
 
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-
     case GetUserPreferenceIntervalMinutes() =>
       val apiCallEffect = Effect(DrtApi.get("data/user-preference-planning-interval-minutes")
         .map(r => SetSelectedTimeInterval(r.responseText match {

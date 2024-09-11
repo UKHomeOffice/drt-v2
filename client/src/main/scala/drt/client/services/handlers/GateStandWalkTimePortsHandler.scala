@@ -13,24 +13,21 @@ import scala.concurrent.duration.{DurationInt, FiniteDuration}
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class GateStandWalkTimePortsHandler[M](modelRW: ModelRW[M, Pot[WalkTimes]]) extends LoggingActionHandler(modelRW) {
-  val requestFrequency: FiniteDuration = 60.seconds
-
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetGateStandWalktime =>
-      val apiCallEffect = effectOnly(Effect(DrtApi.get(s"walk-times")
+      effectOnly(Effect(DrtApi.get(s"walk-times")
         .map { response =>
           val walkTimes: WalkTimes = read[WalkTimes](response.responseText)
           UpdateGateStandWalktime(walkTimes)
-        }.recoverWith {
-        case _ =>
-          log.error(s"Error while getting Gate and Stand walk time")
-          Future(UpdateGateStandWalktime(WalkTimes(Map.empty)))
-      }))
-      apiCallEffect
-
+        }
+        .recoverWith {
+          case _ =>
+            log.error(s"Error while getting Gate and Stand walk time")
+            Future(UpdateGateStandWalktime(WalkTimes(Map.empty)))
+        })
+      )
 
     case UpdateGateStandWalktime(walkTimes) =>
       updated(Ready(walkTimes))
-
   }
 }
