@@ -317,5 +317,6 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 case class MockMinimumStaffingService() extends MinimumStaffingService {
   override val getTerminalConfig: Terminal => Future[Option[PortTerminalConfig]] = _ => Future.successful(Option(PortTerminalConfig(PortCode("STN"), T1, Option(10), 0)))
 
-  override def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[Done] = Future.successful(Done)
+  override def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[MonthOfShifts] =
+    Future.successful(MonthOfShifts(SDate("2024-07-01T01:00").millisSinceEpoch, ShiftAssignments(Seq())))
 }
