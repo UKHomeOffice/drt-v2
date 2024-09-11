@@ -1,11 +1,14 @@
 package drt.client.components.scenarios
 
 import diode.UseValueEq
+import diode.data.Pot
 import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.modules.GoogleEventTracker
+import drt.shared.SimulationResult
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
+import org.scalajs.dom.html.Div
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -24,14 +27,14 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
       panelStatus = panelStatus + (panel -> !isOpen(panel))
     )
   }
+  case class Props(date: LocalDate,
+                   terminal: Terminal,
+                   airportConfig: AirportConfig,
+                   slaConfigs: SlaConfigs,
+                   simulationResult: Pot[SimulationResult]) extends UseValueEq
 
-  case class Props(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig, slaConfigs: SlaConfigs) extends UseValueEq
-
-  private val component = ScalaComponent.builder[Props]("SimulationComponent")
-    .initialStateFromProps(p =>
-      State(SimulationFormFields(p.terminal, p.date, p.airportConfig, p.slaConfigs), Map())
-    )
-    .render_PS { (props, state) =>
+  class Backend() {
+    def render(props: Props, state: State): VdomTagOf[Div] = {
       <.div(
         <.h2("Arrival Scenario Simulation"),
         MuiPaper()(
@@ -41,18 +44,25 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
               ScenarioSimulationFormComponent(props.date, props.terminal, props.airportConfig, props.slaConfigs)
             ),
             MuiGrid(item = true, xs = 10)(
-              SimulationChartComponent(state.simulationParams, props.airportConfig, props.terminal, props.slaConfigs)
+              SimulationChartComponent(
+                SimulationChartComponent.Props(state.simulationParams, props.airportConfig, props.slaConfigs, props.terminal, props.simulationResult)
+              )
             )
           )
         )
       )
     }
-    .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"Arrival Simulations Page")
-    }).build
+  }
 
-  def apply(date: LocalDate, terminal: Terminal, airportConfig: AirportConfig, slaConfigs: SlaConfigs): VdomElement =
-    component(Props(date, terminal, airportConfig, slaConfigs))
+  private val component = ScalaComponent.builder[Props]("SimulationComponent")
+    .initialStateFromProps(p =>
+      State(SimulationFormFields(p.terminal, p.date, p.airportConfig, p.slaConfigs), Map())
+    )
+    .renderBackend[Backend]
+    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView(s"Arrival Simulations Page")))
+    .build
+
+  def apply(props: Props): VdomElement = component(props)
 }
 
 

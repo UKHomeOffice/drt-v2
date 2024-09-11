@@ -22,12 +22,9 @@ object ResponseMessage {
 }
 
 class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) extends LoggingActionHandler(modelRW) {
-
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-
     case ResetFileUpload() =>
       updated(Ready(FileUploadState(state = "", message = "")))
-
 
     case FileUploadStatus(fileUploadState: FileUploadState) =>
       updated(Ready(fileUploadState))
@@ -62,11 +59,12 @@ class ForecastFileUploadHandler[M](modelRW: ModelRW[M, Pot[FileUploadState]]) ex
       }.recoverWith {
         case e: Throwable =>
           log.error(s"Failed to upload file $e")
-          Future.successful(FileUploadStatus(FileUploadState(state = "error", message = "Error while uploading file. Please check the file has correct content & format or Please contact DRT team with the file.")))
+          Future.successful(FileUploadStatus(FileUploadState(
+            state = "error",
+            message = "Error while uploading file. Please check the file has correct content & format or Please contact DRT team with the file.")
+          ))
       })
 
       effectOnly(apiCallEffect)
   }
-
-
 }

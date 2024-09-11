@@ -1,6 +1,7 @@
 package drt.client.components
 
-import japgolly.scalajs.react._
+import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
@@ -91,7 +92,17 @@ object FlightFlaggerFilters {
   @JSImport("@drt/drt-react", "FlightFlaggerFilters")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[FlightFlaggerFiltersProps, Children.None](RawComponent)
+  class Backend {
+    def render(props: FlightFlaggerFiltersProps): VdomElement = {
+      val component = JsFnComponent[FlightFlaggerFiltersProps, Children.None](RawComponent)
+      component(props)
+    }
+  }
+
+  val component: Component[FlightFlaggerFiltersProps, Unit, Backend, CtorType.Props] =
+    ScalaComponent.builder[FlightFlaggerFiltersProps]("FlightFlaggerFilters")
+      .renderBackend[Backend]
+      .build
 
   def apply(
              nationalities: js.Array[Country],

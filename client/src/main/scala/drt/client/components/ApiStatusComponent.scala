@@ -50,8 +50,8 @@ object ApiStatusComponent {
     override val maybeTooltip: Option[String] = Option(info)
   }
 
-  private val receivedInfoText = "The percentage of landed flights that have received API data"
-  private val validatedInfoText = "The percentage of received API data that is within a 5% threshold of the port operator's total pax count"
+  private val receivedInfoText = "Percentage of landed flights in DRT which received API"
+  private val validatedInfoText = "Percentage of received API which passed DRT's quality check"
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ApiStatus")
     .render_P { props =>

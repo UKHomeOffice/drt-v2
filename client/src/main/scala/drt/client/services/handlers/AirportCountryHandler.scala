@@ -22,11 +22,16 @@ class AirportCountryHandler[M](modelRW: ModelRW[M, Map[PortCode, Pot[AirportInfo
         .recoverWith {
           case _ => Future(RetryActionAfter(GetAirportConfig, PollDelay.recoveryDelay))
         }))
+
     case UpdateAirportInfos(infos) =>
       val infosReady = infos.map(kv => (kv._1, Ready(kv._2)))
-      updated(value ++ infosReady)
-    case UpdateAirportInfo(code, Some(airportInfo)) =>
-      val newValue = value + (code -> Ready(airportInfo))
-      updated(newValue)
+      val newInfos = value ++ infosReady
+      value match {
+        case existing if existing != newInfos =>
+          updated(newInfos)
+        case _ =>
+          noChange
+
+      }
   }
 }

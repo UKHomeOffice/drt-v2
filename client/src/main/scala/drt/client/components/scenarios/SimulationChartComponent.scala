@@ -1,18 +1,18 @@
 package drt.client.components.scenarios
 
 import diode.UseValueEq
+import diode.data.Pot
 import drt.client.components.ChartJSComponent._
 import drt.client.components.styles.DefaultFormFieldsStyle
 import drt.client.components.styles.ScalaCssImplicits.StringExtended
 import drt.client.components.{ChartJSComponent, potReactForwarder}
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.SPACircuit
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiCard, MuiLinearProgress}
-import japgolly.scalajs.react.ScalaComponent
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.vdom.all.VdomElement
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{BackendScope, Callback, Reusability, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, displayName}
@@ -27,7 +27,8 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
   case class Props(simulationParams: SimulationFormFields,
                    airportConfig: AirportConfig,
                    slaConfigs: SlaConfigs,
-                   terminal: Terminal
+                   terminal: Terminal,
+                   simulationResult: Pot[SimulationResult],
                   ) extends UseValueEq {
     def queueOrder(terminal: Terminal): List[Queue] =
       airportConfig.desksExportQueueOrder.filter(q => airportConfig.queuesByTerminal(terminal).contains(q))
@@ -39,60 +40,58 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
     def isSelected(tab: String): Boolean = tab == activeTab
   }
 
-  private val component = ScalaComponent.builder[Props]("SimulationChartComponent")
-    .initialStateFromProps(p =>
-      State(p.airportConfig.desksExportQueueOrder.head.toString)
-    )
-    .renderPS { (scope, props, state) =>
-
-      val modelRCP = SPACircuit.connect(m => m.simulationResult)
+  class Backend(scope: BackendScope[Props, State]) {
+    def render(props: Props, state: State): VdomElement = {
 
       def handleChange(queue: String) =
         scope.modState(_.handleChange(queue))
 
-      modelRCP { modelMP =>
-        val simulationPot = modelMP()
-
-        MuiCard(raised = true)(
-          DefaultFormFieldsStyle.simulationCharts,
-          simulationPot.renderEmpty(
-            "Adjust the scenario parameters on the left and click `update` to see what the impact would be. " +
-              "You can also export the result as a CSV."
-          ),
-          simulationPot.renderPending(_ =>
-            MuiLinearProgress(variant = MuiLinearProgress.Variant.indeterminate)
-          ),
-          simulationPot.render(simulationResult => {
-            val qToChart = resultToQueueCharts(simulationResult)
-            <.div(
-              DefaultFormFieldsStyle.simulationCharts,
-              <.ul(^.className := "nav nav-tabs",
-                props.queueOrder(props.terminal).map(q => {
-                  val tabClass = if (state.isSelected(q.toString)) " active" else ""
-                  <.li(
-                    ^.className := s"$tabClass",
-                    <.a(
-                      ^.onClick --> handleChange(q.toString),
-                      ^.className := s"nav-item",
-                      displayName(q).toVdom
-                    )
+      MuiCard(raised = true)(
+        DefaultFormFieldsStyle.simulationCharts,
+        props.simulationResult.renderEmpty(
+          "Adjust the scenario parameters on the left and click `update` to see what the impact would be. " +
+            "You can also export the result as a CSV."
+        ),
+        props.simulationResult.renderPending(_ =>
+          MuiLinearProgress(variant = MuiLinearProgress.Variant.indeterminate)
+        ),
+        props.simulationResult.render { simulationResult =>
+          val qToChart = resultToQueueCharts(simulationResult)
+          <.div(
+            DefaultFormFieldsStyle.simulationCharts,
+            <.ul(^.className := "nav nav-tabs",
+              props.queueOrder(props.terminal).map(q => {
+                val tabClass = if (state.isSelected(q.toString)) " active" else ""
+                <.li(
+                  ^.className := s"$tabClass",
+                  <.a(
+                    ^.onClick --> handleChange(q.toString),
+                    ^.className := s"nav-item",
+                    displayName(q).toVdom
                   )
-                }).toVdomArray
-              ),
-              props.queueOrder(props.terminal).map { q =>
-                <.div(
-                  <.div(qToChart(q)).when(state.isSelected(q.toString))
                 )
-              }.toVdomArray
-            )
-          })
-        )
-      }
+              }).toVdomArray
+            ),
+            props.queueOrder(props.terminal).map { q =>
+              <.div(
+                <.div(qToChart(q)).when(state.isSelected(q.toString))
+              )
+            }.toVdomArray
+          )
+        }
+      )
     }
+  }
+
+  private val component = ScalaComponent.builder[Props]("SimulationChartComponent")
+    .initialStateFromProps(p =>
+      State(p.airportConfig.desksExportQueueOrder.head.toString)
+    )
+    .renderBackend[Backend]
     .build
 
-  def resultToQueueCharts(simulationResult: SimulationResult,
-                         ): Map[Queue, UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]]] = {
+  private def resultToQueueCharts(simulationResult: SimulationResult,
+                                 ): Map[Queue, UnmountedWithRawType[ChartJSComponent.Props, Null, RawMounted[ChartJSComponent.Props, Null]]] = {
     simulationResult.queueToCrunchMinutes.map {
       case (q, simulationCrunchMinutes) =>
         val labels: immutable.Seq[String] = simulationCrunchMinutes.map(m => SDate(m.minute).toHoursAndMinutes)
@@ -138,9 +137,5 @@ object SimulationChartComponent extends ScalaCssReactImplicits {
     }
   }
 
-  def apply(simulationParams: SimulationFormFields,
-            airportConfig: AirportConfig,
-            terminal: Terminal,
-            slaConfigs: SlaConfigs,
-           ): VdomElement = component(Props(simulationParams, airportConfig, slaConfigs, terminal))
+  def apply(props: Props): VdomElement = component(props)
 }
