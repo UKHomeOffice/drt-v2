@@ -61,10 +61,6 @@ object SPAMain {
     override val paramName = "timeRangeEnd"
   }
 
-  object UrlMinStaffUpdateConfirm extends UrlDateLikeParameter {
-    override val paramName = "updateMinStaffConfirm"
-  }
-
   object UrlViewType {
     val paramName = "viewType"
 
@@ -114,7 +110,6 @@ object SPAMain {
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
-    def  updateMinStaffConfirm = queryParams.get(UrlMinStaffUpdateConfirm.paramName).exists(_.toBoolean)
     def viewMode: ViewMode = {
       (mode, maybeViewDate) match {
         case (Current, Some(viewDate)) =>

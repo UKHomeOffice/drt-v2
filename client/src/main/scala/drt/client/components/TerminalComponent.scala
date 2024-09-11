@@ -168,8 +168,7 @@ object TerminalComponent {
     }
     .componentDidMount(p =>
       Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
-        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString, p.props.terminalPageTab.dateFromUrlOrNow))) //>>
-//        Callback(SPACircuit.dispatch(GetShiftsForMonth(p.props.terminalPageTab.dateFromUrlOrNow)))
+        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString)))
     )
     .configure(Reusability.shouldComponentUpdate)
     .build

@@ -128,10 +128,6 @@ object ShiftsActor extends ShiftsActorLike {
     Props(new SequentialWritesActor[ShiftUpdate](update => {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
-        .map { response =>
-          println(s"\n\nshifts-actor-writes response: $response")
-          response
-        }
     }))
 
   def applyMinimumStaff(newMin: Int, previousMin: Option[Int], currentStaff: Int): Int = previousMin match {

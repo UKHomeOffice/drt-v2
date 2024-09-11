@@ -134,7 +134,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
       provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request)
         .mapTo[ShiftAssignments]
         .map { shifts =>
-          val month = SDate.now().millisSinceEpoch
+          val month = SDate(start).millisSinceEpoch
           val monthInLocalTime = SDate(month, europeLondonTimeZone)
           MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
         }

@@ -1,14 +1,13 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlMinStaffUpdateConfirm}
-import drt.client.actions.Actions.{GetShiftsForMonth, UpdateShifts}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
+import drt.client.actions.Actions.UpdateShifts
 import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.{GetMinStaff, SaveMinStaff, TerminalMinStaff}
+import drt.client.services.handlers.{SaveMinStaff, TerminalMinStaff}
 import drt.client.services.{JSDateConversions, SPACircuit}
-import drt.client.spa.TerminalPageModes.Staffing
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
 import japgolly.scalajs.react.callback.Callback
@@ -186,10 +185,10 @@ object MonthlyStaffing {
 
       def saveMinStaff(terminalMinStaff: TerminalMinStaff) = {
         scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff, showMinStaffForm = false, showMinStaffSuccess = true)) >>
-          Callback(SPACircuit.dispatch(SaveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, terminalMinStaff.minStaff), props.terminalPageTab.dateFromUrlOrNow)))
+          Callback(SPACircuit.dispatch(SaveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, terminalMinStaff.minStaff))))
       }.runNow()
 
-      if (state.origShifts != props.shifts || props.terminalMinStaff != state.terminalMinStaff) {
+      if (props.terminalMinStaff != state.terminalMinStaff || state.origShifts != props.shifts) {
         val showMinStaffSuccess = state.showMinStaffSuccess
         scope.modState { _ =>
           stateFromProps(props, showMinStaffSuccess)
@@ -291,7 +290,6 @@ object MonthlyStaffing {
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount { p =>
       Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")) //>>
-      //        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString, p.props.terminalPageTab.dateFromUrlOrNow)))
     }
     .build
 
