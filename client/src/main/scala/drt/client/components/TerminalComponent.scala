@@ -247,7 +247,6 @@ object TerminalComponent {
       Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
         Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString)))
     )
-//    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean): VdomTagOf[UList] = {
