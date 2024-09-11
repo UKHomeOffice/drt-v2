@@ -1,6 +1,7 @@
 package services
 
 import org.slf4j.{Logger, LoggerFactory}
+import services.workload.{CapacityFinder, QueuePassenger}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.mutable
@@ -75,10 +76,11 @@ object OptimiserWithFlexibleProcessors {
         case (c, idx) => config.processors.forMinute(idx).capacityForServers(c)
       }
       val optFinished = SDate.now().millisSinceEpoch
-      val queue = QueueCapacity(actualCapacity.toList).processPassengers(config.sla, passengers)
+//      val queue = QueueCapacity(actualCapacity.toList).processPassengers(config.sla, passengers)
+      val (_, waitTimes, queueSizes) = CapacityFinder.processQueue2(actualCapacity.map(x => List(x * 60)), passengers.map(_.map(x => QueuePassenger((x * 60).round.toInt)).toList).toSeq)
       val queueTook = SDate.now().millisSinceEpoch - optFinished
       log.info(s"Optimisation took ${optFinished - start}ms. Queue length & waits took ${queueTook}ms")
-      OptimizerCrunchResult(desks, queue.waits, queue.queueByMinute.toIndexedSeq)
+      OptimizerCrunchResult(desks, waitTimes/*queue.waits*/, queueSizes.map(_.toDouble).toIndexedSeq/*queue.queueByMinute.toIndexedSeq*/)
     }
   }
 
