@@ -3,8 +3,10 @@ package services.workload
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import services.workload.CapacityFinder.{processQueue, processQueue2}
-import services.{OptimiserConfig, OptimiserWithFlexibleProcessors, QueueCapacity, TryRenjin, WorkloadProcessorsProvider}
+import services.{OptimiserConfig, OptimiserWithFlexibleProcessors, OptimizerCrunchResult, QueueCapacity, TryRenjin, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.egates.Desk
+
+import scala.util.Try
 
 class CapacityFinderTest extends AnyWordSpec with Matchers {
   "applyCapacity" should {
@@ -96,38 +98,50 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
     }
   }
 
+  "crunchWholePax" should {
+    "return a result even when there are no available desks" in {
+      val mins = 360
+      val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(mins)(List.fill(0)(Desk))))
+      val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(randomPassengersForMinutes(mins).map(_.map(_.load.toDouble / 60)), List.fill(mins)(0), List.fill(mins)(0), config)
+
+      result.get.recommendedDesks should ===(List.fill(mins)(0))
+      result.get.waitTimes should ===(0)
+      result.get.paxInQueue should ===(0)
+    }
+  }
+
   "processQueue2" should {
     "give a result in a reasonable amount of time" in {
       val minuteCount = 1440
       val incomingPax = randomPassengersForMinutes(minuteCount)
       val start = System.currentTimeMillis()
-      val desks = 15
+      val desks = 0
       val desksByMinute = IndexedSeq.fill(minuteCount)(List.fill(desks)(60))
       val (queue, waitTimes, queueSizes) = processQueue2(desksByMinute, incomingPax)
       val timeTaken = System.currentTimeMillis() - start
       println(s"Time taken: $timeTaken ms. Queue size: ${queue.size}, max wait time: ${waitTimes.max}")
 
-      val start2 = System.currentTimeMillis()
-      val r2 = QueueCapacity(List.fill(minuteCount)(desks)).processPassengers(60, incomingPax.map(_.map(_.load.toDouble / 60)))
-      val timeTaken2 = System.currentTimeMillis() - start2
-      println(s"Time taken: $timeTaken2 ms. Queue size: ${r2.leftover.loads.size}, max wait time: ${r2.waits.max}")
-
-      val start3 = System.currentTimeMillis()
-      val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(minuteCount)(List.fill(desks)(Desk))))
-      val result = TryRenjin.runSimulationOfWork(incomingPax.map(_.map(_.load).sum.toDouble / 60), List.fill(minuteCount)(desks), config)
-      val timeTaken3 = System.currentTimeMillis() - start3
-      println(s"Time taken: $timeTaken3 ms. Queue size: n/a, max wait time: ${result.max}")
-
-      val start4 = System.currentTimeMillis()
+//      val start2 = System.currentTimeMillis()
+//      val r2 = QueueCapacity(List.fill(minuteCount)(desks)).processPassengers(60, incomingPax.map(_.map(_.load.toDouble / 60)))
+//      val timeTaken2 = System.currentTimeMillis() - start2
+//      println(s"Time taken: $timeTaken2 ms. Queue size: ${r2.leftover.loads.size}, max wait time: ${r2.waits.max}")
+//
+//      val start3 = System.currentTimeMillis()
 //      val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(minuteCount)(List.fill(desks)(Desk))))
-      val result4 = OptimiserWithFlexibleProcessors.legacyTryProcessWork(
-        incomingPax.map(_.map(_.load).sum.toDouble / 60).toIndexedSeq,
-        List.fill(minuteCount)(desks).toIndexedSeq,
-        60,
-        IndexedSeq.empty,
-        config.processors)
-      val timeTaken4 = System.currentTimeMillis() - start4
-      println(s"Time taken: $timeTaken4 ms. Queue size: ${result4.get.residual.sum} wl, max wait time: ${result4.get.waits.max}")
+//      val result = TryRenjin.runSimulationOfWork(incomingPax.map(_.map(_.load).sum.toDouble / 60), List.fill(minuteCount)(desks), config)
+//      val timeTaken3 = System.currentTimeMillis() - start3
+//      println(s"Time taken: $timeTaken3 ms. Queue size: n/a, max wait time: ${result.max}")
+//
+//      val start4 = System.currentTimeMillis()
+////      val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(minuteCount)(List.fill(desks)(Desk))))
+//      val result4 = OptimiserWithFlexibleProcessors.legacyTryProcessWork(
+//        incomingPax.map(_.map(_.load).sum.toDouble / 60).toIndexedSeq,
+//        List.fill(minuteCount)(desks).toIndexedSeq,
+//        60,
+//        IndexedSeq.empty,
+//        config.processors)
+//      val timeTaken4 = System.currentTimeMillis() - start4
+//      println(s"Time taken: $timeTaken4 ms. Queue size: ${result4.get.residual.sum} wl, max wait time: ${result4.get.waits.max}")
 
       assert(timeTaken < 1000)
     }

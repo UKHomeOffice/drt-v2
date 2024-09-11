@@ -77,7 +77,9 @@ object Scenarios {
 
     val desksProducer: Flow[LoadProcessingRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
       .mapAsync(1) { loads =>
-        portDesksAndWaitsProvider.loadsToDesks(request.minutesInMillis, loads.indexed, deskLimitsProviders, "scenarios")
+        val res = portDesksAndWaitsProvider.loadsToDesks(request.minutesInMillis, loads.indexed, deskLimitsProviders.filter(_._1 == simulationParams.terminal), "scenarios")
+        println(s"Got sim result for ${simulationParams.terminal} ${simulationParams.date} ${loads.indexed.keys.groupBy(_.queue).mapValues(_.size).mkString(", ")}")
+        res
       }
 
     val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
