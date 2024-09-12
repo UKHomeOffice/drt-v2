@@ -249,8 +249,7 @@ object TerminalComponent {
     .renderBackend[Backend]
     .componentDidMount(p =>
       Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
-        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString))) >>
-        Callback(SPACircuit.dispatch(ShouldShowMinStaffSuccessBanner())))
+        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString))))
     .configure(Reusability.shouldComponentUpdate)
     .build
 

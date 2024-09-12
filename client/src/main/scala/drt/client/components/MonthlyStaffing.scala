@@ -6,7 +6,7 @@ import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.{CloseMinStaffSuccessBanner, SaveMinStaff, SetMinStaffSuccessBanner, TerminalMinStaff}
+import drt.client.services.handlers.{CloseMinStaffSuccessBanner, SaveMinStaff, SetMinStaffSuccessBanner, ShouldShowMinStaffSuccessBanner, TerminalMinStaff}
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiGrid
@@ -151,7 +151,7 @@ object MonthlyStaffing {
     }
   }
 
-  implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.shifts.hashCode == b.shifts.hashCode && a.showMinStaffSuccess == b.showMinStaffSuccess)
+  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm)
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
@@ -288,8 +288,10 @@ object MonthlyStaffing {
           ))
       }
     }
+    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount { p =>
-      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
+      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))>>
+      Callback(SPACircuit.dispatch(ShouldShowMinStaffSuccessBanner()))
     }
     .build
 
