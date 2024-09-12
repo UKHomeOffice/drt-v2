@@ -180,7 +180,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
                      userSelectedPlanningTimePeriod: Pot[Int] = Empty,
                      flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
-                     minStaff: Pot[TerminalMinStaff] = Empty
+                     minStaff: Pot[TerminalMinStaff] = Empty,
+                     showMinStaffSuccess: Pot[Boolean] = Empty
                     )
 
 object PollDelay {
@@ -261,7 +262,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
       new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v))),
       new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
-      new MinStaffHandler(zoomRW(_.minStaff)((m, v) => m.copy(minStaff = v)))
+      new MinStaffHandler(zoomRW(_.minStaff)((m, v) => m.copy(minStaff = v))),
+      new MinStaffSuccessBannerHandler(zoomRW(_.showMinStaffSuccess)((m, v) => m.copy(showMinStaffSuccess = v)))
     )
     composedHandlers
   }

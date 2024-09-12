@@ -10,7 +10,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.{GetMinStaff, GetUserPreferenceIntervalMinutes, TerminalMinStaff}
+import drt.client.services.handlers.{GetMinStaff, GetUserPreferenceIntervalMinutes, ShouldShowMinStaffSuccessBanner, TerminalMinStaff}
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -56,7 +56,8 @@ object TerminalComponent {
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
-                                   minStaff: Pot[TerminalMinStaff]
+                                   minStaff: Pot[TerminalMinStaff],
+                                   showMinStaffSuccess: Pot[Boolean]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -96,7 +97,8 @@ object TerminalComponent {
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
-        minStaff = model.minStaff
+        minStaff = model.minStaff,
+        showMinStaffSuccess = model.showMinStaffSuccess
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -226,7 +228,9 @@ object TerminalComponent {
                       <.div(
                         model.potMonthOfShifts.render { ms =>
                           model.minStaff.render { minStaff =>
-                            MonthlyStaffing(airportConfig.portCode, ms.shifts, props.terminalPageTab, props.router, minStaff)
+                            model.showMinStaffSuccess.render { showMinStaffSuccess =>
+                              MonthlyStaffing(airportConfig.portCode, ms.shifts, props.terminalPageTab, props.router, minStaff, showMinStaffSuccess)
+                            }
                           }
                         }
                       )
@@ -245,8 +249,9 @@ object TerminalComponent {
     .renderBackend[Backend]
     .componentDidMount(p =>
       Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
-        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString)))
-    )
+        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString))) >>
+        Callback(SPACircuit.dispatch(ShouldShowMinStaffSuccessBanner())))
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean): VdomTagOf[UList] = {
