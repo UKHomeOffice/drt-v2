@@ -155,11 +155,11 @@ object MonthlyStaffing {
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm && a.showMinStaffSuccess == b.showMinStaffSuccess)
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
-    .initialStateFromProps(stateFromProps(_, false))
+    .initialStateFromProps(stateFromProps)
     .renderPS { (scope, props, state) =>
       def confirmAndSave(startOfMonthMidnight: SDateLike): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
         Callback {
-          val initialTimeSlots: Seq[Seq[Any]] = stateFromProps(props, false).timeSlots
+          val initialTimeSlots: Seq[Seq[Any]] = stateFromProps(props).timeSlots
           val changes = scope.state.changes
           val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, changes)
           val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(state.timeSlots, changes)
@@ -183,17 +183,17 @@ object MonthlyStaffing {
 
       val viewingDate = SDate.firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
 
-      def saveMinStaff(terminalMinStaff: TerminalMinStaff) = {
+      def saveMinStaff(terminalMinStaff: TerminalMinStaff): Unit = {
         scope.modState(state => state.copy(terminalMinStaff = terminalMinStaff, showMinStaffForm = false, showMinStaffSuccess = true)) >>
           Callback(SPACircuit.dispatch(SaveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, terminalMinStaff.minStaff))))
       }.runNow()
 
-      if (props.terminalMinStaff != state.terminalMinStaff || state.origShifts != props.shifts) {
-        val showMinStaffSuccess = state.showMinStaffSuccess
-        scope.modState { _ =>
-          stateFromProps(props, showMinStaffSuccess)
-        }.runNow()
-      }
+      //      if (props.terminalMinStaff != state.terminalMinStaff || state.origShifts != props.shifts) {
+      //        val showMinStaffSuccess = state.showMinStaffSuccess
+      //        scope.modState { _ =>
+      //          stateFromProps(props).copy(showMinStaffSuccess = true)
+      //        }.runNow()
+      //      }
 
       val handleOnEdit = (e: Event) => Callback {
         e.preventDefault()
@@ -202,12 +202,20 @@ object MonthlyStaffing {
 
       if (state.showMinStaffForm) {
         val message = s"This number will be applied to all future dates. It will overwrite all staff numbers that are currently ${if (props.terminalMinStaff.minStaff.isEmpty) "zero" else "exists"} with your new specified number"
-        <.div(^.className := "terminal-staffing-header",
-          MinStaffForm(IMinStaffForm(props.portCode.toString, props.terminalPageTab.terminal.toString, message, 0, (minStaff) => {
-            saveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff)))
-          }, () => {
-            scope.modState(state => state.copy(showMinStaffSuccess = false, showMinStaffForm = false)).runNow()
-          })))
+        val form: IMinStaffForm = IMinStaffForm(
+          port = props.portCode.toString,
+          terminal = props.terminalPageTab.terminal.toString,
+          message = message,
+          minStaffNumber = 0,
+          handleSubmit = minStaff => saveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff))),
+          cancelHandler = () => scope.modState(state => state.copy(showMinStaffSuccess = false, showMinStaffForm = false)).runNow()
+        )
+        println(s"form port: ${form.port}")
+        println(s"form terminal: ${form.terminal}")
+        println(s"form message: ${form.message}")
+        println(s"form minStaffNumber: ${form.minStaffNumber}")
+
+        <.div(^.className := "terminal-staffing-header", MinStaffForm(form))
       } else {
         <.div(
           if (state.showMinStaffSuccess)
@@ -344,7 +352,7 @@ object MonthlyStaffing {
     (0 to 10).map(offset => lastDay.addDays(-1 * offset)).find(date => slotsInDay(date, 60).length == 25)
   }
 
-  private def stateFromProps(props: Props, showMinStaffSuccess: Boolean): State = {
+  private def stateFromProps(props: Props): State = {
     import drt.client.services.JSDateConversions._
 
     val viewingDate = props.terminalPageTab.dateFromUrlOrNow
@@ -365,7 +373,9 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map(), false, showMinStaffSuccess, props.terminalMinStaff, props.shifts)
+    println(s"Setting state from props")
+
+    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map(), false, false, props.terminalMinStaff, props.shifts)
   }
 
   def apply(portCode: PortCode,
