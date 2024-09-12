@@ -2,6 +2,7 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.actions.Actions.UpdateShifts
+import drt.client.components.Navbar.{Props, State}
 import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -154,13 +155,12 @@ object MonthlyStaffing {
   implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.terminalMinStaff == b.terminalMinStaff && a.showMinStaffForm == b.showMinStaffForm && a.showMinStaffSuccess == b.showMinStaffSuccess)
 
-  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
-    .initialStateFromProps(stateFromProps)
-    .renderPS { (scope, props, state) =>
+  class Backend(scope: BackendScope[Props, State]) {
+    def render(props: Props, state: State) = {
       def confirmAndSave(startOfMonthMidnight: SDateLike): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
         Callback {
           val initialTimeSlots: Seq[Seq[Any]] = stateFromProps(props).timeSlots
-          val changes = scope.state.changes
+          val changes = state.changes
           val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, changes)
           val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(state.timeSlots, changes)
           val saveAsTimeSlotMinutes = 15
@@ -295,8 +295,14 @@ object MonthlyStaffing {
           ))
       }
     }
-    .configure(Reusability.shouldComponentUpdate)
+  }
+
+  val component = ScalaComponent.builder[Props]("StaffingV2")
+    .initialStateFromProps(stateFromProps)
+    .renderBackend[Backend]
+//    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount { p =>
+      println(s"MonthlyStaffing mounted")
       Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
     }
     .build
@@ -383,5 +389,5 @@ object MonthlyStaffing {
             terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             terminalMinStaff: TerminalMinStaff
-           ): Unmounted[Props, State, Unit] = component(Props(portCode, shifts, terminalPageTab, router, terminalMinStaff))
+           ): Unmounted[Props, State, Backend] = component(Props(portCode, shifts, terminalPageTab, router, terminalMinStaff))
 }
