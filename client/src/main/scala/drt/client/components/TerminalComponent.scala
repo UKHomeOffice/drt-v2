@@ -224,11 +224,7 @@ object TerminalComponent {
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
                       <.div(
-                        model.potMonthOfShifts.render { ms =>
-                          model.minStaff.render { minStaff =>
-                            MonthlyStaffing(airportConfig.portCode, ms.shifts, props.terminalPageTab, props.router, minStaff)
-                          }
-                        }
+                        MonthlyStaffing(airportConfig.portCode, props.terminalPageTab, props.router)
                       )
                   }
                 }
