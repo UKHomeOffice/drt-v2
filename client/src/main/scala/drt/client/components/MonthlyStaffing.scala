@@ -201,8 +201,11 @@ object MonthlyStaffing {
       }
 
       if (state.showMinStaffForm) {
-        val message = s"This number will be applied to all future dates. It will overwrite all staff numbers that are currently ${if (props.terminalMinStaff.minStaff.isEmpty) "zero" else "exists"} with your new specified number"
-        <.div(^.className := "terminal-staffing-header",
+        val message = if (props.terminalMinStaff.minStaff.isEmpty)
+          "All future dates with 0 staff in the table below will be updated."
+        else
+          "All future dates with the previously entered minimum staff number will be updated."
+        <.div(^.className := "terminal-staffing-form-header",
           MinStaffForm(IMinStaffForm(props.portCode.toString, props.terminalPageTab.terminal.toString, message, 0, (minStaff) => {
             saveMinStaff(TerminalMinStaff(props.terminalPageTab.terminal, Option(minStaff)))
           }, () => {
@@ -215,42 +218,42 @@ object MonthlyStaffing {
               Callback(SPACircuit.dispatch(CloseMinStaffSuccessBanner())).runNow()
             }))
           } else EmptyVdom,
-          <.div(^.className := "terminal-staffing-content-header",
-            if (props.terminalMinStaff.minStaff.isEmpty)
+          if (props.terminalMinStaff.minStaff.isEmpty)
+            <.div(^.className := "terminal-staffing-form-header",
               MinStaffWarning(IMinStaffWarning("Your minimum staff cover in DRT is ",
                 "You can now more accurately reflect your minimum staff cover in DRT",
                 props.terminalMinStaff.minStaff, () => {
                   scope.modState(state => state.copy(showMinStaffForm = true)).runNow()
-                })) else <.div(^.className := "terminal-staffing-header",
-              <.div(^.className := "terminal-min-staffing", s"Minimum staff : ${state.terminalMinStaff.minStaff.getOrElse(0)}"),
-              <.span(s"Update latest min staff ", <.a(^.href := "#", Icon.edit, " Edit", ^.onClick ==> handleOnEdit))
-            ),
-            <.div(^.className := "terminal-staffing-content-header",
-              <.div(^.className := "staffing-controls-wrapper",
-                <.div(^.className := "staffing-controls-row",
-                  <.label("Choose Month", ^.className := "staffing-controls-label"),
-                  <.div(^.className := "staffing-controls-select",
-                    drawSelect(
-                      values = monthOptions.map(_.toISOString),
-                      names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
-                      defaultValue = viewingDate.toISOString,
-                      callback = (e: ReactEventFromInput) => {
-                        props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
-                      })
-                  ),
+                }))) else <.div(^.className := "terminal-staffing-header",
+            <.div(^.className := "terminal-min-staffing", s"Minimum staff : ${state.terminalMinStaff.minStaff.getOrElse(0)}"),
+            <.span(s"Update latest min staff ", <.a(^.href := "#", Icon.edit, " Edit", ^.onClick ==> handleOnEdit))
+          ),
+          <.div(^.className := "terminal-staffing-content-header",
+            <.div(^.className := "staffing-controls-wrapper",
+              <.div(^.className := "staffing-controls-row",
+                <.label("Choose Month", ^.className := "staffing-controls-label"),
+                <.div(^.className := "staffing-controls-select",
+                  drawSelect(
+                    values = monthOptions.map(_.toISOString),
+                    names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
+                    defaultValue = viewingDate.toISOString,
+                    callback = (e: ReactEventFromInput) => {
+                      props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
+                    })
                 ),
-                <.div(^.className := "staffing-controls-row",
-                  <.label("Time Resolution", ^.className := "staffing-controls-label"),
-                  <.div(^.className := "staffing-controls-select",
-                    drawSelect(
-                      values = Seq("15", "30", "60"),
-                      names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
-                      defaultValue = s"${props.timeSlotMinutes}",
-                      callback = (e: ReactEventFromInput) =>
-                        props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
-                    )
-                  ),
-                )))),
+              ),
+              <.div(^.className := "staffing-controls-row",
+                <.label("Time Resolution", ^.className := "staffing-controls-label"),
+                <.div(^.className := "staffing-controls-select",
+                  drawSelect(
+                    values = Seq("15", "30", "60"),
+                    names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
+                    defaultValue = s"${props.timeSlotMinutes}",
+                    callback = (e: ReactEventFromInput) =>
+                      props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
+                  )
+                ),
+              ))),
           <.div(^.className := "staffing-controls-save",
             <.div(<.strong(s"Staff numbers in  ${props.terminalPageTab.dateFromUrlOrNow.getMonthString} ${props.terminalPageTab.dateFromUrlOrNow.getFullYear}")),
             <.div("Staff numbers can be entered into the table below. Numbers can be duplicated by selecting and dragging a cell."),
@@ -290,8 +293,8 @@ object MonthlyStaffing {
     }
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount { p =>
-      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))>>
-      Callback(SPACircuit.dispatch(ShouldShowMinStaffSuccessBanner()))
+      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}")) >>
+        Callback(SPACircuit.dispatch(ShouldShowMinStaffSuccessBanner()))
     }
     .build
 
