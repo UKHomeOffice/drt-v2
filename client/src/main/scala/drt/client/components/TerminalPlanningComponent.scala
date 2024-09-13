@@ -8,7 +8,7 @@ import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.styles.DrtTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.{SendSelectedTimeInterval, SetMinStaffSuccessBanner}
+import drt.client.services.handlers.SendSelectedTimeInterval
 import drt.client.services.{DrtApi, SPACircuit}
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.Forecast
@@ -24,7 +24,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
 import uk.gov.homeoffice.drt.ports.Queues
@@ -50,9 +50,12 @@ object TerminalPlanningComponent {
 
   case class State(downloadingHeadlines: Boolean, downloadingStaff: Boolean, timePeriod: Int)
 
+  implicit val propsReuse = Reusability.always[Props]
+  implicit val stateReuse = Reusability.by((s: State) => (s.downloadingHeadlines, s.downloadingStaff, s.timePeriod))
+
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
     .initialStateFromProps(p => State(downloadingHeadlines = false, downloadingStaff = false, timePeriod = p.timePeriod))
-    .renderPS((scope, props, state) => {
+    .renderPS { (scope, props, state) =>
       val modelRCP = SPACircuit.connect(model => TerminalPlanningModel(forecastPeriodPot = model.forecastPeriodPot))
       modelRCP(modelProxy => {
         val model: TerminalPlanningModel = modelProxy()
@@ -200,13 +203,12 @@ object TerminalPlanningComponent {
           )
         })
       })
-    })
+    }
+    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p =>
-      Callback(SPACircuit.dispatch(GetForecastWeek(p.props.page.dateFromUrlOrNow, Terminal(p.props.page.terminalName), p.props.timePeriod))) >>
-        Callback(SPACircuit.dispatch(SetMinStaffSuccessBanner(false))) >>
-        Callback {
-          GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
-        })
+      Callback(SPACircuit.dispatch(GetForecastWeek(defaultStartDate(p.props.page.dateFromUrlOrNow), Terminal(p.props.page.terminalName), p.props.timePeriod))) >>
+        Callback(GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}"))
+    )
     .build
 
   private def buttonContent(isPreparing: Boolean, labelText: String): Seq[VdomNode] =

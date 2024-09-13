@@ -41,7 +41,6 @@ object TerminalComponent {
 
   private case class TerminalModel(userSelectedPlanningTimePeriod: Pot[Int],
                                    potShifts: Pot[ShiftAssignments],
-//                                   potMonthOfShifts: Pot[MonthOfShifts],
                                    potFixedPoints: Pot[FixedPointAssignments],
                                    potStaffMovements: Pot[StaffMovements],
                                    airportConfig: Pot[AirportConfig],
@@ -56,8 +55,6 @@ object TerminalComponent {
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
-//                                   minStaff: Pot[TerminalMinStaff],
-                                   showMinStaffSuccess: Pot[Boolean]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -76,13 +73,12 @@ object TerminalComponent {
   }
 
 
-  class Backend() {
+  class Backend {
     def render(props: Props): VdomElement = {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
         potShifts = model.shifts,
-//        potMonthOfShifts = model.monthOfShifts,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         airportConfig = model.airportConfig,
@@ -97,8 +93,6 @@ object TerminalComponent {
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
-//        minStaff = model.minStaff,
-        showMinStaffSuccess = model.showMinStaffSuccess
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
