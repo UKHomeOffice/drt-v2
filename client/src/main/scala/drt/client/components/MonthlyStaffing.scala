@@ -216,7 +216,11 @@ object MonthlyStaffing {
       }
 
       if (state.showMinStaffForm) {
-        val message = s"This number will be applied to all future dates. It will overwrite all staff numbers that are currently ${if (state.terminalMinStaff.isEmpty) "zero" else "exists"} with your new specified number"
+        val message = if (state.terminalMinStaff.getOrElse(None).isEmpty)
+          "All future dates with 0 staff in the table below will be updated."
+        else
+          "All future dates with the previously entered minimum staff number will be updated."
+
         val form: IMinStaffForm = IMinStaffForm(
           port = props.portCode.toString,
           terminal = props.terminalPageTab.terminal.toString,
@@ -242,7 +246,7 @@ object MonthlyStaffing {
                     minStaff, () => {
                       scope.modState(state => state.copy(showMinStaffForm = true)).runNow()
                     })) else <.div(^.className := "terminal-staffing-header",
-                  <.div(^.className := "terminal-min-staffing", s"Minimum staff : ${minStaff.getOrElse(0)}"),
+                  <.div(^.className := "terminal-min-staffing", s"Minimum staff: ${minStaff.getOrElse(0)}"),
                   <.span(s"Update latest min staff ", <.a(^.href := "#", Icon.edit, " Edit", ^.onClick ==> handleOnEdit))
                 ),
                 <.div(^.className := "terminal-staffing-content-header",
@@ -327,9 +331,9 @@ object MonthlyStaffing {
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount { p =>
+    .componentDidMount(p =>
       Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
-    }
+    )
     .build
 
   def updatedShiftAssignments(
