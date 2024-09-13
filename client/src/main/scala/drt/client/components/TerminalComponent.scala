@@ -78,7 +78,7 @@ object TerminalComponent {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
-        potShifts = model.shifts,
+        potShifts = model.dayOfShift,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         airportConfig = model.airportConfig,

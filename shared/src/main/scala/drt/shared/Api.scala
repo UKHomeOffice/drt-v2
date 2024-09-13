@@ -15,13 +15,6 @@ case class StaffTimeSlot(terminal: Terminal,
                          staff: Int,
                          durationMillis: Int)
 
-case class MonthOfShifts(month: MillisSinceEpoch, shifts: ShiftAssignments)
-
-object MonthOfShifts {
-  implicit val rw: ReadWriter[MonthOfShifts] = macroRW
-}
-
-
 object MinuteHelper {
   def key(terminalName: Terminal, queue: Queue, minute: MillisSinceEpoch): TQM = TQM(terminalName, queue, minute)
 

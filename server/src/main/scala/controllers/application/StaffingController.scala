@@ -71,9 +71,9 @@ class StaffingController @Inject()(cc: ControllerComponents,
       }
     }
 
-  def getShiftsForMonth(month: MillisSinceEpoch): Action[AnyContent] = authByRole(StaffEdit) {
+  def getAllShifts: Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
-      shiftsService.shiftsForMonth(month).map(s => Ok(write(s)))
+      shiftsService.allShifts.map(s => Ok(write(s)))
     }
   }
 
