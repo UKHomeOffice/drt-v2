@@ -10,7 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
@@ -56,7 +56,7 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
   }
 
   type PassengersToQueueMinutes =
-    (NumericRange[MillisSinceEpoch], Map[TQM, PassengersMinute], Map[Terminal, TerminalDeskLimitsLike], String) => Future[PortStateQueueMinutes]
+    (NumericRange[MillisSinceEpoch], Map[TQM, PassengersMinute], TerminalDeskLimitsLike, String, Terminal) => Future[PortStateQueueMinutes]
 
   def crunchRequestsToDeployments(loadsProvider: ProcessingRequest => Future[Map[TQM, PassengersMinute]],
                                   staffProvider: ProcessingRequest => Future[Map[Terminal, List[Int]]],
@@ -67,6 +67,14 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
                                  )
                                  (implicit executionContext: ExecutionContext): Flow[ProcessingRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
     Flow[ProcessingRequest]
+      .mapConcat {
+        case request: CrunchRequest =>
+          terminals.map { terminal =>
+            TerminalUpdateRequest(terminal, request.start.toLocalDate, request.offsetMinutes, request.durationMinutes)
+          }
+        case request: TerminalUpdateRequest =>
+          List(request)
+      }
       .mapAsync(1) { request =>
         loadsProvider(request)
           .map { minutes => Option((request, minutes)) }
@@ -92,10 +100,10 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
         case Some(requestWithData) => requestWithData
       }
       .mapAsync(1) {
-        case (request: LoadProcessingRequest, loads, deskLimitsByTerminal) =>
+        case (request: TerminalUpdateRequest, loads, deskLimitsByTerminal) =>
           val started = SDate.now().millisSinceEpoch
           log.info(s"[deployments] Optimising ${request.durationMinutes} minutes (${request.start.toISOString} to ${request.end.toISOString})")
-          loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal, "deployments")
+          loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal(request.terminal), "deployments", request.terminal)
             .map { minutes =>
               log.info(s"[deployments] Optimising complete. Took ${SDate.now().millisSinceEpoch - started}ms")
               setUpdatedAtForTerminals(terminals, setUpdatedAtForDay, request)

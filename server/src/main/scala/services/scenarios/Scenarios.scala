@@ -1,18 +1,18 @@
 package services.scenarios
 
 import actors.persistent.SortedActorRefSource
-import akka.{Done, NotUsed}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
+import akka.{Done, NotUsed}
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
 import drt.shared.SimulationParams
 import manifests.queues.SplitsCalculator
 import queueus.DynamicQueueStatusProvider
 import services.OptimiserWithFlexibleProcessors
-import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
+import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWaitsProvider, QueuedRequestProcessing}
 import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
@@ -77,7 +77,7 @@ object Scenarios {
 
     val desksProducer: Flow[LoadProcessingRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
       .mapAsync(1) { loads =>
-        val res = portDesksAndWaitsProvider.loadsToDesks(request.minutesInMillis, loads.indexed, deskLimitsProviders.filter(_._1 == simulationParams.terminal), "scenarios")
+        val res = portDesksAndWaitsProvider.terminalLoadsToDesks(request.minutesInMillis, loads.indexed, deskLimitsProviders(simulationParams.terminal), "scenarios", simulationParams.terminal)
         println(s"Got sim result for ${simulationParams.terminal} ${simulationParams.date} ${loads.indexed.keys.groupBy(_.queue).mapValues(_.size).mkString(", ")}")
         res
       }

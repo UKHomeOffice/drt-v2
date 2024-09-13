@@ -307,7 +307,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         crunchRequest = crunchRequest,
         paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
         deskLimitsProvider = deskLimitsProviders,
-        loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+        terminalLoadsToQueueMinutes = portDeskRecs.terminalLoadsToDesks,
         queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
         setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
           airportConfig.portCode,

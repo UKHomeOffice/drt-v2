@@ -319,7 +319,7 @@ class TestDrtActor extends Actor {
           crunchRequest = crunchRequest,
           paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
           deskLimitsProvider = deskLimitsProviders,
-          loadsToQueueMinutes = portDeskRecs.loadsToDesks,
+          terminalLoadsToQueueMinutes = portDeskRecs.loadsToDesks,
           queueMinutesSinkActor = portStateActor,
           setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
         )

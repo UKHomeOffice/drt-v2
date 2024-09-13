@@ -104,7 +104,7 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     val start = scheduled.millisSinceEpoch
     val end = scheduled.addMinutes(14).millisSinceEpoch
     val loads = getFlightLoads(scheduled, flightParams, provider)
-    provider.loadsToDesks(
+    provider.terminalLoadsToDesks(
       minuteMillis = start to end by MilliTimes.oneMinuteMillis,
       loads,
       Map(T1 -> MockTerminalDeskLimits),
