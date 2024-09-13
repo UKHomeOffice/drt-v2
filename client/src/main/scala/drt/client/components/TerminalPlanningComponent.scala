@@ -8,7 +8,7 @@ import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.styles.DrtTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.SendSelectedTimeInterval
+import drt.client.services.handlers.{SendSelectedTimeInterval, SetMinStaffSuccessBanner}
 import drt.client.services.{DrtApi, SPACircuit}
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.Forecast
@@ -203,6 +203,7 @@ object TerminalPlanningComponent {
     })
     .componentDidMount(p =>
       Callback(SPACircuit.dispatch(GetForecastWeek(p.props.page.dateFromUrlOrNow, Terminal(p.props.page.terminalName), p.props.timePeriod))) >>
+        Callback(SPACircuit.dispatch(SetMinStaffSuccessBanner(false))) >>
         Callback {
           GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
         })

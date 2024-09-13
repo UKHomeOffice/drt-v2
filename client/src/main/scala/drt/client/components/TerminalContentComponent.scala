@@ -11,6 +11,7 @@ import drt.client.components.scenarios.ScenarioSimulationComponent
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.client.services.handlers.SetMinStaffSuccessBanner
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
@@ -299,6 +300,7 @@ object TerminalContentComponent {
     .initialStateFromProps(p => State(p.terminalPageTab.subMode))
     .renderBackend[TerminalContentComponent.Backend]
     .componentDidMount { p =>
+      Callback(SPACircuit.dispatch(SetMinStaffSuccessBanner(false))) >>
       Callback {
         val hours = p.props.defaultTimeRangeHours
         val page = s"${p.props.terminalPageTab.terminal}/${p.props.terminalPageTab.mode}/${p.props.terminalPageTab.subMode}"

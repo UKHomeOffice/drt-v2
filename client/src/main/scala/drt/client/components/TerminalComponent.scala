@@ -10,7 +10,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.{GetMinStaff, GetUserPreferenceIntervalMinutes, TerminalMinStaff}
+import drt.client.services.handlers.{GetMinStaff, GetUserPreferenceIntervalMinutes}
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -41,7 +41,7 @@ object TerminalComponent {
 
   private case class TerminalModel(userSelectedPlanningTimePeriod: Pot[Int],
                                    potShifts: Pot[ShiftAssignments],
-                                   potMonthOfShifts: Pot[MonthOfShifts],
+//                                   potMonthOfShifts: Pot[MonthOfShifts],
                                    potFixedPoints: Pot[FixedPointAssignments],
                                    potStaffMovements: Pot[StaffMovements],
                                    airportConfig: Pot[AirportConfig],
@@ -56,7 +56,8 @@ object TerminalComponent {
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
-                                   minStaff: Pot[TerminalMinStaff]
+//                                   minStaff: Pot[TerminalMinStaff],
+                                   showMinStaffSuccess: Pot[Boolean]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -81,7 +82,7 @@ object TerminalComponent {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
         potShifts = model.shifts,
-        potMonthOfShifts = model.monthOfShifts,
+//        potMonthOfShifts = model.monthOfShifts,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         airportConfig = model.airportConfig,
@@ -96,7 +97,8 @@ object TerminalComponent {
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
-        minStaff = model.minStaff
+//        minStaff = model.minStaff,
+        showMinStaffSuccess = model.showMinStaffSuccess
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -223,9 +225,7 @@ object TerminalComponent {
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(
-                        MonthlyStaffing(airportConfig.portCode, props.terminalPageTab, props.router)
-                      )
+                      <.div(MonthlyStaffing(airportConfig.portCode, props.terminalPageTab, props.router))
                   }
                 }
               }
@@ -241,8 +241,8 @@ object TerminalComponent {
     .renderBackend[Backend]
     .componentDidMount(p =>
       Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
-        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString)))
-    )
+        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString))))
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean): VdomTagOf[UList] = {
