@@ -7,7 +7,6 @@ import uk.gov.homeoffice.drt.ports.Queues.EGate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 
-import scala.collection.immutable.Map
 import scala.concurrent.{ExecutionContext, Future}
 
 

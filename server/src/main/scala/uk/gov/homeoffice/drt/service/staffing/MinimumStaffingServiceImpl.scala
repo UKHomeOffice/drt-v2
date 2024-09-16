@@ -1,7 +1,6 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import akka.Done
-import drt.shared.MonthOfShifts
+import drt.shared.ShiftAssignments
 import uk.gov.homeoffice.drt.db.tables.PortTerminalConfig
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -13,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 trait MinimumStaffingService {
   val getTerminalConfig: Terminal => Future[Option[PortTerminalConfig]]
 
-  def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[MonthOfShifts]
+  def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[ShiftAssignments]
 }
 
 case class MinimumStaff(minimumStaff: Int)
@@ -27,10 +26,10 @@ case class MinimumStaffingServiceImpl(portCode: PortCode,
                                       forecastMaxDays: Int,
                                       getTerminalConfig: Terminal => Future[Option[PortTerminalConfig]],
                                       updateTerminalConfig: PortTerminalConfig => Future[Int],
-                                      updateStaffingNumbers: (Terminal, LocalDate, LocalDate, Option[Int], Option[Int]) => Future[MonthOfShifts],
+                                      updateStaffingNumbers: (Terminal, LocalDate, LocalDate, Option[Int], Option[Int]) => Future[ShiftAssignments],
                                      )
                                      (implicit ec: ExecutionContext) extends MinimumStaffingService {
-  def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[MonthOfShifts] = {
+  def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[ShiftAssignments] = {
     getTerminalConfig(terminal)
       .flatMap { maybeConfig =>
         val maybeExistingMinStaff = maybeConfig.flatMap(_.minimumRosteredStaff)

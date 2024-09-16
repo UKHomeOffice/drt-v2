@@ -68,8 +68,8 @@ GET           /logged-in                                                        
 GET           /shifts/minimum-staff/:terminalName                                     controllers.application.StaffingController.getMinimumStaff(terminalName: String)
 POST          /shifts/minimum-staff/:terminalName                                     controllers.application.StaffingController.saveMinimumStaff(terminalName: String)
 GET           /shifts/:localDate                                                      controllers.application.StaffingController.getShifts(localDate: String)
+GET           /shifts                                                                 controllers.application.StaffingController.getAllShifts
 POST          /shifts                                                                 controllers.application.StaffingController.saveShifts
-GET           /shifts-for-month/:monthMillis                                          controllers.application.StaffingController.getShiftsForMonth(monthMillis: Long)
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 
