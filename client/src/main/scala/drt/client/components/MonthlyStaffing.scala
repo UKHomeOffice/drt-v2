@@ -239,42 +239,44 @@ object MonthlyStaffing {
                 MinStaffSuccess(IMinStaffSuccess(minStaff.getOrElse(0), "You updated the minimum staff number to ", () => {
                   scope.modState(state => state.copy(showMinStaffSuccess = false)).runNow()
                 })) else EmptyVdom,
-              <.div(^.className := "terminal-staffing-content-header",
-                if (minStaff.isEmpty)
+              if (minStaff.isEmpty)
+                <.div(^.className := "terminal-staffing-content-header",
                   MinStaffWarning(IMinStaffWarning("Your minimum staff cover in DRT is ",
                     "You can now more accurately reflect your minimum staff cover in DRT",
                     minStaff, () => {
                       scope.modState(state => state.copy(showMinStaffForm = true)).runNow()
-                    })) else <.div(^.className := "terminal-staffing-header",
-                  <.div(^.className := "terminal-min-staffing", s"Minimum staff: ${minStaff.getOrElse(0)}"),
-                  <.span(s"Update latest min staff ", <.a(^.href := "#", Icon.edit, " Edit", ^.onClick ==> handleOnEdit))
-                ),
-                <.div(^.className := "terminal-staffing-content-header",
-                  <.div(^.className := "staffing-controls-wrapper",
-                    <.div(^.className := "staffing-controls-row",
-                      <.label("Choose Month", ^.className := "staffing-controls-label"),
-                      <.div(^.className := "staffing-controls-select",
-                        drawSelect(
-                          values = monthOptions.map(_.toISOString),
-                          names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
-                          defaultValue = viewingDate.toISOString,
-                          callback = (e: ReactEventFromInput) => {
-                            props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
-                          })
-                      ),
+                    }))
+                )
+              else <.div(^.className := "terminal-staffing-header",
+                <.div(^.className := "terminal-min-staffing", s"Minimum staff: ${minStaff.getOrElse(0)}"),
+                <.span(s"Update latest min staff ", <.a(^.href := "#", Icon.edit, " Edit", ^.onClick ==> handleOnEdit))
+              ),
+              <.div(^.className := "terminal-staffing-content-header",
+                <.div(^.className := "staffing-controls-wrapper",
+                  <.div(^.className := "staffing-controls-row",
+                    <.label("Choose Month", ^.className := "staffing-controls-label"),
+                    <.div(^.className := "staffing-controls-select",
+                      drawSelect(
+                        values = monthOptions.map(_.toISOString),
+                        names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
+                        defaultValue = viewingDate.toISOString,
+                        callback = (e: ReactEventFromInput) => {
+                          props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
+                        })
                     ),
-                    <.div(^.className := "staffing-controls-row",
-                      <.label("Time Resolution", ^.className := "staffing-controls-label"),
-                      <.div(^.className := "staffing-controls-select",
-                        drawSelect(
-                          values = Seq("15", "30", "60"),
-                          names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
-                          defaultValue = s"${props.timeSlotMinutes}",
-                          callback = (e: ReactEventFromInput) =>
-                            props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
-                        )
-                      ),
-                    )))
+                  ),
+                  <.div(^.className := "staffing-controls-row",
+                    <.label("Time Resolution", ^.className := "staffing-controls-label"),
+                    <.div(^.className := "staffing-controls-select",
+                      drawSelect(
+                        values = Seq("15", "30", "60"),
+                        names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
+                        defaultValue = s"${props.timeSlotMinutes}",
+                        callback = (e: ReactEventFromInput) =>
+                          props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
+                      )
+                    ),
+                  ))
               )
             )
           },
