@@ -7,7 +7,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
-import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
+import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.SimulationParams
 import manifests.queues.SplitsCalculator
 import queueus.DynamicQueueStatusProvider
@@ -16,14 +16,14 @@ import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWaitsProvider, QueuedRequestProcessing}
 import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.collection.SortedSet
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -73,9 +73,9 @@ object Scenarios {
       }
     }
 
-    val request = CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
+    val request = TerminalUpdateRequest(simulationParams.terminal, simulationParams.date, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
 
-    val desksProducer: Flow[LoadProcessingRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
+    val desksProducer: Flow[TerminalUpdateRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
       .mapAsync(1) { loads =>
         val res = portDesksAndWaitsProvider.terminalLoadsToDesks(request.minutesInMillis, loads.indexed, deskLimitsProviders(simulationParams.terminal), "scenarios", simulationParams.terminal)
         println(s"Got sim result for ${simulationParams.terminal} ${simulationParams.date} ${loads.indexed.keys.groupBy(_.queue).mapValues(_.size).mkString(", ")}")
@@ -84,10 +84,10 @@ object Scenarios {
 
     val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
 
-    val crunchRequest: MillisSinceEpoch => CrunchRequest =
-      (millis: MillisSinceEpoch) => CrunchRequest(millis, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
+//    val crunchRequest: MillisSinceEpoch => TerminalUpdateRequest =
+//      (millis: MillisSinceEpoch) => TerminalUpdateRequest(simulationParams.terminal, SDate(millis).toLocalDate, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
 
-    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, crunchRequest, SortedSet.empty[ProcessingRequest], "sim-desks")
+    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor/*, crunchRequest*/, SortedSet.empty[TerminalUpdateRequest], "sim-desks")
     val (crunchRequestQueue, deskRecsKillSwitch) = QueuedRequestProcessing.createGraph(crunchGraphSource, portStateActor, desksProducer, "sim-desks").run()
 
     crunchRequestQueue ! request

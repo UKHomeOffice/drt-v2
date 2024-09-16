@@ -6,10 +6,11 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.mutable
 
@@ -19,6 +20,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                                                      day: Int,
                                                                                                                      terminal: Terminal,
                                                                                                                      now: () => SDateLike,
+                                                                                                                     processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                                                                                                                      override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -87,10 +89,10 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       case differences =>
         updateStateFromDiff(differences)
         val messageToPersist = containerToMessage(differences)
-        val updatedMillis = if (shouldSendEffectsToSubscriber(container))
-          differences.map(_.minute).toSet
-        else Set.empty[Long]
-        val replyToAndMessage = List((sender(), updatedMillis))
+        val updateRequests = if (shouldSendEffectsToSubscriber(container))
+          processingRequests(terminal, differences.map(v => SDate(v.minute).toUtcDate).toSet)
+        else Set.empty
+        val replyToAndMessage = List((sender(), updateRequests))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
     }
 

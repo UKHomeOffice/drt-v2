@@ -6,28 +6,31 @@ import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
 import TestActors._
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class TestMinuteLookups(system: ActorSystem,
                              now: () => SDateLike,
                              expireAfterMillis: Int,
-                             queuesByTerminal: Map[Terminal, Seq[Queue]])
+                             queuesByTerminal: Map[Terminal, Seq[Queue]],
+                             processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
+                            )
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")
 
   private val resetQueuesData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
-    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.getFullYear, date.getMonth, date.getDate, terminal, now)))
+    val actor = system.actorOf(Props(new TestTerminalDayQueuesActor(date.getFullYear, date.getMonth, date.getDate, terminal, now, processingRequests)))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 
   private val resetStaffData: (Terminal, MillisSinceEpoch) => Future[Any] = (terminal: Terminal, millis: MillisSinceEpoch) => {
     val date = SDate(millis)
-    val actor = system.actorOf(Props(new TestTerminalDayStaffActor(date.getFullYear, date.getMonth, date.getDate, terminal, now)))
+    val actor = system.actorOf(Props(new TestTerminalDayStaffActor(date.getFullYear, date.getMonth, date.getDate, terminal, now, processingRequests)))
     requestAndTerminateActor.ask(RequestAndTerminate(actor, ResetData))
   }
 

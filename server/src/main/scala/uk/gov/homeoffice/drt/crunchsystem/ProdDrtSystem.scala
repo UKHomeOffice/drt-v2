@@ -7,11 +7,13 @@ import akka.util.Timeout
 import com.google.inject.Inject
 import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, UserFeedbackDao}
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -23,7 +25,10 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends DrtSystemInterface {
 
-  override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  val processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest] =
+    (terminal: Terminal, dates: Set[UtcDate]) => dates.map(date => TerminalUpdateRequest(terminal, SDate(date).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch))
+
+  override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, processingRequests)
 
   override val flightLookups: FlightLookupsLike = FlightLookups(
     system,
@@ -32,6 +37,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     params.maybeRemovalCutOffSeconds,
     paxFeedSourceOrder,
     splitsCalculator.terminalSplits,
+    (terminal, utcDates) => utcDates.map(d => TerminalUpdateRequest(terminal, SDate(d).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch))
   )
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)
@@ -83,8 +89,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   lazy val persistentActors: PersistentStateActors = ProdPersistentStateActors(
     system,
     now,
-    airportConfig.minutesToCrunch,
-    airportConfig.crunchOffsetMinutes,
     manifestLookups,
     airportConfig.portCode,
     feedService.paxFeedSourceOrder)

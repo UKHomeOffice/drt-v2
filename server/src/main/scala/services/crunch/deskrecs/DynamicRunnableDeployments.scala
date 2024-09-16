@@ -1,16 +1,16 @@
 package services.crunch.deskrecs
 
-import akka.{Done, NotUsed}
 import akka.actor.ActorRef
-import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.Flow
+import akka.stream.{Materializer, UniqueKillSwitch}
+import akka.{Done, NotUsed}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
+import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
@@ -23,11 +23,11 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(deploymentQueueActor: ActorRef,
-            deploymentQueue: SortedSet[ProcessingRequest],
+            deploymentQueue: SortedSet[TerminalUpdateRequest],
             staffToDeskLimits: Map[Terminal, List[Int]] => Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff],
-            crunchRequest: MillisSinceEpoch => CrunchRequest,
-            paxProvider: ProcessingRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
-            staffMinutesProvider: ProcessingRequest => Future[Map[Terminal, List[Int]]],
+//            crunchRequest: MillisSinceEpoch => CrunchRequest,
+            paxProvider: TerminalUpdateRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
+            staffMinutesProvider: TerminalUpdateRequest => Future[Map[Terminal, List[Int]]],
             loadsToDeployments: PassengersToQueueMinutes,
             terminals: Iterable[Terminal],
             queueMinutesSinkActor: ActorRef,
@@ -50,7 +50,7 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
         initialQueue = deploymentQueue,
         sinkActor = queueMinutesSinkActor,
         graphName = "deployments",
-        processingRequest = crunchRequest,
+//        processingRequest = crunchRequest,
       )
     (deploymentRequestQueueActor, deploymentsKillSwitch)
   }
@@ -58,23 +58,23 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
   type PassengersToQueueMinutes =
     (NumericRange[MillisSinceEpoch], Map[TQM, PassengersMinute], TerminalDeskLimitsLike, String, Terminal) => Future[PortStateQueueMinutes]
 
-  def crunchRequestsToDeployments(loadsProvider: ProcessingRequest => Future[Map[TQM, PassengersMinute]],
-                                  staffProvider: ProcessingRequest => Future[Map[Terminal, List[Int]]],
+  def crunchRequestsToDeployments(loadsProvider: TerminalUpdateRequest => Future[Map[TQM, PassengersMinute]],
+                                  staffProvider: TerminalUpdateRequest => Future[Map[Terminal, List[Int]]],
                                   staffToDeskLimits: StaffToDeskLimits,
                                   loadsToQueueMinutes: PassengersToQueueMinutes,
                                   terminals: Iterable[Terminal],
                                   setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
                                  )
-                                 (implicit executionContext: ExecutionContext): Flow[ProcessingRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
-    Flow[ProcessingRequest]
-      .mapConcat {
-        case request: CrunchRequest =>
-          terminals.map { terminal =>
-            TerminalUpdateRequest(terminal, request.start.toLocalDate, request.offsetMinutes, request.durationMinutes)
-          }
-        case request: TerminalUpdateRequest =>
-          List(request)
-      }
+                                 (implicit executionContext: ExecutionContext): Flow[TerminalUpdateRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
+    Flow[TerminalUpdateRequest]
+//      .mapConcat {
+//        case request: CrunchRequest =>
+//          terminals.map { terminal =>
+//            TerminalUpdateRequest(terminal, request.start.toLocalDate, request.offsetMinutes, request.durationMinutes)
+//          }
+//        case request: TerminalUpdateRequest =>
+//          List(request)
+//      }
       .mapAsync(1) { request =>
         loadsProvider(request)
           .map { minutes => Option((request, minutes)) }

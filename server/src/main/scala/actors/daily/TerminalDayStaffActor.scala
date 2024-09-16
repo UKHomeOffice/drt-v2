@@ -4,17 +4,19 @@ import akka.actor.Props
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import drt.shared.{CrunchApi, TM}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 
 object TerminalDayStaffActor {
-  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, None))
+  def props(processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest])
+           (terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
+    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, None, processingRequests))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
+    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), (_, _) => Set.empty))
 }
 
 class TerminalDayStaffActor(year: Int,
@@ -22,8 +24,10 @@ class TerminalDayStaffActor(year: Int,
                             day: Int,
                             terminal: Terminal,
                             val now: () => SDateLike,
-                            maybePointInTime: Option[MillisSinceEpoch])
-  extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
+                            maybePointInTime: Option[MillisSinceEpoch],
+                            processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest]
+                           )
+  extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage](year, month, day, terminal, now, processingRequests, maybePointInTime) {
 
   override val persistenceIdType: String = "staff"
 

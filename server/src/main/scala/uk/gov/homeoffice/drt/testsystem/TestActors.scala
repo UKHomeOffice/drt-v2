@@ -69,36 +69,36 @@ object TestActors {
     }
   }
 
-  class TestMergeArrivalsQueueActor(now: () => SDateLike, request: Long => MergeArrivalsRequest)
-    extends CrunchQueueActor(now, request) with Resettable {
+  class TestMergeArrivalsQueueActor(now: () => SDateLike)
+    extends CrunchQueueActor(now) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestCrunchQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
-    extends CrunchQueueActor(now, request) with Resettable {
+  class TestCrunchQueueActor(now: () => SDateLike)
+    extends CrunchQueueActor(now) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestDeskRecsQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
-    extends DeskRecsQueueActor(now, request) with Resettable {
+  class TestDeskRecsQueueActor(now: () => SDateLike)
+    extends DeskRecsQueueActor(now) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestDeploymentQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
-    extends DeploymentQueueActor(now, request) with Resettable {
+  class TestDeploymentQueueActor(now: () => SDateLike)
+    extends DeploymentQueueActor(now) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestStaffingUpdateQueueActor(now: () => SDateLike, request: Long => LoadProcessingRequest)
-    extends StaffingUpdateQueueActor(now, request) with Resettable {
+  class TestStaffingUpdateQueueActor(now: () => SDateLike)
+    extends StaffingUpdateQueueActor(now) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
@@ -181,7 +181,7 @@ object TestActors {
     }
   }
 
-  trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B, Long] {
+  trait TestMinuteActorLike[A, B <: WithTimeAccessor] extends MinutesActorLike[A, B, TerminalUpdateRequest] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     private var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 
@@ -208,7 +208,7 @@ object TestActors {
 
   }
 
-  trait TestMinuteActorLike2[A, B <: WithTimeAccessor] extends MinutesActorLike2[A, B, Long] {
+  trait TestMinuteActorLike2[A, B <: WithTimeAccessor] extends MinutesActorLike2[A, B, TerminalUpdateRequest] {
     val resetData: (Terminal, MillisSinceEpoch) => Future[Any]
     private var terminalDaysUpdated: Set[(Terminal, MillisSinceEpoch)] = Set()
 
@@ -237,7 +237,7 @@ object TestActors {
 
   class TestStaffMinutesRouterActor(terminals: Iterable[Terminal],
                                     lookup: MinutesLookup[StaffMinute, TM],
-                                    updateMinutes: MinutesUpdate[StaffMinute, TM, Long],
+                                    updateMinutes: MinutesUpdate[StaffMinute, TM, TerminalUpdateRequest],
                                     val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
     extends StaffMinutesRouterActor(terminals, lookup, updateMinutes) with TestMinuteActorLike[StaffMinute, TM] {
     override def receive: Receive = resetReceive orElse super.receive
@@ -245,7 +245,7 @@ object TestActors {
 
   class TestQueueMinutesRouterActor(terminals: Iterable[Terminal],
                                     lookup: MinutesLookup[CrunchMinute, TQM],
-                                    updateMinutes: MinutesUpdate[CrunchMinute, TQM, Long],
+                                    updateMinutes: MinutesUpdate[CrunchMinute, TQM, TerminalUpdateRequest],
                                     val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
     extends QueueMinutesRouterActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[CrunchMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
@@ -253,7 +253,7 @@ object TestActors {
 
   class TestQueueLoadsMinutesActor(terminals: Iterable[Terminal],
                                    lookup: MinutesLookup[PassengersMinute, TQM],
-                                   updateMinutes: MinutesUpdate[PassengersMinute, TQM, Long],
+                                   updateMinutes: MinutesUpdate[PassengersMinute, TQM, TerminalUpdateRequest],
                                    val resetData: (Terminal, MillisSinceEpoch) => Future[Any])
     extends QueueLoadsMinutesActor(terminals, lookup, updateMinutes) with TestMinuteActorLike2[PassengersMinute, TQM] {
     override def receive: Receive = resetReceive orElse super.receive
@@ -304,10 +304,11 @@ object TestActors {
   class TestFeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
                                     arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
                                     updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
+                                    processingRequest: (Terminal, UtcDate) => TerminalUpdateRequest,
                                     partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                                     resetData: (Terminal, UtcDate) => Future[Any],
                                    )
-    extends FeedArrivalsRouterActor(allTerminals, arrivalsByDayLookup, updateArrivals, partitionUpdates) {
+    extends FeedArrivalsRouterActor(allTerminals, arrivalsByDayLookup, updateArrivals, processingRequest, partitionUpdates) {
     override def receive: Receive = resetReceive orElse super.receive
 
     private var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
@@ -401,7 +402,9 @@ object TestActors {
                                    month: Int,
                                    day: Int,
                                    terminal: Terminal,
-                                   now: () => SDateLike) extends TerminalDayQueuesActor(year, month, day, terminal, now, None) with Resettable {
+                                   now: () => SDateLike,
+                                   processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
+                                  ) extends TerminalDayQueuesActor(year, month, day, terminal, now, None, processingRequests) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
@@ -411,7 +414,9 @@ object TestActors {
                                   month: Int,
                                   day: Int,
                                   terminal: Terminal,
-                                  now: () => SDateLike) extends TerminalDayStaffActor(year, month, day, terminal, now, None) with Resettable {
+                                  now: () => SDateLike,
+                                  processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
+                                 ) extends TerminalDayStaffActor(year, month, day, terminal, now, None, processingRequests) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
@@ -425,8 +430,22 @@ object TestActors {
                                    paxFeedSourceOrder: List[FeedSource],
                                    requestHistoricSplitsActor: Option[ActorRef],
                                    requestHistoricPaxActor: Option[ActorRef],
+                                   processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                                   )
-    extends TerminalDayFlightActor(year, month, day, terminal, now, None, None, paxFeedSourceOrder, None, requestHistoricSplitsActor, requestHistoricPaxActor) with Resettable {
+    extends TerminalDayFlightActor(
+      year,
+      month,
+      day,
+      terminal,
+      now,
+      None,
+      None,
+      paxFeedSourceOrder,
+      None,
+      requestHistoricSplitsActor,
+      requestHistoricPaxActor,
+      processingRequests,
+    ) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

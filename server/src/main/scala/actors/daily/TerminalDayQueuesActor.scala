@@ -4,17 +4,19 @@ import akka.actor.Props
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MillisSinceEpoch}
 import drt.shared.{CrunchApi, TQM}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 
 object TerminalDayQueuesActor {
-  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, None))
+  def props(processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest])
+           (terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, None, processingRequests))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), (_, _) => Set.empty))
 }
 
 class TerminalDayQueuesActor(year: Int,
@@ -22,8 +24,10 @@ class TerminalDayQueuesActor(year: Int,
                              day: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
-                             maybePointInTime: Option[MillisSinceEpoch]) extends
-  TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
+                             maybePointInTime: Option[MillisSinceEpoch],
+                             processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest]
+                            ) extends
+  TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, processingRequests, maybePointInTime) {
   override val persistenceIdType: String = "queues"
 
   import actors.serializers.PortStateMessageConversion._

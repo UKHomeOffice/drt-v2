@@ -44,7 +44,7 @@ trait RouterActorLikeWithSubscriber2[U <: Updates, P, A] extends RouterActorLike
 }
 
 trait RouterActorLike[U <: Updates, P, A] extends Actor with ActorLogging {
-  var processingRequest: Boolean = false
+  var currentlyProcessingARequest: Boolean = false
 
   implicit val dispatcher: ExecutionContext = context.dispatcher
   implicit val mat: Materializer = Materializer.createMaterializer(context)
@@ -61,11 +61,11 @@ trait RouterActorLike[U <: Updates, P, A] extends Actor with ActorLogging {
   def shouldSendEffectsToSubscriber: U => Boolean
 
   def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[Set[A]] = {
-    processingRequest = true
+    currentlyProcessingARequest = true
     val eventualEffects = updateAll(updates)
     eventualEffects
       .onComplete { _ =>
-        processingRequest = false
+        currentlyProcessingARequest = false
         replyTo ! StatusReply.Ack
         self ! ProcessNextUpdateRequest
       }
@@ -114,7 +114,7 @@ trait RouterActorLike[U <: Updates, P, A] extends Actor with ActorLogging {
 
   private def receiveProcessRequest: Receive = {
     case ProcessNextUpdateRequest =>
-      if (!processingRequest) {
+      if (!currentlyProcessingARequest) {
         updateRequestsQueue match {
           case (replyTo, updates) :: tail =>
             handleUpdatesAndAck(updates, replyTo)

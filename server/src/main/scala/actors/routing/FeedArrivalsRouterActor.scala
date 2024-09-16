@@ -13,6 +13,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SourceUtils
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
+import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -90,8 +91,9 @@ object FeedArrivalsRouterActor {
 class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
                               arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
                               updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
+                              processingRequest: (Terminal, UtcDate) => TerminalUpdateRequest,
                               override val partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
-                             ) extends RouterActorLikeWithSubscriber[FeedArrivals, (Terminal, UtcDate), Long] {
+                             ) extends RouterActorLikeWithSubscriber[FeedArrivals, (Terminal, UtcDate), TerminalUpdateRequest] {
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, FeedArrivalsRouterActor.GetStateForDateRange(start, end)) =>
       sender() ! flightsLookupService(start, end, allTerminals, Option(pit))
@@ -109,11 +111,11 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
   private val flightsLookupService: (UtcDate, UtcDate, Iterable[Terminal], Option[MillisSinceEpoch]) => Source[(UtcDate, Seq[FeedArrival]), NotUsed] =
     FeedArrivalsRouterActor.multiTerminalArrivalsByDaySource(arrivalsByDayLookup)
 
-  override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[Long]] = {
+  override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[TerminalUpdateRequest]] = {
     log.info(s"FeedArrivalsRouterActor updating $partition")
     updateArrivals(partition, updates.arrivals).map {
       case true =>
-        Set(SDate(partition._2).millisSinceEpoch)
+        Set(processingRequest(partition._1, partition._2))
       case false =>
         Set.empty
     }

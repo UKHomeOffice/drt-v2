@@ -4,6 +4,7 @@ import actors.routing.RouterActorLikeWithSubscriber2
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
 import drt.shared.TQM
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
@@ -19,7 +20,7 @@ object QueueMinutesRouterActor {
 
 class QueueMinutesRouterActor(terminals: Iterable[Terminal],
                               lookup: MinutesLookup[CrunchMinute, TQM],
-                              updateMinutes: MinutesUpdate[CrunchMinute, TQM, Long])
+                              updateMinutes: MinutesUpdate[CrunchMinute, TQM, TerminalUpdateRequest])
   extends MinutesActorLike2(terminals, lookup, updateMinutes, QueueMinutesRouterActor.splitByResource, QueueMinutesRouterActor.sendIfDeskRec)
-    with RouterActorLikeWithSubscriber2[MinutesContainer[CrunchMinute, TQM], (Terminal, UtcDate), Long] {
+    with RouterActorLikeWithSubscriber2[MinutesContainer[CrunchMinute, TQM], (Terminal, UtcDate), TerminalUpdateRequest] {
 }

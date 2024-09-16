@@ -9,7 +9,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
 import slick.lifted.Rep
 import slickdb.AggregatedDbTables
-import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.db.dao.StatusDailyDao
 import uk.gov.homeoffice.drt.db.tables.{StatusDaily, StatusDailyTable}
 import uk.gov.homeoffice.drt.ports.PortCode
@@ -21,21 +21,21 @@ import scala.collection.SortedSet
 import scala.concurrent.{ExecutionContext, Future}
 
 trait DrtRunnableGraph {
-  def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[ProcessingRequest, A, NotUsed],
+  def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[TerminalUpdateRequest, A, NotUsed],
                                            persistentQueueActor: ActorRef,
-                                           initialQueue: SortedSet[ProcessingRequest],
+                                           initialQueue: SortedSet[TerminalUpdateRequest],
                                            sinkActor: ActorRef,
                                            graphName: String,
-                                           processingRequest: MillisSinceEpoch => ProcessingRequest,
+//                                           processingRequest: MillisSinceEpoch => TerminalUpdateRequest,
                                           )
                                           (implicit mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource(persistentQueueActor, processingRequest, initialQueue, graphName)
+    val graphSource = new SortedActorRefSource(persistentQueueActor, /*processingRequest,*/ initialQueue, graphName)
     QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
   }
 
   def setUpdatedAtForTerminals(terminals: Iterable[Terminal],
                                setUpdatedAtForDay: (Terminal, LocalDate, MillisSinceEpoch) => Future[Done],
-                               pr: ProcessingRequest): Unit =
+                               pr: TerminalUpdateRequest): Unit =
     pr match {
       case TerminalUpdateRequest(terminal, localDate, _, _) =>
         setUpdatedAtForDay(terminal, localDate, SDate.now().millisSinceEpoch)

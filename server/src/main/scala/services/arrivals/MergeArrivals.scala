@@ -2,9 +2,9 @@ package services.arrivals
 
 import akka.NotUsed
 import akka.stream.scaladsl.Flow
-import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
-import uk.gov.homeoffice.drt.time.{DateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateLike, SDate, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
@@ -121,14 +121,11 @@ object MergeArrivals {
                                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                                       updateAggregatedArrivals: ArrivalsDiff => Unit,
                                      )
-                                     (implicit ec: ExecutionContext): Flow[ProcessingRequest, ArrivalsDiff, NotUsed] = {
-    Flow[ProcessingRequest]
-      .collect {
-        case request: MergeArrivalsRequest => request
-      }
+                                     (implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, ArrivalsDiff, NotUsed] = {
+    Flow[TerminalUpdateRequest]
       .mapAsync(1) {
         request =>
-          mergeArrivalsForDate(request.date)
+          mergeArrivalsForDate(SDate(request.date).toUtcDate)
             .flatMap(addArrivalPredictions)
             .flatMap { diff =>
               setPcpTimes(diff.toUpdate.values.toSeq)

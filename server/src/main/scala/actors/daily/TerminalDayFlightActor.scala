@@ -10,6 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -31,6 +32,7 @@ object TerminalDayFlightActor {
                               terminalSplits: Option[Splits],
                               requestHistoricSplitsActor: Option[ActorRef],
                               requestHistoricPaxActor: Option[ActorRef],
+                              processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                              ): Props =
     Props(new TerminalDayFlightActor(
       date.year,
@@ -44,6 +46,7 @@ object TerminalDayFlightActor {
       terminalSplits,
       requestHistoricSplitsActor,
       requestHistoricPaxActor,
+      processingRequests,
     ))
 
   def propsPointInTime(terminal: Terminal,
@@ -53,6 +56,7 @@ object TerminalDayFlightActor {
                        cutOff: Option[FiniteDuration],
                        paxFeedSourceOrder: List[FeedSource],
                        terminalSplits: Option[Splits],
+                       processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                       ): Props =
     Props(new TerminalDayFlightActor(
       date.year,
@@ -66,6 +70,7 @@ object TerminalDayFlightActor {
       terminalSplits,
       None,
       None,
+      processingRequests,
     ))
 }
 
@@ -80,6 +85,7 @@ class TerminalDayFlightActor(year: Int,
                              terminalSplits: Option[Splits],
                              maybeRequestHistoricSplitsActor: Option[ActorRef],
                              maybeRequestHistoricPaxActor: Option[ActorRef],
+                             processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                             ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -195,7 +201,7 @@ class TerminalDayFlightActor(year: Int,
     acceptableExistingSources.isEmpty
   }
 
-  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[MillisSinceEpoch] = {
+  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[TerminalUpdateRequest] = {
     val (updatedState, minutesToUpdate) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
 
     state = updatedState
@@ -203,7 +209,7 @@ class TerminalDayFlightActor(year: Int,
     requestMissingPax()
     requestMissingHistoricSplits()
 
-    minutesToUpdate
+    processingRequests(terminal, minutesToUpdate.map(SDate(_).toUtcDate))
   }
 
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =

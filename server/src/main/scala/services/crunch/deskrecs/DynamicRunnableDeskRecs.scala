@@ -9,7 +9,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.DynamicRunnableDeployments.PassengersToQueueMinutes
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.LocalDate
 
@@ -22,11 +22,17 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(deskRecsQueueActor: ActorRef,
-            deskRecsQueue: SortedSet[ProcessingRequest],
-            crunchRequest: MillisSinceEpoch => CrunchRequest,
-            paxProvider: ProcessingRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
+            deskRecsQueue: SortedSet[TerminalUpdateRequest],
+            //            crunchRequest: MillisSinceEpoch => CrunchRequest,
+            paxProvider: TerminalUpdateRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
             deskLimitsProvider: Map[Terminal, TerminalDeskLimitsLike],
-            terminalLoadsToQueueMinutes: (NumericRange[MillisSinceEpoch], Map[TQM, CrunchApi.PassengersMinute], TerminalDeskLimitsLike, String, Terminal) => Future[CrunchApi.DeskRecMinutes],
+            terminalLoadsToQueueMinutes: (
+              NumericRange[MillisSinceEpoch],
+                Map[TQM, CrunchApi.PassengersMinute],
+                TerminalDeskLimitsLike,
+                String,
+                Terminal
+              ) => Future[CrunchApi.DeskRecMinutes],
             queueMinutesSinkActor: ActorRef,
             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
            )
@@ -45,19 +51,19 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
         deskRecsQueue,
         queueMinutesSinkActor,
         "desk-recs",
-        crunchRequest,
+        //        crunchRequest,
       )
     (deskRecsRequestQueueActor, deskRecsKillSwitch)
   }
 
 
-  def crunchRequestsToDeskRecs(loadsProvider: ProcessingRequest => Future[Map[TQM, PassengersMinute]],
-                               maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
-                               loadsToQueueMinutes: PassengersToQueueMinutes,
-                               setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
-                              )
-                              (implicit executionContext: ExecutionContext): Flow[ProcessingRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
-    Flow[ProcessingRequest]
+  private def crunchRequestsToDeskRecs(loadsProvider: TerminalUpdateRequest => Future[Map[TQM, PassengersMinute]],
+                                       maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
+                                       loadsToQueueMinutes: PassengersToQueueMinutes,
+                                       setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
+                                      )
+                                      (implicit executionContext: ExecutionContext): Flow[TerminalUpdateRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
+    Flow[TerminalUpdateRequest]
       .mapAsync(1) { request =>
         loadsProvider(request)
           .map { minutes => Option((request, minutes)) }
@@ -70,19 +76,19 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
       .collect {
         case Some(requestAndMinutes) => requestAndMinutes
       }
-      .mapConcat {
-        case (request: CrunchRequest, loads) =>
-          maxDesksProviders.map { case (terminal, maxDesks) =>
-            val terminalLoads = loads.filter(_._1.terminal == terminal)
-            val terminalRequest = TerminalUpdateRequest(terminal, request.start.toLocalDate, request.offsetMinutes, request.durationMinutes)
-            (terminalRequest, terminalLoads, maxDesks)
-          }
-        case (request: TerminalUpdateRequest, loads) =>
-          List((request, loads, maxDesksProviders(request.terminal)))
-      }
+      //      .mapConcat {
+      //        case (request: CrunchRequest, loads) =>
+      //          maxDesksProviders.map { case (terminal, maxDesks) =>
+      //            val terminalLoads = loads.filter(_._1.terminal == terminal)
+      //            val terminalRequest = TerminalUpdateRequest(terminal, request.start.toLocalDate, request.offsetMinutes, request.durationMinutes)
+      //            (terminalRequest, terminalLoads, maxDesks)
+      //          }
+      //        case (request: TerminalUpdateRequest, loads) =>
+      //          List((request, loads, maxDesksProviders(request.terminal)))
+      //      }
       .mapAsync(1) {
-        case (request: TerminalUpdateRequest, loads, maxDesks) =>
-          optimiseTerminal(maxDesks, loadsToQueueMinutes, setUpdatedAtForDay, request, loads, request.terminal)
+        case (request: TerminalUpdateRequest, loads) =>
+          optimiseTerminal(maxDesksProviders(request.terminal), loadsToQueueMinutes, setUpdatedAtForDay, request, loads, request.terminal)
       }
       .collect {
         case Some(minutes) => minutes.asContainer

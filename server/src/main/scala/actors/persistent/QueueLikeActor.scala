@@ -21,7 +21,7 @@ object QueueLikeActor {
   case object Tick
 }
 
-abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: MillisSinceEpoch => ProcessingRequest) extends RecoveryActorLike {
+abstract class QueueLikeActor(val now: () => SDateLike/*, processingRequest: MillisSinceEpoch => ProcessingRequest*/) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)
@@ -46,8 +46,8 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
         utcDate == UtcDate(year, month, day)
     }.foreach(state -= _)
 
-    case DaysMessage(days) => state ++= days.map(processingRequest)
-    case RemoveDayMessage(Some(day)) => state -= processingRequest(day)
+//    case DaysMessage(days) => state ++= days.map(processingRequest)
+//    case RemoveDayMessage(Some(day)) => state -= processingRequest(day)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
@@ -59,9 +59,9 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
       log.info(s"Restoring queue to ${requests.size} days")
       state ++= requests.map(mergeArrivalsRequestFromMessage)
 
-    case DaysMessage(days) =>
-      log.info(s"Restoring queue to ${days.size} days")
-      state ++= days.map(processingRequest)
+//    case DaysMessage(days) =>
+//      log.info(s"Restoring queue to ${days.size} days")
+//      state ++= days.map(processingRequest)
   }
 
   override def stateToMessage: GeneratedMessage = {
@@ -92,9 +92,11 @@ abstract class QueueLikeActor(val now: () => SDateLike, processingRequest: Milli
       requests.headOption
         .map {
           case _: Long =>
-            requests
-              .collect { case l: MillisSinceEpoch => processingRequest(l) }
-              .filterNot(state.contains)
+            println(s"\n\n*** !!! Received Long !!! ***\n\n")
+//            requests
+//              .collect { case l: MillisSinceEpoch => processingRequest(l) }
+//              .filterNot(state.contains)
+            Iterable.empty
           case _: ProcessingRequest =>
             requests
               .collect { case r: ProcessingRequest => r }

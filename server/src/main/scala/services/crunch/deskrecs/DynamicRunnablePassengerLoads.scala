@@ -9,7 +9,7 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinut
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.DynamicQueueStatusProvider
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
@@ -26,9 +26,9 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
   def apply(crunchQueueActor: ActorRef,
-            crunchQueue: SortedSet[ProcessingRequest],
-            crunchRequest: MillisSinceEpoch => CrunchRequest,
-            flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
+            crunchQueue: SortedSet[TerminalUpdateRequest],
+//            crunchRequest: MillisSinceEpoch => CrunchRequest,
+            flightsProvider: TerminalUpdateRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
             deskRecsProvider: PortDesksAndWaitsProviderLike,
             redListUpdatesProvider: () => Future[RedListUpdates],
             queueStatusProvider: DynamicQueueStatusProvider,
@@ -41,7 +41,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
            )
            (implicit ec: ExecutionContext, mat: Materializer): ActorRef = {
-    val passengerLoadsFlow: Flow[ProcessingRequest, MinutesContainer[CrunchApi.PassengersMinute, TQM], NotUsed] =
+    val passengerLoadsFlow: Flow[TerminalUpdateRequest, MinutesContainer[CrunchApi.PassengersMinute, TQM], NotUsed] =
       DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
         arrivalsProvider = flightsProvider,
         portDesksAndWaitsProvider = deskRecsProvider,
@@ -62,12 +62,12 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         crunchQueue,
         queueLoadsActor,
         "passenger-loads",
-        crunchRequest,
+//        crunchRequest,
       )
     crunchRequestQueueActor
   }
 
-  def crunchRequestsToQueueMinutes(arrivalsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
+  def crunchRequestsToQueueMinutes(arrivalsProvider: TerminalUpdateRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                                    portDesksAndWaitsProvider: PortDesksAndWaitsProviderLike,
                                    redListUpdatesProvider: () => Future[RedListUpdates],
                                    dynamicQueueStatusProvider: DynamicQueueStatusProvider,
@@ -81,8 +81,8 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
                                   (implicit
                                    ec: ExecutionContext,
                                    mat: Materializer,
-                                  ): Flow[ProcessingRequest, MinutesContainer[PassengersMinute, TQM], NotUsed] =
-    Flow[ProcessingRequest]
+                                  ): Flow[TerminalUpdateRequest, MinutesContainer[PassengersMinute, TQM], NotUsed] =
+    Flow[TerminalUpdateRequest]
       .wireTap(cr => log.info(s"${cr.date} crunch request - started"))
       .via(addArrivals(arrivalsProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1.date} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum} passengers"))
@@ -92,7 +92,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         val datesToUpdate = Set(crWithPax._1.start.toUtcDate, crWithPax._1.end.toUtcDate)
         datesToUpdate.foreach(updateCapacity)
       }
-      .via(Flow[(ProcessingRequest, MinutesContainer[PassengersMinute, TQM])].map {
+      .via(Flow[(TerminalUpdateRequest, MinutesContainer[PassengersMinute, TQM])].map {
         case (pr, paxMinutes) =>
           setUpdatedAtForTerminals(queuesByTerminal.keys, setUpdatedAtForDay, pr)
           paxMinutes
@@ -121,8 +121,8 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
                               (implicit
                                ec: ExecutionContext,
                                mat: Materializer
-                              ): Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits]), (ProcessingRequest, MinutesContainer[PassengersMinute, TQM]), NotUsed] = {
-    Flow[(ProcessingRequest, Iterable[ApiFlightWithSplits])]
+                              ): Flow[(TerminalUpdateRequest, Iterable[ApiFlightWithSplits]), (TerminalUpdateRequest, MinutesContainer[PassengersMinute, TQM]), NotUsed] = {
+    Flow[(TerminalUpdateRequest, Iterable[ApiFlightWithSplits])]
       .mapAsync(1) {
         case (procRequest: LoadProcessingRequest, flights) =>
           log.info(s"Passenger load calculation starting: ${flights.size} flights, ${procRequest.durationMinutes} minutes (${procRequest.start.millisSinceEpoch} to ${procRequest.end.millisSinceEpoch})")
@@ -174,10 +174,11 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
       })
     }
 
-  private def addArrivals(flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]])
-                         (implicit ec: ExecutionContext): Flow[ProcessingRequest, (ProcessingRequest, List[ApiFlightWithSplits]), NotUsed] =
-    Flow[ProcessingRequest]
+  private def addArrivals(flightsProvider: TerminalUpdateRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]])
+                         (implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, (TerminalUpdateRequest, List[ApiFlightWithSplits]), NotUsed] =
+    Flow[TerminalUpdateRequest]
       .mapAsync(1) { crunchRequest =>
+        println(s"\n\n**Received a ${crunchRequest.getClass.getSimpleName}**\n\n")
         val startTime = SDate.now()
         flightsProvider(crunchRequest)
           .map(flightsStream => Option((crunchRequest, flightsStream, startTime)))

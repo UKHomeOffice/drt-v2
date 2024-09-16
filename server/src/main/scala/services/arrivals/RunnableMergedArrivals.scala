@@ -10,7 +10,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import providers.FlightsProvider
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import services.crunch.deskrecs.QueuedRequestProcessing
-import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.{DateLike, SDate, UtcDate}
@@ -24,8 +24,8 @@ object RunnableMergedArrivals {
             aggregatedArrivalsActor: ActorRef,
             mergeArrivalsQueueActor: ActorRef,
             feedArrivalsForDate: Seq[DateLike => Future[FeedArrivalSet]],
-            mergeArrivalsQueue: SortedSet[ProcessingRequest],
-            mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest,
+            mergeArrivalsQueue: SortedSet[TerminalUpdateRequest],
+//            mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest,
             setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
             addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
            )
@@ -52,25 +52,25 @@ object RunnableMergedArrivals {
 
     val (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =
       startQueuedRequestProcessingGraph(
-        mergeArrivalsFlow,
-        mergeArrivalsQueueActor,
-        mergeArrivalsQueue,
-        flightsRouterActor,
-        "arrivals",
-        mergeArrivalRequest,
+        minutesProducer = mergeArrivalsFlow,
+        persistentQueueActor = mergeArrivalsQueueActor,
+        initialQueue = mergeArrivalsQueue,
+        sinkActor = flightsRouterActor,
+        graphName = "arrivals",
+//        processingRequest = mergeArrivalRequest,
       )
     (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch)
   }
 
-  private def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[ProcessingRequest, A, NotUsed],
+  private def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[TerminalUpdateRequest, A, NotUsed],
                                                    persistentQueueActor: ActorRef,
-                                                   initialQueue: SortedSet[ProcessingRequest],
+                                                   initialQueue: SortedSet[TerminalUpdateRequest],
                                                    sinkActor: ActorRef,
                                                    graphName: String,
-                                                   processingRequest: MillisSinceEpoch => ProcessingRequest,
+//                                                   processingRequest: MillisSinceEpoch => TerminalUpdateRequest,
                                                   )
                                                   (implicit materializer: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource(persistentQueueActor, processingRequest, initialQueue, graphName)
+    val graphSource = new SortedActorRefSource(persistentQueueActor, /*processingRequest,*/ initialQueue, graphName)
     QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
   }
 
