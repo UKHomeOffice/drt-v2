@@ -35,7 +35,7 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
       "Then it should send minute updates to the test probe covering the period from now until now + max forecast days" >> {
         writeActor ! SetFixedPoints(Seq(StaffAssignment("assignment", T1, now.millisSinceEpoch, now.addMinutes(30).millisSinceEpoch, 1, None)))
 
-        val expectedRequests = (0 to 2).map(day => TerminalUpdateRequest(T1, now.addDays(day).toLocalDate, 0, 1440))
+        val expectedRequests = (0 to 2).map(day => TerminalUpdateRequest(T1, now.addDays(day).toLocalDate))
 
         updatesProbe.expectMsg(expectedRequests)
 
@@ -167,8 +167,8 @@ class FixedPointsActorSpec extends CrunchTestLike with ImplicitSender {
   def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsActor(now)))
   def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new FixedPointsReadActor(now(), now)), "fpa-pit")
   def newReadActor(now: () => SDateLike): ActorRef = system.actorOf(
-    FixedPointsActor.streamingUpdatesProps(
-      InMemoryStreamingJournal, now, forecastLengthDays, 1440), "fpa-read")
+    FixedPointsActor.streamingUpdatesProps(InMemoryStreamingJournal, now, forecastLengthDays), "fpa-read"
+  )
 
   def nowAs(date: String): () => SDateLike = () => SDate(date)
 }

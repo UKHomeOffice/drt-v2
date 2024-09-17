@@ -32,19 +32,19 @@ trait StaffMovementsActorLike {
       StaffMovementsState(staffMovementMessagesToStaffMovements(snapshot.staffMovements.toList))
   }
 
-  val eventToState: Int => (StaffMovementsState, Any) => (StaffMovementsState, Iterable[TerminalUpdateRequest]) =
-    minutesToCrunch => (state, msg) => msg match {
+  val eventToState: (StaffMovementsState, Any) => (StaffMovementsState, Iterable[TerminalUpdateRequest]) =
+    (state, msg) => msg match {
       case msg: StaffMovementsMessage =>
         val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
         val newState = state.updated(state.staffMovements + movementsToAdd)
-        val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd), minutesToCrunch)
+        val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd))
         (newState, subscriberEvents)
 
       case msg: RemoveStaffMovementMessage =>
         val uuidToRemove = msg.getUUID
         val movementsToRemove = state.staffMovements.movements.filter(_.uUID == uuidToRemove)
         val newState = state.updated(state.staffMovements - Seq(uuidToRemove))
-        val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToRemove), minutesToCrunch)
+        val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToRemove))
         (newState, subscriberEvents)
 
       case _ =>
@@ -56,7 +56,7 @@ trait StaffMovementsActorLike {
       case GetState =>
         getSender() ! getState().staffMovements
 
-      case TerminalUpdateRequest(terminal, localDate, _, _) =>
+      case TerminalUpdateRequest(terminal, localDate) =>
         getSender() ! StaffMovements(getState().staffMovements.movements.filter { movement =>
           val sdate = SDate(localDate)
           movement.terminal == terminal && (
@@ -65,13 +65,13 @@ trait StaffMovementsActorLike {
         })
     }
 
-  def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int): Props =
+  def streamingUpdatesProps(journalType: StreamingJournalLike): Props =
     Props(new StreamingUpdatesActor[StaffMovementsState, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
       StaffMovementsState(StaffMovements(List())),
       snapshotMessageToState,
-      eventToState(minutesToCrunch),
+      eventToState,
       query
     ))
 }
@@ -109,13 +109,13 @@ object StaffMovementsActor extends StaffMovementsActorLike {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 
-  def terminalUpdateRequests(data: StaffMovements, minutesToCrunch: Int): immutable.Iterable[TerminalUpdateRequest] =
+  def terminalUpdateRequests(data: StaffMovements): immutable.Iterable[TerminalUpdateRequest] =
     data.movements.groupBy(_.terminal).collect {
       case (terminal, movements) if data.movements.nonEmpty =>
         val earliest = SDate(movements.map(_.time).min).millisSinceEpoch
         val latest = SDate(movements.map(_.time).max).millisSinceEpoch
         (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
-          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate)
         }
     }.flatten
 }
@@ -174,7 +174,7 @@ class StaffMovementsActor(val now: () => SDateLike,
       val movements = state.staffMovements.purgeExpired(expireBefore)
       sender() ! movements
 
-    case TerminalUpdateRequest(terminal, localDate, _, _) =>
+    case TerminalUpdateRequest(terminal, localDate) =>
       sender() ! StaffMovements(state.staffMovements.movements.filter { movement =>
         val sdate = SDate(localDate)
         movement.terminal == terminal && (

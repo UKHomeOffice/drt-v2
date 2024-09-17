@@ -14,7 +14,6 @@ import drt.server.feeds.acl.AclFeed
 import drt.shared.CrunchApi.MillisSinceEpoch
 import play.api.Configuration
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
-import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.service.FeedService
@@ -55,8 +54,6 @@ case class TestFeedService(journalType: StreamingJournalLike,
       airportConfig.terminals,
       getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
       updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
-      processingRequest =
-        (terminal, date) => TerminalUpdateRequest(terminal, SDate(date).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch),
       partitionUpdates,
       resetFlightsData(AclFeedSource, TerminalDayFeedArrivalActor.props)
     )), name = name)

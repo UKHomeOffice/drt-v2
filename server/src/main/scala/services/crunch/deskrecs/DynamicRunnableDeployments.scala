@@ -7,7 +7,7 @@ import akka.{Done, NotUsed}
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
+//import services.crunch.desklimits.PortDeskLimits.StaffToDeskLimits
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
@@ -25,11 +25,9 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
   def apply(deploymentQueueActor: ActorRef,
             deploymentQueue: SortedSet[TerminalUpdateRequest],
             staffToDeskLimits: Map[Terminal, List[Int]] => Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff],
-//            crunchRequest: MillisSinceEpoch => CrunchRequest,
             paxProvider: TerminalUpdateRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
             staffMinutesProvider: TerminalUpdateRequest => Future[Map[Terminal, List[Int]]],
             loadsToDeployments: PassengersToQueueMinutes,
-            terminals: Iterable[Terminal],
             queueMinutesSinkActor: ActorRef,
             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
            )
@@ -39,7 +37,6 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
       staffProvider = staffMinutesProvider,
       staffToDeskLimits = staffToDeskLimits,
       loadsToQueueMinutes = loadsToDeployments,
-      terminals = terminals,
       setUpdatedAtForDay = setUpdatedAtForDay,
     )
 
@@ -50,7 +47,6 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
         initialQueue = deploymentQueue,
         sinkActor = queueMinutesSinkActor,
         graphName = "deployments",
-//        processingRequest = crunchRequest,
       )
     (deploymentRequestQueueActor, deploymentsKillSwitch)
   }
@@ -60,21 +56,12 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
 
   def crunchRequestsToDeployments(loadsProvider: TerminalUpdateRequest => Future[Map[TQM, PassengersMinute]],
                                   staffProvider: TerminalUpdateRequest => Future[Map[Terminal, List[Int]]],
-                                  staffToDeskLimits: StaffToDeskLimits,
+                                  staffToDeskLimits: Map[Terminal, List[Int]] => Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff],
                                   loadsToQueueMinutes: PassengersToQueueMinutes,
-                                  terminals: Iterable[Terminal],
                                   setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
                                  )
                                  (implicit executionContext: ExecutionContext): Flow[TerminalUpdateRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
     Flow[TerminalUpdateRequest]
-//      .mapConcat {
-//        case request: CrunchRequest =>
-//          terminals.map { terminal =>
-//            TerminalUpdateRequest(terminal, request.start.toLocalDate, request.offsetMinutes, request.durationMinutes)
-//          }
-//        case request: TerminalUpdateRequest =>
-//          List(request)
-//      }
       .mapAsync(1) { request =>
         loadsProvider(request)
           .map { minutes => Option((request, minutes)) }
@@ -102,11 +89,11 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
       .mapAsync(1) {
         case (request: TerminalUpdateRequest, loads, deskLimitsByTerminal) =>
           val started = SDate.now().millisSinceEpoch
-          log.info(s"[deployments] Optimising ${request.durationMinutes} minutes (${request.start.toISOString} to ${request.end.toISOString})")
+          log.info(s"[deployments] Optimising ${request.terminal} ${request.date.toISOString}")
           loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal(request.terminal), "deployments", request.terminal)
             .map { minutes =>
               log.info(s"[deployments] Optimising complete. Took ${SDate.now().millisSinceEpoch - started}ms")
-              setUpdatedAtForTerminals(terminals, setUpdatedAtForDay, request)
+              setUpdatedAtForDay(request.terminal, request.date, SDate.now().millisSinceEpoch)
               Option(minutes)
             }
             .recover {

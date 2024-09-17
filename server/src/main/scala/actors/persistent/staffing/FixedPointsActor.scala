@@ -35,22 +35,22 @@ trait FixedPointsActorLike {
       fixedPointMessagesToFixedPoints(snapshot.fixedPoints)
   }
 
-  val eventToState: (() => SDateLike, Int, Int) => (FixedPointAssignments, Any) => (FixedPointAssignments, immutable.Iterable[TerminalUpdateRequest]) =
-    (now, forecastMaxDays, minutesToCrunch) => (state: FixedPointAssignments, msg: Any) => msg match {
+  val eventToState: (() => SDateLike, Int) => (FixedPointAssignments, Any) => (FixedPointAssignments, immutable.Iterable[TerminalUpdateRequest]) =
+    (now, forecastMaxDays) => (state: FixedPointAssignments, msg: Any) => msg match {
       case msg: FixedPointsMessage =>
         val newState = fixedPointMessagesToFixedPoints(msg.fixedPoints)
         val diff = state.diff(newState)
-        val subscriberEvents = terminalUpdateRequests(diff, now, forecastMaxDays, minutesToCrunch)
+        val subscriberEvents = terminalUpdateRequests(diff, now, forecastMaxDays)
         (newState, subscriberEvents)
       case _ => (state, Seq.empty)
     }
 
-  val query: (() => SDateLike) => (() => FixedPointAssignments, () => ActorRef) => PartialFunction[Any, Unit] =
-    now => (getState, getSender) => {
+  val query: (() => FixedPointAssignments, () => ActorRef) => PartialFunction[Any, Unit] =
+    (getState, getSender) => {
       case GetState =>
         getSender() ! getState()
 
-      case TerminalUpdateRequest(terminal, localDate, _, _) =>
+      case TerminalUpdateRequest(terminal, localDate) =>
         getSender() ! FixedPointAssignments(getState().assignments.filter { assignment =>
           val sdate = SDate(localDate)
           assignment.terminal == terminal && (
@@ -64,28 +64,26 @@ trait FixedPointsActorLike {
   def streamingUpdatesProps(journalType: StreamingJournalLike,
                             now: () => SDateLike,
                             forecastMaxDays: Int,
-                            minutesToCrunch: Int,
                            ): Props =
     Props(new StreamingUpdatesActor[FixedPointAssignments, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
       FixedPointAssignments.empty,
       snapshotMessageToState,
-      eventToState(now, forecastMaxDays, minutesToCrunch),
-      query(now),
+      eventToState(now, forecastMaxDays),
+      query,
     ))
 
   def terminalUpdateRequests(fixedPoints: FixedPointAssignments,
                              now: () => SDateLike,
                              forecastMaxDays: Int,
-                             minutesToCrunch: Int,
                             ): immutable.Iterable[TerminalUpdateRequest] =
     fixedPoints.assignments.groupBy(_.terminal).collect {
       case (terminal, _) if fixedPoints.assignments.nonEmpty =>
         val earliest = now().millisSinceEpoch
         val latest = now().addDays(forecastMaxDays).millisSinceEpoch
         (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
-          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate)
         }
     }.flatten
 }
@@ -144,7 +142,7 @@ class FixedPointsActor(now: () => SDateLike) extends RecoveryActorLike with Pers
       log.debug(s"GetState received")
       sender() ! state
 
-    case TerminalUpdateRequest(terminal, localDate, _, _) =>
+    case TerminalUpdateRequest(terminal, localDate) =>
       sender() ! FixedPointAssignments(state.assignments.filter { assignment =>
         val sdate = SDate(localDate)
         assignment.terminal == terminal && (

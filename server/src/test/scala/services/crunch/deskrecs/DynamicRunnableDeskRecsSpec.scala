@@ -1,13 +1,13 @@
 package services.crunch.deskrecs
 
 import actors.persistent.SortedActorRefSource
-import akka.{Done, NotUsed}
 import akka.actor.{Actor, ActorRef, Props}
 import akka.pattern.StatusReply
 import akka.stream.scaladsl.Source
 import akka.testkit.TestProbe
+import akka.{Done, NotUsed}
 import controllers.ArrivalGenerator
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import drt.shared._
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
@@ -20,7 +20,7 @@ import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamInitialized
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
@@ -149,7 +149,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
                                  expectedQueuePax: Map[(Terminal, Queue), Int]): Any = {
     val probe = TestProbe()
 
-    val request = CrunchRequest(SDate(flight.apiFlight.Scheduled).toLocalDate, 0, 1440)
+    val request = TerminalUpdateRequest(T1, SDate(flight.apiFlight.Scheduled).toLocalDate)
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
 
     val queueMinutesProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
@@ -167,9 +167,7 @@ class RunnableDynamicDeskRecsSpec extends CrunchTestLike {
       updateCapacity = _ => Future.successful(Done),
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
     )
-    val crunchRequest: MillisSinceEpoch => CrunchRequest =
-      (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
-    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, crunchRequest, SortedSet(), "passenger-loads")
+    val crunchGraphSource = new SortedActorRefSource(TestProbe().ref, SortedSet.empty[TerminalUpdateRequest], "passenger-loads")
 
     val (queue, _) = QueuedRequestProcessing.createGraph(crunchGraphSource, sink, queueMinutesProducer, "passenger-loads").run()
     queue ! request

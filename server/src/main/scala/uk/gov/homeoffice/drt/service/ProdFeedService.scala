@@ -41,7 +41,6 @@ import play.api.Configuration
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import services.{Retry, RetryDelays, StreamSupervision}
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
-import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -91,7 +90,7 @@ object ProdFeedService {
                          nowMillis: () => Long,
                          requestAndTerminateActor: ActorRef,
                         )
-                        (implicit system: ActorSystem, timeout: Timeout): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
+                        (implicit system: ActorSystem, timeout: Timeout, ex: ExecutionContext): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
     FeedArrivalsRouterActor.updateArrivals(
       requestAndTerminateActor,
       (d, t) => props(d.year, d.month, d.day, t, source, None, nowMillis, 250),
@@ -363,8 +362,6 @@ case class ProdFeedService(journalType: StreamingJournalLike,
       allTerminals = airportConfig.terminals,
       arrivalsByDayLookup = getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
       updateArrivals = updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
-      processingRequest =
-        (terminal, date) => TerminalUpdateRequest(terminal, SDate(date).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch),
       partitionUpdates = partitionUpdates,
     )), name = name)
 

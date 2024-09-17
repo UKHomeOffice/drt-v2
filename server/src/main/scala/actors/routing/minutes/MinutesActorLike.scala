@@ -214,9 +214,7 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor, U](terminals: Iterabl
                                                               shouldSendEffects: MinutesContainer[A, B] => Boolean,
                                                              ) extends RouterActorLike2[MinutesContainer[A, B], (Terminal, UtcDate), U] {
   override val sequentialUpdatesActor: ActorRef = context.actorOf(Props(new SequentialAccessActor(updateMinutes, splitByResource) {
-    override def shouldSendEffectsToSubscribers(request: MinutesContainer[A, B]): Boolean = {
-      shouldSendEffects(request)
-    }
+    override def shouldSendEffectsToSubscribers(request: MinutesContainer[A, B]): Boolean = shouldSendEffects(request)
   }))
 
   override def receiveQueries: Receive = {

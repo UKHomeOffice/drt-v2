@@ -1,7 +1,6 @@
 package actors.persistent
 
 import actors.persistent.EgateBanksUpdatesActor.{ReceivedSubscriberAck, SendToSubscriber}
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.EgateBanksUpdatesMessageConversion
 import akka.actor.ActorRef
 import akka.pattern.ask
@@ -12,9 +11,9 @@ import akka.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted
+import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.actor.{PersistentDrtActor, RecoveryActorLike}
-import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.egates._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.EgateBanksUpdates.{PortEgateBanksUpdatesMessage, RemoveEgateBanksUpdateMessage, SetEgateBanksUpdateMessage}
@@ -117,7 +116,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
 
       maybeCrunchRequestQueueActor.foreach { requestActor =>
         (updates.firstMinuteAffected to SDate.now().addDays(maxForecastDays).millisSinceEpoch by MilliTimes.oneHourMillis).map { millis =>
-          requestActor ! TerminalUpdateRequest(updates.terminal, SDate(millis).toLocalDate, offsetMinutes, durationMinutes)
+          requestActor ! TerminalUpdateRequest(updates.terminal, SDate(millis).toLocalDate)
         }
       }
 

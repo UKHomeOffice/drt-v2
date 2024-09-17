@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.mutable
 
@@ -20,7 +20,6 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                                                      day: Int,
                                                                                                                      terminal: Terminal,
                                                                                                                      now: () => SDateLike,
-                                                                                                                     processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                                                                                                                      override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -52,11 +51,10 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
-      log.debug(s"Received MinutesContainer for persistence")
+
       updateAndPersistDiff(container)
 
     case GetState =>
-      log.debug(s"Received GetState")
       sender() ! stateResponse
 
     case _: SaveSnapshotSuccess =>
@@ -80,7 +78,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   private def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]]): Unit =
     diff.foreach { cm =>
-      if (firstMinuteMillis <= cm.minute && cm.minute < lastMinuteMillis) state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
+      if (firstMinuteMillis <= cm.minute && cm.minute <= lastMinuteMillis) state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
     }
 
   private def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
@@ -90,7 +88,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         updateStateFromDiff(differences)
         val messageToPersist = containerToMessage(differences)
         val updateRequests = if (shouldSendEffectsToSubscriber(container))
-          processingRequests(terminal, differences.map(v => SDate(v.minute).toUtcDate).toSet)
+          differences.map(v => SDate(v.minute).toLocalDate).toSet.map(date => TerminalUpdateRequest(terminal, date))
         else Set.empty
         val replyToAndMessage = List((sender(), updateRequests))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)

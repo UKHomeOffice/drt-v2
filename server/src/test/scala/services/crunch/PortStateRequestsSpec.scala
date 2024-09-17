@@ -11,7 +11,6 @@ import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._
-import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
@@ -31,14 +30,11 @@ class PortStateRequestsSpec extends CrunchTestLike {
   val forecastMaxDays = 10
   val forecastMaxMillis: () => MillisSinceEpoch = () => myNow().addDays(forecastMaxDays).millisSinceEpoch
 
-  val processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest] =
-    (terminal: Terminal, dates: Set[UtcDate]) => dates.map(date => TerminalUpdateRequest(terminal, SDate(date).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch))
-
-  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, processingRequests)
+  val lookups: MinuteLookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
   val dummyLegacy1ActorProps: (SDateLike, Int) => Props = (_: SDateLike, _: Int) => Props()
 
-  val flightLookups: FlightLookups = FlightLookups(system, myNow, airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None, processingRequests)
+  val flightLookups: FlightLookups = FlightLookups(system, myNow, airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None)
 
   val legacyDataCutOff: SDateLike = SDate("2020-01-01")
   val maxReplyMessages = 1000

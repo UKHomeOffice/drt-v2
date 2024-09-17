@@ -4,6 +4,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Flow
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{DateLike, SDate, UtcDate}
 
 import scala.concurrent.duration.FiniteDuration
@@ -12,15 +13,15 @@ import scala.concurrent.{ExecutionContext, Future}
 object MergeArrivals {
   case class FeedArrivalSet(isPrimary: Boolean, maybeScheduleTolerance: Option[FiniteDuration], arrivals: Map[UniqueArrival, Arrival])
 
-  def apply(existingMerged: UtcDate => Future[Set[UniqueArrival]],
+  def apply(existingMerged: (Terminal, UtcDate) => Future[Set[UniqueArrival]],
             arrivalSources: Seq[DateLike => Future[FeedArrivalSet]],
             adjustments: Arrival => Arrival,
            )
-           (implicit ec: ExecutionContext): UtcDate => Future[ArrivalsDiff] =
-    (date: UtcDate) => {
+           (implicit ec: ExecutionContext): (Terminal, UtcDate) => Future[ArrivalsDiff] =
+    (terminal, date) => {
       for {
         arrivalSets <- Future.sequence(arrivalSources.map(_(date)))
-        existing <- existingMerged(date)
+        existing <- existingMerged(terminal, date)
       } yield {
         val validatedArrivalSets = arrivalSets.map {
           case fas@FeedArrivalSet(_, _, arrivals) =>
@@ -116,7 +117,7 @@ object MergeArrivals {
       FlightCodeSuffix = next.FlightCodeSuffix.orElse(current.FlightCodeSuffix),
     )
 
-  def processingRequestToArrivalsDiff(mergeArrivalsForDate: UtcDate => Future[ArrivalsDiff],
+  def processingRequestToArrivalsDiff(mergeArrivalsForDate: (Terminal, UtcDate) => Future[ArrivalsDiff],
                                       setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
                                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
                                       updateAggregatedArrivals: ArrivalsDiff => Unit,
@@ -125,7 +126,8 @@ object MergeArrivals {
     Flow[TerminalUpdateRequest]
       .mapAsync(1) {
         request =>
-          mergeArrivalsForDate(SDate(request.date).toUtcDate)
+          println(s"\n\nMerging ${request.terminal} on ${request.date}\n\n")
+          mergeArrivalsForDate(request.terminal, SDate(request.date).toUtcDate)
             .flatMap(addArrivalPredictions)
             .flatMap { diff =>
               setPcpTimes(diff.toUpdate.values.toSeq)

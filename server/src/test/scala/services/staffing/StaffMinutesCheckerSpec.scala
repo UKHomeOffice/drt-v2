@@ -29,7 +29,7 @@ class StaffMinutesCheckerSpec extends Specification {
         day <- Seq(LocalDate(2023, 1, 9), LocalDate(2023, 1, 10))
         terminal <- Lhr.config.terminals
       } yield {
-        TerminalUpdateRequest(terminal, day, Lhr.config.crunchOffsetMinutes, Lhr.config.minutesToCrunch)
+        TerminalUpdateRequest(terminal, day)
       }
 
       testProbe.receiveN(8).toSet === expected.toSet

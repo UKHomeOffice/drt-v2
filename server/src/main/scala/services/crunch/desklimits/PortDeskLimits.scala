@@ -12,7 +12,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 object PortDeskLimits {
-  type StaffToDeskLimits = Map[Terminal, List[Int]] => Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff]
+//  type StaffToDeskLimits = Map[Terminal, List[Int]] => Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff]
 
   def fixed(airportConfig: AirportConfig, egatesProvider: Terminal => Future[EgateBanksUpdates])
            (implicit ec: ExecutionContext): Map[Terminal, FixedTerminalDeskLimits] =

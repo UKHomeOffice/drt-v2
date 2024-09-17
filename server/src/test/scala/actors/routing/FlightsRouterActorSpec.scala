@@ -16,6 +16,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.PaxNumbers
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaNonMachineReadable
@@ -40,7 +41,7 @@ class FlightsRouterActorSpec extends CrunchTestLike {
 
   val testProbe: TestProbe = TestProbe()
 
-  val noopUpdates: (Option[ActorRef], Option[ActorRef]) => ((Terminal, UtcDate), FlightUpdates) => Future[Set[Long]] =
+  val noopUpdates: (Option[ActorRef], Option[ActorRef]) => ((Terminal, UtcDate), FlightUpdates) => Future[Set[TerminalUpdateRequest]] =
     (_, _) => (_, _: FlightUpdates) => Future(Set())
 
   "Concerning visibility of flights (scheduled & pcp range)" >> {

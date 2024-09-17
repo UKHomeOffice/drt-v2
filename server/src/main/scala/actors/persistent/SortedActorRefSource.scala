@@ -50,7 +50,6 @@ final class SortedActorRefSource(persistentActor: ActorRef,
                 m.collect { case r: TerminalUpdateRequest => r }
               case _: Long =>
                 println(s"\n\n!!! Received legacy message Long [$graphName] !!!\n\n")
-//                m.collect { case l: Long => processingRequest(l) }
                 Iterable.empty
             }
             .map { requests =>

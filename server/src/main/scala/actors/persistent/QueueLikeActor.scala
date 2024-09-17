@@ -1,7 +1,6 @@
 package actors.persistent
 
 import akka.persistence._
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
@@ -21,7 +20,7 @@ object QueueLikeActor {
   case object Tick
 }
 
-abstract class QueueLikeActor(val now: () => SDateLike/*, processingRequest: MillisSinceEpoch => ProcessingRequest*/) extends RecoveryActorLike {
+abstract class QueueLikeActor(val now: () => SDateLike) extends RecoveryActorLike {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val maybeSnapshotInterval: Option[Int] = Option(500)
@@ -38,16 +37,13 @@ abstract class QueueLikeActor(val now: () => SDateLike/*, processingRequest: Mil
       state ++= requests.map(mergeArrivalsRequestFromMessage)
 
     case RemoveCrunchRequestMessage(Some(year), Some(month), Some(day), maybeTerminal) => state.find {
-      case TerminalUpdateRequest(terminal, localDate, _, _) =>
+      case TerminalUpdateRequest(terminal, localDate) =>
         localDate == LocalDate(year, month, day) && Option(terminal) == maybeTerminal.map(Terminal(_))
-      case CrunchRequest(localDate, _, _) =>
+      case CrunchRequest(localDate) =>
         localDate == LocalDate(year, month, day)
       case MergeArrivalsRequest(utcDate) =>
         utcDate == UtcDate(year, month, day)
     }.foreach(state -= _)
-
-//    case DaysMessage(days) => state ++= days.map(processingRequest)
-//    case RemoveDayMessage(Some(day)) => state -= processingRequest(day)
   }
 
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
@@ -58,10 +54,6 @@ abstract class QueueLikeActor(val now: () => SDateLike/*, processingRequest: Mil
     case MergeArrivalsRequestsMessage(requests) =>
       log.info(s"Restoring queue to ${requests.size} days")
       state ++= requests.map(mergeArrivalsRequestFromMessage)
-
-//    case DaysMessage(days) =>
-//      log.info(s"Restoring queue to ${days.size} days")
-//      state ++= days.map(processingRequest)
   }
 
   override def stateToMessage: GeneratedMessage = {
@@ -85,40 +77,43 @@ abstract class QueueLikeActor(val now: () => SDateLike/*, processingRequest: Mil
     case GetState =>
       sender() ! state
 
-    case cr: ProcessingRequest =>
+    case cr: TerminalUpdateRequest =>
       self ! Seq(cr)
 
-    case requests: Iterable[_] =>
-      requests.headOption
-        .map {
-          case _: Long =>
-            println(s"\n\n*** !!! Received Long !!! ***\n\n")
-//            requests
-//              .collect { case l: MillisSinceEpoch => processingRequest(l) }
-//              .filterNot(state.contains)
-            Iterable.empty
-          case _: ProcessingRequest =>
-            requests
-              .collect { case r: ProcessingRequest => r }
-              .filterNot(state.contains)
-        }
-        .map { processingRequests =>
-          val maybeMessage = processingRequests.headOption.map {
-            case _: LoadProcessingRequest =>
-              CrunchRequestsMessage(processingRequests.collect {
-                case r: LoadProcessingRequest => loadProcessingRequestToMessage(r)
-              }.toList)
-            case _: MergeArrivalsRequest =>
-              MergeArrivalsRequestsMessage(processingRequests.collect {
-                case r: MergeArrivalsRequest => mergeArrivalRequestToMessage(r)
-              }.toList)
-          }
-          maybeMessage.foreach { msg =>
-            persistAndMaybeSnapshot(msg)
-            updateState(processingRequests)
-          }
+    case requests: Iterable[TerminalUpdateRequest] =>
+      val newRequests = requests.filterNot(state.contains)
+      val messages = newRequests.map(loadProcessingRequestToMessage)
+      persistAndMaybeSnapshot(CrunchRequestsMessage(messages.toSeq))
+      updateState(newRequests)
+      println(s"\n\ngot $newRequests. state now: $state\n\n")
 
-        }
+//      requests.headOption
+//        .map {
+//          case _: Long =>
+//            println(s"\n\n*** !!! Received Long !!! ***\n\n")
+//            Iterable.empty
+//          case _: ProcessingRequest =>
+//            requests
+//              .collect { case r: ProcessingRequest => r }
+//              .filterNot(state.contains)
+//        }
+//        .map { processingRequests =>
+//          val maybeMessage = processingRequests.headOption.map {
+//            case _: LoadProcessingRequest =>
+//              CrunchRequestsMessage(processingRequests.collect {
+//                case r: LoadProcessingRequest => loadProcessingRequestToMessage(r)
+//              }.toList)
+//            case _: MergeArrivalsRequest =>
+//              MergeArrivalsRequestsMessage(processingRequests.collect {
+//                case r: MergeArrivalsRequest => mergeArrivalRequestToMessage(r)
+//              }.toList)
+//          }
+//          maybeMessage.foreach { msg =>
+//            persistAndMaybeSnapshot(msg)
+//            updateState(processingRequests)
+//          }
+//
+//        }
 
     case RemoveProcessingRequest(cr) =>
       log.info(s"Removing ${cr.date} from queue. Queue now contains ${state.size} days")

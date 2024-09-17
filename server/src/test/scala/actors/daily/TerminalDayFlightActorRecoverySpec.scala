@@ -132,9 +132,6 @@ class TerminalDayFlightActorRecoverySpec extends CrunchTestLike {
     }
   }
 
-
-
-  def actorForTerminalAndDatePit(terminal: Terminal, date: UtcDate, pit: SDateLike): ActorRef = {
+  def actorForTerminalAndDatePit(terminal: Terminal, date: UtcDate, pit: SDateLike): ActorRef =
     system.actorOf(TerminalDayFlightActor.propsPointInTime(terminal, date, () => SDate(date), pit.millisSinceEpoch, None, paxFeedSourceOrder, None))
-  }
 }

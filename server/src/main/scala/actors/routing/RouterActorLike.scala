@@ -19,13 +19,11 @@ trait RouterActorLikeWithSubscriber[U <: Updates, P, A] extends RouterActorLike[
   var updatesSubscribers: List[ActorRef] = List.empty
 
   override def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[Set[A]] =
-    super.handleUpdatesAndAck(updates, replyTo).map { updatedMillis =>
+    super.handleUpdatesAndAck(updates, replyTo).map { updateRequests =>
       if (shouldSendEffectsToSubscriber(updates)) {
-        updatesSubscribers.foreach { subscriber =>
-          if (updatedMillis.nonEmpty) subscriber ! updatedMillis
-        }
+        updatesSubscribers.foreach(subscriber => updateRequests.foreach(subscriber ! _))
       }
-      updatedMillis
+      updateRequests
     }
 
   override def receiveUtil: Receive = super.receiveUtil orElse {
@@ -73,11 +71,11 @@ trait RouterActorLike[U <: Updates, P, A] extends Actor with ActorLogging {
   }
 
   private def updateAll(updates: U): Future[Set[A]] = {
-    val eventualUpdatedMinutesDiff: Source[Set[A], NotUsed] =
+    val eventualUpdateRequests: Source[Set[A], NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => updatePartition(partition, updates)
       }
-    combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
+    combineUpdateEffectsStream(eventualUpdateRequests)
   }
 
   private def combineUpdateEffectsStream(effects: Source[Set[A], NotUsed]): Future[Set[A]] =

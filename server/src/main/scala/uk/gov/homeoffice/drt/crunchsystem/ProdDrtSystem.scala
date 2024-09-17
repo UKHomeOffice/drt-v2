@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackD
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -24,11 +24,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val ec: ExecutionContext,
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends DrtSystemInterface {
-
-  val processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest] =
-    (terminal: Terminal, dates: Set[UtcDate]) => dates.map(date => TerminalUpdateRequest(terminal, SDate(date).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch))
-
-  override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, processingRequests)
+  override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
   override val flightLookups: FlightLookupsLike = FlightLookups(
     system,
@@ -37,7 +33,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     params.maybeRemovalCutOffSeconds,
     paxFeedSourceOrder,
     splitsCalculator.terminalSplits,
-    (terminal, utcDates) => utcDates.map(d => TerminalUpdateRequest(terminal, SDate(d).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch))
   )
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)

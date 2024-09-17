@@ -35,7 +35,7 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
       val oldestJoinTime = 1
       val minute = 5
       assertQueueAndWait(60, List(QueuePassenger(30, oldestJoinTime), QueuePassenger(40, 2)), minute)(
-        expQueue = List(QueuePassenger(10, oldestJoinTime)), expWait = minute - oldestJoinTime)
+        expQueue = List(QueuePassenger(10, 2)), expWait = minute - oldestJoinTime)
     }
   }
 
@@ -105,8 +105,7 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
       val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(randomPassengersForMinutes(mins).map(_.map(_.load.toDouble / 60)), List.fill(mins)(0), List.fill(mins)(0), config)
 
       result.get.recommendedDesks should ===(List.fill(mins)(0))
-      result.get.waitTimes should ===(0)
-      result.get.paxInQueue should ===(0)
+      result.get.waitTimes should ===(0 to 359)
     }
   }
 

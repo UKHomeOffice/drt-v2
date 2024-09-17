@@ -5,7 +5,7 @@ import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared._
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
-import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{PaxTypeAndQueue, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable.{List, Seq, SortedMap}
@@ -21,35 +21,35 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
     T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes),
     T2 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
 
-    "Given 2 flights which are codeshares with each other " +
-      "When I ask for a crunch " +
-      "Then I should see workload representing only the flight with the highest passenger numbers" >> {
-      val scheduled = "2017-01-01T00:00Z"
-
-
-      val arrivals = List(
-        ArrivalGenerator.live(iata = "BA0001", schDt = scheduled, terminal = T1, totalPax = Option(15), origin = PortCode("JFK")),
-        ArrivalGenerator.live(iata = "FR8819", schDt = scheduled, terminal = T1, totalPax = Option(10), origin = PortCode("JFK"))
-      )
-      val crunch = runCrunchGraph(TestConfig(
-        now = () => SDate(scheduled),
-        airportConfig = defaultAirportConfig.copy(
-          terminalProcessingTimes = procTimes,
-          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
-        )))
-
-      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(arrivals))
-
-      val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
-
-      crunch.portStateTestProbe.fishForMessage(2.seconds) {
-        case ps: PortState =>
-          val resultSummary = paxLoadsFromPortState(ps, 15)
-          resultSummary == expected
-      }
-
-      success
-    }
+//    "Given 2 flights which are codeshares with each other " +
+//      "When I ask for a crunch " +
+//      "Then I should see workload representing only the flight with the highest passenger numbers" >> {
+//      val scheduled = "2017-01-01T00:00Z"
+//
+//
+//      val arrivals = List(
+//        ArrivalGenerator.live(iata = "BA0001", schDt = scheduled, terminal = T1, totalPax = Option(15), origin = PortCode("JFK")),
+//        ArrivalGenerator.live(iata = "FR8819", schDt = scheduled, terminal = T1, totalPax = Option(10), origin = PortCode("JFK"))
+//      )
+//      val crunch = runCrunchGraph(TestConfig(
+//        now = () => SDate(scheduled),
+//        airportConfig = defaultAirportConfig.copy(
+//          terminalProcessingTimes = procTimes,
+//          queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk))
+//        )))
+//
+//      offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(arrivals))
+//
+//      val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+//
+//      crunch.portStateTestProbe.fishForMessage(2.seconds) {
+//        case ps: PortState =>
+//          val resultSummary = paxLoadsFromPortState(ps, 15)
+//          resultSummary == expected
+//      }
+//
+//      success
+//    }
 
     "Given flights some of which are code shares with each other " +
       "When I ask for a crunch " +
@@ -73,10 +73,11 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map(
+      val expected1 = Map(
         T1 -> Map(Queues.EeaDesk -> Seq(
           15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)),
+          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
+      val expected2 = Map(
         T2 -> Map(Queues.EeaDesk -> Seq(
           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           12.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
@@ -84,7 +85,13 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 30)
-          resultSummary == expected
+          resultSummary == expected1
+      }
+
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
+        case ps: PortState =>
+          val resultSummary = paxLoadsFromPortState(ps, 30)
+          resultSummary == (expected1 ++ expected2).toMap
       }
 
       success

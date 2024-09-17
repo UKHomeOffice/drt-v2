@@ -32,7 +32,6 @@ object TerminalDayFlightActor {
                               terminalSplits: Option[Splits],
                               requestHistoricSplitsActor: Option[ActorRef],
                               requestHistoricPaxActor: Option[ActorRef],
-                              processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                              ): Props =
     Props(new TerminalDayFlightActor(
       date.year,
@@ -46,7 +45,6 @@ object TerminalDayFlightActor {
       terminalSplits,
       requestHistoricSplitsActor,
       requestHistoricPaxActor,
-      processingRequests,
     ))
 
   def propsPointInTime(terminal: Terminal,
@@ -56,7 +54,6 @@ object TerminalDayFlightActor {
                        cutOff: Option[FiniteDuration],
                        paxFeedSourceOrder: List[FeedSource],
                        terminalSplits: Option[Splits],
-                       processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                       ): Props =
     Props(new TerminalDayFlightActor(
       date.year,
@@ -70,7 +67,6 @@ object TerminalDayFlightActor {
       terminalSplits,
       None,
       None,
-      processingRequests,
     ))
 }
 
@@ -85,7 +81,6 @@ class TerminalDayFlightActor(year: Int,
                              terminalSplits: Option[Splits],
                              maybeRequestHistoricSplitsActor: Option[ActorRef],
                              maybeRequestHistoricPaxActor: Option[ActorRef],
-                             processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                             ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -209,7 +204,7 @@ class TerminalDayFlightActor(year: Int,
     requestMissingPax()
     requestMissingHistoricSplits()
 
-    processingRequests(terminal, minutesToUpdate.map(SDate(_).toUtcDate))
+    minutesToUpdate.map(SDate(_).toLocalDate).map(d => TerminalUpdateRequest(terminal, d))
   }
 
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =

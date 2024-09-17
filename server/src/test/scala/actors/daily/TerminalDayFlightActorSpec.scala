@@ -1,31 +1,28 @@
 package actors.daily
 
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.ActorRef
 import akka.pattern.ask
 import controllers.ArrivalGenerator.arrivalForDayAndTerminal
-import drt.shared.CrunchApi.CrunchMinute
 import drt.shared.FlightsApi.RemoveSplits
-import drt.shared.TQM
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalsDiff, FlightsWithSplits, Splits, SplitsForArrivals}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.LiveFeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
-import scala.collection.mutable
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 
-class MockTerminalDayQueuesActor(day: SDateLike,
-                                 terminal: Terminal,
-                                 override val state: mutable.Map[TQM, CrunchMinute],
-                                ) extends TerminalDayQueuesActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => day, None)
+//class MockTerminalDayQueuesActor(day: SDateLike,
+//                                 terminal: Terminal,
+//                                 override val state: mutable.Map[TQM, CrunchMinute],
+//                                ) extends TerminalDayQueuesActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => day, None)
 
-class TerminalDayFlightsActorSpec extends CrunchTestLike {
+class TerminalDayFlightActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
   val queue: Queue = EeaDesk
 

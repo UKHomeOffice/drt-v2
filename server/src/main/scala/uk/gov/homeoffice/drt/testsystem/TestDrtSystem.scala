@@ -10,17 +10,15 @@ import manifests.ManifestLookupLike
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import slickdb._
-import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, DrtSystemInterface}
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.FeedService
 import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
 import uk.gov.homeoffice.drt.testsystem.db.{AggregateDbH2, AkkaDbH2}
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -53,17 +51,13 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val userFeedbackService: IUserFeedbackDao = MockUserFeedbackDao()
   override val abFeatureService: IABFeatureDao = MockAbFeatureDao()
 
-  val processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest] =
-    (terminal: Terminal, dates: Set[UtcDate]) => dates.map(date => TerminalUpdateRequest(terminal, SDate(date).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch))
-
-  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, processingRequests)
+  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
   override val flightLookups: FlightLookupsLike = TestFlightLookups(
     system,
     now,
     airportConfig.queuesByTerminal,
     paxFeedSourceOrder,
     splitsCalculator.terminalSplits,
-    (terminal, utcDates) => utcDates.map(d => TerminalUpdateRequest(terminal, SDate(d).toLocalDate, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch))
   )
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val manifestLookups: ManifestLookupsLike = ManifestLookups(system)

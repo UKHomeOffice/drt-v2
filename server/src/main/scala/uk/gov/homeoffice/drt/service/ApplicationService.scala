@@ -43,7 +43,7 @@ import slickdb.dao.ArrivalStatsDao
 import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{TerminalCarrier, TerminalOrigin}
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.actor.serialisation.{ConfigDeserialiser, ConfigSerialiser, EmptyConfig}
 import uk.gov.homeoffice.drt.actor.state.ArrivalsState
 import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeProvider}
@@ -100,7 +100,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
   private val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val crunchRequestProvider: LocalDate => CrunchRequest =
-    date => CrunchRequest(date, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+    date => CrunchRequest(date)
 
   val slasActor: ActorRef = system.actorOf(Props(new ConfigActor[Map[Queue, Int], SlaConfigs]("slas", now, crunchRequestProvider, maxDaysToConsider)(
     emptyProvider = new EmptyConfig[Map[Queue, Int], SlaConfigs] {
@@ -248,12 +248,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
       if (config.getOptional[Boolean]("feature-flags.populate-historic-pax").getOrElse(false))
         PassengersLiveView.populateHistoricPax(populateLivePaxViewForDate)
 
-//      val crunchRequest: MillisSinceEpoch => CrunchRequest =
-//        (millis: MillisSinceEpoch) => CrunchRequest(millis, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
-//
-//      val mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest =
-//        (millis: MillisSinceEpoch) => MergeArrivalsRequest(SDate(millis).toUtcDate)
-
       val (historicSplitsQueueActor, historicSplitsKillSwitch) = RunnableHistoricSplits(
         airportConfig.portCode,
         actorService.flightsRouterActor,
@@ -274,16 +268,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
         mergeArrivalsQueueActor = actors.mergeArrivalsQueueActor,
         feedArrivalsForDate = ProdFeedService.arrivalFeedProvidersInOrder(feedService.activeFeedActorsWithPrimary),
         mergeArrivalsQueue = mergeArrivalsQueue,
-//        mergeArrivalRequest = mergeArrivalRequest,
         setPcpTimes = setPcpTimes,
         addArrivalPredictions = addArrivalPredictions,
       )
 
-
       val crunchRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
         crunchQueueActor = actors.crunchQueueActor,
         crunchQueue = crunchQueue,
-//        crunchRequest = crunchRequest,
         flightsProvider = OptimisationProviders.flightsWithSplitsProvider(actorService.flightsRouterActor),
         deskRecsProvider = portDeskRecs,
         redListUpdatesProvider = () => redListUpdatesActor.ask(GetState).mapTo[RedListUpdates],
@@ -304,7 +295,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val (deskRecsRequestQueueActor: ActorRef, deskRecsKillSwitch: UniqueKillSwitch) = DynamicRunnableDeskRecs(
         deskRecsQueueActor = actors.deskRecsQueueActor,
         deskRecsQueue = deskRecsQueue,
-//        crunchRequest = crunchRequest,
         paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
         deskLimitsProvider = deskLimitsProviders,
         terminalLoadsToQueueMinutes = portDeskRecs.terminalLoadsToDesks,
@@ -320,11 +310,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
         deploymentQueueActor = actors.deploymentQueueActor,
         deploymentQueue = deploymentQueue,
         staffToDeskLimits = staffToDeskLimits,
-//        crunchRequest = crunchRequest,
         paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
-        staffMinutesProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor, airportConfig.terminals),
+        staffMinutesProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor),
         loadsToDeployments = portDeskRecs.loadsToSimulations,
-        terminals = airportConfig.terminals,
         queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
         setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
           airportConfig.portCode,
@@ -336,7 +324,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val (staffingUpdateRequestQueue: ActorRef, staffingUpdateKillSwitch: UniqueKillSwitch) = RunnableStaffing(
         staffingQueueActor = actors.staffingQueueActor,
         staffQueue = staffQueue,
-//        crunchRequest = crunchRequest,
         shiftsActor = actorService.liveShiftsReadActor,
         fixedPointsActor = actorService.liveFixedPointsReadActor,
         movementsActor = actorService.liveStaffMovementsReadActor,

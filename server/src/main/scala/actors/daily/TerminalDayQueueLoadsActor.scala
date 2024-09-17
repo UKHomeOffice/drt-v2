@@ -6,18 +6,16 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
 import drt.shared.{CrunchApi, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 object TerminalDayQueueLoadsActor {
-  def props(processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest])
-           (terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, None, processingRequests))
+  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
+    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, None))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), (_, _) => Set.empty))
+    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
 }
 
 class TerminalDayQueueLoadsActor(year: Int,
@@ -26,8 +24,7 @@ class TerminalDayQueueLoadsActor(year: Int,
                                  terminal: Terminal,
                                  val now: () => SDateLike,
                                  maybePointInTime: Option[MillisSinceEpoch],
-                                 processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest]
-                                ) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](year, month, day, terminal, now, processingRequests, maybePointInTime) {
+                                ) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val persistenceIdType: String = "passengers"
@@ -36,13 +33,14 @@ class TerminalDayQueueLoadsActor(year: Int,
 
   override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[PassengersMinute, TQM]): Boolean = true
 
-  override def containerToMessage(differences: Iterable[PassengersMinute]): GeneratedMessage = PassengersMinutesMessage(
-    differences.map(pm => PassengersMinuteMessage(
-      queueName = Option(pm.queue.toString),
-      minute = Option(pm.minute),
-      passengers = pm.passengers.toSeq,
-    )).toSeq
-  )
+  override def containerToMessage(container: Iterable[PassengersMinute]): GeneratedMessage =
+    PassengersMinutesMessage(
+      container.map(pm => PassengersMinuteMessage(
+        queueName = Option(pm.queue.toString),
+        minute = Option(pm.minute),
+        passengers = pm.passengers.toSeq,
+      )).toSeq
+    )
 
   override val valFromMessage: PassengersMinuteMessage => PassengersMinute =
     (pm: PassengersMinuteMessage) => passengersMinuteFromMessage(terminal, pm)

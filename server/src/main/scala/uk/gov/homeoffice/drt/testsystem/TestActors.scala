@@ -16,9 +16,7 @@ import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, Persiste
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.Logger
-import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
-import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, MergeArrivalsRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -112,12 +110,12 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestStreamingUpdatesActor[T, S](persistenceId: String,
-                                        journalType: StreamingJournalLike,
-                                        initialState: T,
-                                        snapshotMessageToState: Any => T,
-                                        eventToState: (T, Any) => (T, S),
-                                        query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
+  private class TestStreamingUpdatesActor[T, S](persistenceId: String,
+                                                journalType: StreamingJournalLike,
+                                                initialState: T,
+                                                snapshotMessageToState: Any => T,
+                                                eventToState: (T, Any) => (T, S),
+                                                query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
                                        ) extends StreamingUpdatesActor[T, S](persistenceId, journalType, initialState, snapshotMessageToState, eventToState, query) {
     override val receiveQuery: Receive = query(() => state, sender) orElse {
       case ResetData =>
@@ -130,7 +128,6 @@ object TestActors {
 
   object TestShiftsActor extends ShiftsActorLike {
     override def streamingUpdatesProps(journalType: StreamingJournalLike,
-                                       minutesToCrunch: Int,
                                        now: () => SDateLike,
                                       ): Props =
       Props(new TestStreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
@@ -138,7 +135,7 @@ object TestActors {
         journalType,
         ShiftAssignments.empty,
         snapshotMessageToState,
-        eventToState(now, minutesToCrunch),
+        eventToState(now),
         query(now)
       ))
   }
@@ -150,27 +147,26 @@ object TestActors {
     override def streamingUpdatesProps(journalType: StreamingJournalLike,
                                        now: () => SDateLike,
                                        forecastMaxDays: Int,
-                                       minutesToCrunch: Int,
                                       ): Props =
       Props(new TestStreamingUpdatesActor[FixedPointAssignments, Iterable[TerminalUpdateRequest]](
         persistenceId,
         journalType,
         FixedPointAssignments.empty,
         snapshotMessageToState,
-        eventToState(now, forecastMaxDays, minutesToCrunch),
-        query(now)
+        eventToState(now, forecastMaxDays),
+        query
       ))
   }
 
   object TestStaffMovementsActor extends StaffMovementsActorLike {
 
-    override def streamingUpdatesProps(journalType: StreamingJournalLike, minutesToCrunch: Int): Props =
+    override def streamingUpdatesProps(journalType: StreamingJournalLike): Props =
       Props(new TestStreamingUpdatesActor[StaffMovementsState, Iterable[TerminalUpdateRequest]](
         persistenceId,
         journalType,
         StaffMovementsState(StaffMovements(List())),
         snapshotMessageToState,
-        eventToState(minutesToCrunch),
+        eventToState,
         query
       ))
   }
@@ -304,11 +300,10 @@ object TestActors {
   class TestFeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
                                     arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
                                     updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
-                                    processingRequest: (Terminal, UtcDate) => TerminalUpdateRequest,
                                     partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                                     resetData: (Terminal, UtcDate) => Future[Any],
                                    )
-    extends FeedArrivalsRouterActor(allTerminals, arrivalsByDayLookup, updateArrivals, processingRequest, partitionUpdates) {
+    extends FeedArrivalsRouterActor(allTerminals, arrivalsByDayLookup, updateArrivals, partitionUpdates) {
     override def receive: Receive = resetReceive orElse super.receive
 
     private var terminalDaysUpdated: Set[(Terminal, UtcDate)] = Set()
@@ -381,30 +376,12 @@ object TestActors {
     override def receive: Receive = myReceive orElse super.receive
   }
 
-  class TestTerminalDayFeedArrivalActor[A <: FeedArrival](year: Int,
-                                                          month: Int,
-                                                          day: Int,
-                                                          terminal: Terminal,
-                                                          feedSource: FeedSource,
-                                                          mpit: Option[Long],
-                                                          etm: PartialFunction[(Any, Map[UniqueArrival, A]), Option[GeneratedMessage]],
-                                                          mts: (GeneratedMessage, Map[UniqueArrival, A]) => Map[UniqueArrival, A],
-                                                          stm: Map[UniqueArrival, A] => GeneratedMessage,
-                                                          sfm: GeneratedMessage => Map[UniqueArrival, A],
-                                                          msi: Int = 250,
-                                                         ) extends TerminalDayFeedArrivalActor(year, month, day, terminal, feedSource, mpit, etm, mts, stm, sfm, msi) with Resettable {
-    override def resetState(): Unit = state = emptyState
-
-    override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
-  }
-
   class TestTerminalDayQueuesActor(year: Int,
                                    month: Int,
                                    day: Int,
                                    terminal: Terminal,
                                    now: () => SDateLike,
-                                   processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
-                                  ) extends TerminalDayQueuesActor(year, month, day, terminal, now, None, processingRequests) with Resettable {
+                                  ) extends TerminalDayQueuesActor(year, month, day, terminal, now, None) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
@@ -415,8 +392,7 @@ object TestActors {
                                   day: Int,
                                   terminal: Terminal,
                                   now: () => SDateLike,
-                                  processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
-                                 ) extends TerminalDayStaffActor(year, month, day, terminal, now, None, processingRequests) with Resettable {
+                                 ) extends TerminalDayStaffActor(year, month, day, terminal, now, None) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
@@ -430,7 +406,6 @@ object TestActors {
                                    paxFeedSourceOrder: List[FeedSource],
                                    requestHistoricSplitsActor: Option[ActorRef],
                                    requestHistoricPaxActor: Option[ActorRef],
-                                   processingRequests: (Terminal, Set[UtcDate]) => Set[TerminalUpdateRequest],
                                   )
     extends TerminalDayFlightActor(
       year,
@@ -444,7 +419,6 @@ object TestActors {
       None,
       requestHistoricSplitsActor,
       requestHistoricPaxActor,
-      processingRequests,
     ) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
