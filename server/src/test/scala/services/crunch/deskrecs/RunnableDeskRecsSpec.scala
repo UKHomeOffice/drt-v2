@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import actors.PartitionedPortStateActor.GetFlights
+import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
 import actors.persistent.SortedActorRefSource
 import akka.Done
 import akka.actor.{Actor, ActorRef, Props}
@@ -55,7 +55,7 @@ class MockPortStateActor(probe: TestProbe, responseDelayMillis: Long) extends Ac
       log.error(s"Failed", t)
       probe.ref ! StreamFailure
 
-    case getFlights: GetFlights =>
+    case getFlights: GetFlightsForTerminalDateRange =>
       implicit val ec: ExecutionContextExecutor = context.dispatcher
       val replyTo = sender()
       context.system.scheduler.scheduleOnce(responseDelayMillis.milliseconds) {
@@ -139,10 +139,11 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     val midnight20190101 = SDate("2019-01-01T00:00")
     daysQueueSource ! TerminalUpdateRequest(T1, midnight20190101.toLocalDate)
     val expectedStart = midnight20190101.millisSinceEpoch
-    val expectedEnd = midnight20190101.addMinutes(30).millisSinceEpoch
+    val expectedEnd = midnight20190101.addDays(1).addMinutes(-1).millisSinceEpoch
 
     portStateProbe.fishForMessage(5.seconds) {
-      case GetFlights(start, end) => start == expectedStart && end == expectedEnd
+      case GetFlightsForTerminalDateRange(start, end, t) =>
+        start == expectedStart && end == expectedEnd && t == T1
       case _ => false
     }
 

@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import actors.PartitionedPortStateActor.GetStateForDateRange
+import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange}
 import actors.persistent.SortedActorRefSource
 import akka.Done
 import akka.actor.{Actor, Props}
@@ -13,11 +13,11 @@ import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.OptimiserMocks.MockSinkActor
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
-import uk.gov.homeoffice.drt.actor.commands.CrunchRequest
+import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.collection.SortedSet
@@ -27,7 +27,7 @@ import scala.concurrent.duration._
 
 class MockProviderActor(minutes: MinutesContainer[PassengersMinute, TQM]) extends Actor {
   override def receive: Receive = {
-    case _: GetStateForDateRange => sender() ! minutes
+    case _: GetStateForTerminalDateRange => sender() ! minutes
   }
 }
 
@@ -46,7 +46,7 @@ class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
                                  expectedQueuePax: PartialFunction[Any, Boolean]): Any = {
     val probe = TestProbe()
 
-    val request = CrunchRequest(SDate("2021-05-01").toLocalDate)
+    val request = TerminalUpdateRequest(T1, SDate("2021-05-01").toLocalDate)
     val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
     val mockProvider = system.actorOf(Props(new MockProviderActor(minutes)))
 

@@ -1,7 +1,7 @@
 package actors.daily
 
 import akka.persistence.SaveSnapshotSuccess
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer, PassengersMinute}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
@@ -51,7 +51,6 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
-
       updateAndPersistDiff(container)
 
     case GetState =>

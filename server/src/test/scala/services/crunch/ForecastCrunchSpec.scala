@@ -40,16 +40,28 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expectedForecast = Map(
+      SDate(scheduled).toISOString -> 20,
+      SDate(scheduled).addMinutes(1).toISOString -> 1
+    )
+    val expectedForecast2 = Map(
       SDate(base).toISOString -> 20,
       SDate(base).addMinutes(1).toISOString -> 1,
       SDate(scheduled).toISOString -> 20,
       SDate(scheduled).addMinutes(1).toISOString -> 1
     )
 
-    crunch.portStateTestProbe.fishForMessage(1.seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case PortState(_, cms, _) =>
         val forecastSummary = interestingPaxLoads(cms)
+        println(s"forecastSummary: $forecastSummary, ${cms.size}")
         forecastSummary == expectedForecast
+    }
+
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
+      case PortState(_, cms, _) =>
+        val forecastSummary = interestingPaxLoads(cms)
+        println(s"forecastSummary: $forecastSummary, ${cms.size}")
+        forecastSummary == expectedForecast2
     }
 
     success

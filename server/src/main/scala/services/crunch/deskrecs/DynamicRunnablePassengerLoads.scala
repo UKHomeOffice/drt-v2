@@ -33,7 +33,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
             queueStatusProvider: DynamicQueueStatusProvider,
             updateLivePaxView: MinutesContainer[CrunchApi.PassengersMinute, TQM] => Future[StatusReply[Done]],
             terminalSplits: Terminal => Option[Splits],
-            queueLoadsActor: ActorRef,
+            queueLoadsSinkActor: ActorRef,
             queuesByTerminal: SortedMap[Terminal, Seq[Queue]],
             paxFeedSourceOrder: List[FeedSource],
             updateCapacity: UtcDate => Future[Done],
@@ -59,7 +59,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
         minutesProducer = passengerLoadsFlow,
         persistentQueueActor = crunchQueueActor,
         initialQueue = crunchQueue,
-        sinkActor = queueLoadsActor,
+        sinkActor = queueLoadsSinkActor,
         graphName = "passenger-loads",
       )
     crunchRequestQueueActor

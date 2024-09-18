@@ -126,7 +126,6 @@ object MergeArrivals {
     Flow[TerminalUpdateRequest]
       .mapAsync(1) {
         request =>
-          println(s"\n\nMerging ${request.terminal} on ${request.date}\n\n")
           mergeArrivalsForDate(request.terminal, SDate(request.date).toUtcDate)
             .flatMap(addArrivalPredictions)
             .flatMap { diff =>

@@ -68,10 +68,10 @@ case class FlightLookups(system: ActorSystem,
 
   override val flightsRouterActor: ActorRef = system.actorOf(
     Props(new FlightsRouterActor(
-      queuesByTerminal.keys,
-      flightsByDayLookup(removalMessageCutOff),
-      updateFlights(removalMessageCutOff),
-      paxFeedSourceOrder
+      allTerminals = queuesByTerminal.keys,
+      flightsByDayLookup = flightsByDayLookup(removalMessageCutOff),
+      updateFlights = updateFlights(removalMessageCutOff),
+      paxFeedSourceOrder = paxFeedSourceOrder
     ))
   )
 }

@@ -298,7 +298,7 @@ class TestDrtActor extends Actor {
           queueStatusProvider = DynamicQueueStatusProvider(tc.airportConfig, portEgatesProvider),
           updateLivePaxView = _ => Future.successful(StatusReply.Ack),
           terminalSplits = splitsCalculator.terminalSplits,
-          queueLoadsActor = minuteLookups.queueLoadsMinutesActor,
+          queueLoadsSinkActor = minuteLookups.queueLoadsMinutesActor,
           queuesByTerminal = tc.airportConfig.queuesByTerminal,
           paxFeedSourceOrder = paxFeedSourceOrder,
           updateCapacity = _ => Future.successful(Done),
