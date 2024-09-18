@@ -7,13 +7,11 @@ import akka.util.Timeout
 import com.google.inject.Inject
 import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
-import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.db._
 import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, UserFeedbackDao}
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
-import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
@@ -37,7 +35,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)
 
-  override val manifestLookups: ManifestLookups = ManifestLookups(system)
+  override val manifestLookups: ManifestLookups = ManifestLookups(system, airportConfig.terminals)
 
   override val userService: UserTableLike = UserTable(AggregateDb)
 
@@ -86,7 +84,9 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     now,
     manifestLookups,
     airportConfig.portCode,
-    feedService.paxFeedSourceOrder)
+    feedService.paxFeedSourceOrder,
+    airportConfig.terminals,
+  )
 
   override def run(): Unit = applicationService.run()
 

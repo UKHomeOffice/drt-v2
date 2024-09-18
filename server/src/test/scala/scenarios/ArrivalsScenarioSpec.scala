@@ -13,7 +13,7 @@ import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.PortDeskLimits
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
-import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._

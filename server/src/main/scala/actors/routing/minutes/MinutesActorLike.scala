@@ -32,7 +32,7 @@ object MinutesActorLike {
 
   type MinutesUpdate[A, B <: WithTimeAccessor, U] = ((Terminals.Terminal, UtcDate), MinutesContainer[A, B]) => Future[Set[U]]
   type FlightsUpdate = ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[Set[TerminalUpdateRequest]]
-  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Set[Long]]
+  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Set[TerminalUpdateRequest]]
 
   case object ProcessNextUpdateRequest
 

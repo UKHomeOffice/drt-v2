@@ -20,7 +20,7 @@ import services.crunch.deskrecs.OptimiserMocks._
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults, VoyageManifestGenerator}
 import services.graphstages.{CrunchMocks, FlightFilter}
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamInitialized
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
@@ -65,7 +65,7 @@ object OptimiserMocks {
       (key, maybeManifest)
     }, portCode)
 
-  def mockFlightsProvider(flights: List[ApiFlightWithSplits]): ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+  def mockFlightsProvider(flights: List[ApiFlightWithSplits]): TerminalUpdateRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]] =
     _ => Future.successful(Source(List(flights)))
 
   def mockHistoricManifestsProviderNoop: Iterable[Arrival] => Source[ManifestLike, NotUsed] = {
@@ -76,7 +76,7 @@ object OptimiserMocks {
     _: Arrival => Future.successful(None)
   }
 
-  def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]]): ProcessingRequest => Future[Source[VoyageManifests, NotUsed]] = {
+  def mockLiveManifestsProvider(arrival: Arrival, maybePax: Option[List[PassengerInfoJson]]): TerminalUpdateRequest => Future[Source[VoyageManifests, NotUsed]] = {
     val manifests = maybePax match {
       case Some(pax) => VoyageManifests(Set(manifestForArrival(arrival, pax)))
       case None => VoyageManifests(Set())

@@ -17,9 +17,10 @@ import passengersplits.parsing.VoyageManifestParser._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxAge, PortCode}
+import uk.gov.homeoffice.drt.ports.{ApiFeedSource, PaxAge, PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.duration.DurationInt
@@ -39,15 +40,16 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       requestAndTerminateActor ! ((date, maybePit))
       Future(VoyageManifests.empty)
     }
+    override val terminals: Iterable[Terminals.Terminal] = defaultAirportConfig.terminals
   }
 
-  val noopUpdates: ManifestsUpdate = (_: UtcDate, _: VoyageManifests) => Future(Set.empty[Long])
+  val noopUpdates: ManifestsUpdate = (_: UtcDate, _: VoyageManifests) => Future(Set.empty[TerminalUpdateRequest])
 
   private val probe = TestProbe("")
 
   "When sending an ApiFeedResponse" >> {
     "Given a Success response with 1 manifest" >> {
-      val mockLookup = MockManifestsLookup(probe.ref)
+      val mockLookup = MockManifestsLookup(probe.ref, defaultAirportConfig.terminals)
       val manifestRouterActor: ActorRef = manifestRouterActorWithMock(mockLookup)
       val creationDate = SDate("2020-11-20T12:00Z")
 
@@ -65,7 +67,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     }
 
     "Given a Success response with 1 manifest" >> {
-      val mockLookup = MockManifestsLookup(probe.ref)
+      val mockLookup = MockManifestsLookup(probe.ref, defaultAirportConfig.terminals)
       val manifestRouterActor: ActorRef = manifestRouterActorWithMock(mockLookup)
       val creationDate = SDate("2020-11-20T12:00Z")
 
@@ -101,7 +103,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
     }
 
     "Given a Failure response" >> {
-      val mockLookup = MockManifestsLookup(probe.ref)
+      val mockLookup = MockManifestsLookup(probe.ref, defaultAirportConfig.terminals)
       val manifestRouterActor: ActorRef = manifestRouterActorWithMock(mockLookup)
 
       val creationDate = SDate("2020-11-20T12:00Z")
@@ -192,7 +194,7 @@ class ManifestsRouterActorSpec extends CrunchTestLike {
       val manifest1 = manifestForDate("2020-11-01")
       val manifest2 = manifestForDate("2020-11-02")
       val manifest3 = manifestForDate("2020-11-03")
-      val manifestsLookup = MockManifestsLookup(probe.ref)
+      val manifestsLookup = MockManifestsLookup(probe.ref, defaultAirportConfig.terminals)
       val testManifests = VoyageManifests(Set(manifest1, manifest2, manifest3))
       val manifestRouterActor = system.actorOf(
         Props(new ManifestRouterActor(manifestsLookup.lookup(testManifests), noopUpdates))

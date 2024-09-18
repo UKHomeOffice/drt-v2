@@ -90,7 +90,7 @@ object ProdFeedService {
                          nowMillis: () => Long,
                          requestAndTerminateActor: ActorRef,
                         )
-                        (implicit system: ActorSystem, timeout: Timeout, ex: ExecutionContext): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
+                        (implicit system: ActorSystem, timeout: Timeout): ((Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
     FeedArrivalsRouterActor.updateArrivals(
       requestAndTerminateActor,
       (d, t) => props(d.year, d.month, d.day, t, source, None, nowMillis, 250),

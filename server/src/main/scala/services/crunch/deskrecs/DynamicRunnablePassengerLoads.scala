@@ -9,7 +9,7 @@ import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinut
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import queueus.DynamicQueueStatusProvider
-import uk.gov.homeoffice.drt.actor.commands.{LoadProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
@@ -93,9 +93,6 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
       .via(Flow[(TerminalUpdateRequest, MinutesContainer[PassengersMinute, TQM])].map {
         case (pr, paxMinutes) =>
           setUpdatedAtForDay(pr.terminal, pr.date, SDate.now().millisSinceEpoch)
-//          println(s"\n\n!!$pr: sending ${paxMinutes.minutes.count(_.toMinute.passengers.sum > 0)} non-zero pax minutes to sink")
-          println(s"\n\n!!terminal ${pr.terminal}, date ${pr.date}, ${paxMinutes.minutes.count(_.toMinute.passengers.sum > 0)} non-zero pax pr.load minutes ${paxMinutes.minutes.groupBy(_.terminal).map(x => s"${x._1}: ${x._2.size}").mkString(", ")}\n\n")
-
           paxMinutes
       })
       .recover {

@@ -67,36 +67,36 @@ object TestActors {
     }
   }
 
-  class TestMergeArrivalsQueueActor(now: () => SDateLike)
-    extends CrunchQueueActor(now) with Resettable {
+  class TestMergeArrivalsQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+    extends CrunchQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestCrunchQueueActor(now: () => SDateLike)
-    extends CrunchQueueActor(now) with Resettable {
+  class TestCrunchQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+    extends CrunchQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestDeskRecsQueueActor(now: () => SDateLike)
-    extends DeskRecsQueueActor(now) with Resettable {
+  class TestDeskRecsQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+    extends DeskRecsQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestDeploymentQueueActor(now: () => SDateLike)
-    extends DeploymentQueueActor(now) with Resettable {
+  class TestDeploymentQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+    extends DeploymentQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestStaffingUpdateQueueActor(now: () => SDateLike)
-    extends StaffingUpdateQueueActor(now) with Resettable {
+  class TestStaffingUpdateQueueActor(now: () => SDateLike, terminals: Iterable[Terminal])
+    extends StaffingUpdateQueueActor(now, terminals) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

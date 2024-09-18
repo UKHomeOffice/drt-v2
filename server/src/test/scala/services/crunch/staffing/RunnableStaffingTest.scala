@@ -7,7 +7,7 @@ import akka.testkit.TestProbe
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared._
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
@@ -66,9 +66,9 @@ class RunnableStaffingTest extends CrunchTestLike {
                          fixedPoints: FixedPointAssignments,
                          movements: StaffMovements): SourceQueueWithComplete[TerminalUpdateRequest] = {
 
-    val someShifts: ProcessingRequest => Future[ShiftAssignments] = (_: ProcessingRequest) => Future.successful(shifts)
-    val someFixedPoints: ProcessingRequest => Future[FixedPointAssignments] = (_: ProcessingRequest) => Future.successful(fixedPoints)
-    val someMovements: ProcessingRequest => Future[StaffMovements] = (_: ProcessingRequest) => Future.successful(movements)
+    val someShifts: TerminalUpdateRequest => Future[ShiftAssignments] = (_: TerminalUpdateRequest) => Future.successful(shifts)
+    val someFixedPoints: TerminalUpdateRequest => Future[FixedPointAssignments] = (_: TerminalUpdateRequest) => Future.successful(fixedPoints)
+    val someMovements: TerminalUpdateRequest => Future[StaffMovements] = (_: TerminalUpdateRequest) => Future.successful(movements)
 
     val staffFlow = RunnableStaffing.staffMinutesFlow(someShifts, someFixedPoints, someMovements, () => updateDate, (_, _, _) => Future.successful(Done))
     val source = Source.queue[TerminalUpdateRequest](1, OverflowStrategy.fail)

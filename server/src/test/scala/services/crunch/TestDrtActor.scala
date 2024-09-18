@@ -19,7 +19,6 @@ import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
@@ -28,13 +27,14 @@ import queueus.{AdjustmentsNoop, DynamicQueueStatusProvider}
 import services.arrivals
 import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
+import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, MergeArrivalsRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
@@ -187,7 +187,7 @@ class TestDrtActor extends Actor {
       val staffMovementsSequentialWritesActor: ActorRef = system.actorOf(StaffMovementsActor.sequentialWritesProps(
         tc.now, time48HoursAgo(tc.now), requestAndTerminateActor, system), "staff-movements-sequential-writes-actor")
 
-      val manifestLookups = ManifestLookups(system)
+      val manifestLookups = ManifestLookups(system, airportConfig.terminals)
 
       val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
 

@@ -24,9 +24,9 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
 
   def apply(deploymentQueueActor: ActorRef,
             deploymentQueue: SortedSet[TerminalUpdateRequest],
-            staffToDeskLimits: Map[Terminal, List[Int]] => Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff],
+            staffToDeskLimits: (Terminal, List[Int]) => FlexedTerminalDeskLimitsFromAvailableStaff,
             paxProvider: TerminalUpdateRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
-            staffMinutesProvider: TerminalUpdateRequest => Future[Map[Terminal, List[Int]]],
+            staffMinutesProvider: TerminalUpdateRequest => Future[List[Int]],
             loadsToDeployments: PassengersToQueueMinutes,
             queueMinutesSinkActor: ActorRef,
             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
@@ -55,8 +55,8 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
     (NumericRange[MillisSinceEpoch], Map[TQM, PassengersMinute], TerminalDeskLimitsLike, String, Terminal) => Future[PortStateQueueMinutes]
 
   def crunchRequestsToDeployments(loadsProvider: TerminalUpdateRequest => Future[Map[TQM, PassengersMinute]],
-                                  staffProvider: TerminalUpdateRequest => Future[Map[Terminal, List[Int]]],
-                                  staffToDeskLimits: Map[Terminal, List[Int]] => Map[Terminal, FlexedTerminalDeskLimitsFromAvailableStaff],
+                                  staffProvider: TerminalUpdateRequest => Future[List[Int]],
+                                  staffToDeskLimits: (Terminal, List[Int]) => FlexedTerminalDeskLimitsFromAvailableStaff,
                                   loadsToQueueMinutes: PassengersToQueueMinutes,
                                   setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
                                  )
@@ -76,7 +76,7 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
       }
       .mapAsync(1) { case (request, loads) =>
         staffProvider(request)
-          .map(staff => Option((request, loads, staffToDeskLimits(staff))))
+          .map(staff => Option((request, loads, staffToDeskLimits(request.terminal, staff))))
           .recover {
             case t =>
               log.error(s"Failed to fetch staff", t)
@@ -90,7 +90,7 @@ object DynamicRunnableDeployments extends DrtRunnableGraph {
         case (request: TerminalUpdateRequest, loads, deskLimitsByTerminal) =>
           val started = SDate.now().millisSinceEpoch
           log.info(s"[deployments] Optimising ${request.terminal} ${request.date.toISOString}")
-          loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal(request.terminal), "deployments", request.terminal)
+          loadsToQueueMinutes(request.minutesInMillis, loads, deskLimitsByTerminal, "deployments", request.terminal)
             .map { minutes =>
               log.info(s"[deployments] Optimising complete. Took ${SDate.now().millisSinceEpoch - started}ms")
               setUpdatedAtForDay(request.terminal, request.date, SDate.now().millisSinceEpoch)

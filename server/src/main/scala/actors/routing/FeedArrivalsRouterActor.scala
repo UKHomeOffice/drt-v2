@@ -41,14 +41,11 @@ object FeedArrivalsRouterActor {
   def updateArrivals(requestAndTerminateActor: ActorRef,
                      props: (UtcDate, Terminal) => Props,
                     )
-                    (implicit system: ActorSystem, timeout: Timeout, ex: ExecutionContext): ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
+                    (implicit system: ActorSystem, timeout: Timeout): ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
     (partition: (Terminal, UtcDate), arrivals: Seq[FeedArrival]) => {
       val (terminal, date) = partition
       val actor = system.actorOf(props(date, terminal))
-      requestAndTerminateActor.ask(RequestAndTerminate(actor, arrivals)).map { x =>
-        println(s"\n\nxxxxxxxxxx FeedArrivalsRouterActor.updateArrivals: $x")
-        x
-      }.mapTo[Boolean]
+      requestAndTerminateActor.ask(RequestAndTerminate(actor, arrivals)).mapTo[Boolean]
     }
 
   def feedArrivalsDayLookup(now: () => Long,
@@ -114,16 +111,11 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
     FeedArrivalsRouterActor.multiTerminalArrivalsByDaySource(arrivalsByDayLookup)
 
   override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[TerminalUpdateRequest]] = {
-    log.info(s"FeedArrivalsRouterActor updating $partition with ${updates.arrivals.length} arrivals")
     updateArrivals(partition, updates.arrivals).map {
       case true =>
         val date = SDate(partition._2)
         val localDates = Set(date.toLocalDate, date.addDays(1).addMinutes(-1).toLocalDate)
-        println(s"local dates for ${partition._2}: $localDates")
-        localDates.map { ld =>
-          log.info(s"!!FeedArrivalsRouterActor updating ${partition._1} $ld with ${updates.arrivals.length} arrivals")
-          TerminalUpdateRequest(partition._1, ld)
-        }
+        localDates.map(TerminalUpdateRequest(partition._1, _))
       case false =>
         Set.empty
     }

@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange, GetStateForTerminalDateRange}
+import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, GetStateForTerminalDateRange}
 import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.ask

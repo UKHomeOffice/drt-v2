@@ -49,7 +49,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
       "Then I should see a CrunchRequest for the day before in UTC (midnight BST is 23:00 the day before in UTC)" >> {
         val daysSourceProbe: TestProbe = TestProbe()
         val actor = startQueueActor(daysSourceProbe, SortedSet())
-        actor ! Set(day)
+        actor ! TerminalUpdateRequest(T1, LocalDate(2020, 5, 6))
         daysSourceProbe.expectMsg(TerminalUpdateRequest(T1, LocalDate(2020, 5, 6)))
         success
       }
@@ -59,7 +59,7 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
       "Then I should see a CrunchRequest for the day before as the offset pushes that day to cover the following midnight" >> {
         val daysSourceProbe: TestProbe = TestProbe()
         val actor = startQueueActor(daysSourceProbe, SortedSet())
-        actor ! Set(day)
+        actor ! TerminalUpdateRequest(T1, LocalDate(2020, 5, 5))
         daysSourceProbe.expectMsg(TerminalUpdateRequest(T1, LocalDate(2020, 5, 5)))
         success
       }
@@ -69,10 +69,8 @@ class CrunchQueueSpec extends CrunchTestLike with ImplicitSender {
       "Then I should see the 1 remaining CrunchRequest being processed" >> {
         val daysSourceProbe: TestProbe = TestProbe()
         val actor = startQueueActor(daysSourceProbe, SortedSet())
-        val today = myNow().millisSinceEpoch
-        val tomorrow = myNow().addDays(1).millisSinceEpoch
         watch(actor)
-        actor ! Set(today, tomorrow)
+        actor ! Set(TerminalUpdateRequest(T1, LocalDate(2020, 5, 5)), TerminalUpdateRequest(T1, LocalDate(2020, 5, 6)))
         daysSourceProbe.expectMsg(TerminalUpdateRequest(T1, LocalDate(2020, 5, 5)))
         Thread.sleep(200)
         startQueueActor(daysSourceProbe, SortedSet())
