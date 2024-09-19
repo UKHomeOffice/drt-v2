@@ -481,9 +481,9 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     success
   }
 
-  "Given loads for a set of minutes within a day for 2 queues at 2 terminals " +
+  "Given loads for a set of minutes within a day for 2 queues " +
     "When I ask for crunch result " +
-    "Then I should see a full day's worth (1440) of crunch minutes per queue crunched - a total of 5760" >> {
+    "Then I should see a full day's worth (1440) of crunch minutes per queue crunched - a total of 1440 * 2" >> {
     val scheduled = "2018-01-01T00:05"
     val arrival = ArrivalGenerator.live(iata = "BA0001", schDt = scheduled, totalPax = Option(25))
     val flight = List(ApiFlightWithSplits(arrival.toArrival(LiveFeedSource), Set(historicSplits), None))
@@ -499,7 +499,7 @@ class RunnableDeskRecsSpec extends CrunchTestLike {
     daysQueueSource ! TerminalUpdateRequest(T1, SDate(scheduled).toLocalDate)
 
     portStateProbe.fishForMessage(2.seconds) {
-      case mins: MinutesContainer[CrunchMinute, TQM] => mins.minutes.size === defaultAirportConfig.queuesByTerminal.flatMap(_._2).size * minsInADay
+      case mins: MinutesContainer[CrunchMinute, TQM] => mins.minutes.size === defaultAirportConfig.queuesByTerminal(T1).size * minsInADay
       case _ => false
     }
 
