@@ -32,7 +32,6 @@ trait MinuteLookupsLike {
   val updatePassengerMinutes: ((Terminal, UtcDate), MinutesContainer[PassengersMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
     (terminalDate: (Terminal, UtcDate), container: MinutesContainer[PassengersMinute, TQM]) => {
       val (terminal, date) = terminalDate
-//      println(s"\n\n!terminal $terminal, date $date, ${container.minutes.count(_.toMinute.passengers.sum > 0)} non-zero pax load minutes ${container.minutes.groupBy(_.terminal).map(x => s"${x._1}: ${x._2.size}").mkString(", ")}\n\n")
       val actor = system.actorOf(TerminalDayQueueLoadsActor.props(terminal, date, now))
       requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[Set[TerminalUpdateRequest]]
     }

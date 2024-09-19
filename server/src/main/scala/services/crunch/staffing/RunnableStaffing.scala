@@ -26,7 +26,6 @@ object RunnableStaffing extends DrtRunnableGraph {
 
   def apply(staffingQueueActor: ActorRef,
             staffQueue: SortedSet[TerminalUpdateRequest],
-//            crunchRequest: MillisSinceEpoch => CrunchRequest,
             shiftsActor: ActorRef,
             fixedPointsActor: ActorRef,
             movementsActor: ActorRef,
@@ -48,7 +47,6 @@ object RunnableStaffing extends DrtRunnableGraph {
         initialQueue = staffQueue,
         sinkActor = staffMinutesActor,
         graphName = "staffing",
-//        processingRequest = crunchRequest,
       )
     (staffingUpdateRequestQueue, staffingUpdateKillSwitch)
   }

@@ -15,7 +15,6 @@ private object SortedActorRefSource {
 }
 
 final class SortedActorRefSource(persistentActor: ActorRef,
-                                 //                                 processingRequest: MillisSinceEpoch => ProcessingRequest,
                                  initialQueue: SortedSet[TerminalUpdateRequest],
                                  graphName: String,
                                 )
@@ -48,8 +47,8 @@ final class SortedActorRefSource(persistentActor: ActorRef,
             .map {
               case _: TerminalUpdateRequest =>
                 m.collect { case r: TerminalUpdateRequest => r }
-              case _: Long =>
-                println(s"\n\n!!! Received legacy message Long [$graphName] !!!\n\n")
+              case unexpected =>
+                log.error(s"[$graphName] Received unexpected message ${unexpected.getClass.getSimpleName}")
                 Iterable.empty
             }
             .map { requests =>

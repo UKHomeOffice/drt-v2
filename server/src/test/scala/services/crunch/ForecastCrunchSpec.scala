@@ -52,16 +52,12 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case PortState(_, cms, _) =>
-        val forecastSummary = interestingPaxLoads(cms)
-        println(s"forecastSummary: $forecastSummary, ${cms.size}")
-        forecastSummary == expectedForecast
+        interestingPaxLoads(cms) == expectedForecast
     }
 
     crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case PortState(_, cms, _) =>
-        val forecastSummary = interestingPaxLoads(cms)
-        println(s"forecastSummary: $forecastSummary, ${cms.size}")
-        forecastSummary == expectedForecast2
+        interestingPaxLoads(cms) == expectedForecast2
     }
 
     success

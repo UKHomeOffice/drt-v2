@@ -17,11 +17,6 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
 
-//class MockTerminalDayQueuesActor(day: SDateLike,
-//                                 terminal: Terminal,
-//                                 override val state: mutable.Map[TQM, CrunchMinute],
-//                                ) extends TerminalDayQueuesActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => day, None)
-
 class TerminalDayFlightActorSpec extends CrunchTestLike {
   val terminal: Terminal = T1
   val queue: Queue = EeaDesk
