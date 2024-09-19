@@ -2,13 +2,13 @@ package services.workload
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import services.workload.CapacityFinder.processQueue
+import services.workload.QueueProcessor.processQueue
 import services.{OptimiserConfig, OptimiserWithFlexibleProcessors, OptimizerCrunchResult, TryRenjin, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.egates.Desk
 
 import scala.util.Try
 
-class CapacityFinderTest extends AnyWordSpec with Matchers {
+class QueueProcessorTest extends AnyWordSpec with Matchers {
   "applyCapacity" should {
     "return an empty queue given single passenger with workload lower than the capacity" in {
       assertQueueAndWait(30, List(QueuePassenger(29, 0)), 0)(
@@ -40,7 +40,7 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
   }
 
   private def assertQueueAndWait(capacity: Int, queue: List[QueuePassenger], minute: Int)(expQueue: List[QueuePassenger], expWait: Int): Any = {
-    val (newQueue, waitTime) = CapacityFinder.applyCapacity(minute = minute, capacity, queue)
+    val (newQueue, waitTime) = QueueProcessor.applyCapacity(minute = minute, capacity, queue)
 
     assert(newQueue == expQueue)
     assert(waitTime == expWait)
@@ -70,20 +70,6 @@ class CapacityFinderTest extends AnyWordSpec with Matchers {
         List.empty,
       )) shouldBe(List.empty, List(0, 1, 0, 0, 1), List(1, 0, 0, 1, 0))
     }
-  }
-
-  "crunchWholePax" should {
-    "return a result even when there are no available desks" in {
-      val mins = 360
-      val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(mins)(List.fill(0)(Desk))))
-      val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(randomPassengersForMinutes(mins).map(_.map(_.load.toDouble / 60)), List.fill(mins)(0), List.fill(mins)(0), config)
-
-      result.get.recommendedDesks should ===(List.fill(mins)(0))
-      result.get.waitTimes should ===(0 to 359)
-    }
-  }
-
-  "processQueue2" should {
     "give a result in a reasonable amount of time" in {
       val minuteCount = 1440
       val incomingPax = randomPassengersForMinutes(minuteCount)

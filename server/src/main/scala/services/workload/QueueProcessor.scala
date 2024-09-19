@@ -10,7 +10,7 @@ object QueuePassenger {
 }
 
 
-object CapacityFinder {
+object QueueProcessor {
   @tailrec
   def applyCapacity(minute: Int, capacitySeconds: Int, queue: List[QueuePassenger], waitTime: Int = 0): (List[QueuePassenger], Int) = {
     def calcWaitTime(previousWaitTime: Int, joinTime: Int): Int = minute - joinTime match {

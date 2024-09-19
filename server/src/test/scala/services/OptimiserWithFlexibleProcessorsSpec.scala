@@ -1,6 +1,7 @@
 package services
 
 import org.specs2.mutable.Specification
+import services.workload.QueuePassenger
 import uk.gov.homeoffice.drt.egates.{Desk, EgateBank}
 
 import scala.util.Try
@@ -12,12 +13,32 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
 
   private val zeroWaitFor30Minutes: Seq[Int] = Seq.fill(30)(0)
 
+  private def randomPassengersForMinutes(minutes: Int): Seq[List[QueuePassenger]] =
+    (0 until minutes).map(_ => randomPassengersForMinute)
+
+  private def randomPassengersForMinute: List[QueuePassenger] =
+    (0 to (Math.random() * 20).toInt).map(_ => QueuePassenger(randomProcessingSeconds)).toList
+
+  private def randomProcessingSeconds: Int =
+    (Math.random() * 100).toInt + 40
+
+  "crunchWholePax" should {
+    "return a result even when there are no available desks" in {
+      val mins = 360
+      val config = OptimiserConfig(60, WorkloadProcessorsProvider(List.fill(mins)(List.fill(0)(Desk))))
+      val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(randomPassengersForMinutes(mins).map(_.map(_.load.toDouble / 60)), List.fill(mins)(0), List.fill(mins)(0), config)
+
+      result.get.recommendedDesks should ===(List.fill(mins)(0))
+      result.get.waitTimes should ===(0 to 359)
+    }
+  }
+
   "Crunch with desk workload processors" >> {
     "Given 1 minutes incoming workload per minute, and desks fixed at 1 per minute" >> {
       "I should see all the workload completed each minute, leaving zero wait times" >> {
         val oneMinuteWorkloadFor30Minutes = Seq.fill(30)(Iterable(1d))
         val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(
-          passengers = oneMinuteWorkloadFor30Minutes,
+          passengerLoads = oneMinuteWorkloadFor30Minutes,
           minDesks = oneDesk,
           maxDesks = oneDesk,
           config = OptimiserConfig(20, WorkloadProcessorsProvider(IndexedSeq.fill(30)(WorkloadProcessors(Seq.fill(10)(Desk))))))
@@ -30,7 +51,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
       "I should see a minute wait for the passenger processed at minute 2" >> {
         val twoOneMinuteOnFirstMinutePax = Seq(Iterable(1d, 1d)) ++ Seq.fill(29)(Iterable())
         val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(
-          passengers = twoOneMinuteOnFirstMinutePax,
+          passengerLoads = twoOneMinuteOnFirstMinutePax,
           minDesks = oneDesk,
           maxDesks = oneDesk,
           config = OptimiserConfig(20, WorkloadProcessorsProvider(IndexedSeq.fill(30)(WorkloadProcessors(Seq.fill(10)(Desk))))))
@@ -43,7 +64,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
       "I should see workload spilling over each minute, leaving increasing wait times" >> {
         val twoMinuteWorkloadFor30Minutes = Seq.fill(30)(Iterable(2d))
         val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(
-          passengers = twoMinuteWorkloadFor30Minutes,
+          passengerLoads = twoMinuteWorkloadFor30Minutes,
           minDesks = oneDesk,
           maxDesks = oneDesk,
           config = OptimiserConfig(20, WorkloadProcessorsProvider(IndexedSeq.fill(30)(WorkloadProcessors(Seq.fill(10)(Desk))))))
@@ -64,7 +85,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
       "I should see all the workload completed each minute, leaving zero wait times" >> {
         val bankSizes = Iterable(10)
         val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(
-          passengers = tenMinutesWorkloadFor30Minutes,
+          passengerLoads = tenMinutesWorkloadFor30Minutes,
           minDesks = oneBank,
           maxDesks = oneBank,
           config = OptimiserConfig(20, egateProcessorsProvider(tenMinutesWorkloadFor30Minutes.size, bankSizes)))
@@ -77,7 +98,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
       "I should see wait times creeping up by a minute every 2 minutes" >> {
         val bankSizes = Iterable(5)
         val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(
-          passengers = tenMinutesWorkloadFor30Minutes,
+          passengerLoads = tenMinutesWorkloadFor30Minutes,
           minDesks = oneBank,
           maxDesks = oneBank,
           config = OptimiserConfig(20, egateProcessorsProvider(tenMinutesWorkloadFor30Minutes.size, bankSizes)))
@@ -93,7 +114,7 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
         val twentyMinutesWorkloadFor30Minutes = List.fill(30)(Iterable(20d))
         val bankSizes = Iterable(15)
         val result: Try[OptimizerCrunchResult] = OptimiserWithFlexibleProcessors.crunchWholePax(
-          passengers = twentyMinutesWorkloadFor30Minutes,
+          passengerLoads = twentyMinutesWorkloadFor30Minutes,
           minDesks = oneBank,
           maxDesks = oneBank,
           config = OptimiserConfig(20, egateProcessorsProvider(twentyMinutesWorkloadFor30Minutes.size, bankSizes)))
