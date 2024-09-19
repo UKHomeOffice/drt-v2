@@ -76,7 +76,7 @@ object OptimiserWithFlexibleProcessors {
         case (c, idx) => config.processors.forMinute(idx).capacityForServers(c)
       }
       val optFinished = SDate.now().millisSinceEpoch
-      val (_, waitTimes, queueSizes) = CapacityFinder.processQueue2(actualCapacity.map(x => List(x * 60)), passengers.map(_.map(x => QueuePassenger((x * 60).round.toInt)).toList).toSeq)
+      val (_, waitTimes, queueSizes) = CapacityFinder.processQueue(actualCapacity.map(x => List(x * 60)), passengers.map(_.map(x => QueuePassenger((x * 60).round.toInt)).toList).toSeq)
       val queueTook = SDate.now().millisSinceEpoch - optFinished
       log.info(s"Optimisation took ${optFinished - start}ms. Queue length & waits took ${queueTook}ms")
       OptimizerCrunchResult(desks, waitTimes/*queue.waits*/, queueSizes.map(_.toDouble).toIndexedSeq/*queue.queueByMinute.toIndexedSeq*/)
