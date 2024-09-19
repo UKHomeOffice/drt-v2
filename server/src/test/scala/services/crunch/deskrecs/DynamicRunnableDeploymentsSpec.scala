@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange}
+import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.persistent.SortedActorRefSource
 import akka.Done
 import akka.actor.{Actor, Props}
@@ -13,7 +13,7 @@ import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs.OptimiserMocks.MockSinkActor
 import services.crunch.{CrunchTestLike, MockEgatesProvider, TestDefaults}
 import services.graphstages.{CrunchMocks, FlightFilter}
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.egates.EgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk, Queue}
@@ -32,7 +32,7 @@ class MockProviderActor(minutes: MinutesContainer[PassengersMinute, TQM]) extend
 }
 
 class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
-  val airportConfig: AirportConfig = TestDefaults.airportConfigWithEgates
+  implicit val airportConfig: AirportConfig = TestDefaults.airportConfigWithEgates
 
   val egatesProvider: Terminal => Future[EgateBanksUpdates] = MockEgatesProvider.terminalProvider(airportConfig)
 
@@ -52,7 +52,7 @@ class DynamicRunnableDeploymentsSpec extends CrunchTestLike {
 
     val deskRecs = DynamicRunnableDeployments.crunchRequestsToDeployments(
       loadsProvider = OptimisationProviders.passengersProvider(mockProvider),
-      staffProvider = OptimisationProviders.staffMinutesProvider(mockProvider),
+      staffMinutesProvider = OptimisationProviders.staffMinutesProvider(mockProvider),
       staffToDeskLimits = staffToDeskLimits,
       loadsToQueueMinutes = desksAndWaitsProvider.loadsToSimulations,
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),

@@ -32,16 +32,15 @@ object EgateBanksUpdatesActor {
   def terminalEgatesProvider(egateBanksUpdatesActor: ActorRef)
                             (implicit timeout: Timeout, ec: ExecutionContext): Terminal => Future[EgateBanksUpdates] = (terminal: Terminal) =>
     egateBanksUpdatesActor
-    .ask(GetState)
-    .mapTo[PortEgateBanksUpdates]
-    .map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
+      .ask(GetState)
+      .mapTo[PortEgateBanksUpdates]
+      .map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
 }
 
 class EgateBanksUpdatesActor(val now: () => SDateLike,
                              defaults: Map[Terminal, EgateBanksUpdates],
-                             offsetMinutes: Int,
-                             durationMinutes: Int,
-                             maxForecastDays: Int) extends RecoveryActorLike with PersistentDrtActor[PortEgateBanksUpdates] {
+                             maxForecastDays: Int,
+                            ) extends RecoveryActorLike with PersistentDrtActor[PortEgateBanksUpdates] {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override def persistenceId: String = "egate-banks-updates"
@@ -74,7 +73,7 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
   var subscriberMessageQueue: List[EgateBanksUpdateCommand] = List()
   var awaitingSubscriberAck = false
 
-  var maybeCrunchRequestQueueActor: Option[ActorRef] = None
+  private var maybeCrunchRequestQueueActor: Option[ActorRef] = None
 
   implicit val ec: ExecutionContextExecutor = context.dispatcher
   implicit val timeout: Timeout = new Timeout(60.seconds)
@@ -115,9 +114,11 @@ class EgateBanksUpdatesActor(val now: () => SDateLike,
       log.info(s"Saving EgateBanksUpdates $updates")
 
       maybeCrunchRequestQueueActor.foreach { requestActor =>
-        (updates.firstMinuteAffected to SDate.now().addDays(maxForecastDays).millisSinceEpoch by MilliTimes.oneHourMillis).map { millis =>
-          requestActor ! TerminalUpdateRequest(updates.terminal, SDate(millis).toLocalDate)
-        }
+        (updates.firstMinuteAffected to SDate.now().addDays(maxForecastDays).millisSinceEpoch by MilliTimes.oneHourMillis)
+          .map { millis =>
+            val date = SDate(millis).toLocalDate
+            requestActor ! TerminalUpdateRequest(updates.terminal, date)
+          }
       }
 
       state = state.update(updates)

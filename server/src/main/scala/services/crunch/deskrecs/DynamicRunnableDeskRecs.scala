@@ -10,8 +10,9 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.DynamicRunnableDeployments.PassengersToQueueMinutes
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.NumericRange
@@ -23,7 +24,7 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
 
   def apply(deskRecsQueueActor: ActorRef,
             deskRecsQueue: SortedSet[TerminalUpdateRequest],
-            paxProvider: TerminalUpdateRequest => Future[Map[TQM, CrunchApi.PassengersMinute]],
+            paxProvider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, CrunchApi.PassengersMinute]],
             deskLimitsProvider: Map[Terminal, TerminalDeskLimitsLike],
             terminalLoadsToQueueMinutes: (
               NumericRange[MillisSinceEpoch],
@@ -35,7 +36,7 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
             queueMinutesSinkActor: ActorRef,
             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
            )
-           (implicit ex: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+           (implicit ex: ExecutionContext, mat: Materializer, ac: AirportConfig): (ActorRef, UniqueKillSwitch) = {
     val deskRecsFlow = DynamicRunnableDeskRecs.crunchRequestsToDeskRecs(
       loadsProvider = paxProvider,
       maxDesksProviders = deskLimitsProvider,
@@ -55,15 +56,17 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
   }
 
 
-  private def crunchRequestsToDeskRecs(loadsProvider: TerminalUpdateRequest => Future[Map[TQM, PassengersMinute]],
+  private def crunchRequestsToDeskRecs(loadsProvider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, PassengersMinute]],
                                        maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
                                        loadsToQueueMinutes: PassengersToQueueMinutes,
                                        setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
                                       )
-                                      (implicit executionContext: ExecutionContext): Flow[TerminalUpdateRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
+                                      (implicit executionContext: ExecutionContext, ac: AirportConfig): Flow[TerminalUpdateRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
     Flow[TerminalUpdateRequest]
       .mapAsync(1) { request =>
-        loadsProvider(request)
+        val start = request.start.addMinutes(ac.crunchOffsetMinutes)
+        val end = request.end.addMinutes(ac.crunchOffsetMinutes)
+        loadsProvider(start, end, request.terminal)
           .map { minutes => Option((request, minutes)) }
           .recover {
             case t =>
@@ -76,7 +79,8 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
       }
       .mapAsync(1) {
         case (request, loads) =>
-          optimiseTerminal(maxDesksProviders(request.terminal), loadsToQueueMinutes, setUpdatedAtForDay, request, loads)
+          val minutesRange: NumericRange[MillisSinceEpoch] = request.minutesInMillis(ac.crunchOffsetMinutes)
+          optimiseTerminal(maxDesksProviders(request.terminal), loadsToQueueMinutes, setUpdatedAtForDay, request.terminal, minutesRange, loads)
       }
       .collect {
         case Some(minutes) => minutes.asContainer
@@ -86,14 +90,19 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
   private def optimiseTerminal(maxDesksProvider: TerminalDeskLimitsLike,
                                loadsToQueueMinutes: PassengersToQueueMinutes,
                                setUpdatedAtForDay: (Terminal, LocalDate, MillisSinceEpoch) => Future[Done],
-                               request: TerminalUpdateRequest,
+                               terminal: Terminal,
+                               minutesToOptimise: NumericRange[MillisSinceEpoch],
                                loads: Map[TQM, PassengersMinute],
                               )
                               (implicit ec: ExecutionContext): Future[Option[PortStateQueueMinutes]] = {
-    log.info(s"[desk-recs] Optimising ${request.terminal} - (${request.start.toISOString} to ${request.end.toISOString})")
-    loadsToQueueMinutes(request.minutesInMillis, loads, maxDesksProvider, "desk-recs", request.terminal)
+    val start = SDate(minutesToOptimise.min)
+    val end = SDate(minutesToOptimise.max)
+
+    log.info(s"[desk-recs] Optimising $terminal - (${start.toISOString} to ${end.toISOString})")
+
+    loadsToQueueMinutes(minutesToOptimise, loads, maxDesksProvider, "desk-recs", terminal)
       .map { minutes =>
-        setUpdatedAtForDay(request.terminal, request.date, SDate.now().millisSinceEpoch)
+        setUpdatedAtForDay(terminal, start.toLocalDate, SDate.now().millisSinceEpoch)
         Option(minutes)
       }
       .recover {

@@ -72,7 +72,6 @@ import scala.util.{Failure, Success}
 
 @Singleton
 case class ApplicationService(journalType: StreamingJournalLike,
-                              airportConfig: AirportConfig,
                               now: () => SDateLike,
                               params: DrtParameters,
                               config: Configuration,
@@ -87,7 +86,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
                               requestAndTerminateActor: ActorRef,
                               splitsCalculator: SplitsCalculator,
                              )
-                             (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout) {
+                             (implicit system: ActorSystem, ec: ExecutionContext, mat: Materializer, timeout: Timeout, airportConfig: AirportConfig) {
   val log: Logger = LoggerFactory.getLogger(getClass)
   private val walkTimeProvider: (Terminal, String, String) => Option[Int] = WalkTimeProvider(params.gateWalkTimesFilePath, params.standWalkTimesFilePath)
 
@@ -194,10 +193,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   val alertsActor: ActorRef = system.actorOf(Props(new AlertsActor(now)), "alerts-actor")
   val redListUpdatesActor: ActorRef = system.actorOf(Props(new RedListUpdatesActor(now)), "red-list-updates-actor")
-  val egateBanksUpdatesActor: ActorRef = system.actorOf(Props(new EgateBanksUpdatesActor(now,
+  val egateBanksUpdatesActor: ActorRef = system.actorOf(Props(new EgateBanksUpdatesActor(
+    now,
     defaultEgates,
-    airportConfig.crunchOffsetMinutes,
-    airportConfig.minutesToCrunch,
     params.forecastMaxDays)), "egate-banks-updates-actor")
 
   lazy val flightsProvider: FlightsProvider = FlightsProvider(actorService.flightsRouterActor)
@@ -272,7 +270,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         addArrivalPredictions = addArrivalPredictions,
       )
 
-      val crunchRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
+      val paxLoadsRequestQueueActor: ActorRef = DynamicRunnablePassengerLoads(
         crunchQueueActor = actors.crunchQueueActor,
         crunchQueue = crunchQueue,
         flightsProvider = OptimisationProviders.flightsWithSplitsProvider(actorService.flightsRouterActor),
@@ -345,7 +343,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       feedService.liveBaseFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
       feedService.liveFeedArrivalsActor ! AddUpdatesSubscriber(mergeArrivalsRequestQueueActor)
 
-      actorService.flightsRouterActor ! AddUpdatesSubscriber(crunchRequestQueueActor)
+      actorService.flightsRouterActor ! AddUpdatesSubscriber(paxLoadsRequestQueueActor)
       actorService.flightsRouterActor ! AddHistoricSplitsRequestActor(historicSplitsQueueActor)
       actorService.flightsRouterActor ! AddHistoricPaxRequestActor(historicPaxQueueActor)
 
@@ -355,10 +353,11 @@ case class ApplicationService(journalType: StreamingJournalLike,
       actorService.staffRouterActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
 
       slasActor ! AddUpdatesSubscriber(deskRecsRequestQueueActor)
+      slasActor ! AddUpdatesSubscriber(deploymentRequestQueueActor)
 
-      egateBanksUpdatesActor ! AddUpdatesSubscriber(crunchRequestQueueActor)
+      egateBanksUpdatesActor ! AddUpdatesSubscriber(paxLoadsRequestQueueActor)
 
-      crunchManagerActor ! AddQueueCrunchSubscriber(crunchRequestQueueActor)
+      crunchManagerActor ! AddQueueCrunchSubscriber(paxLoadsRequestQueueActor)
       crunchManagerActor ! AddRecalculateArrivalsSubscriber(mergeArrivalsRequestQueueActor)
       crunchManagerActor ! AddQueueHistoricSplitsLookupSubscriber(historicSplitsQueueActor)
       crunchManagerActor ! AddQueueHistoricPaxLookupSubscriber(historicPaxQueueActor)
@@ -383,7 +382,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val killSwitches = Iterable(mergeArrivalsKillSwitch, historicSplitsKillSwitch, historicPaxKillSwitch,
         deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
 
-      (mergeArrivalsRequestQueueActor, crunchRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, killSwitches)
+      (mergeArrivalsRequestQueueActor, paxLoadsRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, killSwitches)
     }
 
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] = EgateBanksUpdatesActor.terminalEgatesProvider(egateBanksUpdatesActor)

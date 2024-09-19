@@ -101,7 +101,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
-    crunch.portStateTestProbe.fishForMessage(1.seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val firstInterestingMilli = SDate("2017-01-03T23:59Z").millisSinceEpoch
         val interestingMinuteMillis = firstInterestingMilli to firstInterestingMilli + oneMinuteMillis

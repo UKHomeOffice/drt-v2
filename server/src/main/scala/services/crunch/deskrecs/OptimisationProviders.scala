@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -83,32 +83,29 @@ object OptimisationProviders {
       .map(_.map(_._2.flights.values.toList))
 
   def passengersProvider(passengersActor: ActorRef)
-                        (processingRequest: TerminalUpdateRequest)
-                        (implicit timeout: Timeout, ec: ExecutionContext): Future[Map[TQM, PassengersMinute]] = {
-    passengersActor
-      .ask(GetStateForTerminalDateRange(processingRequest.start.millisSinceEpoch, processingRequest.end.millisSinceEpoch, processingRequest.terminal))
-      .mapTo[MinutesContainer[PassengersMinute, TQM]]
-      .map(
-        _.minutes.map(_.toMinute)
-          .map { minute => (minute.key, minute) }
-          .toMap
-      )
-  }
+                        (implicit timeout: Timeout, ec: ExecutionContext): (SDateLike, SDateLike, Terminal) => Future[Map[TQM, PassengersMinute]] =
+    (start, end, terminal) =>
+      passengersActor
+        .ask(GetStateForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal))
+        .mapTo[MinutesContainer[PassengersMinute, TQM]]
+        .map(
+          _.minutes.map(_.toMinute)
+            .map { minute => (minute.key, minute) }
+            .toMap
+        )
 
   def staffMinutesProvider(staffActor: ActorRef)
-                          (processingRequest: TerminalUpdateRequest)
-                          (implicit timeout: Timeout, ec: ExecutionContext): Future[List[Int]] = {
-    val start = processingRequest.start.millisSinceEpoch
-    val end = processingRequest.end.millisSinceEpoch
-    staffActor
-      .ask(GetStateForTerminalDateRange(start, end, processingRequest.terminal))
-      .mapTo[MinutesContainer[StaffMinute, TM]]
-      .map { container =>
-        allMinutesForPeriod(processingRequest.terminal, start, end, container.indexed)
-          .toList.sortBy(_.minute)
-          .map(_.available)
-      }
-  }
+                          (implicit timeout: Timeout, ec: ExecutionContext): (SDateLike, SDateLike, Terminal) => Future[List[Int]] =
+    (start, end, terminal) => {
+      staffActor
+        .ask(GetStateForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal))
+        .mapTo[MinutesContainer[StaffMinute, TM]]
+        .map { container =>
+          allMinutesForPeriod(terminal, start.millisSinceEpoch, end.millisSinceEpoch, container.indexed)
+            .toList.sortBy(_.minute)
+            .map(_.available)
+        }
+    }
 
   private def allMinutesForPeriod(terminal: Terminal,
                                   firstMillis: MillisSinceEpoch,

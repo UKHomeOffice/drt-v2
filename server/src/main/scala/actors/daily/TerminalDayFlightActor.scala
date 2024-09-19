@@ -204,7 +204,9 @@ class TerminalDayFlightActor(year: Int,
     requestMissingPax()
     requestMissingHistoricSplits()
 
-    minutesToUpdate.map(SDate(_).toLocalDate).map(d => TerminalUpdateRequest(terminal, d))
+    minutesToUpdate
+      .map(SDate(_).toLocalDate)
+      .map(TerminalUpdateRequest(terminal, _))
   }
 
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =

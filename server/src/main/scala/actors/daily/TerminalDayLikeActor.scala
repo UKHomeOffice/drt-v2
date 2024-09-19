@@ -1,7 +1,7 @@
 package actors.daily
 
 import akka.persistence.SaveSnapshotSuccess
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
@@ -20,7 +20,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                                                      day: Int,
                                                                                                                      terminal: Terminal,
                                                                                                                      now: () => SDateLike,
-                                                                                                                     override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
+                                                                                                                     override val maybePointInTime: Option[MillisSinceEpoch],
+                                                                                                                    ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
@@ -87,7 +88,10 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         updateStateFromDiff(differences)
         val messageToPersist = containerToMessage(differences)
         val updateRequests = if (shouldSendEffectsToSubscriber(container))
-          differences.map(v => SDate(v.minute).toLocalDate).toSet.map(date => TerminalUpdateRequest(terminal, date))
+          differences
+            .map(v => SDate(v.minute).toLocalDate)
+            .map(date => TerminalUpdateRequest(terminal, date))
+            .toSet
         else Set.empty
         val replyToAndMessage = List((sender(), updateRequests))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)

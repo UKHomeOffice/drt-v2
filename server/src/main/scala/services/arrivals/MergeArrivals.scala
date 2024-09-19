@@ -14,13 +14,13 @@ object MergeArrivals {
   case class FeedArrivalSet(isPrimary: Boolean, maybeScheduleTolerance: Option[FiniteDuration], arrivals: Map[UniqueArrival, Arrival])
 
   def apply(existingMerged: (Terminal, UtcDate) => Future[Set[UniqueArrival]],
-            arrivalSources: Seq[DateLike => Future[FeedArrivalSet]],
+            arrivalSources: Seq[(DateLike, Terminal) => Future[FeedArrivalSet]],
             adjustments: Arrival => Arrival,
            )
            (implicit ec: ExecutionContext): (Terminal, UtcDate) => Future[ArrivalsDiff] =
     (terminal, date) => {
       for {
-        arrivalSets <- Future.sequence(arrivalSources.map(_(date)))
+        arrivalSets <- Future.sequence(arrivalSources.map(_(date, terminal)))
         existing <- existingMerged(terminal, date)
       } yield {
         val validatedArrivalSets = arrivalSets.map {

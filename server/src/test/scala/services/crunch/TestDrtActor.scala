@@ -130,6 +130,7 @@ class TestDrtActor extends Actor {
     case tc: TestConfig =>
       val replyTo = sender()
       tc.airportConfig.assertValid()
+      implicit val ac: AirportConfig = tc.airportConfig
 
       val portStateProbe = testProbe("portstate")
       val nowMillis = () => tc.now().millisSinceEpoch

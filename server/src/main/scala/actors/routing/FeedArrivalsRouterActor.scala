@@ -65,13 +65,13 @@ object FeedArrivalsRouterActor {
         .map(_.values.toSeq)
     }
 
-  def multiTerminalArrivalsByDaySource(flightsLookupByDayAndTerminal: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]])
-                                      (start: UtcDate,
-                                       end: UtcDate,
-                                       terminals: Iterable[Terminal],
-                                       maybePit: Option[MillisSinceEpoch],
-                                      )
-                                      (implicit ec: ExecutionContext): Source[(UtcDate, Seq[FeedArrival]), NotUsed] = {
+  private def multiTerminalArrivalsByDaySource(flightsLookupByDayAndTerminal: Option[MillisSinceEpoch] => UtcDate => Terminal => Future[Seq[FeedArrival]])
+                                              (start: UtcDate,
+                                               end: UtcDate,
+                                               terminals: Iterable[Terminal],
+                                               maybePit: Option[MillisSinceEpoch],
+                                              )
+                                              (implicit ec: ExecutionContext): Source[(UtcDate, Seq[FeedArrival]), NotUsed] = {
     val dates: Seq[UtcDate] = DateRange(start, end)
 
     val reduceAndSort = SourceUtils.reduceFutureIterables(terminals, (s: Iterable[Seq[FeedArrival]]) => s.reduce(_ ++ _))
@@ -93,6 +93,7 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
                               updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
                               override val partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                              ) extends RouterActorLikeWithSubscriber[FeedArrivals, (Terminal, UtcDate), TerminalUpdateRequest] {
+
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, FeedArrivalsRouterActor.GetStateForDateRange(start, end)) =>
       sender() ! flightsLookupService(start, end, allTerminals, Option(pit))
@@ -114,7 +115,10 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
     updateArrivals(partition, updates.arrivals).map {
       case true =>
         val date = SDate(partition._2)
-        val localDates = Set(date.toLocalDate, date.addDays(1).addMinutes(-1).toLocalDate)
+        val localDates = Set(
+          date.toLocalDate,
+          date.addDays(1).addMinutes(-1).toLocalDate
+        )
         localDates.map(TerminalUpdateRequest(partition._1, _))
       case false =>
         Set.empty

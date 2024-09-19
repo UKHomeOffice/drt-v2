@@ -81,8 +81,12 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
   private def updateAndPersist(vms: VoyageManifests): Unit = {
     state = state ++ vms.toMap
 
-    val replyToAndMessage = List((sender(), vms.manifests.map(_.scheduled.toLocalDate).flatMap(ms => terminals.map(t => TerminalUpdateRequest(t, ms))).toSet))
+    val updateRequests = vms.manifests
+      .map(vm => vm.scheduled.toLocalDate)
+      .flatMap(ms => terminals.map(TerminalUpdateRequest(_, ms)))
+      .toSet
+
+    val replyToAndMessage = List((sender(), updateRequests))
     persistAndMaybeSnapshotWithAck(ManifestMessageConversion.voyageManifestsToMessage(vms), replyToAndMessage)
   }
-
 }

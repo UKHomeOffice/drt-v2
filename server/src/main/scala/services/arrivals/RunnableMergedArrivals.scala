@@ -23,7 +23,7 @@ object RunnableMergedArrivals {
             flightsRouterActor: ActorRef,
             aggregatedArrivalsActor: ActorRef,
             mergeArrivalsQueueActor: ActorRef,
-            feedArrivalsForDate: Seq[DateLike => Future[FeedArrivalSet]],
+            feedArrivalsForDate: Seq[(DateLike, Terminal) => Future[FeedArrivalSet]],
             mergeArrivalsQueue: SortedSet[TerminalUpdateRequest],
             setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
             addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
@@ -37,9 +37,9 @@ object RunnableMergedArrivals {
           .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
 
     val merger = MergeArrivals(
-      existingMergedArrivals,
-      feedArrivalsForDate,
-      ArrivalsAdjustments.adjustmentsForPort(portCode),
+      existingMerged = existingMergedArrivals,
+      arrivalSources = feedArrivalsForDate,
+      adjustments = ArrivalsAdjustments.adjustmentsForPort(portCode),
     )
 
     val mergeArrivalsFlow = MergeArrivals.processingRequestToArrivalsDiff(

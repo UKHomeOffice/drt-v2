@@ -28,9 +28,9 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[I
     }
   }
 
-  def availableStaffForMinutes(minuteMillis: NumericRange[Long],
-                               queue: Queue,
-                               allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] = {
+  private def availableStaffForMinutes(minuteMillis: NumericRange[Long],
+                                       queue: Queue,
+                                       allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] = {
     val processedQueues = allocatedDesks.keys.toSet
     val deployedByQueue = allocatedDesks.values.toList
     val totalDeployedByMinute = if (deployedByQueue.nonEmpty) Crunch.reduceIterables[Int](deployedByQueue)(_ + _)
