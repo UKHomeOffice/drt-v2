@@ -144,9 +144,9 @@ object DashboardTerminalSummary {
 
         val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal))
 
-        def pressureStaffMinute = props.staffMinutes.find(_.minute == pressurePoint.minute)
+        def pressureStaffMinute: Option[StaffMinute] = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
-        val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.available).getOrElse(0)
+        val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.availableAtPcp).getOrElse(0)
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
 
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, props.flights)

@@ -103,7 +103,7 @@ object OptimisationProviders {
         .map { container =>
           allMinutesForPeriod(terminal, start.millisSinceEpoch, end.millisSinceEpoch, container.indexed)
             .toList.sortBy(_.minute)
-            .map(_.available)
+            .map(_.availableAtPcp)
         }
     }
 
