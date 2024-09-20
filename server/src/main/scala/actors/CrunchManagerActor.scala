@@ -6,7 +6,9 @@ import akka.actor.{Actor, ActorRef, Props}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import org.slf4j.LoggerFactory
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
@@ -59,7 +61,7 @@ object CrunchManagerActor {
 
   def props(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
            )
-           (implicit ec: ExecutionContext, mat: Materializer): Props = {
+           (implicit ec: ExecutionContext, mat: Materializer, ac: AirportConfig): Props = {
     val missingHistoricSplitsArrivalKeysForDate = CrunchManagerActor.missingHistoricSplitsArrivalKeysForDate(allTerminalsFlights)
     val missingPaxArrivalKeysForDate = CrunchManagerActor.missingPaxArrivalKeysForDate(allTerminalsFlights)
 
@@ -70,7 +72,7 @@ object CrunchManagerActor {
 class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
                          historicPaxArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
                         )
-                        (implicit ec: ExecutionContext, mat: Materializer) extends Actor {
+                        (implicit ec: ExecutionContext, mat: Materializer, ac: AirportConfig) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
   private var maybeQueueCrunchSubscriber: Option[ActorRef] = None
@@ -92,10 +94,12 @@ class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable
       maybeQueueHistoricPaxLookupSubscriber = Option(subscriber)
 
     case Recrunch(um) =>
-      maybeQueueCrunchSubscriber.foreach(_ ! um)
+      val updateRequests = millisToTerminalUpdateRequests(um)
+      maybeQueueCrunchSubscriber.foreach(_ ! updateRequests)
 
     case RecalculateArrivals(um) =>
-      maybeRecalculateArrivalsSubscriber.foreach(_ ! um)
+      val updateRequests = millisToTerminalUpdateRequests(um)
+      maybeRecalculateArrivalsSubscriber.foreach(_ ! updateRequests)
 
     case LookupHistoricSplits(um) =>
       queueLookups(um, maybeQueueHistoricSplitsLookupSubscriber, historicManifestArrivalKeys, "historic splits")
@@ -105,6 +109,11 @@ class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable
 
     case other =>
       log.warn(s"CrunchManagerActor received unexpected message: $other")
+  }
+
+  private def millisToTerminalUpdateRequests(um: Set[Long]): Set[TerminalUpdateRequest] = {
+    um.map(ms => SDate(ms).toLocalDate)
+      .flatMap(ld => ac.terminals.map(TerminalUpdateRequest(_, ld)))
   }
 
   private def queueLookups(millis: Set[Long], subscriber: Option[ActorRef], lookup: UtcDate => Future[Iterable[UniqueArrival]], label: String)
