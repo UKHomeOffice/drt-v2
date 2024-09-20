@@ -140,4 +140,23 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
         }
     },
   )
+
+  @Provides
+  def provideStaffShiftFormService: StaffShiftFormService = StaffShiftFormServiceImpl(
+    portCode = airportConfig.portCode,
+    now = now,
+    forecastMaxDays = drtParameters.forecastMaxDays,
+    getTerminalShiftConfig = provideDrtSystemInterface.applicationService.getTerminalShiftConfig,
+    updateTerminalShiftConfig = provideDrtSystemInterface.applicationService.updateTerminalShiftConfig,
+    updateStaffingNumbers = (terminal, start, end, newValue, oldValue) => {
+      val request = ShiftsActor.SetMinimumStaff(terminal, start, end, newValue, oldValue)
+      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request)
+        .mapTo[ShiftAssignments]
+        .map { shifts =>
+          val month = SDate(start).millisSinceEpoch
+          val monthInLocalTime = SDate(month, europeLondonTimeZone)
+          MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
+        }
+    },
+  )
 }

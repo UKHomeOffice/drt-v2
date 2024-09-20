@@ -10,13 +10,12 @@ import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaff, MinimumStaffingService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
-
 import scala.concurrent.Future
-
+import PortTerminalShift._
 
 class StaffingController @Inject()(cc: ControllerComponents,
                                    ctrl: DrtSystemInterface,
@@ -24,6 +23,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
                                    fixedPointsService: FixedPointsService,
                                    movementsService: StaffMovementsService,
                                    minimumStaffingService: MinimumStaffingService,
+                                   staffShiftFormService: StaffShiftFormService
                                   ) extends AuthController(cc, ctrl) {
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
@@ -47,6 +47,29 @@ class StaffingController @Inject()(cc: ControllerComponents,
     }
   }
 
+  def saveShiftStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
+    Action.async { request =>
+      request.body.asText match {
+        case Some(text) =>
+          println(s"saveShiftStaff w...............: $text")
+          val portTerminalShift = read[PortTerminalShift](text)
+          val terminal = Terminal(terminalName)
+          staffShiftFormService.setShiftStaff(terminal,
+            portTerminalShift.shiftName,
+            portTerminalShift.startAt,
+            portTerminalShift.periodInMinutes,
+            portTerminalShift.endAt,
+            portTerminalShift.frequency,
+            portTerminalShift.actualStaff,
+            portTerminalShift.minimumRosteredStaff,
+            portTerminalShift.email)
+            .map(monthOfShifts => Accepted(write(monthOfShifts)))
+        case None =>
+          Future.successful(BadRequest)
+      }
+    }
+  }
+
   def saveMinimumStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
     Action.async { request =>
       request.body.asText match {
@@ -64,6 +87,17 @@ class StaffingController @Inject()(cc: ControllerComponents,
   def getMinimumStaff(terminalName: String): Action[AnyContent] =
     Action.async {
       minimumStaffingService.getTerminalConfig(Terminal(terminalName)).map {
+        case Some(config) =>
+          Ok(write(MinimumStaff(config.minimumRosteredStaff.getOrElse(0))))
+        case None =>
+          NotFound
+      }
+    }
+
+  def getShiftStaff(terminalName: String): Action[AnyContent] =
+    Action.async {
+      println(s"getShiftStaff...............: $terminalName")
+      staffShiftFormService.getTerminalShiftConfig(Terminal(terminalName)).map {
         case Some(config) =>
           Ok(write(MinimumStaff(config.minimumRosteredStaff.getOrElse(0))))
         case None =>
