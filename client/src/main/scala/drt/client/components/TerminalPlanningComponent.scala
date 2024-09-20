@@ -24,7 +24,7 @@ import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.vdom.all.onClick.Event
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
 import uk.gov.homeoffice.drt.ports.Queues
@@ -35,8 +35,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
 
 object TerminalPlanningComponent {
-
-  case class TerminalPlanningModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines])
+  private case class TerminalPlanningModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines])
 
   def getLastSunday(start: SDateLike): SDateLike = {
     val sunday = start.getLastSunday
@@ -50,9 +49,12 @@ object TerminalPlanningComponent {
 
   case class State(downloadingHeadlines: Boolean, downloadingStaff: Boolean, timePeriod: Int)
 
+  implicit val propsReuse: Reusability[Props] = Reusability.always[Props]
+  implicit val stateReuse: Reusability[State] = Reusability.by((s: State) => (s.downloadingHeadlines, s.downloadingStaff, s.timePeriod))
+
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
     .initialStateFromProps(p => State(downloadingHeadlines = false, downloadingStaff = false, timePeriod = p.timePeriod))
-    .renderPS((scope, props, state) => {
+    .renderPS { (scope, props, state) =>
       val modelRCP = SPACircuit.connect(model => TerminalPlanningModel(forecastPeriodPot = model.forecastPeriodPot))
       modelRCP(modelProxy => {
         val model: TerminalPlanningModel = modelProxy()
@@ -200,7 +202,8 @@ object TerminalPlanningComponent {
           )
         })
       })
-    })
+    }
+    .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p =>
       Callback(SPACircuit.dispatch(GetForecastWeek(p.props.page.dateFromUrlOrNow, Terminal(p.props.page.terminalName), p.props.timePeriod))) >>
         Callback {
