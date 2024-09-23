@@ -67,7 +67,7 @@ class SequentialAccessActor[RES, REQ, U](resourceRequest: (RES, REQ) => Future[S
                   for {
                     updates <- maybeUpdates.toOption.toList
                     subscriber <- updatesSubscribers
-                  } yield subscriber ! updates
+                  } yield updates.foreach(subscriber ! _)
                 }
             }
 

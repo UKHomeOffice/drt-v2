@@ -6,6 +6,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
@@ -19,7 +20,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                                                      day: Int,
                                                                                                                      terminal: Terminal,
                                                                                                                      now: () => SDateLike,
-                                                                                                                     override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
+                                                                                                                     override val maybePointInTime: Option[MillisSinceEpoch],
+                                                                                                                    ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
@@ -50,11 +52,9 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
-      log.debug(s"Received MinutesContainer for persistence")
       updateAndPersistDiff(container)
 
     case GetState =>
-      log.debug(s"Received GetState")
       sender() ! stateResponse
 
     case _: SaveSnapshotSuccess =>
@@ -78,7 +78,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   private def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]]): Unit =
     diff.foreach { cm =>
-      if (firstMinuteMillis <= cm.minute && cm.minute < lastMinuteMillis) state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
+      if (firstMinuteMillis <= cm.minute && cm.minute <= lastMinuteMillis) state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
     }
 
   private def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
@@ -87,10 +87,13 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       case differences =>
         updateStateFromDiff(differences)
         val messageToPersist = containerToMessage(differences)
-        val updatedMillis = if (shouldSendEffectsToSubscriber(container))
-          differences.map(_.minute).toSet
-        else Set.empty[Long]
-        val replyToAndMessage = List((sender(), updatedMillis))
+        val updateRequests = if (shouldSendEffectsToSubscriber(container))
+          differences
+            .map(v => SDate(v.minute).toLocalDate)
+            .map(date => TerminalUpdateRequest(terminal, date))
+            .toSet
+        else Set.empty
+        val replyToAndMessage = List((sender(), updateRequests))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
     }
 

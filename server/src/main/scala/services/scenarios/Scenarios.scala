@@ -1,29 +1,29 @@
 package services.scenarios
 
 import actors.persistent.SortedActorRefSource
-import akka.{Done, NotUsed}
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.pattern.{StatusReply, ask}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Flow, Source}
 import akka.util.Timeout
-import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch}
+import akka.{Done, NotUsed}
+import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.SimulationParams
 import manifests.queues.SplitsCalculator
 import queueus.DynamicQueueStatusProvider
 import services.OptimiserWithFlexibleProcessors
-import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
+import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.deskrecs.{DynamicRunnablePassengerLoads, PortDesksAndWaitsProvider, QueuedRequestProcessing}
 import services.graphstages.FlightFilter
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, LoadProcessingRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import scala.collection.SortedSet
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -33,7 +33,7 @@ object Scenarios {
                        simulationAirportConfig: AirportConfig,
                        sla: (LocalDate, Queue) => Future[Int],
                        splitsCalculator: SplitsCalculator,
-                       flightsProvider: ProcessingRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
+                       flightsProvider: TerminalUpdateRequest => Future[Source[List[ApiFlightWithSplits], NotUsed]],
                        portStateActor: ActorRef,
                        redListUpdatesProvider: () => Future[RedListUpdates],
                        egateBanksProvider: () => Future[PortEgateBanksUpdates],
@@ -73,19 +73,16 @@ object Scenarios {
       }
     }
 
-    val request = CrunchRequest(SDate(simulationParams.date).millisSinceEpoch, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
+    val request = TerminalUpdateRequest(simulationParams.terminal, simulationParams.date)
 
-    val desksProducer: Flow[LoadProcessingRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
-      .mapAsync(1) { loads =>
-        portDesksAndWaitsProvider.loadsToDesks(request.minutesInMillis, loads.indexed, deskLimitsProviders, "scenarios")
-      }
+    val desksProducer: Flow[TerminalUpdateRequest, DeskRecMinutes, NotUsed] = paxLoadsProducer
+      .mapAsync(1)(loads =>
+        portDesksAndWaitsProvider.terminalLoadsToDesks(request.minutesInMillis, loads.indexed, deskLimitsProviders(simulationParams.terminal), "scenarios", simulationParams.terminal)
+      )
 
     val dummyPersistentActor = system.actorOf(Props(new DummyPersistentActor))
 
-    val crunchRequest: MillisSinceEpoch => CrunchRequest =
-      (millis: MillisSinceEpoch) => CrunchRequest(millis, simulationAirportConfig.crunchOffsetMinutes, simulationAirportConfig.minutesToCrunch)
-
-    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, crunchRequest, SortedSet.empty[ProcessingRequest], "sim-desks")
+    val crunchGraphSource = new SortedActorRefSource(dummyPersistentActor, SortedSet.empty[TerminalUpdateRequest], "sim-desks")
     val (crunchRequestQueue, deskRecsKillSwitch) = QueuedRequestProcessing.createGraph(crunchGraphSource, portStateActor, desksProducer, "sim-desks").run()
 
     crunchRequestQueue ! request

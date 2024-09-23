@@ -4,11 +4,13 @@ import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
 import akka.actor.ActorRef
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.UtcDate
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-case class MockManifestsLookup(probe: ActorRef) {
+case class MockManifestsLookup(probe: ActorRef, terminals: Iterable[Terminal]) {
   implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
   def lookup(mockData: VoyageManifests = VoyageManifests.empty): ManifestLookup = {
@@ -25,6 +27,6 @@ case class MockManifestsLookup(probe: ActorRef) {
 
   def update: ManifestsUpdate = (date: UtcDate, manifests: VoyageManifests) => {
     probe ! (date, manifests)
-    Future(manifests.manifests.map(_.scheduled.millisSinceEpoch).toSet)
+    Future(manifests.manifests.map(_.scheduled.toLocalDate).flatMap(d => terminals.map(TerminalUpdateRequest(_, d))).toSet)
   }
 }

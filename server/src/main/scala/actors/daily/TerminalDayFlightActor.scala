@@ -10,6 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -195,7 +196,7 @@ class TerminalDayFlightActor(year: Int,
     acceptableExistingSources.isEmpty
   }
 
-  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[MillisSinceEpoch] = {
+  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[TerminalUpdateRequest] = {
     val (updatedState, minutesToUpdate) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
 
     state = updatedState
@@ -204,32 +205,31 @@ class TerminalDayFlightActor(year: Int,
     requestMissingHistoricSplits()
 
     minutesToUpdate
+      .map(SDate(_).toLocalDate)
+      .map(TerminalUpdateRequest(terminal, _))
   }
 
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =
     if (diff.nonEmpty) {
-      val minutesToUpdate = applyDiffAndPersist(diff.applyTo)
+      val updateRequests = applyDiffAndPersist(diff.applyTo)
       val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
-      persistAndMaybeSnapshotWithAck(message, List((sender(), minutesToUpdate)))
+      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
     }
     else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
-      val minutesToUpdate = applyDiffAndPersist(diff.applyTo)
+      val updateRequests = applyDiffAndPersist(diff.applyTo)
       val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
-      persistAndMaybeSnapshotWithAck(message, List((sender(), minutesToUpdate)))
+      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
     } else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {
       val timestamp = now().millisSinceEpoch
-      val (updatedState, minutes) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
-      state = updatedState
-
-      val replyToAndMessage = List((sender(), minutes))
+      val updateRequests = applyDiffAndPersist(diff.applyTo)
       val message = splitsForArrivalsToMessage(diff, timestamp)
-      persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
+      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
     } else sender() ! Set.empty
 
   private def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {

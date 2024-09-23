@@ -15,7 +15,7 @@ class EgateBanksUpdatesActorSpec extends CrunchTestLike {
   "Given an egate banks update actor" >> {
     val defaultUpdate = EgateBanksUpdate(100L, IndexedSeq(EgateBank(IndexedSeq(true, true)), EgateBank(IndexedSeq(true, false))))
     val defaults: Map[Terminal, EgateBanksUpdates] = Map(T1 -> EgateBanksUpdates(List(defaultUpdate)))
-    val actor = system.actorOf(Props(new EgateBanksUpdatesActor(() => SDate.now(), defaults, 0, 1440, 5)))
+    val actor = system.actorOf(Props(new EgateBanksUpdatesActor(() => SDate.now(), defaults, 5)))
 
     "Given no updates, when I ask for its state I should receive the default gates" >> {
       val result = Await.result(actor.ask(GetState).mapTo[PortEgateBanksUpdates], 1.second)

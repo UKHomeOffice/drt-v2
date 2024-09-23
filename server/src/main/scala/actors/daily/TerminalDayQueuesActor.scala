@@ -4,8 +4,8 @@ import akka.actor.Props
 import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MillisSinceEpoch}
 import drt.shared.{CrunchApi, TQM}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 
@@ -22,7 +22,8 @@ class TerminalDayQueuesActor(year: Int,
                              day: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
-                             maybePointInTime: Option[MillisSinceEpoch]) extends
+                             maybePointInTime: Option[MillisSinceEpoch],
+                            ) extends
   TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"
 

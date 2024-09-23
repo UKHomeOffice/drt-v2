@@ -40,16 +40,24 @@ class ForecastCrunchSpec extends CrunchTestLike {
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
     val expectedForecast = Map(
+      SDate(scheduled).toISOString -> 20,
+      SDate(scheduled).addMinutes(1).toISOString -> 1
+    )
+    val expectedForecast2 = Map(
       SDate(base).toISOString -> 20,
       SDate(base).addMinutes(1).toISOString -> 1,
       SDate(scheduled).toISOString -> 20,
       SDate(scheduled).addMinutes(1).toISOString -> 1
     )
 
-    crunch.portStateTestProbe.fishForMessage(1.seconds) {
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
       case PortState(_, cms, _) =>
-        val forecastSummary = interestingPaxLoads(cms)
-        forecastSummary == expectedForecast
+        interestingPaxLoads(cms) == expectedForecast
+    }
+
+    crunch.portStateTestProbe.fishForMessage(5.seconds) {
+      case PortState(_, cms, _) =>
+        interestingPaxLoads(cms) == expectedForecast2
     }
 
     success
@@ -89,7 +97,7 @@ class ForecastCrunchSpec extends CrunchTestLike {
 
     offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(baseFlights))
 
-    crunch.portStateTestProbe.fishForMessage(1.seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val firstInterestingMilli = SDate("2017-01-03T23:59Z").millisSinceEpoch
         val interestingMinuteMillis = firstInterestingMilli to firstInterestingMilli + oneMinuteMillis

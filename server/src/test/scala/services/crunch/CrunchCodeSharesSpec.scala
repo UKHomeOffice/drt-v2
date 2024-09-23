@@ -73,10 +73,11 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
 
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
-      val expected = Map(
+      val expected1 = Map(
         T1 -> Map(Queues.EeaDesk -> Seq(
           15.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)),
+          0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
+      val expected2 = Map(
         T2 -> Map(Queues.EeaDesk -> Seq(
           0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
           12.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)))
@@ -84,7 +85,13 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState =>
           val resultSummary = paxLoadsFromPortState(ps, 30)
-          resultSummary == expected
+          resultSummary == expected1
+      }
+
+      crunch.portStateTestProbe.fishForMessage(2.seconds) {
+        case ps: PortState =>
+          val resultSummary = paxLoadsFromPortState(ps, 30)
+          resultSummary == (expected1 ++ expected2).toMap
       }
 
       success

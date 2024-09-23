@@ -1,6 +1,7 @@
 package services
 
 import org.slf4j.{Logger, LoggerFactory}
+import services.workload.{QueueProcessor, QueuePassenger}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.mutable
@@ -45,16 +46,16 @@ object OptimiserWithFlexibleProcessors {
   val targetWidth = 60
   val rollingBuffer = 120
 
-  def crunchWholePax(passengers: Iterable[Iterable[Double]],
+  def crunchWholePax(passengerLoads: Iterable[Iterable[Double]],
                      minDesks: Iterable[Int],
                      maxDesks: Iterable[Int],
                      config: OptimiserConfig): Try[OptimizerCrunchResult] = {
     val processorsCount = config.processors.processorsByMinute.length
-    assert(processorsCount == passengers.size, s"processors by minute ($processorsCount) needs to match workload length (${passengers.size})")
-    val indexedWork = passengers.map(_.sum).toIndexedSeq
+    assert(processorsCount == passengerLoads.size, s"processors by minute ($processorsCount) needs to match workload length (${passengerLoads.size})")
+    val indexedWork = passengerLoads.map(_.sum).toIndexedSeq
     val indexedMinDesks = minDesks.toIndexedSeq
 
-    val bestMaxDesks = if (passengers.size >= 60) {
+    val bestMaxDesks = if (passengerLoads.size >= 60) {
       val fairMaxDesks = rollingFairXmax(indexedWork,
         indexedMinDesks,
         blockSize,
@@ -72,13 +73,14 @@ object OptimiserWithFlexibleProcessors {
       desks <- tryOptimiseWin(indexedWork, indexedMinDesks, bestMaxDesks, config.sla, weightChurn, weightPax, weightStaff, weightSla, config.processors)
     } yield {
       val actualCapacity = desks.zipWithIndex.map {
-        case (c, idx) => config.processors.forMinute(idx).capacityForServers(c)
+        case (c, idx) => List(config.processors.forMinute(idx).capacityForServers(c) * 60)
       }
       val optFinished = SDate.now().millisSinceEpoch
-      val queue = QueueCapacity(actualCapacity.toList).processPassengers(config.sla, passengers)
+      val queuePassengers = passengerLoads.map(_.map(x => QueuePassenger((x * 60).round.toInt)).toList)
+      val (_, waitTimes, queueSizes) = QueueProcessor.processQueue(actualCapacity, queuePassengers.toSeq)
       val queueTook = SDate.now().millisSinceEpoch - optFinished
       log.info(s"Optimisation took ${optFinished - start}ms. Queue length & waits took ${queueTook}ms")
-      OptimizerCrunchResult(desks, queue.waits, queue.queueByMinute.toIndexedSeq)
+      OptimizerCrunchResult(desks, waitTimes, queueSizes.map(_.toDouble).toIndexedSeq)
     }
   }
 

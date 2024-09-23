@@ -333,8 +333,6 @@ object CrunchApi {
 
     def ++(that: MinutesContainer[MINUTE, IDX]): MinutesContainer[MINUTE, IDX] = MinutesContainer(minutes ++ that.minutes)
 
-    def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[MINUTE, IDX] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
-
     def contains(clazz: Class[_]): Boolean = minutes.headOption match {
       case Some(x) if x.getClass == clazz => true
       case _ => false

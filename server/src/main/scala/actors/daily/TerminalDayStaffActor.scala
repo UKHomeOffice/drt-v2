@@ -22,7 +22,8 @@ class TerminalDayStaffActor(year: Int,
                             day: Int,
                             terminal: Terminal,
                             val now: () => SDateLike,
-                            maybePointInTime: Option[MillisSinceEpoch])
+                            maybePointInTime: Option[MillisSinceEpoch],
+                           )
   extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
 
   override val persistenceIdType: String = "staff"

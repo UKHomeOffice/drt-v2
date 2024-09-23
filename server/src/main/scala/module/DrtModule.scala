@@ -31,9 +31,9 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
 
   val config: Configuration = new Configuration(ConfigFactory.load)
 
-  val airportConfig: AirportConfig = AirportConfigProvider(config)
-
   lazy val drtParameters: DrtParameters = DrtParameters(config)
+
+  val airportConfig: AirportConfig = AirportConfigProvider(config)
 
   private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, drtParameters, now)
   private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, drtParameters, now)

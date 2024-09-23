@@ -39,13 +39,13 @@ trait ShiftsActorLike {
       shiftMessagesToStaffAssignments(snapshot.shifts)
   }
 
-  val eventToState: (() => SDateLike, Int) => (ShiftAssignments, Any) => (ShiftAssignments, Iterable[TerminalUpdateRequest]) =
-    (now, minutesToCrunch) => (state, msg) => msg match {
+  val eventToState: (() => SDateLike) => (ShiftAssignments, Any) => (ShiftAssignments, Iterable[TerminalUpdateRequest]) =
+    now => (state, msg) => msg match {
       case m: ShiftsMessage =>
         val shiftsToRecover = shiftMessagesToStaffAssignments(m.shifts)
         val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
         val newState = ShiftAssignments(updatedShifts).purgeExpired(startOfTheMonth(now))
-        val subscriberEvents = terminalUpdateRequests(shiftsToRecover, minutesToCrunch)
+        val subscriberEvents = terminalUpdateRequests(shiftsToRecover)
         (newState, subscriberEvents)
       case _ => (state, Seq.empty)
     }
@@ -58,7 +58,7 @@ trait ShiftsActorLike {
       case GetStateForDateRange(from, to) =>
         getSender() ! ShiftAssignments(getState().assignments.filter(a => from <= a.start && a.end <= to))
 
-      case TerminalUpdateRequest(terminal, localDate, _, _) =>
+      case TerminalUpdateRequest(terminal, localDate) =>
         val assignmentsForDate = ShiftAssignments(getState().assignments.filter { assignment =>
           val sdate = SDate(localDate)
           assignment.terminal == terminal &&
@@ -67,28 +67,23 @@ trait ShiftsActorLike {
         getSender() ! assignmentsForDate
     }
 
-  def streamingUpdatesProps(journalType: StreamingJournalLike,
-                            minutesToCrunch: Int,
-                            now: () => SDateLike,
-                           ): Props =
+  def streamingUpdatesProps(journalType: StreamingJournalLike, now: () => SDateLike): Props =
     Props(new StreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
       ShiftAssignments.empty,
       snapshotMessageToState,
-      eventToState(now, minutesToCrunch),
+      eventToState(now),
       query(now)
     ))
 
-  def terminalUpdateRequests(shifts: ShiftAssignments,
-                             minutesToCrunch: Int,
-                            ): immutable.Iterable[TerminalUpdateRequest] =
+  def terminalUpdateRequests(shifts: ShiftAssignments): immutable.Iterable[TerminalUpdateRequest] =
     shifts.assignments.groupBy(_.terminal).collect {
       case (terminal, assignments) if shifts.assignments.nonEmpty =>
         val earliest = SDate(assignments.map(_.start).min).millisSinceEpoch
         val latest = SDate(assignments.map(_.end).max).millisSinceEpoch
         (earliest to latest by MilliTimes.oneDayMillis).map { milli =>
-          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate, 0, minutesToCrunch)
+          TerminalUpdateRequest(terminal, SDate(milli).toLocalDate)
         }
     }.flatten
 }
@@ -223,7 +218,7 @@ class ShiftsActor(val now: () => SDateLike,
       val assignments = state.purgeExpired(expireBefore)
       sender() ! assignments
 
-    case TerminalUpdateRequest(terminal, localDate, _, _) =>
+    case TerminalUpdateRequest(terminal, localDate) =>
       sender() ! ShiftAssignments(state.assignments.filter { assignment =>
         val sdate = SDate(localDate)
         assignment.terminal == terminal &&

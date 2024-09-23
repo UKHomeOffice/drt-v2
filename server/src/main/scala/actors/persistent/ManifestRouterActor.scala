@@ -18,6 +18,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.feeds._
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
@@ -186,7 +187,7 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     case unexpected => log.error(s"Got an unexpected message: $unexpected")
   }
 
-  def handleUpdatesAndAck(updates: VoyageManifests, replyTo: ActorRef): Future[Set[Long]] = {
+  def handleUpdatesAndAck(updates: VoyageManifests, replyTo: ActorRef): Future[Set[TerminalUpdateRequest]] = {
     processingRequest = true
     val eventualEffects = sendUpdates(updates)
     eventualEffects
@@ -198,23 +199,23 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
     eventualEffects
   }
 
-  private def sendUpdates(updates: VoyageManifests): Future[Set[Long]] = {
-    val eventualUpdatedMinutesDiff: Source[Set[Long], NotUsed] =
+  private def sendUpdates(updates: VoyageManifests): Future[Set[TerminalUpdateRequest]] = {
+    val eventualUpdatedMinutesDiff: Source[Set[TerminalUpdateRequest], NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => manifestsUpdate(partition, updates)
       }
     combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
   }
 
-  private def combineUpdateEffectsStream(effects: Source[Set[Long], NotUsed]): Future[Set[Long]] =
+  private def combineUpdateEffectsStream(effects: Source[Set[TerminalUpdateRequest], NotUsed]): Future[Set[TerminalUpdateRequest]] =
     effects
-      .fold[Set[Long]](Set.empty[Long])(_ ++ _)
+      .fold[Set[TerminalUpdateRequest]](Set.empty[TerminalUpdateRequest])(_ ++ _)
       .log(getClass.getName)
       .runWith(Sink.seq)
-      .map(_.foldLeft[Set[Long]](Set.empty[Long])(_ ++ _))
+      .map(_.foldLeft[Set[TerminalUpdateRequest]](Set.empty[TerminalUpdateRequest])(_ ++ _))
       .recover { case t =>
         log.error("Failed to combine update effects", t)
-        Set.empty[Long]
+        Set.empty[TerminalUpdateRequest]
       }
 
   private def persistLastSeenFileName(lastProcessedMarker: MillisSinceEpoch): Unit =

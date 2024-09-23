@@ -22,7 +22,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val ec: ExecutionContext,
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends DrtSystemInterface {
-
   override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
 
   override val flightLookups: FlightLookupsLike = FlightLookups(
@@ -36,7 +35,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)
 
-  override val manifestLookups: ManifestLookups = ManifestLookups(system)
+  override val manifestLookups: ManifestLookups = ManifestLookups(system, airportConfig.terminals)
 
   override val userService: UserTableLike = UserTable(AggregateDb)
 
@@ -83,11 +82,11 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   lazy val persistentActors: PersistentStateActors = ProdPersistentStateActors(
     system,
     now,
-    airportConfig.minutesToCrunch,
-    airportConfig.crunchOffsetMinutes,
     manifestLookups,
     airportConfig.portCode,
-    feedService.paxFeedSourceOrder)
+    feedService.paxFeedSourceOrder,
+    airportConfig.terminals,
+  )
 
   override def run(): Unit = applicationService.run()
 

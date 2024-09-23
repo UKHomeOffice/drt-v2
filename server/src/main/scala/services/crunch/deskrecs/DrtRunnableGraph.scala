@@ -5,46 +5,31 @@ import akka.actor.ActorRef
 import akka.stream.scaladsl.Flow
 import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.{Done, NotUsed}
-import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.LoggerFactory
 import slick.lifted.Rep
 import slickdb.AggregatedDbTables
-import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.db.dao.StatusDailyDao
 import uk.gov.homeoffice.drt.db.tables.{StatusDaily, StatusDailyTable}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.LocalDate
 
 import java.sql.Timestamp
 import scala.collection.SortedSet
 import scala.concurrent.{ExecutionContext, Future}
 
 trait DrtRunnableGraph {
-  def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[ProcessingRequest, A, NotUsed],
+  def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[TerminalUpdateRequest, A, NotUsed],
                                            persistentQueueActor: ActorRef,
-                                           initialQueue: SortedSet[ProcessingRequest],
+                                           initialQueue: SortedSet[TerminalUpdateRequest],
                                            sinkActor: ActorRef,
                                            graphName: String,
-                                           processingRequest: MillisSinceEpoch => ProcessingRequest,
                                           )
                                           (implicit mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource(persistentQueueActor, processingRequest, initialQueue, graphName)
+    val graphSource = new SortedActorRefSource(persistentQueueActor, initialQueue, graphName)
     QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
   }
-
-  def setUpdatedAtForTerminals(terminals: Iterable[Terminal],
-                               setUpdatedAtForDay: (Terminal, LocalDate, MillisSinceEpoch) => Future[Done],
-                               pr: ProcessingRequest): Unit =
-    pr match {
-      case TerminalUpdateRequest(terminal, localDate, _, _) =>
-        setUpdatedAtForDay(terminal, localDate, SDate.now().millisSinceEpoch)
-      case other =>
-        val localDate = LocalDate(other.date.year, other.date.month, other.date.day)
-        terminals.foreach { terminal =>
-          setUpdatedAtForDay(terminal, localDate, SDate.now().millisSinceEpoch)
-        }
-    }
 }
 
 object DrtRunnableGraph extends DrtRunnableGraph {

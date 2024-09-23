@@ -19,13 +19,11 @@ trait RouterActorLikeWithSubscriber[U <: Updates, P, A] extends RouterActorLike[
   var updatesSubscribers: List[ActorRef] = List.empty
 
   override def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[Set[A]] =
-    super.handleUpdatesAndAck(updates, replyTo).map { updatedMillis =>
+    super.handleUpdatesAndAck(updates, replyTo).map { updateRequests =>
       if (shouldSendEffectsToSubscriber(updates)) {
-        updatesSubscribers.foreach { subscriber =>
-          if (updatedMillis.nonEmpty) subscriber ! updatedMillis
-        }
+        updatesSubscribers.foreach(subscriber => updateRequests.foreach(subscriber ! _))
       }
-      updatedMillis
+      updateRequests
     }
 
   override def receiveUtil: Receive = super.receiveUtil orElse {
@@ -44,7 +42,7 @@ trait RouterActorLikeWithSubscriber2[U <: Updates, P, A] extends RouterActorLike
 }
 
 trait RouterActorLike[U <: Updates, P, A] extends Actor with ActorLogging {
-  var processingRequest: Boolean = false
+  var currentlyProcessingARequest: Boolean = false
 
   implicit val dispatcher: ExecutionContext = context.dispatcher
   implicit val mat: Materializer = Materializer.createMaterializer(context)
@@ -61,11 +59,11 @@ trait RouterActorLike[U <: Updates, P, A] extends Actor with ActorLogging {
   def shouldSendEffectsToSubscriber: U => Boolean
 
   def handleUpdatesAndAck(updates: U, replyTo: ActorRef): Future[Set[A]] = {
-    processingRequest = true
+    currentlyProcessingARequest = true
     val eventualEffects = updateAll(updates)
     eventualEffects
       .onComplete { _ =>
-        processingRequest = false
+        currentlyProcessingARequest = false
         replyTo ! StatusReply.Ack
         self ! ProcessNextUpdateRequest
       }
@@ -73,11 +71,11 @@ trait RouterActorLike[U <: Updates, P, A] extends Actor with ActorLogging {
   }
 
   private def updateAll(updates: U): Future[Set[A]] = {
-    val eventualUpdatedMinutesDiff: Source[Set[A], NotUsed] =
+    val eventualUpdateRequests: Source[Set[A], NotUsed] =
       Source(partitionUpdates(updates)).mapAsync(1) {
         case (partition, updates) => updatePartition(partition, updates)
       }
-    combineUpdateEffectsStream(eventualUpdatedMinutesDiff)
+    combineUpdateEffectsStream(eventualUpdateRequests)
   }
 
   private def combineUpdateEffectsStream(effects: Source[Set[A], NotUsed]): Future[Set[A]] =
@@ -114,7 +112,7 @@ trait RouterActorLike[U <: Updates, P, A] extends Actor with ActorLogging {
 
   private def receiveProcessRequest: Receive = {
     case ProcessNextUpdateRequest =>
-      if (!processingRequest) {
+      if (!currentlyProcessingARequest) {
         updateRequestsQueue match {
           case (replyTo, updates) :: tail =>
             handleUpdatesAndAck(updates, replyTo)
