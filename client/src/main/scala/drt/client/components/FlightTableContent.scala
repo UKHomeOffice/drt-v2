@@ -88,11 +88,11 @@ object FlightTableContent {
               <.div {
                 val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || ageGroups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals
                 val flightCounts = if (flaggerInUse && props.flightHighlight.showOnlyHighlightedRows)
-                  <.span(s"$highlightedFlightsCount flights shown and highlighted")
+                  <.span(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} shown and highlighted")
                 else if (flaggerInUse)
-                  <.span(s"${sortedFlights.length} flights shown", " | ", <.b(s"$highlightedFlightsCount flights highlighted"))
+                  <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown", " | ", <.b(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} highlighted"))
                 else
-                  <.span(s"${sortedFlights.length} flights shown")
+                  <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown")
 
                 MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
               },
@@ -162,6 +162,10 @@ object FlightTableContent {
       }
       content.getOrElse(<.div())
     }
+  }
+
+  private def pluraliseString(highlightedFlightsCount: Int) = {
+    if (highlightedFlightsCount != 1) "s" else ""
   }
 
   val component: Component[Props, Unit, Backend, CtorType.Props] =
