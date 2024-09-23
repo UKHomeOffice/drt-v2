@@ -25,8 +25,8 @@ case class MockShiftsService(shifts: Seq[StaffAssignmentLike]) extends ShiftsSer
   override def shiftsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] =
     Future.successful(ShiftAssignments(shifts))
 
-  override def shiftsForMonth(month: MillisSinceEpoch): Future[MonthOfShifts] =
-    Future.successful(MonthOfShifts(month, ShiftAssignments(shifts)))
+  override def allShifts: Future[ShiftAssignments] =
+    Future.successful(ShiftAssignments(shifts))
 
   override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Unit = ()
 }
@@ -99,11 +99,11 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     "return the shifts from the mock service as json" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
       val result = controller
-        .getShiftsForMonth(SDate("2024-07-01T01:00").millisSinceEpoch)
+        .getAllShifts
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
-      contentAsString(result) must ===(write(MonthOfShifts(SDate("2024-07-01T01:00").millisSinceEpoch, ShiftAssignments(shifts))))
+      contentAsString(result) must ===(write(ShiftAssignments(shifts)))
     }
   }
 
@@ -250,7 +250,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "return Forbidden for getShiftsForMonth" in {
       val result = controller
-        .getShiftsForMonth(SDate("2024-07-01T01:00").millisSinceEpoch)
+        .getAllShifts
         .apply(FakeRequest(method = "GET", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)
@@ -318,8 +318,8 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 case class MockMinimumStaffingService() extends MinimumStaffingService {
   override val getTerminalConfig: Terminal => Future[Option[PortTerminalConfig]] = _ => Future.successful(Option(PortTerminalConfig(PortCode("STN"), T1, Option(10), 0)))
 
-  override def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[MonthOfShifts] =
-    Future.successful(MonthOfShifts(SDate("2024-07-01T01:00").millisSinceEpoch, ShiftAssignments(Seq())))
+  override def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[ShiftAssignments] =
+    Future.successful(ShiftAssignments(Seq()))
 }
 
   case class MockStaffShiftFormService() extends StaffShiftFormService{

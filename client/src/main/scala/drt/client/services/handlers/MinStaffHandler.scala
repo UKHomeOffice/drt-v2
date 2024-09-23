@@ -2,10 +2,10 @@ package drt.client.services.handlers
 
 import diode.data.{Pot, Ready}
 import diode.{Action, ActionResult, Effect, ModelRW}
-import drt.client.actions.Actions.{RetryActionAfter, SetShiftsForMonth}
+import drt.client.actions.Actions.{RetryActionAfter, SetAllShifts}
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.MonthOfShifts
+import drt.shared.ShiftAssignments
 import org.scalajs.dom.XMLHttpRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default._
@@ -47,7 +47,7 @@ class MinStaffHandler[M](modelRW: ModelRW[M, Pot[TerminalMinStaff]]) extends Log
 
     case SaveMinStaff(minStaff) =>
       val apiCallEffect = Effect(DrtApi.post(s"shifts/minimum-staff/${minStaff.terminal.toString}", s"""{"minimumStaff":"${minStaff.minStaff.getOrElse(0)}"}""")
-        .map(r => SetShiftsForMonth(read[MonthOfShifts](r.responseText)))
+        .map(r => SetAllShifts(read[ShiftAssignments](r.responseText)))
         .recoverWith {
           case _ =>
             log.error(s"Failed to save min staff. Re-requesting after ${PollDelay.recoveryDelay}")

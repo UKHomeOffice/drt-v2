@@ -144,7 +144,7 @@ object SPAMain {
 
     def loadAction: Action = mode match {
       case Staffing =>
-        GetShiftsForMonth(dateFromUrlOrNow)
+        GetAllShifts
       case _ =>
         SetViewMode(viewMode)
     }

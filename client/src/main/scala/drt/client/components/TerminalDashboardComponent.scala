@@ -6,7 +6,6 @@ import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.TerminalContentComponent.originMapper
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.SetMinStaffSuccessBanner
 import drt.client.services.{SPACircuit, ViewLive}
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
@@ -190,10 +189,7 @@ object TerminalDashboardComponent {
       }
       <.div(pot.render(identity))
     }
-    .componentDidMount(p => Callback(SPACircuit.dispatch(SetMinStaffSuccessBanner(false))) >>
-      Callback {
-        GoogleEventTracker.sendPageView(page = s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}")
-      })
+    .componentDidMount(p => Callback(GoogleEventTracker.sendPageView(page = s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}")))
     .build
 
   private def cmsForTerminalAndQueue(crunchMinutes: SortedMap[TQM, CrunchMinute], queue: Queue, terminal: Terminal): Iterable[CrunchMinute] =

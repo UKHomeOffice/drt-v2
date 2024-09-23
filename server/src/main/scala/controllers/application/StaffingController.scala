@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
 import scala.concurrent.Future
-import PortTerminalShift._
+
 
 class StaffingController @Inject()(cc: ControllerComponents,
                                    ctrl: DrtSystemInterface,
@@ -105,9 +105,9 @@ class StaffingController @Inject()(cc: ControllerComponents,
       }
     }
 
-  def getShiftsForMonth(month: MillisSinceEpoch): Action[AnyContent] = authByRole(StaffEdit) {
+  def getAllShifts: Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
-      shiftsService.shiftsForMonth(month).map(s => Ok(write(s)))
+      shiftsService.allShifts.map(s => Ok(write(s)))
     }
   }
 
