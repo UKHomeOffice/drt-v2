@@ -28,6 +28,7 @@ trait LtnFeedRequestLike {
 
 case class LtnFeedRequester(endPoint: String, token: String, username: String, password: String)
                            (implicit system: ActorSystem) extends LtnFeedRequestLike {
+  println(s"Creating LtnFeedRequester with endPoint: $endPoint, token: ${token.takeRight(30)}, username: $username, password: ${password.take(4)}..${password.takeRight(4)}")
   val request: HttpRequest = HttpRequest(
     method = HttpMethods.GET,
     uri = Uri(endPoint),
@@ -52,19 +53,21 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
     }
 
   def requestFeed(): Future[ArrivalsFeedResponse] = feedRequester.getResponse()
-    .map {
+    .flatMap {
       case HttpResponse(StatusCodes.OK, _, entity, _) =>
         responseToFeedResponse(entity)
 
-      case HttpResponse(status, _, _, _) =>
-        log.error(s"Got status $status")
-        Future(ArrivalsFeedFailure(status.defaultMessage()))
+      case HttpResponse(status, _, entity, _) =>
+        entity.dataBytes.runFold("")((acc, b) => acc + b.utf8String).map { body =>
+          log.error(s"Got status $status with body $body")
+          ArrivalsFeedFailure(status.defaultMessage())
+        }
     }
-    .recover {
-      case throwable => log.error("Caught error while retrieving the LTN port feed.", throwable)
-        Future(ArrivalsFeedFailure(throwable.toString))
+    .recoverWith {
+      case throwable =>
+        log.error("Caught error while retrieving the LTN port feed.", throwable)
+        Future.successful(ArrivalsFeedFailure(throwable.toString))
     }
-    .flatten
 
   private def responseToFeedResponse(entity: ResponseEntity): Future[ArrivalsFeedResponse] = {
     import LtnLiveFlightProtocol._
