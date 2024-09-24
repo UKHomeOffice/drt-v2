@@ -28,8 +28,6 @@ trait LtnFeedRequestLike {
 
 case class LtnFeedRequester(endPoint: String, token: String, username: String, password: String)
                            (implicit system: ActorSystem) extends LtnFeedRequestLike {
-  val log = LoggerFactory.getLogger(getClass)
-  log.info(s"Creating LtnFeedRequester with endPoint: $endPoint, token: ${token.takeRight(30)}, username: $username, password: ${password.take(4)}..${password.takeRight(4)}")
   val request: HttpRequest = HttpRequest(
     method = HttpMethods.GET,
     uri = Uri(endPoint),
