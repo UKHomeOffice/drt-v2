@@ -11,8 +11,7 @@ import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._
-import manifests.queues.SplitsCalculator
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, FlightsWithSplits, Splits}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}

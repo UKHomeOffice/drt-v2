@@ -23,11 +23,11 @@ case class TestActorService(journalType: StreamingJournalLike,
                            (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext) extends ActorsServiceLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "request-and-terminate-actor")
   override val liveShiftsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(
-    journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
+    journalType, now), name = "shifts-read-actor")
   override val liveFixedPointsReadActor: ActorRef = system.actorOf(TestFixedPointsActor.streamingUpdatesProps(
-    journalType, now, forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
+    journalType, now, forecastMaxDays), name = "fixed-points-read-actor")
   override val liveStaffMovementsReadActor: ActorRef = system.actorOf(TestStaffMovementsActor.streamingUpdatesProps(
-    journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
+    journalType), name = "staff-movements-read-actor")
 
   override val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
     now, startOfTheMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")

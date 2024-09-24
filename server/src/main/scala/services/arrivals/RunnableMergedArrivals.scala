@@ -6,13 +6,13 @@ import akka.actor.ActorRef
 import akka.stream.scaladsl.{Flow, Sink}
 import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.util.Timeout
-import drt.shared.CrunchApi.MillisSinceEpoch
 import providers.FlightsProvider
 import services.arrivals.MergeArrivals.FeedArrivalSet
 import services.crunch.deskrecs.QueuedRequestProcessing
-import uk.gov.homeoffice.drt.actor.commands.{MergeArrivalsRequest, ProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{DateLike, SDate, UtcDate}
 
 import scala.collection.SortedSet
@@ -23,24 +23,23 @@ object RunnableMergedArrivals {
             flightsRouterActor: ActorRef,
             aggregatedArrivalsActor: ActorRef,
             mergeArrivalsQueueActor: ActorRef,
-            feedArrivalsForDate: Seq[DateLike => Future[FeedArrivalSet]],
-            mergeArrivalsQueue: SortedSet[ProcessingRequest],
-            mergeArrivalRequest: MillisSinceEpoch => MergeArrivalsRequest,
+            feedArrivalsForDate: Seq[(DateLike, Terminal) => Future[FeedArrivalSet]],
+            mergeArrivalsQueue: SortedSet[TerminalUpdateRequest],
             setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
             addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
            )
            (implicit ec: ExecutionContext, mat: Materializer, timeout: Timeout): (ActorRef, UniqueKillSwitch) = {
-    val existingMergedArrivals: UtcDate => Future[Set[UniqueArrival]] =
-      (date: UtcDate) =>
+    val existingMergedArrivals: (Terminal, UtcDate) => Future[Set[UniqueArrival]] =
+      (terminal, date) =>
         FlightsProvider(flightsRouterActor)
-          .allTerminalsDateRangeScheduledOrPcp(date, date).map(_._2.map(_.unique).toSet)
+          .terminalDateRangeScheduledOrPcp(terminal)(date, date).map(_._2.map(_.unique).toSet)
           .runWith(Sink.fold(Set[UniqueArrival]())(_ ++ _))
           .map(_.filter(u => SDate(u.scheduled).toUtcDate == date))
 
     val merger = MergeArrivals(
-      existingMergedArrivals,
-      feedArrivalsForDate,
-      ArrivalsAdjustments.adjustmentsForPort(portCode),
+      existingMerged = existingMergedArrivals,
+      arrivalSources = feedArrivalsForDate,
+      adjustments = ArrivalsAdjustments.adjustmentsForPort(portCode),
     )
 
     val mergeArrivalsFlow = MergeArrivals.processingRequestToArrivalsDiff(
@@ -52,25 +51,23 @@ object RunnableMergedArrivals {
 
     val (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =
       startQueuedRequestProcessingGraph(
-        mergeArrivalsFlow,
-        mergeArrivalsQueueActor,
-        mergeArrivalsQueue,
-        flightsRouterActor,
-        "arrivals",
-        mergeArrivalRequest,
+        minutesProducer = mergeArrivalsFlow,
+        persistentQueueActor = mergeArrivalsQueueActor,
+        initialQueue = mergeArrivalsQueue,
+        sinkActor = flightsRouterActor,
+        graphName = "arrivals",
       )
     (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch)
   }
 
-  private def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[ProcessingRequest, A, NotUsed],
+  private def startQueuedRequestProcessingGraph[A](minutesProducer: Flow[TerminalUpdateRequest, A, NotUsed],
                                                    persistentQueueActor: ActorRef,
-                                                   initialQueue: SortedSet[ProcessingRequest],
+                                                   initialQueue: SortedSet[TerminalUpdateRequest],
                                                    sinkActor: ActorRef,
                                                    graphName: String,
-                                                   processingRequest: MillisSinceEpoch => ProcessingRequest,
                                                   )
                                                   (implicit materializer: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val graphSource = new SortedActorRefSource(persistentQueueActor, processingRequest, initialQueue, graphName)
+    val graphSource = new SortedActorRefSource(persistentQueueActor, initialQueue, graphName)
     QueuedRequestProcessing.createGraph(graphSource, sinkActor, minutesProducer, graphName).run()
   }
 

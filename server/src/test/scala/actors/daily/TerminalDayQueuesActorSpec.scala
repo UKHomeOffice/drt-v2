@@ -6,6 +6,7 @@ import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
 import drt.shared.TQM
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -28,9 +29,9 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
       val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None)
       val eventualContainer = queuesActor.ask(MinutesContainer(Seq(drm))).mapTo[Set[Long]]
 
-      "I should get back the merged CrunchMinute" >> {
+      "I should get back a TerminalUpdateRequest for the LocalDate affected" >> {
         val result = Await.result(eventualContainer, 1.second)
-        result === Set(drm.minute)
+        result === Set(TerminalUpdateRequest(T1, date.toLocalDate))
       }
     }
   }

@@ -1,17 +1,17 @@
 package services.crunch.staffing
 
-import akka.{Done, NotUsed}
 import akka.actor.ActorRef
 import akka.pattern.ask
-import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.stream.scaladsl.Flow
+import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.util.Timeout
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute, StaffMinutes}
+import akka.{Done, NotUsed}
+import drt.shared.CrunchApi.{MinutesContainer, StaffMinute, StaffMinutes}
 import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovements, TM}
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.deskrecs.DrtRunnableGraph
 import services.graphstages.Staffing
-import uk.gov.homeoffice.drt.actor.commands.{CrunchRequest, ProcessingRequest, TerminalUpdateRequest}
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
@@ -25,8 +25,7 @@ object RunnableStaffing extends DrtRunnableGraph {
   import SDate.implicits.sdateFromMillisLocal
 
   def apply(staffingQueueActor: ActorRef,
-            staffQueue: SortedSet[ProcessingRequest],
-            crunchRequest: MillisSinceEpoch => CrunchRequest,
+            staffQueue: SortedSet[TerminalUpdateRequest],
             shiftsActor: ActorRef,
             fixedPointsActor: ActorRef,
             movementsActor: ActorRef,
@@ -35,9 +34,9 @@ object RunnableStaffing extends DrtRunnableGraph {
             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
            )
            (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val shiftsProvider = (r: ProcessingRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
-    val fixedPointsProvider = (r: ProcessingRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
-    val movementsProvider = (r: ProcessingRequest) => movementsActor.ask(r).mapTo[StaffMovements]
+    val shiftsProvider = (r: TerminalUpdateRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
+    val fixedPointsProvider = (r: TerminalUpdateRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
+    val movementsProvider = (r: TerminalUpdateRequest) => movementsActor.ask(r).mapTo[StaffMovements]
 
     val staffMinutesFlow = RunnableStaffing.staffMinutesFlow(shiftsProvider, fixedPointsProvider, movementsProvider, now, setUpdatedAtForDay)
 
@@ -48,19 +47,18 @@ object RunnableStaffing extends DrtRunnableGraph {
         initialQueue = staffQueue,
         sinkActor = staffMinutesActor,
         graphName = "staffing",
-        processingRequest = crunchRequest,
       )
     (staffingUpdateRequestQueue, staffingUpdateKillSwitch)
   }
 
-  def staffMinutesFlow(shiftsProvider: ProcessingRequest => Future[ShiftAssignments],
-                       fixedPointsProvider: ProcessingRequest => Future[FixedPointAssignments],
-                       movementsProvider: ProcessingRequest => Future[StaffMovements],
+  def staffMinutesFlow(shiftsProvider: TerminalUpdateRequest => Future[ShiftAssignments],
+                       fixedPointsProvider: TerminalUpdateRequest => Future[FixedPointAssignments],
+                       movementsProvider: TerminalUpdateRequest => Future[StaffMovements],
                        now: () => SDateLike,
                        setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
                       )
-                      (implicit ec: ExecutionContext): Flow[ProcessingRequest, MinutesContainer[StaffMinute, TM], NotUsed] =
-    Flow[ProcessingRequest]
+                      (implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, MinutesContainer[StaffMinute, TM], NotUsed] =
+    Flow[TerminalUpdateRequest]
       .wireTap(processingRequest => log.info(s"${processingRequest.date} staffing crunch request started"))
       .mapAsync(1)(cr => shiftsProvider(cr).map(sa => (cr, sa)))
       .mapAsync(1) { case (cr, sa) => fixedPointsProvider(cr).map(fp => (cr, sa, fp)) }
@@ -69,8 +67,8 @@ object RunnableStaffing extends DrtRunnableGraph {
 
   private def toStaffMinutes(now: () => SDateLike,
                              setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
-                            ): Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements), MinutesContainer[StaffMinute, TM], NotUsed] =
-    Flow[(ProcessingRequest, ShiftAssignments, FixedPointAssignments, StaffMovements)]
+                            ): Flow[(TerminalUpdateRequest, ShiftAssignments, FixedPointAssignments, StaffMovements), MinutesContainer[StaffMinute, TM], NotUsed] =
+    Flow[(TerminalUpdateRequest, ShiftAssignments, FixedPointAssignments, StaffMovements)]
       .collect { case (processingRequest: TerminalUpdateRequest, sa, fp, sm) =>
         setUpdatedAtForDay(processingRequest.terminal, processingRequest.date, now().millisSinceEpoch)
 

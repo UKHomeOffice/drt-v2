@@ -20,6 +20,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import javax.inject.Singleton
@@ -31,9 +32,9 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
 
   val config: Configuration = new Configuration(ConfigFactory.load)
 
-  val airportConfig: AirportConfig = AirportConfigProvider(config)
-
   lazy val drtParameters: DrtParameters = DrtParameters(config)
+
+  val airportConfig: AirportConfig = AirportConfigProvider(config)
 
   private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, drtParameters, now)
   private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, drtParameters, now)
@@ -142,11 +143,6 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
       val request = ShiftsActor.SetMinimumStaff(terminal, start, end, newValue, oldValue)
       provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request)
         .mapTo[ShiftAssignments]
-        .map { shifts =>
-          val month = SDate(start).millisSinceEpoch
-          val monthInLocalTime = SDate(month, europeLondonTimeZone)
-          MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
-        }
     },
   )
 }

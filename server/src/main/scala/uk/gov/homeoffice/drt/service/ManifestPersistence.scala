@@ -60,11 +60,12 @@ object ManifestPersistence {
                                          timeout: Timeout,
                                          ec: ExecutionContext,
                                          mat: Materializer,
-                                        ): Iterable[ManifestLike] => Future[Done] = ManifestPersistence.persistSplitsFromManifest(
-    FlightsProvider(flightsRouterActor).allTerminalsDateScheduledOrPcp,
-    splitsForManifest,
-    FlightsRouterActor.persistSplits(flightsRouterActor),
-  )
+                                        ): Iterable[ManifestLike] => Future[Done] =
+    ManifestPersistence.persistSplitsFromManifest(
+      FlightsProvider(flightsRouterActor).allTerminalsDateScheduledOrPcp,
+      splitsForManifest,
+      FlightsRouterActor.persistSplits(flightsRouterActor),
+    )
 
   def processManifestFeedResponse(manifestsRouterActor: ActorRef,
                                   flightsRouterActor: ActorRef,
@@ -87,6 +88,7 @@ object ManifestPersistence {
                 log.error(s"Failed to persist splits from manifests: ${response.manifests.manifests}", t)
                 Done
             }
+          Done
         }
   }
 }

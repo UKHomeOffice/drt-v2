@@ -32,6 +32,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
   implicit val timeout: Timeout
+  implicit val airportConfig: AirportConfig
 
   val config: Configuration = new Configuration(ConfigFactory.load)
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
@@ -39,7 +40,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val aggregatedDb: AggregatedDbTables
   val akkaDb: AkkaDbTables
-  val airportConfig: AirportConfig
   val params: DrtParameters
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
@@ -88,7 +88,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   lazy val applicationService: ApplicationService = ApplicationService(
     journalType = journalType,
-    airportConfig = airportConfig,
     now = now,
     params = params,
     config = config,

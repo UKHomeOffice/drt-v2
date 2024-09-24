@@ -86,9 +86,6 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             T1 -> Map(
               Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0),
               Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)),
-            T2 -> Map(
-              Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
-              Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0))
           )
 
           crunch.portStateTestProbe.fishForMessage(2.seconds) {
@@ -174,10 +171,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               T1 -> Map(
                 Queues.EeaDesk -> Seq(20.0, 0.0, 0.0, 0.0, 0.0),
                 Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)),
-              T2 -> Map(
-                Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
-                Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
-              ))
+            )
 
             crunch.portStateTestProbe.fishForMessage(2.seconds) {
               case ps: PortState =>

@@ -26,7 +26,7 @@ case class StaffMinutesChecker(now: () => SDateLike,
         setConfiguredMinimumStaff(terminal, date)
           .foreach { _ =>
             log.info(s"Requesting staff minutes calculation for $terminal on $date")
-            val request = TerminalUpdateRequest(terminal, date, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
+            val request = TerminalUpdateRequest(terminal, date)
             staffingUpdateRequestQueue ! request
           }
       }

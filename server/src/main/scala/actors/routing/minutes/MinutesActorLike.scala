@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -30,8 +31,8 @@ object MinutesActorLike {
   type ManifestLookup = (UtcDate, Option[MillisSinceEpoch]) => Future[VoyageManifests]
 
   type MinutesUpdate[A, B <: WithTimeAccessor, U] = ((Terminals.Terminal, UtcDate), MinutesContainer[A, B]) => Future[Set[U]]
-  type FlightsUpdate = ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[Set[Long]]
-  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Set[Long]]
+  type FlightsUpdate = ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[Set[TerminalUpdateRequest]]
+  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Set[TerminalUpdateRequest]]
 
   case object ProcessNextUpdateRequest
 
@@ -213,9 +214,7 @@ abstract class MinutesActorLike2[A, B <: WithTimeAccessor, U](terminals: Iterabl
                                                               shouldSendEffects: MinutesContainer[A, B] => Boolean,
                                                              ) extends RouterActorLike2[MinutesContainer[A, B], (Terminal, UtcDate), U] {
   override val sequentialUpdatesActor: ActorRef = context.actorOf(Props(new SequentialAccessActor(updateMinutes, splitByResource) {
-    override def shouldSendEffectsToSubscribers(request: MinutesContainer[A, B]): Boolean = {
-      shouldSendEffects(request)
-    }
+    override def shouldSendEffectsToSubscribers(request: MinutesContainer[A, B]): Boolean = shouldSendEffects(request)
   }))
 
   override def receiveQueries: Receive = {

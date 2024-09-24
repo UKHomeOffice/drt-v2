@@ -17,10 +17,6 @@ object OutOfHoursStatus {
   implicit val rw: ReadWriter[OutOfHoursStatus] = macroRW
 }
 
-trait HasAirportConfig {
-  val airportConfig: AirportConfig
-}
-
 object DrtPortConfigs {
 
   import uk.gov.homeoffice.drt.ports.config._

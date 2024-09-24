@@ -35,8 +35,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
 
 object TerminalPlanningComponent {
-
-  case class TerminalPlanningModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines])
+  private case class TerminalPlanningModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines])
 
   def getLastSunday(start: SDateLike): SDateLike = {
     val sunday = start.getLastSunday
@@ -50,8 +49,8 @@ object TerminalPlanningComponent {
 
   case class State(downloadingHeadlines: Boolean, downloadingStaff: Boolean, timePeriod: Int)
 
-  implicit val propsReuse = Reusability.always[Props]
-  implicit val stateReuse = Reusability.by((s: State) => (s.downloadingHeadlines, s.downloadingStaff, s.timePeriod))
+  implicit val propsReuse: Reusability[Props] = Reusability.always[Props]
+  implicit val stateReuse: Reusability[State] = Reusability.by((s: State) => (s.downloadingHeadlines, s.downloadingStaff, s.timePeriod))
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
     .initialStateFromProps(p => State(downloadingHeadlines = false, downloadingStaff = false, timePeriod = p.timePeriod))

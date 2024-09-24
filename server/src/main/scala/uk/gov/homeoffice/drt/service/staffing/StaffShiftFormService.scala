@@ -1,12 +1,13 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import drt.shared.MonthOfShifts
+import drt.shared.ShiftAssignments
 import uk.gov.homeoffice.drt.db.tables.PortTerminalShiftConfig
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import upickle.default.macroRW
 import upickle.default._
+
 import scala.concurrent.{ExecutionContext, Future}
 
 trait StaffShiftFormService {
@@ -20,7 +21,7 @@ trait StaffShiftFormService {
                     frequency: Option[String],
                     actualStaff: Option[Int],
                     minimumRosteredStaff: Option[Int],
-                    email: String): Future[MonthOfShifts]
+                    email: String): Future[ShiftAssignments]
 }
 
 case class PortTerminalShift(port: String,
@@ -44,7 +45,7 @@ case class StaffShiftFormServiceImpl(portCode: PortCode,
                                      forecastMaxDays: Int,
                                      getTerminalShiftConfig: Terminal => Future[Option[PortTerminalShiftConfig]],
                                      updateTerminalShiftConfig: PortTerminalShiftConfig => Future[Int],
-                                     updateStaffingNumbers: (Terminal, LocalDate, LocalDate, Option[Int], Option[Int]) => Future[MonthOfShifts],
+                                     updateStaffingNumbers: (Terminal, LocalDate, LocalDate, Option[Int], Option[Int]) => Future[ShiftAssignments],
                                     )(implicit ec: ExecutionContext) extends StaffShiftFormService {
 
   def setShiftStaff(terminal: Terminal,
@@ -55,7 +56,7 @@ case class StaffShiftFormServiceImpl(portCode: PortCode,
                     frequency: Option[String],
                     actualStaff: Option[Int],
                     minimumRosteredStaff: Option[Int],
-                    email: String): Future[MonthOfShifts] = {
+                    email: String): Future[ShiftAssignments] = {
     getTerminalShiftConfig(terminal)
       .flatMap { maybeConfig =>
         val updatedConfig = maybeConfig match {

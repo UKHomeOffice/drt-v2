@@ -8,6 +8,7 @@ import akka.pattern.ask
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared.TQM
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
@@ -27,7 +28,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
   val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
   val minutesContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(Seq(crunchMinute))
 
-  val noopUpdates: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[Long]] =
+  val noopUpdates: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
     (_: (Terminal, UtcDate), _: MinutesContainer[CrunchMinute, TQM]) => Future(Set())
 
   "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {

@@ -4,6 +4,7 @@ import akka.event.Logging
 import api._
 import buildinfo.BuildInfo
 import com.google.inject.Inject
+import com.typesafe.config.ConfigFactory
 import controllers.application._
 import drt.http.ProdSendAndReceive
 import drt.shared.DrtPortConfigs
@@ -15,9 +16,7 @@ import slickdb._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao, PortTerminalConfigDao}
-import uk.gov.homeoffice.drt.db.tables.PortTerminalConfig
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
@@ -43,6 +42,9 @@ object AirportConfigProvider {
     configForPort.assertValid()
     configForPort
   }
+
+  implicit val airportConfig: AirportConfig =
+    AirportConfigProvider(new Configuration(ConfigFactory.load))
 }
 
 trait FeatureGuideProviderLike {

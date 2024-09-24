@@ -1,6 +1,6 @@
 package services.imports
 
-import actors.PartitionedPortStateActor.GetFlights
+import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import akka.actor.{Actor, ActorLogging, PoisonPill}
 import akka.pattern.{StatusReply, pipe}
@@ -19,7 +19,7 @@ class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with Ac
   var promisedResult: Promise[DeskRecMinutes] = Promise[DeskRecMinutes]
 
   override def receive: Receive = {
-    case GetFlights(_, _) =>
+    case GetFlightsForTerminalDateRange(_, _, _) =>
       val groupedByDay = fws.flights.values
         .groupBy(f => SDate(f.apiFlight.Scheduled).toUtcDate)
         .map {
