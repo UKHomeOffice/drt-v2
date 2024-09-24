@@ -7,11 +7,9 @@ import actors.persistent.staffing.ShiftsReadActor
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.util.Timeout
-import drt.shared.{MonthOfShifts, ShiftAssignments, StaffAssignmentLike}
-import services.staffing.StaffTimeSlots
+import drt.shared.{ShiftAssignments, StaffAssignmentLike}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
-import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import java.util.UUID
@@ -40,14 +38,10 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
     }
   }
 
-  override def shiftsForMonth(month: MillisSinceEpoch): Future[MonthOfShifts] =
+  override def allShifts: Future[ShiftAssignments] =
     liveShiftsActor
       .ask(GetState)
       .mapTo[ShiftAssignments]
-      .map { shifts =>
-        val monthInLocalTime = SDate(month, europeLondonTimeZone)
-        MonthOfShifts(month, StaffTimeSlots.getShiftsForMonth(shifts, monthInLocalTime))
-      }
 
   private def liveShiftsForDate(date: LocalDate): Future[ShiftAssignments] = {
     val start = SDate(date).millisSinceEpoch

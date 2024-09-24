@@ -110,7 +110,6 @@ object SPAMain {
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
-
     def viewMode: ViewMode = {
       (mode, maybeViewDate) match {
         case (Current, Some(viewDate)) =>
@@ -145,7 +144,7 @@ object SPAMain {
 
     def loadAction: Action = mode match {
       case Staffing =>
-        GetShiftsForMonth(dateFromUrlOrNow)
+        GetAllShifts
       case _ =>
         SetViewMode(viewMode)
     }

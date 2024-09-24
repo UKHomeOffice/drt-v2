@@ -205,10 +205,9 @@ object TerminalPlanningComponent {
     }
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p =>
-      Callback(SPACircuit.dispatch(GetForecastWeek(p.props.page.dateFromUrlOrNow, Terminal(p.props.page.terminalName), p.props.timePeriod))) >>
-        Callback {
-          GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
-        })
+      Callback(SPACircuit.dispatch(GetForecastWeek(defaultStartDate(p.props.page.dateFromUrlOrNow), Terminal(p.props.page.terminalName), p.props.timePeriod))) >>
+        Callback(GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}"))
+    )
     .build
 
   private def buttonContent(isPreparing: Boolean, labelText: String): Seq[VdomNode] =

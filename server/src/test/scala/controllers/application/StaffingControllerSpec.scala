@@ -11,11 +11,11 @@ import play.api.mvc.{AnyContentAsEmpty, AnyContentAsText, Headers}
 import play.api.test.Helpers._
 import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.tables.PortTerminalConfig
+import uk.gov.homeoffice.drt.db.tables.{PortTerminalConfig, PortTerminalShiftConfig}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaff, MinimumStaffingService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaff, MinimumStaffingService, ShiftsService, StaffMovementsService, StaffShiftFormService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import upickle.default.write
 
@@ -25,8 +25,8 @@ case class MockShiftsService(shifts: Seq[StaffAssignmentLike]) extends ShiftsSer
   override def shiftsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] =
     Future.successful(ShiftAssignments(shifts))
 
-  override def shiftsForMonth(month: MillisSinceEpoch): Future[MonthOfShifts] =
-    Future.successful(MonthOfShifts(month, ShiftAssignments(shifts)))
+  override def allShifts: Future[ShiftAssignments] =
+    Future.successful(ShiftAssignments(shifts))
 
   override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Unit = ()
 }
@@ -99,11 +99,11 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     "return the shifts from the mock service as json" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
       val result = controller
-        .getShiftsForMonth(SDate("2024-07-01T01:00").millisSinceEpoch)
+        .getAllShifts
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
-      contentAsString(result) must ===(write(MonthOfShifts(SDate("2024-07-01T01:00").millisSinceEpoch, ShiftAssignments(shifts))))
+      contentAsString(result) must ===(write(ShiftAssignments(shifts)))
     }
   }
 
@@ -250,7 +250,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "return Forbidden for getShiftsForMonth" in {
       val result = controller
-        .getShiftsForMonth(SDate("2024-07-01T01:00").millisSinceEpoch)
+        .getAllShifts
         .apply(FakeRequest(method = "GET", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)
@@ -307,6 +307,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
       MockFixedPointsService(fixedPoints),
       MockStaffMovementsService(movements),
       MockMinimumStaffingService(),
+      MockStaffShiftFormService()
     )
 
   private def newDrtInterface(): DrtSystemInterface = {
@@ -317,5 +318,25 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
 case class MockMinimumStaffingService() extends MinimumStaffingService {
   override val getTerminalConfig: Terminal => Future[Option[PortTerminalConfig]] = _ => Future.successful(Option(PortTerminalConfig(PortCode("STN"), T1, Option(10), 0)))
 
-  override def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[Done] = Future.successful(Done)
+  override def setMinimum(terminal: Terminal, newMinimum: Option[Int]): Future[ShiftAssignments] =
+    Future.successful(ShiftAssignments(Seq()))
+}
+
+  case class MockStaffShiftFormService() extends StaffShiftFormService{
+
+override val getTerminalShiftConfig: Terminal => Future[Option[PortTerminalShiftConfig]] = _ => Future.successful(Option(PortTerminalShiftConfig(port = PortCode("STN"),
+  shiftName = "shiftName",
+  terminal=T1,
+  startAt= 1,
+  frequency=Option("daily"),
+  periodInMinutes =1,
+  endAt=Option(1),
+  actualStaff= Option(1),
+  minimumRosteredStaff= Option(1),
+  updatedAt = 1,
+  email = "email")))
+
+  override def setShiftStaff(terminal: Terminal, shiftName: String, startAt: MillisSinceEpoch, periodInMinutes: Port, endAt: Option[MillisSinceEpoch], frequency: Option[String], actualStaff: Option[Port], minimumRosteredStaff: Option[Port], email: String): Future[ShiftAssignments] =
+    Future.successful(ShiftAssignments(Seq()))
+
 }

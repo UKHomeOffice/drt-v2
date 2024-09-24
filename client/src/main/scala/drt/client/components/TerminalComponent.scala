@@ -10,7 +10,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.GetUserPreferenceIntervalMinutes
+import drt.client.services.handlers.{GetMinStaff, GetUserPreferenceIntervalMinutes}
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -19,7 +19,7 @@ import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -37,9 +37,10 @@ object TerminalComponent {
 
   case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]) extends FastEqLowPri
 
+  implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
+
   private case class TerminalModel(userSelectedPlanningTimePeriod: Pot[Int],
                                    potShifts: Pot[ShiftAssignments],
-                                   potMonthOfShifts: Pot[MonthOfShifts],
                                    potFixedPoints: Pot[FixedPointAssignments],
                                    potStaffMovements: Pot[StaffMovements],
                                    airportConfig: Pot[AirportConfig],
@@ -72,13 +73,12 @@ object TerminalComponent {
   }
 
 
-  class Backend() {
+  class Backend {
     def render(props: Props): VdomElement = {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
-        potShifts = model.shifts,
-        potMonthOfShifts = model.monthOfShifts,
+        potShifts = model.dayOfShift,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         airportConfig = model.airportConfig,
@@ -219,11 +219,7 @@ object TerminalComponent {
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(
-                        model.potMonthOfShifts.render { ms =>
-                          MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
-                        }
-                      )
+                      <.div(MonthlyStaffing(airportConfig.portCode, props.terminalPageTab, props.router))
                   }
                 }
               }
@@ -237,7 +233,10 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())))
+    .componentDidMount(p =>
+      Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
+        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString))))
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean): VdomTagOf[UList] = {

@@ -95,9 +95,9 @@ object Actions {
 
   case class GetShifts(viewMode: ViewMode) extends Action
 
-  case class SetShiftsForMonth(shiftsForMonth: MonthOfShifts) extends Action
+  case class SetAllShifts(allShifts: ShiftAssignments) extends Action
 
-  case class GetShiftsForMonth(month: SDateLike) extends Action
+  case object GetAllShifts extends Action
 
   case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment]) extends Action
 
