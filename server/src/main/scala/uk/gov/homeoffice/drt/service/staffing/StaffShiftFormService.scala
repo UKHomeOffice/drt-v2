@@ -5,7 +5,6 @@ import uk.gov.homeoffice.drt.db.tables.PortTerminalShiftConfig
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
-import upickle.default.macroRW
 import upickle.default._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -24,21 +23,6 @@ trait StaffShiftFormService {
                     email: String): Future[ShiftAssignments]
 }
 
-case class PortTerminalShift(port: String,
-                             terminal: String,
-                             shiftName: String,
-                             startAt: Long,
-                             periodInMinutes: Int,
-                             endAt: Option[Long],
-                             frequency: Option[String],
-                             actualStaff: Option[Int],
-                             minimumRosteredStaff: Option[Int],
-                             email: String
-                            )
-
-object PortTerminalShift {
-  implicit val rw: ReadWriter[PortTerminalShift] = macroRW
-}
 
 case class StaffShiftFormServiceImpl(portCode: PortCode,
                                      now: () => SDateLike,

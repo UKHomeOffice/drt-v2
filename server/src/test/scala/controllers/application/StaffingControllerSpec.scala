@@ -336,7 +336,7 @@ override val getTerminalShiftConfig: Terminal => Future[Option[PortTerminalShift
   updatedAt = 1,
   email = "email")))
 
-  override def setShiftStaff(terminal: Terminal, shiftName: String, startAt: MillisSinceEpoch, periodInMinutes: Port, endAt: Option[MillisSinceEpoch], frequency: Option[String], actualStaff: Option[Port], minimumRosteredStaff: Option[Port], email: String): Future[MonthOfShifts] =
-    Future.successful(MonthOfShifts(SDate("2024-07-01T01:00").millisSinceEpoch, ShiftAssignments(Seq())))
+  override def setShiftStaff(terminal: Terminal, shiftName: String, startAt: MillisSinceEpoch, periodInMinutes: Port, endAt: Option[MillisSinceEpoch], frequency: Option[String], actualStaff: Option[Port], minimumRosteredStaff: Option[Port], email: String): Future[ShiftAssignments] =
+    Future.successful(ShiftAssignments(Seq()))
 
 }

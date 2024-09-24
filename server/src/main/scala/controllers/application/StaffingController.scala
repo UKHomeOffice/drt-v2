@@ -4,7 +4,6 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.exports.StaffMovementsExport
@@ -51,7 +50,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
     Action.async { request =>
       request.body.asText match {
         case Some(text) =>
-          println(s"saveShiftStaff w...............: $text")
+          import PortTerminalShiftJsonSerializer._
           val portTerminalShift = read[PortTerminalShift](text)
           val terminal = Terminal(terminalName)
           staffShiftFormService.setShiftStaff(terminal,
@@ -99,7 +98,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
       println(s"getShiftStaff...............: $terminalName")
       staffShiftFormService.getTerminalShiftConfig(Terminal(terminalName)).map {
         case Some(config) =>
-          Ok(write(MinimumStaff(config.minimumRosteredStaff.getOrElse(0))))
+          Ok(PortTerminalShiftConfigJsonSerializer.writeToJson(config))
         case None =>
           NotFound
       }
