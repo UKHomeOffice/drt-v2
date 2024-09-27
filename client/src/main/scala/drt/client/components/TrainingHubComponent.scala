@@ -12,7 +12,7 @@ import drt.shared.{DropIn, DropInRegistration}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -21,7 +21,11 @@ object TrainingHubComponent {
 
   val log: Logger = LoggerFactory.getLogger("TrainingHubComponent")
 
-  case class Props(trainingHubLoc: TrainingHubLoc, router: RouterCtl[Loc]) extends FastEqLowPri
+  case class Props(trainingHubLoc: TrainingHubLoc,
+                   router: RouterCtl[Loc],
+                   loggedInUserPot: Pot[LoggedInUser],
+                   airportConfigPot: Pot[AirportConfig],
+                  ) extends FastEqLowPri
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.trainingHubLoc == b.trainingHubLoc)
 
@@ -36,8 +40,8 @@ object TrainingHubComponent {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TrainingHubComponent")
     .render_P { props =>
       val modelRCP = SPACircuit.connect(model => TrainingModel(
-        airportConfig = model.airportConfig,
-        loggedInUserPot = model.loggedInUserPot,
+        airportConfig = props.airportConfigPot,
+        loggedInUserPot = props.loggedInUserPot,
         dropIns = model.dropIns,
         dropInRegistrations = model.dropInRegistrations
       ))
@@ -63,6 +67,9 @@ object TrainingHubComponent {
         ))
     }
     .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount { p =>
+      Callback(SetDocumentTitle("Training Hub", p.props.airportConfigPot))
+    }
     .build
 
   private def trainingTabs(props: Props): VdomTagOf[UList] = {

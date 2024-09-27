@@ -17,9 +17,9 @@ case class FileUploadState(state: String, message: String)
 
 case class FileUploadStateModel(fileUploadState: Pot[FileUploadState], airportConfig: Pot[AirportConfig])
 
-object ForecastFileUploadPage {
+object ForecastUploadComponent {
 
-  case class Props()
+  case class Props(airportConfigPot: Pot[AirportConfig])
 
   val heading: VdomTagOf[Heading] = <.h3("Forecast Feed File Upload")
 
@@ -72,20 +72,22 @@ object ForecastFileUploadPage {
         )
       }
       )
-    }.componentDidMount(_ => Callback {
-    GoogleEventTracker.sendPageView(s"forecastFileUpload")
-  }).build
+    }
+    .componentDidMount { p =>
+      Callback(SetDocumentTitle("Forecast Upload", p.props.airportConfigPot)) >>
+        Callback(GoogleEventTracker.sendPageView(s"forecastFileUpload"))
+    }.build
 
-  def apply(): VdomElement = component(Props())
+  def apply(airportConfigPot: Pot[AirportConfig]): VdomElement = component(Props(airportConfigPot))
 
 
-  def onReset(e: ReactEventFromInput): Callback = {
+  private def onReset(e: ReactEventFromInput): Callback = {
     e.preventDefaultCB >> Callback {
       SPACircuit.dispatch(ResetFileUpload())
     }
   }
 
-  def onSubmit(portCode: String)(e: ReactEventFromInput): Callback = {
+  private def onSubmit(portCode: String)(e: ReactEventFromInput): Callback = {
     SPACircuit.dispatch(FileUploadInProgress())
     e.preventDefaultCB >> Callback {
       val file: File = dom.document

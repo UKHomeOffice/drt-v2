@@ -16,6 +16,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.window.confirm
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -39,7 +40,9 @@ object MonthlyStaffing {
 
   case class Props(shifts: ShiftAssignments,
                    terminalPageTab: TerminalPageTabLoc,
-                   router: RouterCtl[Loc]) {
+                   router: RouterCtl[Loc],
+                   airportConfig: AirportConfig,
+                  ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
   }
 
@@ -241,7 +244,8 @@ object MonthlyStaffing {
     }
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount { p =>
-      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
+      Callback(SetDocumentTitle("Monthly Staffing", p.props.terminalPageTab.terminal, p.props.airportConfig)) >>
+        Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
     }
     .build
 
@@ -323,5 +327,7 @@ object MonthlyStaffing {
 
   def apply(shifts: ShiftAssignments,
             terminalPageTab: TerminalPageTabLoc,
-            router: RouterCtl[Loc]): Unmounted[Props, State, Unit] = component(Props(shifts, terminalPageTab, router))
+            router: RouterCtl[Loc],
+            airportConfig: AirportConfig,
+           ): Unmounted[Props, State, Unit] = component(Props(shifts, terminalPageTab, router, airportConfig))
 }

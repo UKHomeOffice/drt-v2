@@ -215,13 +215,13 @@ object TerminalComponent {
 
                     case Planning =>
                       <.div(model.userSelectedPlanningTimePeriod.render { timePeriod =>
-                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod))
+                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod, airportConfig))
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
                       <.div(
                         model.potMonthOfShifts.render { ms =>
-                          MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router)
+                          MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router, airportConfig)
                         }
                       )
                   }

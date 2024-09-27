@@ -27,7 +27,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
-import uk.gov.homeoffice.drt.ports.Queues
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
 
@@ -43,7 +43,7 @@ object TerminalPlanningComponent {
     SDate(f"${sunday.getFullYear}-${sunday.getMonth}%02d-${sunday.getDate}%02dT00:00:00")
   }
 
-  case class Props(page: TerminalPageTabLoc, router: RouterCtl[Loc], timePeriod: Int)
+  case class Props(page: TerminalPageTabLoc, router: RouterCtl[Loc], timePeriod: Int, airportConfig: AirportConfig)
 
   private val forecastWeeks: Seq[SDateLike] = (-4 to 30).map(w => getLastSunday(SDate.now()).addDays(w * 7))
 
@@ -204,11 +204,11 @@ object TerminalPlanningComponent {
       })
     }
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(p =>
-      Callback(SPACircuit.dispatch(GetForecastWeek(p.props.page.dateFromUrlOrNow, Terminal(p.props.page.terminalName), p.props.timePeriod))) >>
-        Callback {
-          GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}")
-        })
+    .componentDidMount { p =>
+      Callback(SetDocumentTitle("Staff Planning", p.props.page.terminal, p.props.airportConfig)) >>
+        Callback(SPACircuit.dispatch(GetForecastWeek(p.props.page.dateFromUrlOrNow, Terminal(p.props.page.terminalName), p.props.timePeriod))) >>
+        Callback(GoogleEventTracker.sendPageView(s"${p.props.page.terminal}/planning/${defaultStartDate(p.props.page.dateFromUrlOrNow).toISODateOnly}"))
+    }
     .build
 
   private def buttonContent(isPreparing: Boolean, labelText: String): Seq[VdomNode] =
