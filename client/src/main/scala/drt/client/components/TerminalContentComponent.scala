@@ -63,6 +63,7 @@ object TerminalContentComponent {
                    windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
+                   defaultDesksAndQueuesViewType: String,
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -113,7 +114,10 @@ object TerminalContentComponent {
               <.li(^.className := desksAndQueuesActive,
                 <.a(^.className := "flexed-anchor", ^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
                   GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                  props.router.set(props.terminalPageTab.copy(subMode = "desksAndQueues"))
+                  props.router.set(props.terminalPageTab.copy(
+                    subMode = "desksAndQueues",
+                    queryParams = props.terminalPageTab.queryParams.updated("viewType", props.defaultDesksAndQueuesViewType)
+                  ))
                 }),
               <.li(^.className := staffingActive,
                 <.a(^.className := "flexed-anchor", ^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", staffMovementsTabTooltip),
