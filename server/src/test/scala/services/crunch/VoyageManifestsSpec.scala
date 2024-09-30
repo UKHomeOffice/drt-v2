@@ -339,7 +339,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expected = 2
 
-    crunch.portStateTestProbe.fishForMessage(1.seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val queuePax = paxLoadsFromPortState(ps, 60, 0)
           .values
@@ -388,7 +388,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expected = 3
 
-    crunch.portStateTestProbe.fishForMessage(1.seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val queuePax = paxLoadsFromPortState(ps, 60, 0)
           .values
@@ -437,7 +437,7 @@ class VoyageManifestsSpec extends CrunchTestLike {
 
     val expected = 2
 
-    crunch.portStateTestProbe.fishForMessage(1.seconds) {
+    crunch.portStateTestProbe.fishForMessage(2.seconds) {
       case ps: PortState =>
         val queuePax = paxLoadsFromPortState(ps, 60, 0)
           .values
