@@ -81,6 +81,7 @@ case class TerminalDesksAndWaitsProvider(terminal: Terminal,
               case noWork if noWork.isEmpty || noWork.map(_.sum).sum == 0 =>
                 log.info(s"No workload to crunch for $identifier on ${SDate(minuteMillis.min).toISOString}. Filling with min desks and zero wait times")
                 queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0), List.fill(minDesks.size)(0d))))
+
               case someWork =>
                 val start = System.currentTimeMillis()
                 val maxDesks = processorsProvider.maxProcessors(someWork.size)

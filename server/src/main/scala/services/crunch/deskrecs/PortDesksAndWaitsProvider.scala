@@ -54,7 +54,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }.toMap
 
   private def terminalDescRecs(terminal: Terminal, description: String): TerminalDesksAndWaitsProvider =
-    deskrecs.TerminalDesksAndWaitsProvider(terminal, sla, flexedQueuesPriority, tryCrunch, description)
+    TerminalDesksAndWaitsProvider(terminal, sla, flexedQueuesPriority, tryCrunch, description)
 
   override def flightsToLoads(minuteMillis: NumericRange[MillisSinceEpoch],
                               flights: FlightsWithSplits,
