@@ -20,7 +20,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.{PortFeedUpload, SuperAdmin}
-import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
+import uk.gov.homeoffice.drt.feeds.{FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
 import uk.gov.homeoffice.drt.ports._
 
 
@@ -28,14 +28,12 @@ object FeedsStatusPage {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props()
-
-  case class Model(statuses: Pot[Seq[FeedSourceStatuses]], user: Pot[LoggedInUser], airportConfig: Pot[AirportConfig])
+  case class Props(loggedInUserPot: Pot[LoggedInUser], airportConfigPot: Pot[AirportConfig])
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StatusPage")
-    .render_P { _ =>
+    .render_P { props =>
 
-      val modelRcp = SPACircuit.connect(rm => Model(rm.feedStatuses, rm.loggedInUserPot, rm.airportConfig))
+      val modelRcp = SPACircuit.connect(_.feedStatuses)
 
       def checkFeed(feedSource: FeedSource): Callback = Callback {
         SPACircuit.dispatch(CheckFeed(feedSource))
@@ -63,12 +61,12 @@ object FeedsStatusPage {
 
       modelRcp { proxy =>
 
-        val model = proxy()
+        val statuses = proxy()
 
         val statusContentPot = for {
-          allFeedStatuses <- model.statuses
-          user <- model.user
-          airportConfig <- model.airportConfig
+          allFeedStatuses <- statuses
+          user <- props.loggedInUserPot
+          airportConfig <- props.airportConfigPot
         } yield {
           val isLiveFeedAvailable = allFeedStatuses.count(_.feedSource == LiveFeedSource) > 0
 
@@ -124,7 +122,7 @@ object FeedsStatusPage {
         }
 
         val crunchControlsPot = for {
-          user <- model.user
+          user <- props.loggedInUserPot
         } yield {
           if (user.hasRole(SuperAdmin)) <.div(
             <.br(),
@@ -160,7 +158,10 @@ object FeedsStatusPage {
         )
       }
     }
-    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("feed-status")))
+    .componentDidMount { p =>
+      Callback(SetDocumentTitle("Feeds status", p.props.airportConfigPot)) >>
+        Callback(GoogleEventTracker.sendPageView("feed-status"))
+    }
     .build
 
   private def displayTime(date: MillisSinceEpoch): String = {
@@ -169,7 +170,7 @@ object FeedsStatusPage {
     else dateToDisplay.prettyDateTime
   }
 
-  def timeAgo(millisToCheck: MillisSinceEpoch): String = {
+  private def timeAgo(millisToCheck: MillisSinceEpoch): String = {
     val minutes = (SDate.now().millisSinceEpoch - millisToCheck) / 60000
     val hours = minutes / 60
     val days = hours / 24
@@ -180,5 +181,5 @@ object FeedsStatusPage {
     else s"$days days ago"
   }
 
-  def apply(): VdomElement = component(Props())
+  def apply(loggedInUserPot: Pot[LoggedInUser], airportConfigPot: Pot[AirportConfig]): VdomElement = component(Props(loggedInUserPot, airportConfigPot))
 }

@@ -4,10 +4,7 @@ import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles._
-import drt.client.components.{
-  ContactPage, ForecastFileUploadPage, GlobalStyles, Layout, PortConfigPage,
-  PortDashboardPage, FeedsStatusPage, TerminalComponent, TerminalPlanningComponent, TrainingHubComponent, UserDashboardPage
-}
+import drt.client.components.{ContactPage, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -78,9 +75,6 @@ object SPAMain {
       override val value: Option[String] = viewType.map(_.queryParamsValue)
     }
   }
-
-  case class PortConfigPageLoc()
-
 
   object TerminalPageTabLoc {
     def apply(terminalName: String,
@@ -190,6 +184,7 @@ object SPAMain {
     GetManifestSummariesForDate(SDate.now().addDays(-1).toUtcDate),
     GetSlaConfigs,
   )
+
   def sendInitialRequests(): Unit = initialRequestsActions.foreach(SPACircuit.dispatch(_))
 
   val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc]
@@ -232,7 +227,9 @@ object SPAMain {
   def statusRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#status", StatusLoc) ~> renderR((_: RouterCtl[Loc]) => FeedsStatusPage())
+    val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
+
+    staticRoute("#status", StatusLoc) ~> renderR(_ => proxy(p => FeedsStatusPage(p()._1, p()._2)))
   }
 
   def contactRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
@@ -244,7 +241,9 @@ object SPAMain {
   def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
-    staticRoute("#forecastFileUpload", ForecastFileUploadLoc) ~> renderR(_ => ForecastFileUploadPage())
+    val proxy = SPACircuit.connect(_.airportConfig)
+
+    staticRoute("#forecastFileUpload", ForecastFileUploadLoc) ~> renderR(_ => proxy(ac => ForecastUploadComponent(ac())))
   }
 
   def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
@@ -252,26 +251,32 @@ object SPAMain {
     val proxy = SPACircuit.connect(m =>
       PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.slaConfigs, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime)
     )
-    staticRoute("#config", PortConfigLoc) ~> render(proxy(x => PortConfigPage(x())))
+    staticRoute("#config", PortConfigLoc) ~> render(proxy(props => PortConfigPage(props())))
   }
 
   def dashboardRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
+    val proxy = SPACircuit.connect(_.airportConfig)
+
     dynamicRouteCT(("#portDashboard" / int.option).caseClass[PortDashboardLoc]) ~>
-      dynRenderR((page: PortDashboardLoc, router) => {
-        PortDashboardPage(router, page)
-      })
+      dynRenderR { case (page: PortDashboardLoc, router) =>
+        proxy(p => PortDashboardPage(router, page, p()))
+      }
   }
 
   def trainingHubRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
+    val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
+
     dynamicRouteCT(
       ("#trainingHub" / string("[a-zA-Z0-9]*")).caseClass[TrainingHubLoc]) ~>
-      dynRenderR { (page: TrainingHubLoc, router) =>
-        val props = TrainingHubComponent.Props(trainingHubLoc = page, router)
-        ThemeProvider(DrtTheme.theme)(TrainingHubComponent(props))
+      dynRenderR { case (page: TrainingHubLoc, router) =>
+        proxy { p =>
+          val props = TrainingHubComponent.Props(trainingHubLoc = page, router, p()._1, p()._2)
+          ThemeProvider(DrtTheme.theme)(TrainingHubComponent(props))
+        }
       }
   }
 
@@ -284,7 +289,7 @@ object SPAMain {
 
     dynamicRouteCT(
       ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
-      dynRenderR { (page: TerminalPageTabLoc, router) =>
+      dynRenderR { case (page: TerminalPageTabLoc, router) =>
         val props = TerminalComponent.Props(terminalPageTab = page, router)
         ThemeProvider(DrtTheme.theme)(TerminalComponent(props))
       }
@@ -312,13 +317,8 @@ object SPAMain {
       SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}/$terminal")
   }
 
-  def exportSnapshotUrl(exportType: ExportType, date: LocalDate, pointInTime: SDateLike, terminal: Terminal): String =
-    SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/$date/${pointInTime.millisSinceEpoch}/$terminal")
-
   def exportDatesUrl(exportType: ExportType, start: LocalDate, end: LocalDate, terminal: Terminal): String =
     SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${start.toISOString}/${end.toISOString}/$terminal")
-
-  def assetsPrefix: String = if (pathToThisApp == "/") s"/assets" else s"live/assets"
 
   @JSExportTopLevel("SPAMain")
   protected def getInstance(): this.type = this

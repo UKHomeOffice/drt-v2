@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
-import diode.data.Pot
+import diode.data.{Pot, Ready}
 import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -10,6 +10,7 @@ import drt.shared.api.{WalkTime, WalkTimes}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import org.scalajs.dom.document
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.EgateBanksEdit
@@ -59,12 +60,35 @@ object PortConfigPage {
         )
       mp.render(identity)
     }
-    .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"port-config")
-    })
+    .componentDidMount { p =>
+      Callback(SetDocumentTitle("Port Config", p.props.airportConfig)) >>
+        Callback(GoogleEventTracker.sendPageView(s"port-config"))
+    }
     .build
 
   def apply(props: Props): VdomElement = component(props)
+}
+
+object SetDocumentTitle {
+  def apply(pageName: String, airportConfigPot: Pot[AirportConfig]): Unit = {
+    document.title = airportConfigPot match {
+      case Ready(airportConfig) => constructTitle(pageName, airportConfig.portCode, airportConfig.portName, None)
+      case _ => "Loading..."
+    }
+  }
+
+  def apply(pageName: String, airportConfig: AirportConfig): Unit = {
+    document.title = constructTitle(pageName, airportConfig.portCode, airportConfig.portName, None)
+  }
+
+  def apply(pageName: String, terminal: Terminal, airportConfig: AirportConfig): Unit = {
+    document.title = constructTitle(pageName, airportConfig.portCode, airportConfig.portName, Option(terminal))
+  }
+
+  private def constructTitle(pageName: String, portCode: PortCode, portName: String, maybeTerminal: Option[Terminal]): String = {
+    val terminal = maybeTerminal.map(t => s", Terminal ${t.toString}").getOrElse("")
+    s"$pageName at ${portCode.iata} ($portName)$terminal - DRT"
+  }
 }
 
 object PortConfigDetails {

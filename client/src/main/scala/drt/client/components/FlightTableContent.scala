@@ -11,10 +11,10 @@ import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
-import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
+import japgolly.scalajs.react.{CtorType, _}
 import org.scalajs.dom
 import org.scalajs.dom.html.{TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
@@ -171,9 +171,10 @@ object FlightTableContent {
   val component: Component[Props, Unit, Backend, CtorType.Props] =
     ScalaComponent.builder[Props]("FlightTableContent")
       .renderBackend[Backend]
-      .componentDidMount(_ => Callback {
-        log.info("FlightTableContent mounted")
-      })
+      .componentDidMount { p =>
+        Callback(SetDocumentTitle("Arrivals", p.props.terminal, p.props.airportConfig)) >>
+          Callback(log.info("FlightTableContent mounted"))
+      }
       .build
 
   def apply(props: Props): VdomElement = component(props)

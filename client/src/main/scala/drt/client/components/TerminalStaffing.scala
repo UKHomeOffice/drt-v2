@@ -211,6 +211,9 @@ object TerminalStaffing {
 
   private val component = ScalaComponent.builder[Props]("TerminalStaffing")
     .renderBackend[Backend]
+    .componentDidMount { p =>
+      Callback(SetDocumentTitle("Desks and Queues", p.props.terminal, p.props.airportConfig))
+    }
     .build
 
   private object MovementDisplay {

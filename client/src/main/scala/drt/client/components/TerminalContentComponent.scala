@@ -185,6 +185,7 @@ object TerminalContentComponent {
                       windowCrunchSummaries = props.windowCrunchSummaries,
                       dayCrunchSummaries = props.dayCrunchSummaries,
                       windowStaffSummaries = props.windowStaffSummaries,
+                      terminal = terminal,
                     )
                   )
                 }
