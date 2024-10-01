@@ -27,6 +27,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.collection.mutable
 import scala.scalajs.js
 import scala.util.Try
+import upickle.default._
 
 
 object MonthlyStaffing {
@@ -39,6 +40,7 @@ object MonthlyStaffing {
                    colHeadings: Seq[String],
                    rowHeadings: Seq[String],
                    changes: Map[(Int, Int), Int],
+                   showShiftStaffForm: Boolean,
                    showMinStaffForm: Boolean,
                    showMinStaffSuccess: Boolean,
                    terminalMinStaff: Pot[Option[Int]],
@@ -157,6 +159,11 @@ object MonthlyStaffing {
 
   class Backend(scope: BackendScope[Props, State]) {
     def render(props: Props, state: State): VdomTagOf[Div] = {
+      val handleShiftEditForm = (e: Event) => Callback {
+        e.preventDefault()
+        scope.modState(state => state.copy(showShiftStaffForm = true)).runNow()
+      }
+
       def confirmAndSave(startOfMonthMidnight: SDateLike, timeSlots: Seq[Seq[Any]]): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
         Callback {
           val initialTimeSlots: Seq[Seq[Any]] = slotsFromShifts(state.shifts, props.terminalPageTab.terminal, startOfMonthMidnight, props.timeSlotMinutes)
@@ -215,7 +222,44 @@ object MonthlyStaffing {
         <.div(content.render(identity))
       }
 
-      if (state.showMinStaffForm) {
+      <.div(<.input.button(^.value := "staff updates",
+        ^.className := "btn btn-primary",
+        ^.onClick ==> handleShiftEditForm
+      ))
+      if (state.showShiftStaffForm) {
+        var formData:IShiftStaffForm = IShiftStaffForm(
+          port = props.portCode.toString,
+          terminal = props.terminalPageTab.terminal.toString,
+          shiftName = "",
+          startAt = null,
+          periodInMinutes = 0,
+          endAt = null,
+          frequency = null,
+          actualStaff = 0,
+          minimumRosteredStaff = 0,
+          email = "dontknow@email.com")
+
+        var resultFormData : IShiftStaffForm = IShiftStaffForm(
+          port = props.portCode.toString,
+          terminal = props.terminalPageTab.terminal.toString,
+          shiftName = "",
+          startAt = null,
+          periodInMinutes = 0,
+          endAt = null,
+          frequency = null,
+          actualStaff = 0,
+          minimumRosteredStaff = 0,
+          email = "")
+        <.div(^.className := "",
+          StaffShiftFormComponent(ShiftStaffFormData(shiftStaffForm = formData,
+            handleSubmit = (resultFormData) =>  {
+              println(s"submit ${IShiftStaffForm.toShiftStaffDataJson(resultFormData)}")
+            },
+            cancelHandler = () => {
+              scope.modState(state => state.copy(showShiftStaffForm = false)).runNow()
+              println("cancel")
+            })))
+      } else if (state.showMinStaffForm) {
         val message = if (state.terminalMinStaff.getOrElse(None).isEmpty)
           "All future dates with 0 staff in the table below will be updated."
         else
@@ -296,7 +340,10 @@ object MonthlyStaffing {
                       "then the rest of the hours in 2 separate steps", ^.style := js.Dictionary("marginBottom" -> "15px", "display" -> "block")))
                   ))
                 },
-                <.div(<.input.button(^.value := "Save staff updates",
+                <.div(<.input.button(^.value := "staff updates",
+                  ^.className := "btn btn-primary",
+                  ^.onClick ==> handleShiftEditForm),
+                  <.input.button(^.value := "Save staff updates",
                   ^.className := "btn btn-primary",
                   ^.onClick ==> confirmAndSave(viewingDate, timeSlots)
                 ))
@@ -409,7 +456,7 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(Empty, daysInMonth.map(_.getDate.toString), rowHeadings, Map.empty, showMinStaffForm = false, showMinStaffSuccess = false, Empty, ShiftAssignments.empty)
+    State(Empty, daysInMonth.map(_.getDate.toString), rowHeadings, Map.empty, showShiftStaffForm = false ,showMinStaffForm = false, showMinStaffSuccess = false, Empty, ShiftAssignments.empty)
   }
 
   def apply(portCode: PortCode,
