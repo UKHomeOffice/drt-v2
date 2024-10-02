@@ -74,30 +74,30 @@ object MinStaffWarning {
 }
 
 @js.native
-trait IMinStaffSuccess extends js.Object {
+trait IStaffSuccess extends js.Object {
   var minStaffNumber: Int = js.native
   var message: String = js.native
   var closeHandler: js.Function0[Unit] = js.native
 }
 
-object IMinStaffSuccess {
-  def apply(minStaffNumber: Int, message: String, closeHandler: js.Function0[Unit]): IMinStaffSuccess = {
-    val p = (new js.Object).asInstanceOf[IMinStaffSuccess]
-    p.minStaffNumber = minStaffNumber
+object IStaffSuccess {
+  def apply(staffNumber: Int, message: String, closeHandler: js.Function0[Unit]): IStaffSuccess = {
+    val p = (new js.Object).asInstanceOf[IStaffSuccess]
+    p.minStaffNumber = staffNumber
     p.message = message
     p.closeHandler = closeHandler
     p
   }
 }
 
-object MinStaffSuccess {
+object StaffSuccess {
   @js.native
-  @JSImport("@drt/drt-react", "MinStaffSuccess")
+  @JSImport("@drt/drt-react", "StaffSuccess")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[IMinStaffSuccess, Children.None](RawComponent)
+  val component = JsFnComponent[IStaffSuccess, Children.None](RawComponent)
 
-  def apply(props: IMinStaffSuccess): VdomElement = {
+  def apply(props: IStaffSuccess): VdomElement = {
     component(props)
   }
 

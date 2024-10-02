@@ -49,17 +49,17 @@ object IEditShiftStaff {
       obj.dayAt.year(),
       obj.dayAt.month(),
       obj.dayAt.date,
-      obj.startTime.toDate().getHours.toInt,
-      obj.startTime.toDate().getMinutes.toInt,
-      obj.startTime.toDate().getSeconds.toInt)
+      obj.startTime.toDate().getUTCHours.toInt,
+      obj.startTime.toDate().getUTCMinutes.toInt,
+      obj.startTime.toDate().getUTCSeconds.toInt)
 
     val combinedEndTime: UndefOr[Double] = obj.endTime.map(e => Date.UTC(
       obj.dayAt.year(),
       obj.dayAt.month(),
       obj.dayAt.date(),
-      e.toDate.getHours.toInt,
-      e.toDate.getMinutes.toInt,
-      e.toDate.getSeconds.toInt))
+      e.toDate.getUTCHours.toInt,
+      e.toDate.getUTCMinutes.toInt,
+      e.toDate.getUTCSeconds.toInt))
 
     StaffAssignment(obj.dayAt.toISOString,
       terminal,
