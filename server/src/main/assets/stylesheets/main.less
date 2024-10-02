@@ -513,6 +513,10 @@ table.headlines tr:nth-child(odd) {
   margin: 5px 5px 5px 5px;
 }
 
+.btn-secondary {
+  background-color: #FFFFFF;
+}
+
 .staff-adjustment--save-cancel.btn.btn-default, .staff-adjustment--save-cancel.btn.btn-primary {
   float: right;
 }
@@ -1400,13 +1404,29 @@ p {
   align-items: center;
 }
 
-.staffing-controls-save {
+.staffing-controls {
   padding-top: 10px;
-  padding-left: 10px;
+  //padding-left: 10px;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   gap: 15px;
+}
+
+.staffing-controls-save {
+  padding-top: 10px;
+  padding-right: 10px;
+  padding-bottom: 10px;
+  //padding-left: 10px;
+  display: flex;
+  //flex-direction: column;
+  //justify-content: flex-end;
+  gap: 15px;
+  background-color: #E6E9F1;
+}
+
+.staffing-controls-save > div {
+  align-self: flex-start;
 }
 
 .staffing-controls-label {
@@ -1418,7 +1438,7 @@ p {
 }
 
 .staffing-table {
-  margin-top: 15px;
+  //margin-top: 15px;
 }
 
 .pcp-pax-summaries {
@@ -2029,7 +2049,7 @@ th h2 {
 
 .arrivals__table__flight-code-wrapper__highlighted {
   width: 141px;
-  margin-top:-7px;
+  margin-top: -7px;
   margin-left: -8px;
 }
 

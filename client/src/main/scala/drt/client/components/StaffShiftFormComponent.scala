@@ -1,12 +1,12 @@
 package drt.client.components
 
+import drt.client.services.JSDateConversions.SDate
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
-import japgolly.scalajs.react._
 import japgolly.scalajs.react.{Children, JsFnComponent}
 import japgolly.scalajs.react.vdom.VdomElement
+import moment.Moment
 import upickle.default._
-import java.sql.Timestamp
 
 
 @js.native
@@ -58,7 +58,7 @@ object IShiftStaffForm {
     write(ShiftStaffData(port = obj.port,
       terminal = obj.terminal,
       shiftName = obj.shiftName,
-      startAt = obj.startAt.toDate().getTime().toLong,
+      startAt = SDate.JSSDate(obj.startAt.utc).millisSinceEpoch,
       periodInMinutes = obj.periodInMinutes,
       endAt = None,
       frequency = obj.frequency.toOption,
