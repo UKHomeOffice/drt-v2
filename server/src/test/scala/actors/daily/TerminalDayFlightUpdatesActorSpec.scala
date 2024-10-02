@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSource
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -38,7 +38,7 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
     }
     "When I ask it for updates after an arrival has been persisted it should give those diffs" >> {
       val flightRoutesActor = system.actorOf(Props(
-        new TerminalDayFlightActor(2023, 8, 8, T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource), None, None, None)
+        new TerminalDayFlightActor(UtcDate(2023, 8, 8), T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource), None, None, None)
       ))
       val updatesActor = system.actorOf(Props(new TerminalDayFlightUpdatesActor(2023, 8, 8, T1, () => TimeControl.now, InMemoryStreamingJournal)))
       val arrival = ArrivalGenerator.arrival(
@@ -60,7 +60,7 @@ class TerminalDayFlightUpdatesActorSpec extends CrunchTestLike {
 
     "When I ask it for updates after an arrival and splits have been persisted it should give those diffs" >> {
       val flightRoutesActor = system.actorOf(Props(
-        new TerminalDayFlightActor(2023, 8, 8, T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource), None, None, None)
+        new TerminalDayFlightActor(UtcDate(2023, 8, 8), T1, () => TimeControl.now, None, None, List(LiveFeedSource, ApiFeedSource), None, None, None)
       ))
       val updatesActor = system.actorOf(Props(new TerminalDayFlightUpdatesActor(2023, 8, 8, T1, () => TimeControl.now, InMemoryStreamingJournal)))
       val arrival = ArrivalGenerator.arrival(

@@ -15,6 +15,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
 
+
 trait RouterActorLikeWithSubscriber[U <: Updates, P, A] extends RouterActorLike[U, P, A] {
   var updatesSubscribers: List[ActorRef] = List.empty
 
@@ -28,7 +29,7 @@ trait RouterActorLikeWithSubscriber[U <: Updates, P, A] extends RouterActorLike[
 
   override def receiveUtil: Receive = super.receiveUtil orElse {
     case AddUpdatesSubscriber(queueActor) =>
-      log.info("Received subscriber")
+      log.info("Received updates subscriber")
       updatesSubscribers = queueActor :: updatesSubscribers
   }
 }

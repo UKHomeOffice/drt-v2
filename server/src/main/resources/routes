@@ -2,7 +2,9 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# Home page
+
+GET           /ws                                                                     controllers.Application.websocket
+
 + nocsrf
 POST          /report-to                                                              controllers.CSPReportController.report
 GET           /                                                                       controllers.Application.index

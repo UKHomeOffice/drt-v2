@@ -398,9 +398,7 @@ object TestActors {
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
   }
 
-  class TestTerminalDayFlightActor(year: Int,
-                                   month: Int,
-                                   day: Int,
+  class TestTerminalDayFlightActor(date: UtcDate,
                                    terminal: Terminal,
                                    now: () => SDateLike,
                                    paxFeedSourceOrder: List[FeedSource],
@@ -408,9 +406,7 @@ object TestActors {
                                    requestHistoricPaxActor: Option[ActorRef],
                                   )
     extends TerminalDayFlightActor(
-      year,
-      month,
-      day,
+      date,
       terminal,
       now,
       None,
@@ -419,6 +415,7 @@ object TestActors {
       None,
       requestHistoricSplitsActor,
       requestHistoricPaxActor,
+      (_, _) => {},
     ) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 
@@ -454,7 +451,7 @@ object TestActors {
 
   class TestFlightUpdatesSupervisor(now: () => SDateLike,
                                     terminals: List[Terminal],
-                                    updatesActorFactory: (Terminal, SDateLike) => Props)
+                                    updatesActorFactory: (Terminal, UtcDate) => Props)
     extends FlightUpdatesSupervisor(now, terminals, updatesActorFactory) {
 
     def testReceive: Receive = {

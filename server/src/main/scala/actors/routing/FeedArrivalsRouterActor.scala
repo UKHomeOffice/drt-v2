@@ -93,7 +93,6 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
                               updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
                               override val partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                              ) extends RouterActorLikeWithSubscriber[FeedArrivals, (Terminal, UtcDate), TerminalUpdateRequest] {
-
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, FeedArrivalsRouterActor.GetStateForDateRange(start, end)) =>
       sender() ! flightsLookupService(start, end, allTerminals, Option(pit))

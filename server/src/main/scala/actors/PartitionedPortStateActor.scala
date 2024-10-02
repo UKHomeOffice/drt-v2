@@ -34,9 +34,9 @@ object PartitionedPortStateActor {
       Props(new TerminalDayStaffUpdatesActor(day.getFullYear, day.getMonth, day.getDate, terminal, now, journalType))
     }
 
-  def flightUpdatesProps(now: () => SDateLike, journalType: StreamingJournalLike): (Terminal, SDateLike) => Props =
-    (terminal: Terminal, day: SDateLike) => {
-      Props(new TerminalDayFlightUpdatesActor(day.getFullYear, day.getMonth, day.getDate, terminal, now, journalType))
+  def flightUpdatesProps(now: () => SDateLike, journalType: StreamingJournalLike): (Terminal, UtcDate) => Props =
+    (terminal: Terminal, day: UtcDate) => {
+      Props(new TerminalDayFlightUpdatesActor(day.year, day.month, day.day, terminal, now, journalType))
     }
 
   type QueueMinutesRequester = PortStateRequest => Future[MinutesContainer[CrunchMinute, TQM]]
@@ -190,8 +190,6 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
   implicit val mat: Materializer = Materializer.createMaterializer(context)
   implicit val timeout: Timeout = new Timeout(90 seconds)
 
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()))
-
   private val requestStaffMinuteUpdates: StaffMinutesRequester = requestStaffMinutesFn(staffUpdatesActor)
   private val requestQueueMinuteUpdates: QueueMinutesRequester = requestQueueMinutesFn(queueUpdatesActor)
   private val requestFlightUpdates: FlightUpdatesRequester = requestFlightUpdatesFn(flightUpdatesActor)
@@ -230,7 +228,8 @@ class PartitionedPortStateActor(flightsRouterActor: ActorRef,
       val replyTo = sender()
       askThenAck(staffRouterActor, someStaffUpdates, replyTo)
 
-    case GetUpdatesSince(flights, queues, staff, from, to) => replyWithUpdates(flights, queues, staff, from, to, sender())
+    case GetUpdatesSince(flights, queues, staff, from, to) =>
+      replyWithUpdates(flights, queues, staff, from, to, sender())
 
     case pitRequest@PointInTimeQuery(_, _: GetStateForDateRange) =>
       replyWithPortState(sender(), pitRequest)

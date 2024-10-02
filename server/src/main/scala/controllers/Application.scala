@@ -1,5 +1,7 @@
 package controllers
 
+import actors.routing.RouterActorLikeWithSubscriber.AddJsonUpdatesSubscriber
+import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import api._
 import buildinfo.BuildInfo
@@ -9,6 +11,7 @@ import controllers.application._
 import drt.http.ProdSendAndReceive
 import drt.shared.DrtPortConfigs
 import org.joda.time.chrono.ISOChronology
+import play.api.libs.streams.ActorFlow
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
@@ -202,6 +205,24 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   val protocol = if (isSecure) "https://" else "http://"
   val fromPort = "?fromPort=" + airportConfig.portCode.toString.toLowerCase
   val redirectUrl = protocol + baseDomain + fromPort
+
+  object MyWebSocketActor {
+    def props(out: ActorRef) = Props(new MyWebSocketActor(out))
+  }
+
+  class MyWebSocketActor(out: ActorRef) extends Actor {
+    def receive = {
+      case msg: String =>
+        out ! ("I received your message: " + msg)
+    }
+  }
+
+  def websocket: WebSocket = WebSocket.accept[String, String] { request =>
+    ActorFlow.actorRef { outActorRef =>
+      ctrl.actorService.flightsRouterActor ! AddJsonUpdatesSubscriber(outActorRef)
+      MyWebSocketActor.props(outActorRef)
+    }
+  }
 
   def index: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)

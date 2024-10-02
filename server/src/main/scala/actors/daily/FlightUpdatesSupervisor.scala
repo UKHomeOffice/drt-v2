@@ -12,7 +12,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike, UtcDate}
 
 import java.util.UUID
 import scala.concurrent.duration._
@@ -22,13 +22,13 @@ import scala.language.postfixOps
 
 object FlightUpdatesSupervisor {
 
-  case class UpdateLastRequest(terminal: Terminal, day: MillisSinceEpoch, lastRequestMillis: MillisSinceEpoch)
+  case class UpdateLastRequest(terminal: Terminal, day: UtcDate, lastRequestMillis: MillisSinceEpoch)
 
 }
 
 class FlightUpdatesSupervisor(now: () => SDateLike,
                               terminals: List[Terminal],
-                              updatesActorFactory: (Terminal, SDateLike) => Props) extends Actor {
+                              updatesActorFactory: (Terminal, UtcDate) => Props) extends Actor {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   import FlightUpdatesSupervisor._
@@ -38,10 +38,10 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
   implicit val timeout: Timeout = new Timeout(30 seconds)
 
   val cancellableTick: Cancellable = context.system.scheduler.scheduleWithFixedDelay(10 seconds, 10 seconds, self, PurgeExpired)
-  val killActor: ActorRef = context.system.actorOf(Props(new RequestAndTerminateActor()), s"flight-updates-supervisor-kill-actor-flight")
 
-  var streamingUpdateActors: Map[(Terminal, MillisSinceEpoch), ActorRef] = Map[(Terminal, MillisSinceEpoch), ActorRef]()
-  var lastRequests: Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch] = Map[(Terminal, MillisSinceEpoch), MillisSinceEpoch]()
+  var streamingUpdateActors: Map[(Terminal, UtcDate), ActorRef] = Map[(Terminal, UtcDate), ActorRef]()
+  var jsonUpdateSubscribers: Map[UtcDate, Set[ActorRef]] = Map[UtcDate, Set[ActorRef]]()
+  var lastRequests: Map[(Terminal, UtcDate), MillisSinceEpoch] = Map[(Terminal, UtcDate), MillisSinceEpoch]()
 
   override def postStop(): Unit = {
     log.warn("Actor stopped. Cancelling scheduled tick")
@@ -50,13 +50,14 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
   }
 
   def startUpdatesStream(terminal: Terminal,
-                         day: SDateLike): ActorRef = streamingUpdateActors.get((terminal, day.millisSinceEpoch)) match {
+                         day: UtcDate): ActorRef = streamingUpdateActors.get((terminal, day)) match {
     case Some(existing) => existing
     case None =>
-      log.debug(s"Starting supervised updates stream for $terminal / ${day.toISODateOnly}")
-      val actor = context.system.actorOf(updatesActorFactory(terminal, day), s"flight-updates-actor-$terminal-${day.toISOString}-${UUID.randomUUID().toString}")
-      streamingUpdateActors = streamingUpdateActors + ((terminal, day.millisSinceEpoch) -> actor)
-      lastRequests = lastRequests + ((terminal, day.millisSinceEpoch) -> now().millisSinceEpoch)
+      log.debug(s"Starting supervised updates stream for $terminal / ${day.toISOString}")
+      val actorId = s"flight-updates-actor-$terminal-${day.toISOString}-${UUID.randomUUID().toString}"
+      val actor = context.system.actorOf(updatesActorFactory(terminal, day), actorId)
+      streamingUpdateActors = streamingUpdateActors + ((terminal, day) -> actor)
+      lastRequests = lastRequests + ((terminal, day) -> now().millisSinceEpoch)
       actor
   }
 
@@ -89,9 +90,9 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
   }
 
   def terminalDaysForPeriod(fromMillis: MillisSinceEpoch,
-                            toMillis: MillisSinceEpoch): List[(Terminal, MillisSinceEpoch)] = {
-    val daysMillis: Seq[MillisSinceEpoch] = (fromMillis to toMillis by MilliTimes.oneHourMillis)
-      .map(m => SDate(m).getUtcLastMidnight.millisSinceEpoch)
+                            toMillis: MillisSinceEpoch): List[(Terminal, UtcDate)] = {
+    val daysMillis: Seq[UtcDate] = (fromMillis to toMillis by MilliTimes.oneHourMillis)
+      .map(m => SDate(m).toUtcDate)
       .distinct
 
     for {
@@ -100,13 +101,13 @@ class FlightUpdatesSupervisor(now: () => SDateLike,
     } yield (terminal, day)
   }
 
-  def updatesActor(terminal: Terminal, day: MillisSinceEpoch): ActorRef =
+  def updatesActor(terminal: Terminal, day: UtcDate): ActorRef =
     streamingUpdateActors.get((terminal, day)) match {
       case Some(existingActor) => existingActor
-      case None => startUpdatesStream(terminal, SDate(day))
+      case None => startUpdatesStream(terminal, day)
     }
 
-  def terminalsAndDaysUpdatesSource(terminalDays: List[(Terminal, MillisSinceEpoch)],
+  def terminalsAndDaysUpdatesSource(terminalDays: List[(Terminal, UtcDate)],
                                     sinceMillis: MillisSinceEpoch): Source[FlightUpdatesAndRemovals, NotUsed] =
     Source(terminalDays)
       .mapAsync(1) {
