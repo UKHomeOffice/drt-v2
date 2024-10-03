@@ -1,20 +1,25 @@
 package actors.daily
 
 import akka.actor.Props
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MillisSinceEpoch}
-import drt.shared.{CrunchApi, TQM}
+import drt.shared.CrunchApi.{CrunchMinute, CrunchMinutes, DeskRecMinute, MillisSinceEpoch}
+import drt.shared.{CrunchApi, TQM, WsMessage}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import upickle.default.write
 
 
 object TerminalDayQueuesActor {
-  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, None))
+  def props(updateSubscribers: (UtcDate, String) => Unit)
+           (terminal: Terminal,
+            date: UtcDate,
+            now: () => SDateLike,
+           ): Props =
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, None, updateSubscribers))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), (_, _) => {}))
 }
 
 class TerminalDayQueuesActor(year: Int,
@@ -23,8 +28,10 @@ class TerminalDayQueuesActor(year: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
                              maybePointInTime: Option[MillisSinceEpoch],
+                             updateSubscribers: (UtcDate, String) => Unit,
                             ) extends
-  TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
+  TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, maybePointInTime,
+    updateSubscribers, vs => write(WsMessage("CrunchMinutes", write(CrunchMinutes(vs.toSeq))))) {
   override val persistenceIdType: String = "queues"
 
   import actors.serializers.PortStateMessageConversion._

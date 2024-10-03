@@ -116,7 +116,7 @@ object TestActors {
                                                 snapshotMessageToState: Any => T,
                                                 eventToState: (T, Any) => (T, S),
                                                 query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
-                                       ) extends StreamingUpdatesActor[T, S](persistenceId, journalType, initialState, snapshotMessageToState, eventToState, query) {
+                                               ) extends StreamingUpdatesActor[T, S](persistenceId, journalType, initialState, snapshotMessageToState, eventToState, query) {
     override val receiveQuery: Receive = query(() => state, sender) orElse {
       case ResetData =>
         maybeKillSwitch.foreach(_.shutdown())
@@ -381,7 +381,8 @@ object TestActors {
                                    day: Int,
                                    terminal: Terminal,
                                    now: () => SDateLike,
-                                  ) extends TerminalDayQueuesActor(year, month, day, terminal, now, None) with Resettable {
+                                   updateSubscribers: (UtcDate, String) => Unit,
+                                  ) extends TerminalDayQueuesActor(year, month, day, terminal, now, None, updateSubscribers) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
@@ -392,7 +393,8 @@ object TestActors {
                                   day: Int,
                                   terminal: Terminal,
                                   now: () => SDateLike,
-                                 ) extends TerminalDayStaffActor(year, month, day, terminal, now, None) with Resettable {
+                                   updateSubscribers: (UtcDate, String) => Unit,
+                                 ) extends TerminalDayStaffActor(year, month, day, terminal, now, None, updateSubscribers) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand

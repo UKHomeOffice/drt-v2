@@ -22,7 +22,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val ec: ExecutionContext,
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends DrtSystemInterface {
-  override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal, updateSubscribers)
 
   override val flightLookups: FlightLookupsLike = FlightLookups(
     system,
@@ -31,6 +31,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     params.maybeRemovalCutOffSeconds,
     paxFeedSourceOrder,
     splitsCalculator.terminalSplits,
+    updateSubscribers,
   )
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)

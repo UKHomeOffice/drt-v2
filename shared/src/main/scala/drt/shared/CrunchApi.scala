@@ -174,6 +174,10 @@ object CrunchApi {
     override def toMinute: PassengersMinute = this
   }
 
+  object PassengersMinute {
+    implicit val rw: ReadWriter[PassengersMinute] = macroRW
+  }
+
   trait DeskRecMinuteLike {
     val terminal: Terminal
     val queue: Queue
@@ -234,10 +238,14 @@ object CrunchApi {
     override def isEmpty: Boolean = minutes.isEmpty
   }
 
-  case class PassengersMinutes(minutes: Seq[PassengersMinute]) extends PortStateQueueLoadMinutes {
+  case class PassengersMinutes(minutes: Seq[PassengersMinute]) extends PortStateQueueLoadMinutes with MinutesLike[PassengersMinute, TQM] {
     override val asContainer: MinutesContainer[PassengersMinute, TQM] = MinutesContainer(minutes)
 
     override def isEmpty: Boolean = minutes.isEmpty
+  }
+
+  object PassengersMinutes {
+    implicit val rw: ReadWriter[PassengersMinutes] = macroRW
   }
 
   trait SimulationMinuteLike {
@@ -342,6 +350,10 @@ object CrunchApi {
   }
 
   case class CrunchMinutes(minutes: Iterable[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
+
+  object CrunchMinutes {
+    implicit val rw: ReadWriter[CrunchMinutes] = macroRW
+  }
 
   case class PortStateUpdates(lastFlightsUpdate: MillisSinceEpoch,
                               lastQueuesUpdate: MillisSinceEpoch,

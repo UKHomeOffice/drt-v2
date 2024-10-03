@@ -2,20 +2,25 @@ package actors.daily
 
 import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesToMessage, passengersMinuteFromMessage}
 import akka.actor.Props
-import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
-import drt.shared.{CrunchApi, TQM}
+import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute, PassengersMinutes}
+import drt.shared.{CrunchApi, TQM, WsMessage}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import upickle.default.write
 
 object TerminalDayQueueLoadsActor {
-  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, None))
+  def props(updateSubscribers: (UtcDate, String) => Unit)
+           (terminal: Terminal,
+            date: UtcDate,
+            now: () => SDateLike,
+           ): Props =
+    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, None, updateSubscribers))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
+    Props(new TerminalDayQueueLoadsActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), (_, _) => {}))
 }
 
 class TerminalDayQueueLoadsActor(year: Int,
@@ -24,7 +29,9 @@ class TerminalDayQueueLoadsActor(year: Int,
                                  terminal: Terminal,
                                  val now: () => SDateLike,
                                  maybePointInTime: Option[MillisSinceEpoch],
-                                ) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
+                                 updateSubscribers: (UtcDate, String) => Unit,
+                                ) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](year, month, day,
+  terminal, now, maybePointInTime, updateSubscribers, vs => write(WsMessage("PassengersMinutes", write(PassengersMinutes(vs.toSeq))))) {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val persistenceIdType: String = "passengers"

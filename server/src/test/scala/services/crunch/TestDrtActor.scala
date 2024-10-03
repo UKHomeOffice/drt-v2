@@ -207,7 +207,7 @@ class TestDrtActor extends Actor {
         }
       }
 
-      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None)
+      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None, (_, _) => ())
       val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
       val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor

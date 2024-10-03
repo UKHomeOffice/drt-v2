@@ -14,7 +14,7 @@ import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -30,13 +30,22 @@ trait FlightLookupsLike {
   val paxFeedSourceOrder: List[FeedSource]
   val terminalSplits: Terminal => Option[Splits]
 
-  def updateFlights(removalMessageCutOff: Option[FiniteDuration])
+  def updateFlights(removalMessageCutOff: Option[FiniteDuration], updateSubscribers: (UtcDate, String) => Unit)
                    (requestHistoricSplitsActor: Option[ActorRef],
                     requestHistoricPaxActor: Option[ActorRef],
                    ): FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
     val (terminal, date) = partition
-    val props = TerminalDayFlightActor.propsWithRemovalsCutoff(
-      terminal, date, now, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal), requestHistoricSplitsActor, requestHistoricPaxActor)
+    val props = TerminalDayFlightActor.props(
+      terminal,
+      date,
+      now,
+      removalMessageCutOff,
+      paxFeedSourceOrder,
+      terminalSplits(terminal),
+      requestHistoricSplitsActor,
+      requestHistoricPaxActor,
+      updateSubscribers,
+    )
     val actor = system.actorOf(props)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Set[TerminalUpdateRequest]]
   }
@@ -44,8 +53,8 @@ trait FlightLookupsLike {
   def flightsByDayLookup(removalMessageCutOff: Option[FiniteDuration]): FlightsLookup =
     (maybePit: Option[MillisSinceEpoch]) => (date: UtcDate) => (terminal: Terminal) => {
       val props = maybePit match {
-        case None => TerminalDayFlightActor.propsWithRemovalsCutoff(
-          terminal, date, now, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal), None, None)
+        case None => TerminalDayFlightActor.props(
+          terminal, date, now, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal), None, None, (_, _) => {})
         case Some(pointInTime) => TerminalDayFlightActor.propsPointInTime(
           terminal, date, now, pointInTime, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal))
       }
@@ -63,15 +72,16 @@ case class FlightLookups(system: ActorSystem,
                          removalMessageCutOff: Option[FiniteDuration],
                          paxFeedSourceOrder: List[FeedSource],
                          terminalSplits: Terminal => Option[Splits],
-) extends FlightLookupsLike {
+                         updateSubscribers: (UtcDate, String) => Unit,
+                        ) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 
   override val flightsRouterActor: ActorRef = system.actorOf(
     Props(new FlightsRouterActor(
       allTerminals = queuesByTerminal.keys,
       flightsByDayLookup = flightsByDayLookup(removalMessageCutOff),
-      updateFlights = updateFlights(removalMessageCutOff),
-      paxFeedSourceOrder = paxFeedSourceOrder
+      updateFlights = updateFlights(removalMessageCutOff, updateSubscribers),
+      paxFeedSourceOrder = paxFeedSourceOrder,
     ))
   )
 }

@@ -36,11 +36,12 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
       val (_, flightsSince, queuesSince, staffSince) = portStateModel.value
       val startMillis = viewMode.dayStart.millisSinceEpoch
       val endMillis = startMillis + thirtySixHoursInMillis
-      val updateRequestFuture = DrtApi.get(s"crunch?start=$startMillis&end=$endMillis&flights-since=$flightsSince&queues-since=$queuesSince&staff-since=$staffSince")
-
-      val eventualAction = processUpdatesRequest(viewMode, updateRequestFuture)
-
-      effectOnly(Effect(eventualAction))
+//      val updateRequestFuture = DrtApi.get(s"crunch?start=$startMillis&end=$endMillis&flights-since=$flightsSince&queues-since=$queuesSince&staff-since=$staffSince")
+//
+//      val eventualAction = processUpdatesRequest(viewMode, updateRequestFuture)
+//
+//      effectOnly(Effect(eventualAction))
+    noChange
 
     case UpdatePortStateFromUpdates(viewMode, _) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring out of date view response")

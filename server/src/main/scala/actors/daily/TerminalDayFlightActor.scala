@@ -25,15 +25,16 @@ import upickle.default.write
 import scala.concurrent.duration.FiniteDuration
 
 object TerminalDayFlightActor {
-  def propsWithRemovalsCutoff(terminal: Terminal,
-                              date: UtcDate,
-                              now: () => SDateLike,
-                              cutOff: Option[FiniteDuration],
-                              paxFeedSourceOrder: List[FeedSource],
-                              terminalSplits: Option[Splits],
-                              requestHistoricSplitsActor: Option[ActorRef],
-                              requestHistoricPaxActor: Option[ActorRef],
-                             ): Props =
+  def props(terminal: Terminal,
+            date: UtcDate,
+            now: () => SDateLike,
+            cutOff: Option[FiniteDuration],
+            paxFeedSourceOrder: List[FeedSource],
+            terminalSplits: Option[Splits],
+            requestHistoricSplitsActor: Option[ActorRef],
+            requestHistoricPaxActor: Option[ActorRef],
+            updateSubscribers: (UtcDate, String) => Unit,
+           ): Props =
     Props(new TerminalDayFlightActor(
       date,
       terminal,
@@ -44,7 +45,7 @@ object TerminalDayFlightActor {
       terminalSplits,
       requestHistoricSplitsActor,
       requestHistoricPaxActor,
-      (_, _) => {},
+      updateSubscribers,
     ))
 
   def propsPointInTime(terminal: Terminal,
@@ -212,7 +213,7 @@ class TerminalDayFlightActor(date: UtcDate,
       val updateRequests = applyDiffAndPersist(diff.applyTo)
       val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
       persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
-      updateSubscribers(date, write(diff))
+      updateSubscribers(date, write(WsMessage("FlightsWithSplitsDiff", write(diff))))
     }
     else sender() ! Set.empty
 
@@ -221,7 +222,7 @@ class TerminalDayFlightActor(date: UtcDate,
       val updateRequests = applyDiffAndPersist(diff.applyTo)
       val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
       persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
-      updateSubscribers(date, write(diff))
+      updateSubscribers(date, write(WsMessage("ArrivalsDiff", write(diff))))
     } else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
@@ -230,7 +231,7 @@ class TerminalDayFlightActor(date: UtcDate,
       val updateRequests = applyDiffAndPersist(diff.applyTo)
       val message = splitsForArrivalsToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
-      updateSubscribers(date, write(diff))
+      updateSubscribers(date, write(WsMessage("SplitsForArrivals", write(diff))))
     } else sender() ! Set.empty
 
   private def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {

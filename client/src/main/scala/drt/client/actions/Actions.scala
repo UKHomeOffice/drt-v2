@@ -9,6 +9,7 @@ import drt.shared.CrunchApi._
 import drt.shared.{Country, _}
 import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
 import org.scalajs.dom.File
+import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
@@ -48,6 +49,10 @@ object Actions {
   case class GetInitialPortState(viewMode: ViewMode) extends Action
 
   case class GetPortStateUpdates(viewMode: ViewMode) extends Action
+
+  case class ApplyFlightUpdates(updates: FlightUpdates) extends Action
+
+  case class ApplyMinuteUpdates(updates: MinutesLike[_, _]) extends Action
 
   case class SchedulePortStateUpdateRequest(viewMode: ViewMode) extends Action
 

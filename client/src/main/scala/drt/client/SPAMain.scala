@@ -11,15 +11,20 @@ import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
 import drt.client.spa.TerminalPageModes.{Current, Staffing}
 import drt.client.spa.{TerminalPageMode, TerminalPageModes}
+import drt.shared.CrunchApi.{CrunchMinutes, PassengersMinutes, StaffMinutes}
+import drt.shared.WsMessage
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
-import org.scalajs.dom.console
+import org.scalajs.dom.{WebSocket, console}
 import scalacss.ProdDefaults._
 import uk.gov.homeoffice.drt.Urls
+import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplitsDiff, SplitsForArrivals}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import upickle.default
+import upickle.legacy.read
 
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scala.util.Try
@@ -184,6 +189,36 @@ object SPAMain {
     GetManifestSummariesForDate(SDate.now().addDays(-1).toUtcDate),
     GetSlaConfigs,
   )
+
+  private def getWebsocketUri(): String = {
+    val wsProtocol = if (dom.document.location.protocol == "https:") "wss" else "ws"
+
+    s"$wsProtocol://${dom.document.location.host}/ws"
+  }
+  val websocket = new WebSocket(getWebsocketUri())
+  websocket.onopen = { event =>
+    log.info(s"Websocket opened: $event")
+  }
+  websocket.onerror = { event =>
+    log.error(s"Websocket error: $event")
+  }
+  websocket.onclose = { event =>
+    log.info(s"Websocket closed: $event")
+  }
+  websocket.onmessage = { event =>
+    log.info(s"Websocket message: ${event.data.toString}")
+    val msg = default.read[WsMessage](event.data.toString)
+    log.info(s"WsMessage: $msg")
+    val action = msg.kind match {
+      case "FlightsWithSplitsDiff" => ApplyFlightUpdates(default.read[FlightsWithSplitsDiff](msg.payload))
+      case "ArrivalsDiff" => ApplyFlightUpdates(default.read[ArrivalsDiff](msg.payload))
+      case "SplitsForArrivals" => ApplyFlightUpdates(default.read[SplitsForArrivals](msg.payload))
+      case "CrunchMinutes" => ApplyMinuteUpdates(default.read[CrunchMinutes](msg.payload))
+      case "StaffMinutes" => ApplyMinuteUpdates(default.read[StaffMinutes](msg.payload))
+      case "PassengersMinutes" => ApplyMinuteUpdates(default.read[PassengersMinutes](msg.payload))
+    }
+    SPACircuit.dispatch(action)
+  }
 
   def sendInitialRequests(): Unit = initialRequestsActions.foreach(SPACircuit.dispatch(_))
 

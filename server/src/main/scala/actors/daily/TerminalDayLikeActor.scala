@@ -10,10 +10,9 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.mutable
-
 
 abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor, M <: GeneratedMessage](year: Int,
                                                                                                                      month: Int,
@@ -21,6 +20,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                                                      terminal: Terminal,
                                                                                                                      now: () => SDateLike,
                                                                                                                      override val maybePointInTime: Option[MillisSinceEpoch],
+                                                                                                                     updateSubscribers: (UtcDate, String) => Unit,
+                                                                                                                     serialiseValues: Iterable[VAL] => String,
                                                                                                                     ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -95,6 +96,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
         else Set.empty
         val replyToAndMessage = List((sender(), updateRequests))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
+        updateSubscribers(UtcDate(year, month, day), serialiseValues(differences))
     }
 
   def shouldSendEffectsToSubscriber(container: MinutesContainer[VAL, INDEX]): Boolean

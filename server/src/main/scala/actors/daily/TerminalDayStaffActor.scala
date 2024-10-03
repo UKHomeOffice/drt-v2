@@ -1,20 +1,25 @@
 package actors.daily
 
 import akka.actor.Props
-import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import drt.shared.{CrunchApi, TM}
+import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute, StaffMinutes}
+import drt.shared.{CrunchApi, TM, WsMessage}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{StaffMinuteMessage, StaffMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+import upickle.default.write
 
 
 object TerminalDayStaffActor {
-  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, None))
+  def props(updateSubscribers: (UtcDate, String) => Unit)
+           (terminal: Terminal,
+            date: UtcDate,
+            now: () => SDateLike,
+           ): Props =
+    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, None, updateSubscribers))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
+    Props(new TerminalDayStaffActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), (_, _) => {}))
 }
 
 class TerminalDayStaffActor(year: Int,
@@ -23,8 +28,10 @@ class TerminalDayStaffActor(year: Int,
                             terminal: Terminal,
                             val now: () => SDateLike,
                             maybePointInTime: Option[MillisSinceEpoch],
+                            updateSubscribers: (UtcDate, String) => Unit,
                            )
-  extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
+  extends TerminalDayLikeActor[StaffMinute, TM, StaffMinuteMessage](year, month, day, terminal, now, maybePointInTime,
+    updateSubscribers, vs => write(WsMessage("StaffMinutes", write(StaffMinutes(vs.toSeq))))) {
 
   override val persistenceIdType: String = "staff"
 

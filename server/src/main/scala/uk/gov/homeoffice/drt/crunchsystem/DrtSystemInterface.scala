@@ -1,7 +1,7 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors._
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
@@ -38,6 +38,14 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val journalType: StreamingJournalLike = StreamingJournal.forConfig(config)
   val env: AppEnvironment = AppEnvironment(config.getOptional[String]("env").getOrElse("other"))
 
+  var subscribers: Map[UtcDate, ActorRef] = Map.empty
+
+  val updateSubscribers: (UtcDate, String) => Unit =
+    (date, response) => {
+      log.info(s"Update subscribers for $date: $response")
+      subscribers.get(date).foreach(_ ! response)
+    }
+
   val aggregatedDb: AggregatedDbTables
   val akkaDb: AkkaDbTables
   val params: DrtParameters
@@ -48,7 +56,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
       Roles.availableRoles
     } else userRolesFromHeader(headers)
   }
-
 
   val now: () => SDateLike
 

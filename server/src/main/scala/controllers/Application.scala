@@ -1,6 +1,5 @@
 package controllers
 
-import actors.routing.RouterActorLikeWithSubscriber.AddJsonUpdatesSubscriber
 import akka.actor.{Actor, ActorRef, Props}
 import akka.event.Logging
 import api._
@@ -211,15 +210,15 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   }
 
   class MyWebSocketActor(out: ActorRef) extends Actor {
-    def receive = {
+    def receive: Receive = {
       case msg: String =>
         out ! ("I received your message: " + msg)
     }
   }
 
-  def websocket: WebSocket = WebSocket.accept[String, String] { request =>
+  def websocket: WebSocket = WebSocket.accept[String, String] { _ =>
     ActorFlow.actorRef { outActorRef =>
-      ctrl.actorService.flightsRouterActor ! AddJsonUpdatesSubscriber(outActorRef)
+      ctrl.subscribers = ctrl.subscribers.updated(SDate.now().toUtcDate, outActorRef)
       MyWebSocketActor.props(outActorRef)
     }
   }
