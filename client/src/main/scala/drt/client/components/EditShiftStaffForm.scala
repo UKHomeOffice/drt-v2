@@ -5,7 +5,6 @@ import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.{Children, JsFnComponent}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default._
-
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 import scala.scalajs.js.{Date, UndefOr}
@@ -24,19 +23,20 @@ case class EditShiftStaff(port: String,
 
 @js.native
 sealed trait IEditShiftStaff extends js.Object {
-  var dayAt: moment.Date
-  var startTime: moment.Date
-  var endTime: js.UndefOr[moment.Date]
-  var actualStaff: js.UndefOr[String]
+  var startDayAt: moment.Date
+  var startTimeAt: moment.Date
+  var endTimeAt: moment.Date
+  var endDayAt: moment.Date
+  var actualStaff: String
 }
 
-
 object IEditShiftStaff {
-  def apply(dayAt: moment.Date, startTime: moment.Date, endTime: js.UndefOr[moment.Date], actualStaff: js.UndefOr[String]): IEditShiftStaff = {
+  def apply(startDayAt: moment.Date, startTimeAt: moment.Date, endTimeAt: moment.Date, endDayAt: moment.Date, actualStaff: String): IEditShiftStaff = {
     val p = (new js.Object).asInstanceOf[IEditShiftStaff]
-    p.dayAt = dayAt
-    p.startTime = startTime
-    p.endTime = endTime
+    p.startDayAt = startDayAt
+    p.startTimeAt = startTimeAt
+    p.endTimeAt = endTimeAt
+    p.endDayAt = endDayAt
     p.actualStaff = actualStaff
     p
   }
@@ -46,32 +46,33 @@ object IEditShiftStaff {
   def toStaffAssignment(obj: IEditShiftStaff, terminal: Terminal): StaffAssignment = {
 
     val combinedStartTime: Double = Date.UTC(
-      obj.dayAt.year(),
-      obj.dayAt.month(),
-      obj.dayAt.date,
-      obj.startTime.toDate().getUTCHours.toInt,
-      obj.startTime.toDate().getUTCMinutes.toInt,
-      obj.startTime.toDate().getUTCSeconds.toInt)
+      obj.startDayAt.year(),
+      obj.startDayAt.month(),
+      obj.startDayAt.date,
+      obj.startTimeAt.utc.toDate().getUTCHours.toInt,
+      obj.startTimeAt.utc.toDate().getUTCMinutes.toInt,
+      obj.startTimeAt.utc.toDate().getUTCSeconds.toInt)
 
-    val combinedEndTime: UndefOr[Double] = obj.endTime.map(e => Date.UTC(
-      obj.dayAt.year(),
-      obj.dayAt.month(),
-      obj.dayAt.date(),
-      e.toDate.getUTCHours.toInt,
-      e.toDate.getUTCMinutes.toInt,
-      e.toDate.getUTCSeconds.toInt))
+    val combinedEndTime: UndefOr[Double] = Date.UTC(
+      obj.startDayAt.year(),
+      obj.startDayAt.month(),
+      obj.startDayAt.date(),
+      obj.endTimeAt.utc.toDate().getUTCHours.toInt,
+      obj.endTimeAt.utc.toDate().getUTCMinutes.toInt,
+      obj.endTimeAt.utc.toDate().getUTCSeconds.toInt)
 
-    StaffAssignment(obj.dayAt.toISOString,
+    StaffAssignment(obj.startDayAt.toISOString,
       terminal,
       combinedStartTime.toLong,
       combinedEndTime.map(a => a.toLong).getOrElse(combinedStartTime.toLong),
-      obj.actualStaff.toOption.map(_.toInt).getOrElse(0), None)
+      obj.actualStaff.toInt,
+      None)
   }
 }
 
 @js.native
 trait IEditShiftStaffForm extends js.Object {
-  var ssf: IEditShiftStaff
+  var essf: IEditShiftStaff
   var handleSubmit: js.Function1[IEditShiftStaff, Unit]
   var cancelHandler: js.Function0[Unit]
 }
@@ -79,7 +80,7 @@ trait IEditShiftStaffForm extends js.Object {
 object IEditShiftStaffForm {
   def apply(editShiftStaff: IEditShiftStaff, handleSubmit: js.Function1[IEditShiftStaff, Unit], cancelHandler: js.Function0[Unit]): IEditShiftStaffForm = {
     val p = (new js.Object).asInstanceOf[IEditShiftStaffForm]
-    p.ssf = editShiftStaff
+    p.essf = editShiftStaff
     p.handleSubmit = handleSubmit
     p.cancelHandler = cancelHandler
     p
