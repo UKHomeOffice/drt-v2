@@ -62,7 +62,7 @@ object Settings {
     val drtCirium = "186"
     val uPickle = "3.1.3"
     val akkaHttp = "10.5.2"
-    val slick = "3.4.1"
+    val slick = "3.5.2"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.9"
     val scalaJsReactMaterialUi = "0.1.18"
