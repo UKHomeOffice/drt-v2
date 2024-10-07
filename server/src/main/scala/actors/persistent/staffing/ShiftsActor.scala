@@ -234,7 +234,7 @@ class ShiftsActor(val now: () => SDateLike,
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
 
       persistAndMaybeSnapshotWithAck(shiftsMessage, List(
-        (sender(), StatusReply.Ack),
+        (sender(), state),
       ))
 
     case ReplaceAllShifts(newShiftAssignments) =>
