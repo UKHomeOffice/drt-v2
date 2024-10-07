@@ -17,9 +17,11 @@ import drt.shared._
 import drt.shared.api.WalkTimes
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
+import japgolly.scalajs.react.component.ScalaFn
 import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.facade.React.useMemo
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent, ScalaFnComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -71,10 +73,10 @@ object TerminalComponent {
     (startOfView, endOfView)
   }
 
-
-  class Backend() {
-    def render(props: Props): VdomElement = {
-
+  val component: ScalaFn.Component[Props, CtorType.Props] = ScalaFnComponent
+    .withHooks[Props]
+    .render { props: Props =>
+      useMemo(() => println("Hello"))
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
         potShifts = model.shifts,
@@ -240,12 +242,8 @@ object TerminalComponent {
         }.getOrElse(LoadingOverlay())
         ))
     }
-  }
-
-  val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
-    .renderBackend[Backend]
-    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())))
-    .build
+//    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())))
+//    .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean): VdomTagOf[UList] = {
     val terminalName = props.terminalPageTab.terminal.toString

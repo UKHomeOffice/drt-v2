@@ -16,8 +16,9 @@ import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.facade.React.useMemo
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent, ScalaFnComponent}
 import org.scalajs.dom
 import org.scalajs.dom.DOMList
 import org.scalajs.dom.html.{Div, TableCell}
@@ -83,8 +84,47 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean, deskType: DeskType, displayType: DisplayType, showWaitColumn: Boolean) extends UseValueEq
 
-  class Backend() {
-    def render(props: Props, state: State): VdomTagOf[Div] = {
+//  class Backend() {
+//    def render(props: Props, state: State): VdomTagOf[Div] =   }
+
+  private def adminRecrunchButton(requestForecastRecrunch: () => Callback): VdomTagOf[Div] = {
+    <.div(MuiButton(
+      variant = "outlined",
+      size = "medium",
+      color = Color.primary
+    )(MuiIcons(RefreshOutlined)(),
+      ^.onClick --> requestForecastRecrunch(),
+      "Request re-crunch")
+    )
+  }
+
+  val component = ScalaFnComponent
+    .withHooks[Props]
+    .useStateBy { p =>
+      State(
+        showActuals = p.airportConfig.hasActualDeskStats && p.showActuals,
+        deskType = p.terminalPageTab.deskType,
+        displayType = p.terminalPageTab.displayAs,
+        showWaitColumn = !p.featureFlags.displayWaitTimesToggle)
+    }
+    .useEffectWithDeps() { p =>
+      //      Callback {
+      SetDocumentTitle("Desks and Queues", p.terminal, p.airportConfig)
+      println("TerminalDesksAndQueues mounted")
+      StickyTableHeader("[data-sticky]")
+      //      }
+    }
+//    .useMemo { () =>
+//            Callback(SetDocumentTitle("Desks and Queues", p.props.terminal, p.props.airportConfig)) >>
+//              Callback(log.info("TerminalDesksAndQueues mounted")) >>
+//              StickyTableHeader("[data-sticky]")
+//    }
+    .render { (props, s) =>
+      useMemo { () =>
+        println(s"TerminalDesksAndQueues render")
+      }
+
+      val state = s.value
       val slotMinutes = 15
 
       def deskUnitLabel(queue: Queue): String = {
@@ -277,33 +317,12 @@ object TerminalDesksAndQueues {
         renderPot.getOrElse(<.div())
       }
     }
-  }
-
-  private def adminRecrunchButton(requestForecastRecrunch: () => Callback): VdomTagOf[Div] = {
-    <.div(MuiButton(
-      variant = "outlined",
-      size = "medium",
-      color = Color.primary
-    )(MuiIcons(RefreshOutlined)(),
-      ^.onClick --> requestForecastRecrunch(),
-      "Request re-crunch")
-    )
-  }
-
-  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
-    .initialStateFromProps { p =>
-      State(
-        showActuals = p.airportConfig.hasActualDeskStats && p.showActuals,
-        deskType = p.terminalPageTab.deskType,
-        displayType = p.terminalPageTab.displayAs,
-        showWaitColumn = !p.featureFlags.displayWaitTimesToggle)
-    }
-    .renderBackend[Backend]
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Desks and Queues", p.props.terminal, p.props.airportConfig)) >>
-        StickyTableHeader("[data-sticky]")
-    }
-    .build
+//    .componentDidMount { p =>
+//      Callback(SetDocumentTitle("Desks and Queues", p.props.terminal, p.props.airportConfig)) >>
+//        Callback(log.info("TerminalDesksAndQueues mounted")) >>
+//        StickyTableHeader("[data-sticky]")
+//    }
+//    .build
 
   def documentScrollTop: Double = Math.max(dom.document.documentElement.scrollTop, dom.document.body.scrollTop)
 

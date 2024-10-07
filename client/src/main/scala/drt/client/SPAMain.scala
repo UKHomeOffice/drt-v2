@@ -16,6 +16,7 @@ import drt.shared.WsMessage
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
+import japgolly.scalajs.react.facade.React.useMemo
 import org.scalajs.dom
 import org.scalajs.dom.{WebSocket, console}
 import scalacss.ProdDefaults._
@@ -195,6 +196,7 @@ object SPAMain {
 
     s"$wsProtocol://${dom.document.location.host}/ws"
   }
+
   val websocket = new WebSocket(getWebsocketUri())
   websocket.onopen = { event =>
     log.info(s"Websocket opened: $event")
@@ -230,7 +232,7 @@ object SPAMain {
         dashboardRoute(dsl) |
         terminalRoute(dsl) |
         statusRoute(dsl) |
-        contactRoute(dsl) |
+        //        contactRoute(dsl) |
         trainingHubRoute(dsl) |
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
@@ -255,7 +257,10 @@ object SPAMain {
   def homeRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
-    staticRoute(root, UserDashboardLoc) ~> renderR((router: RouterCtl[Loc]) => UserDashboardPage(router))
+    staticRoute(root, UserDashboardLoc) ~> renderR { (router: RouterCtl[Loc]) =>
+      println(s"UserDashboardLoc route")
+      UserDashboardPage(router)
+    }
   }
 
 
@@ -264,14 +269,20 @@ object SPAMain {
 
     val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
 
-    staticRoute("#status", StatusLoc) ~> renderR(_ => proxy(p => FeedsStatusPage(p()._1, p()._2)))
+    staticRoute("#status", StatusLoc) ~> render {
+      println(s"StatusLoc route")
+      proxy(p => FeedsStatusPage(p()._1, p()._2))
+    }
   }
 
-  def contactRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    staticRoute("#contact", ContactUsLoc) ~> renderR(_ => ContactPage())
-  }
+  //  def contactRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  //    import dsl._
+  //
+  //    staticRoute("#contact", ContactUsLoc) ~> render {
+  //      println(s"Con route")
+  //      ContactPage()
+  //    }
+  //  }
 
   def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
@@ -308,6 +319,8 @@ object SPAMain {
     dynamicRouteCT(
       ("#trainingHub" / string("[a-zA-Z0-9]*")).caseClass[TrainingHubLoc]) ~>
       dynRenderR { case (page: TrainingHubLoc, router) =>
+        println(s"TraingHubLoc route")
+
         proxy { p =>
           val props = TrainingHubComponent.Props(trainingHubLoc = page, router, p()._1, p()._2)
           ThemeProvider(DrtTheme.theme)(TrainingHubComponent(props))
@@ -323,7 +336,8 @@ object SPAMain {
     val requiredSecondLevelTab = string("[a-zA-Z0-9]+")
 
     dynamicRouteCT(
-      ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
+      ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap)
+        .caseClass[TerminalPageTabLoc]) ~>
       dynRenderR { case (page: TerminalPageTabLoc, router) =>
         val props = TerminalComponent.Props(terminalPageTab = page, router)
         ThemeProvider(DrtTheme.theme)(TerminalComponent(props))
