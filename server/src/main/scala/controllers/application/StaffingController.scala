@@ -34,14 +34,15 @@ class StaffingController @Inject()(cc: ControllerComponents,
   }
 
   def saveShifts: Action[AnyContent] = authByRole(StaffEdit) {
-    Action { request =>
+    Action.async { request =>
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
-          shiftsService.updateShifts(shifts.assignments)
-          Accepted
+          shiftsService
+            .updateShifts(shifts.assignments)
+            .map(allShifts => Accepted(write(allShifts)))
         case None =>
-          BadRequest
+          Future.successful(BadRequest)
       }
     }
   }
@@ -95,7 +96,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
 
   def getShiftStaff(terminalName: String): Action[AnyContent] =
     Action.async {
-      println(s"getShiftStaff...............: $terminalName")
       staffShiftFormService.getTerminalShiftConfig(Terminal(terminalName)).map {
         case Some(config) =>
           Ok(PortTerminalShiftConfigJsonSerializer.writeToJson(config))

@@ -11,5 +11,5 @@ trait ShiftsService {
 
   def allShifts: Future[ShiftAssignments]
 
-  def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Unit
+  def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments]
 }

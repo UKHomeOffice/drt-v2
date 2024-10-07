@@ -291,9 +291,6 @@ object MonthlyStaffing {
                     IEditShiftStaff.toStaffAssignment(ssfDay, props.terminalPageTab.terminal)
                   }
                   SPACircuit.dispatch(UpdateShifts(staffAssignments))
-                  println("Dispatching UpdateShifts")
-//                  SPACircuit.dispatch(GetAllShifts)
-//                  println("Dispatching GetAllShifts")
 
                   scope.modState(state => {
                     val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)

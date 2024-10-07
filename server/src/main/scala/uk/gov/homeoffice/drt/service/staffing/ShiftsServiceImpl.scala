@@ -68,7 +68,8 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
       }
   }
 
-  override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Unit = {
-    shiftsWriteActor ! UpdateShifts(shiftAssignments)
-  }
+  override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] =
+    shiftsWriteActor
+      .ask(UpdateShifts(shiftAssignments))
+      .mapTo[ShiftAssignments]
 }
