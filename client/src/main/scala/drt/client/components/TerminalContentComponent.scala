@@ -102,6 +102,10 @@ object TerminalContentComponent {
         case ViewDay(localDate, _) => localDate
       }
 
+      val desksAndQueuesLoc = props.terminalPageTab.copy(
+        subMode = "desksAndQueues",
+        queryParams = props.terminalPageTab.queryParams.updated("viewType", props.defaultDesksAndQueuesViewType)
+      )
       <.div(^.className := "queues-and-arrivals",
         <.div(^.className := s"view-mode-content $viewModeStr",
           <.div(^.className := "tabs-with-export",
@@ -112,12 +116,10 @@ object TerminalContentComponent {
                   props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
                 }),
               <.li(^.className := desksAndQueuesActive,
-                <.a(^.className := "flexed-anchor", ^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
-                  GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                  props.router.set(props.terminalPageTab.copy(
-                    subMode = "desksAndQueues",
-                    queryParams = props.terminalPageTab.queryParams.updated("viewType", props.defaultDesksAndQueuesViewType)
-                  ))
+                props.router.link(desksAndQueuesLoc)(^.className := "flexed-anchor", ^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"),
+                ^.onClick --> {
+                  Callback(GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly))
+//                  props.router.set(desksAndQueuesLoc)
                 }),
               <.li(^.className := staffingActive,
                 <.a(^.className := "flexed-anchor", ^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", staffMovementsTabTooltip),

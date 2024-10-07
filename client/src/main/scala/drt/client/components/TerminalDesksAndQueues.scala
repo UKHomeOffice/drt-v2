@@ -14,11 +14,13 @@ import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
-import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
-import japgolly.scalajs.react.facade.React.useMemo
+import japgolly.scalajs.react.facade.React.{useEffect, useMemo}
+import org.scalajs.dom.{Event, window}
+
+import scala.scalajs.js
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent, ScalaFnComponent}
+import japgolly.scalajs.react.{Callback, ReactEventFromInput, Reusability, ScalaFnComponent}
 import org.scalajs.dom
 import org.scalajs.dom.DOMList
 import org.scalajs.dom.html.{Div, TableCell}
@@ -84,8 +86,10 @@ object TerminalDesksAndQueues {
 
   case class State(showActuals: Boolean, deskType: DeskType, displayType: DisplayType, showWaitColumn: Boolean) extends UseValueEq
 
-//  class Backend() {
-//    def render(props: Props, state: State): VdomTagOf[Div] =   }
+  //  class Backend() {
+  //    def render(props: Props, state: State): VdomTagOf[Div] =   }
+
+  implicit val reuseTerminal = Reusability.by((t: Terminal) => t.toString)
 
   private def adminRecrunchButton(requestForecastRecrunch: () => Callback): VdomTagOf[Div] = {
     <.div(MuiButton(
@@ -107,22 +111,35 @@ object TerminalDesksAndQueues {
         displayType = p.terminalPageTab.displayAs,
         showWaitColumn = !p.featureFlags.displayWaitTimesToggle)
     }
-    .useEffectWithDeps() { p =>
-      //      Callback {
-      SetDocumentTitle("Desks and Queues", p.terminal, p.airportConfig)
-      println("TerminalDesksAndQueues mounted")
-      StickyTableHeader("[data-sticky]")
-      //      }
-    }
-//    .useMemo { () =>
-//            Callback(SetDocumentTitle("Desks and Queues", p.props.terminal, p.props.airportConfig)) >>
-//              Callback(log.info("TerminalDesksAndQueues mounted")) >>
-//              StickyTableHeader("[data-sticky]")
-//    }
+    //    .useEffectWithDeps(props) { p =>
+    //      //      Callback {
+    //      SetDocumentTitle("Desks and Queues", p.terminal, p.airportConfig)
+    //      println("TerminalDesksAndQueues mounted")
+    //      StickyTableHeader("[data-sticky]")
+    //      //      }
+    //    }
+    //    .useMemo { () =>
+    //            Callback(SetDocumentTitle("Desks and Queues", p.props.terminal, p.props.airportConfig)) >>
+    //              Callback(log.info("TerminalDesksAndQueues mounted")) >>
+    //              StickyTableHeader("[data-sticky]")
+    //    }
     .render { (props, s) =>
-      useMemo { () =>
-        println(s"TerminalDesksAndQueues render")
-      }
+      //      useMemo { () =>
+      //        println(s"TerminalDesksAndQueues render")
+      //      }
+
+//      useEffect(
+//        () => {
+//          println(s"TerminalDesksAndQueues useEffect")
+//          Callback(SetDocumentTitle("Desks and Queues", props.terminal, props.airportConfig)) >>
+//            Callback(log.info("TerminalDesksAndQueues mounted")) >>
+//            StickyTableHeader("[data-sticky]")
+////          val eventToUnit: js.Function1[Event, Unit] = (e: Event) => println(":D")
+////          window.removeEventListener("mousemove", eventToUnit)
+//          ()
+//        },
+//        js.Array(props.terminal)
+//      )
 
       val state = s.value
       val slotMinutes = 15
@@ -317,12 +334,12 @@ object TerminalDesksAndQueues {
         renderPot.getOrElse(<.div())
       }
     }
-//    .componentDidMount { p =>
-//      Callback(SetDocumentTitle("Desks and Queues", p.props.terminal, p.props.airportConfig)) >>
-//        Callback(log.info("TerminalDesksAndQueues mounted")) >>
-//        StickyTableHeader("[data-sticky]")
-//    }
-//    .build
+  //    .componentDidMount { p =>
+  //      Callback(SetDocumentTitle("Desks and Queues", p.props.terminal, p.props.airportConfig)) >>
+  //        Callback(log.info("TerminalDesksAndQueues mounted")) >>
+  //        StickyTableHeader("[data-sticky]")
+  //    }
+  //    .build
 
   def documentScrollTop: Double = Math.max(dom.document.documentElement.scrollTop, dom.document.body.scrollTop)
 

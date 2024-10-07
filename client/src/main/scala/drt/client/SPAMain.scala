@@ -4,7 +4,7 @@ import diode.Action
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles._
-import drt.client.components.{ContactPage, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
+import drt.client.components.{FeedsStatusPage, ForecastUploadComponent, GlobalStyles, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -16,7 +16,6 @@ import drt.shared.WsMessage
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
-import japgolly.scalajs.react.facade.React.useMemo
 import org.scalajs.dom
 import org.scalajs.dom.{WebSocket, console}
 import scalacss.ProdDefaults._
@@ -25,7 +24,6 @@ import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplitsDiff, Spli
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import upickle.default
-import upickle.legacy.read
 
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
 import scala.util.Try
@@ -162,8 +160,6 @@ object SPAMain {
 
   case object UserDashboardLoc extends Loc
 
-  case object ContactUsLoc extends Loc
-
   case class TrainingHubLoc(modeStr: String = "dropInBooking") extends Loc
 
   case object PortConfigLoc extends Loc
@@ -232,7 +228,6 @@ object SPAMain {
         dashboardRoute(dsl) |
         terminalRoute(dsl) |
         statusRoute(dsl) |
-        //        contactRoute(dsl) |
         trainingHubRoute(dsl) |
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
@@ -245,7 +240,7 @@ object SPAMain {
         (maybePrevLoc, currentLoc) match {
           case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
             if (c.updateRequired(p)) SPACircuit.dispatch(c.loadAction)
-          case (_, c: TerminalPageTabLoc) =>
+          case (None, c: TerminalPageTabLoc) =>
             SPACircuit.dispatch(c.loadAction)
           case (_, UserDashboardLoc) =>
             SPACircuit.dispatch(GetUserDashboardState)
@@ -274,15 +269,6 @@ object SPAMain {
       proxy(p => FeedsStatusPage(p()._1, p()._2))
     }
   }
-
-  //  def contactRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-  //    import dsl._
-  //
-  //    staticRoute("#contact", ContactUsLoc) ~> render {
-  //      println(s"Con route")
-  //      ContactPage()
-  //    }
-  //  }
 
   def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
@@ -319,8 +305,6 @@ object SPAMain {
     dynamicRouteCT(
       ("#trainingHub" / string("[a-zA-Z0-9]*")).caseClass[TrainingHubLoc]) ~>
       dynRenderR { case (page: TrainingHubLoc, router) =>
-        println(s"TraingHubLoc route")
-
         proxy { p =>
           val props = TrainingHubComponent.Props(trainingHubLoc = page, router, p()._1, p()._2)
           ThemeProvider(DrtTheme.theme)(TrainingHubComponent(props))
@@ -339,6 +323,8 @@ object SPAMain {
       ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap)
         .caseClass[TerminalPageTabLoc]) ~>
       dynRenderR { case (page: TerminalPageTabLoc, router) =>
+        println(s"TerminalPageTabLoc loc: $page")
+        println(s"TerminalPageTabLoc router: $router")
         val props = TerminalComponent.Props(terminalPageTab = page, router)
         ThemeProvider(DrtTheme.theme)(TerminalComponent(props))
       }
