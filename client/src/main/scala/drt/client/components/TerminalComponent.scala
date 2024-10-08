@@ -76,7 +76,6 @@ object TerminalComponent {
   val component: ScalaFn.Component[Props, CtorType.Props] = ScalaFnComponent
     .withHooks[Props]
     .render { props: Props =>
-      useMemo(() => println("Hello"))
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
         potShifts = model.shifts,

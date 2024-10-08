@@ -2,7 +2,6 @@ package drt.client.components
 
 import diode.data.Pot
 import drt.client.actions.Actions.{FileUploadInProgress, ForecastFileUploadAction, ResetFileUpload}
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
@@ -73,10 +72,11 @@ object ForecastUploadComponent {
       }
       )
     }
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Forecast Upload", p.props.airportConfigPot)) >>
-        Callback(GoogleEventTracker.sendPageView(s"forecastFileUpload"))
-    }.build
+//    .componentDidMount { p =>
+//      Callback(SetDocumentTitle("Forecast Upload", p.props.airportConfigPot)) >>
+//        Callback(GoogleEventTracker.sendPageView(s"forecastFileUpload"))
+//    }
+    .build
 
   def apply(airportConfigPot: Pot[AirportConfig]): VdomElement = component(Props(airportConfigPot))
 

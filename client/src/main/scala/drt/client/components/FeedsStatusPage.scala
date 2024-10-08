@@ -5,7 +5,6 @@ import drt.client.actions.Actions.{RequestForecastRecrunch, RequestMissingHistor
 import drt.client.components.ToolTips._
 import drt.client.components.styles.DrtTheme
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.CheckFeed
@@ -158,10 +157,10 @@ object FeedsStatusPage {
         )
       }
     }
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Feeds status", p.props.airportConfigPot)) >>
-        Callback(GoogleEventTracker.sendPageView("feed-status"))
-    }
+//    .componentDidMount { p =>
+//      Callback(SetDocumentTitle("Feeds status", p.props.airportConfigPot)) >>
+//        Callback(GoogleEventTracker.sendPageView("feed-status"))
+//    }
     .build
 
   private def displayTime(date: MillisSinceEpoch): String = {

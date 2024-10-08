@@ -30,7 +30,7 @@ object MainMenu {
   private val dashboardMenuItem: MenuItem = MenuItem(0, "Dashboard", Icon.dashboard, UserDashboardLoc)
 
   private def statusMenuItem(position: Int, feeds: Seq[FeedSourceStatuses]): MenuItem =
-    MenuItem(position, "Feeds", Icon.barChart, StatusLoc, tabClasses = List(feedsRag(feeds)))
+    MenuItem(position, "Feeds", Icon.barChart, FeedsStatusLoc, tabClasses = List(feedsRag(feeds)))
 
   private val portConfigMenuItem: Int => MenuItem = (position: Int) => MenuItem(position, "Port Config", Icon.cogs, PortConfigLoc)
 

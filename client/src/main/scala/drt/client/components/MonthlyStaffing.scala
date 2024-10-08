@@ -2,7 +2,6 @@ package drt.client.components
 
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.actions.Actions.UpdateShifts
-import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -243,10 +242,10 @@ object MonthlyStaffing {
       )
     }
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Monthly Staffing", p.props.terminalPageTab.terminal, p.props.airportConfig)) >>
-        Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
-    }
+//    .componentDidMount { p =>
+//      Callback(SetDocumentTitle("Monthly Staffing", p.props.terminalPageTab.terminal, p.props.airportConfig)) >>
+//        Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
+//    }
     .build
 
   def updatedShiftAssignments(

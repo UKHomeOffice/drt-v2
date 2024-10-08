@@ -12,7 +12,7 @@ import drt.shared.{DropIn, DropInRegistration}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.AirportConfig
@@ -67,9 +67,9 @@ object TrainingHubComponent {
         ))
     }
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Training Hub", p.props.airportConfigPot))
-    }
+//    .componentDidMount { p =>
+//      Callback(SetDocumentTitle("Training Hub", p.props.airportConfigPot))
+//    }
     .build
 
   private def trainingTabs(props: Props): VdomTagOf[UList] = {

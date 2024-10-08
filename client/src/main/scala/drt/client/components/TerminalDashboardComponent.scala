@@ -4,7 +4,6 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.TerminalContentComponent.originMapper
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewLive
 import drt.shared.CrunchApi.CrunchMinute
@@ -14,7 +13,7 @@ import drt.shared.redlist.RedList
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
@@ -189,10 +188,10 @@ object TerminalDashboardComponent {
       }
       <.div(pot.render(identity))
     }
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Terminal Dashboard", p.props.terminalPageTabLoc.terminal, p.props.airportConfig)) >>
-        Callback(GoogleEventTracker.sendPageView(page = s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}"))
-    }
+//    .componentDidMount { p =>
+//      Callback(SetDocumentTitle("Terminal Dashboard", p.props.terminalPageTabLoc.terminal, p.props.airportConfig)) >>
+//        Callback(GoogleEventTracker.sendPageView(page = s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}"))
+//    }
     .build
 
   private def cmsForTerminalAndQueue(crunchMinutes: SortedMap[TQM, CrunchMinute], queue: Queue, terminal: Terminal): Iterable[CrunchMinute] =

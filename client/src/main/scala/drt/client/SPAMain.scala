@@ -17,11 +17,13 @@ import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
 import org.scalajs.dom
-import org.scalajs.dom.{WebSocket, console}
+import org.scalajs.dom.{WebSocket, console, window}
 import scalacss.ProdDefaults._
 import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.arrivals.{ArrivalsDiff, FlightsWithSplitsDiff, SplitsForArrivals}
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.config.AirportConfigs
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import upickle.default
 
@@ -30,7 +32,24 @@ import scala.util.Try
 
 object SPAMain {
 
-  sealed trait Loc
+  sealed trait Loc {
+    val portCodeStr = dom.document.getElementById("port-code").getAttribute("value")
+    val portConfig = AirportConfigs.confByPort(PortCode(portCodeStr))
+    val url = window.location.href
+
+    def terminalPart(maybeTerminal: Option[Terminal]): String = {
+      val terminalShortName = maybeTerminal.map { t =>
+        val terminalStr = t.toString
+        if (terminalStr.take(1) == "T") terminalStr.drop(1) else terminalStr
+      }
+      terminalShortName.map(t => s", Terminal $t").getOrElse("")
+    }
+
+    def title(pageName: String, maybeTerminal: Option[Terminal]) =
+      s"$pageName at ${portConfig.portCode.iata} (${portConfig.portName})${terminalPart(maybeTerminal)} - DRT"
+
+    def title(maybeTerminal: Option[Terminal]): String
+  }
 
   sealed trait UrlParameter {
     val name: String
@@ -93,6 +112,15 @@ object SPAMain {
                                 subMode: String = "arrivals",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
+    val pageName = subMode match {
+      case "arrivals" => "Arrivals"
+      case "desksAndQueues" => "Desks and queues"
+      case "staffing" => "Monthly staffing"
+      case "simulations" => "Simulate day"
+      case other => ""
+    }
+    override def title(maybeTerminal: Option[Terminal]): String = title(pageName, maybeTerminal)
+
     val terminal: Terminal = Terminal(terminalName)
     val maybeViewDate: Option[LocalDate] = queryParams.get(UrlDateParameter.paramName)
       .filter(_.matches(".+"))
@@ -154,17 +182,29 @@ object SPAMain {
 
   def serverLogEndpoint: String = absoluteUrl("logging")
 
-  case class PortDashboardLoc(period: Option[Int]) extends Loc
+  case class PortDashboardLoc(period: Option[Int]) extends Loc {
+    override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
+  }
 
-  case object StatusLoc extends Loc
+  case object FeedsStatusLoc extends Loc {
+    override def title(maybeTerminal: Option[Terminal]): String = title("Feeds status", maybeTerminal)
+  }
 
-  case object UserDashboardLoc extends Loc
+  case object UserDashboardLoc extends Loc {
+    override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
+  }
 
-  case class TrainingHubLoc(modeStr: String = "dropInBooking") extends Loc
+  case class TrainingHubLoc(modeStr: String = "dropInBooking") extends Loc {
+    override def title(maybeTerminal: Option[Terminal]): String = title("Training hub", maybeTerminal)
+  }
 
-  case object PortConfigLoc extends Loc
+  case object PortConfigLoc extends Loc {
+    override def title(maybeTerminal: Option[Terminal]): String = title("Port config", maybeTerminal)
+  }
 
-  case object ForecastFileUploadLoc extends Loc
+  case object ForecastFileUploadLoc extends Loc {
+    override def title(maybeTerminal: Option[Terminal]): String = title("Forecast upload", maybeTerminal)
+  }
 
   private val initialRequestsActions = Seq(
     GetApplicationVersion,
@@ -232,7 +272,17 @@ object SPAMain {
         portConfigRoute(dsl) |
         forecastFileUploadRoute(dsl)
 
-      rule.notFound(redirectToPage(PortDashboardLoc(None))(SetRouteVia.HistoryReplace))
+      rule
+        .notFound(redirectToPage(PortDashboardLoc(None))(SetRouteVia.HistoryReplace))
+        .setTitle { loc: Loc =>
+          val regex = """.+terminal/([A-Z0-9]+)/.+""".r
+          val url = window.location.href
+          val maybeTerminal = url match {
+            case regex(t) => Some(Terminal(t))
+            case _ => None
+          }
+          loc.title(maybeTerminal)
+        }
     }
     .renderWith(Layout(_, _))
     .onPostRender((maybePrevLoc, currentLoc) => {
@@ -253,7 +303,6 @@ object SPAMain {
     import dsl._
 
     staticRoute(root, UserDashboardLoc) ~> renderR { (router: RouterCtl[Loc]) =>
-      println(s"UserDashboardLoc route")
       UserDashboardPage(router)
     }
   }
@@ -264,7 +313,7 @@ object SPAMain {
 
     val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
 
-    staticRoute("#status", StatusLoc) ~> render {
+    staticRoute("#status", FeedsStatusLoc) ~> render {
       println(s"StatusLoc route")
       proxy(p => FeedsStatusPage(p()._1, p()._2))
     }
