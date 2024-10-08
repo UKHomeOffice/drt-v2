@@ -420,7 +420,7 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(Empty, daysInMonth.map(a => s"${a._1.getDate.toString} \\n ${a._2.substring(0, 3)}"), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, Empty, ShiftAssignments.empty)
+    State(Empty, daysInMonth.map(a => s"${a._1.getDate.toString} <br> ${a._2.substring(0, 3)}"), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, Empty, ShiftAssignments.empty)
   }
 
   def apply(portCode: PortCode,
