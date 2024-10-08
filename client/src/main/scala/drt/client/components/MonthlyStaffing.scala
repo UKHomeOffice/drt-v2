@@ -114,9 +114,21 @@ object MonthlyStaffing {
       }.toTagMod)
   }
 
-  def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[SDateLike] = {
+  def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[(SDateLike, String)] = {
     val days = (endDay.getDate - startDay.getDate) + 1
-    List.tabulate(days)(i => startDay.addDays(i))
+    List.tabulate(days)(i => {
+      val date = startDay.addDays(i)
+      val dayOfWeek = date.getDayOfWeek match {
+        case 1 => "Monday"
+        case 2 => "Tuesday"
+        case 3 => "Wednesday"
+        case 4 => "Thursday"
+        case 5 => "Friday"
+        case 6 => "Saturday"
+        case 7 => "Sunday"
+      }
+      (date, dayOfWeek)
+    })
   }
 
   def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5)
@@ -377,7 +389,7 @@ object MonthlyStaffing {
     consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
       .map { day =>
         timeZoneSafeTimeSlots(
-          slotsInDay(day, timeSlotMinutes),
+          slotsInDay(day._1, timeSlotMinutes),
           timeSlotMinutes
         )
       }
@@ -398,7 +410,7 @@ object MonthlyStaffing {
     import drt.client.services.JSDateConversions._
 
     val viewingDate = props.terminalPageTab.dateFromUrlOrNow
-    val daysInMonth: Seq[SDateLike] = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
+    val daysInMonth: Seq[(SDateLike, String)] = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
 
 
     val dayForRowLabels = if (viewingDate.getMonth != 10)
@@ -408,7 +420,7 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(Empty, daysInMonth.map(_.getDate.toString), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, Empty, ShiftAssignments.empty)
+    State(Empty, daysInMonth.map(a => s"${a._1.getDate.toString} \\n ${a._2.substring(0, 3)}"), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, Empty, ShiftAssignments.empty)
   }
 
   def apply(portCode: PortCode,
