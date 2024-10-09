@@ -270,7 +270,6 @@ object TerminalComponent {
         <.a(^.id := "currentTab", "Queues & Arrivals", VdomAttr("data-toggle") := "tab"),
         ^.onClick ==> { e: ReactEventFromInput =>
           e.preventDefault()
-          GoogleEventTracker.sendEvent(terminalName, "click", "Queues & Arrivals")
           props.router.set(props.terminalPageTab.update(
             mode = Current,
             subMode = subMode,
@@ -281,7 +280,6 @@ object TerminalComponent {
         <.a(^.id := "planning-tab", VdomAttr("data-toggle") := "tab", "Planning"),
         ^.onClick ==> { e: ReactEventFromInput =>
           e.preventDefault()
-          GoogleEventTracker.sendEvent(terminalName, "click", "Planning")
           props.router.set(props.terminalPageTab.update(
             mode = Planning,
             subMode = subMode,
@@ -294,7 +292,6 @@ object TerminalComponent {
           <.a(^.id := "monthlyStaffingTab", ^.className := "flex-forizontally", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip),
           ^.onClick ==> { e: ReactEventFromInput =>
             e.preventDefault()
-            GoogleEventTracker.sendEvent(terminalName, "click", "Monthly Staffing")
             props.router.set(props.terminalPageTab.update(
               mode = Staffing,
               subMode = "15",
@@ -304,7 +301,6 @@ object TerminalComponent {
         ) else "",
       <.li(^.className := tabClass(Dashboard),
         <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", s"$terminalName Dashboard"), ^.onClick --> {
-          GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
           props.router.set(
             props.terminalPageTab.update(
               mode = Dashboard,

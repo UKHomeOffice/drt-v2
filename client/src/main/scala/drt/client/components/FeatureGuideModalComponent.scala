@@ -107,12 +107,11 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
       .builder[Props]("NavBar")
       .initialStateFromProps(_ => State(1))
       .renderBackend[Backend]
-      .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("feature-guide")))
+      .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView("Feature guide")))
       .build
 
   def apply(showDialog: Boolean,
             closeDialog: ReactEvent => Callback,
             trainingDataTemplates: Seq[FeatureGuide]): VdomElement =
     component(Props(showDialog, closeDialog, trainingDataTemplates))
-
 }

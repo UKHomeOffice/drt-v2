@@ -27,9 +27,6 @@ object PortExportDashboardPage {
         }))
       })
     })
-    .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"dashboard")
-    })
     .build
 
   def apply(loggedInUser: LoggedInUser): VdomElement = component(Props(loggedInUser))
