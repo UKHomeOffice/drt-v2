@@ -241,6 +241,15 @@ object SPAMain {
       rule.notFound(redirectToPage(PortDashboardLoc(None))(SetRouteVia.HistoryReplace))
     }
     .renderWith(Layout(_, _))
+    .setTitle { loc: Loc =>
+      val terminalRegex = """.+terminal/([A-Z0-9]+)/.+""".r
+      val url = window.location.href
+      val maybeTerminal = url match {
+        case terminalRegex(t) => Some(Terminal(t))
+        case _ => None
+      }
+      loc.title(maybeTerminal)
+    }
     .onPostRender((maybePrevLoc, currentLoc) => {
       Callback(
         (maybePrevLoc, currentLoc) match {
