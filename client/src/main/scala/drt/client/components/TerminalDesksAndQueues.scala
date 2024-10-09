@@ -299,10 +299,7 @@ object TerminalDesksAndQueues {
         showWaitColumn = !p.featureFlags.displayWaitTimesToggle)
     }
     .renderBackend[Backend]
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Desks and Queues", p.props.terminal, p.props.airportConfig)) >>
-        StickyTableHeader("[data-sticky]")
-    }
+    .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
 
   def documentScrollTop: Double = Math.max(dom.document.documentElement.scrollTop, dom.document.body.scrollTop)

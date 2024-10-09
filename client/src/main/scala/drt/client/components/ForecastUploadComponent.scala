@@ -73,10 +73,7 @@ object ForecastUploadComponent {
       }
       )
     }
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Forecast Upload", p.props.airportConfigPot)) >>
-        Callback(GoogleEventTracker.sendPageView(s"forecastFileUpload"))
-    }.build
+    .build
 
   def apply(airportConfigPot: Pot[AirportConfig]): VdomElement = component(Props(airportConfigPot))
 

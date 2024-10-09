@@ -67,9 +67,6 @@ object TrainingHubComponent {
         ))
     }
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Training Hub", p.props.airportConfigPot))
-    }
     .build
 
   private def trainingTabs(props: Props): VdomTagOf[UList] = {

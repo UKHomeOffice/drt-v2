@@ -117,13 +117,6 @@ object PortDashboardPage {
           }))
       }
     })
-    .componentWillReceiveProps(p => Callback {
-      GoogleEventTracker.sendPageView(s"dashboard${p.nextProps.dashboardPage.period.map(period => s"/$period").getOrElse("")}")
-    })
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Dashboard", p.props.airportConfig)) >>
-        Callback(GoogleEventTracker.sendPageView(s"dashboard${p.props.dashboardPage.period.map(period => s"/$period").getOrElse("")}"))
-    }
     .build
 
   def apply(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc = PortDashboardLoc(None), airportConfig: Pot[AirportConfig]): VdomElement = component(Props(router, dashboardPage, airportConfig))

@@ -2,9 +2,7 @@ package drt.client.components.scenarios
 
 import diode.UseValueEq
 import diode.data.Pot
-import drt.client.components.SetDocumentTitle
 import drt.client.components.styles.DefaultFormFieldsStyle
-import drt.client.modules.GoogleEventTracker
 import drt.shared.SimulationResult
 import io.kinoplan.scalajs.react.material.ui.core._
 import japgolly.scalajs.react._
@@ -61,10 +59,6 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
       State(SimulationFormFields(p.terminal, p.date, p.airportConfig, p.slaConfigs), Map())
     )
     .renderBackend[Backend]
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Simulate Day", p.props.terminal, p.props.airportConfig)) >>
-        Callback(GoogleEventTracker.sendPageView(s"Arrival Simulations Page"))
-    }
     .build
 
   def apply(props: Props): VdomElement = component(props)

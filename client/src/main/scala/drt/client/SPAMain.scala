@@ -108,12 +108,14 @@ object SPAMain {
                                 subMode: String = "arrivals",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
-    val pageName = subMode match {
-      case "arrivals" => "Arrivals"
-      case "desksAndQueues" => "Desks and queues"
-      case "staffing" => "Monthly staffing"
-      case "simulations" => "Simulate day"
-      case other => ""
+    val pageName = (modeStr.toLowerCase, subMode.toLowerCase) match {
+      case ("current", "arrivals") => "Arrivals"
+      case ("current", "desksAndQueues") => "Desks and queues"
+      case ("current", "staffing") => "Staff movements"
+      case ("current", "simulations") => "Simulate day"
+      case ("planning", _) => "Staff planning"
+      case ("staffing", _) => "Monthly staffing"
+      case _ => ""
     }
 
     override def title(maybeTerminal: Option[Terminal]): String = title(pageName, maybeTerminal)

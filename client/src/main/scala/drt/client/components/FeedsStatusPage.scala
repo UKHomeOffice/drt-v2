@@ -158,10 +158,6 @@ object FeedsStatusPage {
         )
       }
     }
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Feeds status", p.props.airportConfigPot)) >>
-        Callback(GoogleEventTracker.sendPageView("feed-status"))
-    }
     .build
 
   private def displayTime(date: MillisSinceEpoch): String = {
