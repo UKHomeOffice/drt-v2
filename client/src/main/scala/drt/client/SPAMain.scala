@@ -244,17 +244,9 @@ object SPAMain {
       rule.notFound(redirectToPage(PortDashboardLoc(None))(SetRouteVia.HistoryReplace))
     }
     .renderWith(Layout(_, _))
-    .setTitle { loc: Loc =>
-      val terminalRegex = """.+terminal/([A-Z0-9]+)/.+""".r
-      val url = window.location.href
-      val maybeTerminal = url match {
-        case terminalRegex(t) => Some(Terminal(t))
-        case _ => None
-      }
-      loc.title(maybeTerminal)
-    }
+    .setTitle(_.title(maybeTerminal))
     .onPostRender((maybePrevLoc, currentLoc) => {
-      log.info(s"Sending pageview")
+      log.info(s"Sending pageview: ${window.location.href} / ${window.document.title}")
       Callback(GoogleEventTracker.sendPageView()) >>
         Callback(
           (maybePrevLoc, currentLoc) match {
@@ -268,6 +260,15 @@ object SPAMain {
           }
         )
     })
+
+  private def maybeTerminal: Option[Terminal] = {
+    val terminalRegex = """.+terminal/([A-Z0-9]+)/.+""".r
+    val url = window.location.href
+    url match {
+      case terminalRegex(t) => Some(Terminal(t))
+      case _ => None
+    }
+  }
 
   def homeRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
