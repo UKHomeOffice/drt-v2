@@ -97,10 +97,6 @@ object DropInDialog extends WithScalaCssImplicits {
       .builder[Props]("DropDialogComponent")
       .initialStateFromProps(_ => State(1))
       .renderBackend[Backend]
-      .componentDidMount { _ =>
-        println(s"DropDialogComponent mounted")
-        Callback(GoogleEventTracker.sendPageView("Drop-in Dialog"))
-      }
       .build
 
   def apply(date: String,
