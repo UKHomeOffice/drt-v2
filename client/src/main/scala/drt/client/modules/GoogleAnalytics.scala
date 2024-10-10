@@ -6,6 +6,7 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobalScope
 import scala.util.Try
 import com.dedipresta.crypto.hash.sha256.Sha256
+import org.scalajs.dom.document
 
 object GoogleEventTracker {
 
@@ -19,39 +20,42 @@ object GoogleEventTracker {
 
   def port: String = dom.document.getElementById("port-code").getAttribute("value")
 
-  def userId: String = dom.document.getElementById("user-id").getAttribute("value")
+//  def userId: String = dom.document.getElementById("user-id").getAttribute("value")
 
-  def isScriptLoaded: Boolean = Try(Globals.gtag.isInstanceOf[js.Function]).isSuccess
+//  def isScriptLoaded: Boolean = Try(Globals.gtag.isInstanceOf[js.Function]).isSuccess
 
-  private var hasCreateTrackerRun = false
+//  private var hasCreateTrackerRun = false
 
-  private def runCreateTracker(): Unit = {
-    if (!hasCreateTrackerRun && userId.nonEmpty && port.nonEmpty && trackingCode.nonEmpty) {
-      val userUUID = Sha256.hashString(userId)
-      GoogleAnalytics.gtag("config", trackingCode, js.Dictionary("user_id" -> userUUID, "anonymize_ip" -> true))
-      hasCreateTrackerRun = true
-    }
-  }
+//  private def runCreateTracker(): Unit = {
+//    if (!hasCreateTrackerRun && userId.nonEmpty && port.nonEmpty && trackingCode.nonEmpty) {
+//      val userUUID = Sha256.hashString(userId)
+//      GoogleAnalytics.gtag("config", trackingCode, js.Dictionary("user_id" -> userUUID, "anonymize_ip" -> true))
+//      hasCreateTrackerRun = true
+//    }
+//  }
 
-  def sendPageView(page: String): Unit = {
-    if (isScriptLoaded) {
-      runCreateTracker()
-      if (hasCreateTrackerRun) {
-        GoogleAnalytics.gtag("event", "page_view", js.Dictionary("page" -> s"/$port/$page"))
+  def sendPageView(additional: String = ""): Unit = {
+//    if (isScriptLoaded) {
+//      runCreateTracker()
+      if (trackingCode.nonEmpty) {
+        GoogleAnalytics.gtag("event", "page_view", js.Dictionary(
+          "page_title" -> (document.title + (if (additional.nonEmpty) s" - $additional" else "")),
+          "page_location" -> document.location.href,
+        ))
       }
-    }
+//    }
   }
 
   def sendEvent(category: String, action: String, label: String): Unit = {
-    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label))
+    if (trackingCode.nonEmpty) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label))
   }
 
   def sendEvent(category: String, action: String, label: String, value: String): Unit = {
-    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label, "value" -> value))
+    if (trackingCode.nonEmpty) GoogleAnalytics.gtag("event", s"${port}_$category", js.Dictionary("action" -> action, "label" -> label, "value" -> value))
   }
 
   def sendError(description: String, fatal: Boolean): Unit = {
-    if (isScriptLoaded && hasCreateTrackerRun) GoogleAnalytics.gtag("event", "exception", js.Dictionary("exDescription" -> description, "exFatal" -> fatal))
+    if (trackingCode.nonEmpty) GoogleAnalytics.gtag("event", "exception", js.Dictionary("exDescription" -> description, "exFatal" -> fatal))
   }
 }
 

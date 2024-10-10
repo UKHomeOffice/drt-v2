@@ -6,6 +6,7 @@ import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, De
 import drt.client.components.styles._
 import drt.client.components.{FeedsStatusPage, ForecastUploadComponent, GlobalStyles, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
 import drt.client.logger._
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
@@ -108,9 +109,9 @@ object SPAMain {
                                 subMode: String = "arrivals",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
-    val pageName = (modeStr.toLowerCase, subMode.toLowerCase) match {
+    def pageName = (modeStr.toLowerCase, subMode.toLowerCase) match {
       case ("current", "arrivals") => "Arrivals"
-      case ("current", "desksAndQueues") => "Desks and queues"
+      case ("current", "desksandqueues") => "Desks and queues"
       case ("current", "staffing") => "Staff movements"
       case ("current", "simulations") => "Simulate day"
       case ("planning", _) => "Staff planning"
@@ -253,17 +254,19 @@ object SPAMain {
       loc.title(maybeTerminal)
     }
     .onPostRender((maybePrevLoc, currentLoc) => {
-      Callback(
-        (maybePrevLoc, currentLoc) match {
-          case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
-            if (c.updateRequired(p)) SPACircuit.dispatch(c.loadAction)
-          case (_, c: TerminalPageTabLoc) =>
-            SPACircuit.dispatch(c.loadAction)
-          case (_, UserDashboardLoc) =>
-            SPACircuit.dispatch(GetUserDashboardState)
-          case _ =>
-        }
-      )
+      log.info(s"Sending pageview")
+      Callback(GoogleEventTracker.sendPageView()) >>
+        Callback(
+          (maybePrevLoc, currentLoc) match {
+            case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
+              if (c.updateRequired(p)) SPACircuit.dispatch(c.loadAction)
+            case (_, c: TerminalPageTabLoc) =>
+              SPACircuit.dispatch(c.loadAction)
+            case (_, UserDashboardLoc) =>
+              SPACircuit.dispatch(GetUserDashboardState)
+            case _ =>
+          }
+        )
     })
 
   def homeRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
