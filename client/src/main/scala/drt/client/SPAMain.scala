@@ -31,6 +31,10 @@ object SPAMain {
 
   sealed trait Loc {
     val url: String
+    def href: String = window.location.href.split("#").headOption match {
+      case Some(head) => head + url
+      case None => url
+    }
     val portCodeStr = dom.document.getElementById("port-code").getAttribute("value")
     val portConfig = DrtPortConfigs.confByPort(PortCode(portCodeStr))
 
@@ -275,8 +279,8 @@ object SPAMain {
     .setTitle(_.title(maybeTerminal))
     .onPostRender((maybePrevLoc, currentLoc) => {
       val title = currentLoc.title(maybeTerminal)
-      log.info(s"Sending pageview: $title / ${currentLoc.url}")
-      Callback(GoogleEventTracker.sendPageView(title, currentLoc.url)) >>
+      log.info(s"Sending pageview: $title (${currentLoc.href})")
+      Callback(GoogleEventTracker.sendPageView(title, currentLoc.href)) >>
         Callback(
           (maybePrevLoc, currentLoc) match {
             case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
