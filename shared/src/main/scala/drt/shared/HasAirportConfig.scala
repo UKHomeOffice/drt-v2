@@ -21,13 +21,10 @@ object DrtPortConfigs {
 
   import uk.gov.homeoffice.drt.ports.config._
 
-  val testPorts: List[AirportConfigLike] = List(Test, Test2)
-  val allPorts: List[AirportConfigLike] = AirportConfigs.allPorts ::: testPorts
+  private val testPorts: List[AirportConfigLike] = List(Test, Test2)
+  private val allPorts: List[AirportConfigLike] = AirportConfigs.allPorts ::: testPorts
 
-  val allPortConfigs: List[AirportConfig] = allPorts.map(_.config)
-  val testPortConfigs: List[AirportConfig] = testPorts.map(_.config)
-
-  def portGroups: List[String] = allPortConfigs.filterNot(testPorts.contains).map(_.portCode.toString.toUpperCase).sorted
+  private val allPortConfigs: List[AirportConfig] = allPorts.map(_.config)
 
   val confByPort: Map[PortCode, AirportConfig] = allPortConfigs.map(c => (c.portCode, c)).toMap
 }

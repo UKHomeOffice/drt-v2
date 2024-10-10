@@ -12,6 +12,7 @@ import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
 import drt.client.spa.TerminalPageModes.{Current, Staffing}
 import drt.client.spa.{TerminalPageMode, TerminalPageModes}
+import drt.shared.DrtPortConfigs
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.Callback
 import japgolly.scalajs.react.extra.router._
@@ -21,7 +22,6 @@ import scalacss.ProdDefaults._
 import uk.gov.homeoffice.drt.Urls
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.config.AirportConfigs
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.scalajs.js.annotation.{JSExport, JSExportTopLevel}
@@ -32,7 +32,7 @@ object SPAMain {
   sealed trait Loc {
     val url: String
     val portCodeStr = dom.document.getElementById("port-code").getAttribute("value")
-    val portConfig = AirportConfigs.confByPort(PortCode(portCodeStr))
+    val portConfig = DrtPortConfigs.confByPort(PortCode(portCodeStr))
 
     def terminalPart(maybeTerminal: Option[Terminal]): String = {
       val terminalShortName = maybeTerminal.map { t =>
