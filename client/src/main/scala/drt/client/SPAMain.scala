@@ -363,7 +363,7 @@ object SPAMain {
     val proxy = SPACircuit.connect(m =>
       PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.slaConfigs, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime)
     )
-    staticRoute(PortDashboardLoc.hashValue, PortConfigLoc) ~> render(proxy(props => PortConfigPage(props())))
+    staticRoute(PortConfigLoc.hashValue, PortConfigLoc) ~> render(proxy(props => PortConfigPage(props())))
   }
 
   def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
