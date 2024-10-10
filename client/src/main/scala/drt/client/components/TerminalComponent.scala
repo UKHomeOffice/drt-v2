@@ -267,47 +267,32 @@ object TerminalComponent {
 
     <.ul(^.className := "nav nav-tabs",
       <.li(^.className := tabClass(Current) + " " + timeMachineClass,
-        <.a(^.id := "currentTab", "Queues & Arrivals", VdomAttr("data-toggle") := "tab"),
-        ^.onClick ==> { e: ReactEventFromInput =>
-          e.preventDefault()
-          props.router.set(props.terminalPageTab.update(
-            mode = Current,
-            subMode = subMode,
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), viewTypeQueryParam).queryParams
-          ))
-        }),
+        props.router.link(props.terminalPageTab.update(
+          mode = Current,
+          subMode = subMode,
+          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), viewTypeQueryParam).queryParams
+        ))(^.id := "currentTab", "Queues & Arrivals", VdomAttr("data-toggle") := "tab")),
       <.li(^.className := tabClass(Planning),
-        <.a(^.id := "planning-tab", VdomAttr("data-toggle") := "tab", "Planning"),
-        ^.onClick ==> { e: ReactEventFromInput =>
-          e.preventDefault()
-          props.router.set(props.terminalPageTab.update(
-            mode = Planning,
-            subMode = subMode,
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))
-        }
+        props.router.link(props.terminalPageTab.update(
+          mode = Planning,
+          subMode = subMode,
+          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
+        ))(^.id := "planning-tab", VdomAttr("data-toggle") := "tab", "Planning"),
       ),
       if (loggedInUser.roles.contains(StaffEdit))
         <.li(^.className := tabClass(Staffing),
-          <.a(^.id := "monthlyStaffingTab", ^.className := "flex-forizontally", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip),
-          ^.onClick ==> { e: ReactEventFromInput =>
-            e.preventDefault()
-            props.router.set(props.terminalPageTab.update(
-              mode = Staffing,
-              subMode = "15",
-              queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-            ))
-          }
+          props.router.link(props.terminalPageTab.update(
+            mode = Staffing,
+            subMode = "15",
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
+          ))(^.id := "monthlyStaffingTab", ^.className := "flex-forizontally", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip)
         ) else "",
       <.li(^.className := tabClass(Dashboard),
-        <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", s"$terminalName Dashboard"), ^.onClick --> {
-          props.router.set(
-            props.terminalPageTab.update(
-              mode = Dashboard,
-              subMode = "summary",
-              queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams)
-          )
-        }
+        props.router.link(props.terminalPageTab.update(
+          mode = Dashboard,
+          subMode = "summary",
+          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
+        ))(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", s"$terminalName Dashboard")
       )
     )
   }

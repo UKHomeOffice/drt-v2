@@ -107,26 +107,37 @@ object TerminalContentComponent {
           <.div(^.className := "tabs-with-export",
             <.ul(^.className := "nav nav-tabs",
               <.li(^.className := arrivalsActive,
-                <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
-                  props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
-                }),
+                props.router.link(props.terminalPageTab.copy(subMode = "arrivals"))(
+                  ^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals")
+              ),
               <.li(^.className := desksAndQueuesActive,
-                <.a(^.className := "flexed-anchor", ^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
-                  props.router.set(props.terminalPageTab.copy(
-                    subMode = "desksAndQueues",
-                    queryParams = props.terminalPageTab.queryParams.updated("viewType", props.defaultDesksAndQueuesViewType)
-                  ))
-                }),
+                props.router.link(props.terminalPageTab.copy(
+                  subMode = "desksAndQueues",
+                  queryParams = props.terminalPageTab.queryParams.updated("viewType", props.defaultDesksAndQueuesViewType)
+                ))(
+                  ^.className := "flexed-anchor",
+                  ^.id := "desksAndQueuesTab",
+                  VdomAttr("data-toggle") := "tab",
+                  "Desks & Queues"
+                )
+              ),
               <.li(^.className := staffingActive,
-                <.a(^.className := "flexed-anchor", ^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", staffMovementsTabTooltip),
-                ^.onClick --> {
-                  props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
-                }),
+                props.router.link(props.terminalPageTab.copy(subMode = "staffing"))(
+                  ^.className := "flexed-anchor",
+                  ^.id := "staffMovementsTab",
+                  VdomAttr("data-toggle") := "tab",
+                  "Staff Movements",
+                  staffMovementsTabTooltip)
+              ),
               displayForRole(
                 <.li(^.className := simulationsActive,
-                  <.a(^.className := "flexed-anchor", ^.id := "simulationDayTab", VdomAttr("data-toggle") := "tab", "Simulate Day"), ^.onClick --> {
-                    props.router.set(props.terminalPageTab.copy(subMode = "simulations"))
-                  }),
+                  props.router.link(props.terminalPageTab.copy(subMode = "simulations"))(
+                    ^.className := "flexed-anchor",
+                    ^.id := "simulationDayTab",
+                    VdomAttr("data-toggle") := "tab",
+                    "Simulate Day"
+                  )
+                ),
                 ArrivalSimulationUpload, props.loggedInUser
               )
             ),

@@ -212,7 +212,14 @@ object SPAMain {
   }
   case class TrainingHubLoc(modeStr: String = "dropInBooking") extends Loc {
     override val url = s"${TrainingHubLoc.hashValue}/$modeStr"
-    override def title(maybeTerminal: Option[Terminal]): String = title("Training hub", maybeTerminal)
+
+    val subTtitle = modeStr match {
+      case "dropInBooking" => "Book a drop-in"
+      case "trainingMaterial" => "Training material"
+      case _ => ""
+    }
+
+    override def title(maybeTerminal: Option[Terminal]): String = title(s"Training hub - $subTtitle", maybeTerminal)
   }
 
   case object PortConfigLoc extends Loc {
