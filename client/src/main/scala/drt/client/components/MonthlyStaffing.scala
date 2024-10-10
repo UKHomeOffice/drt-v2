@@ -243,10 +243,6 @@ object MonthlyStaffing {
       )
     }
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Monthly Staffing", p.props.terminalPageTab.terminal, p.props.airportConfig)) >>
-        Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
-    }
     .build
 
   def updatedShiftAssignments(

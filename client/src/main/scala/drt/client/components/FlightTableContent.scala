@@ -171,10 +171,6 @@ object FlightTableContent {
   val component: Component[Props, Unit, Backend, CtorType.Props] =
     ScalaComponent.builder[Props]("FlightTableContent")
       .renderBackend[Backend]
-      .componentDidMount { p =>
-        Callback(SetDocumentTitle("Arrivals", p.props.terminal, p.props.airportConfig)) >>
-          Callback(log.info("FlightTableContent mounted"))
-      }
       .build
 
   def apply(props: Props): VdomElement = component(props)

@@ -107,30 +107,37 @@ object TerminalContentComponent {
           <.div(^.className := "tabs-with-export",
             <.ul(^.className := "nav nav-tabs",
               <.li(^.className := arrivalsActive,
-                <.a(^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals"), ^.onClick --> {
-                  GoogleEventTracker.sendEvent(terminalName, "Arrivals", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                  props.router.set(props.terminalPageTab.copy(subMode = "arrivals"))
-                }),
+                props.router.link(props.terminalPageTab.copy(subMode = "arrivals"))(
+                  ^.id := "arrivalsTab", VdomAttr("data-toggle") := "tab", "Arrivals")
+              ),
               <.li(^.className := desksAndQueuesActive,
-                <.a(^.className := "flexed-anchor", ^.id := "desksAndQueuesTab", VdomAttr("data-toggle") := "tab", "Desks & Queues"), ^.onClick --> {
-                  GoogleEventTracker.sendEvent(terminalName, "Desks & Queues", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                  props.router.set(props.terminalPageTab.copy(
-                    subMode = "desksAndQueues",
-                    queryParams = props.terminalPageTab.queryParams.updated("viewType", props.defaultDesksAndQueuesViewType)
-                  ))
-                }),
+                props.router.link(props.terminalPageTab.copy(
+                  subMode = "desksAndQueues",
+                  queryParams = props.terminalPageTab.queryParams.updated("viewType", props.defaultDesksAndQueuesViewType)
+                ))(
+                  ^.className := "flexed-anchor",
+                  ^.id := "desksAndQueuesTab",
+                  VdomAttr("data-toggle") := "tab",
+                  "Desks & Queues"
+                )
+              ),
               <.li(^.className := staffingActive,
-                <.a(^.className := "flexed-anchor", ^.id := "staffMovementsTab", VdomAttr("data-toggle") := "tab", "Staff Movements", staffMovementsTabTooltip),
-                ^.onClick --> {
-                  GoogleEventTracker.sendEvent(terminalName, "Staff Movements", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                  props.router.set(props.terminalPageTab.copy(subMode = "staffing"))
-                }),
+                props.router.link(props.terminalPageTab.copy(subMode = "staffing"))(
+                  ^.className := "flexed-anchor",
+                  ^.id := "staffMovementsTab",
+                  VdomAttr("data-toggle") := "tab",
+                  "Staff Movements",
+                  staffMovementsTabTooltip)
+              ),
               displayForRole(
                 <.li(^.className := simulationsActive,
-                  <.a(^.className := "flexed-anchor", ^.id := "simulationDayTab", VdomAttr("data-toggle") := "tab", "Simulate Day"), ^.onClick --> {
-                    GoogleEventTracker.sendEvent(terminalName, "Simulate Day", props.terminalPageTab.dateFromUrlOrNow.toISODateOnly)
-                    props.router.set(props.terminalPageTab.copy(subMode = "simulations"))
-                  }),
+                  props.router.link(props.terminalPageTab.copy(subMode = "simulations"))(
+                    ^.className := "flexed-anchor",
+                    ^.id := "simulationDayTab",
+                    VdomAttr("data-toggle") := "tab",
+                    "Simulate Day"
+                  )
+                ),
                 ArrivalSimulationUpload, props.loggedInUser
               )
             ),
@@ -303,16 +310,6 @@ object TerminalContentComponent {
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("TerminalContentComponent")
     .initialStateFromProps(p => State(p.terminalPageTab.subMode))
     .renderBackend[TerminalContentComponent.Backend]
-    .componentDidMount { p =>
-      Callback {
-        val hours = p.props.defaultTimeRangeHours
-        val page = s"${p.props.terminalPageTab.terminal}/${p.props.terminalPageTab.mode}/${p.props.terminalPageTab.subMode}"
-        val pageWithTime = s"$page/${hours.start}/${hours.end}"
-        val pageWithDate = p.props.terminalPageTab.maybeViewDate
-          .map(s => s"$page/$s/${hours.start}/${hours.end}").getOrElse(pageWithTime)
-        GoogleEventTracker.sendPageView(pageWithDate)
-      }
-    }
     .build
 
   def apply(props: Props): VdomElement = component(props)

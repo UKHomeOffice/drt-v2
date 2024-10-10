@@ -60,35 +60,9 @@ object PortConfigPage {
         )
       mp.render(identity)
     }
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Port Config", p.props.airportConfig)) >>
-        Callback(GoogleEventTracker.sendPageView(s"port-config"))
-    }
     .build
 
   def apply(props: Props): VdomElement = component(props)
-}
-
-object SetDocumentTitle {
-  def apply(pageName: String, airportConfigPot: Pot[AirportConfig]): Unit = {
-    document.title = airportConfigPot match {
-      case Ready(airportConfig) => constructTitle(pageName, airportConfig.portCode, airportConfig.portName, None)
-      case _ => "Loading..."
-    }
-  }
-
-  def apply(pageName: String, airportConfig: AirportConfig): Unit = {
-    document.title = constructTitle(pageName, airportConfig.portCode, airportConfig.portName, None)
-  }
-
-  def apply(pageName: String, terminal: Terminal, airportConfig: AirportConfig): Unit = {
-    document.title = constructTitle(pageName, airportConfig.portCode, airportConfig.portName, Option(terminal))
-  }
-
-  private def constructTitle(pageName: String, portCode: PortCode, portName: String, maybeTerminal: Option[Terminal]): String = {
-    val terminal = maybeTerminal.map(t => s", Terminal ${t.toString}").getOrElse("")
-    s"$pageName at ${portCode.iata} ($portName)$terminal - DRT"
-  }
 }
 
 object PortConfigDetails {

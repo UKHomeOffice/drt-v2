@@ -302,7 +302,6 @@ object ScenarioSimulationFormComponent extends ScalaCssReactImplicits {
           )
         )
     }
-    .componentDidMount(_ => Callback(GoogleEventTracker.sendPageView(s"Arrival Simulations Page")))
     .build
 
   private def submitButton(showCharts: Callback, form: SimulationFormFields): WithPropsAndTagsMods = {

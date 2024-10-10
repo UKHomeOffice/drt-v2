@@ -31,9 +31,6 @@ object UserDashboardPage {
 
       }
     })
-    .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"dashboard")
-    })
     .build
 
   def apply(router: RouterCtl[Loc]): VdomElement = component(Props(router))

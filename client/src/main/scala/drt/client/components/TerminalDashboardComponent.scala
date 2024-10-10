@@ -189,10 +189,6 @@ object TerminalDashboardComponent {
       }
       <.div(pot.render(identity))
     }
-    .componentDidMount { p =>
-      Callback(SetDocumentTitle("Terminal Dashboard", p.props.terminalPageTabLoc.terminal, p.props.airportConfig)) >>
-        Callback(GoogleEventTracker.sendPageView(page = s"terminal-dashboard-${p.props.terminalPageTabLoc.terminal}"))
-    }
     .build
 
   private def cmsForTerminalAndQueue(crunchMinutes: SortedMap[TQM, CrunchMinute], queue: Queue, terminal: Terminal): Iterable[CrunchMinute] =
