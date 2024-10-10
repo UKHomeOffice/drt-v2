@@ -4,46 +4,19 @@ import org.scalajs.dom
 
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSGlobalScope
-import scala.util.Try
-import com.dedipresta.crypto.hash.sha256.Sha256
-import org.scalajs.dom.document
 
 object GoogleEventTracker {
-
-  @js.native
-  @JSGlobalScope
-  object Globals extends js.Object {
-    var gtag: js.Any = js.native
-  }
-
   def trackingCode: String = dom.document.getElementById("ga-code").getAttribute("value")
 
   def port: String = dom.document.getElementById("port-code").getAttribute("value")
 
-//  def userId: String = dom.document.getElementById("user-id").getAttribute("value")
-
-//  def isScriptLoaded: Boolean = Try(Globals.gtag.isInstanceOf[js.Function]).isSuccess
-
-//  private var hasCreateTrackerRun = false
-
-//  private def runCreateTracker(): Unit = {
-//    if (!hasCreateTrackerRun && userId.nonEmpty && port.nonEmpty && trackingCode.nonEmpty) {
-//      val userUUID = Sha256.hashString(userId)
-//      GoogleAnalytics.gtag("config", trackingCode, js.Dictionary("user_id" -> userUUID, "anonymize_ip" -> true))
-//      hasCreateTrackerRun = true
-//    }
-//  }
-
-  def sendPageView(additional: String = ""): Unit = {
-//    if (isScriptLoaded) {
-//      runCreateTracker()
+  def sendPageView(title: String, url: String): Unit = {
       if (trackingCode.nonEmpty) {
         GoogleAnalytics.gtag("event", "page_view", js.Dictionary(
-          "page_title" -> (document.title + (if (additional.nonEmpty) s" - $additional" else "")),
-          "page_location" -> document.location.href,
+          "page_title" -> title,
+          "page_location" -> url,
         ))
       }
-//    }
   }
 
   def sendEvent(category: String, action: String, label: String): Unit = {

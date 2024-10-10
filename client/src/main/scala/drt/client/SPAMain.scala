@@ -30,9 +30,9 @@ import scala.util.Try
 object SPAMain {
 
   sealed trait Loc {
+    val url: String
     val portCodeStr = dom.document.getElementById("port-code").getAttribute("value")
     val portConfig = AirportConfigs.confByPort(PortCode(portCodeStr))
-    val url = window.location.href
 
     def terminalPart(maybeTerminal: Option[Terminal]): String = {
       val terminalShortName = maybeTerminal.map { t =>
@@ -97,6 +97,8 @@ object SPAMain {
   }
 
   object TerminalPageTabLoc {
+    val hashValue: String = "#terminal"
+
     def apply(terminalName: String,
               mode: TerminalPageMode,
               subMode: String,
@@ -109,11 +111,14 @@ object SPAMain {
                                 subMode: String = "arrivals",
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
+    private val queryString = if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
+    override val url = s"${TerminalPageTabLoc.hashValue}/$terminalName/$modeStr/$subMode$queryString"
     def pageName = (modeStr.toLowerCase, subMode.toLowerCase) match {
       case ("current", "arrivals") => "Arrivals"
       case ("current", "desksandqueues") => "Desks and queues"
       case ("current", "staffing") => "Staff movements"
       case ("current", "simulations") => "Simulate day"
+      case ("dashboard", "summary") => "Terminal dashboard"
       case ("planning", _) => "Staff planning"
       case ("staffing", _) => "Monthly staffing"
       case _ => ""
@@ -182,27 +187,43 @@ object SPAMain {
 
   def serverLogEndpoint: String = absoluteUrl("logging")
 
+  object PortDashboardLoc {
+    val hashValue: String = "#portDashboard"
+  }
   case class PortDashboardLoc(period: Option[Int]) extends Loc {
+    override val url = s"${PortDashboardLoc.hashValue}/$period"
     override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
   }
 
   case object StatusLoc extends Loc {
+    val hashValue: String = "#status"
+    override val url = s"$hashValue"
     override def title(maybeTerminal: Option[Terminal]): String = title("Feeds status", maybeTerminal)
   }
 
   case object UserDashboardLoc extends Loc {
+    val hashValue: String = ""
+    override val url = ""
     override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
   }
 
+  object TrainingHubLoc {
+    val hashValue: String = "#trainingHub"
+  }
   case class TrainingHubLoc(modeStr: String = "dropInBooking") extends Loc {
+    override val url = s"${TrainingHubLoc.hashValue}/$modeStr"
     override def title(maybeTerminal: Option[Terminal]): String = title("Training hub", maybeTerminal)
   }
 
   case object PortConfigLoc extends Loc {
+    val hashValue: String = "#config"
+    override val url = s"$hashValue"
     override def title(maybeTerminal: Option[Terminal]): String = title("Port config", maybeTerminal)
   }
 
   case object ForecastFileUploadLoc extends Loc {
+    val hashValue: String = "#forecastFileUpload"
+    override val url = s"$hashValue"
     override def title(maybeTerminal: Option[Terminal]): String = title("Forecast upload", maybeTerminal)
   }
 
@@ -246,8 +267,9 @@ object SPAMain {
     .renderWith(Layout(_, _))
     .setTitle(_.title(maybeTerminal))
     .onPostRender((maybePrevLoc, currentLoc) => {
-      log.info(s"Sending pageview: ${window.location.href} / ${window.document.title}")
-      Callback(GoogleEventTracker.sendPageView()) >>
+      val title = currentLoc.title(maybeTerminal)
+      log.info(s"Sending pageview: $title / ${currentLoc.url}")
+      Callback(GoogleEventTracker.sendPageView(title, currentLoc.url)) >>
         Callback(
           (maybePrevLoc, currentLoc) match {
             case (Some(p: TerminalPageTabLoc), c: TerminalPageTabLoc) =>
@@ -276,54 +298,14 @@ object SPAMain {
     staticRoute(root, UserDashboardLoc) ~> renderR((router: RouterCtl[Loc]) => UserDashboardPage(router))
   }
 
-
-  def statusRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
-
-    staticRoute("#status", StatusLoc) ~> renderR(_ => proxy(p => FeedsStatusPage(p()._1, p()._2)))
-  }
-
-  def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    val proxy = SPACircuit.connect(_.airportConfig)
-
-    staticRoute("#forecastFileUpload", ForecastFileUploadLoc) ~> renderR(_ => proxy(ac => ForecastUploadComponent(ac())))
-  }
-
-  def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-    val proxy = SPACircuit.connect(m =>
-      PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.slaConfigs, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime)
-    )
-    staticRoute("#config", PortConfigLoc) ~> render(proxy(props => PortConfigPage(props())))
-  }
-
   def dashboardRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     val proxy = SPACircuit.connect(_.airportConfig)
 
-    dynamicRouteCT(("#portDashboard" / int.option).caseClass[PortDashboardLoc]) ~>
+    dynamicRouteCT((PortDashboardLoc.hashValue / int.option).caseClass[PortDashboardLoc]) ~>
       dynRenderR { case (page: PortDashboardLoc, router) =>
         proxy(p => PortDashboardPage(router, page, p()))
-      }
-  }
-
-  def trainingHubRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-
-    val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
-
-    dynamicRouteCT(
-      ("#trainingHub" / string("[a-zA-Z0-9]*")).caseClass[TrainingHubLoc]) ~>
-      dynRenderR { case (page: TrainingHubLoc, router) =>
-        proxy { p =>
-          val props = TrainingHubComponent.Props(trainingHubLoc = page, router, p()._1, p()._2)
-          ThemeProvider(DrtTheme.theme)(TrainingHubComponent(props))
-        }
       }
   }
 
@@ -335,11 +317,50 @@ object SPAMain {
     val requiredSecondLevelTab = string("[a-zA-Z0-9]+")
 
     dynamicRouteCT(
-      ("#terminal" / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
+      (TerminalPageTabLoc.hashValue / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
       dynRenderR { case (page: TerminalPageTabLoc, router) =>
         val props = TerminalComponent.Props(terminalPageTab = page, router)
         ThemeProvider(DrtTheme.theme)(TerminalComponent(props))
       }
+  }
+
+  def statusRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+    import dsl._
+
+    val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
+
+    staticRoute(StatusLoc.hashValue, StatusLoc) ~> renderR(_ => proxy(p => FeedsStatusPage(p()._1, p()._2)))
+  }
+
+  def trainingHubRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+    import dsl._
+
+    val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
+
+    dynamicRouteCT(
+      (TrainingHubLoc.hashValue / string("[a-zA-Z0-9]*")).caseClass[TrainingHubLoc]) ~>
+      dynRenderR { case (page: TrainingHubLoc, router) =>
+        proxy { p =>
+          val props = TrainingHubComponent.Props(trainingHubLoc = page, router, p()._1, p()._2)
+          ThemeProvider(DrtTheme.theme)(TrainingHubComponent(props))
+        }
+      }
+  }
+
+  def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+    import dsl._
+    val proxy = SPACircuit.connect(m =>
+      PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.slaConfigs, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime)
+    )
+    staticRoute(PortDashboardLoc.hashValue, PortConfigLoc) ~> render(proxy(props => PortConfigPage(props())))
+  }
+
+  def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+    import dsl._
+
+    val proxy = SPACircuit.connect(_.airportConfig)
+
+    staticRoute(ForecastFileUploadLoc.hashValue, ForecastFileUploadLoc) ~> renderR(_ => proxy(ac => ForecastUploadComponent(ac())))
   }
 
   val pathToThisApp: String = dom.document.location.pathname
