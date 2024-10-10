@@ -79,6 +79,16 @@ object SPAMain {
     }
   }
 
+  object UrlDayRangeType {
+    val paramName = "dayRange"
+
+    def apply(viewType: Option[String]): UrlParameter = new UrlParameter {
+      override val name: String = paramName
+      override val value: Option[String] = viewType
+    }
+  }
+
+
   case class PortConfigPageLoc()
 
 
@@ -96,6 +106,7 @@ object SPAMain {
                                 queryParams: Map[String, String] = Map.empty[String, String]
                                ) extends Loc {
     val terminal: Terminal = Terminal(terminalName)
+    def dayRangeType = queryParams.get(UrlDayRangeType.paramName)
     val maybeViewDate: Option[LocalDate] = queryParams.get(UrlDateParameter.paramName)
       .filter(_.matches(".+"))
       .flatMap(dateStr => Try {

@@ -102,6 +102,15 @@ object StaffingComponentTimezoneTests extends TestSuite {
         result.foreach(row => assert(row.size == 31))
       }
 
+      "Given 2019-01-01 when retrieving days in week by time slot with 1 hour slots I should get back a 24x31 matrix" - {
+        val startDate = SDate("2019-01-05")
+        val result: Seq[Seq[Option[SDateLike]]] = daysInWeekByTimeSlot((startDate, 60))
+        val expectedHeight = 24
+
+        assert(result.size == expectedHeight)
+        result.foreach(row => assert(row.size == 31))
+      }
+
       "Given 2019-01-01 when retrieving days in month by time slot with 1 hour slots row 1 should be midnight for " +
         "every day of the month" - {
         val startDate = SDate("2019-01-01T00:00:00Z")

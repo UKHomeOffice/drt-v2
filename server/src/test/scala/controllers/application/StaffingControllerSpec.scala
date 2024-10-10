@@ -28,7 +28,7 @@ case class MockShiftsService(shifts: Seq[StaffAssignmentLike]) extends ShiftsSer
   override def allShifts: Future[ShiftAssignments] =
     Future.successful(ShiftAssignments(shifts))
 
-  override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Unit = ()
+  override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] = Future.successful(ShiftAssignments(shifts))
 }
 
 case class MockFixedPointsService(fixedPoints: Seq[StaffAssignmentLike]) extends FixedPointsService {
