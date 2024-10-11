@@ -282,7 +282,7 @@ object MonthlyStaffing {
         ),
         state.timeSlots.render(timeSlots =>
           <.div(
-            <.div(^.className := "staffing-controls",
+            <.div(^.className := "staffing-controls sticky-div",
               maybeClockChangeDate(viewingDate).map { clockChangeDate =>
                 val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
                 <.div(^.className := "staff-daylight-month-warning", MuiGrid(container = true, direction = "column", spacing = 1)(
