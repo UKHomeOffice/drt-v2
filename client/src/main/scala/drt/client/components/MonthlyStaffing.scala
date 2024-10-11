@@ -249,6 +249,7 @@ object MonthlyStaffing {
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
       val isWeekly = props.terminalPageTab.dayRangeType.contains("weekly")
+      val isDaily  = props.terminalPageTab.dayRangeType.contains("daily")
 
       case class Model(monthOfShiftsPot: Pot[ShiftAssignments])
       val minStaffRCP = SPACircuit.connect(m => Model(m.allShifts))
@@ -273,7 +274,6 @@ object MonthlyStaffing {
       ))
       <.div(
         modelChangeDetection,
-        //          state.terminalMinStaff.render { minStaff =>
         <.div(
           if (state.showStaffSuccess)
             StaffSuccess(IStaffSuccess(0, "You updated the staff number for selected date and time", () => {
@@ -341,7 +341,23 @@ object MonthlyStaffing {
                       <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly)))), "<"),
                       <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))), ">")
                     )
-                  } else EmptyVdom
+                  }  else if (isDaily) {
+                    val isFirstDayOfMonth = viewingDate.getDate == 1
+                    val isLastDayOfMonth = viewingDate.getDate == SDate.lastDayOfMonth(viewingDate).getDate
+                    val previousDayDate = if (isFirstDayOfMonth) viewingDate else viewingDate.addDays(-1)
+                    val nextDayDate = if (isLastDayOfMonth) viewingDate else viewingDate.addDays(1)
+                    <.div(
+                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousDayDate.toISODateOnly)))), "<"),
+                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextDayDate.toISODateOnly)))), ">")
+                    )
+                  } else {
+                    val previousMonthDate = viewingDate.addMonths(-1)
+                    val nextMonthDate = viewingDate.addMonths(1)
+                    <.div(
+                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousMonthDate.toISODateOnly)))), "<"),
+                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextMonthDate.toISODateOnly)))), ">")
+                    )
+                  }
                 ),
                 <.input.button(^.value := "Edit staff", ^.className := "btn btn-secondary", ^.onClick ==> handleShiftEditForm),
                 <.input.button(^.value := "Save staff updates", ^.className := "btn btn-primary", ^.onClick ==> confirmAndSave(viewingDate, timeSlots))
@@ -409,7 +425,6 @@ object MonthlyStaffing {
           )
         )
       )
-      //      }
     }
   }
 
