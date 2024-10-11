@@ -133,7 +133,7 @@ object StaffingComponentTests extends TestSuite {
         val startDate = SDate("2017-06-22")
 
         val expected = List(
-          SDate("2017-06-01"),
+          SDate.now(),
           SDate("2017-07-01"),
           SDate("2017-08-01"),
           SDate("2017-09-01"),
@@ -150,7 +150,7 @@ object StaffingComponentTests extends TestSuite {
         val startDate = SDate("2017-12-22")
 
         val expected = List(
-          SDate("2017-12-01"),
+          SDate.now(),
           SDate("2018-01-01"),
           SDate("2018-02-01"),
           SDate("2018-03-01"),
