@@ -112,7 +112,7 @@ lazy val server = (project in file("server"))
     libraryDependencies += guice,
     excludeDependencies += ExclusionRule("org.slf4j", "slf4j-log4j12"),
 
-    dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
+    dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0",
 
     commands += ReleaseCmd,
     // connect to the client project
