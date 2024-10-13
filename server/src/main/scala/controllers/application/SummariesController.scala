@@ -18,6 +18,7 @@ import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate}
 
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
 
@@ -35,6 +36,30 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         Action(BadRequest(s"Invalid date format for $localDateStr. Expected YYYY-mm-dd"))
     }
   }
+
+  def exportPassengers(): Action[AnyContent] =
+    auth(
+      Action {
+        request =>
+          val maybeTerminal = request.getQueryString("terminal").map(t => Terminal(t))
+          val granularity = request.getQueryString("granularity").getOrElse("total")
+          val duration = request.getQueryString("duration").map { d =>
+            granularity match {
+              case "total" | "daily" => d.toInt.days
+              case "hourly" => d.toInt.hours
+              case "minute" => d.toInt.minutes
+            }
+          }
+          val start = request.getQueryString("start") match {
+            case None => SDate.now()
+            case Some("") => SDate.now()
+          }
+//          val terminal = Terminal(terminalName)
+//          val maybeTerminal = Option(terminal)
+//          exportPassengersCsv(startLocalDateString, endLocalDateString, request, maybeTerminal)
+      }
+    )
+
   def exportPassengersByTerminalForDateRangeApi(startLocalDateString: String,
                                                 endLocalDateString: String,
                                                 terminalName: String): Action[AnyContent] =
