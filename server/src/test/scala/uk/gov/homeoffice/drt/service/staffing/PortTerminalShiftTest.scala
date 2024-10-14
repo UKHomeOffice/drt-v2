@@ -6,7 +6,7 @@ import upickle.default._
 class PortTerminalShiftTest extends AnyFlatSpec with Matchers {
 
   "uPickle" should "correctly deserialize PortTerminalShift from JSON" in {
-    val json = """{[
+    val json = """{
       "port": "PortCode",
       "terminal": "Terminal",
       "shiftName": "Shift Name",
@@ -17,7 +17,7 @@ class PortTerminalShiftTest extends AnyFlatSpec with Matchers {
       "actualStaff": 10,
       "minimumRosteredStaff": 8,
       "email": "example@example.com"
-    ]}"""
+    }"""
 
     val expectedPortTerminalShift = PortTerminalShift(
       port = "PortCode",
