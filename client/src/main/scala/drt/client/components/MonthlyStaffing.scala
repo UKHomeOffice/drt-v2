@@ -36,7 +36,7 @@ object MonthlyStaffing {
   }
 
   case class State(timeSlots: Pot[Seq[Seq[Any]]],
-                   colHeadings: Seq[String],
+                   colHeadings: Seq[(String, String)],
                    rowHeadings: Seq[String],
                    changes: Map[(Int, Int), Int],
                    showEditStaffForm: Boolean,
@@ -160,10 +160,8 @@ object MonthlyStaffing {
       SDate(endDay.getFullYear, endDay.getMonth, 7)
     } else endDay
 
-    println(s"endDay.getDate ${endDay.getDate}  startDay.getDate = ${startDay.getDate} adjustedEndDay= ${adjustedEndDay} adjustedStartDay=${adjustedStartDay.getDate}")
     val days = (adjustedEndDay.getDate - adjustedStartDay.getDate) + 1
     List.tabulate(days)(i => {
-      println(s"adjustedStartDay.addDays($i) = ${adjustedStartDay.addDays(i)}")
       val date = adjustedStartDay.addDays(i)
       val dayOfWeek = date.getDayOfWeek match {
         case 1 => "Monday"
@@ -240,15 +238,15 @@ object MonthlyStaffing {
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots).map(d => state.colHeadings(d)).toList
 
-          if (confirm(s"You have updated staff for ${dateListToString(changedDays)} $updatedMonth - do you want to save these changes?")) {
-            GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Save Monthly Staffing", s"updated staff for ${dateListToString(changedDays)} $updatedMonth")
+          if (confirm(s"You have updated staff for ${dateListToString(changedDays.map(_._1))} $updatedMonth - do you want to save these changes?")) {
+            GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Save Monthly Staffing", s"updated staff for ${dateListToString(changedDays.map(_._1))} $updatedMonth")
             SPACircuit.dispatch(UpdateShifts(changedShiftSlots))
           }
         }
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
       val isWeekly = props.terminalPageTab.dayRangeType.contains("weekly")
-      val isDaily  = props.terminalPageTab.dayRangeType.contains("daily")
+      val isDaily = props.terminalPageTab.dayRangeType.contains("daily")
 
       case class Model(monthOfShiftsPot: Pot[ShiftAssignments])
       val staffRCP = SPACircuit.connect(m => Model(m.allShifts))
@@ -340,7 +338,7 @@ object MonthlyStaffing {
                       <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly)))), "<"),
                       <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))), ">")
                     )
-                  }  else if (isDaily) {
+                  } else if (isDaily) {
                     val isFirstDayOfMonth = viewingDate.getDate == 1
                     val isLastDayOfMonth = viewingDate.getDate == SDate.lastDayOfMonth(viewingDate).getDate
                     val previousDayDate = if (isFirstDayOfMonth) viewingDate else viewingDate.addDays(-1)
@@ -404,7 +402,7 @@ object MonthlyStaffing {
               state.shiftsLastLoaded.map(lastLoaded =>
                 HotTable(HotTable.Props(
                   timeSlots,
-                  colHeadings = state.colHeadings,
+                  colHeadings = state.colHeadings.map(h => s"${h._1} <br> ${h._2}"),
                   rowHeadings = state.rowHeadings,
                   changeCallback = (row, col, value) => {
                     scope.modState { state =>
@@ -540,7 +538,7 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(Empty, daysInMonth.map(a => s"${a._1.getDate.toString} <br> ${a._2.substring(0, 3)}"), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, ShiftAssignments.empty, None)
+    State(Empty, daysInMonth.map(a => (a._1.getDate.toString, a._2.substring(0, 3))), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, ShiftAssignments.empty, None)
   }
 
   def apply(portCode: PortCode,
