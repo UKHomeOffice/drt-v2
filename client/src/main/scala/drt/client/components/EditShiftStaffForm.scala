@@ -45,21 +45,23 @@ object IEditShiftStaff {
 
   def toStaffAssignment(obj: IEditShiftStaff, terminal: Terminal): StaffAssignment = {
 
-    val combinedStartTime: Double = Date.UTC(
+    val combinedStartTime: Double = new Date(
       obj.startDayAt.year(),
       obj.startDayAt.month(),
       obj.startDayAt.date,
       obj.startTimeAt.utc.toDate().getUTCHours.toInt,
       obj.startTimeAt.utc.toDate().getUTCMinutes.toInt,
-      obj.startTimeAt.utc.toDate().getUTCSeconds.toInt)
+      obj.startTimeAt.utc.toDate().getUTCSeconds.toInt
+    ).getTime()
 
-    val combinedEndTime: UndefOr[Double] = Date.UTC(
+    val combinedEndTime: UndefOr[Double] = new Date(
       obj.startDayAt.year(),
       obj.startDayAt.month(),
       obj.startDayAt.date(),
       obj.endTimeAt.utc.toDate().getUTCHours.toInt,
       obj.endTimeAt.utc.toDate().getUTCMinutes.toInt,
-      obj.endTimeAt.utc.toDate().getUTCSeconds.toInt)
+      obj.endTimeAt.utc.toDate().getUTCSeconds.toInt
+    ).getTime()
 
     StaffAssignment(obj.startDayAt.toISOString,
       terminal,
