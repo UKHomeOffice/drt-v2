@@ -7,7 +7,6 @@ import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.{SaveMinStaff, TerminalMinStaff}
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiSwipeableDrawer}
@@ -252,9 +251,9 @@ object MonthlyStaffing {
       val isDaily  = props.terminalPageTab.dayRangeType.contains("daily")
 
       case class Model(monthOfShiftsPot: Pot[ShiftAssignments])
-      val minStaffRCP = SPACircuit.connect(m => Model(m.allShifts))
+      val staffRCP = SPACircuit.connect(m => Model(m.allShifts))
 
-      val modelChangeDetection = minStaffRCP { modelMP =>
+      val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
         val content = for {
           monthOfShifts <- model.monthOfShiftsPot

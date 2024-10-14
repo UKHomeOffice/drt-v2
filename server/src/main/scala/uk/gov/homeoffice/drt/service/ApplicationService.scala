@@ -375,17 +375,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val delayUntilTomorrow = (SDate.now().getLocalNextMidnight.millisSinceEpoch - SDate.now().millisSinceEpoch) + MilliTimes.oneHourMillis
       log.info(s"Scheduling next day staff calculations to begin at ${delayUntilTomorrow / 1000}s -> ${SDate.now().addMillis(delayUntilTomorrow).toISOString}")
 
-      val setConfiguredMinimumStaff: (Terminal, LocalDate) => Future[Done] =
-        (terminal, date) => {
-          aggregatedDb.run(PortTerminalConfigDao.get(airportConfig.portCode)(ec)(terminal))
-            .map(_.flatMap(_.minimumRosteredStaff))
-            .flatMap { minStaff =>
-              log.info(s"Setting configured minimum staff for $terminal on $date to $minStaff")
-              actorService.shiftsSequentialWritesActor.ask(ShiftsActor.SetMinimumStaff(terminal, date, date, minStaff, None)).mapTo[Done]
-            }
-        }
-
-      val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig, setConfiguredMinimumStaff)
+      val staffChecker = StaffMinutesChecker(now, staffingUpdateRequestQueue, params.forecastMaxDays, airportConfig)
 
       system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
 

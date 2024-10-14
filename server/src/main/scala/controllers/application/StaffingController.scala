@@ -21,7 +21,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
                                    shiftsService: ShiftsService,
                                    fixedPointsService: FixedPointsService,
                                    movementsService: StaffMovementsService,
-                                   minimumStaffingService: MinimumStaffingService,
                                    staffShiftFormService: StaffShiftFormService
                                   ) extends AuthController(cc, ctrl) {
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
@@ -69,30 +68,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
       }
     }
   }
-
-  def saveMinimumStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
-    Action.async { request =>
-      request.body.asText match {
-        case Some(text) =>
-          val terminalMinStaff = read[MinimumStaff](text)
-          val terminal = Terminal(terminalName)
-          minimumStaffingService.setMinimum(terminal, Option(terminalMinStaff.minimumStaff))
-            .map(monthOfShifts => Accepted(write(monthOfShifts)))
-        case None =>
-          Future.successful(BadRequest)
-      }
-    }
-  }
-
-  def getMinimumStaff(terminalName: String): Action[AnyContent] =
-    Action.async {
-      minimumStaffingService.getTerminalConfig(Terminal(terminalName)).map {
-        case Some(config) =>
-          Ok(write(MinimumStaff(config.minimumRosteredStaff.getOrElse(0))))
-        case None =>
-          NotFound
-      }
-    }
 
   def getShiftStaff(terminalName: String): Action[AnyContent] =
     Action.async {

@@ -10,7 +10,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.{GetMinStaff, GetUserPreferenceIntervalMinutes}
+import drt.client.services.handlers.GetUserPreferenceIntervalMinutes
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -233,9 +233,8 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(p =>
-      Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
-        Callback(SPACircuit.dispatch(GetMinStaff(p.props.terminalPageTab.terminal.toString))))
+    .componentDidMount(_ =>
+      Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())))
     .configure(Reusability.shouldComponentUpdate)
     .build
 

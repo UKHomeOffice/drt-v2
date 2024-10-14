@@ -66,8 +66,6 @@ DELETE        /sla-configs/:effectiveFrom                                       
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 GET           /shifts/staff/:terminalName                                             controllers.application.StaffingController.getShiftStaff(terminalName: String)
 POST          /shifts/staff/:terminalName                                             controllers.application.StaffingController.saveShiftStaff(terminalName: String)
-GET           /shifts/minimum-staff/:terminalName                                     controllers.application.StaffingController.getMinimumStaff(terminalName: String)
-POST          /shifts/minimum-staff/:terminalName                                     controllers.application.StaffingController.saveMinimumStaff(terminalName: String)
 GET           /shifts/:localDate                                                      controllers.application.StaffingController.getShifts(localDate: String)
 GET           /shifts                                                                 controllers.application.StaffingController.getAllShifts
 POST          /shifts                                                                 controllers.application.StaffingController.saveShifts

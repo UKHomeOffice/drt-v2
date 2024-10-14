@@ -120,19 +120,6 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtParameters.govNotifyApiKey)
 
   @Provides
-  def provideMinimumStaffingService: MinimumStaffingService = MinimumStaffingServiceImpl(
-    portCode = airportConfig.portCode,
-    now = now,
-    forecastMaxDays = drtParameters.forecastMaxDays,
-    getTerminalConfig = provideDrtSystemInterface.applicationService.getTerminalConfig,
-    updateTerminalConfig = provideDrtSystemInterface.applicationService.updateTerminalConfig,
-    updateStaffingNumbers = (terminal, start, end, newValue, oldValue) => {
-      val request = ShiftsActor.SetMinimumStaff(terminal, start, end, newValue, oldValue)
-      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request).mapTo[ShiftAssignments]
-    },
-  )
-
-  @Provides
   def provideStaffShiftFormService: StaffShiftFormService = StaffShiftFormServiceImpl(
     portCode = airportConfig.portCode,
     now = now,
