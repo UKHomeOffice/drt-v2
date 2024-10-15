@@ -120,20 +120,24 @@ object MonthlyStaffing {
       }.toTagMod)
   }
 
-  def consecutiveDayForWeek(viewingDate: SDateLike): Seq[(SDateLike, String)] = {
+  private def consecutiveDayForWeek(viewingDate: SDateLike): Seq[(SDateLike, String)] = {
     val firstDayOfMonth = SDate.firstDayOfMonth(viewingDate)
     val lastDayOfMonth = SDate.lastDayOfMonth(viewingDate)
 
     val startOfWeek = SDate.firstDayOfWeek(viewingDate)
     val endOfWeek = SDate.lastDayOfWeek(viewingDate)
 
-    val adjustedStartOfWeek = if (startOfWeek.millisSinceEpoch < firstDayOfMonth.millisSinceEpoch) firstDayOfMonth else startOfWeek
+    val adjustedStartOfWeek: SDateLike = if (startOfWeek.millisSinceEpoch < firstDayOfMonth.millisSinceEpoch) firstDayOfMonth else startOfWeek
     val adjustedEndOfWeek = if (endOfWeek.millisSinceEpoch > lastDayOfMonth.millisSinceEpoch) lastDayOfMonth else endOfWeek
 
     val days = (adjustedEndOfWeek.getDate - adjustedStartOfWeek.getDate) + 1
 
-    List.tabulate(days)(i => {
-      val date = adjustedStartOfWeek.addDays(i)
+    daysOfWeek(adjustedStartOfWeek, days)
+  }
+
+  private def daysOfWeek(startDate: SDateLike, numberOfDays: Int) = {
+    List.tabulate(numberOfDays)(i => {
+      val date = startDate.addDays(i)
       val dayOfWeek = date.getDayOfWeek match {
         case 1 => "Monday"
         case 2 => "Tuesday"
@@ -150,7 +154,7 @@ object MonthlyStaffing {
 
   def consecutiveDaysWithinDates(startDay: SDateLike, endDay: SDateLike): Seq[(SDateLike, String)] = {
     val lastDayOfPreviousMonth = SDate(startDay.getFullYear, startDay.getMonth, 1).addDays(-1)
-    val adjustedStartDay = if (startDay.getDate == lastDayOfPreviousMonth.getDate) {
+    val adjustedStartDay: SDateLike = if (startDay.getDate == lastDayOfPreviousMonth.getDate) {
       if (startDay.getMonth == 11) // December
         SDate(startDay.getFullYear + 1, 0, 1) // January of the next year
       else
@@ -164,20 +168,7 @@ object MonthlyStaffing {
     } else endDay
 
     val days = (adjustedEndDay.getDate - adjustedStartDay.getDate) + 1
-    List.tabulate(days)(i => {
-      val date = adjustedStartDay.addDays(i)
-      val dayOfWeek = date.getDayOfWeek match {
-        case 1 => "Monday"
-        case 2 => "Tuesday"
-        case 3 => "Wednesday"
-        case 4 => "Thursday"
-        case 5 => "Friday"
-        case 6 => "Saturday"
-        case 7 => "Sunday"
-        case _ => "Unknown"
-      }
-      (date, dayOfWeek)
-    })
+    daysOfWeek(adjustedStartDay, days)
   }
 
   def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5)
@@ -309,26 +300,17 @@ object MonthlyStaffing {
                       val lastDayOfMonth = SDate.lastDayOfMonth(viewingDate)
                       if (potentialNextWeekDate.millisSinceEpoch > lastDayOfMonth.millisSinceEpoch) lastDayOfMonth else potentialNextWeekDate
                     }
-                    <.div(
-                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly)))), "<"),
-                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))), ">")
-                    )
+                    navigationArrows(props, previousWeekDate, nextWeekDate)
                   } else if (isDaily) {
                     val isFirstDayOfMonth = viewingDate.getDate == 1
                     val isLastDayOfMonth = viewingDate.getDate == SDate.lastDayOfMonth(viewingDate).getDate
                     val previousDayDate = if (isFirstDayOfMonth) viewingDate else viewingDate.addDays(-1)
                     val nextDayDate = if (isLastDayOfMonth) viewingDate else viewingDate.addDays(1)
-                    <.div(
-                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousDayDate.toISODateOnly)))), "<"),
-                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextDayDate.toISODateOnly)))), ">")
-                    )
+                    navigationArrows(props, previousDayDate, nextDayDate)
                   } else {
                     val previousMonthDate = viewingDate.addMonths(-1)
                     val nextMonthDate = viewingDate.addMonths(1)
-                    <.div(
-                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousMonthDate.toISODateOnly)))), "<"),
-                      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextMonthDate.toISODateOnly)))), ">")
-                    )
+                    navigationArrows(props, previousMonthDate, nextMonthDate)
                   }
                 ) else EmptyVdom,
                 <.div(^.className := "staffing-controls-select",
@@ -347,7 +329,7 @@ object MonthlyStaffing {
                       names = Seq("Monthly", "Weekly", "Daily"),
                       defaultValue = s"${props.dayRangeType}",
                       callback = (e: ReactEventFromInput) =>
-                        props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType((Some(e.target.value)))))
+                        props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
                     )
                   ) else EmptyVdom,
                 <.div(^.className := "staffing-controls-select",
@@ -428,12 +410,20 @@ object MonthlyStaffing {
     }
   }
 
+  private def navigationArrows(props: Props, previousWeekDate: SDateLike, nextWeekDate: SDateLike) = {
+    <.div(
+      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly)))), "<"),
+      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))), ">")
+    )
+  }
+
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .componentDidMount(p =>
-      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
+      Callback(
+        GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
     )
     .build
 
