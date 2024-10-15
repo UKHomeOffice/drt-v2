@@ -384,10 +384,11 @@ object CrunchApi {
     implicit val rw: ReadWriter[QueueHeadline] = macroRW
   }
 
-  def groupCrunchMinutesByX(groupSize: Int)
-                           (crunchMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])],
-                            terminalName: Terminal,
-                            queueOrder: List[Queue]): Seq[(MillisSinceEpoch, Seq[CrunchMinute])] = {
+  def groupCrunchMinutesBy(groupSize: Int)
+                          (crunchMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])],
+                           terminalName: Terminal,
+                           queueOrder: List[Queue],
+                          ): Seq[(MillisSinceEpoch, Seq[CrunchMinute])] =
     crunchMinutes.grouped(groupSize).toList.map(group => {
       val byQueueName = group.flatMap(_._2).groupBy(_.queue)
       val startMinute = group.map(_._1).min
@@ -420,13 +421,13 @@ object CrunchApi {
       }
       (startMinute, queueCrunchMinutes)
     })
-  }
 
   def terminalMinutesByMinute[T <: MinuteLike[A, B], A, B](minutes: List[T],
-                                                           terminalName: Terminal): Seq[(MillisSinceEpoch, List[T])] = minutes
-    .filter(_.terminal == terminalName)
-    .groupBy(_.minute)
-    .toList
-    .sortBy(_._1)
+                                                           terminalName: Terminal): Seq[(MillisSinceEpoch, List[T])] =
+    minutes
+      .filter(_.terminal == terminalName)
+      .groupBy(_.minute)
+      .toList
+      .sortBy(_._1)
 
 }

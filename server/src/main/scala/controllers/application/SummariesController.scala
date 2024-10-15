@@ -1,9 +1,13 @@
 package controllers.application
 
+import actors.PartitionedPortStateActor.GetMinutesForTerminalDateRange
 import akka.NotUsed
+import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
+import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
+import drt.shared.{CrunchApi, TQM}
 import play.api.mvc._
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
@@ -15,10 +19,9 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate, SDateLike}
 
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 import scala.util.{Failure, Success, Try}
 
 
@@ -41,24 +44,42 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     auth(
       Action {
         request =>
+          val start = parseOptionalEndDate(request.getQueryString("start"), SDate.now())
+          val end = parseOptionalEndDate(request.getQueryString("end"), SDate.now())
+          if (start > end) {
+            throw new Exception("Start date must be before end date")
+          }
           val maybeTerminal = request.getQueryString("terminal").map(t => Terminal(t))
           val granularity = request.getQueryString("granularity").getOrElse("total")
-          val duration = request.getQueryString("duration").map { d =>
-            granularity match {
-              case "total" | "daily" => d.toInt.days
-              case "hourly" => d.toInt.hours
-              case "minute" => d.toInt.minutes
-            }
+          val acceptFormat = request.headers.get("Accept").getOrElse("application/json")
+
+          queueTotalsForGranularity(start, end, maybeTerminal.getOrElse(Terminal("")).toString, granularity match {
+            case "hourly" => 60
+            case "daily" => 1440
+            case _ => 1
+          }).map { queueTotals =>
+            val fileName = makeFileName("passengers", maybeTerminal, start, end, airportConfig.portCode) + ".csv"
+            val contentStream = streamForGranularity(maybeTerminal, Some(granularity), acceptFormat)
+            val result = if (acceptFormat == "text/csv")
+              sourceToCsvResponse(contentStream(start.toLocalDate, end.toLocalDate), fileName)
+            else
+              sourceToJsonResponse(contentStream(start.toLocalDate, end.toLocalDate)
+                .fold(Seq[String]())(_ :+ _)
+                .map(objects => s"[${objects.mkString(",")}]"))
           }
-          val start = request.getQueryString("start") match {
-            case None => SDate.now()
-            case Some("") => SDate.now()
-          }
-//          val terminal = Terminal(terminalName)
-//          val maybeTerminal = Option(terminal)
-//          exportPassengersCsv(startLocalDateString, endLocalDateString, request, maybeTerminal)
+
+          Ok("done")
+        //          val terminal = Terminal(terminalName)
+        //          val maybeTerminal = Option(terminal)
+        //          exportPassengersCsv(startLocalDateString, endLocalDateString, request, maybeTerminal)
       }
     )
+
+  private def parseOptionalEndDate(maybeString: Option[String], default: SDateLike): SDateLike =
+    maybeString match {
+      case None => SDate.now()
+      case Some(dateStr) => SDate(dateStr)
+    }
 
   def exportPassengersByTerminalForDateRangeApi(startLocalDateString: String,
                                                 endLocalDateString: String,
@@ -106,6 +127,17 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     request.headers.get("Accept").getOrElse("application/json")
   }
 
+  val queueTotalsForGranularity: (SDateLike, SDateLike, Terminal, Int) => Future[Iterable[(Long, Seq[CrunchMinute])]] =
+    (start, end, terminal, granularity) => {
+    val request = GetMinutesForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
+    ctrl.actorService.queuesRouterActor.ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
+      .map { minutesContainer =>
+        val cms: List[CrunchMinute] = minutesContainer.minutes.map(_.toMinute).toList
+        val value: Seq[(MillisSinceEpoch, List[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(cms, terminal)
+        CrunchApi.groupCrunchMinutesBy(granularity)(value, terminal, Queues.queueOrder)
+      }
+  }
+
   private def streamForGranularity(maybeTerminal: Option[Terminal],
                                    granularity: Option[String],
                                    contentType: String,
@@ -144,10 +176,10 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     }
 
   private val hourlyStream: (LocalDate => Future[Map[Long, Map[Queue, Int]]], LocalDate => Future[Map[Long, Int]]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Int, Option[Long]), NotUsed] =
-    (queueTotalsForDate, capacityTotalsForDate) => (start, end) =>
+    (queueTotalsForDate, hourlyCapacityTotalsForDate) => (start, end) =>
       Source(DateRange(start, end))
         .mapAsync(1) { date =>
-          capacityTotalsForDate(date).map { capacityTotals =>
+          hourlyCapacityTotalsForDate(date).map { capacityTotals =>
             (date, capacityTotals)
           }
         }

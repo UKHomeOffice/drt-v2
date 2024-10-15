@@ -80,14 +80,15 @@ object StaffRequirementExports {
     if (reqs.nonEmpty) reqs.max else 0
   }
 
-  def groupByXMinutes[A, B](minutes: Seq[MinuteLike[A, B]], minutesInGroup: Int): Map[Int, Seq[A]] = minutes
-    .groupBy { sm =>
-      val localSDate = SDate(sm.minute, europeLondonTimeZone)
-      ((localSDate.getHours * 60) + localSDate.getMinutes) / minutesInGroup
-    }
-    .view
-    .mapValues(_.map(_.toMinute))
-    .toMap
+  def groupByXMinutes[A, B](minutes: Seq[MinuteLike[A, B]], minutesInGroup: Int): Map[Int, Seq[A]] =
+    minutes
+      .groupBy { sm =>
+        val localSDate = SDate(sm.minute, europeLondonTimeZone)
+        ((localSDate.getHours * 60) + localSDate.getMinutes) / minutesInGroup
+      }
+      .view
+      .mapValues(_.map(_.toMinute))
+      .toMap
 
   def staffingForLocalDateProvider(utcProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed])
                                   (implicit ec: ExecutionContext, mat: Materializer): LocalDate => Future[Seq[StaffMinute]] =
