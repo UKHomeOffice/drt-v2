@@ -1,0 +1,32 @@
+{
+  "start-time": "2024-10-15T12:07",
+  "end-time": "2024-10-15T14:06",
+  "ports": [
+    {
+      "name": "LHR",
+      "terminals": [
+        {
+          "name": "T2",
+          "flights": [
+            {
+              "code": "BA0001",
+              "origin": "JFK",
+              "scheduled-time": "2024-10-15T12:05",
+              "estimated-pcp-arrival-start-time": "2024-10-15T12:15",
+              "estimated-pcp-arrival-end-time": "2024-10-15T12:19",
+              "estimated-passenger-count": 100
+            },
+            {
+              "code": "BA0002",
+              "origin": "CDG",
+              "scheduled-time": "2024-10-15T12:20",
+              "estimated-pcp-arrival-start-time": "2024-10-15T12:32",
+              "estimated-pcp-arrival-end-time": "2024-10-15T12:33",
+              "estimated-passenger-count": 50
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

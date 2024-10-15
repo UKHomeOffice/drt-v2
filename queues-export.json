@@ -1,0 +1,57 @@
+{
+  "start-time": "2024-10-15T12:05",
+  "end-time": "2024-10-15T14:04",
+  "period-length-minutes": 15,
+  "ports": [
+    {
+      "name": "LHR",
+      "terminals": [
+        {
+          "name": "T1",
+          "periods": [
+            {
+              "start-time": "2024-10-15T12:05",
+              "queues": [
+                {
+                  "name": "eea",
+                  "pax-joining": 100,
+                  "max-wait": 10
+                },
+                {
+                  "name": "non-eea",
+                  "pax-joining": 100,
+                  "max-wait": 10
+                },
+                {
+                  "name": "e-gates",
+                  "pax-joining": 100,
+                  "max-wait": 10
+                }
+              ]
+            },
+            {
+              "start-time": "2024-10-15T12:20",
+              "queues": [
+                {
+                  "name": "eea",
+                  "pax-joining": 110,
+                  "max-wait": 5
+                },
+                {
+                  "name": "non-eea",
+                  "pax-joining": 110,
+                  "max-wait": 5
+                },
+                {
+                  "name": "e-gates",
+                  "pax-joining": 110,
+                  "max-wait": 5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+  ]
+}

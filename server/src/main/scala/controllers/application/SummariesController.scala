@@ -3,13 +3,16 @@ package controllers.application
 import actors.PartitionedPortStateActor.GetMinutesForTerminalDateRange
 import akka.NotUsed
 import akka.pattern.ask
-import akka.stream.scaladsl.Source
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Sink, Source}
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
+import controllers.model.RedListCountsJsonFormats.SDateJsonFormat
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
 import drt.shared.{CrunchApi, TQM}
 import play.api.mvc._
-import spray.json.enrichAny
+import services.exports.QueueExport
+import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
@@ -25,7 +28,7 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 
-class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl)  {
   def populatePassengersForDate(localDateStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
     LocalDate.parse(localDateStr) match {
       case Some(localDate) =>
@@ -40,6 +43,8 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     }
   }
 
+  val queueExport = QueueExport(queueTotalsForGranularity, ctrl.airportConfig.terminals, ctrl.airportConfig.portCode)
+
   def exportPassengers(): Action[AnyContent] =
     auth(
       Action {
@@ -49,35 +54,17 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           if (start > end) {
             throw new Exception("Start date must be before end date")
           }
-          val maybeTerminal = request.getQueryString("terminal").map(t => Terminal(t))
-          val granularity = request.getQueryString("granularity").getOrElse("total")
-          val acceptFormat = request.headers.get("Accept").getOrElse("application/json")
+          val periodMinutes = request.getQueryString("period-minutes").map(_.toInt).getOrElse(15)
 
-          queueTotalsForGranularity(start, end, maybeTerminal.getOrElse(Terminal("")).toString, granularity match {
-            case "hourly" => 60
-            case "daily" => 1440
-            case _ => 1
-          }).map { queueTotals =>
-            val fileName = makeFileName("passengers", maybeTerminal, start, end, airportConfig.portCode) + ".csv"
-            val contentStream = streamForGranularity(maybeTerminal, Some(granularity), acceptFormat)
-            val result = if (acceptFormat == "text/csv")
-              sourceToCsvResponse(contentStream(start.toLocalDate, end.toLocalDate), fileName)
-            else
-              sourceToJsonResponse(contentStream(start.toLocalDate, end.toLocalDate)
-                .fold(Seq[String]())(_ :+ _)
-                .map(objects => s"[${objects.mkString(",")}]"))
-          }
+          val portJson = queueExport(start, end, periodMinutes)
 
           Ok("done")
-        //          val terminal = Terminal(terminalName)
-        //          val maybeTerminal = Option(terminal)
-        //          exportPassengersCsv(startLocalDateString, endLocalDateString, request, maybeTerminal)
       }
     )
 
   private def parseOptionalEndDate(maybeString: Option[String], default: SDateLike): SDateLike =
     maybeString match {
-      case None => SDate.now()
+      case None => default
       case Some(dateStr) => SDate(dateStr)
     }
 
@@ -103,7 +90,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
                                  ): Result =
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
-        val fileName = makeFileName("passengers", maybeTerminal, start, end, airportConfig.portCode) + ".csv"
+        val fileName = makeFileName("passengers", maybeTerminal, SDate(start), SDate(end), airportConfig.portCode) + ".csv"
         val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"), acceptHeader(request))
 
         val result = if (acceptHeader(request) == "text/csv")
@@ -129,14 +116,14 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
   val queueTotalsForGranularity: (SDateLike, SDateLike, Terminal, Int) => Future[Iterable[(Long, Seq[CrunchMinute])]] =
     (start, end, terminal, granularity) => {
-    val request = GetMinutesForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
-    ctrl.actorService.queuesRouterActor.ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
-      .map { minutesContainer =>
-        val cms: List[CrunchMinute] = minutesContainer.minutes.map(_.toMinute).toList
-        val value: Seq[(MillisSinceEpoch, List[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(cms, terminal)
-        CrunchApi.groupCrunchMinutesBy(granularity)(value, terminal, Queues.queueOrder)
-      }
-  }
+      val request = GetMinutesForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
+      ctrl.actorService.queuesRouterActor.ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
+        .map { minutesContainer =>
+          val cms: List[CrunchMinute] = minutesContainer.minutes.map(_.toMinute).toList
+          val value: Seq[(MillisSinceEpoch, List[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(cms, terminal)
+          CrunchApi.groupCrunchMinutesBy(granularity)(value, terminal, Queues.queueOrder)
+        }
+    }
 
   private def streamForGranularity(maybeTerminal: Option[Terminal],
                                    granularity: Option[String],

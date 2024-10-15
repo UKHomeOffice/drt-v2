@@ -422,7 +422,7 @@ object CrunchApi {
       (startMinute, queueCrunchMinutes)
     })
 
-  def terminalMinutesByMinute[T <: MinuteLike[A, B], A, B](minutes: List[T],
+  def terminalMinutesByMinute[T <: MinuteLike[_, _]](minutes: List[T],
                                                            terminalName: Terminal): Seq[(MillisSinceEpoch, List[T])] =
     minutes
       .filter(_.terminal == terminalName)
