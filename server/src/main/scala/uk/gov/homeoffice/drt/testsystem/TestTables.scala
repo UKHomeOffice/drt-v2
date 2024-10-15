@@ -127,6 +127,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val retainDataForYears: Int = 5
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
+  override val enableStaffPlanningChange: Boolean = false
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {

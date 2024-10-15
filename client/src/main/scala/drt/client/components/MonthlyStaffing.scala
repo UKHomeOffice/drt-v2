@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
-import drt.client.actions.Actions.{GetAllShifts, UpdateShifts}
+import drt.client.actions.Actions.UpdateShifts
 import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -10,13 +10,13 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiSwipeableDrawer}
-import japgolly.scalajs.react.{CtorType, _}
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.HtmlAttrs.onClick.Event
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.{CtorType, _}
 import moment.Moment
 import org.scalajs.dom.html.{Div, Select}
 import org.scalajs.dom.window.confirm
@@ -35,8 +35,10 @@ object MonthlyStaffing {
     def key: (Int, Int) = (timeSlot, day)
   }
 
+  case class ColumnHeader(day: String, dayOfWeek: String)
+
   case class State(timeSlots: Pot[Seq[Seq[Any]]],
-                   colHeadings: Seq[(String, String)],
+                   colHeadings: Seq[ColumnHeader],
                    rowHeadings: Seq[String],
                    changes: Map[(Int, Int), Int],
                    showEditStaffForm: Boolean,
@@ -50,6 +52,7 @@ object MonthlyStaffing {
   case class Props(portCode: PortCode,
                    terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
+                   enableStaffPlanningChanges: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
 
@@ -238,8 +241,8 @@ object MonthlyStaffing {
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots).map(d => state.colHeadings(d)).toList
 
-          if (confirm(s"You have updated staff for ${dateListToString(changedDays.map(_._1))} $updatedMonth - do you want to save these changes?")) {
-            GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Save Monthly Staffing", s"updated staff for ${dateListToString(changedDays.map(_._1))} $updatedMonth")
+          if (confirm(s"You have updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth - do you want to save these changes?")) {
+            GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Save Monthly Staffing", s"updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth")
             SPACircuit.dispatch(UpdateShifts(changedShiftSlots))
           }
         }
@@ -278,8 +281,8 @@ object MonthlyStaffing {
             })) else EmptyVdom,
         ),
         state.timeSlots.render(timeSlots =>
-          <.div(
-            <.div(^.className := "staffing-controls sticky-div",
+          <.div(^.className := "staffing-container",
+            <.div(^.className := "staffing-controls",
               maybeClockChangeDate(viewingDate).map { clockChangeDate =>
                 val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
                 <.div(^.className := "staff-daylight-month-warning", MuiGrid(container = true, direction = "column", spacing = 1)(
@@ -294,35 +297,7 @@ object MonthlyStaffing {
               <.div(^.className := "staffing-controls-save",
                 <.div(^.style := js.Dictionary("padding-top" -> "5px", "padding-left" -> "10px"),
                   <.strong(s"Staff numbers in ${props.terminalPageTab.dateFromUrlOrNow.getMonthString} ${props.terminalPageTab.dateFromUrlOrNow.getFullYear}")),
-                <.div(^.className := "staffing-controls-select",
-                  drawSelect(
-                    values = monthOptions.map(_.toISOString),
-                    names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
-                    defaultValue = SDate.firstDayOfMonth(viewingDate).toISOString,
-                    callback = (e: ReactEventFromInput) => {
-                      props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
-                    })
-                ),
-                <.div(^.className := "staffing-controls-select",
-                  drawSelect(
-                    values = Seq("monthly", "weekly", "daily"),
-                    names = Seq("Monthly", "Weekly", "Daily"),
-                    defaultValue = s"${props.dayRangeType}",
-                    callback = (e: ReactEventFromInput) =>
-                      props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType((Some(e.target.value)))))
-                  )
-                ),
-                <.div(^.className := "staffing-controls-select",
-                  drawSelect(
-                    values = Seq("15", "30", "60"),
-                    names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
-                    defaultValue = s"${props.timeSlotMinutes}",
-                    callback = (e: ReactEventFromInput) =>
-                      props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
-                  )
-                ),
-
-                <.div(^.className := "staffing-controls-navigation",
+                if (props.enableStaffPlanningChanges) <.div(^.className := "staffing-controls-navigation",
                   if (isWeekly) {
                     val previousWeekDate = {
                       val potentialPreviousWeekDate = viewingDate.addDays(-7)
@@ -355,8 +330,38 @@ object MonthlyStaffing {
                       <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextMonthDate.toISODateOnly)))), ">")
                     )
                   }
+                ) else EmptyVdom,
+                <.div(^.className := "staffing-controls-select",
+                  drawSelect(
+                    values = monthOptions.map(_.toISOString),
+                    names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
+                    defaultValue = SDate.firstDayOfMonth(viewingDate).toISOString,
+                    callback = (e: ReactEventFromInput) => {
+                      props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
+                    })
                 ),
-                <.input.button(^.value := "Edit staff", ^.className := "btn btn-secondary", ^.onClick ==> handleShiftEditForm),
+                if (props.enableStaffPlanningChanges)
+                  <.div(^.className := "staffing-controls-select",
+                    drawSelect(
+                      values = Seq("monthly", "weekly", "daily"),
+                      names = Seq("Monthly", "Weekly", "Daily"),
+                      defaultValue = s"${props.dayRangeType}",
+                      callback = (e: ReactEventFromInput) =>
+                        props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType((Some(e.target.value)))))
+                    )
+                  ) else EmptyVdom,
+                <.div(^.className := "staffing-controls-select",
+                  drawSelect(
+                    values = Seq("15", "30", "60"),
+                    names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
+                    defaultValue = s"${props.timeSlotMinutes}",
+                    callback = (e: ReactEventFromInput) =>
+                      props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
+                  )
+                ),
+                if (props.enableStaffPlanningChanges)
+                  <.input.button(^.value := "Edit staff", ^.className := "btn btn-secondary", ^.onClick ==> handleShiftEditForm)
+                else EmptyVdom,
                 <.input.button(^.value := "Save staff updates", ^.className := "btn btn-primary", ^.onClick ==> confirmAndSave(viewingDate, timeSlots))
               )
             ),
@@ -390,19 +395,17 @@ object MonthlyStaffing {
 
                   scope.modState(state => {
                     val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
-                    println("New State: " + newState)
                     newState
                   }).runNow()
                 },
                 cancelHandler = () => {
                   scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
-                }))))
-            ,
+                })))),
             <.div(^.className := "staffing-table",
               state.shiftsLastLoaded.map(lastLoaded =>
                 HotTable(HotTable.Props(
                   timeSlots,
-                  colHeadings = state.colHeadings.map(h => s"${h._1} <br> ${h._2}"),
+                  colHeadings = state.colHeadings.map(h => s"<div style='text-align: left;'>${h.day}<br>${h.dayOfWeek}</div>"),
                   rowHeadings = state.rowHeadings,
                   changeCallback = (row, col, value) => {
                     scope.modState { state =>
@@ -538,11 +541,12 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(Empty, daysInMonth.map(a => (a._1.getDate.toString, a._2.substring(0, 3))), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, ShiftAssignments.empty, None)
+    State(Empty, daysInMonth.map(a => ColumnHeader(a._1.getDate.toString, a._2.substring(0, 3))), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, ShiftAssignments.empty, None)
   }
 
   def apply(portCode: PortCode,
             terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
-           ): Unmounted[Props, State, Backend] = component(Props(portCode, terminalPageTab, router))
+            enableStaffPlanningChange: Boolean
+           ): Unmounted[Props, State, Backend] = component(Props(portCode, terminalPageTab, router, enableStaffPlanningChange))
 }

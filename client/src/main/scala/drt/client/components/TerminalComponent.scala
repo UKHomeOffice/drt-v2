@@ -102,6 +102,7 @@ object TerminalComponent {
         modelRCP(modelMP => {
           val model: TerminalModel = modelMP()
           for {
+            featureFlags <- model.featureFlags
             airportConfig <- model.airportConfig
             loggedInUser <- model.loggedInUserPot
             redListUpdates <- model.redListUpdates
@@ -219,7 +220,7 @@ object TerminalComponent {
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffing(airportConfig.portCode, props.terminalPageTab, props.router))
+                      <.div(MonthlyStaffing(airportConfig.portCode, props.terminalPageTab, props.router, featureFlags.enableStaffPlanningChange))
                   }
                 }
               }

@@ -1405,6 +1405,10 @@ p {
 }
 
 .staffing-controls {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: white;
   padding-top: 10px;
   //padding-left: 10px;
   display: flex;
@@ -1437,15 +1441,11 @@ p {
   width: 200px;
 }
 
-.sticky-div {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  background-color: white;
-}
-
 .staffing-table {
-  //margin-top: 15px;
+  position: sticky;
+  top: 50px;
+  z-index: 99;
+  background-color: white;
 }
 
 .pcp-pax-summaries {
