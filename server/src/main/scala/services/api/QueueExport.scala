@@ -1,11 +1,8 @@
-package services.exports
+package services.api
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import controllers.model.RedListCountsJsonFormats.SDateJsonFormat
 import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
-import services.exports.QueueExport.{PeriodJson, PortQueuesJson, QueueJson, TerminalQueuesJson}
-import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -13,36 +10,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait QueueExportJsonProtocol extends DefaultJsonProtocol {
-  implicit object QueueJsonFormat extends RootJsonFormat[Queue] {
-    override def write(obj: Queue): JsValue = JsString(obj.stringValue)
 
-    override def read(json: JsValue): Queue = json match {
-      case JsString(value) => Queue(value)
-      case unexpected => throw new Exception(s"Failed to parse Queue. Expected JsString. Got ${unexpected.getClass}")
-    }
-  }
-
-  implicit val queueJsonFormat: RootJsonFormat[QueueJson] = jsonFormat3(QueueJson.apply)
-
-  implicit val periodJsonFormat: RootJsonFormat[PeriodJson] = jsonFormat2(PeriodJson.apply)
-
-  implicit object TerminalJsonFormat extends RootJsonFormat[Terminal] {
-    override def write(obj: Terminal): JsValue = JsString(obj.toString)
-
-    override def read(json: JsValue): Terminal = json match {
-      case JsString(value) => Terminal(value)
-      case unexpected => throw new Exception(s"Failed to parse Terminal. Expected JsString. Got ${unexpected.getClass}")
-    }
-  }
-
-  implicit val terminalQueuesJsonFormat: RootJsonFormat[TerminalQueuesJson] = jsonFormat2(TerminalQueuesJson.apply)
-
-  implicit val portCodeJsonFormat: RootJsonFormat[PortCode] = jsonFormat1(PortCode.apply)
-
-  implicit val portQueuesJsonFormat: RootJsonFormat[PortQueuesJson] = jsonFormat2(PortQueuesJson.apply)
-
-}
 
 object QueueExport {
 

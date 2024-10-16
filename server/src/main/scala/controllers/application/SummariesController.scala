@@ -1,18 +1,11 @@
 package controllers.application
 
-import actors.PartitionedPortStateActor.GetMinutesForTerminalDateRange
 import akka.NotUsed
-import akka.pattern.ask
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
-import controllers.model.RedListCountsJsonFormats.SDateJsonFormat
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer}
-import drt.shared.{CrunchApi, TQM}
 import play.api.mvc._
-import services.exports.QueueExport
-import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat, enrichAny}
+import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
@@ -42,25 +35,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         Action(BadRequest(s"Invalid date format for $localDateStr. Expected YYYY-mm-dd"))
     }
   }
-
-  val queueExport = QueueExport(queueTotalsForGranularity, ctrl.airportConfig.terminals, ctrl.airportConfig.portCode)
-
-  def exportPassengers(): Action[AnyContent] =
-    auth(
-      Action {
-        request =>
-          val start = parseOptionalEndDate(request.getQueryString("start"), SDate.now())
-          val end = parseOptionalEndDate(request.getQueryString("end"), SDate.now())
-          if (start > end) {
-            throw new Exception("Start date must be before end date")
-          }
-          val periodMinutes = request.getQueryString("period-minutes").map(_.toInt).getOrElse(15)
-
-          val portJson = queueExport(start, end, periodMinutes)
-
-          Ok("done")
-      }
-    )
 
   private def parseOptionalEndDate(maybeString: Option[String], default: SDateLike): SDateLike =
     maybeString match {
@@ -113,17 +87,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   private def acceptHeader(request: Request[AnyContent]): String = {
     request.headers.get("Accept").getOrElse("application/json")
   }
-
-  val queueTotalsForGranularity: (SDateLike, SDateLike, Terminal, Int) => Future[Iterable[(Long, Seq[CrunchMinute])]] =
-    (start, end, terminal, granularity) => {
-      val request = GetMinutesForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
-      ctrl.actorService.queuesRouterActor.ask(request).mapTo[MinutesContainer[CrunchMinute, TQM]]
-        .map { minutesContainer =>
-          val cms: List[CrunchMinute] = minutesContainer.minutes.map(_.toMinute).toList
-          val value: Seq[(MillisSinceEpoch, List[CrunchMinute])] = CrunchApi.terminalMinutesByMinute(cms, terminal)
-          CrunchApi.groupCrunchMinutesBy(granularity)(value, terminal, Queues.queueOrder)
-        }
-    }
 
   private def streamForGranularity(maybeTerminal: Option[Terminal],
                                    granularity: Option[String],
