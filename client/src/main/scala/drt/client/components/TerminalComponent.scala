@@ -154,6 +154,12 @@ object TerminalComponent {
                       val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, 15, terminal, q)))
                       val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, 15, terminal).toMap)
 
+                      val hasStaff = windowStaffSummaries.exists(_.values.exists(_.available > 0))
+                      val defaultDesksAndQueuesViewType = props.terminalPageTab.queryParams.get("viewType") match {
+                        case Some(viewType) => viewType
+                        case None => if (hasStaff) "deployments" else "ideal"
+                      }
+
                       <.div(
                         <.div(^.className := s"terminal-content-header $headerClass",
                           DaySelectorComponent(
@@ -191,6 +197,7 @@ object TerminalComponent {
                           windowCrunchSummaries = windowCrunchSummaries,
                           dayCrunchSummaries = dayCrunchSummaries,
                           windowStaffSummaries = windowStaffSummaries,
+                          defaultDesksAndQueuesViewType = defaultDesksAndQueuesViewType,
                         ))
                       )
 
@@ -216,11 +223,11 @@ object TerminalComponent {
 
                     case Planning =>
                       <.div(model.userSelectedPlanningTimePeriod.render { timePeriod =>
-                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod))
+                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod,airportConfig))
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffing(airportConfig.portCode, props.terminalPageTab, props.router, featureFlags.enableStaffPlanningChange))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig,featureFlags.enableStaffPlanningChange))
                   }
                 }
               }

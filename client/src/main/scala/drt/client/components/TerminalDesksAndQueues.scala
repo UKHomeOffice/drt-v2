@@ -25,6 +25,7 @@ import org.scalajs.dom.raw.Node
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue, Transfer}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -53,6 +54,7 @@ object TerminalDesksAndQueues {
                    windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
+                   terminal: Terminal,
                   ) extends UseValueEq
 
   sealed trait DeskType {

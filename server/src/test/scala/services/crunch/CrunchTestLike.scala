@@ -34,6 +34,7 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Futu
 object TestDefaults {
   val airportConfig: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
+    portName = "Stansted",
     queuesByTerminal = SortedMap(
       T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk),
       T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)
@@ -104,6 +105,7 @@ object TestDefaults {
 
   val airportConfigWithEgates: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
+    portName = "Stansted",
     queuesByTerminal = SortedMap(
       T1 -> Seq(Queues.EGate, Queues.EeaDesk, Queues.NonEeaDesk)
     ),
@@ -166,6 +168,7 @@ object TestDefaults {
 
     AirportConfig(
       portCode = PortCode("STN"),
+      portName = "Stansted",
       queuesByTerminal = SortedMap(
         T1 -> queues
       ),

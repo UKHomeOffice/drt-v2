@@ -260,17 +260,6 @@ class OptimiserWithFlexibleProcessorsSpec extends Specification {
   }
 
   "Processing work" >> {
-    "Given a workload and capacity containing some zeros" >> {
-      val workload = IndexedSeq.fill(60)(5d)
-      val capacity = IndexedSeq.fill(30)(5) ++ IndexedSeq.fill(30)(0)
-      "When I ask for the ProcessedWork" >> {
-        val processed = OptimiserWithFlexibleProcessors.tryProcessWork(workload, capacity, 25, IndexedSeq(), WorkloadProcessorsProvider(IndexedSeq.fill(60)(WorkloadProcessors(Seq.fill(10)(Desk)))))
-        "I should not find any NaNs" >> {
-          processed.get.util.exists(_.isNaN) === false
-        }
-      }
-    }
-
     "Given a constant workload of 5, 1 max processor for the first 30 mins, followed by 5" >> {
       val passengers = IndexedSeq.fill(120)(Iterable(5d))
       val minDesks = IndexedSeq.fill(120)(0)

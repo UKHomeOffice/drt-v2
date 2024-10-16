@@ -206,7 +206,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   def index: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     if (user.hasRole(airportConfig.role)) {
-      Ok(views.html.index("DRT - BorderForce", airportConfig.portCode.toString, googleTrackingCode, user.id))
+      Ok(views.html.index("DRT", airportConfig.portCode.toString, googleTrackingCode, user.id))
     } else {
       log.info(s"User lacks ${airportConfig.role} role. Redirecting to $redirectUrl")
       Redirect(Call("get", redirectUrl))

@@ -84,9 +84,6 @@ object OptimiserWithFlexibleProcessors {
     }
   }
 
-  def runSimulationOfWork(workloads: Iterable[Double], desks: Iterable[Int], config: OptimiserConfig): Try[Seq[Int]] =
-    tryProcessWork(workloads.toIndexedSeq, desks.toIndexedSeq, config.sla, IndexedSeq(), config.processors).map(_.waits)
-
   def approx(x: IndexedSeq[Int], y: IndexedSeq[Int], i: Seq[Double]): List[Double] = {
     val diffX = x(1) - x.head
     val diffY = y(1) - y.head
@@ -129,17 +126,6 @@ object OptimiserWithFlexibleProcessors {
       case c if c == 0 => 1
       case c => c
     }
-
-  def tryProcessWork(work: IndexedSeq[Double],
-                     capacity: IndexedSeq[Int],
-                     sla: Int,
-                     qstart: IndexedSeq[Double],
-                     processors: WorkloadProcessorsProvider): Try[ProcessedWorkLike] = {
-    val actualCapacity = capacity.zipWithIndex.map {
-      case (c, idx) => processors.forMinute(idx).capacityForServers(c)
-    }
-    Try(QueueCapacity(actualCapacity.toList).processMinutes(sla, work.toList))
-  }
 
   def legacyTryProcessWork(work: IndexedSeq[Double],
                            capacity: IndexedSeq[Int],

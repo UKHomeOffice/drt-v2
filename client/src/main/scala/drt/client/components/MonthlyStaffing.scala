@@ -20,7 +20,7 @@ import japgolly.scalajs.react.{CtorType, _}
 import moment.Moment
 import org.scalajs.dom.html.{Div, Select}
 import org.scalajs.dom.window.confirm
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -49,9 +49,9 @@ object MonthlyStaffing {
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(portCode: PortCode,
-                   terminalPageTab: TerminalPageTabLoc,
+  case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
+                   airportConfig: AirportConfig,
                    enableStaffPlanningChanges: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
@@ -421,10 +421,6 @@ object MonthlyStaffing {
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(p =>
-      Callback(
-        GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
-    )
     .build
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int],
@@ -534,9 +530,9 @@ object MonthlyStaffing {
     State(Empty, daysInMonth.map(a => ColumnHeader(a._1.getDate.toString, a._2.substring(0, 3))), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, ShiftAssignments.empty, None)
   }
 
-  def apply(portCode: PortCode,
-            terminalPageTab: TerminalPageTabLoc,
+  def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
+            airportConfig: AirportConfig,
             enableStaffPlanningChange: Boolean
-           ): Unmounted[Props, State, Backend] = component(Props(portCode, terminalPageTab, router, enableStaffPlanningChange))
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router,airportConfig, enableStaffPlanningChange))
 }

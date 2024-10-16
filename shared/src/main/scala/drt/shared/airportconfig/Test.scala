@@ -15,6 +15,7 @@ object Test extends AirportConfigLike {
 
   val config: AirportConfig = AirportConfig(
     portCode = PortCode("TEST"),
+    portName = "Test Airport",
     queuesByTerminal = SortedMap(
       T1 -> Seq(EeaDesk, EGate, NonEeaDesk)
     ),

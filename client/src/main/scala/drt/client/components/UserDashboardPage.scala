@@ -16,20 +16,20 @@ object UserDashboardPage {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("UserDashboard")
     .render_P(p => {
-      val loggedInUserRCP = SPACircuit.connect(_.loggedInUserPot)
-      loggedInUserRCP(loggedInUserMP => {
-        <.div(loggedInUserMP().renderReady(user => {
+      val loggedInUserRCP = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
+      loggedInUserRCP { loggedInUserMP =>
+        val (loggedInUser, airportConfig) = loggedInUserMP()
+
+        <.div(loggedInUser.renderReady(user => {
           if (user.hasRole(PortOperatorStaff))
             PortExportDashboardPage(user)
           else if (user.hasRole(BorderForceStaff))
-            PortDashboardPage(p.router, PortDashboardLoc(None))
+            PortDashboardPage(p.router, PortDashboardLoc(None), airportConfig)
           else
             <.div("You have successfully logged into DRT but your account has not been configured correctly. Please contact us for assistance.")
         }))
-      })
-    })
-    .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"dashboard")
+
+      }
     })
     .build
 

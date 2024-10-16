@@ -13,9 +13,6 @@ object TrainingMaterialComponent {
     .render_P(_ =>
       <.div(^.className := "training-material", <.h3("Training Material"), TrainingMaterialDetailComponent())
     )
-    .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"Training Material")
-    })
     .build
 
   def apply(): VdomElement = component(Props())
