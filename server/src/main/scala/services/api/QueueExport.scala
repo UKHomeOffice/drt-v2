@@ -14,7 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object QueueExport {
 
-  case class QueueJson(name: Queue, incomingPax: Int, maxWaitMinutes: Int)
+  case class QueueJson(queue: Queue, incomingPax: Int, maxWaitMinutes: Int)
 
   object QueueJson {
     def apply(cm: CrunchMinute): QueueJson = QueueJson(cm.queue, cm.paxLoad.toInt, cm.waitTime)

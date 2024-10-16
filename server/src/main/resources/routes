@@ -130,8 +130,9 @@ GET           /api/arrivals/:startLocalDate/:endLocalDate/:terminalName         
 + nocsrf
 GET           /api/passengers/:startLocalDate/:endLocalDate                           controllers.application.SummariesController.exportPassengersByPortForDateRangeApi(startLocalDate: String, endLocalDate: String)
 GET           /api/passengers/:startLocalDate/:endLocalDate/:terminalName             controllers.application.SummariesController.exportPassengersByTerminalForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)
-GET           /api/v1/passengers                                                      controllers.application.api.v1.QueuesApiController.queues()
 PUT           /api/passengers/:localDate                                              controllers.application.SummariesController.populatePassengersForDate(localDate: String)
+
+GET           /api/v1/queues                                                          controllers.application.api.v1.QueuesApiController.queues()
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)
