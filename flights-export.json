@@ -1,6 +1,6 @@
 {
-  "start-time": "2024-10-15T12:07",
-  "end-time": "2024-10-15T14:06",
+  "startTime": "2024-10-15T12:07",
+  "endTime": "2024-10-15T14:06",
   "ports": [
     {
       "name": "LHR",
@@ -11,18 +11,18 @@
             {
               "code": "BA0001",
               "origin": "JFK",
-              "scheduled-time": "2024-10-15T12:05",
-              "estimated-pcp-arrival-start-time": "2024-10-15T12:15",
-              "estimated-pcp-arrival-end-time": "2024-10-15T12:19",
-              "estimated-passenger-count": 100
+              "scheduledTime": "2024-10-15T12:05",
+              "estimatedPcpArrivalStartTime": "2024-10-15T12:15",
+              "estimatedPcpArrivalEndTime": "2024-10-15T12:19",
+              "estimatedPassengerCount": 100
             },
             {
               "code": "BA0002",
               "origin": "CDG",
-              "scheduled-time": "2024-10-15T12:20",
-              "estimated-pcp-arrival-start-time": "2024-10-15T12:32",
-              "estimated-pcp-arrival-end-time": "2024-10-15T12:33",
-              "estimated-passenger-count": 50
+              "scheduledTime": "2024-10-15T12:20",
+              "estimatedPcpArrivalStartTime": "2024-10-15T12:32",
+              "estimatedPcpArrivalEndTime": "2024-10-15T12:33",
+              "estimatedPassengerCount": 50
             }
           ]
         }

@@ -5,8 +5,8 @@ import akka.stream.Materializer
 import drt.shared.CrunchApi.CrunchMinute
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import services.api.QueueExport
-import services.api.QueueExport.{PeriodJson, PortQueuesJson, QueueJson, TerminalQueuesJson}
+import services.api.v1.QueueExport.{PeriodJson, PortQueuesJson, QueueJson, TerminalQueuesJson}
+import services.api.v1.QueueExport
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, NonEeaDesk}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}

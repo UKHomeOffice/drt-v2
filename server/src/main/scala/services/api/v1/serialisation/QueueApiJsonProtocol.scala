@@ -1,6 +1,6 @@
 package services.api.v1.serialisation
 
-import services.api.QueueExport.{PeriodJson, PortQueuesJson, QueueJson, TerminalQueuesJson}
+import services.api.v1.QueueExport.{PeriodJson, PortQueuesJson, QueueJson, TerminalQueuesJson}
 import spray.json.{DefaultJsonProtocol, JsString, JsValue, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Queues.Queue

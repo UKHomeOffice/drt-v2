@@ -7,7 +7,7 @@ import controllers.application.AuthController
 import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
 import drt.shared.{CrunchApi, TQM}
 import play.api.mvc._
-import services.api.QueueExport
+import services.api.v1.QueueExport
 import services.api.v1.serialisation.QueueApiJsonProtocol
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface

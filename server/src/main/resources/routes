@@ -133,6 +133,7 @@ GET           /api/passengers/:startLocalDate/:endLocalDate/:terminalName       
 PUT           /api/passengers/:localDate                                              controllers.application.SummariesController.populatePassengersForDate(localDate: String)
 
 GET           /api/v1/queues                                                          controllers.application.api.v1.QueuesApiController.queues()
+GET           /api/v1/flights                                                         controllers.application.api.v1.FlightsApiController.flights()
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)

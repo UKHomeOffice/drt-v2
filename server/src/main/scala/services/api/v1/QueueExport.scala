@@ -1,4 +1,4 @@
-package services.api
+package services.api.v1
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
