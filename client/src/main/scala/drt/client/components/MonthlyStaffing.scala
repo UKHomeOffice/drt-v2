@@ -366,17 +366,17 @@ object MonthlyStaffing {
               <.div(EditShiftStaffForm(IEditShiftStaffForm(
                 editShiftStaff = IEditShiftStaff(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
                 handleSubmit = (ssf: IEditShiftStaff) => {
-                  val startDay = ssf.startDayAt.utc().toDate().getTime().toLong / (1000 * 60 * 60 * 24) // Convert to days
-                  val endDay = ssf.endDayAt.utc().toDate().getTime().toLong / (1000 * 60 * 60 * 24) // Convert to days
+                  val dayInMilliseconds = 1000 * 60 * 60 * 24
+                  val startDay = ssf.startDayAt.utc().toDate().getTime().toLong / dayInMilliseconds // Convert to days
+                  val endDay = ssf.endDayAt.utc().toDate().getTime().toLong / dayInMilliseconds // Convert to days
                   val staffAssignments: Seq[StaffAssignment] = (startDay to endDay).map { day =>
-                    val dayAt = Moment(day * (1000 * 60 * 60 * 24)) // Convert back to milliseconds
+                    val dayAt = Moment(day * dayInMilliseconds) // Convert back to milliseconds
                     val ssfDay = IEditShiftStaff(dayAt, ssf.startTimeAt, ssf.endTimeAt, dayAt, ssf.actualStaff)
                     IEditShiftStaff.toStaffAssignment(ssfDay, props.terminalPageTab.terminal)
                   }
                   SPACircuit.dispatch(UpdateShifts(staffAssignments))
-
                   scope.modState(state => {
-                    val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
+                    val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true, shiftsLastLoaded = Option(SDate.now().millisSinceEpoch))
                     newState
                   }).runNow()
                 },
@@ -534,5 +534,5 @@ object MonthlyStaffing {
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
             enableStaffPlanningChange: Boolean
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router,airportConfig, enableStaffPlanningChange))
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange))
 }
