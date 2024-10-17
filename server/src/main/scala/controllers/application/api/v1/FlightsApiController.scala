@@ -26,10 +26,17 @@ class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
   private val flightTotalsForGranularity: (SDateLike, SDateLike, Terminal) => Future[Seq[Arrival]] =
     (start, end, terminal) => {
       val request = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, Seq(terminal))
+
       ctrl.actorService.flightsRouterActor.ask(request).mapTo[Source[(UtcDate, FlightsWithSplits), NotUsed]]
         .flatMap(_
           .map { case (_, FlightsWithSplits(flights)) =>
-            flights.values.map(_.apiFlight).toSeq
+            flights.values
+              .filter { fws =>
+                val startTime = Try(fws.apiFlight.pcpRange(pfso).min).getOrElse(fws.apiFlight.Scheduled)
+                val endTime = Try(fws.apiFlight.pcpRange(pfso).max).getOrElse(fws.apiFlight.Scheduled)
+                startTime >= start.millisSinceEpoch && endTime <= end.millisSinceEpoch
+              }
+              .map(_.apiFlight).toSeq
               .sortBy(a => Try(a.pcpRange(pfso).min).getOrElse(a.Scheduled))
           }
           .runWith(Sink.fold(Seq[Arrival]())(_ ++ _))
@@ -45,14 +52,12 @@ class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
         request =>
           val start = parseOptionalEndDate(request.getQueryString("start"), SDate.now())
           val end = parseOptionalEndDate(request.getQueryString("end"), SDate.now())
+
           if (start > end) {
             throw new Exception("Start date must be before end date")
           }
 
-          log.info(s"\n\nGetting flights for ${start.toISOString} -> ${end.toISOString}\n\n")
-
-          flightExport(start, end)
-            .map(r => Ok(r.toJson.compactPrint))
+          flightExport(start, end).map(r => Ok(r.toJson.compactPrint))
       }
     )
 

@@ -8,15 +8,18 @@ import uk.gov.homeoffice.drt.time.SDate
 
 trait FlightApiJsonProtocol extends DefaultJsonProtocol {
   implicit object FlightJsonJsonFormat extends RootJsonFormat[FlightJson] {
-    override def write(obj: FlightJson): JsValue = JsObject(
-      "code" -> obj.code.toJson,
-      "originPort" -> obj.originPort.toJson,
-      "scheduledTime" -> SDate(obj.scheduledTime).toISOString.toJson,
-      "estimatedPcpStartTime" -> obj.estimatedPcpStartTime.map(SDate(_).toISOString).toJson,
-      "estimatedPcpEndTime" -> obj.estimatedPcpEndTime.map(SDate(_).toISOString).toJson,
-      "estimatedPaxCount" -> obj.estimatedPaxCount.toJson,
-      "status" -> obj.status.toJson
-    )
+    override def write(obj: FlightJson): JsValue = {
+      val maybePax = obj.estimatedPaxCount.filter(_ > 0)
+      JsObject(
+        "code" -> obj.code.toJson,
+        "originPort" -> obj.originPort.toJson,
+        "scheduledTime" -> SDate(obj.scheduledTime).toISOString.toJson,
+        "estimatedPcpStartTime" -> maybePax.flatMap(_ => obj.estimatedPcpStartTime.map(SDate(_).toISOString)).toJson,
+        "estimatedPcpEndTime" -> maybePax.flatMap(_ => obj.estimatedPcpEndTime.map(SDate(_).toISOString)).toJson,
+        "estimatedPcpPaxCount" -> obj.estimatedPaxCount.toJson,
+        "status" -> obj.status.toJson
+      )
+    }
 
     override def read(json: JsValue): FlightJson = json match {
       case JsObject(fields) => FlightJson(
@@ -25,7 +28,7 @@ trait FlightApiJsonProtocol extends DefaultJsonProtocol {
         fields.get("scheduledTime").map(_.convertTo[Long]).getOrElse(0L),
         fields.get("estimatedPcpStartTime").map(_.convertTo[Long]),
         fields.get("estimatedPcpEndTime").map(_.convertTo[Long]),
-        fields.get("estimatedPaxCount").map(_.convertTo[Int]),
+        fields.get("estimatedPcpPaxCount").map(_.convertTo[Int]),
         fields.get("status").map(_.convertTo[String]).getOrElse(""),
       )
       case unexpected => throw new Exception(s"Failed to parse FlightJson. Expected JsString. Got ${unexpected.getClass}")

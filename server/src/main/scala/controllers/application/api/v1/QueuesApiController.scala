@@ -44,10 +44,7 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           }
           val periodMinutes = request.getQueryString("period-minutes").map(_.toInt).getOrElse(15)
 
-          log.info(s"\n\nGetting queues for ${start.toISOString} -> ${end.toISOString} every $periodMinutes minutes\n\n")
-
-          queueExport(start, end, periodMinutes)
-            .map(r => Ok(r.toJson.compactPrint))
+          queueExport(start, end, periodMinutes).map(r => Ok(r.toJson.compactPrint))
       }
     )
 
