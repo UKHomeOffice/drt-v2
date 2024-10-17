@@ -4,17 +4,15 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, MinimumStaff, MinimumStaffingService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.time.SDate
 import upickle.default._
-
 import scala.concurrent.Future
 
 
@@ -23,7 +21,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
                                    shiftsService: ShiftsService,
                                    fixedPointsService: FixedPointsService,
                                    movementsService: StaffMovementsService,
-                                   minimumStaffingService: MinimumStaffingService,
+                                   staffShiftFormService: StaffShiftFormService
                                   ) extends AuthController(cc, ctrl) {
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
@@ -35,45 +33,55 @@ class StaffingController @Inject()(cc: ControllerComponents,
   }
 
   def saveShifts: Action[AnyContent] = authByRole(StaffEdit) {
-    Action { request =>
+    Action.async { request =>
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
-          shiftsService.updateShifts(shifts.assignments)
-          Accepted
+          shiftsService
+            .updateShifts(shifts.assignments)
+            .map(allShifts => Accepted(write(allShifts)))
         case None =>
-          BadRequest
+          Future.successful(BadRequest)
       }
     }
   }
 
-  def saveMinimumStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
-    Action { request =>
+  def saveShiftStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
+    Action.async { request =>
       request.body.asText match {
         case Some(text) =>
-          val terminalMinStaff = read[MinimumStaff](text)
+          import PortTerminalShiftJsonSerializer._
+          val portTerminalShift = read[PortTerminalShift](text)
           val terminal = Terminal(terminalName)
-          minimumStaffingService.setMinimum(terminal, Option(terminalMinStaff.minimumStaff))
-          Accepted
+          staffShiftFormService.setShiftStaff(terminal,
+            portTerminalShift.shiftName,
+            portTerminalShift.startAt,
+            portTerminalShift.periodInMinutes,
+            portTerminalShift.endAt,
+            portTerminalShift.frequency,
+            portTerminalShift.actualStaff,
+            portTerminalShift.minimumRosteredStaff,
+            portTerminalShift.email)
+            .map(monthOfShifts => Accepted(write(monthOfShifts)))
         case None =>
-          BadRequest
+          Future.successful(BadRequest)
       }
     }
   }
 
-  def getMinimumStaff(terminalName: String): Action[AnyContent] =
+  def getShiftStaff(terminalName: String): Action[AnyContent] =
     Action.async {
-      minimumStaffingService.getTerminalConfig(Terminal(terminalName)).map {
+      staffShiftFormService.getTerminalShiftConfig(Terminal(terminalName)).map {
         case Some(config) =>
-          Ok(write(MinimumStaff(config.minimumRosteredStaff.getOrElse(0))))
+          Ok(PortTerminalShiftConfigJsonSerializer.writeToJson(config))
         case None =>
           NotFound
       }
     }
 
-  def getShiftsForMonth(month: MillisSinceEpoch): Action[AnyContent] = authByRole(StaffEdit) {
+  def getAllShifts: Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
-      shiftsService.shiftsForMonth(month).map(s => Ok(write(s)))
+      shiftsService.allShifts.map(s => Ok(write(s)))
     }
   }
 

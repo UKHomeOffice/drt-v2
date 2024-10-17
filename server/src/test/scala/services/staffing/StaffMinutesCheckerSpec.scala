@@ -22,7 +22,7 @@ class StaffMinutesCheckerSpec extends Specification {
 
       val today = SDate("2023-01-08T10:00")
       val forecastMaxDays = 3
-      val checker = StaffMinutesChecker(() => today, testProbe.ref, forecastMaxDays, Lhr.config, (_, _) => Future.successful(Done))
+      val checker = StaffMinutesChecker(() => today, testProbe.ref, forecastMaxDays, Lhr.config)
       checker.calculateForecastStaffMinutes()
 
       val expected = for {

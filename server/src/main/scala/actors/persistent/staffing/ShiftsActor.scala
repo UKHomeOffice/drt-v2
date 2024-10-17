@@ -25,6 +25,7 @@ import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
 import scala.collection.immutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Try
 
@@ -118,7 +119,7 @@ object ShiftsActor extends ShiftsActorLike {
                             requestAndTerminateActor: ActorRef,
                             system: ActorSystem
                            )
-                           (implicit timeout: Timeout): Props =
+                           (implicit timeout: Timeout, ec: ExecutionContext): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
@@ -233,7 +234,7 @@ class ShiftsActor(val now: () => SDateLike,
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
 
       persistAndMaybeSnapshotWithAck(shiftsMessage, List(
-        (sender(), StatusReply.Ack),
+        (sender(), state),
       ))
 
     case ReplaceAllShifts(newShiftAssignments) =>
@@ -260,7 +261,7 @@ class ShiftsActor(val now: () => SDateLike,
           val createdAt = now()
           val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(updatedAssignments, createdAt), Option(createdAt.millisSinceEpoch))
 
-          persistAndMaybeSnapshotWithAck(shiftsMessage, List((sender(), StatusReply.Ack)))
+          persistAndMaybeSnapshotWithAck(shiftsMessage, List((sender(), state)))
         case None =>
           log.error(s"To be implemented if required")
           sender() ! StatusReply.Ack

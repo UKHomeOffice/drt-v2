@@ -19,7 +19,7 @@ import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -37,9 +37,10 @@ object TerminalComponent {
 
   case class Props(terminalPageTab: TerminalPageTabLoc, router: RouterCtl[Loc]) extends FastEqLowPri
 
+  implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
+
   private case class TerminalModel(userSelectedPlanningTimePeriod: Pot[Int],
                                    potShifts: Pot[ShiftAssignments],
-                                   potMonthOfShifts: Pot[MonthOfShifts],
                                    potFixedPoints: Pot[FixedPointAssignments],
                                    potStaffMovements: Pot[StaffMovements],
                                    airportConfig: Pot[AirportConfig],
@@ -72,13 +73,12 @@ object TerminalComponent {
   }
 
 
-  class Backend() {
+  class Backend {
     def render(props: Props): VdomElement = {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
-        potShifts = model.shifts,
-        potMonthOfShifts = model.monthOfShifts,
+        potShifts = model.dayOfShift,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         airportConfig = model.airportConfig,
@@ -102,6 +102,7 @@ object TerminalComponent {
         modelRCP(modelMP => {
           val model: TerminalModel = modelMP()
           for {
+            featureFlags <- model.featureFlags
             airportConfig <- model.airportConfig
             loggedInUser <- model.loggedInUserPot
             redListUpdates <- model.redListUpdates
@@ -222,15 +223,11 @@ object TerminalComponent {
 
                     case Planning =>
                       <.div(model.userSelectedPlanningTimePeriod.render { timePeriod =>
-                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod, airportConfig))
+                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod,airportConfig))
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(
-                        model.potMonthOfShifts.render { ms =>
-                          MonthlyStaffing(ms.shifts, props.terminalPageTab, props.router, airportConfig)
-                        }
-                      )
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig,featureFlags.enableStaffPlanningChange))
                   }
                 }
               }
@@ -244,7 +241,9 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())))
+    .componentDidMount(_ =>
+      Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())))
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean): VdomTagOf[UList] = {
@@ -267,32 +266,51 @@ object TerminalComponent {
 
     <.ul(^.className := "nav nav-tabs",
       <.li(^.className := tabClass(Current) + " " + timeMachineClass,
-        props.router.link(props.terminalPageTab.update(
-          mode = Current,
-          subMode = subMode,
-          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), viewTypeQueryParam).queryParams
-        ))(^.id := "currentTab", "Queues & Arrivals", VdomAttr("data-toggle") := "tab")),
+        <.a(^.id := "currentTab", "Queues & Arrivals", VdomAttr("data-toggle") := "tab"),
+        ^.onClick ==> { e: ReactEventFromInput =>
+          e.preventDefault()
+          GoogleEventTracker.sendEvent(terminalName, "click", "Queues & Arrivals")
+          props.router.set(props.terminalPageTab.update(
+            mode = Current,
+            subMode = subMode,
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), viewTypeQueryParam).queryParams
+          ))
+        }),
       <.li(^.className := tabClass(Planning),
-        props.router.link(props.terminalPageTab.update(
-          mode = Planning,
-          subMode = subMode,
-          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-        ))(^.id := "planning-tab", VdomAttr("data-toggle") := "tab", "Planning"),
+        <.a(^.id := "planning-tab", VdomAttr("data-toggle") := "tab", "Planning"),
+        ^.onClick ==> { e: ReactEventFromInput =>
+          e.preventDefault()
+          GoogleEventTracker.sendEvent(terminalName, "click", "Planning")
+          props.router.set(props.terminalPageTab.update(
+            mode = Planning,
+            subMode = subMode,
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
+          ))
+        }
       ),
       if (loggedInUser.roles.contains(StaffEdit))
         <.li(^.className := tabClass(Staffing),
-          props.router.link(props.terminalPageTab.update(
-            mode = Staffing,
-            subMode = "15",
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))(^.id := "monthlyStaffingTab", ^.className := "flex-forizontally", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip)
+          <.a(^.id := "monthlyStaffingTab", ^.className := "flex-forizontally", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip),
+          ^.onClick ==> { e: ReactEventFromInput =>
+            e.preventDefault()
+            GoogleEventTracker.sendEvent(terminalName, "click", "Monthly Staffing")
+            props.router.set(props.terminalPageTab.update(
+              mode = Staffing,
+              subMode = "15",
+              queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
+            ))
+          }
         ) else "",
       <.li(^.className := tabClass(Dashboard),
-        props.router.link(props.terminalPageTab.update(
-          mode = Dashboard,
-          subMode = "summary",
-          queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-        ))(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", s"$terminalName Dashboard")
+        <.a(^.id := "terminalDashboardTab", VdomAttr("data-toggle") := "tab", s"$terminalName Dashboard"), ^.onClick --> {
+          GoogleEventTracker.sendEvent(terminalName, "click", "Terminal Dashboard")
+          props.router.set(
+            props.terminalPageTab.update(
+              mode = Dashboard,
+              subMode = "summary",
+              queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams)
+          )
+        }
       )
     )
   }

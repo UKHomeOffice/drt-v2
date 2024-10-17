@@ -6,7 +6,7 @@ import akka.Done
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.testkit.{TestKit, TestProbe}
 import akka.util.Timeout
-import drt.shared.{MonthOfShifts, ShiftAssignments, StaffAssignment}
+import drt.shared.{ShiftAssignments, StaffAssignment}
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -46,8 +46,8 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
 
     "return a list of staff assignments for a month" in {
       MockActor.response = assignments
-      val result = service.shiftsForMonth(SDate("2024-07-01T01:00").millisSinceEpoch)
-      result.futureValue.getClass should ===(classOf[MonthOfShifts])
+      val result = service.allShifts
+      result.futureValue.getClass should ===(classOf[ShiftAssignments])
       liveProbe.expectMsg(GetState)
     }
 
