@@ -52,7 +52,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val now: () => SDateLike
 
-  val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
+  implicit val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
     ScenarioSimulationSource,
     LiveFeedSource,
     ApiFeedSource,

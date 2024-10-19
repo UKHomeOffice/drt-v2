@@ -118,7 +118,8 @@ object DashboardTerminalSummary {
     }
   }
 
-  def aggSplits(paxFeedSourceOrder: List[FeedSource], flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(flights, paxFeedSourceOrder)
+  def aggSplits(paxFeedSourceOrder: List[FeedSource], flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] =
+    BigSummaryBoxes.aggregateSplits(flights, paxFeedSourceOrder)
 
   case class Props(flights: List[ApiFlightWithSplits],
                    crunchMinutes: List[CrunchMinute],
@@ -133,8 +134,8 @@ object DashboardTerminalSummary {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
-      val crunchMinuteTimeSlots = groupCrunchMinutesByX(groupSize = 15)(
-        CrunchApi.terminalMinutesByMinute[CrunchMinute, CrunchMinute, TQM](props.crunchMinutes, props.terminal),
+      val crunchMinuteTimeSlots = groupCrunchMinutesBy(groupSize = 15)(
+        CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal),
         props.terminal,
         Queues.queueOrder).flatMap(_._2)
 

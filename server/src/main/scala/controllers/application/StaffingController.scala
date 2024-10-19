@@ -147,8 +147,8 @@ class StaffingController @Inject()(cc: ControllerComponents,
           CsvFileStreaming.makeFileName(
             "staff-movements",
             Option(terminal),
-            localDate,
-            localDate,
+            SDate(localDate),
+            SDate(localDate),
             airportConfig.portCode
           ) + ".csv"
         )
