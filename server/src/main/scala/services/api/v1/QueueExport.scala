@@ -11,7 +11,6 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-
 object QueueExport {
 
   case class QueueJson(queue: Queue, incomingPax: Int, maxWaitMinutes: Int)
@@ -36,9 +35,15 @@ object QueueExport {
         .mapAsync(terminals.size) { terminal =>
           minutesSource(start, end, terminal, periodMinutes)
             .map { queueTotals: Iterable[(MillisSinceEpoch, Seq[CrunchMinute])] =>
-              queueTotals.map { case (slotTime, queues) =>
-                PeriodJson(SDate(slotTime), queues.map(QueueJson.apply))
-              }
+              queueTotals
+                .filter {
+                  case (slotTime, _) =>
+                    println(s"${start.toISOString} <= ${SDate(slotTime).toISOString} < ${end.toISOString}")
+                    start.millisSinceEpoch <= slotTime && slotTime < end.millisSinceEpoch
+                }
+                .map { case (slotTime, queues) =>
+                  PeriodJson(SDate(slotTime), queues.map(QueueJson.apply))
+                }
             }
         }
         .runWith(Sink.seq)

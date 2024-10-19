@@ -21,38 +21,49 @@ class QueueExportSpec extends AnyWordSpec with Matchers {
   implicit val mat: Materializer = Materializer.matFromSystem
   implicit val ec: ExecutionContextExecutor = system.dispatcher
 
-  val minute: SDateLike = SDate("2024-10-15T12:00")
+  val start: SDateLike = SDate("2024-10-15T12:00")
+  val end: SDateLike = SDate("2024-10-15T12:30")
 
   "QueueExport" should {
-    "return a PortQueuesJson with the correct structure" in {
+    "return a PortQueuesJson with the correct structure and only the values in the requested time range" in {
       val source = (_: SDateLike, _: SDateLike, _: Terminal, _: Int) => {
         Future.successful(Seq(
-          minute.millisSinceEpoch -> Seq(
-            CrunchMinute(T1, EeaDesk, minute.millisSinceEpoch, 10d, 0d, 0, 0, None, None, None, None, None, None, None),
-            CrunchMinute(T1, NonEeaDesk, minute.millisSinceEpoch, 12d, 0d, 0, 0, None, None, None, None, None, None, None),
-            CrunchMinute(T1, EGate, minute.millisSinceEpoch, 14d, 0d, 0, 0, None, None, None, None, None, None, None),
+          start.addMinutes(-15).millisSinceEpoch -> Seq(
+            CrunchMinute(T1, EeaDesk, start.addMinutes(-15).millisSinceEpoch, 10d, 0d, 0, 0, None, None, None, None, None, None, None),
+            CrunchMinute(T1, NonEeaDesk, start.addMinutes(-15).millisSinceEpoch, 12d, 0d, 0, 0, None, None, None, None, None, None, None),
+            CrunchMinute(T1, EGate, start.addMinutes(-15).millisSinceEpoch, 14d, 0d, 0, 0, None, None, None, None, None, None, None),
           ),
-          minute.addMinutes(15).millisSinceEpoch -> Seq(
-            CrunchMinute(T1, EeaDesk, minute.addMinutes(15).millisSinceEpoch, 10d, 0d, 0, 0, None, None, None, None, None, None, None),
-            CrunchMinute(T1, NonEeaDesk, minute.addMinutes(15).millisSinceEpoch, 12d, 0d, 0, 0, None, None, None, None, None, None, None),
-            CrunchMinute(T1, EGate, minute.addMinutes(15).millisSinceEpoch, 14d, 0d, 0, 0, None, None, None, None, None, None, None),
+          start.millisSinceEpoch -> Seq(
+            CrunchMinute(T1, EeaDesk, start.millisSinceEpoch, 10d, 0d, 0, 0, None, None, None, None, None, None, None),
+            CrunchMinute(T1, NonEeaDesk, start.millisSinceEpoch, 12d, 0d, 0, 0, None, None, None, None, None, None, None),
+            CrunchMinute(T1, EGate, start.millisSinceEpoch, 14d, 0d, 0, 0, None, None, None, None, None, None, None),
+          ),
+          start.addMinutes(15).millisSinceEpoch -> Seq(
+            CrunchMinute(T1, EeaDesk, start.addMinutes(15).millisSinceEpoch, 10d, 0d, 0, 0, None, None, None, None, None, None, None),
+            CrunchMinute(T1, NonEeaDesk, start.addMinutes(15).millisSinceEpoch, 12d, 0d, 0, 0, None, None, None, None, None, None, None),
+            CrunchMinute(T1, EGate, start.addMinutes(15).millisSinceEpoch, 14d, 0d, 0, 0, None, None, None, None, None, None, None),
+          ),
+          start.addMinutes(30).millisSinceEpoch -> Seq(
+            CrunchMinute(T1, EeaDesk, start.addMinutes(30).millisSinceEpoch, 10d, 0d, 0, 0, None, None, None, None, None, None, None),
+            CrunchMinute(T1, NonEeaDesk, start.addMinutes(30).millisSinceEpoch, 12d, 0d, 0, 0, None, None, None, None, None, None, None),
+            CrunchMinute(T1, EGate, start.addMinutes(30).millisSinceEpoch, 14d, 0d, 0, 0, None, None, None, None, None, None, None),
           ),
         ))
       }
       val export = QueueExport(source, Seq(T1), PortCode("LHR"))
-      Await.result(export(minute, minute, 15), 1.second) shouldEqual
+      Await.result(export(start, end, 15), 1.second) shouldEqual
         PortQueuesJson(
           PortCode("LHR"),
           Seq(
             TerminalQueuesJson(
               T1,
               Seq(
-                PeriodJson(minute, Seq(
+                PeriodJson(start, Seq(
                   QueueJson(EeaDesk, 10, 0),
                   QueueJson(NonEeaDesk, 12, 0),
                   QueueJson(EGate, 14, 0),
                 )),
-                PeriodJson(minute.addMinutes(15), Seq(
+                PeriodJson(start.addMinutes(15), Seq(
                   QueueJson(EeaDesk, 10, 0),
                   QueueJson(NonEeaDesk, 12, 0),
                   QueueJson(EGate, 14, 0),

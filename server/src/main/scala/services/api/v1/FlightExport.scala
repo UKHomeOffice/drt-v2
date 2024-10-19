@@ -1,5 +1,6 @@
 package services.api.v1
 
+import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import uk.gov.homeoffice.drt.arrivals.Arrival
@@ -47,7 +48,10 @@ object FlightExport {
     (start, end) => {
       Source(terminals.toSeq)
         .mapAsync(terminals.size) { terminal =>
-          minutesSource(start, end, terminal).map(_.map(FlightJson.apply(_)))
+          minutesSource(start, end, terminal).map {
+            _.filter(_.hasPcpDuring(start, end, sourceOrderPreference))
+              .map(FlightJson.apply(_))
+          }
         }
         .runWith(Sink.seq)
         .map {
