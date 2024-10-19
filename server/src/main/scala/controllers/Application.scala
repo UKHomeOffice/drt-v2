@@ -252,7 +252,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
     val usernameOption = postStringValOrElse("username")
     val passwordOption = postStringValOrElse("password")
-//    import KeyCloakAuthTokenParserProtocol._
+
     import spray.json._
 
     def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse): Result = token match {

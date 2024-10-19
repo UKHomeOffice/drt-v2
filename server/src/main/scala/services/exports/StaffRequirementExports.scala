@@ -53,8 +53,8 @@ object StaffRequirementExports {
       val numberOfSlots = 1440 / minutesInSlot
       val dateFormatted = f"${date.day}%02d/${date.month}%02d"
       staffProvider(date).map { staffMinutes =>
-        val staffMinutesBySlot = groupByXMinutes(staffMinutes, minutesInSlot)
-        val crunchMinutesBySlot = groupByXMinutes(crunchMinutes, minutesInSlot)
+        val staffMinutesBySlot = groupByMinutes(staffMinutes, minutesInSlot)
+        val crunchMinutesBySlot = groupByMinutes(crunchMinutes, minutesInSlot)
 
         val availableAndRequired: Seq[(String, String, String)] = (0 until numberOfSlots).map { slotNumber =>
           val slotCrunch = crunchMinutesBySlot.getOrElse(slotNumber, Seq())
@@ -80,7 +80,7 @@ object StaffRequirementExports {
     if (reqs.nonEmpty) reqs.max else 0
   }
 
-  def groupByXMinutes[A, B](minutes: Seq[MinuteLike[A, B]], minutesInGroup: Int): Map[Int, Seq[A]] =
+  def groupByMinutes[A, B](minutes: Seq[MinuteLike[A, B]], minutesInGroup: Int): Map[Int, Seq[A]] =
     minutes
       .groupBy { sm =>
         val localSDate = SDate(sm.minute, europeLondonTimeZone)

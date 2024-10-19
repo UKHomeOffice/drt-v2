@@ -26,11 +26,12 @@ import scala.util.Try
 
 
 case class ApiResponseBody(message: String)
+
 object ApiResponseBody {
   implicit val w: OWrites[ApiResponseBody] = writes[ApiResponseBody]
 }
 
-class ImportsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl)  {
+class ImportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def feedImportRedListCounts: Action[AnyContent] = authByRole(NeboUpload) {
     Action.async { request =>
@@ -46,9 +47,9 @@ class ImportsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
                     .ask(RedListCounts(updatedRedListCounts))
                   Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
                 }.recover {
-                case e => log.warning(s"Error while updating redListPassenger", e)
-                  BadRequest("Failed to update the red List Passenger")
-              }
+                  case e => log.warning(s"Error while updating redListPassenger", e)
+                    BadRequest("Failed to update the red List Passenger")
+                }
             }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
         case None => Future.successful(BadRequest("No content"))
       }
