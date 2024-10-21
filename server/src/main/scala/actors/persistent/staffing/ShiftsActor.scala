@@ -117,67 +117,7 @@ object ShiftsActor extends ShiftsActorLike {
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
 
-    def isOverlapping(existing: StaffAssignmentLike, update: StaffAssignmentLike): Boolean = {
-      existing.terminal == update.terminal &&
-        existing.start <= update.end &&
-        update.start <= existing.end
-    }
-
-    def splitIntoIntervals(assignment: StaffAssignmentLike): Seq[StaffAssignment] = {
-      val intervalMillis = 15.minutes.toMillis
-      val intervals = for {
-        start <- assignment.start until assignment.end by intervalMillis
-      } yield StaffAssignment(
-        name = assignment.name,
-        terminal = assignment.terminal,
-        start = start,
-        end = Math.min(start + intervalMillis, assignment.end),
-        numberOfStaff = assignment.numberOfStaff,
-        createdBy = assignment.createdBy
-      )
-      intervals
-    }
-
-    val existingIntervals = existingAssignments.flatMap(splitIntoIntervals)
-    val updateIntervals = shiftsToUpdate.flatMap(splitIntoIntervals)
-
-    existingIntervals.foreach { existing =>
-      println(s"existing: $existing")
-    }
-
-    updateIntervals.foreach { update =>
-      println(s"update: $update")
-    }
-
-    val updatedIntervals = updateIntervals.foldLeft(existingIntervals.map(e => (e.terminal, e.start) -> e).toMap) { (acc, update) =>
-      val overlappingKey = acc.keys.find { case (terminal, start) =>
-        isOverlapping(acc((terminal, start)), update)
-      }
-
-      overlappingKey match {
-        case Some(key) =>
-          acc.updated(key, acc(key).copy(name = update.name, numberOfStaff = update.numberOfStaff))
-        case None =>
-          acc + ((update.terminal, update.start) -> update)
-      }
-    }.values.toSeq
-
-//    val updatedIntervals = updateIntervals.foldLeft(existingIntervals) { (acc, update) =>
-//        val updatedAcc = acc.map { existing =>
-//          if (isOverlapping(existing, update)) {
-//            println(s"overlapping existing: $existing update: $update")
-//            existing.copy(name = update.name, numberOfStaff = update.numberOfStaff)
-//          } else {
-//            existing
-//          }
-//        }
-//        if (updatedAcc == acc) {
-//          updatedAcc :+ update
-//        } else {
-//          updatedAcc
-//        }
-//    }
-    updatedIntervals
+    SplitUtil.applyUpdatedShifts(existingAssignments, shiftsToUpdate)
   }
 
 
