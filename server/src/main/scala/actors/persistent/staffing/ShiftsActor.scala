@@ -149,21 +149,34 @@ object ShiftsActor extends ShiftsActorLike {
       println(s"update: $update")
     }
 
-    val updatedIntervals = updateIntervals.foldLeft(existingIntervals) { (acc, update) =>
-        val updatedAcc = acc.map { existing =>
-          if (isOverlapping(existing, update)) {
-            println(s"overlapping existing: $existing update: $update")
-            existing.copy(name = update.name, numberOfStaff = update.numberOfStaff)
-          } else {
-            existing
-          }
-        }
-        if (updatedAcc == acc) {
-          updatedAcc :+ update
-        } else {
-          updatedAcc
-        }
-    }
+    val updatedIntervals = updateIntervals.foldLeft(existingIntervals.map(e => (e.terminal, e.start) -> e).toMap) { (acc, update) =>
+      val overlappingKey = acc.keys.find { case (terminal, start) =>
+        isOverlapping(acc((terminal, start)), update)
+      }
+
+      overlappingKey match {
+        case Some(key) =>
+          acc.updated(key, acc(key).copy(name = update.name, numberOfStaff = update.numberOfStaff))
+        case None =>
+          acc + ((update.terminal, update.start) -> update)
+      }
+    }.values.toSeq
+
+//    val updatedIntervals = updateIntervals.foldLeft(existingIntervals) { (acc, update) =>
+//        val updatedAcc = acc.map { existing =>
+//          if (isOverlapping(existing, update)) {
+//            println(s"overlapping existing: $existing update: $update")
+//            existing.copy(name = update.name, numberOfStaff = update.numberOfStaff)
+//          } else {
+//            existing
+//          }
+//        }
+//        if (updatedAcc == acc) {
+//          updatedAcc :+ update
+//        } else {
+//          updatedAcc
+//        }
+//    }
     updatedIntervals
   }
 
