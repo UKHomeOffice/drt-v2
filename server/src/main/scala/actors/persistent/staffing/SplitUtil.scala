@@ -62,7 +62,7 @@ object SplitUtil {
       }
     }.values.toSeq
 
-    overallShift
+    overallShift.sortBy(_.start)
   }
 
 }

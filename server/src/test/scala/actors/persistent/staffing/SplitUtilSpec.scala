@@ -1,46 +1,12 @@
 package actors.persistent.staffing;
 
 
-import org.specs2.mutable.Specification
 import drt.shared._
+import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Terminals.T1
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike, TimeZoneHelper}
+import uk.gov.homeoffice.drt.time.SDate
 
 class SplitUtilSpec extends Specification {
-
-
-//  val assignments = Seq(
-//    StaffAssignment("test", T1, 1483267500000L, 1483268400000L, 3, None),
-//    StaffAssignment("test", T1, 1483257600000L, 1483258500000L, 3, None),
-//    StaffAssignment("test", T1, 1483271100000L, 1483272000000L, 3, None),
-//    StaffAssignment("test", T1, 1483261200000L, 1483262100000L, 3, None),
-//    StaffAssignment("test", T1, 1483263900000L, 1483264800000L, 3, None),
-//    StaffAssignment("test", T1, 1483268400000L, 1483269300000L, 3, None),
-//    StaffAssignment("test", T1, 1483270200000L, 1483271100000L, 3, None),
-//    StaffAssignment("test", T1, 1483256700000L, 1483257600000L, 3, None),
-//    StaffAssignment("test", T1, 1483260300000L, 1483261200000L, 3, None),
-//    StaffAssignment("test", T1, 1483264800000L, 1483265700000L, 3, None),
-//    StaffAssignment("test", T1, 1483269300000L, 1483270200000L, 3, None),
-//    StaffAssignment("test", T1, 1483255800000L, 1483256700000L, 3, None),
-//    StaffAssignment("test", T1, 1483265700000L, 1483266600000L, 3, None),
-//    StaffAssignment("test", T1, 1483262100000L, 1483263000000L, 3, None),
-//    StaffAssignment("test", T1, 1483259400000L, 1483260300000L, 3, None),
-//    StaffAssignment("test", T1, 1483254900000L, 1483255800000L, 3, None),
-//    StaffAssignment("test", T1, 1483266600000L, 1483267500000L, 3, None),
-//    StaffAssignment("test", T1, 1483263000000L, 1483263900000L, 3, None),
-//    StaffAssignment("test", T1, 1483258500000L, 1483259400000L, 3, None),
-//    StaffAssignment("test", T1, 1483254000000L, 1483254900000L, 3, None)
-//    ,
-//  )
-//  assignments.foreach { case assignment =>
-//    println(s"StaffAssignment......(${assignment.name}, ${assignment.terminal}, ${SDate(assignment.start).toISOString}, ${SDate(assignment.end).toISOString}, ${assignment.numberOfStaff}, ${assignment.createdBy})")
-//  }
-
-  def printlnResult(assignments: Seq[StaffAssignmentLike]): Unit = {
-    assignments.sortBy(_.start).foreach { case assignment =>
-      println(s"StaffAssignment......(${assignment.name}, ${assignment.terminal}, ${SDate(assignment.start).toISOString}, ${SDate(assignment.end).toISOString}, ${assignment.numberOfStaff}, ${assignment.createdBy})")
-    }
-  }
 
   "SplitUtil" >> {
     "split a shift into 14 minutes interval shifts" >> {
@@ -107,7 +73,6 @@ class SplitUtilSpec extends Specification {
     val result: Seq[StaffAssignmentLike] = SplitUtil.applyUpdatedShifts(
       Seq(StaffAssignment("Morning", T1, existingShiftStartTime, existingShiftEndTime, 5, None)),
       Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
-    printlnResult(result)
     result.toSet mustEqual expectedResult
   }
 
@@ -131,7 +96,6 @@ class SplitUtilSpec extends Specification {
       val result: Seq[StaffAssignmentLike] = SplitUtil.applyUpdatedShifts(
         Seq(StaffAssignment("Morning", T1, existingShiftStartTime, existingShiftEndTime, 10, None)),
         Seq(StaffAssignment("Morning", T1, startTime, endTime, 5, None)))
-      printlnResult(result)
       result.toSet mustEqual expectedResult
     }
 
