@@ -3,7 +3,6 @@ package drt.client.components
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.UpdateShifts
-import drt.client.components.TerminalPlanningComponent.defaultStartDate
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -56,7 +55,7 @@ object MonthlyStaffing {
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
 
-    def dayRangeType = terminalPageTab.dayRangeType match {
+    def dayRangeType: String = terminalPageTab.dayRangeType match {
       case Some(dayRange) => dayRange
       case None => "monthly"
     }
@@ -376,7 +375,7 @@ object MonthlyStaffing {
                   }
                   SPACircuit.dispatch(UpdateShifts(staffAssignments))
                   scope.modState(state => {
-                    val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true, shiftsLastLoaded = Option(SDate.now().millisSinceEpoch))
+                    val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
                     newState
                   }).runNow()
                 },
@@ -494,17 +493,20 @@ object MonthlyStaffing {
   private def slotsFromShifts(shifts: StaffAssignmentsLike, terminal: Terminal, viewingDate: SDateLike, timeSlotMinutes: Int, dayRange: String): Seq[Seq[Any]] =
     dayRange match {
       case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
-        case Some(slotDateTime) => shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+        case Some(slotDateTime) =>
+          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
         case None => "-"
       })
 
       case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
-        case Some(slotDateTime) => shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+        case Some(slotDateTime) =>
+          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
         case None => "-"
       })
 
       case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map {
-        case Some(slotDateTime) => shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+        case Some(slotDateTime) =>
+          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
         case None => "-"
       }.map(Seq(_))
     }

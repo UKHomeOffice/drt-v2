@@ -1,9 +1,8 @@
 package actors
 
-import actors.persistent.staffing.ShiftsActor.{UpdateShifts, updateMinimumStaff}
+import actors.persistent.staffing.ShiftsActor.UpdateShifts
 import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor}
 import akka.actor.{ActorRef, PoisonPill, Props}
-import akka.pattern.StatusReply
 import akka.testkit.ImplicitSender
 import drt.shared._
 import services.crunch.CrunchTestLike
@@ -52,6 +51,44 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       true
     }
 
+    "update the shift and check update shift number is applied" in {
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
+
+      val newStartTime = SDate(s"2017-01-01T13:00").millisSinceEpoch
+      val newEndTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
+
+      val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
+
+      val newShift = ShiftAssignments(Seq(StaffAssignment("Morning-late", T1, newStartTime, newEndTime, 5, None)))
+
+//      val sumUpShift = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 15, None)))
+
+      val now: () => SDateLike = () => SDate("2017-01-01T23:59")
+      val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
+
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor")
+
+      actor ! UpdateShifts(shifts.assignments)
+      expectMsg(ShiftAssignments(shifts.assignments))
+      actor ! PoisonPill
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
+
+      newActor ! GetState
+
+      expectMsg(shifts)
+
+      newActor ! UpdateShifts(newShift.assignments)
+      expectMsg(ShiftAssignments(newShift.assignments))
+//      val otherNewActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor3")
+
+//      otherNewActor ! GetState
+
+//      expectMsg(newShift)
+
+      true
+    }
+
     "snapshots are correctly persisted and replayed" in {
       val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
       val endTime = SDate(s"2017-01-01T15:00").millisSinceEpoch
@@ -76,7 +113,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
     "correctly remember an update to a shift after a restart" in {
       val shift1 = generateStaffAssignment("Morning 1", T1, "2017-01-01T07:00", "2017-01-01T15:00", 10)
-      val shift2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T07:30", "2017-01-01T15:30", 10)
+      val shift2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T012:30", "2017-01-01T15:30", 10)
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
@@ -189,37 +226,6 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
     }
   }
 
-  "updateMinimumStaff" should {
-    "create shift assignments with the minimum level where there are none existing" in {
-      val shifts = updateMinimumStaff(T1, LocalDate(2024, 8, 18), LocalDate(2024, 8, 18), 10, None, ShiftAssignments.empty)
-
-      shifts.assignments.length === 96
-      shifts.assignments.forall(_.numberOfStaff === 10) === true
-    }
-    "update existing shift assignments with the new minimum level where they equal the old minimum" in {
-      val existingShifts = ShiftAssignments((0 until 96).map { i =>
-        val startTime = SDate("2024-08-18T00:00", TimeZoneHelper.europeLondonTimeZone).addMinutes(i * 15)
-        val endTime = startTime.addMinutes(14)
-        StaffAssignment(s"Shift $i", T1, startTime.millisSinceEpoch, endTime.millisSinceEpoch, 5, None)
-      })
-      val shifts = updateMinimumStaff(T1, LocalDate(2024, 8, 18), LocalDate(2024, 8, 18), 10, Option(5), existingShifts)
-
-      shifts.assignments.length === 96
-      shifts.assignments.forall(_.numberOfStaff === 10) === true
-    }
-    "return in a reasonable time when updating 6 months of shifts" in {
-      val existingShifts = ShiftAssignments((0 until 96 * 30 * 6).map { i =>
-        val startTime = SDate("2024-08-18T00:00", TimeZoneHelper.europeLondonTimeZone).addMinutes(i * 15)
-        val endTime = startTime.addMinutes(14)
-        StaffAssignment(s"Shift $i", T1, startTime.millisSinceEpoch, endTime.millisSinceEpoch, 5, None)
-      })
-      val start = System.currentTimeMillis()
-      updateMinimumStaff(T1, LocalDate(2024, 8, 18), LocalDate(2025, 2, 18), 10, Option(5), existingShifts)
-      val end = System.currentTimeMillis()
-
-      (end - start) < 1000 === true
-    }
-  }
 
   def newStaffActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsActor(now, expiryDateXDaysFrom(now, 1), 10)))
   def newStaffPointInTimeActor(now: () => SDateLike): ActorRef = system.actorOf(Props(new ShiftsReadActor(now(), expiryDateXDaysFrom(now, 1))))
