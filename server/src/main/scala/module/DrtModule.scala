@@ -2,7 +2,6 @@ package module
 
 import actors.DrtParameters
 import actors.persistent.staffing.ShiftsActor
-import akka.Done
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.persistence.testkit.PersistenceTestKitPlugin
@@ -12,6 +11,7 @@ import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController}
 import controllers.{AirportConfigProvider, Application}
+import drt.shared.ShiftAssignments
 import email.GovNotifyEmail
 import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
@@ -20,6 +20,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import javax.inject.Singleton
@@ -119,15 +120,16 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtParameters.govNotifyApiKey)
 
   @Provides
-  def minimumStaffingService: MinimumStaffingService = MinimumStaffingServiceImpl(
+  def provideStaffShiftFormService: StaffShiftFormService = StaffShiftFormServiceImpl(
     portCode = airportConfig.portCode,
     now = now,
     forecastMaxDays = drtParameters.forecastMaxDays,
-    getTerminalConfig = provideDrtSystemInterface.applicationService.getTerminalConfig,
-    updateTerminalConfig = provideDrtSystemInterface.applicationService.updateTerminalConfig,
+    getTerminalShiftConfig = provideDrtSystemInterface.applicationService.getTerminalShiftConfig,
+    updateTerminalShiftConfig = provideDrtSystemInterface.applicationService.updateTerminalShiftConfig,
     updateStaffingNumbers = (terminal, start, end, newValue, oldValue) => {
       val request = ShiftsActor.SetMinimumStaff(terminal, start, end, newValue, oldValue)
-      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request).map(_ => Done)
+      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request)
+        .mapTo[ShiftAssignments]
     },
   )
 }

@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
-import diode.data.{Pot, Ready}
+import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -10,7 +10,6 @@ import drt.shared.api.{WalkTime, WalkTimes}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
-import org.scalajs.dom.document
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.EgateBanksEdit

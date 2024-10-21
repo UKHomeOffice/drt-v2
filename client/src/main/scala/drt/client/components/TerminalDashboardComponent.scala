@@ -6,7 +6,7 @@ import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.TerminalContentComponent.originMapper
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.ViewLive
+import drt.client.services.{SPACircuit, ViewLive}
 import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
