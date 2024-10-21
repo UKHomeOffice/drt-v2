@@ -90,7 +90,6 @@ class SplitUtilSpec extends Specification {
 
   "update shift if shift exists before" >> {
 
-
     val existingShiftStartTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
     val existingShiftEndTime = SDate(s"2017-01-01T8:00").millisSinceEpoch
 
@@ -111,6 +110,31 @@ class SplitUtilSpec extends Specification {
     printlnResult(result)
     result.toSet mustEqual expectedResult
   }
+
+
+    "update shift if shift exists before" >> {
+
+      val existingShiftStartTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val existingShiftEndTime = SDate(s"2017-01-01T9:00").millisSinceEpoch
+
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T8:00").millisSinceEpoch
+      val expectedResult = Set(
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:00:00Z").millisSinceEpoch, SDate("2017-01-01T07:15:00Z").millisSinceEpoch, 5, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:15:00Z").millisSinceEpoch, SDate("2017-01-01T07:30:00Z").millisSinceEpoch, 5, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:30:00Z").millisSinceEpoch, SDate("2017-01-01T07:45:00Z").millisSinceEpoch, 5, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:45:00Z").millisSinceEpoch, SDate("2017-01-01T08:00:00Z").millisSinceEpoch, 5, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:00:00Z").millisSinceEpoch, SDate("2017-01-01T08:15:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:15:00Z").millisSinceEpoch, SDate("2017-01-01T08:30:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:30:00Z").millisSinceEpoch, SDate("2017-01-01T08:45:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:45:00Z").millisSinceEpoch, SDate("2017-01-01T09:00:00Z").millisSinceEpoch, 10, None))
+      val result: Seq[StaffAssignmentLike] = SplitUtil.applyUpdatedShifts(
+        Seq(StaffAssignment("Morning", T1, existingShiftStartTime, existingShiftEndTime, 10, None)),
+        Seq(StaffAssignment("Morning", T1, startTime, endTime, 5, None)))
+      printlnResult(result)
+      result.toSet mustEqual expectedResult
+    }
+
 }
 
 }
