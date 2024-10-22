@@ -36,13 +36,13 @@ object SplitUtil {
     val existingIntervals = existingAssignments.flatMap(splitIntoIntervals)
     val updateIntervals = shiftsToUpdate.flatMap(splitIntoIntervals)
 
-    existingIntervals.foreach { existing =>
-      println(s"existing: $existing")
-    }
-
-    updateIntervals.foreach { update =>
-      println(s"update: $update")
-    }
+    //    existingIntervals.foreach { existing =>
+    //      println(s"existing: $existing")
+    //    }
+    //
+    //    updateIntervals.foreach { update =>
+    //      println(s"update: $update")
+    //    }
 
     val overallShift: Seq[StaffAssignment] = updateIntervals.foldLeft(existingIntervals.map(e => (e.terminal, e.start) -> e).toMap) { (acc, update) =>
       val overlappingKey = acc.keys.find { case (terminal, start) =>
@@ -51,13 +51,13 @@ object SplitUtil {
 
       overlappingKey match {
         case Some(key) =>
-          println(s"overlapping key: ${key._1} ${SDate(key._2).toISOString} update: ${update.terminal} ${SDate(update.start).toISOString} ${SDate(update.end).toISOString} ${update.numberOfStaff}")
+          // println(s"overlapping key: ${key._1} ${SDate(key._2).toISOString} update: ${update.terminal} ${SDate(update.start).toISOString} ${SDate(update.end).toISOString} ${update.numberOfStaff}")
           val existing = acc(key)
           val updated = existing.copy(numberOfStaff = update.numberOfStaff)
           acc.updated(key, updated)
           acc.updated(key, acc(key).copy(numberOfStaff = update.numberOfStaff))
         case None =>
-          println(s"no overlapping key: ${update.terminal} ${SDate(update.start).toISOString} ${SDate(update.end).toISOString} ${update.numberOfStaff}")
+          //println(s"no overlapping key: ${update.terminal} ${SDate(update.start).toISOString} ${SDate(update.end).toISOString} ${update.numberOfStaff}")
           acc + ((update.terminal, update.start) -> update)
       }
     }.values.toSeq
