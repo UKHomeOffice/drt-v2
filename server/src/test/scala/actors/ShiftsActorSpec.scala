@@ -60,15 +60,21 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
       val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor")
       actor ! UpdateShifts(shifts.assignments)
-
-      expectMsg(expectedShifts)
+      val response = expectMsgType[ShiftAssignments]
+      val sortedResponse = response.assignments.sortBy(_.start)
+      val sortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
+      assert(sortedResponse == sortedExpectedShifts)
+//      expectMsg(expectedShifts)
       actor ! PoisonPill
 
       val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
 
       newActor ! GetState
-
-      expectMsg(expectedShifts)
+      val newResponse = expectMsgType[ShiftAssignments]
+      val newSortedResponse = newResponse.assignments.sortBy(_.start)
+      val newSortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
+      assert(newSortedResponse == newSortedExpectedShifts)
+//      expectMsg(expectedShifts)
 
       true
     }
@@ -136,16 +142,29 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       ))
 
       actor ! UpdateShifts(shifts.assignments)
-      expectMsg(expectedShifts)
+      val response = expectMsgType[ShiftAssignments]
+      val sortedResponse = response.assignments.sortBy(_.start)
+      val sortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
+      assert(sortedResponse == sortedExpectedShifts)
+//      expectMsg(expectedShifts)
       actor ! PoisonPill
       val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
 
       newActor ! GetState
 
-      expectMsg(expectedShifts)
+      val newResponse = expectMsgType[ShiftAssignments]
+      val newSortedResponse = newResponse.assignments.sortBy(_.start)
+      val newSortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
+      assert(newSortedResponse == newSortedExpectedShifts)
+//      expectMsg(expectedShifts)
 
       newActor ! UpdateShifts(newShift.assignments)
-      expectMsg(expectedNewShifts)
+
+      val newShiftResponse = expectMsgType[ShiftAssignments]
+      val newShiftSortedResponse = newShiftResponse.assignments.sortBy(_.start)
+      val newShiftSortedExpectedShifts = expectedNewShifts.assignments.sortBy(_.start)
+      assert(newShiftSortedResponse == newShiftSortedExpectedShifts)
+//      expectMsg(expectedNewShifts)
       true
     }
 

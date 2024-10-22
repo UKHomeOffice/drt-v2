@@ -103,17 +103,6 @@ object ShiftsActor extends ShiftsActorLike {
                              newMinimum: Option[Int],
                              previousMinimum: Option[Int]) extends ShiftUpdate
 
-
-  def existingImplementation(existingAssignments: Seq[StaffAssignmentLike],
-                             shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
-    val existingIndexed = existingAssignments.map(a => (a.terminal, a.start) -> a).toMap
-    val updatedIndexed = shiftsToUpdate.map(a => (a.terminal, a.start) -> a).toMap
-
-    updatedIndexed.foldLeft(existingIndexed) {
-      case (assignmentsSoFar, (key, updatedAssignment)) => assignmentsSoFar + (key -> updatedAssignment)
-    }.values.toSeq
-  }
-
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
 
@@ -131,13 +120,6 @@ object ShiftsActor extends ShiftsActorLike {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), "shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
-
-  def applyMinimumStaff(newMin: Int, previousMin: Option[Int], currentStaff: Int): Int = previousMin match {
-    case None =>
-      if (currentStaff == 0) newMin else currentStaff
-    case Some(oldMin) =>
-      if (currentStaff == oldMin) newMin else currentStaff
-  }
 
 }
 
