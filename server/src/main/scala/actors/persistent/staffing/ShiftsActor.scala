@@ -117,7 +117,7 @@ object ShiftsActor extends ShiftsActorLike {
                            )
                            (implicit timeout: Timeout, ec: ExecutionContext): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
-      val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), "shifts-actor-writes")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), s"shifts-actor-writes-${UUID.randomUUID()}")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 
