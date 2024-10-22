@@ -2,6 +2,7 @@ package actors.persistent.staffing
 
 import drt.shared.{StaffAssignment, StaffAssignmentLike}
 import scala.concurrent.duration._
+import scala.collection.parallel.CollectionConverters._
 
 object SplitUtil {
 
@@ -30,10 +31,8 @@ object SplitUtil {
         existing.start < update.end &&
         update.start < existing.end
     }
-
-
-    val existingIntervals = existingAssignments.flatMap(splitIntoIntervals)
-    val updateIntervals = shiftsToUpdate.flatMap(splitIntoIntervals)
+    val existingIntervals = existingAssignments.par.flatMap(splitIntoIntervals).seq
+    val updateIntervals = shiftsToUpdate.par.flatMap(splitIntoIntervals).seq
 
     val overallShift: Seq[StaffAssignment] = updateIntervals.foldLeft(existingIntervals.map(e => (e.terminal, e.start) -> e).toMap) { (acc, update) =>
       val overlappingKey = acc.keys.find { case (terminal, start) =>
@@ -52,6 +51,27 @@ object SplitUtil {
     }.values.toSeq
 
     overallShift
+
+//    val existingIntervals = existingAssignments.flatMap(splitIntoIntervals)
+//    val updateIntervals = shiftsToUpdate.flatMap(splitIntoIntervals)
+//
+//    val overallShift: Seq[StaffAssignment] = updateIntervals.foldLeft(existingIntervals.map(e => (e.terminal, e.start) -> e).toMap) { (acc, update) =>
+//      val overlappingKey = acc.keys.find { case (terminal, start) =>
+//        isOverlapping(acc((terminal, start)), update)
+//      }
+//
+//      overlappingKey match {
+//        case Some(key) =>
+//          val existing = acc(key)
+//          val updated = existing.copy(numberOfStaff = update.numberOfStaff)
+//          acc.updated(key, updated)
+//          acc.updated(key, acc(key).copy(numberOfStaff = update.numberOfStaff))
+//        case None =>
+//          acc + ((update.terminal, update.start) -> update)
+//      }
+//    }.values.toSeq
+//
+//    overallShift
   }
 
 }
