@@ -27,6 +27,13 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
   import StaffAssignmentGenerator._
 
+  def assertExpectedResponse(expectedShifts: ShiftAssignments): Unit = {
+    val response = expectMsgType[ShiftAssignments]
+    val sortedResponse = response.assignments.sortBy(_.start)
+    val sortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
+    assert(sortedResponse == sortedExpectedShifts)
+  }
+
   "Shifts actor" should {
     "remember a shift staff assignment added before a shutdown" in {
       val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
@@ -64,7 +71,6 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val sortedResponse = response.assignments.sortBy(_.start)
       val sortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
       assert(sortedResponse == sortedExpectedShifts)
-//      expectMsg(expectedShifts)
       actor ! PoisonPill
 
       val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
@@ -74,7 +80,6 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val newSortedResponse = newResponse.assignments.sortBy(_.start)
       val newSortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
       assert(newSortedResponse == newSortedExpectedShifts)
-//      expectMsg(expectedShifts)
 
       true
     }
@@ -142,29 +147,17 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       ))
 
       actor ! UpdateShifts(shifts.assignments)
-      val response = expectMsgType[ShiftAssignments]
-      val sortedResponse = response.assignments.sortBy(_.start)
-      val sortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
-      assert(sortedResponse == sortedExpectedShifts)
-//      expectMsg(expectedShifts)
+      assertExpectedResponse(expectedShifts)
+
       actor ! PoisonPill
       val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
 
       newActor ! GetState
-
-      val newResponse = expectMsgType[ShiftAssignments]
-      val newSortedResponse = newResponse.assignments.sortBy(_.start)
-      val newSortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
-      assert(newSortedResponse == newSortedExpectedShifts)
-//      expectMsg(expectedShifts)
+      assertExpectedResponse(expectedShifts)
 
       newActor ! UpdateShifts(newShift.assignments)
 
-      val newShiftResponse = expectMsgType[ShiftAssignments]
-      val newShiftSortedResponse = newShiftResponse.assignments.sortBy(_.start)
-      val newShiftSortedExpectedShifts = expectedNewShifts.assignments.sortBy(_.start)
-      assert(newShiftSortedResponse == newShiftSortedExpectedShifts)
-//      expectMsg(expectedNewShifts)
+      assertExpectedResponse(expectedNewShifts)
       true
     }
 
@@ -202,14 +195,12 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       ))
 
       actor ! UpdateShifts(shifts.assignments)
-      expectMsg(expectedShifts)
+      assertExpectedResponse(expectedShifts)
       actor ! PoisonPill
 
       val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 1)), "shiftsActor2")
       newActor ! GetState
-
-      expectMsg(expectedShifts)
-
+      assertExpectedResponse(expectedShifts)
       true
     }
 
@@ -246,8 +237,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
         StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:59:00Z").millisSinceEpoch, 10, None),
       ))
 
-      expectMsg(expectedShifts)
-
+      assertExpectedResponse(expectedShifts)
       val updatedShifts = Seq(shift1, shift2).map(_.copy(numberOfStaff = 0))
       actor ! UpdateShifts(updatedShifts)
 
@@ -273,15 +263,14 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
         StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:44:00Z").millisSinceEpoch, 0, None),
         StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:59:00Z").millisSinceEpoch, 0, None),
       ))
-      expectMsg(updatedExpectedShifts)
+      assertExpectedResponse(updatedExpectedShifts)
       actor ! PoisonPill
 
       val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
 
       newActor ! GetState
-      val expected = ShiftAssignments(updatedShifts)
 
-      expectMsg(updatedExpectedShifts)
+      assertExpectedResponse(updatedExpectedShifts)
 
       true
     }
@@ -361,8 +350,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor1")
 
       actor ! UpdateShifts(Seq(shift1, shift2, shift3, shift4))
-      expectMsg(ShiftAssignments(expectedShift))
-      //true
+      assertExpectedResponse(ShiftAssignments(expectedShift))
 
       val updatedShift1 = shift1.copy(numberOfStaff = 0)
       val updatedShift3 = shift3.copy(numberOfStaff = 0)
@@ -430,7 +418,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
         StaffAssignment("Evening 2", T1, SDate("2017-01-01T23:15:00Z").millisSinceEpoch, SDate("2017-01-01T23:29:00Z").millisSinceEpoch, 6, None))
 
       actor ! UpdateShifts(Seq(updatedShift1, updatedShift3))
-      expectMsg(ShiftAssignments(expectedUpdated1And2Shift))
+      assertExpectedResponse(ShiftAssignments(expectedUpdated1And2Shift))
       actor ! PoisonPill
 
 
@@ -489,7 +477,8 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
         StaffAssignment("Morning 1", T1, SDate("2017-01-01T14:15:00Z").millisSinceEpoch, SDate("2017-01-01T14:29:00Z").millisSinceEpoch, 10, None),
         StaffAssignment("Morning 1", T1, SDate("2017-01-01T14:30:00Z").millisSinceEpoch, SDate("2017-01-01T14:44:00Z").millisSinceEpoch, 10, None),
         StaffAssignment("Morning 1", T1, SDate("2017-01-01T14:45:00Z").millisSinceEpoch, SDate("2017-01-01T14:59:00Z").millisSinceEpoch, 10, None))
-      expectMsg(ShiftAssignments(expectedShift1))
+
+      assertExpectedResponse(ShiftAssignments(expectedShift1))
       actor2000 ! PoisonPill
 
       val actor2005 = newStaffActor(nowAs("2017-01-01T20:05"))
@@ -532,7 +521,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
         StaffAssignment("Morning 2", T1, SDate("2017-01-01T15:00:00Z").millisSinceEpoch, SDate("2017-01-01T15:14:00Z").millisSinceEpoch, 5, None),
         StaffAssignment("Morning 2", T1, SDate("2017-01-01T15:15:00Z").millisSinceEpoch, SDate("2017-01-01T15:29:00Z").millisSinceEpoch, 5, None))
 
-      expectMsg(ShiftAssignments(expectedShift1And2))
+      assertExpectedResponse(ShiftAssignments(expectedShift1And2))
       actor2005 ! PoisonPill
 
       val actor2010 = newStaffActor(nowAs("2017-01-01T20:10"))
@@ -600,7 +589,8 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
         StaffAssignment("Evening 1", T1, SDate("2017-01-01T22:45:00Z").millisSinceEpoch, SDate("2017-01-01T22:59:00Z").millisSinceEpoch, 6, None),
         StaffAssignment("Evening 2", T1, SDate("2017-01-01T23:00:00Z").millisSinceEpoch, SDate("2017-01-01T23:14:00Z").millisSinceEpoch, 6, None),
         StaffAssignment("Evening 2", T1, SDate("2017-01-01T23:15:00Z").millisSinceEpoch, SDate("2017-01-01T23:29:00Z").millisSinceEpoch, 6, None))
-      expectMsg(ShiftAssignments(expectedShiftWith3And4))
+
+      assertExpectedResponse(ShiftAssignments(expectedShiftWith3And4))
       actor2010 ! PoisonPill
 
       val actorPit2006 = newStaffPointInTimeActor(nowAs("2017-01-01T20:06"))
