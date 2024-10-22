@@ -128,7 +128,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
     updateTerminalShiftConfig = provideDrtSystemInterface.applicationService.updateTerminalShiftConfig,
     updateStaffingNumbers = (terminal, start, end, newValue, oldValue) => {
       val request = ShiftsActor.SetMinimumStaff(terminal, start, end, newValue, oldValue)
-      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request)
+      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request)(timeout = 90.seconds)
         .mapTo[ShiftAssignments]
     },
   )
