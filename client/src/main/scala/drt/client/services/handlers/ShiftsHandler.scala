@@ -50,7 +50,7 @@ class ShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, P
         .recoverWith {
           case _ =>
             log.error(s"Failed to save Shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(UpdateShifts(assignments), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(UpdateShifts(assignments), 90.minutes))
         }
       effectOnly(Effect(futureResponse))
   }

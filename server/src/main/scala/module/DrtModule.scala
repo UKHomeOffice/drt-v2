@@ -40,7 +40,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
   private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, drtParameters, now)
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val timeout: Timeout = new Timeout(60.seconds)
+  implicit val timeout: Timeout = new Timeout(90.seconds)
 
   override def configure(): Unit = {
     if (drtParameters.isTestEnvironment) {
@@ -128,7 +128,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
     updateTerminalShiftConfig = provideDrtSystemInterface.applicationService.updateTerminalShiftConfig,
     updateStaffingNumbers = (terminal, start, end, newValue, oldValue) => {
       val request = ShiftsActor.SetMinimumStaff(terminal, start, end, newValue, oldValue)
-      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request)(timeout = 90.seconds)
+      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request)
         .mapTo[ShiftAssignments]
     },
   )
