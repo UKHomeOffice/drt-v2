@@ -5,7 +5,7 @@ import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
 import actors.persistent.staffing.ShiftsActor.{ReplaceAllShifts, UpdateShifts, applyUpdatedShifts}
-import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
+import actors.persistent.staffing.ShiftsMessageParser.{log, shiftMessagesToStaffAssignments}
 import actors.routing.SequentialWritesActor
 import actors.{ExpiryActorLike, StreamingJournalLike}
 import akka.actor.{ActorRef, ActorSystem, Props, Scheduler}
@@ -23,6 +23,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, ShiftStateSnapshotMessage, ShiftsMessage}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
+
 import scala.concurrent.duration._
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
@@ -105,8 +106,10 @@ object ShiftsActor extends ShiftsActorLike {
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
-
-    SplitUtil.applyUpdatedShifts(existingAssignments, shiftsToUpdate)
+    val createdAt = SDate.now()
+    val updatedShifts = SplitUtil.applyUpdatedShifts(existingAssignments, shiftsToUpdate)
+    log.info(s"Shifts updated took ${SDate.now.millisSinceEpoch-createdAt.millisSinceEpoch} ms")
+    updatedShifts
   }
 
 
@@ -117,7 +120,7 @@ object ShiftsActor extends ShiftsActorLike {
                            )
                            (implicit timeout: Timeout, ec: ExecutionContext): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
-      val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), s"shifts-actor-writes-${UUID.randomUUID()}")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), s"shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 
