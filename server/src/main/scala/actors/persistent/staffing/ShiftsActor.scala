@@ -44,7 +44,7 @@ trait ShiftsActorLike {
     now => (state, msg) => msg match {
       case m: ShiftsMessage =>
         val shiftsToRecover = shiftMessagesToStaffAssignments(m.shifts)
-        val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
+        val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments, "shiftsToRecover - eventToState")
         val newState = ShiftAssignments(updatedShifts).purgeExpired(startOfTheMonth(now))
         val subscriberEvents = terminalUpdateRequests(shiftsToRecover)
         (newState, subscriberEvents)
@@ -105,10 +105,10 @@ object ShiftsActor extends ShiftsActorLike {
                              previousMinimum: Option[Int]) extends ShiftUpdate
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
-                         shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
+                         shiftsToUpdate: Seq[StaffAssignmentLike], sourceCall: String): Seq[StaffAssignmentLike] = {
     val createdAt = SDate.now()
     val updatedShifts = SplitUtil.applyUpdatedShifts(existingAssignments, shiftsToUpdate)
-    log.info(s"Shifts updated took ${SDate.now.millisSinceEpoch-createdAt.millisSinceEpoch} ms")
+    log.info(s"Shifts updated took sourceCall $sourceCall ${SDate.now.millisSinceEpoch - createdAt.millisSinceEpoch} ms")
     updatedShifts
   }
 
@@ -167,7 +167,7 @@ class ShiftsActor(val now: () => SDateLike,
     case sm: ShiftsMessage =>
       log.info(s"Recovery: ShiftsMessage received with ${sm.shifts.length} shifts")
       val shiftsToRecover = shiftMessagesToStaffAssignments(sm.shifts)
-      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
+      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments,"shiftsToRecover - processRecoveryMessage")
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
   }
 
@@ -200,7 +200,7 @@ class ShiftsActor(val now: () => SDateLike,
 
     case UpdateShifts(shiftsToUpdate) =>
       //      println(s"state.assignments: ${state.assignments}")
-      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate)
+      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate, "UpdateShifts(shiftsToUpdate) - shiftsToUpdate")
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
       //    println(s"updatedShifts: $updatedShifts")
       val createdAt = now()
