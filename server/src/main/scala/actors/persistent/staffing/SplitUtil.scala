@@ -30,50 +30,93 @@ object SplitUtil {
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
-
     def isOverlapping(existing: StaffAssignmentLike, update: StaffAssignmentLike): Boolean = {
       existing.terminal == update.terminal &&
         existing.start < update.end &&
         update.start < existing.end
     }
-//    val existingIntervals = existingAssignments.par.flatMap(splitIntoIntervals).seq
-//    val updateIntervals = shiftsToUpdate.par.flatMap(splitIntoIntervals).seq
-
-    val existingIntervals: immutable.Iterable[StaffAssignment] = existingAssignments
-      .groupBy(_.terminal)
-      .par
-      .flatMap { case (_, assignments) => assignments.flatMap(splitIntoIntervals) }
-      .seq
-
-    val updateIntervals: immutable.Iterable[StaffAssignment] = shiftsToUpdate
-      .groupBy(_.terminal)
-      .par
-      .flatMap { case (_, assignments) => assignments.flatMap(splitIntoIntervals) }
-      .seq
 
     implicit val ordering: Ordering[Long] = Ordering.Long
 
-    val existingMap: Map[Terminals.Terminal, TreeMap[Long, StaffAssignment]] = existingIntervals.groupBy(_.terminal).view.mapValues { assignments =>
-      TreeMap(assignments.map(e => e.start -> e).toSeq: _*)
-    }.toMap
+    val updateIntervalsByTerminal = shiftsToUpdate
+      .groupBy(_.terminal)
+      .view
+      .mapValues(assignments => assignments.flatMap(splitIntoIntervals))
+      .toMap
 
-    val overallShift: Seq[StaffAssignment] = updateIntervals.foldLeft(existingMap) { (acc, update) =>
-      val terminalMap = acc.getOrElse(update.terminal, TreeMap.empty[Long, StaffAssignment])
-      val overlappingKey = terminalMap.keys.find { start =>
-        isOverlapping(terminalMap(start), update)
-      }
+    val existingIntervalsByTerminal = existingAssignments
+      .groupBy(_.terminal)
+      .view
+      .filterKeys(updateIntervalsByTerminal.contains)
+      .mapValues(assignments => assignments.flatMap(splitIntoIntervals).groupBy(_.terminal).view.mapValues { intervals =>
+        TreeMap(intervals.map(e => e.start -> e).toSeq: _*)
+      }.toMap)
+      .toMap
 
-      overlappingKey match {
-        case Some(start) =>
-          val existing = terminalMap(start)
-          val updated = existing.copy(numberOfStaff = update.numberOfStaff)
-          acc.updated(update.terminal, terminalMap.updated(start, updated))
-        case None =>
-          acc.updated(update.terminal, terminalMap + (update.start -> update))
+    val overallShift = updateIntervalsByTerminal.flatMap { case (terminal, updateIntervals) =>
+      val existingMap = existingIntervalsByTerminal.getOrElse(terminal, Map.empty[Terminals.Terminal, TreeMap[Long, StaffAssignment]])
+      val updatedMap = updateIntervals.foldLeft(existingMap) { (acc, update) =>
+        val terminalMap = acc.getOrElse(terminal, TreeMap.empty[Long, StaffAssignment])
+        val overlappingKey = terminalMap.keys.find { start =>
+          isOverlapping(terminalMap(start), update)
+        }
+
+        overlappingKey match {
+          case Some(start) =>
+            val existing = terminalMap(start)
+            val updated = existing.copy(numberOfStaff = update.numberOfStaff)
+            acc.updated(terminal, terminalMap.updated(start, updated))
+          case None =>
+            acc.updated(terminal, terminalMap + (update.start -> update))
+        }
       }
-    }.values.flatMap(_.values).toSeq
+      updatedMap.values.flatMap(_.values)
+    }.toSeq
 
     overallShift
+//    def isOverlapping(existing: StaffAssignmentLike, update: StaffAssignmentLike): Boolean = {
+//      existing.terminal == update.terminal &&
+//        existing.start < update.end &&
+//        update.start < existing.end
+//    }
+////    val existingIntervals = existingAssignments.par.flatMap(splitIntoIntervals).seq
+////    val updateIntervals = shiftsToUpdate.par.flatMap(splitIntoIntervals).seq
+//
+//    val existingIntervals: immutable.Iterable[StaffAssignment] = existingAssignments
+//      .groupBy(_.terminal)
+//      .par
+//      .flatMap { case (_, assignments) => assignments.flatMap(splitIntoIntervals) }
+//      .seq
+//
+//    val updateIntervals: immutable.Iterable[StaffAssignment] = shiftsToUpdate
+//      .groupBy(_.terminal)
+//      .par
+//      .flatMap { case (_, assignments) => assignments.flatMap(splitIntoIntervals) }
+//      .seq
+//
+//    implicit val ordering: Ordering[Long] = Ordering.Long
+//
+//    val existingMap: Map[Terminals.Terminal, TreeMap[Long, StaffAssignment]] = existingIntervals.groupBy(_.terminal).view.mapValues { assignments =>
+//      TreeMap(assignments.map(e => e.start -> e).toSeq: _*)
+//    }.toMap
+//
+//    val overallShift: Seq[StaffAssignment] = updateIntervals.foldLeft(existingMap) { (acc, update) =>
+//      val terminalMap = acc.getOrElse(update.terminal, TreeMap.empty[Long, StaffAssignment])
+//      val overlappingKey = terminalMap.keys.find { start =>
+//        isOverlapping(terminalMap(start), update)
+//      }
+//
+//      overlappingKey match {
+//        case Some(start) =>
+//          val existing = terminalMap(start)
+//          val updated = existing.copy(numberOfStaff = update.numberOfStaff)
+//          acc.updated(update.terminal, terminalMap.updated(start, updated))
+//        case None =>
+//          acc.updated(update.terminal, terminalMap + (update.start -> update))
+//      }
+//    }.values.flatMap(_.values).toSeq
+//
+//    overallShift
 
 //    val existingMap = existingIntervals.groupBy(_.terminal).view.mapValues { assignments =>
 //      TreeMap(assignments.map(e => e.start -> e): _*)
