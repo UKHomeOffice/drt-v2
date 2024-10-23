@@ -108,7 +108,7 @@ object ShiftsActor extends ShiftsActorLike {
                          shiftsToUpdate: Seq[StaffAssignmentLike], sourceCall: String): Seq[StaffAssignmentLike] = {
     val createdAt = SDate.now()
     val updatedShifts = SplitUtil.applyUpdatedShifts(existingAssignments, shiftsToUpdate)
-    log.info(s"Shifts updated took sourceCall $sourceCall ${SDate.now.millisSinceEpoch - createdAt.millisSinceEpoch} ms")
+    log.info(s"User Shifts updated took sourceCall $sourceCall ${SDate.now.millisSinceEpoch - createdAt.millisSinceEpoch} ms")
     updatedShifts
   }
 
@@ -166,8 +166,17 @@ class ShiftsActor(val now: () => SDateLike,
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case sm: ShiftsMessage =>
       log.info(s"Recovery: ShiftsMessage received with ${sm.shifts.length} shifts")
-      val shiftsToRecover = shiftMessagesToStaffAssignments(sm.shifts)
-      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments,"shiftsToRecover - processRecoveryMessage")
+      val shiftsToRecover: ShiftAssignments = shiftMessagesToStaffAssignments(sm.shifts)
+
+      val batchSize = 200
+      val updatedShifts = if (shiftsToRecover.assignments.size > batchSize) {
+        shiftsToRecover.assignments.grouped(batchSize).flatMap { batch =>
+          applyUpdatedShifts(state.assignments, batch, "shiftsToRecover batched - processRecoveryMessage")
+        }.toSeq
+      } else {
+        applyUpdatedShifts(state.assignments, shiftsToRecover.assignments, "shiftsToRecover - processRecoveryMessage")
+      }
+
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
   }
 
