@@ -90,7 +90,7 @@ trait ShiftsActorLike {
 }
 
 object ShiftsActor extends ShiftsActorLike {
-  val snapshotInterval = 5000
+  val snapshotInterval = 500
 
   trait ShiftUpdate
 
