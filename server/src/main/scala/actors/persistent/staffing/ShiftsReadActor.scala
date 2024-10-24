@@ -23,7 +23,7 @@ class ShiftsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike)
       if (createdAtMillis <= pointInTime.millisSinceEpoch) {
         logRecoveryMessage(s"ShiftsMessage received with ${shiftMessages.length} shifts")
         val shiftsToRecover = shiftMessagesToStaffAssignments(shiftMessages)
-        val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments)
+        val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments,"ShiftsReadActor-processRecoveryMessage")
         purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
       }
   }

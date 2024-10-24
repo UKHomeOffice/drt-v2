@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v898"
+    val drtLib = "v911"
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
@@ -99,7 +99,7 @@ object Settings {
     "react-markdown" -> "9.0.1",
     "@types/react-dom" -> react,
     "css-loader" -> "6.7.2",
-    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react/tree/1.4.1",
+    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#a31cd014e8913b756f5d901186d4e271e9994b82",
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

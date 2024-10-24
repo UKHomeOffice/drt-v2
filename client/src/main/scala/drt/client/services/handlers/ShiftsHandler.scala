@@ -46,11 +46,11 @@ class ShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, P
 
     case UpdateShifts(assignments) =>
       val futureResponse = DrtApi.post("shifts", write(ShiftAssignments(assignments)))
-        .map(_ => NoAction)
+        .map(r => SetAllShifts(read[ShiftAssignments](r.responseText)))
         .recoverWith {
           case _ =>
             log.error(s"Failed to save Shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(UpdateShifts(assignments), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(UpdateShifts(assignments), 90.minutes))
         }
       effectOnly(Effect(futureResponse))
   }
