@@ -50,8 +50,8 @@ import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeP
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.db.AggregateDb
-import uk.gov.homeoffice.drt.db.dao.{PortTerminalConfigDao, PortTerminalShiftConfigDao}
-import uk.gov.homeoffice.drt.db.tables.{PortTerminalConfig, PortTerminalShiftConfig}
+import uk.gov.homeoffice.drt.db.dao.PortTerminalShiftConfigDao
+import uk.gov.homeoffice.drt.db.tables.PortTerminalShiftConfig
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -155,16 +155,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
     PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
-
-  val getTerminalConfig: Terminal => Future[Option[PortTerminalConfig]] =
-    terminal => {
-      aggregatedDb.run(PortTerminalConfigDao.get(airportConfig.portCode)(ec)(terminal))
-    }
-
-  val updateTerminalConfig: PortTerminalConfig => Future[Int] =
-    portTerminalConfig => {
-      aggregatedDb.run(PortTerminalConfigDao.insertOrUpdate(airportConfig.portCode)(portTerminalConfig))
-    }
 
   val getTerminalShiftConfig: Terminal => Future[Option[PortTerminalShiftConfig]] =
     terminal => {

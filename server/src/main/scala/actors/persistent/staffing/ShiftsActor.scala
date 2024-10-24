@@ -90,7 +90,7 @@ trait ShiftsActorLike {
 }
 
 object ShiftsActor extends ShiftsActorLike {
-  val snapshotInterval = 500
+  val snapshotInterval = 10 // this is the number of events between snapshots at moment as it taking time to recover
 
   trait ShiftUpdate
 
@@ -108,7 +108,7 @@ object ShiftsActor extends ShiftsActorLike {
                          shiftsToUpdate: Seq[StaffAssignmentLike], sourceCall: String): Seq[StaffAssignmentLike] = {
     val createdAt = SDate.now()
     val updatedShifts = SplitUtil.applyUpdatedShifts(existingAssignments, shiftsToUpdate)
-    log.info(s"User Shifts updated took sourceCall $sourceCall ${SDate.now.millisSinceEpoch - createdAt.millisSinceEpoch} ms")
+    log.info(s"Shifts updated took sourceCall $sourceCall ${SDate.now.millisSinceEpoch - createdAt.millisSinceEpoch} ms")
     updatedShifts
   }
 
@@ -208,10 +208,8 @@ class ShiftsActor(val now: () => SDateLike,
       })
 
     case UpdateShifts(shiftsToUpdate) =>
-      //      println(s"state.assignments: ${state.assignments}")
       val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate, "UpdateShifts(shiftsToUpdate) - shiftsToUpdate")
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
-      //    println(s"updatedShifts: $updatedShifts")
       val createdAt = now()
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
 
