@@ -53,7 +53,7 @@ object MonthlyStaffing {
                    airportConfig: AirportConfig,
                    enableStaffPlanningChanges: Boolean
                   ) {
-    def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
+    def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
     def dayRangeType: String = terminalPageTab.dayRangeType match {
       case Some(dayRange) => dayRange

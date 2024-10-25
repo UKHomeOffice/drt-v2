@@ -296,7 +296,7 @@ object TerminalComponent {
             GoogleEventTracker.sendEvent(terminalName, "click", "Monthly Staffing")
             props.router.set(props.terminalPageTab.update(
               mode = Staffing,
-              subMode = "15",
+              subMode = "60",
               queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
             ))
           }
