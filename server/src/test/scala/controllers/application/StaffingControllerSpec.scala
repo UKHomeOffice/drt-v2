@@ -11,7 +11,7 @@ import play.api.mvc.{AnyContentAsEmpty, AnyContentAsText, Headers}
 import play.api.test.Helpers._
 import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.db.tables.{PortTerminalConfig, PortTerminalShiftConfig}
+import uk.gov.homeoffice.drt.db.tables.PortTerminalShiftConfig
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr

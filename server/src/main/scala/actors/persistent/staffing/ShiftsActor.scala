@@ -108,7 +108,7 @@ object ShiftsActor extends ShiftsActorLike {
                          shiftsToUpdate: Seq[StaffAssignmentLike], sourceCall: String): Seq[StaffAssignmentLike] = {
     val createdAt = SDate.now()
     val updatedShifts = SplitUtil.applyUpdatedShifts(existingAssignments, shiftsToUpdate)
-    log.info(s"Shifts updated took sourceCall $sourceCall ${SDate.now.millisSinceEpoch - createdAt.millisSinceEpoch} ms")
+    log.info(s"Shifts updated from source $sourceCall took ${SDate.now.millisSinceEpoch - createdAt.millisSinceEpoch} ms")
     updatedShifts
   }
 
