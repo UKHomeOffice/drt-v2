@@ -5,6 +5,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{macroRW, ReadWriter => RW}
 
+case class StaffAssignmentKey(terminal: Terminal, start: MillisSinceEpoch, end: MillisSinceEpoch)
 
 sealed trait StaffAssignmentLike extends Expireable {
   val name: String
@@ -18,6 +19,13 @@ sealed trait StaffAssignmentLike extends Expireable {
   val startMinutesSinceEpoch: MillisSinceEpoch = start / 60000
   val endMinutesSinceEpoch: MillisSinceEpoch = end / 60000
 
+  def key: StaffAssignmentKey = {
+    StaffAssignmentKey(
+      terminal = terminal,
+      start = start,
+      end = end
+    )
+  }
   override def isExpired(expireBeforeMillis: MillisSinceEpoch): Boolean = end < expireBeforeMillis
 }
 

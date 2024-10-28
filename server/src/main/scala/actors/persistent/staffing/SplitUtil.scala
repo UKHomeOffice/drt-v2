@@ -2,7 +2,7 @@ package actors.persistent.staffing
 
 import SplitUtil.splitIntoIntervals
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.{StaffAssignment, StaffAssignmentLike}
+import drt.shared.{StaffAssignment, StaffAssignmentKey, StaffAssignmentLike}
 import uk.gov.homeoffice.drt.ports.Terminals
 
 import scala.collection.immutable
@@ -31,48 +31,20 @@ object SplitUtil {
 
   def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
                          shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
-    def isOverlapping(existing: StaffAssignmentLike, update: StaffAssignmentLike): Boolean = {
-      existing.terminal == update.terminal &&
-        existing.start < update.end &&
-        update.start < existing.end
-    }
 
-    implicit val ordering: Ordering[Long] = Ordering.Long
+    val splitExisting = existingAssignments.flatMap(splitIntoIntervals)
+    val splitUpdates = shiftsToUpdate.flatMap(splitIntoIntervals)
 
-    val existingIntervals: immutable.Iterable[StaffAssignment] = existingAssignments
-      .groupBy(_.terminal)
-      .par
-      .flatMap { case (_, assignments) => assignments.flatMap(splitIntoIntervals) }
-      .seq
-
-    val updateIntervals: immutable.Iterable[StaffAssignment] = shiftsToUpdate
-      .groupBy(_.terminal)
-      .par
-      .flatMap { case (_, assignments) => assignments.flatMap(splitIntoIntervals) }
-      .seq
-
-
-    val existingMap: Map[Terminals.Terminal, TreeMap[Long, StaffAssignment]] = existingIntervals.groupBy(_.terminal).view.mapValues { assignments =>
-      TreeMap(assignments.map(e => e.start -> e).toSeq: _*)
+    val existingMap: Map[StaffAssignmentKey, StaffAssignment] = splitExisting.map { existing =>
+      existing.key -> existing
     }.toMap
 
-    val overallShift: Seq[StaffAssignment] = updateIntervals.foldLeft(existingMap) { (acc, update) =>
-      val terminalMap = acc.getOrElse(update.terminal, TreeMap.empty[Long, StaffAssignment])
-      val overlappingKey = terminalMap.keys.find { start =>
-        isOverlapping(terminalMap(start), update)
-      }
+    val updatedAssignments = splitUpdates.foldLeft(existingMap) { (acc, update) =>
+      acc.updated(update.key, update)
+    }
 
-      overlappingKey match {
-        case Some(start) =>
-          val existing = terminalMap(start)
-          val updated = existing.copy(numberOfStaff = update.numberOfStaff)
-          acc.updated(update.terminal, terminalMap.updated(start, updated))
-        case None =>
-          acc.updated(update.terminal, terminalMap + (update.start -> update))
-      }
-    }.values.flatMap(_.values).toSeq
+    updatedAssignments.values.toSeq
 
-    overallShift
   }
 
 }
