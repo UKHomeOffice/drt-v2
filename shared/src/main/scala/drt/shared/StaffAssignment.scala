@@ -4,6 +4,7 @@ import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{macroRW, ReadWriter => RW}
+import scala.concurrent.duration._
 
 case class StaffAssignmentKey(terminal: Terminal, start: MillisSinceEpoch, end: MillisSinceEpoch)
 
@@ -20,13 +21,22 @@ sealed trait StaffAssignmentLike extends Expireable {
   val endMinutesSinceEpoch: MillisSinceEpoch = end / 60000
 
   def key: StaffAssignmentKey = {
+    val intervalMillis = 14.minutes.toMillis
+    val breakMillis = 1.minute.toMillis
+    val totalIntervalMillis = intervalMillis + breakMillis
+    val startOfHour = start - (start % 1.hour.toMillis)
+    val intervalIndex = ((start % 1.hour.toMillis) / totalIntervalMillis).toInt
+    val intervalStart = startOfHour + (intervalIndex * totalIntervalMillis)
+
     StaffAssignmentKey(
       terminal = terminal,
-      start = start,
-      end = end
+      start = intervalStart,
+      end = intervalStart + intervalMillis
     )
   }
+
   override def isExpired(expireBeforeMillis: MillisSinceEpoch): Boolean = end < expireBeforeMillis
+
 }
 
 object StaffAssignmentLike {

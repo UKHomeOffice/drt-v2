@@ -1,15 +1,9 @@
 package actors.persistent.staffing
 
-import SplitUtil.splitIntoIntervals
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{StaffAssignment, StaffAssignmentKey, StaffAssignmentLike}
-import uk.gov.homeoffice.drt.ports.Terminals
 
-import scala.collection.immutable
-import scala.collection.immutable.TreeMap
 import scala.concurrent.duration._
-import scala.collection.parallel.CollectionConverters._
-import scala.collection.immutable.{HashMap, TreeMap}
+
 object SplitUtil {
 
   def splitIntoIntervals(assignment: StaffAssignmentLike): Seq[StaffAssignment] = {
