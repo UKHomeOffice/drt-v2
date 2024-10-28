@@ -151,7 +151,7 @@ object MonthlyStaffing {
     })
   }
 
-  def consecutiveDaysWithinDates(startDay: SDateLike, endDay: SDateLike): Seq[(SDateLike, String)] = {
+  def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[(SDateLike, String)] = {
     val lastDayOfPreviousMonth = SDate(startDay.getFullYear, startDay.getMonth, 1).addDays(-1)
     val adjustedStartDay: SDateLike = if (startDay.getDate == lastDayOfPreviousMonth.getDate) {
       if (startDay.getMonth == 11) // December
@@ -214,6 +214,32 @@ object MonthlyStaffing {
         scope.modState(state => state.copy(showEditStaffForm = true)).runNow()
       }
 
+      def handleNavigation(props: Props, viewingDate: SDateLike, isWeekly: Boolean, isDaily: Boolean): VdomTagOf[Div] = {
+        if (isWeekly) {
+          val previousWeekDate = {
+            val potentialPreviousWeekDate = viewingDate.addDays(-7)
+            val firstDayOfMonth = SDate.firstDayOfMonth(viewingDate)
+            if (potentialPreviousWeekDate.millisSinceEpoch < firstDayOfMonth.millisSinceEpoch) firstDayOfMonth else potentialPreviousWeekDate
+          }
+          val nextWeekDate = {
+            val potentialNextWeekDate = viewingDate.addDays(7)
+            val lastDayOfMonth = SDate.lastDayOfMonth(viewingDate)
+            if (potentialNextWeekDate.millisSinceEpoch > lastDayOfMonth.millisSinceEpoch) lastDayOfMonth else potentialNextWeekDate
+          }
+          navigationArrows(props, previousWeekDate, nextWeekDate)
+        } else if (isDaily) {
+          val isFirstDayOfMonth = viewingDate.getDate == 1
+          val isLastDayOfMonth = viewingDate.getDate == SDate.lastDayOfMonth(viewingDate).getDate
+          val previousDayDate = if (isFirstDayOfMonth) viewingDate else viewingDate.addDays(-1)
+          val nextDayDate = if (isLastDayOfMonth) viewingDate else viewingDate.addDays(1)
+          navigationArrows(props, previousDayDate, nextDayDate)
+        } else {
+          val previousMonthDate = viewingDate.addMonths(-1)
+          val nextMonthDate = viewingDate.addMonths(1)
+          navigationArrows(props, previousMonthDate, nextMonthDate)
+        }
+      }
+
       def confirmAndSave(startOfMonthMidnight: SDateLike, timeSlots: Seq[Seq[Any]]): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
         Callback {
           val initialTimeSlots: Seq[Seq[Any]] = slotsFromShifts(state.shifts, props.terminalPageTab.terminal, startOfMonthMidnight, props.timeSlotMinutes, props.terminalPageTab.dayRangeType.getOrElse("monthly"))
@@ -266,7 +292,7 @@ object MonthlyStaffing {
         modelChangeDetection,
         <.div(
           if (state.showStaffSuccess)
-            StaffSuccess(IStaffSuccess(0, "You updated the staff number for selected date and time", () => {
+            StaffUpdateSuccess(IStaffSuccess(0, "You updated the staff number for selected date and time", () => {
               scope.modState(state => state.copy(showStaffSuccess = false)).runNow()
             })) else EmptyVdom,
         ),
@@ -288,29 +314,7 @@ object MonthlyStaffing {
                 <.div(^.style := js.Dictionary("padding-top" -> "5px", "padding-left" -> "10px"),
                   <.strong(s"Staff numbers in ${props.terminalPageTab.dateFromUrlOrNow.getMonthString} ${props.terminalPageTab.dateFromUrlOrNow.getFullYear}")),
                 if (props.enableStaffPlanningChanges) <.div(^.className := "staffing-controls-navigation",
-                  if (isWeekly) {
-                    val previousWeekDate = {
-                      val potentialPreviousWeekDate = viewingDate.addDays(-7)
-                      val firstDayOfMonth = SDate.firstDayOfMonth(viewingDate)
-                      if (potentialPreviousWeekDate.millisSinceEpoch < firstDayOfMonth.millisSinceEpoch) firstDayOfMonth else potentialPreviousWeekDate
-                    }
-                    val nextWeekDate = {
-                      val potentialNextWeekDate = viewingDate.addDays(7)
-                      val lastDayOfMonth = SDate.lastDayOfMonth(viewingDate)
-                      if (potentialNextWeekDate.millisSinceEpoch > lastDayOfMonth.millisSinceEpoch) lastDayOfMonth else potentialNextWeekDate
-                    }
-                    navigationArrows(props, previousWeekDate, nextWeekDate)
-                  } else if (isDaily) {
-                    val isFirstDayOfMonth = viewingDate.getDate == 1
-                    val isLastDayOfMonth = viewingDate.getDate == SDate.lastDayOfMonth(viewingDate).getDate
-                    val previousDayDate = if (isFirstDayOfMonth) viewingDate else viewingDate.addDays(-1)
-                    val nextDayDate = if (isLastDayOfMonth) viewingDate else viewingDate.addDays(1)
-                    navigationArrows(props, previousDayDate, nextDayDate)
-                  } else {
-                    val previousMonthDate = viewingDate.addMonths(-1)
-                    val nextMonthDate = viewingDate.addMonths(1)
-                    navigationArrows(props, previousMonthDate, nextMonthDate)
-                  }
+                  handleNavigation(props, viewingDate, isWeekly, isDaily)
                 ) else EmptyVdom,
                 <.div(^.className := "staffing-controls-select",
                   drawSelect(
@@ -476,7 +480,7 @@ object MonthlyStaffing {
   }
 
   private def daysInMonthByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] =
-    consecutiveDaysWithinDates(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
+    consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
       .map { day =>
         timeZoneSafeTimeSlots(
           slotsInDay(day._1, timeSlotMinutes),
@@ -518,8 +522,8 @@ object MonthlyStaffing {
 
     val daysInMonth: Seq[(SDateLike, String)] = props.terminalPageTab.dayRangeType match {
       case Some("weekly") => consecutiveDayForWeek(viewingDate)
-      case Some("daily") => consecutiveDaysWithinDates(viewingDate, viewingDate)
-      case _ => consecutiveDaysWithinDates(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
+      case Some("daily") => consecutiveDaysInMonth(viewingDate, viewingDate)
+      case _ => consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
     }
 
     val dayForRowLabels = if (viewingDate.getMonth != 10)

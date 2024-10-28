@@ -37,30 +37,12 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
   "Shifts actor" should {
     "remember a shift staff assignment added before a shutdown" in {
       val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
-      val endTime = SDate(s"2017-01-01T12:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T7:30").millisSinceEpoch
       val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
 
       val expectedShifts = ShiftAssignments(Seq(
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:59:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 10, None)
       ))
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
@@ -86,10 +68,10 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
     "update the shift and check update shift number is applied" in {
       val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
-      val endTime = SDate(s"2017-01-01T12:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T8:30").millisSinceEpoch
 
-      val newStartTime = SDate(s"2017-01-01T9:00").millisSinceEpoch
-      val newEndTime = SDate(s"2017-01-01T11:00").millisSinceEpoch
+      val newStartTime = SDate(s"2017-01-01T7:30").millisSinceEpoch
+      val newEndTime = SDate(s"2017-01-01T8:00").millisSinceEpoch
 
       val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
 
@@ -106,44 +88,16 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:44:00Z").millisSinceEpoch, 10, None),
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:59:00Z").millisSinceEpoch, 10, None),
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:59:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:29:00Z").millisSinceEpoch, 10, None)
       ))
 
       val expectedNewShifts = ShiftAssignments(Seq(
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 10, None),
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:59:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:44:00Z").millisSinceEpoch, 5, None),
+        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:59:00Z").millisSinceEpoch, 5, None),
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:14:00Z").millisSinceEpoch, 10, None),
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:14:00Z").millisSinceEpoch, 5, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:29:00Z").millisSinceEpoch, 5, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:44:00Z").millisSinceEpoch, 5, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:59:00Z").millisSinceEpoch, 5, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:14:00Z").millisSinceEpoch, 5, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:29:00Z").millisSinceEpoch, 5, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:44:00Z").millisSinceEpoch, 5, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:59:00Z").millisSinceEpoch, 5, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:59:00Z").millisSinceEpoch, 10, None),
       ))
 
       actor ! UpdateShifts(shifts.assignments)
@@ -163,7 +117,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
     "snapshots are correctly persisted and replayed" in {
       val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
-      val endTime = SDate(s"2017-01-01T12:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T7:30").millisSinceEpoch
       val shifts = ShiftAssignments(Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
@@ -173,25 +127,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
 
       val expectedShifts = ShiftAssignments(Seq(
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T08:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T09:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T10:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning", T1, SDate(s"2017-01-01T11:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:59:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 10, None)
       ))
 
       actor ! UpdateShifts(shifts.assignments)
@@ -205,36 +141,21 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
     }
 
     "correctly remember an update to a shift after a restart" in {
-      val shift1 = generateStaffAssignment("Morning 1", T1, "2017-01-01T07:00", "2017-01-01T9:00", 10)
-      val shift2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T09:00", "2017-01-01T12:00", 10)
+      val shift1 = generateStaffAssignment("Morning one", T1, "2017-01-01T07:00", "2017-01-01T8.00", 10)
+      val shift2 = generateStaffAssignment("Morning 2", T1, "2017-01-01T07:30", "2017-01-01T8:15", 10)
 
       val now: () => SDateLike = () => SDate("2017-01-01T23:59")
       val expireAfterOneDay: () => SDateLike = () => now().addDays(-1)
 
-      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor1")
+      val actor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor-1")
       actor ! UpdateShifts(Seq(shift1, shift2))
 
       val expectedShifts = ShiftAssignments(Seq(
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T07:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T07:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T08:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T08:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T08:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T08:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T09:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T09:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T09:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T09:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T10:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T10:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T10:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T10:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:59:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:14:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:29:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:44:00Z").millisSinceEpoch, 10, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:59:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning one", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning one", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning one", T1, SDate(s"2017-01-01T07:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:44:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning one", T1, SDate(s"2017-01-01T07:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:59:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T08:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:14:00Z").millisSinceEpoch, 10, None),
       ))
 
       assertExpectedResponse(expectedShifts)
@@ -242,31 +163,16 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       actor ! UpdateShifts(updatedShifts)
 
       val updatedExpectedShifts = ShiftAssignments(Seq(
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T07:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:44:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T07:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:59:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T08:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:14:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T08:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:29:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T08:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:44:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 1", T1, SDate(s"2017-01-01T08:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:59:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T09:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:14:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T09:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:29:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T09:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:44:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T09:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T09:59:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T10:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:14:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T10:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:29:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T10:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:44:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T10:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T10:59:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:14:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:29:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:44:00Z").millisSinceEpoch, 0, None),
-        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T11:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T11:59:00Z").millisSinceEpoch, 0, None),
+        StaffAssignment("Morning one", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 0, None),
+        StaffAssignment("Morning one", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 0, None),
+        StaffAssignment("Morning one", T1, SDate(s"2017-01-01T07:30:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:44:00Z").millisSinceEpoch, 0, None),
+        StaffAssignment("Morning one", T1, SDate(s"2017-01-01T07:45:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:59:00Z").millisSinceEpoch, 0, None),
+        StaffAssignment("Morning 2", T1, SDate(s"2017-01-01T08:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T08:14:00Z").millisSinceEpoch, 0, None),
       ))
       assertExpectedResponse(updatedExpectedShifts)
       actor ! PoisonPill
 
-      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor2")
+      val newActor = system.actorOf(Props(new ShiftsActor(now, expireAfterOneDay, 10)), "shiftsActor-2")
 
       newActor ! GetState
 

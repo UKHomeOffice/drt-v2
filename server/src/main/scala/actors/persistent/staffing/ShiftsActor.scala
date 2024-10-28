@@ -90,7 +90,7 @@ trait ShiftsActorLike {
 }
 
 object ShiftsActor extends ShiftsActorLike {
-  val snapshotInterval = 10 // this is the number of events between snapshots at moment as it taking time to recover
+  val snapshotInterval = 5000
 
   trait ShiftUpdate
 
@@ -166,17 +166,8 @@ class ShiftsActor(val now: () => SDateLike,
   def processRecoveryMessage: PartialFunction[Any, Unit] = {
     case sm: ShiftsMessage =>
       log.info(s"Recovery: ShiftsMessage received with ${sm.shifts.length} shifts")
-      val shiftsToRecover: ShiftAssignments = shiftMessagesToStaffAssignments(sm.shifts)
-
-      val batchSize = 200
-      val updatedShifts = if (shiftsToRecover.assignments.size > batchSize) {
-        shiftsToRecover.assignments.grouped(batchSize).flatMap { batch =>
-          applyUpdatedShifts(state.assignments, batch, "shiftsToRecover batched - processRecoveryMessage")
-        }.toSeq
-      } else {
-        applyUpdatedShifts(state.assignments, shiftsToRecover.assignments, "shiftsToRecover - processRecoveryMessage")
-      }
-
+      val shiftsToRecover = shiftMessagesToStaffAssignments(sm.shifts)
+      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments,"shiftsToRecover - processRecoveryMessage")
       purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
   }
 

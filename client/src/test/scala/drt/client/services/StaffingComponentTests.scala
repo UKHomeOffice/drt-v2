@@ -90,7 +90,7 @@ object StaffingComponentTests extends TestSuite {
           val startDay = SDate("2017-12-21")
           val endDay = SDate("2017-12-25")
 
-          val result = consecutiveDaysWithinDates(startDay, endDay).map(_._1.millisSinceEpoch)
+          val result = consecutiveDaysInMonth(startDay, endDay).map(_._1.millisSinceEpoch)
 
           val expected = List(
             SDate("2017-12-21"),

@@ -23,7 +23,7 @@ object IStaffSuccess {
   }
 }
 
-object StaffSuccess {
+object StaffUpdateSuccess {
   @js.native
   @JSImport("@drt/drt-react", "StaffSuccess")
   object RawComponent extends js.Object
