@@ -3,17 +3,16 @@ package controllers.application
 import actors.persistent.nebo.NeboArrivalActor
 import akka.actor.ActorRef
 import akka.pattern.ask
-import api.ApiResponseBody
 import com.google.inject.Inject
 import controllers.model.RedListCounts
 import controllers.model.RedListCountsJsonFormats._
 import drt.server.feeds.StoreFeedImportArrivals
 import drt.server.feeds.lhr.forecast.LHRForecastCSVExtractor
 import drt.server.feeds.stn.STNForecastXLSExtractor
-import drt.shared.FlightsApi.Flights
 import drt.shared.{NeboArrivals, RedListPassengers}
 import play.api.libs.Files
 import play.api.libs.json.Json._
+import play.api.libs.json.OWrites
 import play.api.mvc._
 import spray.json._
 import uk.gov.homeoffice.drt.auth.Roles.{NeboUpload, PortFeedUpload}
@@ -26,7 +25,13 @@ import scala.concurrent.Future
 import scala.util.Try
 
 
-class ImportsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl)  {
+case class ApiResponseBody(message: String)
+
+object ApiResponseBody {
+  implicit val w: OWrites[ApiResponseBody] = writes[ApiResponseBody]
+}
+
+class ImportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
   def feedImportRedListCounts: Action[AnyContent] = authByRole(NeboUpload) {
     Action.async { request =>
@@ -42,9 +47,9 @@ class ImportsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInterf
                     .ask(RedListCounts(updatedRedListCounts))
                   Accepted(toJson(ApiResponseBody(s"${redListCounts.passengers} red list records imported")))
                 }.recover {
-                case e => log.warning(s"Error while updating redListPassenger", e)
-                  BadRequest("Failed to update the red List Passenger")
-              }
+                  case e => log.warning(s"Error while updating redListPassenger", e)
+                    BadRequest("Failed to update the red List Passenger")
+                }
             }.getOrElse(Future.successful(BadRequest("Failed to parse json")))
         case None => Future.successful(BadRequest("No content"))
       }

@@ -151,8 +151,8 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
 
       val fileName = CsvFileStreaming.makeFileName(s"simulation-${simulationParams.passengerWeighting}",
         Option(simulationParams.terminal),
-        simulationParams.date,
-        simulationParams.date,
+        SDate(simulationParams.date),
+        SDate(simulationParams.date),
         airportConfig.portCode
       ) + ".csv"
 

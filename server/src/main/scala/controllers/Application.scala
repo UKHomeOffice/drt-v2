@@ -1,22 +1,23 @@
 package controllers
 
 import akka.event.Logging
-import api._
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
-import drt.http.ProdSendAndReceive
+import spray.json.enrichAny
 import drt.shared.DrtPortConfigs
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
 import slickdb._
-import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.keycloak.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
@@ -73,7 +74,7 @@ trait ABFeatureProviderLike {
 }
 
 class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)
-  extends AuthController(cc, ctrl) {
+  extends AuthController(cc, ctrl) with KeyCloakAuthTokenParserProtocol {
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
@@ -193,7 +194,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   def viewedFeatureGuideIds: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
-      import spray.json.DefaultJsonProtocol.{StringJsonFormat, immSeqFormat}
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.featureGuideViewService.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
     }
@@ -252,7 +252,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
     val usernameOption = postStringValOrElse("username")
     val passwordOption = postStringValOrElse("password")
-    import KeyCloakAuthTokenParserProtocol._
+
     import spray.json._
 
     def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse): Result = token match {
@@ -274,7 +274,8 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       clientSecret <- clientSecretOption
     } yield (usernameOption, passwordOption) match {
       case (Some(username), Some(password)) =>
-        val authClient = new KeyCloakAuth(tokenUrl, clientId, clientSecret) with ProdSendAndReceive
+        val requestToEventualResponse: HttpRequest => Future[HttpResponse] = request => Http().singleRequest(request)
+        val authClient = KeyCloakAuth(tokenUrl, clientId, clientSecret, requestToEventualResponse)
         authClient.getToken(username, password).map(tokenToHttpResponse(username))
       case _ =>
         log.info(s"Invalid post fields for api login.")
