@@ -42,7 +42,7 @@ object StaffingUtil {
     daysOfWeek(adjustedStartDay, days)
   }
 
-  def daysOfWeek(startDate: SDateLike, numberOfDays: Int) = {
+  def daysOfWeek(startDate: SDateLike, numberOfDays: Int): Seq[(SDateLike, String)] = {
     List.tabulate(numberOfDays)(i => {
       val date = startDate.addDays(i)
       val dayOfWeek = date.getDayOfWeek match {

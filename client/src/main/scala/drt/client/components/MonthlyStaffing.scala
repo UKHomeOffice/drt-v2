@@ -191,11 +191,11 @@ object MonthlyStaffing {
         }
       }
 
-      def confirmAndSave(startOfMonthMidnight: SDateLike, timeSlots: Seq[Seq[Any]]): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
+      def confirmAndSave(viewingDate: SDateLike, timeSlots: Seq[Seq[Any]]): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
         Callback {
           val initialTimeSlots: Seq[Seq[Any]] = slotsFromShifts(state.shifts,
             props.terminalPageTab.terminal,
-            startOfMonthMidnight,
+            viewingDate,
             props.timeSlotMinutes,
             props.terminalPageTab.dayRangeType.getOrElse("monthly"))
 
@@ -205,9 +205,10 @@ object MonthlyStaffing {
 
           val changedShiftSlots: Seq[StaffAssignment] = updatedShiftAssignments(
             quarterHourlyChanges,
-            startOfMonthMidnight,
+            viewingDate,
             props.terminalPageTab.terminal,
-            saveAsTimeSlotMinutes)
+            saveAsTimeSlotMinutes,
+            props.terminalPageTab.dayRangeType.getOrElse("monthly"))
 
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots).map(d => state.colHeadings(d)).toList
@@ -389,13 +390,18 @@ object MonthlyStaffing {
     .build
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int],
-                              startOfMonthMidnight: SDateLike,
+                              viewingDate: SDateLike,
                               terminalName: Terminal,
-                              timeSlotMinutes: Int
+                              timeSlotMinutes: Int,
+                              dayRange: String
                              ): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
-      val timeSlots = daysInMonthByTimeSlot((startOfMonthMidnight, timeSlotMinutes))
-
+      val timeSlots: Seq[Seq[Option[SDateLike]]] =
+        dayRange match {
+          case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes))
+          case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes))
+          case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map(Seq(_))
+        }
       timeSlots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
         val startMd = slotStart.millisSinceEpoch
         val endMd = slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch
