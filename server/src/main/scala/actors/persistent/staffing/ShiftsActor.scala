@@ -4,8 +4,8 @@ import actors.DrtStaticParameters.startOfTheMonth
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
-import actors.persistent.staffing.ShiftsActor.{ReplaceAllShifts, UpdateShifts, applyUpdatedShifts}
-import actors.persistent.staffing.ShiftsMessageParser.{log, shiftMessagesToStaffAssignments}
+import actors.persistent.staffing.ShiftsActor.{ReplaceAllShifts, UpdateShifts}
+import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
 import actors.routing.SequentialWritesActor
 import actors.{ExpiryActorLike, StreamingJournalLike}
 import akka.actor.{ActorRef, ActorSystem, Props, Scheduler}
@@ -24,7 +24,6 @@ import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftMessage, Shift
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, MilliTimes, SDate, SDateLike}
 
-import scala.concurrent.duration._
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -44,8 +43,8 @@ trait ShiftsActorLike {
     now => (state, msg) => msg match {
       case m: ShiftsMessage =>
         val shiftsToRecover = shiftMessagesToStaffAssignments(m.shifts)
-        val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments, "shiftsToRecover - eventToState")
-        val newState = ShiftAssignments(updatedShifts).purgeExpired(startOfTheMonth(now))
+        val updatedShifts = state.applyUpdates(shiftsToRecover.assignments)
+        val newState = updatedShifts.purgeExpired(startOfTheMonth(now))
         val subscriberEvents = terminalUpdateRequests(shiftsToRecover)
         (newState, subscriberEvents)
       case _ => (state, Seq.empty)
@@ -104,15 +103,6 @@ object ShiftsActor extends ShiftsActorLike {
                              newMinimum: Option[Int],
                              previousMinimum: Option[Int]) extends ShiftUpdate
 
-  def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
-                         shiftsToUpdate: Seq[StaffAssignmentLike], sourceCall: String): Seq[StaffAssignmentLike] = {
-    val createdAt = SDate.now()
-    val updatedShifts = SplitUtil.applyUpdatedShifts(existingAssignments, shiftsToUpdate)
-    log.info(s"Shifts updated from source $sourceCall took ${SDate.now.millisSinceEpoch - createdAt.millisSinceEpoch} ms")
-    updatedShifts
-  }
-
-
   def sequentialWritesProps(now: () => SDateLike,
                             expireBefore: () => SDateLike,
                             requestAndTerminateActor: ActorRef,
@@ -167,8 +157,8 @@ class ShiftsActor(val now: () => SDateLike,
     case sm: ShiftsMessage =>
       log.info(s"Recovery: ShiftsMessage received with ${sm.shifts.length} shifts")
       val shiftsToRecover = shiftMessagesToStaffAssignments(sm.shifts)
-      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments,"shiftsToRecover - processRecoveryMessage")
-      purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
+      val updatedShifts = state.applyUpdates(shiftsToRecover.assignments)
+      purgeExpiredAndUpdateState(updatedShifts)
   }
 
   override def postRecoveryComplete(): Unit = terminalDays.foreach {
@@ -199,8 +189,8 @@ class ShiftsActor(val now: () => SDateLike,
       })
 
     case UpdateShifts(shiftsToUpdate) =>
-      val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToUpdate, "UpdateShifts(shiftsToUpdate) - shiftsToUpdate")
-      purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
+      val updatedShifts = state.applyUpdates(shiftsToUpdate)
+      purgeExpiredAndUpdateState(updatedShifts)
       val createdAt = now()
       val shiftsMessage = ShiftsMessage(staffAssignmentsToShiftsMessages(ShiftAssignments(shiftsToUpdate), createdAt), Option(createdAt.millisSinceEpoch))
 

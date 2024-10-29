@@ -1,6 +1,5 @@
 package actors.persistent.staffing
 
-import actors.persistent.staffing.ShiftsActor.applyUpdatedShifts
 import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
 import akka.actor.Props
 import akka.persistence.{Recovery, SnapshotSelectionCriteria}
@@ -23,8 +22,8 @@ class ShiftsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike)
       if (createdAtMillis <= pointInTime.millisSinceEpoch) {
         logRecoveryMessage(s"ShiftsMessage received with ${shiftMessages.length} shifts")
         val shiftsToRecover = shiftMessagesToStaffAssignments(shiftMessages)
-        val updatedShifts = applyUpdatedShifts(state.assignments, shiftsToRecover.assignments,"ShiftsReadActor-processRecoveryMessage")
-        purgeExpiredAndUpdateState(ShiftAssignments(updatedShifts))
+        val updatedShifts = state.applyUpdates(shiftsToRecover.assignments)
+        purgeExpiredAndUpdateState(updatedShifts)
       }
   }
 

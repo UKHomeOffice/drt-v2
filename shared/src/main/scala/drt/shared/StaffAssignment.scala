@@ -2,9 +2,11 @@ package drt.shared
 
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDateLike
 import upickle.default.{macroRW, ReadWriter => RW}
-import scala.concurrent.duration._
+
+import scala.concurrent.duration.DurationInt
 
 case class StaffAssignmentKey(terminal: Terminal, start: MillisSinceEpoch, end: MillisSinceEpoch)
 
@@ -20,27 +22,13 @@ sealed trait StaffAssignmentLike extends Expireable {
   val startMinutesSinceEpoch: MillisSinceEpoch = start / 60000
   val endMinutesSinceEpoch: MillisSinceEpoch = end / 60000
 
-  def key: StaffAssignmentKey = {
-    val intervalMillis = 14.minutes.toMillis
-    val breakMillis = 1.minute.toMillis
-    val totalIntervalMillis = intervalMillis + breakMillis
-    val startOfHour = start - (start % 1.hour.toMillis)
-    val intervalIndex = ((start % 1.hour.toMillis) / totalIntervalMillis).toInt
-    val intervalStart = startOfHour + (intervalIndex * totalIntervalMillis)
-
-    StaffAssignmentKey(
-      terminal = terminal,
-      start = intervalStart,
-      end = intervalStart + intervalMillis
-    )
-  }
-
   override def isExpired(expireBeforeMillis: MillisSinceEpoch): Boolean = end < expireBeforeMillis
 
+  def splitIntoSlots(slotMinutes: Int): Seq[StaffAssignment]
 }
 
 object StaffAssignmentLike {
-  implicit val rw: RW[StaffAssignmentLike] = RW.merge(CompleteStaffMovement.rw, StaffAssignment.rw)
+  implicit val rw: RW[StaffAssignmentLike] = RW.merge(/*CompleteStaffMovement.rw, */StaffAssignment.rw)
 }
 
 case class StaffAssignment(name: String,
@@ -50,28 +38,40 @@ case class StaffAssignment(name: String,
                            numberOfStaff: Int,
                            createdBy: Option[String]) extends StaffAssignmentLike {
   override val maybeUuid: Option[String] = None
+
+  override def splitIntoSlots(slotMinutes: Int): Seq[StaffAssignment] =
+    (start until end by slotMinutes.minutes.toMillis).map(start =>
+      StaffAssignment(
+        name = name,
+        terminal = terminal,
+        start = start,
+        end = start + (slotMinutes.minutes.toMillis - oneMinuteMillis),
+        numberOfStaff = numberOfStaff,
+        createdBy = createdBy
+      )
+    )
 }
 
 object StaffAssignment {
   implicit val rw: RW[StaffAssignment] = macroRW
 }
 
-object CompleteStaffMovement {
-  implicit val rw: RW[CompleteStaffMovement] = macroRW
-}
+//object CompleteStaffMovement {
+//  implicit val rw: RW[CompleteStaffMovement] = macroRW
+//}
 
-case class CompleteStaffMovement(reason: String,
-                                 terminal: Terminal,
-                                 start: MillisSinceEpoch,
-                                 end: MillisSinceEpoch,
-                                 numberOfStaff: Int,
-                                 uuid: String,
-                                 createdBy: Option[String]) extends StaffAssignmentLike {
-  override val name: String = reason
-  override val maybeUuid: Option[String] = Option(uuid)
-  val startMovement: StaffMovement = StaffMovement(terminal, reason, start, numberOfStaff, uuid, None, createdBy)
-  val endMovement: StaffMovement = StaffMovement(terminal, reason, end, numberOfStaff, uuid, None, createdBy)
-}
+//case class CompleteStaffMovement(reason: String,
+//                                 terminal: Terminal,
+//                                 start: MillisSinceEpoch,
+//                                 end: MillisSinceEpoch,
+//                                 numberOfStaff: Int,
+//                                 uuid: String,
+//                                 createdBy: Option[String]) extends StaffAssignmentLike {
+//  override val name: String = reason
+//  override val maybeUuid: Option[String] = Option(uuid)
+//  val startMovement: StaffMovement = StaffMovement(terminal, reason, start, numberOfStaff, uuid, None, createdBy)
+//  val endMovement: StaffMovement = StaffMovement(terminal, reason, end, numberOfStaff, uuid, None, createdBy)
+//}
 
 trait StaffAssignmentsLike {
   val assignments: Seq[StaffAssignmentLike]
@@ -89,12 +89,18 @@ object StaffAssignmentsLike {
 }
 
 object ShiftAssignments {
-  val empty: ShiftAssignments = ShiftAssignments(Seq())
-
   implicit val rw: RW[ShiftAssignments] = macroRW
+
+  val periodLengthMinutes: Int = 15
+
+  val empty: ShiftAssignments = ShiftAssignments(Map[TM, StaffAssignmentLike]())
+
+  def apply(assignments: Seq[StaffAssignmentLike]): ShiftAssignments =
+    ShiftAssignments(assignments.map(a => TM(a.terminal, a.start) -> a).toMap)
 }
 
-case class ShiftAssignments(assignments: Seq[StaffAssignmentLike]) extends StaffAssignmentsLike with HasExpireables[ShiftAssignments] {
+case class ShiftAssignments(indexedAssignments: Map[TM, StaffAssignmentLike]) extends StaffAssignmentsLike with HasExpireables[ShiftAssignments] {
+  lazy val assignments: Seq[StaffAssignmentLike] = indexedAssignments.values.toSeq
   def terminalStaffAt(terminalName: Terminal, date: SDateLike, msToSd: MillisSinceEpoch => SDateLike): Int = {
     val dateMinutesSinceEpoch = date.millisSinceEpoch / 60000
 
@@ -109,7 +115,15 @@ case class ShiftAssignments(assignments: Seq[StaffAssignmentLike]) extends Staff
 
   def purgeExpired(expireBefore: () => SDateLike): ShiftAssignments = {
     val expireBeforeMillis = expireBefore().millisSinceEpoch
-    copy(assignments = assignments.filterNot(_.isExpired(expireBeforeMillis)))
+    copy(indexedAssignments = indexedAssignments.filterNot(_._2.isExpired(expireBeforeMillis)))
+  }
+
+  def applyUpdates(updates: Seq[StaffAssignmentLike]): ShiftAssignments = {
+    val updatedAssignments = updates
+      .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
+      .map(a => TM(a.terminal, a.start) -> a)
+      .toMap
+    copy(indexedAssignments = indexedAssignments ++ updatedAssignments)
   }
 }
 

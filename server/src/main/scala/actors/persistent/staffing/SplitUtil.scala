@@ -21,24 +21,4 @@ object SplitUtil {
     )
     intervals
   }
-
-
-  def applyUpdatedShifts(existingAssignments: Seq[StaffAssignmentLike],
-                         shiftsToUpdate: Seq[StaffAssignmentLike]): Seq[StaffAssignmentLike] = {
-
-    val splitExisting = existingAssignments.flatMap(splitIntoIntervals)
-    val splitUpdates = shiftsToUpdate.flatMap(splitIntoIntervals)
-
-    val existingMap: Map[StaffAssignmentKey, StaffAssignment] = splitExisting.map { existing =>
-      existing.key -> existing
-    }.toMap
-
-    val updatedAssignments = splitUpdates.foldLeft(existingMap) { (acc, update) =>
-      acc.updated(update.key, update)
-    }
-
-    updatedAssignments.values.toSeq
-
-  }
-
 }
