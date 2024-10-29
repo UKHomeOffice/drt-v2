@@ -75,11 +75,17 @@ class SplitUtilSpec extends Specification {
         StaffAssignment("Morning", T1, SDate(s"2017-01-01T12:00").millisSinceEpoch, SDate(s"2017-01-01T18:59").millisSinceEpoch, 10, None)
       )
 
-      val start = System.currentTimeMillis()
+      val start1 = System.currentTimeMillis()
       existingShifts.applyUpdates(updateShifts)
-      val end = System.currentTimeMillis()
-      println(s"Time taken: ${end - start}")
-      (end - start) must be_<(100L)
+      val end1 = System.currentTimeMillis()
+      println(s"Map storage solution time taken: ${end1 - start1}")
+      (end1 - start1) must be_<(10L)
+
+      val start2 = System.currentTimeMillis()
+      SplitUtil.applyUpdatedShifts(existingShifts.assignments, updateShifts)
+      val end2 = System.currentTimeMillis()
+      println(s"SplitUtil solution time taken: ${end2 - start2}")
+      (end2 - start2) must be_<(10L)
     }
   }
 }
