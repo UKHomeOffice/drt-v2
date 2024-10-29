@@ -11,6 +11,7 @@ import services.api.v1.FlightExport
 import services.api.v1.serialisation.FlightApiJsonProtocol
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplits}
+import uk.gov.homeoffice.drt.auth.Roles.ApiFlightAccess
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -47,7 +48,7 @@ class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
     FlightExport(flightTotalsForGranularity, ctrl.airportConfig.terminals, ctrl.airportConfig.portCode)
 
   def flights(): Action[AnyContent] =
-    auth(
+    authByRole(ApiFlightAccess) {
       Action.async {
         request =>
           val start = parseOptionalEndDate(request.getQueryString("start"), SDate.now())
@@ -59,7 +60,7 @@ class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
 
           flightExport(start, end).map(r => Ok(r.toJson.compactPrint))
       }
-    )
+    }
 
   private def parseOptionalEndDate(maybeString: Option[String], default: SDateLike): SDateLike =
     maybeString match {

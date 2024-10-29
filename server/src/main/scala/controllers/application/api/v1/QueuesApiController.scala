@@ -10,6 +10,7 @@ import play.api.mvc._
 import services.api.v1.QueueExport
 import services.api.v1.serialisation.QueueApiJsonProtocol
 import spray.json.enrichAny
+import uk.gov.homeoffice.drt.auth.Roles.ApiQueueAccess
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -34,7 +35,7 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     QueueExport(queueTotalsForGranularity, ctrl.airportConfig.terminals, ctrl.airportConfig.portCode)
 
   def queues(): Action[AnyContent] =
-    auth(
+    authByRole(ApiQueueAccess) {
       Action.async {
         request =>
           val start = parseOptionalEndDate(request.getQueryString("start"), SDate.now())
@@ -46,7 +47,7 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
           queueExport(start, end, periodMinutes).map(r => Ok(r.toJson.compactPrint))
       }
-    )
+    }
 
   private def parseOptionalEndDate(maybeString: Option[String], default: SDateLike): SDateLike =
     maybeString match {
