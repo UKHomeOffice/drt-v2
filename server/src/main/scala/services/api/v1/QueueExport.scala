@@ -37,9 +37,7 @@ object QueueExport {
             .map { queueTotals: Iterable[(MillisSinceEpoch, Seq[CrunchMinute])] =>
               queueTotals
                 .filter {
-                  case (slotTime, _) =>
-                    println(s"${start.toISOString} <= ${SDate(slotTime).toISOString} < ${end.toISOString}")
-                    start.millisSinceEpoch <= slotTime && slotTime < end.millisSinceEpoch
+                  case (slotTime, _) => start.millisSinceEpoch <= slotTime && slotTime < end.millisSinceEpoch
                 }
                 .map { case (slotTime, queues) =>
                   PeriodJson(SDate(slotTime), queues.map(QueueJson.apply))

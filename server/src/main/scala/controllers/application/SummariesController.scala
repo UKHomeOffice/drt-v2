@@ -15,7 +15,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, SDate}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -35,12 +35,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         Action(BadRequest(s"Invalid date format for $localDateStr. Expected YYYY-mm-dd"))
     }
   }
-
-  private def parseOptionalEndDate(maybeString: Option[String], default: SDateLike): SDateLike =
-    maybeString match {
-      case None => default
-      case Some(dateStr) => SDate(dateStr)
-    }
 
   def exportPassengersByTerminalForDateRangeApi(startLocalDateString: String,
                                                 endLocalDateString: String,
