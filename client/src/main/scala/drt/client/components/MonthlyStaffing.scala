@@ -366,7 +366,7 @@ object MonthlyStaffing {
               onOpen = (_: ReactEventFromHtml) => Callback {
                 print("open drawer")
               })(
-              <.div(EditShiftStaffForm(IEditShiftStaffForm(
+              <.div(UpdateStaffForTimeRangeForm(IEditShiftStaffForm(
                 editShiftStaff = IEditShiftStaff(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
                 handleSubmit = (ssf: IEditShiftStaff) => {
                   val dayInMilliseconds = 1000 * 60 * 60 * 24

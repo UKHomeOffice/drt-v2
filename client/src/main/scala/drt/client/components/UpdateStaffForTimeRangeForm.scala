@@ -89,7 +89,7 @@ object IEditShiftStaffForm {
   }
 }
 
-object EditShiftStaffForm {
+object UpdateStaffForTimeRangeForm {
   @js.native
   @JSImport("@drt/drt-react", "EditShiftStaffForm")
   object RawComponent extends js.Object
