@@ -22,6 +22,21 @@ sealed trait StaffAssignmentLike extends Expireable {
   val startMinutesSinceEpoch: MillisSinceEpoch = start / 60000
   val endMinutesSinceEpoch: MillisSinceEpoch = end / 60000
 
+  def key: StaffAssignmentKey = {
+    val intervalMillis = 14.minutes.toMillis
+    val breakMillis = 1.minute.toMillis
+    val totalIntervalMillis = intervalMillis + breakMillis
+    val startOfHour = start - (start % 1.hour.toMillis)
+    val intervalIndex = ((start % 1.hour.toMillis) / totalIntervalMillis).toInt
+    val intervalStart = startOfHour + (intervalIndex * totalIntervalMillis)
+
+    StaffAssignmentKey(
+      terminal = terminal,
+      start = intervalStart,
+      end = intervalStart + intervalMillis
+    )
+  }
+
   override def isExpired(expireBeforeMillis: MillisSinceEpoch): Boolean = end < expireBeforeMillis
 
   def splitIntoSlots(slotMinutes: Int): Seq[StaffAssignment]
