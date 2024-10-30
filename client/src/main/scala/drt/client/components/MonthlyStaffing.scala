@@ -318,8 +318,6 @@ object MonthlyStaffing {
               PaperProps = js.Dynamic.literal(
                 "style" -> js.Dynamic.literal(
                   "width" -> "400px",
-                  "height" -> "510px",
-                  "top" -> "25%",
                   "transform" -> "translateY(-50%)"
                 )
               ),
@@ -331,6 +329,7 @@ object MonthlyStaffing {
               })(
               <.div(UpdateStaffForTimeRangeForm(IEditShiftStaffForm(
                 editShiftStaff = IEditShiftStaff(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
+                interval = props.timeSlotMinutes,
                 handleSubmit = (ssf: IEditShiftStaff) => {
                   val dayInMilliseconds = 1000 * 60 * 60 * 24
                   val startDay = ssf.startDayAt.utc().toDate().getTime().toLong / dayInMilliseconds // Convert to days
