@@ -144,7 +144,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
           " 15 minute slot" - {
           val change: Map[(Int, Int), Int] = Map((0, 30) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, T1, 15).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 15, "monthly").head
 
           val shiftStart = SDate("2019-03-31T00:00:00Z")
           val expected = StaffAssignment(
@@ -163,7 +163,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
           " 1 hour slot" - {
           val change: Map[(Int, Int), Int] = Map((0, 30) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, T1, 60).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 60, "monthly").head
 
           val shiftStart = SDate("2019-03-31T00:00:00Z")
           val expected = StaffAssignment(
@@ -182,7 +182,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
           " 1 hour slot" - {
           val change: Map[(Int, Int), Int] = Map((1, 29) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, T1, 60).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 60, "monthly").head
 
           val shiftStart = SDate("2019-03-30T01:00:00Z")
           val expected = StaffAssignment(
@@ -201,7 +201,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
           "StaffAssignment for that 1 hour slot - which is the 3rd slot for the day" - {
           val change: Map[(Int, Int), Int] = Map((2, 30) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, T1, 60).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 60, "monthly").head
 
           val shiftStart = SDate("2019-03-31T01:00:00Z")
           val expected = StaffAssignment(

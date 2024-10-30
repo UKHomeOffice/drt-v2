@@ -335,11 +335,11 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
       newActor ! GetState
       val expected = expectedUpdated1And2Shift.toSet
 
-      val result = expectMsgPF(1.second) {
+      val result: Set[(TM, StaffAssignmentLike)] = expectMsgPF(1.second) {
         case ShiftAssignments(sa) => sa.toSet
       }
 
-      result === expected
+      result.map(_._2) === expected
     }
 
     "restore shifts to a point in time view" in {
@@ -509,7 +509,7 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
         case ShiftAssignments(sa) => sa.toSet
       }
 
-      result === expectedShift1And2.toSet
+      result.map(_._2) === expectedShift1And2.toSet
     }
 
   }
