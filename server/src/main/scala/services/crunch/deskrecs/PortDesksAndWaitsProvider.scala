@@ -6,7 +6,6 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunchWholePax
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.crunch.deskrecs
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.ports.Queues._
@@ -43,7 +42,6 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                  (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes] = {
     terminalLoadsToDesks(minuteMillis, passengersByQueue, deskLimitProviders, description, terminal).map { deskRecMinutes =>
       val simMinutes = deskRecsToSimulations(deskRecMinutes.minutes).values.toSeq
-      println(s"simMinutes: $simMinutes")
       log.info(s"Deployments & waits calculated for ${SDate(minuteMillis.min).toISOString} to ${SDate(minuteMillis.max).toISOString}")
       SimulationMinutes(simMinutes)
     }

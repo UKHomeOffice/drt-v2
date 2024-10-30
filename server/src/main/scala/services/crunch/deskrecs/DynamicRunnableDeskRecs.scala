@@ -80,7 +80,6 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
       .mapAsync(1) {
         case (request, loads) =>
           val minutesRange: NumericRange[MillisSinceEpoch] = request.minutesInMillis(ac.crunchOffsetMinutes)
-          println(s"loads: $loads")
           optimiseTerminal(maxDesksProviders(request.terminal), loadsToQueueMinutes, setUpdatedAtForDay, request.terminal, minutesRange, loads)
       }
       .collect {

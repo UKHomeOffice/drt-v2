@@ -19,7 +19,7 @@ import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{Historical, TerminalAverage}
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical, TerminalAverage}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
@@ -107,6 +107,39 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
         expectedQueuePax = expected)
 
       success
+    }
+
+    "When I provide only historic splits with 100% to eea desk, all pax should arrive at the eea desk " >> {
+      val expected: Map[(Terminal, Queue), Int] = Map((T1, EeaDesk) -> 100)
+      val historicSplits = Splits(Set(ApiPaxTypeAndQueueCount(PaxTypes.GBRNational, EeaDesk, 1, None, None)), Historical, None, Percentage)
+      setupGraphAndCheckQueuePax(
+        flight = ApiFlightWithSplits(arrival, Set(historicSplits)),
+        expectedQueuePax = expected
+      )
+
+      success
+    }
+  }
+
+  "validApiPercentage" >> {
+    val validApi = ApiFlightWithSplits(
+      ArrivalGenerator.live(totalPax = Option(100)).toArrival(LiveFeedSource),
+      Set(Splits(
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 100, None, None)),
+        ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    val invalidApi = ApiFlightWithSplits(
+      ArrivalGenerator.live(totalPax = Option(100)).toArrival(LiveFeedSource),
+      Set(Splits(
+        Set(ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EeaDesk, 50, None, None)),
+        ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))))
+    "Given no flights, then validApiPercentage should give 100%" >> {
+      DynamicRunnablePassengerLoads.validApiPercentage(Seq()) === 100d
+    }
+    "Given 1 flight with live api splits, when it is valid, then validApiPercentage should give 100%" >> {
+      DynamicRunnablePassengerLoads.validApiPercentage(Seq(validApi)) === 100d
+    }
+    "Given 4 flights with live api splits, when 3 are categorised as valid, then validApiPercentage should give 75%" >> {
+      DynamicRunnablePassengerLoads.validApiPercentage(Seq(validApi, validApi, validApi, invalidApi)) === 75d
     }
   }
 }
