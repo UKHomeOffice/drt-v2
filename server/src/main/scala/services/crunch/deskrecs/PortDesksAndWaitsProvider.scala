@@ -43,6 +43,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
                                  (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes] = {
     terminalLoadsToDesks(minuteMillis, passengersByQueue, deskLimitProviders, description, terminal).map { deskRecMinutes =>
       val simMinutes = deskRecsToSimulations(deskRecMinutes.minutes).values.toSeq
+      println(s"simMinutes: $simMinutes")
       log.info(s"Deployments & waits calculated for ${SDate(minuteMillis.min).toISOString} to ${SDate(minuteMillis.max).toISOString}")
       SimulationMinutes(simMinutes)
     }

@@ -56,12 +56,12 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
   }
 
 
-  private def crunchRequestsToDeskRecs(loadsProvider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, PassengersMinute]],
-                                       maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
-                                       loadsToQueueMinutes: PassengersToQueueMinutes,
-                                       setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
-                                      )
-                                      (implicit executionContext: ExecutionContext, ac: AirportConfig): Flow[TerminalUpdateRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
+  def crunchRequestsToDeskRecs(loadsProvider: (SDateLike, SDateLike, Terminal) => Future[Map[TQM, PassengersMinute]],
+                               maxDesksProviders: Map[Terminal, TerminalDeskLimitsLike],
+                               loadsToQueueMinutes: PassengersToQueueMinutes,
+                               setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
+                              )
+                              (implicit executionContext: ExecutionContext, ac: AirportConfig): Flow[TerminalUpdateRequest, MinutesContainer[CrunchMinute, TQM], NotUsed] = {
     Flow[TerminalUpdateRequest]
       .mapAsync(1) { request =>
         val start = request.start.addMinutes(ac.crunchOffsetMinutes)
@@ -80,6 +80,7 @@ object DynamicRunnableDeskRecs extends DrtRunnableGraph {
       .mapAsync(1) {
         case (request, loads) =>
           val minutesRange: NumericRange[MillisSinceEpoch] = request.minutesInMillis(ac.crunchOffsetMinutes)
+          println(s"loads: $loads")
           optimiseTerminal(maxDesksProviders(request.terminal), loadsToQueueMinutes, setUpdatedAtForDay, request.terminal, minutesRange, loads)
       }
       .collect {
