@@ -9,7 +9,6 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import drt.shared._
 import manifests.queues.SplitsCalculator
-import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import queueus._
 import services.TryCrunchWholePax
 import services.crunch.deskrecs.OptimiserMocks._
