@@ -8,7 +8,6 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.nio.file.{Files, Paths}
 import scala.concurrent.duration._
-import scala.util.Try
 
 trait DrtParameters {
   val gateWalkTimesFilePath: Option[String]
@@ -140,8 +139,5 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
 
   override val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
 
-  override val enableStaffPlanningChange: Boolean = Try(
-    config.get[String]("feature-flags.enable-ports-staff-planning-change").split(",")
-      .map(_.toUpperCase).contains(config.get[String]("portcode").toUpperCase)
-  ).getOrElse(false)
+  override val enableStaffPlanningChange: Boolean = config.get[Boolean]("feature-flags.enable-ports-staff-planning-change")
 }

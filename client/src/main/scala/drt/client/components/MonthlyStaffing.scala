@@ -3,6 +3,7 @@ package drt.client.components
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.UpdateShifts
+import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, consecutiveDay}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -119,56 +120,6 @@ object MonthlyStaffing {
       }.toTagMod)
   }
 
-  private def consecutiveDayForWeek(viewingDate: SDateLike): Seq[(SDateLike, String)] = {
-    val firstDayOfMonth = SDate.firstDayOfMonth(viewingDate)
-    val lastDayOfMonth = SDate.lastDayOfMonth(viewingDate)
-
-    val startOfWeek = SDate.firstDayOfWeek(viewingDate)
-    val endOfWeek = SDate.lastDayOfWeek(viewingDate)
-
-    val adjustedStartOfWeek: SDateLike = if (startOfWeek.millisSinceEpoch < firstDayOfMonth.millisSinceEpoch) firstDayOfMonth else startOfWeek
-    val adjustedEndOfWeek = if (endOfWeek.millisSinceEpoch > lastDayOfMonth.millisSinceEpoch) lastDayOfMonth else endOfWeek
-
-    val days = (adjustedEndOfWeek.getDate - adjustedStartOfWeek.getDate) + 1
-
-    daysOfWeek(adjustedStartOfWeek, days)
-  }
-
-  private def daysOfWeek(startDate: SDateLike, numberOfDays: Int) = {
-    List.tabulate(numberOfDays)(i => {
-      val date = startDate.addDays(i)
-      val dayOfWeek = date.getDayOfWeek match {
-        case 1 => "Monday"
-        case 2 => "Tuesday"
-        case 3 => "Wednesday"
-        case 4 => "Thursday"
-        case 5 => "Friday"
-        case 6 => "Saturday"
-        case 7 => "Sunday"
-        case _ => "Unknown"
-      }
-      (date, dayOfWeek)
-    })
-  }
-
-  def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[(SDateLike, String)] = {
-    val lastDayOfPreviousMonth = SDate(startDay.getFullYear, startDay.getMonth, 1).addDays(-1)
-    val adjustedStartDay: SDateLike = if (startDay.getDate == lastDayOfPreviousMonth.getDate) {
-      if (startDay.getMonth == 11) // December
-        SDate(startDay.getFullYear + 1, 0, 1) // January of the next year
-      else
-        SDate(startDay.getFullYear, startDay.getMonth + 1, 1) // Next month of the same year
-    } else {
-      startDay
-    }
-
-    val adjustedEndDay = if (startDay.getDate > endDay.getDate) {
-      SDate(endDay.getFullYear, endDay.getMonth, 7)
-    } else endDay
-
-    val days = (adjustedEndDay.getDate - adjustedStartDay.getDate) + 1
-    daysOfWeek(adjustedStartDay, days)
-  }
 
   def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5)
     .map(i => if (i == 0) SDate.now() else SDate.firstDayOfMonth(date).addMonths(i))
@@ -240,9 +191,13 @@ object MonthlyStaffing {
         }
       }
 
-      def confirmAndSave(startOfMonthMidnight: SDateLike, timeSlots: Seq[Seq[Any]]): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
+      def confirmAndSave(viewingDate: SDateLike, timeSlots: Seq[Seq[Any]]): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
         Callback {
-          val initialTimeSlots: Seq[Seq[Any]] = slotsFromShifts(state.shifts, props.terminalPageTab.terminal, startOfMonthMidnight, props.timeSlotMinutes, props.terminalPageTab.dayRangeType.getOrElse("monthly"))
+          val initialTimeSlots: Seq[Seq[Any]] = slotsFromShifts(state.shifts,
+            props.terminalPageTab.terminal,
+            viewingDate,
+            props.timeSlotMinutes,
+            props.terminalPageTab.dayRangeType.getOrElse("monthly"))
 
           val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, state.changes)
           val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(timeSlots, state.changes)
@@ -250,15 +205,18 @@ object MonthlyStaffing {
 
           val changedShiftSlots: Seq[StaffAssignment] = updatedShiftAssignments(
             quarterHourlyChanges,
-            startOfMonthMidnight,
+            viewingDate,
             props.terminalPageTab.terminal,
-            saveAsTimeSlotMinutes)
+            saveAsTimeSlotMinutes,
+            props.terminalPageTab.dayRangeType.getOrElse("monthly"))
 
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
           val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots).map(d => state.colHeadings(d)).toList
 
           if (confirm(s"You have updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth - do you want to save these changes?")) {
-            GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Save Monthly Staffing", s"updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth")
+            GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}",
+              "Save Monthly Staffing",
+              s"updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth")
             SPACircuit.dispatch(UpdateShifts(changedShiftSlots))
           }
         }
@@ -276,8 +234,13 @@ object MonthlyStaffing {
           monthOfShifts <- model.monthOfShiftsPot
         } yield {
           if (monthOfShifts != state.shifts || state.timeSlots.isEmpty) {
-            val slots = slotsFromShifts(monthOfShifts, props.terminalPageTab.terminal, viewingDate, props.timeSlotMinutes, props.terminalPageTab.dayRangeType.getOrElse("monthly"))
-            scope.modState(state => state.copy(shifts = monthOfShifts, timeSlots = Ready(slots), shiftsLastLoaded = Option(SDate.now().millisSinceEpoch))).runNow()
+            val slots = slotsFromShifts(monthOfShifts,
+              props.terminalPageTab.terminal,
+              viewingDate,
+              props.timeSlotMinutes,
+              props.terminalPageTab.dayRangeType.getOrElse("monthly"))
+            scope.modState(state => state.copy(shifts = monthOfShifts, timeSlots = Ready(slots),
+              shiftsLastLoaded = Option(SDate.now().millisSinceEpoch))).runNow()
           }
           <.div()
         }
@@ -355,8 +318,6 @@ object MonthlyStaffing {
               PaperProps = js.Dynamic.literal(
                 "style" -> js.Dynamic.literal(
                   "width" -> "400px",
-                  "height" -> "510px",
-                  "top" -> "25%",
                   "transform" -> "translateY(-50%)"
                 )
               ),
@@ -366,8 +327,9 @@ object MonthlyStaffing {
               onOpen = (_: ReactEventFromHtml) => Callback {
                 print("open drawer")
               })(
-              <.div(EditShiftStaffForm(IEditShiftStaffForm(
+              <.div(UpdateStaffForTimeRangeForm(IEditShiftStaffForm(
                 editShiftStaff = IEditShiftStaff(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
+                interval = props.timeSlotMinutes,
                 handleSubmit = (ssf: IEditShiftStaff) => {
                   val dayInMilliseconds = 1000 * 60 * 60 * 24
                   val startDay = ssf.startDayAt.utc().toDate().getTime().toLong / dayInMilliseconds // Convert to days
@@ -427,13 +389,18 @@ object MonthlyStaffing {
     .build
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int],
-                              startOfMonthMidnight: SDateLike,
+                              viewingDate: SDateLike,
                               terminalName: Terminal,
-                              timeSlotMinutes: Int
+                              timeSlotMinutes: Int,
+                              dayRange: String
                              ): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
-      val timeSlots = daysInMonthByTimeSlot((startOfMonthMidnight, timeSlotMinutes))
-
+      val timeSlots: Seq[Seq[Option[SDateLike]]] =
+        dayRange match {
+          case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes))
+          case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes))
+          case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map(Seq(_))
+        }
       timeSlots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
         val startMd = slotStart.millisSinceEpoch
         val endMd = slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch
@@ -466,7 +433,7 @@ object MonthlyStaffing {
   }
 
   private def daysInWeekByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] =
-    consecutiveDayForWeek(viewingDate)
+    StaffingUtil.consecutiveDayForWeek(viewingDate)
       .map { day =>
         timeZoneSafeTimeSlots(
           slotsInDay(day._1, timeSlotMinutes),
@@ -520,9 +487,9 @@ object MonthlyStaffing {
 
     val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
-    val daysInMonth: Seq[(SDateLike, String)] = props.terminalPageTab.dayRangeType match {
+    val daysInDayRange: Seq[(SDateLike, String)] = props.terminalPageTab.dayRangeType match {
       case Some("weekly") => consecutiveDayForWeek(viewingDate)
-      case Some("daily") => consecutiveDaysInMonth(viewingDate, viewingDate)
+      case Some("daily") => consecutiveDay(viewingDate)
       case _ => consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
     }
 
@@ -533,7 +500,7 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(Empty, daysInMonth.map(a => ColumnHeader(a._1.getDate.toString, a._2.substring(0, 3))), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, ShiftAssignments.empty, None)
+    State(Empty, daysInDayRange.map(a => ColumnHeader(a._1.getDate.toString, a._2.substring(0, 3))), rowHeadings, Map.empty, showEditStaffForm = false, showStaffSuccess = false, ShiftAssignments.empty, None)
   }
 
   def apply(terminalPageTab: TerminalPageTabLoc,

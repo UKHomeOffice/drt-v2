@@ -75,21 +75,23 @@ object IEditShiftStaff {
 @js.native
 trait IEditShiftStaffForm extends js.Object {
   var essf: IEditShiftStaff
+  var interval: Int
   var handleSubmit: js.Function1[IEditShiftStaff, Unit]
   var cancelHandler: js.Function0[Unit]
 }
 
 object IEditShiftStaffForm {
-  def apply(editShiftStaff: IEditShiftStaff, handleSubmit: js.Function1[IEditShiftStaff, Unit], cancelHandler: js.Function0[Unit]): IEditShiftStaffForm = {
+  def apply(editShiftStaff: IEditShiftStaff, interval:Int ,handleSubmit: js.Function1[IEditShiftStaff, Unit], cancelHandler: js.Function0[Unit]): IEditShiftStaffForm = {
     val p = (new js.Object).asInstanceOf[IEditShiftStaffForm]
     p.essf = editShiftStaff
     p.handleSubmit = handleSubmit
+    p.interval = interval
     p.cancelHandler = cancelHandler
     p
   }
 }
 
-object EditShiftStaffForm {
+object UpdateStaffForTimeRangeForm {
   @js.native
   @JSImport("@drt/drt-react", "EditShiftStaffForm")
   object RawComponent extends js.Object
