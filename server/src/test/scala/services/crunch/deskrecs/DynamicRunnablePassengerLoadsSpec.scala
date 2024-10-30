@@ -44,10 +44,11 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
 
   def setupGraphAndCheckQueuePax(flight: ApiFlightWithSplits,
                                  expectedQueuePax: Map[(Terminal, Queue), Int]): Any = {
-    val probe = TestProbe()
+    val sinkProbe = TestProbe()
+    val updatesProbe = TestProbe()
 
     val request = TerminalUpdateRequest(T1, SDate(flight.apiFlight.Scheduled).toLocalDate)
-    val sink = system.actorOf(Props(new MockSinkActor(probe.ref)))
+    val sink = system.actorOf(Props(new MockSinkActor(sinkProbe.ref)))
 
     val queueMinutesProducer = DynamicRunnablePassengerLoads.crunchRequestsToQueueMinutes(
       arrivalsProvider = mockFlightsProvider(List(flight)),
@@ -56,7 +57,7 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
       dynamicQueueStatusProvider = DynamicQueueStatusProvider(airportConfig, MockEgatesProvider.portProvider(airportConfig)),
       queuesByTerminal = airportConfig.queuesByTerminal,
       updateLiveView = _ => {
-        probe.ref ! "Live view updated"
+        updatesProbe.ref ! "Live view updated"
         Future.successful(StatusReply.Ack)
       },
       paxFeedSourceOrder = paxFeedSourceOrder,
@@ -65,7 +66,7 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
         ApiPaxTypeAndQueueCount(PaxTypes.EeaMachineReadable, EGate, 50, None, None),
       ), TerminalAverage, None, Percentage)),
       updateCapacity = _ => {
-        probe.ref ! "Capacity updated"
+        updatesProbe.ref ! "Capacity updated"
         Future.successful(Done)
       },
       setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
@@ -75,7 +76,7 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
     val (queue, _) = QueuedRequestProcessing.createGraph(crunchGraphSource, sink, queueMinutesProducer, "passenger-loads").run()
     queue ! request
 
-    probe.fishForMessage(2.second) {
+    sinkProbe.fishForMessage(2.second) {
       case container: MinutesContainer[PassengersMinute, TQM] =>
         val tqPax = container.minutes
           .groupBy(pm => (pm.toMinute.terminal, pm.toMinute.queue))
@@ -89,8 +90,8 @@ class DynamicRunnablePassengerLoadsSpec extends CrunchTestLike {
         tqPax == expectedQueuePax
     }
 
-    probe.expectMsg("Capacity updated")
-    probe.expectMsg("Live view updated")
+    updatesProbe.expectMsg("Capacity updated")
+    updatesProbe.expectMsg("Live view updated")
   }
 
   "Given an arrival with 100 pax " >> {
