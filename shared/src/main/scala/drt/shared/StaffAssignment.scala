@@ -71,23 +71,6 @@ object StaffAssignment {
   implicit val rw: RW[StaffAssignment] = macroRW
 }
 
-//object CompleteStaffMovement {
-//  implicit val rw: RW[CompleteStaffMovement] = macroRW
-//}
-
-//case class CompleteStaffMovement(reason: String,
-//                                 terminal: Terminal,
-//                                 start: MillisSinceEpoch,
-//                                 end: MillisSinceEpoch,
-//                                 numberOfStaff: Int,
-//                                 uuid: String,
-//                                 createdBy: Option[String]) extends StaffAssignmentLike {
-//  override val name: String = reason
-//  override val maybeUuid: Option[String] = Option(uuid)
-//  val startMovement: StaffMovement = StaffMovement(terminal, reason, start, numberOfStaff, uuid, None, createdBy)
-//  val endMovement: StaffMovement = StaffMovement(terminal, reason, end, numberOfStaff, uuid, None, createdBy)
-//}
-
 trait StaffAssignmentsLike {
   val assignments: Seq[StaffAssignmentLike]
 
