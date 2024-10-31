@@ -108,7 +108,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
         val expectedHeight = 24
 
         assert(result.size == expectedHeight)
-        result.foreach(row => assert(row.size == 6))
+        result.foreach(row => assert(row.size == 7))
       }
 
       "Given 2019-01-01 when retrieving days in day by time slot with 1 hour slots I should get back a 24x1 matrix" - {
