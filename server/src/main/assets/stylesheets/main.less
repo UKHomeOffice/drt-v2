@@ -1404,6 +1404,11 @@ p {
   align-items: center;
 }
 
+.staffing-container {
+  display: flex;
+  flex-direction: column;
+}
+
 .staffing-controls {
   position: sticky;
   top: 0;
@@ -1428,11 +1433,14 @@ p {
   justify-content: flex-end;
   gap: 15px;
   padding-right: 10px;
-  margin-left: 350px;
+  margin-left: 250px;
   //margin-right: 150px
 }
 
 .staffing-controls-save {
+  position: sticky;
+  top: 0;
+  z-index: 101;
   padding-top: 10px;
   padding-right: 10px;
   padding-bottom: 10px;
@@ -1455,8 +1463,8 @@ p {
 
 .staffing-table {
   position: sticky;
-  top: 50px;
-  z-index: 99;
+  top: 150px;
+  z-index: 100;
   background-color: white;
 }
 

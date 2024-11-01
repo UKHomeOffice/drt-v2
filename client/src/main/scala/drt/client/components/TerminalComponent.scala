@@ -282,7 +282,7 @@ object TerminalComponent {
             mode = Staffing,
             subMode = "60",
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))(^.id := "monthlyStaffingTab", ^.className := "flex-forizontally", VdomAttr("data-toggle") := "tab", "Monthly Staffing", " ", monthlyStaffingTooltip)
+          ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
         ) else "",
       <.li(^.className := tabClass(Dashboard),
         props.router.link(props.terminalPageTab.update(

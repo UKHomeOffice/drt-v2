@@ -9,7 +9,10 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiGrid, MuiSwipeableDrawer}
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiSwipeableDrawer}
+import io.kinoplan.scalajs.react.material.ui.icons.{MuiIcons, MuiIconsModule}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ChevronLeft, ChevronRight, Delete, GetApp, Groups, People, PeopleAltRounded}
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -166,7 +169,7 @@ object MonthlyStaffing {
       }
 
       def handleNavigation(props: Props, viewingDate: SDateLike, isWeekly: Boolean, isDaily: Boolean): VdomTagOf[Div] = {
-        val (previousWeekDate, nextWeekDate) = navigationDates(viewingDate, isWeekly, isDaily,() => SDate.now())
+        val (previousWeekDate, nextWeekDate) = navigationDates(viewingDate, isWeekly, isDaily, () => SDate.now())
         navigationArrows(props, previousWeekDate, nextWeekDate)
       }
 
@@ -256,14 +259,24 @@ object MonthlyStaffing {
                 <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "flex-end", "align-items" -> "center"),
                   <.span(^.className := "staffing-controls-title",
                     <.strong(props.terminalPageTab.dayRangeType match {
-                      case Some("monthly") => s"Staff numbers in ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
-                      case Some("weekly") => s"Staff numbers for the week of ${viewingDate.toISODateOnly}"
-                      case Some("daily") => s"Staff numbers for ${viewingDate.toISODateOnly}"
+                      case Some("monthly") => s"Staff numbers : ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
+                      case Some("weekly") => s"Staff numbers : ${SDate.firstDayOfWeek(viewingDate).`dayOfWeek-DD-MMM-YYYY`} to ${SDate.lastDayOfWeek(viewingDate).`dayOfWeek-DD-MMM-YYYY`}"
+                      case Some("daily") => s"Staff numbers : ${viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
                       case _ => s"Staff numbers in ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
                     })),
                   <.span(^.className := "staffing-controls-title-options",
-                    <.div(^.className := "staffing-controls-select",
-                      if (props.dayRangeType != "weekly" && props.dayRangeType != "daily") {
+                    if (props.enableStaffPlanningChanges)
+                      <.div(^.className := "staffing-controls-select",
+                        drawSelect(
+                          values = Seq("monthly", "weekly", "daily"),
+                          names = Seq("View: Monthly", "View: Weekly", "View: Daily"),
+                          defaultValue = s"${props.dayRangeType}",
+                          callback = (e: ReactEventFromInput) =>
+                            props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
+                        )
+                      ) else EmptyVdom,
+                    if (props.dayRangeType != "weekly" && props.dayRangeType != "daily") {
+                      <.div(^.className := "staffing-controls-select",
                         drawSelect(
                           values = monthOptions.map(_.toISOString),
                           names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
@@ -271,35 +284,29 @@ object MonthlyStaffing {
                           callback = (e: ReactEventFromInput) => {
                             props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
                           }
-                        )
-                      } else EmptyVdom
-                    ),
+                        ))
+                    } else EmptyVdom,
                     if (props.enableStaffPlanningChanges) <.div(^.className := "staffing-controls-navigation",
                       handleNavigation(props, viewingDate, isWeekly, isDaily)
                     ) else EmptyVdom,
-                    if (props.enableStaffPlanningChanges)
-                      <.div(^.className := "staffing-controls-select",
-                        drawSelect(
-                          values = Seq("monthly", "weekly", "daily"),
-                          names = Seq("Monthly", "Weekly", "Daily"),
-                          defaultValue = s"${props.dayRangeType}",
-                          callback = (e: ReactEventFromInput) =>
-                            props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
-                        )
-                      ) else EmptyVdom,
                     <.div(^.className := "staffing-controls-select",
                       drawSelect(
                         values = Seq("15", "30", "60"),
-                        names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
+                        names = Seq("Display: Every 15 mins", "Display: Every 30 mins", "Display: Hourly"),
                         defaultValue = s"${props.timeSlotMinutes}",
                         callback = (e: ReactEventFromInput) =>
                           props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
                       )
                     ),
                     if (props.enableStaffPlanningChanges)
-                      <.input.button(^.value := "Edit staff", ^.className := "btn btn-secondary", ^.onClick ==> handleShiftEditForm)
+                      MuiButton(color = Color.primary, variant = "outlined", size = "small")
+                      (MuiIcons(Groups)(fontSize = "small"),
+                        <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
+                        ^.onClick ==> handleShiftEditForm)
                     else EmptyVdom,
-                    <.input.button(^.value := "Save staff updates", ^.className := "btn btn-primary", ^.onClick ==> confirmAndSave(viewingDate, timeSlots))
+                    MuiButton(color = Color.primary, variant = "contained")
+                    (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
+                      ^.onClick ==> confirmAndSave(viewingDate, timeSlots))
                   ))
               ),
               MuiSwipeableDrawer(open = state.showEditStaffForm,
@@ -352,22 +359,24 @@ object MonthlyStaffing {
                   ))
                 ),
                 <.div(^.className := "terminal-staffing-content-header",
-                  <.input.button(^.value := "Save staff updates",
-                    ^.className := "btn btn-primary",
-                    ^.onClick ==> confirmAndSave(viewingDate, timeSlots)
-                  )
+                  MuiButton(color = Color.primary, variant = "contained")
+                  (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
+                    ^.onClick ==> confirmAndSave(viewingDate, timeSlots))
                 )
               )
             )
           )
-        ))
+        )
+      )
     }
   }
 
   private def navigationArrows(props: Props, previousWeekDate: SDateLike, nextWeekDate: SDateLike) = {
     <.div(
-      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly)))), "<"),
-      <.button(^.className := "btn btn-secondary", ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))), ">")
+      MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(ChevronLeft)(fontSize = "medium"),
+        ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly))))),
+      MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(ChevronRight)(fontSize = "medium"),
+        ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))))
     )
   }
 
