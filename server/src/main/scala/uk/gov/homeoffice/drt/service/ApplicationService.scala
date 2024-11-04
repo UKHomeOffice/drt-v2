@@ -5,7 +5,6 @@ import actors._
 import actors.daily.{PassengersActor, RequestAndTerminate}
 import actors.persistent._
 import actors.persistent.arrivals.AclForecastArrivalsActor
-import actors.persistent.staffing.ShiftsActor
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import akka.actor.{ActorRef, ActorSystem, Props, typed}
 import akka.pattern.{StatusReply, ask}
@@ -50,8 +49,6 @@ import uk.gov.homeoffice.drt.actor.{ConfigActor, PredictionModelActor, WalkTimeP
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
 import uk.gov.homeoffice.drt.db.AggregateDb
-import uk.gov.homeoffice.drt.db.dao.PortTerminalShiftConfigDao
-import uk.gov.homeoffice.drt.db.tables.PortTerminalShiftConfig
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -155,16 +152,6 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
     PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
-
-  val getTerminalShiftConfig: Terminal => Future[Option[PortTerminalShiftConfig]] =
-    terminal => {
-      aggregatedDb.run(PortTerminalShiftConfigDao.get(airportConfig.portCode)(ec)(terminal))
-    }
-
-  val updateTerminalShiftConfig: PortTerminalShiftConfig => Future[Int] =
-    portTerminalShiftConfig => {
-      aggregatedDb.run(PortTerminalShiftConfigDao.insertOrUpdate(airportConfig.portCode)(portTerminalShiftConfig))
-    }
 
   def initialState[A](askableActor: ActorRef): Option[A] = Await.result(initialStateFuture[A](askableActor), 2.minutes)
 

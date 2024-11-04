@@ -1410,9 +1410,6 @@ p {
 }
 
 .staffing-controls {
-  position: sticky;
-  top: 0;
-  z-index: 100;
   background-color: white;
   padding-top: 10px;
   display: flex;
@@ -1432,8 +1429,9 @@ p {
   display: flex;
   justify-content: flex-end;
   gap: 15px;
+  flex-grow: 1;
   padding-right: 10px;
-  margin-left: 250px;
+  margin-left: 50px;
   //margin-right: 150px
 }
 
@@ -1447,6 +1445,7 @@ p {
   display: flex;
   gap: 15px;
   background-color: #E6E9F1;
+  border: 1px solid red;
 }
 
 .staffing-controls-save > div {
@@ -1466,6 +1465,7 @@ p {
   top: 150px;
   z-index: 100;
   background-color: white;
+  border: 1px solid blue;
 }
 
 .pcp-pax-summaries {
