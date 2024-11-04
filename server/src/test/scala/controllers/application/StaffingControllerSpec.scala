@@ -267,7 +267,6 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
       MockShiftsService(shifts),
       MockFixedPointsService(fixedPoints),
       MockStaffMovementsService(movements),
-      MockStaffShiftFormService()
     )
 
   private def newDrtInterface(): DrtSystemInterface = {
@@ -275,21 +274,3 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
   }
 }
 
-  case class MockStaffShiftFormService() extends StaffShiftFormService{
-
-override val getTerminalShiftConfig: Terminal => Future[Option[PortTerminalShiftConfig]] = _ => Future.successful(Option(PortTerminalShiftConfig(port = PortCode("STN"),
-  shiftName = "shiftName",
-  terminal=T1,
-  startAt= 1,
-  frequency=Option("daily"),
-  periodInMinutes =1,
-  endAt=Option(1),
-  actualStaff= Option(1),
-  minimumRosteredStaff= Option(1),
-  updatedAt = 1,
-  email = "email")))
-
-  override def setShiftStaff(terminal: Terminal, shiftName: String, startAt: MillisSinceEpoch, periodInMinutes: Port, endAt: Option[MillisSinceEpoch], frequency: Option[String], actualStaff: Option[Port], minimumRosteredStaff: Option[Port], email: String): Future[ShiftAssignments] =
-    Future.successful(ShiftAssignments(Seq()))
-
-}

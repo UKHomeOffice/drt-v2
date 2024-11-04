@@ -64,8 +64,6 @@ GET           /sla-configs                                                      
 DELETE        /sla-configs/:effectiveFrom                                             controllers.application.SlaConfigsController.removeSlaConfig(effectiveFrom: Long)
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
-GET           /shifts/staff/:terminalName                                             controllers.application.StaffingController.getShiftStaff(terminalName: String)
-POST          /shifts/staff/:terminalName                                             controllers.application.StaffingController.saveShiftStaff(terminalName: String)
 GET           /shifts/:localDate                                                      controllers.application.StaffingController.getShifts(localDate: String)
 GET           /shifts                                                                 controllers.application.StaffingController.getAllShifts
 POST          /shifts                                                                 controllers.application.StaffingController.saveShifts

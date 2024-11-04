@@ -20,9 +20,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
                                    ctrl: DrtSystemInterface,
                                    shiftsService: ShiftsService,
                                    fixedPointsService: FixedPointsService,
-                                   movementsService: StaffMovementsService,
-                                   staffShiftFormService: StaffShiftFormService
-                                  ) extends AuthController(cc, ctrl) {
+                                   movementsService: StaffMovementsService) extends AuthController(cc, ctrl) {
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
       val date = SDate(localDateStr).toLocalDate
@@ -45,39 +43,6 @@ class StaffingController @Inject()(cc: ControllerComponents,
       }
     }
   }
-
-  def saveShiftStaff(terminalName: String): Action[AnyContent] = authByRole(StaffEdit) {
-    Action.async { request =>
-      request.body.asText match {
-        case Some(text) =>
-          import PortTerminalShiftJsonSerializer._
-          val portTerminalShift = read[PortTerminalShift](text)
-          val terminal = Terminal(terminalName)
-          staffShiftFormService.setShiftStaff(terminal,
-            portTerminalShift.shiftName,
-            portTerminalShift.startAt,
-            portTerminalShift.periodInMinutes,
-            portTerminalShift.endAt,
-            portTerminalShift.frequency,
-            portTerminalShift.actualStaff,
-            portTerminalShift.minimumRosteredStaff,
-            portTerminalShift.email)
-            .map(monthOfShifts => Accepted(write(monthOfShifts)))
-        case None =>
-          Future.successful(BadRequest)
-      }
-    }
-  }
-
-  def getShiftStaff(terminalName: String): Action[AnyContent] =
-    Action.async {
-      staffShiftFormService.getTerminalShiftConfig(Terminal(terminalName)).map {
-        case Some(config) =>
-          Ok(PortTerminalShiftConfigJsonSerializer.writeToJson(config))
-        case None =>
-          NotFound
-      }
-    }
 
   def getAllShifts: Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
