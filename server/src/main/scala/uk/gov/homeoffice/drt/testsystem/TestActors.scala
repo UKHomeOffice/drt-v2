@@ -18,6 +18,7 @@ import drt.shared._
 import org.slf4j.Logger
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, Terminals}

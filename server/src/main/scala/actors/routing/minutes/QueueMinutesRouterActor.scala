@@ -2,9 +2,9 @@ package actors.routing.minutes
 
 import actors.routing.RouterActorLikeWithSubscriber2
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
-import drt.shared.TQM
+import drt.shared.CrunchApi.{DeskRecMinute, MinutesContainer}
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 

@@ -2,7 +2,8 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.{PortState, TQM}
+import drt.shared.PortState
+import uk.gov.homeoffice.drt.model.TQM
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate

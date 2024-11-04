@@ -2,6 +2,7 @@ package drt.shared
 
 import uk.gov.homeoffice.drt.DataUpdates.{Combinable, MinuteUpdates}
 import uk.gov.homeoffice.drt.arrivals.{WithLastUpdated, WithTimeAccessor}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, MinuteLike, TQM, WithMinute}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
@@ -18,24 +19,6 @@ object CrunchApi {
 
   object PortStateError {
     implicit val rw: ReadWriter[PortStateError] = macroRW
-  }
-
-  trait WithMinute {
-    val minute: MillisSinceEpoch
-  }
-
-  trait MinuteLike[A, B] {
-    val minute: MillisSinceEpoch
-    val lastUpdated: Option[MillisSinceEpoch]
-    val terminal: Terminal
-
-    def maybeUpdated(existing: A, now: MillisSinceEpoch): Option[A]
-
-    val key: B
-
-    def toUpdatedMinute(now: MillisSinceEpoch): A
-
-    def toMinute: A
   }
 
   trait TerminalQueueMinute {
@@ -101,57 +84,6 @@ object CrunchApi {
     def apply(minutesByKey: IMap[TM, StaffMinute]): StaffMinutes = StaffMinutes(minutesByKey.values.toSeq)
 
     implicit val rw: ReadWriter[StaffMinutes] = macroRW
-  }
-
-  case class CrunchMinute(terminal: Terminal,
-                          queue: Queue,
-                          minute: MillisSinceEpoch,
-                          paxLoad: Double,
-                          workLoad: Double,
-                          deskRec: Int,
-                          waitTime: Int,
-                          maybePaxInQueue: Option[Int],
-                          deployedDesks: Option[Int] = None,
-                          deployedWait: Option[Int] = None,
-                          maybeDeployedPaxInQueue: Option[Int] = None,
-                          actDesks: Option[Int] = None,
-                          actWait: Option[Int] = None,
-                          lastUpdated: Option[MillisSinceEpoch] = None)
-    extends MinuteLike[CrunchMinute, TQM]
-      with WithMinute with WithLastUpdated {
-    def equals(candidate: CrunchMinute): Boolean = this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
-
-    override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
-      if (!equals(existing)) Option(copy(lastUpdated = Option(now)))
-      else None
-
-    lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
-
-    override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = this.copy(lastUpdated = Option(now))
-
-    override val toMinute: CrunchMinute = this
-
-    def prettyPrint(implicit niceDate: MillisSinceEpoch => String): String = {
-      s"CrunchMinute($terminal, $queue, ${niceDate(minute)}, $paxLoad pax, $workLoad work, $deskRec desks, $waitTime waits, $deployedDesks dep desks, $deployedWait dep wait, $actDesks act desks, $actWait act wait, ${lastUpdated.map(niceDate)} updated)"
-    }
-  }
-
-  object CrunchMinute {
-    def apply(tqm: TQM, ad: DeskStat, now: MillisSinceEpoch): CrunchMinute = CrunchMinute(
-      terminal = tqm.terminal,
-      queue = tqm.queue,
-      minute = tqm.minute,
-      paxLoad = 0,
-      workLoad = 0,
-      deskRec = 0,
-      waitTime = 0,
-      maybePaxInQueue = None,
-      actDesks = ad.desks,
-      actWait = ad.waitTime,
-      lastUpdated = Option(now)
-    )
-
-    implicit val rw: ReadWriter[CrunchMinute] = macroRW
   }
 
   case class PassengersMinute(terminal: Terminal,

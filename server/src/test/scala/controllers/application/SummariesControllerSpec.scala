@@ -3,7 +3,7 @@ package controllers.application
 import akka.actor.ActorSystem
 import akka.pattern.ask
 import akka.stream.Materializer
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
+import drt.shared.CrunchApi.MinutesContainer
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
@@ -13,6 +13,7 @@ import slick.jdbc.H2Profile.api._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
 import uk.gov.homeoffice.drt.db.tables.CapacityHourlyRow
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, NonEeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, T3, Terminal}
 import uk.gov.homeoffice.drt.ports.config.Lhr

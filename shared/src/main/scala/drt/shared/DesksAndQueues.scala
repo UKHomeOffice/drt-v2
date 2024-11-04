@@ -1,6 +1,7 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.CrunchApi.StaffMinute
+import uk.gov.homeoffice.drt.model.CrunchMinute
 
 object DesksAndQueues {
   def totalDeployed(staffMinute: StaffMinute, crunchMinutes: List[CrunchMinute]): Int = {

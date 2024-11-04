@@ -2,10 +2,11 @@ package actors.daily
 
 import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesToMessage, passengersMinuteFromMessage}
 import akka.actor.Props
+import drt.shared.CrunchApi
 import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
-import drt.shared.{CrunchApi, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.model.TQM
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}

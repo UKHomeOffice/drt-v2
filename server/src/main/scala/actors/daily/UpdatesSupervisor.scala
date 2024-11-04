@@ -1,6 +1,6 @@
 package actors.daily
 
-import actors.PartitionedPortStateActor.{GetMinuteUpdatesSince, GetUpdatesSince}
+import actors.PartitionedPortStateActor.GetMinuteUpdatesSince
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import akka.NotUsed
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
@@ -8,10 +8,11 @@ import akka.pattern.{AskTimeoutException, ask}
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 

@@ -5,15 +5,15 @@ import actors.{InMemoryStreamingJournal, StreamingJournalLike}
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
 import akka.testkit.TestProbe
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import uk.gov.homeoffice.drt.time.SDateLike
+import drt.shared.CrunchApi.MinutesContainer
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.CrunchMinuteMessage
-import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
-import uk.gov.homeoffice.drt.testsystem.TestActors.TestTerminalDayQueuesActor
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.CrunchMinuteMessage
+import uk.gov.homeoffice.drt.testsystem.TestActors.TestTerminalDayQueuesActor
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}

@@ -4,6 +4,7 @@ import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.deskrecs.DeskRecs
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis

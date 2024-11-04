@@ -11,6 +11,7 @@ import drt.shared._
 import drt.shared.api.FlightManifestSummary
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import upickle.default.read
@@ -132,7 +133,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
   private def updateAndTrimCrunch(crunchUpdates: PortStateUpdates,
                                   existingState: PortState,
                                   keepFromMillis: MillisSinceEpoch,
-                         ): SortedMap[TQM, CrunchApi.CrunchMinute] = {
+                         ): SortedMap[TQM, CrunchMinute] = {
     val relevantMinutes = existingState.crunchMinutes.dropWhile {
       case (TQM(_, _, m), _) => m < keepFromMillis
     }

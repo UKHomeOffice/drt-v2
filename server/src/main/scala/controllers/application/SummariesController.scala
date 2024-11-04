@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
 import uk.gov.homeoffice.drt.jsonformats.PassengersSummaryFormat.JsonFormat
-import uk.gov.homeoffice.drt.models.PassengersSummary
+import uk.gov.homeoffice.drt.model.PassengersSummary
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}

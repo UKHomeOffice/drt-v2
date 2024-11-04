@@ -2,11 +2,11 @@ package actors.daily
 
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MinutesContainer}
-import drt.shared.TQM
+import drt.shared.CrunchApi.{DeskRecMinute, MinutesContainer}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.{EeaDesk, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

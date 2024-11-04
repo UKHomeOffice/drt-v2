@@ -4,14 +4,15 @@ import actors.PartitionedPortStateActor.GetMinutesForTerminalDateRange
 import akka.pattern.ask
 import com.google.inject.Inject
 import controllers.application.AuthController
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
-import drt.shared.{CrunchApi, TQM}
+import drt.shared.CrunchApi
+import drt.shared.CrunchApi.MinutesContainer
 import play.api.mvc._
 import services.api.v1.QueueExport
 import services.api.v1.serialisation.QueueApiJsonProtocol
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.ApiQueueAccess
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

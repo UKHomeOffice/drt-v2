@@ -17,7 +17,7 @@ import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
@@ -53,6 +53,7 @@ import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.db.dao.PortTerminalConfigDao
 import uk.gov.homeoffice.drt.db.tables.PortTerminalConfig
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._

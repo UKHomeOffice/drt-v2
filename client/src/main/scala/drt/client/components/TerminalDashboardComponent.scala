@@ -4,19 +4,18 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.TerminalContentComponent.originMapper
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.ViewLive
-import drt.shared.CrunchApi.CrunchMinute
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.RedList
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ReactEventFromInput, ScalaComponent}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
@@ -197,7 +196,7 @@ object TerminalDashboardComponent {
         case (tqm, cm) if tqm.queue == queue && tqm.terminal == terminal => cm
       }
 
-  private def maxWaitInPeriod(cru: Iterable[CrunchApi.CrunchMinute]): Int = if (cru.nonEmpty)
+  private def maxWaitInPeriod(cru: Iterable[CrunchMinute]): Int = if (cru.nonEmpty)
     cru.map(cm => cm.deployedWait.getOrElse(cm.waitTime)).max
   else 0
 

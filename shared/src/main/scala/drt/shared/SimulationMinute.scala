@@ -1,6 +1,7 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinuteLike, SimulationMinuteLike}
+import drt.shared.CrunchApi.{MillisSinceEpoch, SimulationMinuteLike}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, MinuteLike, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 

@@ -11,6 +11,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import queueus.DynamicQueueStatusProvider
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.model.TQM
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.{Closed, Queue, QueueStatus}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

@@ -2,8 +2,9 @@ package actors.daily
 
 import akka.actor.Props
 import akka.pattern.ask
-import drt.shared.CrunchApi.{CrunchMinute, MinutesContainer}
+import drt.shared.CrunchApi.MinutesContainer
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.testsystem.TestActors.{ResetData, TestTerminalDayQueuesActor}

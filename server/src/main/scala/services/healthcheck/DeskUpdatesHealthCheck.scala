@@ -3,8 +3,8 @@ package services.healthcheck
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared.CrunchApi.CrunchMinute
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}

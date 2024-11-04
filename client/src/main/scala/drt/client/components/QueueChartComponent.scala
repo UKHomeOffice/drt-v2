@@ -6,13 +6,14 @@ import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 
 import scala.scalajs.js
 
 object QueueChartComponent {
   case class Props(queue: Queue,
-                   queueSummaries: List[(Long, Map[Queue, CrunchApi.CrunchMinute])],
+                   queueSummaries: List[(Long, Map[Queue, CrunchMinute])],
                    sla: Int,
                    deskType: DeskType)
 

@@ -7,7 +7,7 @@ import drt.client.components.TerminalDesksAndQueues.{Deployments, DeskType, Idea
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions._
 import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import drt.shared._
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.TagOf
@@ -17,6 +17,7 @@ import org.scalajs.dom.html
 import org.scalajs.dom.html.TableCell
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffMovementsEdit
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

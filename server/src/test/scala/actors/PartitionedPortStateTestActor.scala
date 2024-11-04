@@ -7,12 +7,13 @@ import akka.NotUsed
 import akka.actor.ActorRef
 import akka.pattern.{StatusReply, ask}
 import akka.stream.scaladsl.Source
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, StaffMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.PaxForArrivals
 import drt.shared._
 import uk.gov.homeoffice.drt.actor.acking.Acking.AckingAsker
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamFailure
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

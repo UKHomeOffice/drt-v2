@@ -4,16 +4,16 @@ import akka.actor.ActorRef
 import akka.stream.scaladsl.Flow
 import akka.stream.{Materializer, UniqueKillSwitch}
 import akka.{Done, NotUsed}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
-import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.time.SDateLike
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 import scala.collection.SortedSet
 import scala.collection.immutable.{Map, NumericRange}

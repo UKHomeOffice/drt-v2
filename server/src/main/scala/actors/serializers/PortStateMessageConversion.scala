@@ -1,8 +1,9 @@
 package actors.serializers
 
-import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState._

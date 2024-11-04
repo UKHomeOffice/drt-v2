@@ -12,6 +12,7 @@ import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, ArrivalsDiff, FlightsWithSplits}
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AirportConfig, LiveFeedSource}

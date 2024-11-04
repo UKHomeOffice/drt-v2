@@ -8,12 +8,13 @@ import akka.persistence.query.PersistenceQuery
 import akka.persistence.{PersistentActor, RecoveryCompleted}
 import akka.stream.scaladsl.{Keep, Sink}
 import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import org.slf4j.Logger
 import scalapb.GeneratedMessage
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.model.MinuteLike
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 object StreamingUpdatesLike {

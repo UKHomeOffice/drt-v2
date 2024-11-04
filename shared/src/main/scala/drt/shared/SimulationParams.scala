@@ -1,6 +1,7 @@
 package drt.shared
 
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Passengers}
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -138,7 +139,7 @@ object SimulationParams {
 }
 
 
-case class SimulationResult(params: SimulationParams, queueToCrunchMinutes: Map[Queues.Queue, List[CrunchApi.CrunchMinute]])
+case class SimulationResult(params: SimulationParams, queueToCrunchMinutes: Map[Queues.Queue, List[CrunchMinute]])
 
 object SimulationResult {
   implicit val rw: ReadWriter[SimulationResult] = macroRW
