@@ -7,15 +7,15 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 
 @js.native
-trait IStaffSuccess extends js.Object {
+trait IStaffUpdateSuccess extends js.Object {
   var minStaffNumber: Int = js.native
   var message: String = js.native
   var closeHandler: js.Function0[Unit] = js.native
 }
 
-object IStaffSuccess {
-  def apply(staffNumber: Int, message: String, closeHandler: js.Function0[Unit]): IStaffSuccess = {
-    val p = (new js.Object).asInstanceOf[IStaffSuccess]
+object IStaffUpdateSuccess {
+  def apply(staffNumber: Int, message: String, closeHandler: js.Function0[Unit]): IStaffUpdateSuccess = {
+    val p = (new js.Object).asInstanceOf[IStaffUpdateSuccess]
     p.minStaffNumber = staffNumber
     p.message = message
     p.closeHandler = closeHandler
@@ -25,12 +25,12 @@ object IStaffSuccess {
 
 object StaffUpdateSuccess {
   @js.native
-  @JSImport("@drt/drt-react", "StaffSuccess")
+  @JSImport("@drt/drt-react", "StaffUpdateSuccess")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[IStaffSuccess, Children.None](RawComponent)
+  val component = JsFnComponent[IStaffUpdateSuccess, Children.None](RawComponent)
 
-  def apply(props: IStaffSuccess): VdomElement = {
+  def apply(props: IStaffUpdateSuccess): VdomElement = {
     component(props)
   }
 

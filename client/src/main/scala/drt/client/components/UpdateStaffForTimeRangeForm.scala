@@ -4,24 +4,12 @@ import drt.shared.StaffAssignment
 import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.{Children, JsFnComponent}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import upickle.default._
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 import scala.scalajs.js.{Date, UndefOr}
 
-case class UpdateStaffForTimeRangeForm(port: String,
-                                       terminal: String,
-                                       shiftName: String,
-                                       startAt: Long,
-                                       periodInMinutes: Int,
-                                       endAt: Option[Long],
-                                       frequency: Option[String],
-                                       actualStaff: Option[Int],
-                                       minimumRosteredStaff: Option[Int],
-                                       email: String)
-
 @js.native
-sealed trait IEditShiftStaff extends js.Object {
+sealed trait IUpdateStaffForTimeRangeData extends js.Object {
   var startDayAt: moment.Date
   var startTimeAt: moment.Date
   var endTimeAt: moment.Date
@@ -29,9 +17,9 @@ sealed trait IEditShiftStaff extends js.Object {
   var actualStaff: String
 }
 
-object IEditShiftStaff {
-  def apply(startDayAt: moment.Date, startTimeAt: moment.Date, endTimeAt: moment.Date, endDayAt: moment.Date, actualStaff: String): IEditShiftStaff = {
-    val p = (new js.Object).asInstanceOf[IEditShiftStaff]
+object IUpdateStaffForTimeRangeData {
+  def apply(startDayAt: moment.Date, startTimeAt: moment.Date, endTimeAt: moment.Date, endDayAt: moment.Date, actualStaff: String): IUpdateStaffForTimeRangeData = {
+    val p = (new js.Object).asInstanceOf[IUpdateStaffForTimeRangeData]
     p.startDayAt = startDayAt
     p.startTimeAt = startTimeAt
     p.endTimeAt = endTimeAt
@@ -40,9 +28,7 @@ object IEditShiftStaff {
     p
   }
 
-  implicit val rw: ReadWriter[UpdateStaffForTimeRangeForm] = macroRW[UpdateStaffForTimeRangeForm]
-
-  def toStaffAssignment(obj: IEditShiftStaff, terminal: Terminal): StaffAssignment = {
+  def toStaffAssignment(obj: IUpdateStaffForTimeRangeData, terminal: Terminal): StaffAssignment = {
 
     val combinedStartTime: Double = new Date(
       obj.startDayAt.year(),
@@ -72,17 +58,17 @@ object IEditShiftStaff {
 }
 
 @js.native
-trait IEditShiftStaffForm extends js.Object {
-  var essf: IEditShiftStaff
+trait IUpdateStaffForTimeRangeForm extends js.Object {
+  var ustd: IUpdateStaffForTimeRangeData
   var interval: Int
-  var handleSubmit: js.Function1[IEditShiftStaff, Unit]
+  var handleSubmit: js.Function1[IUpdateStaffForTimeRangeData, Unit]
   var cancelHandler: js.Function0[Unit]
 }
 
-object IEditShiftStaffForm {
-  def apply(editShiftStaff: IEditShiftStaff, interval:Int ,handleSubmit: js.Function1[IEditShiftStaff, Unit], cancelHandler: js.Function0[Unit]): IEditShiftStaffForm = {
-    val p = (new js.Object).asInstanceOf[IEditShiftStaffForm]
-    p.essf = editShiftStaff
+object IUpdateStaffForTimeRangeForm {
+  def apply(ustd: IUpdateStaffForTimeRangeData, interval:Int, handleSubmit: js.Function1[IUpdateStaffForTimeRangeData, Unit], cancelHandler: js.Function0[Unit]): IUpdateStaffForTimeRangeForm = {
+    val p = (new js.Object).asInstanceOf[IUpdateStaffForTimeRangeForm]
+    p.ustd = ustd
     p.handleSubmit = handleSubmit
     p.interval = interval
     p.cancelHandler = cancelHandler
@@ -92,12 +78,12 @@ object IEditShiftStaffForm {
 
 object UpdateStaffForTimeRangeForm {
   @js.native
-  @JSImport("@drt/drt-react", "EditShiftStaffForm")
+  @JSImport("@drt/drt-react", "UpdateStaffForTimeRangeForm")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[IEditShiftStaffForm, Children.None](RawComponent)
+  val component = JsFnComponent[IUpdateStaffForTimeRangeForm, Children.None](RawComponent)
 
-  def apply(props: IEditShiftStaffForm): VdomElement = {
+  def apply(props: IUpdateStaffForTimeRangeForm): VdomElement = {
     component(props)
   }
 }

@@ -236,7 +236,7 @@ object MonthlyStaffing {
         modelChangeDetection,
         <.div(
           if (state.showStaffSuccess)
-            StaffUpdateSuccess(IStaffSuccess(0, "The staff numbers have been successfully updated for your chosen dates and times", () => {
+            StaffUpdateSuccess(IStaffUpdateSuccess(0, "The staff numbers have been successfully updated for your chosen dates and times", () => {
               scope.modState(state => state.copy(showStaffSuccess = false)).runNow()
             })) else EmptyVdom,
         ),
@@ -326,20 +326,18 @@ object MonthlyStaffing {
                 onClose = (_: ReactEventFromHtml) => Callback {
                   scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
                 },
-                onOpen = (_: ReactEventFromHtml) => Callback {
-                  print("open drawer")
-                })(
-                <.div(UpdateStaffForTimeRangeForm(IEditShiftStaffForm(
-                  editShiftStaff = IEditShiftStaff(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
+                onOpen = (_: ReactEventFromHtml) => Callback {})(
+                <.div(UpdateStaffForTimeRangeForm(IUpdateStaffForTimeRangeForm(
+                  ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
                   interval = props.timeSlotMinutes,
-                  handleSubmit = (ssf: IEditShiftStaff) => {
+                  handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
                     val dayInMilliseconds = 1000 * 60 * 60 * 24
                     val startDay = ssf.startDayAt.utc().toDate().getTime().toLong / dayInMilliseconds // Convert to days
                     val endDay = ssf.endDayAt.utc().toDate().getTime().toLong / dayInMilliseconds // Convert to days
                     val staffAssignments: Seq[StaffAssignment] = (startDay to endDay).map { day =>
                       val dayAt = Moment(day * dayInMilliseconds) // Convert back to milliseconds
-                      val ssfDay = IEditShiftStaff(dayAt, ssf.startTimeAt, ssf.endTimeAt, dayAt, ssf.actualStaff)
-                      IEditShiftStaff.toStaffAssignment(ssfDay, props.terminalPageTab.terminal)
+                      val ssfDay = IUpdateStaffForTimeRangeData(dayAt, ssf.startTimeAt, ssf.endTimeAt, dayAt, ssf.actualStaff)
+                      IUpdateStaffForTimeRangeData.toStaffAssignment(ssfDay, props.terminalPageTab.terminal)
                     }
                     SPACircuit.dispatch(UpdateShifts(staffAssignments))
                     scope.modState(state => {
