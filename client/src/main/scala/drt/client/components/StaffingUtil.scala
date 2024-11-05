@@ -4,7 +4,7 @@ import drt.client.services.JSDateConversions.SDate
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object StaffingUtil {
-  def navigationDates(viewingDate: SDateLike, isWeekly: Boolean, isDaily: Boolean, now: () => SDateLike): (SDateLike, SDateLike) = {
+  def navigationDates(viewingDate: SDateLike, dayRangeType: String, now: () => SDateLike): (SDateLike, SDateLike) = {
     val currentMonthStart = SDate.firstDayOfMonth(now())
     val adjustedViewingDate = if (viewingDate.millisSinceEpoch < currentMonthStart.millisSinceEpoch) {
       currentMonthStart
@@ -12,54 +12,55 @@ object StaffingUtil {
       viewingDate
     }
 
-    if (isWeekly) {
-      val previousWeekDate = {
-        val firstDayOfWeek = SDate.firstDayOfWeek(viewingDate)
-        val potentialPreviousWeekDate = if (firstDayOfWeek.millisSinceEpoch < currentMonthStart.millisSinceEpoch) {
-          adjustedViewingDate
-        } else adjustedViewingDate.addDays(-7)
-        potentialPreviousWeekDate
-      }
-      val nextWeekDate = {
-        val currentMonthStart = SDate.firstDayOfMonth(now())
-        val lastDayOfFifthMonth = SDate.lastDayOfMonth(currentMonthStart.addMonths(5))
-        val lastDayOfWeek = SDate.lastDayOfWeek(viewingDate)
+    dayRangeType match {
+      case "weekly" =>
+        val previousWeekDate = {
+          val firstDayOfWeek = SDate.firstDayOfWeek(viewingDate)
+          val potentialPreviousWeekDate = if (firstDayOfWeek.millisSinceEpoch < currentMonthStart.millisSinceEpoch) {
+            adjustedViewingDate
+          } else adjustedViewingDate.addDays(-7)
+          potentialPreviousWeekDate
+        }
+        val nextWeekDate = {
+          val currentMonthStart = SDate.firstDayOfMonth(now())
+          val lastDayOfFifthMonth = SDate.lastDayOfMonth(currentMonthStart.addMonths(5))
+          val lastDayOfWeek = SDate.lastDayOfWeek(viewingDate)
 
-        if (lastDayOfWeek.millisSinceEpoch > lastDayOfFifthMonth.millisSinceEpoch) {
-          adjustedViewingDate
-        } else {
-          adjustedViewingDate.addDays(7)
+          if (lastDayOfWeek.millisSinceEpoch > lastDayOfFifthMonth.millisSinceEpoch) {
+            adjustedViewingDate
+          } else {
+            adjustedViewingDate.addDays(7)
+          }
         }
-      }
-      (previousWeekDate, nextWeekDate)
-    } else if (isDaily) {
-      val previousDayDate = adjustedViewingDate.addDays(-1)
-      val nextDayDate = {
-        val currentMonthStart = SDate.firstDayOfMonth(now())
-        val lastDayOfFifthMonth = SDate.lastDayOfMonth(currentMonthStart.addMonths(5))
-        if (adjustedViewingDate.millisSinceEpoch == lastDayOfFifthMonth.millisSinceEpoch) {
-          adjustedViewingDate
-        } else {
-          adjustedViewingDate.addDays(1)
+        (previousWeekDate, nextWeekDate)
+      case "daily" =>
+        val previousDayDate = adjustedViewingDate.addDays(-1)
+        val nextDayDate = {
+          val currentMonthStart = SDate.firstDayOfMonth(now())
+          val lastDayOfFifthMonth = SDate.lastDayOfMonth(currentMonthStart.addMonths(5))
+          if (adjustedViewingDate.millisSinceEpoch == lastDayOfFifthMonth.millisSinceEpoch) {
+            adjustedViewingDate
+          } else {
+            adjustedViewingDate.addDays(1)
+          }
         }
-      }
-      val isFirstDayOfCurrentMonth = adjustedViewingDate.millisSinceEpoch == currentMonthStart.millisSinceEpoch
-      if (isFirstDayOfCurrentMonth)
-        (currentMonthStart, nextDayDate)
-      else
-        (previousDayDate, nextDayDate)
-    } else {
-      val previousMonthDate = adjustedViewingDate.addMonths(-1)
-      val nextMonthDate = adjustedViewingDate.addMonths(1)
-      val sixMonthsFromNow = currentMonthStart.addMonths(5)
-      val finalNextMonthDate = if (nextMonthDate.millisSinceEpoch > sixMonthsFromNow.millisSinceEpoch)
-        sixMonthsFromNow
-      else
-        nextMonthDate
-      if (previousMonthDate.millisSinceEpoch < currentMonthStart.millisSinceEpoch) {
-        (currentMonthStart, finalNextMonthDate)
-      } else
-        (previousMonthDate, finalNextMonthDate)
+        val isFirstDayOfCurrentMonth = adjustedViewingDate.millisSinceEpoch == currentMonthStart.millisSinceEpoch
+        if (isFirstDayOfCurrentMonth)
+          (currentMonthStart, nextDayDate)
+        else
+          (previousDayDate, nextDayDate)
+      case _ =>
+        val previousMonthDate = adjustedViewingDate.addMonths(-1)
+        val nextMonthDate = adjustedViewingDate.addMonths(1)
+        val sixMonthsFromNow = currentMonthStart.addMonths(5)
+        val finalNextMonthDate = if (nextMonthDate.millisSinceEpoch > sixMonthsFromNow.millisSinceEpoch)
+          sixMonthsFromNow
+        else
+          nextMonthDate
+        if (previousMonthDate.millisSinceEpoch < currentMonthStart.millisSinceEpoch) {
+          (currentMonthStart, finalNextMonthDate)
+        } else
+          (previousMonthDate, finalNextMonthDate)
     }
   }
 
@@ -71,9 +72,6 @@ object StaffingUtil {
     dateRangeDays(startOfWeek, days.toInt)
   }
 
-//  def consecutiveDay(viewingDate: SDateLike): Seq[(SDateLike, String)] = {
-//    daysOfWeek(viewingDate, 1)
-//  }
 
   def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[(SDateLike, String)] = {
     val lastDayOfPreviousMonth = SDate(startDay.getFullYear, startDay.getMonth, 1).addDays(-1)

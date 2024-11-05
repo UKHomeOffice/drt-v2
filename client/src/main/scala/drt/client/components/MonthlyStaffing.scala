@@ -12,8 +12,8 @@ import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiSwipeableDrawer}
-import io.kinoplan.scalajs.react.material.ui.icons.{MuiIcons, MuiIconsModule}
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ChevronLeft, ChevronRight, Delete, GetApp, Groups, People, PeopleAltRounded}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ChevronLeft, ChevronRight, Groups}
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -169,9 +169,9 @@ object MonthlyStaffing {
         scope.modState(state => state.copy(showEditStaffForm = true)).runNow()
       }
 
-      def handleNavigation(props: Props, viewingDate: SDateLike, isWeekly: Boolean, isDaily: Boolean): VdomTagOf[Div] = {
-        val (previousWeekDate, nextWeekDate) = navigationDates(viewingDate, isWeekly, isDaily, () => SDate.now())
-        navigationArrows(props, previousWeekDate, nextWeekDate)
+      def handleNavigation(props: Props, viewingDate: SDateLike): VdomTagOf[Div] = {
+        val (previousDate, nextDate) = navigationDates(viewingDate, props.terminalPageTab.dayRangeType.getOrElse("monthly"), () => SDate.now())
+        navigationArrows(props, previousDate, nextDate)
       }
 
       def confirmAndSave(viewingDate: SDateLike, timeSlots: Seq[Seq[Any]]): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
@@ -205,8 +205,6 @@ object MonthlyStaffing {
         }
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
-      val isWeekly = props.terminalPageTab.dayRangeType.contains("weekly")
-      val isDaily = props.terminalPageTab.dayRangeType.contains("daily")
 
       case class Model(monthOfShiftsPot: Pot[ShiftAssignments])
       val staffRCP = SPACircuit.connect(m => Model(m.allShifts))
@@ -295,7 +293,7 @@ object MonthlyStaffing {
                         ))
                     } else EmptyVdom,
                     if (props.enableStaffPlanningChanges) <.div(^.className := "staffing-controls-navigation ",
-                      handleNavigation(props, viewingDate, isWeekly, isDaily)
+                      handleNavigation(props, viewingDate)
                     ) else EmptyVdom,
                     <.div(^.className := "staffing-controls-select",
                       drawSelect(
