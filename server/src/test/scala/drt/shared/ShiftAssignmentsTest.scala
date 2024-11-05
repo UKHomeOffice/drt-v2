@@ -35,7 +35,7 @@ object ShiftAssignmentsTest extends Specification {
 
 
   "Give shift with start and end date" >> {
-    "Then split a shift into 14 minutes interval shifts" >> {
+    "Then split a shift into 15 minutes interval shifts" >> {
       val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
       val endTime = SDate(s"2017-01-01T7:30").millisSinceEpoch
       StaffAssignment("test", T1, startTime, endTime, 3, None).splitIntoSlots(15) mustEqual List(
