@@ -51,13 +51,21 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val userFeedbackService: IUserFeedbackDao = MockUserFeedbackDao()
   override val abFeatureService: IABFeatureDao = MockAbFeatureDao()
 
-  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(system, now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(
+    system,
+    now,
+    MilliTimes.oneDayMillis,
+    airportConfig.queuesByTerminal,
+    update15MinuteQueueSlotsLiveView,
+  )
+
   override val flightLookups: FlightLookupsLike = TestFlightLookups(
     system,
     now,
     airportConfig.queuesByTerminal,
     paxFeedSourceOrder,
     splitsCalculator.terminalSplits,
+    updateFlightsLiveView,
   )
   override val manifestLookupService: ManifestLookupLike = MockManifestLookupService()
   override val manifestLookups: ManifestLookupsLike = ManifestLookups(system, airportConfig.terminals)

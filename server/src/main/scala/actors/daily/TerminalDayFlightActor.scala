@@ -32,19 +32,21 @@ object TerminalDayFlightActor {
                               terminalSplits: Option[Splits],
                               requestHistoricSplitsActor: Option[ActorRef],
                               requestHistoricPaxActor: Option[ActorRef],
+                              maybeUpdateLiveView: Option[Iterable[ApiFlightWithSplits] => Unit],
                              ): Props =
     Props(new TerminalDayFlightActor(
-      date.year,
-      date.month,
-      date.day,
-      terminal,
-      now,
-      None,
-      cutOff,
-      paxFeedSourceOrder,
-      terminalSplits,
-      requestHistoricSplitsActor,
-      requestHistoricPaxActor,
+      year = date.year,
+      month = date.month,
+      day = date.day,
+      terminal = terminal,
+      now = now,
+      maybePointInTime = None,
+      maybeRemovalMessageCutOff = cutOff,
+      paxFeedSourceOrder = paxFeedSourceOrder,
+      terminalSplits = terminalSplits,
+      maybeRequestHistoricSplitsActor = requestHistoricSplitsActor,
+      maybeRequestHistoricPaxActor = requestHistoricPaxActor,
+      maybeUpdateLiveView = maybeUpdateLiveView,
     ))
 
   def propsPointInTime(terminal: Terminal,
@@ -56,17 +58,18 @@ object TerminalDayFlightActor {
                        terminalSplits: Option[Splits],
                       ): Props =
     Props(new TerminalDayFlightActor(
-      date.year,
-      date.month,
-      date.day,
-      terminal,
-      now,
-      Option(pointInTime),
-      cutOff,
-      paxFeedSourceOrder,
-      terminalSplits,
-      None,
-      None,
+      year = date.year,
+      month = date.month,
+      day = date.day,
+      terminal = terminal,
+      now = now,
+      maybePointInTime = Option(pointInTime),
+      maybeRemovalMessageCutOff = cutOff,
+      paxFeedSourceOrder = paxFeedSourceOrder,
+      terminalSplits = terminalSplits,
+      maybeRequestHistoricSplitsActor = None,
+      maybeRequestHistoricPaxActor = None,
+      maybeUpdateLiveView = None,
     ))
 }
 
@@ -81,6 +84,7 @@ class TerminalDayFlightActor(year: Int,
                              terminalSplits: Option[Splits],
                              maybeRequestHistoricSplitsActor: Option[ActorRef],
                              maybeRequestHistoricPaxActor: Option[ActorRef],
+                             maybeUpdateLiveView: Option[Iterable[ApiFlightWithSplits] => Unit],
                             ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -196,10 +200,12 @@ class TerminalDayFlightActor(year: Int,
     acceptableExistingSources.isEmpty
   }
 
-  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[TerminalUpdateRequest] = {
-    val (updatedState, minutesToUpdate) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
+  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long], Iterable[ApiFlightWithSplits])): Set[TerminalUpdateRequest] = {
+    val (updatedState, minutesToUpdate, updates) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
 
     state = updatedState
+
+    maybeUpdateLiveView.foreach(_(updates))
 
     requestMissingPax()
     requestMissingHistoricSplits()

@@ -37,10 +37,10 @@ trait MinuteLookupsLike {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[Set[TerminalUpdateRequest]]
     }
 
-  val updateCrunchMinutes: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
+  def updateCrunchMinutes(updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit): ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
     (terminalDate: (Terminal, UtcDate), container: MinutesContainer[CrunchMinute, TQM]) => {
       val (terminal, date) = terminalDate
-      val actor = system.actorOf(TerminalDayQueuesActor.props(terminal, date, now))
+      val actor = system.actorOf(TerminalDayQueuesActor.props(Option(updateLiveView))(terminal, date, now))
       requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[Set[TerminalUpdateRequest]]
     }
 
@@ -54,7 +54,7 @@ trait MinuteLookupsLike {
   val queuesLoadsLookup: MinutesLookup[PassengersMinute, TQM] =
     lookup[PassengersMinute, TQM](TerminalDayQueueLoadsActor.props, TerminalDayQueueLoadsActor.propsPointInTime)
   val queuesLookup: MinutesLookup[CrunchMinute, TQM] =
-    lookup[CrunchMinute, TQM](TerminalDayQueuesActor.props, TerminalDayQueuesActor.propsPointInTime)
+    lookup[CrunchMinute, TQM](TerminalDayQueuesActor.props(None), TerminalDayQueuesActor.propsPointInTime)
   val staffLookup: MinutesLookup[StaffMinute, TM] =
     lookup[StaffMinute, TM](TerminalDayStaffActor.props, TerminalDayStaffActor.propsPointInTime)
 
@@ -81,13 +81,14 @@ trait MinuteLookupsLike {
 case class MinuteLookups(now: () => SDateLike,
                          expireAfterMillis: Int,
                          queuesByTerminal: Map[Terminal, Seq[Queue]],
+                         updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit,
                         )
                         (implicit val ec: ExecutionContext, val system: ActorSystem) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "minutes-lookup-kill-actor")
 
   override val queueLoadsMinutesActor: ActorRef = system.actorOf(Props(new QueueLoadsMinutesActor(queuesByTerminal.keys, queuesLoadsLookup, updatePassengerMinutes)))
 
-  override val queueMinutesRouterActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes)))
+  override val queueMinutesRouterActor: ActorRef = system.actorOf(Props(new QueueMinutesRouterActor(queuesByTerminal.keys, queuesLookup, updateCrunchMinutes(updateLiveView))))
 
   override val staffMinutesRouterActor: ActorRef = system.actorOf(Props(new StaffMinutesRouterActor(queuesByTerminal.keys, staffLookup, updateStaffMinutes)))
 }

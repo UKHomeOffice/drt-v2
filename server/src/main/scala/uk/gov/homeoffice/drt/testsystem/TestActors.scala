@@ -382,7 +382,8 @@ object TestActors {
                                    day: Int,
                                    terminal: Terminal,
                                    now: () => SDateLike,
-                                  ) extends TerminalDayQueuesActor(year, month, day, terminal, now, None) with Resettable {
+                                   onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Unit],
+                                  ) extends TerminalDayQueuesActor(year, month, day, terminal, now, None, onUpdate) with Resettable {
     override def resetState(): Unit = state.clear()
 
     override def receiveCommand: Receive = resetBehaviour orElse super.receiveCommand
@@ -407,6 +408,7 @@ object TestActors {
                                    paxFeedSourceOrder: List[FeedSource],
                                    requestHistoricSplitsActor: Option[ActorRef],
                                    requestHistoricPaxActor: Option[ActorRef],
+                                   maybeUpdateLiveView: Option[Iterable[ApiFlightWithSplits] => Unit],
                                   )
     extends TerminalDayFlightActor(
       year,
@@ -420,6 +422,7 @@ object TestActors {
       None,
       requestHistoricSplitsActor,
       requestHistoricPaxActor,
+      maybeUpdateLiveView,
     ) with Resettable {
     override def resetState(): Unit = state = FlightsWithSplits.empty
 

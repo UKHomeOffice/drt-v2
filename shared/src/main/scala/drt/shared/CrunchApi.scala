@@ -6,7 +6,7 @@ import uk.gov.homeoffice.drt.model.{CrunchMinute, MinuteLike, TQM, WithMinute}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 import upickle.default._
 
 import scala.collection.immutable.{Map => IMap}
@@ -274,6 +274,76 @@ object CrunchApi {
   }
 
   case class CrunchMinutes(minutes: Iterable[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
+
+  object CrunchMinutes {
+    def groupByMinutes(slotSizeMinutes: Int, crunchMinutes: Seq[CrunchMinute], date: UtcDate)
+                      (implicit dateInMillis: UtcDate => MillisSinceEpoch): Iterable[CrunchMinute] =
+      crunchMinutes
+        .groupBy(_.terminal)
+        .map {
+          case (terminal, minutes) => (terminal, minutes.groupBy(_.queue))
+        }
+        .flatMap {
+          case (terminal, minutesByQueue) =>
+            minutesByQueue.flatMap {
+              case (queue, minutes) =>
+                val dayStart = dateInMillis(date)
+                (0 until 1440 by slotSizeMinutes).map { slot =>
+                  val slotStart = dayStart + slot * oneMinuteMillis
+                  val slotEnd = slotStart + slotSizeMinutes * oneMinuteMillis
+                  val minsInSlot = minutes.filter(cm => slotStart <= cm.minute && cm.minute < slotEnd)
+                  periodSummary(terminal, slotStart, queue, minsInSlot.toList)
+                }
+            }
+        }
+    def periodSummary(terminal: Terminal, periodStart: MillisSinceEpoch, queue: Queue, slotMinutes: List[CrunchMinute]): CrunchMinute = {
+      if (slotMinutes.nonEmpty) CrunchMinute(
+        terminal = terminal,
+        queue = queue,
+        minute = periodStart,
+        paxLoad = slotMinutes.map(_.paxLoad).sum,
+        workLoad = slotMinutes.map(_.workLoad).sum,
+        deskRec = slotMinutes.map(_.deskRec).max,
+        waitTime = slotMinutes.map(_.waitTime).max,
+        maybePaxInQueue = slotMinutes.map(_.maybePaxInQueue).max,
+        deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined))
+          Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max)
+        else
+          None,
+        deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined))
+          Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max)
+        else
+          None,
+        maybeDeployedPaxInQueue = if (slotMinutes.exists(cm => cm.maybeDeployedPaxInQueue.isDefined))
+          Option(slotMinutes.map(_.maybeDeployedPaxInQueue.getOrElse(0)).max)
+        else
+          None,
+        actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined))
+          Option(slotMinutes.map(_.actDesks.getOrElse(0)).max)
+        else
+          None,
+        actWait = if (slotMinutes.exists(cm => cm.actWait.isDefined))
+          Option(slotMinutes.map(_.actWait.getOrElse(0)).max)
+        else
+          None
+      )
+      else CrunchMinute(
+        terminal = terminal,
+        queue = queue,
+        minute = periodStart,
+        paxLoad = 0,
+        workLoad = 0,
+        deskRec = 0,
+        waitTime = 0,
+        maybePaxInQueue = None,
+        deployedDesks = None,
+        deployedWait = None,
+        maybeDeployedPaxInQueue = None,
+        actDesks = None,
+        actWait = None)
+    }
+
+  }
 
   case class PortStateUpdates(lastFlightsUpdate: MillisSinceEpoch,
                               lastQueuesUpdate: MillisSinceEpoch,

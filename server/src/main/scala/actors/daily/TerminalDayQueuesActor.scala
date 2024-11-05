@@ -11,11 +11,15 @@ import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
 
 object TerminalDayQueuesActor {
-  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, None))
+  def props(maybeUpdateLiveView: Option[(UtcDate, Iterable[CrunchMinute]) => Unit])
+           (terminal: Terminal,
+            date: UtcDate,
+            now: () => SDateLike,
+           ): Props =
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, None, maybeUpdateLiveView))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), None))
 }
 
 class TerminalDayQueuesActor(year: Int,
@@ -24,6 +28,7 @@ class TerminalDayQueuesActor(year: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
                              maybePointInTime: Option[MillisSinceEpoch],
+                             override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Unit],
                             ) extends
   TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"

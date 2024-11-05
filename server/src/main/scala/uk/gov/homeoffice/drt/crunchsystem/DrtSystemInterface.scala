@@ -6,16 +6,20 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
+import drt.shared.CrunchApi.CrunchMinutes
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import queueus.{AdjustmentsNoop, ChildEGateAdjustments}
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments}
 import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
@@ -41,6 +45,19 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val aggregatedDb: AggregatedDbTables
   val akkaDb: AkkaDbTables
   val params: DrtParameters
+
+  private val flightDao = FlightDao(airportConfig.portCode)
+
+  private val queueSlotDao = QueueSlotDao(airportConfig.portCode)
+
+  val updateFlightsLiveView: Iterable[ApiFlightWithSplits] => Unit =
+    flights => aggregatedDb.run(flightDao.insertOrUpdate(flights))
+  val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit =
+    (date, crunchMinutes) => {
+      val slotSizeMinutes = 15
+      val summaries = CrunchMinutes.groupByMinutes(slotSizeMinutes, crunchMinutes.toSeq, date)(d => SDate(d).millisSinceEpoch)
+      aggregatedDb.run(queueSlotDao.insertOrUpdate(summaries, slotSizeMinutes))
+    }
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
     if (params.isSuperUserMode) {
@@ -83,7 +100,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val feedService: FeedService
 
-  lazy val queueAdjustments = if (params.adjustEGateUseByUnder12s) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild) else AdjustmentsNoop
+  lazy val queueAdjustments: QueueAdjustments =
+    if (params.adjustEGateUseByUnder12s) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild) else AdjustmentsNoop
   lazy val splitsCalculator: SplitsCalculator = SplitsCalculator(airportConfig, queueAdjustments)
 
   lazy val applicationService: ApplicationService = ApplicationService(
