@@ -110,8 +110,7 @@ object ShiftAssignmentsTest extends Specification {
       val start = System.currentTimeMillis()
       existingShifts.applyUpdates(updateShifts)
       val end = System.currentTimeMillis()
-      println(s"Time taken: ${end - start}")
-      (end - start) must be_<(100L)
+      (end - start) must be_<(5L)
     }
 
   }

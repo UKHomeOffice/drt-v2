@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.UpdateShifts
-import drt.client.components.StaffingUtil.{consecutiveDay, consecutiveDayForWeek, consecutiveDaysInMonth, navigationDates}
+import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -126,7 +126,7 @@ object MonthlyStaffing {
 
 
   def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5)
-    .map(i => if (i == 0) SDate.now() else SDate.firstDayOfMonth(date).addMonths(i))
+    .map(i => SDate.firstDayOfMonth(date).addMonths(i))
 
   def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Any]], changes: Map[(Int, Int), Int]): Seq[Seq[Any]] =
     changes.foldLeft(staffTimeSlotDays) {
@@ -238,7 +238,7 @@ object MonthlyStaffing {
         modelChangeDetection,
         <.div(
           if (state.showStaffSuccess)
-            StaffUpdateSuccess(IStaffSuccess(0, "You updated the staff number for selected date and time", () => {
+            StaffUpdateSuccess(IStaffSuccess(0, "The staff numbers have been successfully updated for your chosen dates and times", () => {
               scope.modState(state => state.copy(showStaffSuccess = false)).runNow()
             })) else EmptyVdom,
         ),
@@ -511,7 +511,7 @@ object MonthlyStaffing {
 
     val daysInDayRange: Seq[(SDateLike, String)] = props.terminalPageTab.dayRangeType match {
       case Some("weekly") => consecutiveDayForWeek(viewingDate)
-      case Some("daily") => consecutiveDay(viewingDate)
+      case Some("daily") => dateRangeDays(viewingDate, 1)
       case _ => consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
     }
 

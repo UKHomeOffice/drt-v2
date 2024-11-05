@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.client.components.StaffingUtil.dateRangeDays
 import drt.client.services.JSDateConversions.SDate
 import utest._
 
@@ -27,7 +28,7 @@ object StaffingUtilSpec extends TestSuite {
       "Given consecutiveDay" - {
         "Then handle the date 2024-10-30 correctly" - {
           val startDay = SDate("2024-10-30T00:00:00Z")
-          val result = StaffingUtil.consecutiveDay(startDay)
+          val result = dateRangeDays(startDay, 1)
 
           assert(result == Seq(
             (SDate("2024-10-30T00:00:00Z"), "Wednesday")

@@ -9,17 +9,16 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 import scala.scalajs.js.{Date, UndefOr}
 
-case class EditShiftStaff(port: String,
-                          terminal: String,
-                          shiftName: String,
-                          startAt: Long,
-                          periodInMinutes: Int,
-                          endAt: Option[Long],
-                          frequency: Option[String],
-                          actualStaff: Option[Int],
-                          minimumRosteredStaff: Option[Int],
-                          email: String
-                         )
+case class UpdateStaffForTimeRangeForm(port: String,
+                                       terminal: String,
+                                       shiftName: String,
+                                       startAt: Long,
+                                       periodInMinutes: Int,
+                                       endAt: Option[Long],
+                                       frequency: Option[String],
+                                       actualStaff: Option[Int],
+                                       minimumRosteredStaff: Option[Int],
+                                       email: String)
 
 @js.native
 sealed trait IEditShiftStaff extends js.Object {
@@ -41,7 +40,7 @@ object IEditShiftStaff {
     p
   }
 
-  implicit val rw: ReadWriter[EditShiftStaff] = macroRW[EditShiftStaff]
+  implicit val rw: ReadWriter[UpdateStaffForTimeRangeForm] = macroRW[UpdateStaffForTimeRangeForm]
 
   def toStaffAssignment(obj: IEditShiftStaff, terminal: Terminal): StaffAssignment = {
 

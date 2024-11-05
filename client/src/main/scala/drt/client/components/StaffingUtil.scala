@@ -68,12 +68,12 @@ object StaffingUtil {
     val endOfWeek = SDate.lastDayOfWeek(viewingDate)
 
     val days = (endOfWeek.millisSinceEpoch - startOfWeek.millisSinceEpoch) / (1000 * 60 * 60 * 24) + 1
-    daysOfWeek(startOfWeek, days.toInt)
+    dateRangeDays(startOfWeek, days.toInt)
   }
 
-  def consecutiveDay(viewingDate: SDateLike): Seq[(SDateLike, String)] = {
-    daysOfWeek(viewingDate, 1)
-  }
+//  def consecutiveDay(viewingDate: SDateLike): Seq[(SDateLike, String)] = {
+//    daysOfWeek(viewingDate, 1)
+//  }
 
   def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[(SDateLike, String)] = {
     val lastDayOfPreviousMonth = SDate(startDay.getFullYear, startDay.getMonth, 1).addDays(-1)
@@ -91,23 +91,13 @@ object StaffingUtil {
     } else endDay
 
     val days = (adjustedEndDay.getDate - adjustedStartDay.getDate) + 1
-    daysOfWeek(adjustedStartDay, days)
+    dateRangeDays(adjustedStartDay, days)
   }
 
-  def daysOfWeek(startDate: SDateLike, numberOfDays: Int): Seq[(SDateLike, String)] = {
+  def dateRangeDays(startDate: SDateLike, numberOfDays: Int): Seq[(SDateLike, String)] = {
     List.tabulate(numberOfDays)(i => {
       val date = startDate.addDays(i)
-      val dayOfWeek = date.getDayOfWeek match {
-        case 1 => "Monday"
-        case 2 => "Tuesday"
-        case 3 => "Wednesday"
-        case 4 => "Thursday"
-        case 5 => "Friday"
-        case 6 => "Saturday"
-        case 7 => "Sunday"
-        case _ => "Unknown"
-      }
-      (date, dayOfWeek)
+      (date, date.getDayOfWeekString)
     })
   }
 }

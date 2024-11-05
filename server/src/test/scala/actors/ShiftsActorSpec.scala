@@ -30,7 +30,6 @@ class ShiftsActorSpec extends CrunchTestLike with ImplicitSender {
   def assertExpectedResponse(expectedShifts: ShiftAssignments): Unit = {
     val response = expectMsgType[ShiftAssignments]
     val sortedResponse = response.assignments.sortBy(_.start)
-//    sortedResponse.map(a => println(s"${a.name} ${SDate(a.start).toISOString} ${SDate(a.end).toISOString} ${a.numberOfStaff}"))
     val sortedExpectedShifts = expectedShifts.assignments.sortBy(_.start)
     assert(sortedResponse == sortedExpectedShifts)
   }
