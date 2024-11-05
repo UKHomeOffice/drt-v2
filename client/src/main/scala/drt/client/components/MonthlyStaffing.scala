@@ -10,6 +10,7 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiSwipeableDrawer}
 import io.kinoplan.scalajs.react.material.ui.icons.{MuiIcons, MuiIconsModule}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ChevronLeft, ChevronRight, Delete, GetApp, Groups, People, PeopleAltRounded}
@@ -116,7 +117,7 @@ object MonthlyStaffing {
                   callback: ReactEventFromInput => Callback
                 ): TagOf[Select] = {
     val valueNames = values.zip(names)
-    <.select(^.className := "form-control", ^.defaultValue := defaultValue,
+    <.select(^.className := "form-control dynamic-width", ^.defaultValue := defaultValue,
       ^.onChange ==> callback,
       valueNames.map {
         case (value, name) => <.option(^.value := value, s"$name")
@@ -259,9 +260,16 @@ object MonthlyStaffing {
                 <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
                   <.span(^.className := "staffing-controls-title",
                     <.strong(props.terminalPageTab.dayRangeType match {
-                      case Some("monthly") => s"Staff numbers : ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
-                      case Some("weekly") => s"Staff numbers : ${SDate.firstDayOfWeek(viewingDate).`dayOfWeek-DD-MMM-YYYY`} to ${SDate.lastDayOfWeek(viewingDate).`dayOfWeek-DD-MMM-YYYY`}"
-                      case Some("daily") => s"Staff numbers : ${viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
+                      case Some("monthly") => s"Staff numbers: ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
+                      case Some("weekly") =>
+                        val firstDayOfWeek = SDate.firstDayOfWeek(viewingDate)
+                        val lastDayOfWeek = SDate.lastDayOfWeek(viewingDate)
+                        if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
+                          val length = firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.length
+                          s"Staff numbers: ${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.substring(0, length - 4)} to ${SDate.lastDayOfWeek(viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
+                        } else
+                          s"Staff numbers: ${SDate.firstDayOfWeek(viewingDate).`shortDayOfWeek-DD-MMM-YYYY`} to ${SDate.lastDayOfWeek(viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
+                      case Some("daily") => s"Staff numbers: ${viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
                       case _ => s"Staff numbers in ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
                     })),
                   <.span(^.className := "staffing-controls-title-options",
@@ -286,7 +294,7 @@ object MonthlyStaffing {
                           }
                         ))
                     } else EmptyVdom,
-                    if (props.enableStaffPlanningChanges) <.div(^.className := "staffing-controls-navigation",
+                    if (props.enableStaffPlanningChanges) <.div(^.className := "staffing-controls-navigation ",
                       handleNavigation(props, viewingDate, isWeekly, isDaily)
                     ) else EmptyVdom,
                     <.div(^.className := "staffing-controls-select",
@@ -299,7 +307,7 @@ object MonthlyStaffing {
                       )
                     ),
                     if (props.enableStaffPlanningChanges)
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small")
+                      MuiButton(color = Color.primary, variant = "outlined", size = "small", sx = SxProps(Map("backgroundColor" -> "white")))
                       (MuiIcons(Groups)(fontSize = "small"),
                         <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
                         ^.onClick ==> handleShiftEditForm)
@@ -373,9 +381,11 @@ object MonthlyStaffing {
 
   private def navigationArrows(props: Props, previousWeekDate: SDateLike, nextWeekDate: SDateLike) = {
     <.div(
-      MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(ChevronLeft)(fontSize = "medium"),
+      MuiButton(color = Color.primary, variant = "outlined",
+        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronLeft)(fontSize = "medium"),
         ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly))))),
-      MuiButton(color = Color.primary, variant = "outlined", size = "small")(MuiIcons(ChevronRight)(fontSize = "medium"),
+      MuiButton(color = Color.primary, variant = "outlined",
+        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronRight)(fontSize = "medium"),
         ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))))
     )
   }
