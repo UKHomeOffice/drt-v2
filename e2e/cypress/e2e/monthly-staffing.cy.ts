@@ -113,10 +113,13 @@ describe('Monthly Staffing', () => {
             const csrf: any = $html.filter('input:hidden[name="csrfToken"]').val()
             cy.saveShifts(shifts(), csrf).then(() => {
               cy.visit('#terminal/T1/staffing/15/')
+                .wait(5000)
                 .get(cellToTest).contains("1")
                 .visit('#terminal/T1/staffing/15/?date=' + nextMonthDateString())
+                .wait(5000)
                 .get(cellToTest).contains("2")
                 .visit('#terminal/T1/staffing/15/?date=' + thisMonthDateString())
+                .wait(5000)
                 .get(cellToTest).contains("1")
                 .resetShifts(csrf);
             });
