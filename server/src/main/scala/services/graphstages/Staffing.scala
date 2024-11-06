@@ -6,14 +6,9 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.crunch.deskrecs.DeskRecs
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
-
-import scala.collection.immutable.{NumericRange, SortedMap}
-import scala.collection.mutable
-import scala.util.Try
 
 
 object Staffing {
@@ -37,49 +32,20 @@ object Staffing {
     StaffSources(relevantShifts, fixedPoints, movementsService, available, sdateFromMillisLocal)
   }
 
-  def removeOldShifts(dropBeforeMillis: MillisSinceEpoch, shifts: ShiftAssignments): ShiftAssignments = shifts.copy(
-    shifts.assignments.collect { case sa: StaffAssignment if sa.end.millisSinceEpoch > dropBeforeMillis => sa }
-  )
+  def removeOldShifts(dropBeforeMillis: MillisSinceEpoch, shifts: ShiftAssignments): ShiftAssignments =
+    shifts.copy(
+      shifts.indexedAssignments.collect { case (idx, sa) if sa.end.millisSinceEpoch > dropBeforeMillis => (idx, sa) }
+    )
 
   def removeOldMovements(dropBeforeMillis: MillisSinceEpoch,
-                         movements: Seq[StaffMovement]): Seq[StaffMovement] = movements
-    .groupBy(_.uUID)
-    .values
-    .filter(_.exists(_.time.millisSinceEpoch > dropBeforeMillis))
-    .flatten
-    .toSeq
-    .sortBy(_.time.millisSinceEpoch)
-
-  def staffMinutesForCrunchMinutes(crunchMinutes: mutable.SortedMap[TQM, CrunchMinute],
-                                   maybeSources: StaffSources): SortedMap[TM, StaffMinute] = {
-
-    val staff = maybeSources
-    SortedMap[TM, StaffMinute]() ++ crunchMinutes
+                         movements: Seq[StaffMovement]): Seq[StaffMovement] =
+    movements
+      .groupBy(_.uUID)
       .values
-      .groupBy(_.terminal)
-      .flatMap {
-        case (tn, tcms) =>
-          val minutes = tcms.map(_.minute)
-          val startMinuteMillis = minutes.min + oneMinuteMillis
-          val endMinuteMillis = minutes.max
-          val minuteMillis = startMinuteMillis to endMinuteMillis by oneMinuteMillis
-          staffMinutesForPeriod(staff, tn, minuteMillis)
-      }
-  }
-
-  def staffMinutesForPeriod(staff: StaffSources,
-                            tn: Terminal,
-                            minuteMillis: NumericRange[MillisSinceEpoch]): SortedMap[TM, StaffMinute] = {
-
-    SortedMap[TM, StaffMinute]() ++ minuteMillis
-      .map { minute =>
-        val shifts = staff.shifts.terminalStaffAt(tn, SDate(minute), sdateFromMillisLocal)
-        val fixedPoints = staff.fixedPoints.terminalStaffAt(tn, SDate(minute, europeLondonTimeZone), sdateFromMillisLocal)
-        val movements = staff.movements.terminalStaffAt(tn, minute)
-        val staffMinute = StaffMinute(tn, minute, shifts, fixedPoints, movements)
-        (staffMinute.key, staffMinute)
-      }
-  }
+      .filter(_.exists(_.time.millisSinceEpoch > dropBeforeMillis))
+      .flatten
+      .toSeq
+      .sortBy(_.time.millisSinceEpoch)
 
   def terminalStaffAt(shifts: ShiftAssignments,
                       fixedPoints: FixedPointAssignments,
@@ -162,57 +128,6 @@ object StaffDeploymentCalculator {
 
     if (best > staffAvailable) staffAvailable
     else best
-  }
-}
-
-object StaffAssignmentHelper {
-  def tryStaffAssignment(name: String,
-                         terminalName: Terminal,
-                         startDate: String,
-                         startTime: String,
-                         endTime: String,
-                         numberOfStaff: String = "1"): Try[StaffAssignment] = {
-    val staffDeltaTry = Try(numberOfStaff.toInt)
-    val ymd = startDate.split("/").toVector
-
-    val tryDMY: Try[(Int, Int, Int)] = Try((ymd(0).toInt, ymd(1).toInt, ymd(2).toInt + 2000))
-
-    for {
-      dmy <- tryDMY
-      (d, m, y) = dmy
-
-      startDtTry: Try[SDateLike] = parseTimeWithStartTime(startTime, d, m, y)
-      endDtTry: Try[SDateLike] = parseTimeWithStartTime(endTime, d, m, y)
-      startDt <- startDtTry
-      endDt <- endDtTry
-      staffDelta: Int <- staffDeltaTry
-    } yield {
-      val start = startDt
-      val end = adjustEndDateIfEndTimeIsBeforeStartTime(d, m, y, startDt, endDt)
-      StaffAssignment(name, terminalName, start.millisSinceEpoch, end.millisSinceEpoch, staffDelta, None)
-    }
-  }
-
-  private def adjustEndDateIfEndTimeIsBeforeStartTime(d: Int,
-                                                      m: Int,
-                                                      y: Int,
-                                                      startDt: SDateLike,
-                                                      endDt: SDateLike): SDateLike = {
-    if (endDt.millisSinceEpoch < startDt.millisSinceEpoch) {
-      SDate(y, m, d, endDt.getHours, endDt.getMinutes).addDays(1)
-    }
-    else {
-      endDt
-    }
-  }
-
-  private def parseTimeWithStartTime(startTime: String, d: Int, m: Int, y: Int): Try[SDateLike] = {
-    Try {
-      val startT = startTime.split(":").toVector
-      val (startHour, startMinute) = (startT(0).toInt, startT(1).toInt)
-      val startDt = SDate(y = y, m = m, d = d, h = startHour, mm = startMinute, dateTimeZone = europeLondonTimeZone)
-      startDt
-    }
   }
 }
 

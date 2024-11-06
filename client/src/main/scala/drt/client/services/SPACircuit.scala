@@ -21,7 +21,6 @@ import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import uk.gov.homeoffice.drt.training.FeatureGuide
-
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -140,8 +139,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      airportConfig: Pot[AirportConfig] = Empty,
                      arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])] = None,
                      contactDetails: Pot[ContactDetails] = Empty,
-                     shifts: Pot[ShiftAssignments] = Empty,
-                     monthOfShifts: Pot[MonthOfShifts] = Empty,
+                     dayOfShifts: Pot[ShiftAssignments] = Empty,
+                     allShifts: Pot[ShiftAssignments] = Empty,
                      fixedPoints: Pot[FixedPointAssignments] = Empty,
                      staffMovements: Pot[StaffMovements] = Empty,
                      viewMode: ViewMode = ViewLive,
@@ -176,7 +175,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      dropIns: Pot[Seq[DropIn]] = Empty,
                      dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
                      userFeedbacks: Pot[Seq[UserFeedback]] = Empty,
-                     abFeatures:Pot[Seq[ABFeature]] = Empty,
+                     abFeatures: Pot[Seq[ABFeature]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
                      userSelectedPlanningTimePeriod: Pot[Int] = Empty,
@@ -223,8 +222,8 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new OohForSupportHandler(zoomRW(_.oohStatus)((m, v) => m.copy(oohStatus = v))),
       new FeatureFlagHandler(zoomRW(_.featureFlags)((m, v) => m.copy(featureFlags = v))),
       new ApplicationVersionHandler(zoomRW(_.applicationVersion)((m, v) => m.copy(applicationVersion = v))),
-      new ShiftsHandler(currentViewMode, zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
-      new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
+      new ShiftsHandler(currentViewMode, zoomRW(_.dayOfShifts)((m, v) => m.copy(dayOfShifts = v))),
+      new AllShiftsHandler(zoomRW(_.allShifts)((m, v) => m.copy(allShifts = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
       new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3))),
@@ -260,7 +259,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
       new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v))),
-      new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v)))
+      new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
     )
     composedHandlers
   }

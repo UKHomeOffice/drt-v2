@@ -32,7 +32,7 @@ class FeatureFlagsControllerSpec extends PlaySpec {
       status(result) mustBe OK
 
       val resultExpected =
-        s"""{"useApiPaxNos":true,"displayWaitTimesToggle":true,"displayRedListInfo":true}"""
+        s"""{"useApiPaxNos":true,"displayWaitTimesToggle":true,"displayRedListInfo":true,"enableStaffPlanningChange":false}""".stripMargin
           .stripMargin
 
       contentAsString(result) must include(resultExpected)

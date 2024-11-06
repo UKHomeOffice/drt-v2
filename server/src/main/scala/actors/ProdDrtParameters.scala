@@ -64,6 +64,8 @@ trait DrtParameters {
   val retainDataForYears: Int
 
   val isTestEnvironment: Boolean
+
+  val enableStaffPlanningChange: Boolean
 }
 
 object DrtParameters {
@@ -74,7 +76,7 @@ object DrtParameters {
   }
 }
 
-case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParameters {
+case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParameters {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val gateWalkTimesFilePath: Option[String] =
@@ -136,4 +138,6 @@ case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParamete
   override val govNotifyApiKey: String = config.get[String]("notifications.gov-notify-api-key")
 
   override val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
+
+  override val enableStaffPlanningChange: Boolean = config.get[Boolean]("feature-flags.enable-ports-staff-planning-change")
 }

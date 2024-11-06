@@ -1,10 +1,7 @@
 package module
 
 import actors.DrtParameters
-import actors.persistent.staffing.ShiftsActor
-import akka.Done
 import akka.actor.ActorSystem
-import akka.pattern.ask
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.util.Timeout
 import com.google.inject.{AbstractModule, Provides}
@@ -34,12 +31,11 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
   lazy val drtParameters: DrtParameters = DrtParameters(config)
 
   val airportConfig: AirportConfig = AirportConfigProvider(config)
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  implicit val timeout: Timeout = new Timeout(90.seconds)
 
   private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, drtParameters, now)
   private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, drtParameters, now)
-
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val timeout: Timeout = new Timeout(10.seconds)
 
   override def configure(): Unit = {
     if (drtParameters.isTestEnvironment) {
@@ -118,16 +114,4 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
   @Provides
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtParameters.govNotifyApiKey)
 
-  @Provides
-  def minimumStaffingService: MinimumStaffingService = MinimumStaffingServiceImpl(
-    portCode = airportConfig.portCode,
-    now = now,
-    forecastMaxDays = drtParameters.forecastMaxDays,
-    getTerminalConfig = provideDrtSystemInterface.applicationService.getTerminalConfig,
-    updateTerminalConfig = provideDrtSystemInterface.applicationService.updateTerminalConfig,
-    updateStaffingNumbers = (terminal, start, end, newValue, oldValue) => {
-      val request = ShiftsActor.SetMinimumStaff(terminal, start, end, newValue, oldValue)
-      provideDrtSystemInterface.actorService.shiftsSequentialWritesActor.ask(request).map(_ => Done)
-    },
-  )
 }

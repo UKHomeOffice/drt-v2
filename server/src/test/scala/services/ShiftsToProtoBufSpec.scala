@@ -50,13 +50,6 @@ class ShiftsToProtoBufSpec extends Specification {
           terminalName = Some(T1.toString),
           startTimestamp = Some(1484906400000L),
           endTimestamp = Some(1484942400000L),
-          numberOfStaff = Some("5"),
-          createdAt = Some(createdAt.millisSinceEpoch)
-        ), ShiftMessage(
-          name = Some("shift name"),
-          terminalName = Some(T1.toString),
-          startTimestamp = Some(1484906400000L),
-          endTimestamp = Some(1484942400000L),
           numberOfStaff = Some("9"),
           createdAt = Some(createdAt.millisSinceEpoch)
         ))
