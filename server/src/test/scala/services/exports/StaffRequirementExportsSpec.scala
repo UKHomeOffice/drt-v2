@@ -21,7 +21,7 @@ class StaffRequirementExportsSpec extends Specification {
 
       def fifteenMins(start: SDateLike): Seq[Long] = (start.millisSinceEpoch to start.addMinutes(14).millisSinceEpoch by oneMinuteMillis).toList
 
-      val grouped = StaffRequirementExports.groupByXMinutes(minutes, 15).view.mapValues(_.map(_.minute)).toMap
+      val grouped = StaffRequirementExports.groupByMinutes(minutes, 15).view.mapValues(_.map(_.minute)).toMap
       val expected = Map(
         0 -> fifteenMins(SDate("2023-09-26T00:00", europeLondonTimeZone)),
         1 -> fifteenMins(SDate("2023-09-26T00:15", europeLondonTimeZone)),

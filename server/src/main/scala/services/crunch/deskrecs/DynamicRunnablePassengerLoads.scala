@@ -88,7 +88,10 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
       .wireTap { crWithPax =>
         log.info(s"${crWithPax._1} crunch request - ${crWithPax._2.minutes.size} minutes of passenger loads with ${crWithPax._2.minutes.map(_.toMinute.passengers.size).sum} passengers")
         val datesToUpdate = Set(crWithPax._1.start.toUtcDate, crWithPax._1.end.toUtcDate)
-        datesToUpdate.foreach(updateCapacity)
+        datesToUpdate.foreach { d =>
+          updateCapacity(d)
+          updateLiveView(crWithPax._2)
+        }
       }
       .via(Flow[(TerminalUpdateRequest, MinutesContainer[PassengersMinute, TQM])].map {
         case (pr, paxMinutes) =>
