@@ -3,7 +3,7 @@ package slickdb
 
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
-import uk.gov.homeoffice.drt.db.tables.StatusDailyTable
+import uk.gov.homeoffice.drt.db.tables.{FlightTable, QueueSlotTable, StatusDailyTable}
 
 import java.sql.Timestamp
 import scala.concurrent.Future
@@ -231,11 +231,16 @@ trait AggregatedDbTables {
   }
 
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */
-  lazy val voyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfoTable(tag))
-  lazy val processedJson = new TableQuery(tag => new ProcessedJsonTable(tag))
-  lazy val processedZip = new TableQuery(tag => new ProcessedZipTable(tag))
-  lazy val arrival = new TableQuery(tag => new ArrivalTable(tag))
-  lazy val arrivalStats = new TableQuery(tag => new ArrivalStatsTable(tag))
-  lazy val user = new TableQuery(tag => new UserTable(tag))
-  lazy val statusDaily = new TableQuery(tag => new StatusDailyTable(tag))
+  val voyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfoTable(tag))
+  val processedJson = new TableQuery(tag => new ProcessedJsonTable(tag))
+  val processedZip = new TableQuery(tag => new ProcessedZipTable(tag))
+  val arrival = new TableQuery(tag => new ArrivalTable(tag))
+  val arrivalStats = new TableQuery(tag => new ArrivalStatsTable(tag))
+  val user = new TableQuery(tag => new UserTable(tag))
+  val statusDaily = new TableQuery(tag => new StatusDailyTable(tag))
+  val flight = new TableQuery(tag => new FlightTable(tag))
+  val queueSlot = new TableQuery(tag => new QueueSlotTable(tag))
+
+  val tables = Seq(arrival, arrivalStats, processedZip, processedJson, statusDaily, voyageManifestPassengerInfo,
+    flight, queueSlot)
 }

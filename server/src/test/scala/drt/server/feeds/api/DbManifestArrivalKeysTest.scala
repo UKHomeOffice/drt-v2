@@ -20,7 +20,7 @@ import scala.util.Try
 class DbManifestArrivalKeysTest
   extends CrunchTestLike with BeforeEach {
 
-  override def before: Any = {
+  override def before(): Any = {
     clearDatabase()
   }
 

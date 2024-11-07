@@ -23,7 +23,7 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   val myNow: () => SDateLike = () => date
 
   "Given an empty TerminalDayQueuesActor" >> {
-    val queuesActor: ActorRef = system.actorOf(Props(new TerminalDayQueuesActor(2020, 1, 1, terminal, myNow, None)))
+    val queuesActor: ActorRef = system.actorOf(Props(new TerminalDayQueuesActor(2020, 1, 1, terminal, myNow, None, None)))
 
     "When I send it a DeskRecMinute" >> {
       val drm = DeskRecMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None)
@@ -95,6 +95,6 @@ class TerminalDayQueuesActorSpec extends CrunchTestLike {
   }
 
   private def actorForTerminalAndDate(terminal: Terminal, date: SDateLike): ActorRef = {
-    system.actorOf(TerminalDayQueuesActor.props(terminal, date.toUtcDate, () => date))
+    system.actorOf(TerminalDayQueuesActor.props(None)(terminal, date.toUtcDate, () => date))
   }
 }

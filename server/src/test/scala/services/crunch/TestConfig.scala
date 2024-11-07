@@ -7,9 +7,11 @@ import manifests.ManifestLookupLike
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}
 import services.graphstages.CrunchMocks
 import services.{TryCrunchWholePax, TrySimulator}
+import slickdb.AggregatedDbTables
 import uk.gov.homeoffice.drt.arrivals.{Arrival, ArrivalsDiff, FeedArrival, ForecastArrival, LiveArrival}
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.SDate.implicits.sdateFromMillisLocal
 import uk.gov.homeoffice.drt.time.SDateLike
 
@@ -37,4 +39,5 @@ case class TestConfig(initialForecastBaseArrivals: Seq[ForecastArrival] = Seq.em
                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff] = diff => Future.successful(diff),
                       passengerAdjustments: List[FeedArrival] => Future[List[FeedArrival]] = arrivals => Future.successful(arrivals),
                       historicManifestLookup: Option[ManifestLookupLike] = None,
+                      maybeAggregatedDbTables: Option[AggregatedDbTables] = None,
                      )

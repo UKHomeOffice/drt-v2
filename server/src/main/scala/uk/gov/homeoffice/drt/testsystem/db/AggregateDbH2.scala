@@ -15,15 +15,6 @@ object AggregateDbH2 extends AggregatedDbTables {
 
   import profile.api._
 
-  private val tables = Seq(
-    arrival,
-    arrivalStats,
-    processedZip,
-    processedJson,
-    statusDaily,
-    voyageManifestPassengerInfo,
-  )
-
   def dropAndCreateH2Tables()
                            (implicit ec: ExecutionContext): Unit =
     Await.result(
@@ -32,4 +23,3 @@ object AggregateDbH2 extends AggregatedDbTables {
       1.second
     )
 }
-

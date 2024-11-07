@@ -6,16 +6,16 @@ import akka.stream.Materializer
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
-import drt.shared.CrunchApi.CrunchMinutes
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
 import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments}
+import services.liveviews.{FlightsLiveView, QueuesLiveView}
 import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
@@ -46,18 +46,14 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val akkaDb: AkkaDbTables
   val params: DrtParameters
 
-  private val flightDao = FlightDao(airportConfig.portCode)
+  private val flightDao = FlightDao()
+  private val queueSlotDao = QueueSlotDao()
 
-  private val queueSlotDao = QueueSlotDao(airportConfig.portCode)
+  val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit =
+    FlightsLiveView.updateFlightsLiveView(flightDao, aggregatedDb, airportConfig.portCode)
 
-  val updateFlightsLiveView: Iterable[ApiFlightWithSplits] => Unit =
-    flights => aggregatedDb.run(flightDao.insertOrUpdate(flights))
   val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit =
-    (date, crunchMinutes) => {
-      val slotSizeMinutes = 15
-      val summaries = CrunchMinutes.groupByMinutes(slotSizeMinutes, crunchMinutes.toSeq, date)(d => SDate(d).millisSinceEpoch)
-      aggregatedDb.run(queueSlotDao.insertOrUpdate(summaries, slotSizeMinutes))
-    }
+    QueuesLiveView.updateFlightsLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
     if (params.isSuperUserMode) {
@@ -120,6 +116,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     requestAndTerminateActor = actorService.requestAndTerminateActor,
     splitsCalculator,
   )
+
   def run(): Unit
 
 }

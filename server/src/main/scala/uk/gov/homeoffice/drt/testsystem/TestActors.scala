@@ -408,7 +408,7 @@ object TestActors {
                                    paxFeedSourceOrder: List[FeedSource],
                                    requestHistoricSplitsActor: Option[ActorRef],
                                    requestHistoricPaxActor: Option[ActorRef],
-                                   maybeUpdateLiveView: Option[Iterable[ApiFlightWithSplits] => Unit],
+                                   maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit],
                                   )
     extends TerminalDayFlightActor(
       year,

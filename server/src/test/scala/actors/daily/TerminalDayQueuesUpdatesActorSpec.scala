@@ -29,7 +29,7 @@ class TerminalDayQueuesUpdatesActorSpec extends CrunchTestLike {
 
   "Given a TerminalDayQueueMinuteUpdatesActor" >> {
     implicit val ec: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
-    val queuesActor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => day)))
+    val queuesActor = system.actorOf(Props(new TestTerminalDayQueuesActor(day.getFullYear, day.getMonth, day.getDate, terminal, () => day, None)))
     val probe = TestProbe()
     val journal = InMemoryStreamingJournal
     system.actorOf(Props(new TestTerminalDayQueuesUpdatesActor[journal.ReadJournalType](day.getFullYear, day.getMonth, day.getDate, terminal, () => day, journal, probe.ref)))

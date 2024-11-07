@@ -32,7 +32,7 @@ object TerminalDayFlightActor {
                               terminalSplits: Option[Splits],
                               requestHistoricSplitsActor: Option[ActorRef],
                               requestHistoricPaxActor: Option[ActorRef],
-                              maybeUpdateLiveView: Option[Iterable[ApiFlightWithSplits] => Unit],
+                              maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit],
                              ): Props =
     Props(new TerminalDayFlightActor(
       year = date.year,
@@ -84,7 +84,7 @@ class TerminalDayFlightActor(year: Int,
                              terminalSplits: Option[Splits],
                              maybeRequestHistoricSplitsActor: Option[ActorRef],
                              maybeRequestHistoricPaxActor: Option[ActorRef],
-                             maybeUpdateLiveView: Option[Iterable[ApiFlightWithSplits] => Unit],
+                             maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit],
                             ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -200,12 +200,13 @@ class TerminalDayFlightActor(year: Int,
     acceptableExistingSources.isEmpty
   }
 
-  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long], Iterable[ApiFlightWithSplits])): Set[TerminalUpdateRequest] = {
-    val (updatedState, minutesToUpdate, updates) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
+  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long], Iterable[ApiFlightWithSplits], Iterable[UniqueArrival])
+                                 ): Set[TerminalUpdateRequest] = {
+    val (updatedState, minutesToUpdate, updates, removals) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
 
     state = updatedState
 
-    maybeUpdateLiveView.foreach(_(updates))
+    maybeUpdateLiveView.foreach(_(updates, removals))
 
     requestMissingPax()
     requestMissingHistoricSplits()
