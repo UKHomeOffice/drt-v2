@@ -8,6 +8,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.db.dao.FlightDao
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedSource, PortCode}
@@ -400,6 +401,8 @@ class AclFeedSpec extends CrunchTestLike {
           val voyageNos = ps.flights.values.map(_.apiFlight.VoyageNumber).toSet
           voyageNos == expected
       }
+
+      aggregatedDb.run(FlightDao().getForDateDate(defaultAirportConfig.portCode))
 
       success
     }
