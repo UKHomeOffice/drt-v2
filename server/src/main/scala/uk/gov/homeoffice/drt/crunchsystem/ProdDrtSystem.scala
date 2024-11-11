@@ -91,8 +91,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     system,
     now,
     manifestLookups,
-    airportConfig.portCode,
-    feedService.paxFeedSourceOrder,
     airportConfig.terminals,
   )
 

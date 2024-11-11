@@ -38,7 +38,8 @@ trait FlightLookupsLike {
                    ): FlightsUpdate = (partition: (Terminal, UtcDate), diff: FlightUpdates) => {
     val (terminal, date) = partition
     val props = TerminalDayFlightActor.propsWithRemovalsCutoff(
-      terminal, date, now, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal), requestHistoricSplitsActor, requestHistoricPaxActor, Option(updateLiveView))
+      terminal, date, now, removalMessageCutOff, paxFeedSourceOrder, terminalSplits(terminal),
+      requestHistoricSplitsActor, requestHistoricPaxActor, Option(updateLiveView))
     val actor = system.actorOf(props)
     requestAndTerminateActor.ask(RequestAndTerminate(actor, diff)).mapTo[Set[TerminalUpdateRequest]]
   }

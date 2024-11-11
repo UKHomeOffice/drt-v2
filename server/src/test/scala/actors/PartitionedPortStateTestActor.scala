@@ -98,12 +98,10 @@ class PartitionedPortStateTestActor(probe: ActorRef,
             updateFlights(actor, removals, minutesAffected.min, minutesAffected.max)
           }
 
-        case flightsWithSplitsDiff@FlightsWithSplitsDiff(_, _) if flightsWithSplitsDiff.nonEmpty =>
+        case flightsWithSplitsDiff@FlightsWithSplitsDiff(_) if flightsWithSplitsDiff.nonEmpty =>
           updateFlights(
             actor,
-            flightsWithSplitsDiff.arrivalsToRemove.collect {
-              case ua: UniqueArrival => ua
-            },
+            Seq.empty,
             flightsWithSplitsDiff.updateMinutes(paxFeedSourceOrder).min,
             flightsWithSplitsDiff.updateMinutes(paxFeedSourceOrder).max
           )

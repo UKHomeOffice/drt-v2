@@ -203,11 +203,6 @@ class TestDrtActor extends Actor {
         override val deskRecsQueueActor: ActorRef = TestProbe("desk-recs-queue-actor").ref
         override val deploymentQueueActor: ActorRef = TestProbe("deployments-queue-actor").ref
         override val staffingQueueActor: ActorRef = TestProbe("staffing-queue-actor").ref
-
-        override val aggregatedArrivalsActor: ActorRef = tc.maybeAggregatedArrivalsActor match {
-          case Some(actor) => actor
-          case None => system.actorOf(Props(new MockAggregatedArrivalsActor))
-        }
       }
 
       val (updateFlightsLiveView, update15MinuteQueueSlotsLiveView) = tc.maybeAggregatedDbTables match {
@@ -301,7 +296,6 @@ class TestDrtActor extends Actor {
         val (mergeArrivalsRequestActor, mergeArrivalsKillSwitch: UniqueKillSwitch) = arrivals.RunnableMergedArrivals(
           portCode = tc.airportConfig.portCode,
           flightsRouterActor = portStateActor,
-          aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
           mergeArrivalsQueueActor = TestProbe().ref,
           feedArrivalsForDate = feedProviders,
           mergeArrivalsQueue = SortedSet.empty[TerminalUpdateRequest],
@@ -427,7 +421,6 @@ class TestDrtActor extends Actor {
         staffMovementsInput = staffMovementsSequentialWritesActor,
         actualDesksAndQueuesInput = crunchInputs.actualDeskStatsSource,
         portStateTestProbe = portStateProbe,
-        aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
         portStateActor = portStateActor,
       )
   }

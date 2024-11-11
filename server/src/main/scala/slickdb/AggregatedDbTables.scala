@@ -48,24 +48,6 @@ case class VoyageManifestPassengerInfoRow(event_code: String,
                                           in_transit: Boolean,
                                           json_file: String)
 
-case class ArrivalRow(code: String,
-                      number: Int,
-                      destination: String,
-                      origin: String,
-                      terminal: String,
-                      gate: Option[String] = None,
-                      stand: Option[String] = None,
-                      status: String,
-                      scheduled: java.sql.Timestamp,
-                      estimated: Option[java.sql.Timestamp] = None,
-                      actual: Option[java.sql.Timestamp] = None,
-                      estimatedchox: Option[java.sql.Timestamp] = None,
-                      actualchox: Option[java.sql.Timestamp] = None,
-                      pcp: java.sql.Timestamp,
-                      totalpassengers: Option[Int] = None,
-                      pcppassengers: Option[Int] = None,
-                      scheduled_departure: Option[java.sql.Timestamp] = None)
-
 case class ArrivalStatsRow(portCode: String,
                            terminal: String,
                            date: String,
@@ -89,7 +71,7 @@ trait AggregatedDbTables {
   // NOTE: GetResult mappers for plain SQL are only generated for tables where Slick knows how to map the types of all columns.
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = voyageManifestPassengerInfo.schema ++ processedJson.schema ++ processedZip.schema ++ arrival.schema
+  lazy val schema: profile.SchemaDescription = voyageManifestPassengerInfo.schema ++ processedJson.schema ++ processedZip.schema
 
   private val maybeSchema = profile match {
     case _: PostgresProfile =>
@@ -154,44 +136,6 @@ trait AggregatedDbTables {
     val json_file: Rep[String] = column[String]("json_file")
   }
 
-  /** Table description of table arrival. Objects of this class serve as prototypes for rows in queries. */
-  class ArrivalTable(_tableTag: Tag) extends {
-    private val maybeSchema = profile match {
-      case _: PostgresProfile => Some("public")
-      case _ => None
-    }
-  } with profile.api.Table[ArrivalRow](_tableTag, maybeSchema, "arrival") {
-    def * = (code, number, destination, origin, terminal, gate, stand, status, scheduled, estimated, actual, estimatedchox, actualchox, pcp, totalpassengers, pcppassengers, scheduled_departure) <> (ArrivalRow.tupled, ArrivalRow.unapply)
-
-    val code: Rep[String] = column[String]("code")
-    val number: Rep[Int] = column[Int]("number")
-    val destination: Rep[String] = column[String]("destination")
-    val origin: Rep[String] = column[String]("origin")
-    val terminal: Rep[String] = column[String]("terminal")
-    val gate: Rep[Option[String]] = column[Option[String]]("gate", O.Default(None))
-    val stand: Rep[Option[String]] = column[Option[String]]("stand", O.Default(None))
-    val status: Rep[String] = column[String]("status")
-    val scheduled: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("scheduled")
-    val estimated: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("estimated", O.Default(None))
-    val actual: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("actual", O.Default(None))
-    val estimatedchox: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("estimatedchox", O.Default(None))
-    val actualchox: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("actualchox", O.Default(None))
-    val pcp: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("pcp")
-    val totalpassengers: Rep[Option[Int]] = column[Option[Int]]("totalpassengers", O.Default(None))
-    val pcppassengers: Rep[Option[Int]] = column[Option[Int]]("pcppassengers", O.Default(None))
-    val scheduled_departure: Rep[Option[java.sql.Timestamp]] = column[Option[java.sql.Timestamp]]("scheduled_departure", O.Default(None))
-
-    val pk = primaryKey("arrival_pkey", (number, destination, terminal, scheduled))
-
-    index("code", code)
-    index("number", number)
-    index("origin", origin)
-    index("pcp", pcp)
-    index("scheduled", scheduled)
-    index("terminal", terminal)
-    index("scheduled_departure", scheduled_departure)
-  }
-
   class UserTable(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
     def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at, feedback_banner_closed_at, staff_planning_interval_minutes) <> (UserRow.tupled, UserRow.unapply)
 
@@ -234,13 +178,11 @@ trait AggregatedDbTables {
   val voyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfoTable(tag))
   val processedJson = new TableQuery(tag => new ProcessedJsonTable(tag))
   val processedZip = new TableQuery(tag => new ProcessedZipTable(tag))
-  val arrival = new TableQuery(tag => new ArrivalTable(tag))
   val arrivalStats = new TableQuery(tag => new ArrivalStatsTable(tag))
   val user = new TableQuery(tag => new UserTable(tag))
   val statusDaily = new TableQuery(tag => new StatusDailyTable(tag))
   val flight = new TableQuery(tag => new FlightTable(tag))
   val queueSlot = new TableQuery(tag => new QueueSlotTable(tag))
 
-  val tables = Seq(arrival, arrivalStats, processedZip, processedJson, statusDaily, voyageManifestPassengerInfo,
-    flight, queueSlot)
+  val tables = Seq(arrivalStats, processedZip, processedJson, statusDaily, voyageManifestPassengerInfo, flight, queueSlot)
 }
