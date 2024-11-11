@@ -119,12 +119,18 @@ describe('Update Monthly Staffing', () => {
                 cy.get('@endDateInput')
                   .type('02 November 2024', { force: true })
 
-                cy.get('[data-testid="start-time-select"]').click().then(() => {
-                  cy.get('li[data-value="00:00"]').click()
-                });
-                cy.get('[data-testid="end-time-select"]').click().then(() => {
-                  cy.get('li[data-value="05:00"]').click()
-                });
+                cy.get('[data-testid="start-time-select"]')
+                  .as('startTimeSelect')
+                  .click()
+                  .then(() => {
+                    cy.get('@startTimeSelect').get('li[data-value="00:00"]').click({ force: true });
+                  });
+                cy.get('[data-testid="end-time-select"]')
+                  .as('endTimeSelect')
+                  .click()
+                  .then(() => {
+                    cy.get('@endTimeSelect').get('li[data-value="05:00"]').click({ force: true });
+                  });
                 cy.get('[data-testid="staff-number-input"]').clear().type('5');
                 cy.get('[data-testid="save-staff-button"]').click().then(() => {
                   cy.get(cellToTest).contains("5")
