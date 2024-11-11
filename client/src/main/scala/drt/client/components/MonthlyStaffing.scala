@@ -311,8 +311,8 @@ object MonthlyStaffing {
                         size = "small",
                         sx = SxProps(Map("backgroundColor" -> "white")))
                       (MuiIcons(Groups)(fontSize = "small"),
-                        VdomAttr("data-cy") := "edit-staff-button",
                         <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
+                        VdomAttr("data-cy") := "edit-staff-button",
                         ^.onClick ==> handleShiftEditForm)
                     else EmptyVdom,
                     MuiButton(color = Color.primary, variant = "contained")
