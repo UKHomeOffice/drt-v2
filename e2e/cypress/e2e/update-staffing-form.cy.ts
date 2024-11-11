@@ -107,36 +107,37 @@ describe('Update Monthly Staffing', () => {
             cy.visit('#terminal/T1/staffing/15/?date=2024-11-01').then(() => {
               cy.get('[data-cy=edit-staff-button]').first().click().then(() => {
 
-                cy.get('[data-testid="start-date-picker-text"] input')
-                  .as('startDateInput')
-                  .type('{selectall}{backspace}', { force: true })
-                cy.get('@startDateInput')
-                  .type('01 November 2024', { force: true })
+              cy.get('[data-testid="start-date-picker-text"] input')
+                .as('startDateInput')
+                .type('{selectall}{backspace}', {force: true})
+              cy.get('@startDateInput')
+                .type('01 November 2024', {force: true})
 
-                cy.get('[data-testid="end-date-picker-text"] input')
-                  .as('endDateInput')
-                  .type('{selectall}{backspace}', { force: true })
-                cy.get('@endDateInput')
-                  .type('02 November 2024', { force: true })
+              cy.get('[data-testid="end-date-picker-text"] input')
+                .as('endDateInput')
+                .type('{selectall}{backspace}', {force: true})
+              cy.get('@endDateInput')
+                .type('02 November 2024', {force: true})
 
-                cy.get('[data-testid="start-time-select"]')
-                  .as('startTimeSelect')
-                  .click()
-                  .then(() => {
-                    cy.get('@startTimeSelect').get('li[data-value="00:00"]').click({ force: true });
-                  });
-                cy.get('[data-testid="end-time-select"]')
-                  .as('endTimeSelect')
-                  .click()
-                  .then(() => {
-                    cy.get('@endTimeSelect').get('li[data-value="05:00"]').click({ force: true });
-                  });
-                cy.get('[data-testid="staff-number-input"]').clear().type('5');
-                cy.get('[data-testid="save-staff-button"]').click().then(() => {
-                  cy.get(cellToTest).contains("5")
-                });
-                cy.resetShifts(csrf);
+              cy.get('div[data-testid="start-time-select"]')
+                .find('.MuiSelect-select') // Adjust this selector if necessary
+                .click();
+              cy.contains('li', '00:00').click();
+
+              // .then(() => {
+              //   cy.get('li[data-value="00:00"]').click({ force: true });
+              // });
+
+              cy.get('div[data-testid="end-time-select"]')
+                .find('.MuiSelect-select').click()
+              cy.contains('li', '05:00').click();
+
+              cy.get('[data-testid="staff-number-input"]').clear().type('5');
+              cy.get('[data-testid="save-staff-button"]').click().then(() => {
+                cy.get(cellToTest).contains("5")
               });
+              cy.resetShifts(csrf);
+            });
             });
           });
         });
