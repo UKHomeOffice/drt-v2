@@ -306,8 +306,12 @@ object MonthlyStaffing {
                       )
                     ),
                     if (props.enableStaffPlanningChanges)
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small", sx = SxProps(Map("backgroundColor" -> "white")))
+                      MuiButton(color = Color.primary,
+                        variant = "outlined",
+                        size = "small",
+                        sx = SxProps(Map("backgroundColor" -> "white")))
                       (MuiIcons(Groups)(fontSize = "small"),
+                        VdomAttr("data-cy") := "edit-staff-button",
                         <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
                         ^.onClick ==> handleShiftEditForm)
                     else EmptyVdom,
