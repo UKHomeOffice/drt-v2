@@ -27,50 +27,6 @@ object IUpdateStaffForTimeRangeData {
     p.actualStaff = actualStaff
     p
   }
-
-  def toStaffAssignment(obj: IUpdateStaffForTimeRangeData, terminal: Terminal): StaffAssignment = {
-
-    val combinedStartTime: Double = new Date(
-      obj.startDayAt.year(),
-      obj.startDayAt.month(),
-      obj.startDayAt.date,
-      obj.startTimeAt.utc.toDate().getUTCHours.toInt,
-      obj.startTimeAt.utc.toDate().getUTCMinutes.toInt,
-      obj.startTimeAt.utc.toDate().getUTCSeconds.toInt
-    ).getTime()
-
-    val combinedEndTime: UndefOr[Double] = {
-      val startTime = obj.startTimeAt.utc.toDate().getTime()
-      val endTime = obj.endTimeAt.utc.toDate().getTime()
-      val is24Hours = (endTime - startTime) == 24 * 60 * 60 * 1000
-      if (is24Hours) {
-        // Calculate the next day's midnight
-        val nextDayMidnight = new Date(Date.UTC(
-          obj.startDayAt.year(),
-          obj.startDayAt.month(),
-          obj.startDayAt.date() + 1,
-          0, 0, 0
-        )).getTime()
-        nextDayMidnight
-      } else {
-        new Date(Date.UTC(
-          obj.startDayAt.year(),
-          obj.startDayAt.month(),
-          obj.startDayAt.date(),
-          obj.endTimeAt.utc.toDate().getUTCHours.toInt,
-          obj.endTimeAt.utc.toDate().getUTCMinutes.toInt,
-          obj.endTimeAt.utc.toDate().getUTCSeconds.toInt
-        )).getTime()
-      }
-    }
-
-    StaffAssignment(obj.startDayAt.toISOString,
-      terminal,
-      combinedStartTime.toLong,
-      combinedEndTime.map(a => a.toLong).getOrElse(combinedStartTime.toLong),
-      obj.actualStaff.toInt,
-      None)
-  }
 }
 
 @js.native
