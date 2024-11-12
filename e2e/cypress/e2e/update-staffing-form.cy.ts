@@ -119,21 +119,24 @@ describe('Update Monthly Staffing', () => {
               cy.get('@endDateInput')
                 .type('02 November 2024', {force: true})
 
-              cy.get('div[data-testid="start-time-select"]')
-                .find('.MuiSelect-select') // Adjust this selector if necessary
-                .click();
-              cy.contains('li', '00:00').click();
+                cy.get('[data-testid="start-time-select"]')
+                  .click() // Open the dropdown
+                  .then(() => {
+                    cy.get('ul li[data-value="00:00"]', { timeout: 20000 }) // Wait for the option to be available
+                      .should('be.visible') // Ensure the option is visible
+                      .click({ force: true }); // Click the option
+                  });
+                cy.get('[data-testid="end-time-select"]')
+                  .click() // Open the dropdown
+                  .then(() => {
+                    cy.get('ul li[data-value="05:00"]', { timeout: 20000 }) // Wait for the option to be available
+                      .should('be.visible') // Ensure the option is visible
+                      .click({ force: true }); // Click the option
+                  });
 
-              // .then(() => {
-              //   cy.get('li[data-value="00:00"]').click({ force: true });
-              // });
 
-              cy.get('div[data-testid="end-time-select"]')
-                .find('.MuiSelect-select').click()
-              cy.contains('li', '05:00').click();
-
-              cy.get('[data-testid="staff-number-input"]').clear().type('5');
-              cy.get('[data-testid="save-staff-button"]').click().then(() => {
+              cy.get('[data-testid="staff-number-input"] input').clear({ force: true }).type('5',{ force: true });
+              cy.get('[data-testid="save-staff-button"]').click({ force: true }).then(() => {
                 cy.get(cellToTest).contains("5")
               });
               cy.resetShifts(csrf);
