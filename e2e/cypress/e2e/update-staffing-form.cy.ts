@@ -107,34 +107,37 @@ describe('Update Monthly Staffing', () => {
             cy.visit('#terminal/T1/staffing/15/?date=2024-11-01').then(() => {
               cy.get('[data-cy=edit-staff-button]').first().click().then(() => {
 
-              cy.get('[data-cy="start-date-picker-text"] input')
-                .as('startDateInput')
-                .type('{selectall}{backspace}', {force: true})
-              cy.get('@startDateInput')
-                .type('01 November 2024', {force: true})
+                cy.get('[data-cy="start-date-picker-text"] input')
+                  .as('startDateInput')
+                  .type('{selectall}{backspace}', {force: true})
+                cy.get('@startDateInput')
+                  .type('01 November 2024', {force: true})
 
-              cy.get('[data-cy="end-date-picker-text"] input')
-                .as('endDateInput')
-                .type('{selectall}{backspace}', {force: true})
-              cy.get('@endDateInput')
-                .type('02 November 2024', {force: true})
+                cy.get('[data-cy="end-date-picker-text"] input')
+                  .as('endDateInput')
+                  .type('{selectall}{backspace}', {force: true})
+                cy.get('@endDateInput')
+                  .type('02 November 2024', {force: true})
 
                 cy.get('div[data-cy="end-time-select"] .MuiSelect-select')
-                  // .eq(1)
                   .first()
-                  .click({ force: true }) // Open the dropdown
+                  .click({force: true}) // Open the dropdown
                   .then(() => {
-                    cy.get('ul[role="listbox"] li[data-value="05:00"]', { timeout: 20000 }) // Wait for the MenuItem to be available
-                      .should('be.visible') // Ensure the MenuItem is visible
-                      .click(); // Click the MenuItem
+                    cy.get('ul[role="listbox"] li[data-value="05:00"]', {timeout: 20000}) // Wait for the MenuItem to be available
+                      .should('be.visible')
+                      .click();
                   });
 
-              cy.get('[data-cy="staff-number-input"] input').clear({ force: true }).type('5',{ force: true });
-              cy.get('[data-cy="save-staff-button"]').click({ force: true }).then(() => {
-                cy.get(cellToTest).contains("5")
+                cy.get('[data-cy="staff-number-input"] input')
+                  .clear({force: true})
+                  .type('5', {force: true})
+                  .then(() => {
+                    cy.get('[data-cy="save-staff-button"]').click({force: true}).then(() => {
+                      cy.get(cellToTest).contains("5")
+                    });
+                  });
+                cy.resetShifts(csrf);
               });
-              cy.resetShifts(csrf);
-            });
             });
           });
         });
