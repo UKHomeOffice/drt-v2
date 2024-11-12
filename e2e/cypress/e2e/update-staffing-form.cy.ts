@@ -3,7 +3,7 @@ import {moment} from '../support/time-helpers'
 describe('Update Monthly Staffing', () => {
 
   beforeEach(() => {
-    cy.deleteData();
+    cy.deleteData('nocheck');
   });
 
   const firstMidnightOfThisMonth = (): moment.Moment => {
