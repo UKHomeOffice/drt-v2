@@ -107,47 +107,30 @@ describe('Update Monthly Staffing', () => {
             cy.visit('#terminal/T1/staffing/15/?date=2024-11-01').then(() => {
               cy.get('[data-cy=edit-staff-button]').first().click().then(() => {
 
-              cy.get('[data-testid="start-date-picker-text"] input')
+              cy.get('[data-cy="start-date-picker-text"] input')
                 .as('startDateInput')
                 .type('{selectall}{backspace}', {force: true})
               cy.get('@startDateInput')
                 .type('01 November 2024', {force: true})
 
-              cy.get('[data-testid="end-date-picker-text"] input')
+              cy.get('[data-cy="end-date-picker-text"] input')
                 .as('endDateInput')
                 .type('{selectall}{backspace}', {force: true})
               cy.get('@endDateInput')
                 .type('02 November 2024', {force: true})
 
-                cy.get('[data-testid="start-time-select"]')
-                  .click({force:true}) // Open the dropdown
+                cy.get('div[data-cy="end-time-select"] .MuiSelect-select')
+                  // .eq(1)
+                  .first()
+                  .click({ force: true }) // Open the dropdown
                   .then(() => {
-                    cy.get('.MuiSelect-select')
-                      .first() // Ensure only one element is selected
-                      .click({force:true}) // Open the dropdown
-                      .then(() => {
-                        cy.get('ul[role="listbox"] li[data-value="00:00"]', { timeout: 20000 }) // Wait for the MenuItem to be available
-                          .should('be.visible') // Ensure the MenuItem is visible
-                          .click(); // Click the MenuItem
-                      });
+                    cy.get('ul[role="listbox"] li[data-value="05:00"]', { timeout: 20000 }) // Wait for the MenuItem to be available
+                      .should('be.visible') // Ensure the MenuItem is visible
+                      .click(); // Click the MenuItem
                   });
 
-                cy.get('[data-testid="end-time-select"]')
-                  .click({force:true}) // Open the dropdown
-                  .then(() => {
-                    // cy.get('MuiSelect-select', { timeout: 20000 }) // Wait for the ul element to be available
-                    //   .next() // Ensure only one element is selected
-                    //   .click() // Open the dropdown
-                    //   .then(() => {
-                        cy.get('ul[role="listbox"] li[data-value="05:00"]', { timeout: 20000 }) // Wait for the li element to be available
-                          .should('be.visible') // Ensure the li element is visible
-                          .click({force:true}); // Click the li element
-                      });
-                  // });
-
-
-              cy.get('[data-testid="staff-number-input"] input').clear({ force: true }).type('5',{ force: true });
-              cy.get('[data-testid="save-staff-button"]').click({ force: true }).then(() => {
+              cy.get('[data-cy="staff-number-input"] input').clear({ force: true }).type('5',{ force: true });
+              cy.get('[data-cy="save-staff-button"]').click({ force: true }).then(() => {
                 cy.get(cellToTest).contains("5")
               });
               cy.resetShifts(csrf);
