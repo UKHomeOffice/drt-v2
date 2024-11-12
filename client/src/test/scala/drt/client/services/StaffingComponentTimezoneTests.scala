@@ -102,6 +102,24 @@ object StaffingComponentTimezoneTests extends TestSuite {
         result.foreach(row => assert(row.size == 31))
       }
 
+      "Given 2019-01-01 when retrieving days in week by time slot with 1 hour slots I should get back a 24x6 matrix" - {
+        val startDate = SDate("2019-01-05")
+        val result: Seq[Seq[Option[SDateLike]]] = daysInWeekByTimeSlot((startDate, 60))
+        val expectedHeight = 24
+
+        assert(result.size == expectedHeight)
+        result.foreach(row => assert(row.size == 7))
+      }
+
+      "Given 2019-01-01 when retrieving days in day by time slot with 1 hour slots I should get back a 24x1 matrix" - {
+        val startDate = SDate("2019-01-05")
+        val result: Seq[Option[SDateLike]] = dayTimeSlot((startDate, 60))
+        val expectedHeight = 24
+
+        assert(result.size == expectedHeight)
+        result.foreach(row => assert(row.size == 1))
+      }
+
       "Given 2019-01-01 when retrieving days in month by time slot with 1 hour slots row 1 should be midnight for " +
         "every day of the month" - {
         val startDate = SDate("2019-01-01T00:00:00Z")
@@ -126,7 +144,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
           " 15 minute slot" - {
           val change: Map[(Int, Int), Int] = Map((0, 30) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, T1, 15).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 15, "monthly").head
 
           val shiftStart = SDate("2019-03-31T00:00:00Z")
           val expected = StaffAssignment(
@@ -145,7 +163,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
           " 1 hour slot" - {
           val change: Map[(Int, Int), Int] = Map((0, 30) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, T1, 60).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 60, "monthly").head
 
           val shiftStart = SDate("2019-03-31T00:00:00Z")
           val expected = StaffAssignment(
@@ -164,7 +182,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
           " 1 hour slot" - {
           val change: Map[(Int, Int), Int] = Map((1, 29) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, T1, 60).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 60, "monthly").head
 
           val shiftStart = SDate("2019-03-30T01:00:00Z")
           val expected = StaffAssignment(
@@ -183,7 +201,7 @@ object StaffingComponentTimezoneTests extends TestSuite {
           "StaffAssignment for that 1 hour slot - which is the 3rd slot for the day" - {
           val change: Map[(Int, Int), Int] = Map((2, 30) -> 1)
           val startOfMonth = SDate("2019-03-01")
-          val result = updatedShiftAssignments(change, startOfMonth, T1, 60).head
+          val result = updatedShiftAssignments(change, startOfMonth, T1, 60, "monthly").head
 
           val shiftStart = SDate("2019-03-31T01:00:00Z")
           val expected = StaffAssignment(
