@@ -7,11 +7,13 @@ import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
+import scala.concurrent.Future
+
 object QueuesLiveView {
   def updateFlightsLiveView(queueSlotDao: QueueSlotDao,
                             aggregatedDb: AggregatedDbTables,
                             portCode: PortCode,
-                           ): (UtcDate, Iterable[CrunchMinute]) => Unit = {
+                           ): (UtcDate, Iterable[CrunchMinute]) => Future[Int] = {
     val slotSizeMinutes = 15
     val insertOrUpdate = queueSlotDao.insertOrUpdateMulti(portCode, slotSizeMinutes)
 

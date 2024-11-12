@@ -2,11 +2,13 @@ package controllers.application.api.v1
 
 import actors.PartitionedPortStateActor.GetMinutesForTerminalDateRange
 import akka.pattern.ask
+import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.AuthController
 import drt.shared.CrunchApi
 import drt.shared.CrunchApi.MinutesContainer
 import play.api.mvc._
+import providers.MinutesProvider
 import services.api.v1.QueueExport
 import services.api.v1.serialisation.QueueApiJsonProtocol
 import spray.json.enrichAny
@@ -15,12 +17,14 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.Future
 
 
-class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) with QueueApiJsonProtocol  {
+class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) with QueueApiJsonProtocol {
+  private val defaultPeriodLengthMinutes = 15
+
   private val queueTotalsForGranularity: (SDateLike, SDateLike, Terminal, Int) => Future[Iterable[(Long, Seq[CrunchMinute])]] =
     (start, end, terminal, granularity) => {
       val request = GetMinutesForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
@@ -44,9 +48,31 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           if (start > end) {
             throw new Exception("Start date must be before end date")
           }
-          val periodMinutes = request.getQueryString("period-minutes").map(_.toInt).getOrElse(15)
+          val periodMinutes = request.getQueryString("period-minutes").map(_.toInt).getOrElse(defaultPeriodLengthMinutes)
 
           queueExport(start, end, periodMinutes).map(r => Ok(r.toJson.compactPrint))
+      }
+    }
+
+  def populateQueues(start: String, end: String): Action[AnyContent] =
+    authByRole(ApiQueueAccess) {
+      Action {
+        val startDate = UtcDate.parse(start).getOrElse(throw new Exception("Invalid start date"))
+        val endDate = UtcDate.parse(end).getOrElse(throw new Exception("Invalid end date"))
+        if (startDate > endDate) {
+          throw new Exception("Start date must be before end date")
+        }
+        Source(DateRange(startDate, endDate))
+          .mapAsync(1) {
+            date =>
+              ctrl.applicationService.allTerminalsCrunchMinutesProvider(date, date).runForeach {
+                case (_, flights) =>
+                  ctrl.update15MinuteQueueSlotsLiveView(date, flights).map { _ =>
+                    log.info(s"Updated queue slots for $date")
+                  }
+              }
+          }
+        Ok("Queue slots populating")
       }
     }
 

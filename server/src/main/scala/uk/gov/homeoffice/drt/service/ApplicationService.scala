@@ -188,9 +188,12 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   lazy val flightsProvider: FlightsProvider = FlightsProvider(actorService.flightsRouterActor)
 
-  lazy val crunchMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] =
+  lazy val terminalCrunchMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] =
     MinutesProvider.singleTerminal(actorService.queuesRouterActor)
-  lazy val staffMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
+  lazy val allTerminalsCrunchMinutesProvider: (UtcDate, UtcDate) => Source[(UtcDate, Seq[CrunchMinute]), NotUsed] =
+    MinutesProvider.allTerminals(actorService.queuesRouterActor)
+
+  lazy val terminalStaffMinutesProvider: Terminal => (UtcDate, UtcDate) => Source[(UtcDate, Seq[StaffMinute]), NotUsed] =
     MinutesProvider.singleTerminal(actorService.staffRouterActor)
 
   private def enabledPredictionModelNamesWithUpperThresholds = Map(

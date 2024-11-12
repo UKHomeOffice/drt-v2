@@ -25,7 +25,7 @@ import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
 import uk.gov.homeoffice.drt.time._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 trait DrtSystemInterface extends UserRoleProviderLike
   with FeatureGuideProviderLike
@@ -49,10 +49,10 @@ trait DrtSystemInterface extends UserRoleProviderLike
   private val flightDao = FlightDao()
   private val queueSlotDao = QueueSlotDao()
 
-  val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit =
+  val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] =
     FlightsLiveView.updateFlightsLiveView(flightDao, aggregatedDb, airportConfig.portCode)
 
-  val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit =
+  val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Int] =
     QueuesLiveView.updateFlightsLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {

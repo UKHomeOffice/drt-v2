@@ -11,11 +11,11 @@ import services.api.v1.FlightExport
 import services.api.v1.serialisation.FlightApiJsonProtocol
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplits}
-import uk.gov.homeoffice.drt.auth.Roles.ApiFlightAccess
+import uk.gov.homeoffice.drt.auth.Roles.{ApiFlightAccess, ApiQueueAccess}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
+import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -61,6 +61,28 @@ class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
           flightExport(start, end).map(r => Ok(r.toJson.compactPrint))
       }
     }
+
+  def populateFlights(start: String, end: String): Action[AnyContent] =
+    authByRole(ApiQueueAccess) {
+      Action {
+        val startDate = UtcDate.parse(start).getOrElse(throw new Exception("Invalid start date"))
+        val endDate = UtcDate.parse(end).getOrElse(throw new Exception("Invalid end date"))
+        if (startDate > endDate) {
+          throw new Exception("Start date must be before end date")
+        }
+        Source(DateRange(startDate, endDate))
+          .mapAsync(1) { date =>
+            ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp(date, date).runForeach {
+              case (_, flights) =>
+                ctrl.updateFlightsLiveView(flights, Seq.empty).map { _ =>
+                  log.info(s"Updated flights for $date")
+                }
+            }
+          }
+        Ok("Flights populating")
+      }
+    }
+
 
   private def parseOptionalEndDate(maybeString: Option[String], default: SDateLike): SDateLike =
     maybeString match {
