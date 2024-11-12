@@ -210,11 +210,18 @@ class TestDrtActor extends Actor {
           val flightDao = FlightDao()
           val queueSlotDao = QueueSlotDao()
 
-          val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit =
-            FlightsLiveView.updateFlightsLiveView(flightDao, dbTables, airportConfig.portCode)
+          val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
+            val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, dbTables, airportConfig.portCode)
+            (updates, removals) =>
+              doUpdate(updates, removals)
+          }
 
-          val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit =
-            QueuesLiveView.updateFlightsLiveView(queueSlotDao, dbTables, airportConfig.portCode)
+          val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
+            val doUpdate = QueuesLiveView.updateFlightsLiveView(queueSlotDao, dbTables, airportConfig.portCode)
+            (date, updates) => {
+              doUpdate(date, updates)
+            }
+          }
           (updateFlightsLiveView, update15MinuteQueueSlotsLiveView)
         case None =>
           ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => (), (_: UtcDate, _: Iterable[CrunchMinute]) => ())

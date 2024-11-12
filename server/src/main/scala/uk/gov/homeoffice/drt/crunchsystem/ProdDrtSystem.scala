@@ -7,9 +7,8 @@ import akka.util.Timeout
 import com.google.inject.Inject
 import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
-import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.db._
-import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, FlightDao, IABFeatureDao, IUserFeedbackDao, UserFeedbackDao}
+import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, UserFeedbackDao}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}

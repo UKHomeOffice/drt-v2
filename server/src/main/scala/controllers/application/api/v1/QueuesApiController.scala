@@ -2,7 +2,7 @@ package controllers.application.api.v1
 
 import actors.PartitionedPortStateActor.GetMinutesForTerminalDateRange
 import akka.pattern.ask
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import com.google.inject.Inject
 import controllers.application.AuthController
 import drt.shared.CrunchApi
@@ -67,11 +67,11 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
             date =>
               ctrl.applicationService.allTerminalsCrunchMinutesProvider(date, date).runForeach {
                 case (_, flights) =>
-                  ctrl.update15MinuteQueueSlotsLiveView(date, flights).map { _ =>
-                    log.info(s"Updated queue slots for $date")
-                  }
+                  ctrl.update15MinuteQueueSlotsLiveView(date, flights)
+                  log.info(s"Updated queue slots for $date")
               }
           }
+          .runWith(Sink.ignore)
         Ok("Queue slots populating")
       }
     }

@@ -72,13 +72,12 @@ class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
         }
         Source(DateRange(startDate, endDate))
           .mapAsync(1) { date =>
-            ctrl.applicationService.flightsProvider.allTerminalsDateRangeScheduledOrPcp(date, date).runForeach {
-              case (_, flights) =>
-                ctrl.updateFlightsLiveView(flights, Seq.empty).map { _ =>
-                  log.info(s"Updated flights for $date")
-                }
+            ctrl.applicationService.flightsProvider.allTerminalsScheduledOn(date).runForeach { flights =>
+              ctrl.updateFlightsLiveView(flights, Seq.empty)
+              log.info(s"Updated flights for $date")
             }
           }
+          .runWith(Sink.ignore)
         Ok("Flights populating")
       }
     }
