@@ -124,7 +124,7 @@ describe('Update Monthly Staffing', () => {
                   .then(() => {
                     cy.get('.MuiSelect-select')
                       .first() // Ensure only one element is selected
-                      .click() // Open the dropdown
+                      .click({force:true}) // Open the dropdown
                       .then(() => {
                         cy.get('ul[role="listbox"] li[data-value="00:00"]', { timeout: 20000 }) // Wait for the MenuItem to be available
                           .should('be.visible') // Ensure the MenuItem is visible
@@ -133,7 +133,7 @@ describe('Update Monthly Staffing', () => {
                   });
 
                 cy.get('[data-testid="end-time-select"]')
-                  .click() // Open the dropdown
+                  .click({}) // Open the dropdown
                   .then(() => {
                     // cy.get('MuiSelect-select', { timeout: 20000 }) // Wait for the ul element to be available
                     //   .next() // Ensure only one element is selected
