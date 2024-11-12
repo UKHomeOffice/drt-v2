@@ -133,7 +133,7 @@ describe('Update Monthly Staffing', () => {
                   });
 
                 cy.get('[data-testid="end-time-select"]')
-                  .click({}) // Open the dropdown
+                  .click({force:true}) // Open the dropdown
                   .then(() => {
                     // cy.get('MuiSelect-select', { timeout: 20000 }) // Wait for the ul element to be available
                     //   .next() // Ensure only one element is selected
