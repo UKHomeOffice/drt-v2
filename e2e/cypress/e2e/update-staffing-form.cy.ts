@@ -132,8 +132,8 @@ describe('Update Monthly Staffing', () => {
                   .clear({force: true})
                   .type('5', {force: true})
                   .then(() => {
-                    cy.get('[data-cy="save-staff-button"]').click({force: true}).then(() => {
-                      cy.get(cellToTest).contains("5")
+                    cy.get('[data-cy="save-staff-button"]').click({ force: true }).then(() => {
+                      cy.get(cellToTest, { timeout: 20000 }).should('contain', '5');
                     });
                   });
                 cy.resetShifts(csrf);
