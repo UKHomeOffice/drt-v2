@@ -120,14 +120,14 @@ describe('Update Monthly Staffing', () => {
                 .type('02 November 2024', {force: true})
 
                 cy.get('[data-testid="start-time-select"]')
-                  .click() // Open the dropdown
+                  .click({ force: true }) // Open the dropdown
                   .then(() => {
                     cy.get('ul li[data-value="00:00"]', { timeout: 20000 }) // Wait for the option to be available
                       .should('be.visible') // Ensure the option is visible
                       .click({ force: true }); // Click the option
                   });
                 cy.get('[data-testid="end-time-select"]')
-                  .click() // Open the dropdown
+                  .click({ force: true }) // Open the dropdown
                   .then(() => {
                     cy.get('ul li[data-value="05:00"]', { timeout: 20000 }) // Wait for the option to be available
                       .should('be.visible') // Ensure the option is visible
