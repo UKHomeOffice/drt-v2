@@ -120,19 +120,30 @@ describe('Update Monthly Staffing', () => {
                 .type('02 November 2024', {force: true})
 
                 cy.get('[data-testid="start-time-select"]')
-                  .click({ force: true }) // Open the dropdown
+                  .click({force:true}) // Open the dropdown
                   .then(() => {
-                    cy.get('ul li[data-value="00:00"]', { timeout: 20000 }) // Wait for the option to be available
-                      .should('be.visible') // Ensure the option is visible
-                      .click({ force: true }); // Click the option
+                    cy.get('.MuiSelect-select')
+                      .first() // Ensure only one element is selected
+                      .click() // Open the dropdown
+                      .then(() => {
+                        cy.get('ul[role="listbox"] li[data-value="00:00"]', { timeout: 20000 }) // Wait for the MenuItem to be available
+                          .should('be.visible') // Ensure the MenuItem is visible
+                          .click(); // Click the MenuItem
+                      });
                   });
+
                 cy.get('[data-testid="end-time-select"]')
-                  .click({ force: true }) // Open the dropdown
+                  .click() // Open the dropdown
                   .then(() => {
-                    cy.get('ul li[data-value="05:00"]', { timeout: 20000 }) // Wait for the option to be available
-                      .should('be.visible') // Ensure the option is visible
-                      .click({ force: true }); // Click the option
-                  });
+                    // cy.get('MuiSelect-select', { timeout: 20000 }) // Wait for the ul element to be available
+                    //   .next() // Ensure only one element is selected
+                    //   .click() // Open the dropdown
+                    //   .then(() => {
+                        cy.get('ul[role="listbox"] li[data-value="05:00"]', { timeout: 20000 }) // Wait for the li element to be available
+                          .should('be.visible') // Ensure the li element is visible
+                          .click({force:true}); // Click the li element
+                      });
+                  // });
 
 
               cy.get('[data-testid="staff-number-input"] input').clear({ force: true }).type('5',{ force: true });
