@@ -33,6 +33,28 @@ object ShiftAssignmentsTest extends Specification {
     }
   }
 
+  "Given a shift that spans 24 hours from midnight" >> {
+    "Then it should correctly handle the shift" >> {
+      val startTime = SDate("2024-11-05T00:00:00Z").millisSinceEpoch
+      val endTime = SDate("2024-11-06T00:00:00Z").millisSinceEpoch
+      val shift = StaffAssignment("24HourShift", T1, startTime, endTime, 5, None)
+      val service = ShiftAssignments(Seq(shift))
+      val msToSdate: MillisSinceEpoch => SDateLike = millis => SDate(millis)
+
+      "I should see the shift apply at the start time" >> {
+        service.terminalStaffAt(T1, SDate("2024-11-05T00:00"), msToSdate) === 5
+      }
+      "I should see the shift apply at the 23:30 time" >> {
+        service.terminalStaffAt(T1, SDate("2024-11-05T23:30"), msToSdate) === 5
+      }
+      "I should see the shift apply at the end time" >> {
+        service.terminalStaffAt(T1, SDate("2024-11-06T00:00"), msToSdate) === 5
+      }
+      "I should see the shift apply throughout the 24 hours" >> {
+        service.terminalStaffAt(T1, SDate("2024-11-05T12:00"), msToSdate) === 5
+      }
+    }
+  }
 
   "Give shift with start and end date" >> {
     "Then split a shift into 15 minutes interval shifts" >> {

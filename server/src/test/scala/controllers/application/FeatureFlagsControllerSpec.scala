@@ -17,6 +17,7 @@ class FeatureFlagsControllerSpec extends PlaySpec {
           override val useApiPaxNos = true
           override val enableToggleDisplayWaitTimes = true
           override val displayRedListInfo = true
+          override val enableStaffPlanningChange = true
         }
       }
 
@@ -32,7 +33,7 @@ class FeatureFlagsControllerSpec extends PlaySpec {
       status(result) mustBe OK
 
       val resultExpected =
-        s"""{"useApiPaxNos":true,"displayWaitTimesToggle":true,"displayRedListInfo":true,"enableStaffPlanningChange":false}""".stripMargin
+        s"""{"useApiPaxNos":true,"displayWaitTimesToggle":true,"displayRedListInfo":true,"enableStaffPlanningChange":true}""".stripMargin
           .stripMargin
 
       contentAsString(result) must include(resultExpected)
