@@ -1,10 +1,10 @@
 package passengersplits
 
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.TQM
 import org.slf4j.LoggerFactory
 import services.graphstages.Crunch.LoadMinute
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits}
+import uk.gov.homeoffice.drt.model.TQM
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{ApiPaxTypeAndQueueCount, FeedSource, PaxType, PaxTypeAndQueue}

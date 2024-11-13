@@ -32,12 +32,15 @@ import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
 import services.crunch.staffing.RunnableStaffing
 import services.graphstages.FlightFilter
+import services.liveviews.{FlightsLiveView, QueuesLiveView}
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
+import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
@@ -200,16 +203,33 @@ class TestDrtActor extends Actor {
         override val deskRecsQueueActor: ActorRef = TestProbe("desk-recs-queue-actor").ref
         override val deploymentQueueActor: ActorRef = TestProbe("deployments-queue-actor").ref
         override val staffingQueueActor: ActorRef = TestProbe("staffing-queue-actor").ref
-
-        override val aggregatedArrivalsActor: ActorRef = tc.maybeAggregatedArrivalsActor match {
-          case Some(actor) => actor
-          case None => system.actorOf(Props(new MockAggregatedArrivalsActor))
-        }
       }
 
-      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None)
+      val (updateFlightsLiveView, update15MinuteQueueSlotsLiveView) = tc.maybeAggregatedDbTables match {
+        case Some(dbTables) =>
+          val flightDao = FlightDao()
+          val queueSlotDao = QueueSlotDao()
+
+          val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
+            val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, dbTables, airportConfig.portCode)
+            (updates, removals) =>
+              doUpdate(updates, removals)
+          }
+
+          val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
+            val doUpdate = QueuesLiveView.updateFlightsLiveView(queueSlotDao, dbTables, airportConfig.portCode)
+            (date, updates) => {
+              doUpdate(date, updates)
+            }
+          }
+          (updateFlightsLiveView, update15MinuteQueueSlotsLiveView)
+        case None =>
+          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => (), (_: UtcDate, _: Iterable[CrunchMinute]) => ())
+      }
+
+      val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None, updateFlightsLiveView)
       val flightsRouterActor: ActorRef = flightLookups.flightsRouterActor
-      val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal)
+      val minuteLookups: MinuteLookupsLike = MinuteLookups(tc.now, MilliTimes.oneDayMillis, tc.airportConfig.queuesByTerminal, update15MinuteQueueSlotsLiveView)
       val queueLoadsActor = minuteLookups.queueLoadsMinutesActor
       val queuesActor = minuteLookups.queueMinutesRouterActor
       val staffActor = minuteLookups.staffMinutesRouterActor
@@ -283,7 +303,6 @@ class TestDrtActor extends Actor {
         val (mergeArrivalsRequestActor, mergeArrivalsKillSwitch: UniqueKillSwitch) = arrivals.RunnableMergedArrivals(
           portCode = tc.airportConfig.portCode,
           flightsRouterActor = portStateActor,
-          aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
           mergeArrivalsQueueActor = TestProbe().ref,
           feedArrivalsForDate = feedProviders,
           mergeArrivalsQueue = SortedSet.empty[TerminalUpdateRequest],
@@ -409,7 +428,6 @@ class TestDrtActor extends Actor {
         staffMovementsInput = staffMovementsSequentialWritesActor,
         actualDesksAndQueuesInput = crunchInputs.actualDeskStatsSource,
         portStateTestProbe = portStateProbe,
-        aggregatedArrivalsActor = actors.aggregatedArrivalsActor,
         portStateActor = portStateActor,
       )
   }

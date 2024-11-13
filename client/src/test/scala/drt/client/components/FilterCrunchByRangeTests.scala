@@ -2,9 +2,10 @@ package drt.client.components
 
 import drt.client.components.TerminalComponent.viewStartAndEnd
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.CrunchApi.{CrunchMinute, StaffMinute}
+import drt.shared.CrunchApi.StaffMinute
 import drt.shared.PortState
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource, LiveFeedSource, Queues}
 import utest.{TestSuite, _}

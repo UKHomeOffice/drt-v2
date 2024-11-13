@@ -16,7 +16,6 @@ case class CrunchGraphInputsAndProbes(aclArrivalsInput: SourceQueueWithComplete[
                                       staffMovementsInput: ActorRef,
                                       actualDesksAndQueuesInput: SourceQueueWithComplete[ActualDeskStats],
                                       portStateTestProbe: TestProbe,
-                                      aggregatedArrivalsActor: ActorRef,
                                       portStateActor: ActorRef,
                                      ) {
   def shutdown(): Unit = {

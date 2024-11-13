@@ -21,7 +21,6 @@ import scala.concurrent.{ExecutionContext, Future}
 object RunnableMergedArrivals {
   def apply(portCode: PortCode,
             flightsRouterActor: ActorRef,
-            aggregatedArrivalsActor: ActorRef,
             mergeArrivalsQueueActor: ActorRef,
             feedArrivalsForDate: Seq[(DateLike, Terminal) => Future[FeedArrivalSet]],
             mergeArrivalsQueue: SortedSet[TerminalUpdateRequest],
@@ -46,7 +45,6 @@ object RunnableMergedArrivals {
       mergeArrivalsForDate = merger,
       setPcpTimes = setPcpTimes,
       addArrivalPredictions = addArrivalPredictions,
-      updateAggregatedArrivals = aggregatedArrivalsActor ! _,
     )
 
     val (mergeArrivalsRequestQueueActor, mergeArrivalsKillSwitch: UniqueKillSwitch) =

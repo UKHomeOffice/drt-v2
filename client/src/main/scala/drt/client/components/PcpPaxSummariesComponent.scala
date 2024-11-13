@@ -3,12 +3,13 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, ViewMode}
-import drt.shared.CrunchApi.CrunchMinute
-import japgolly.scalajs.react.ScalaComponent
+import drt.client.services.ViewMode
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
 import org.scalajs.dom.html.Div
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.time.SDateLike
@@ -81,7 +82,7 @@ object PcpPaxSummariesComponent {
     )
   }
 
-  val component = ScalaComponent.builder[Props]("PcpPaxSummariesComponent")
+  val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("PcpPaxSummariesComponent")
     .renderBackend[PcpPaxSummariesComponent.Backend]
     .build
 

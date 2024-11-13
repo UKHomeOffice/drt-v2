@@ -20,11 +20,11 @@ class PortStateMinutesSpec extends Specification {
       val newFlightsWithSplits = FlightsWithSplitsDiff(
         (1 to 5).map(d => ApiFlightWithSplits(
           ArrivalGenerator.live(iata = "BA0001", schDt = s"2019-01-0${d}T12:00.00Z", terminal = T1).toArrival(LiveFeedSource), Set())
-        ).toList, List())
+        ).toList)
 
       "To an empty PortState" >> {
         "Then I should see those flights in the PortState" >> {
-          val (portState, _) = newFlightsWithSplits.applyTo(FlightsWithSplits.empty, now, paxFeedSourceOrder)
+          val (portState, _, _, _) = newFlightsWithSplits.applyTo(FlightsWithSplits.empty, now, paxFeedSourceOrder)
           val expected = PortState(newFlightsWithSplits.flightsToUpdate.map(_.copy(lastUpdated = Option(now))), List(), List())
 
           portState.flights === expected.flights

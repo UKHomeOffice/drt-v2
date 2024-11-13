@@ -8,13 +8,14 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import drt.shared._
 import services.crunch.{CrunchTestLike, TestConfig}
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.db.dao.FlightDao
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.eeaMachineReadableToDesk
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.DurationInt
 
 
@@ -388,6 +389,7 @@ class AclFeedSpec extends CrunchTestLike {
         initialPortState = Option(PortState(Seq(
           live.toArrival(LiveFeedSource), initialAcl1.toArrival(AclFeedSource), initialAcl2.toArrival(AclFeedSource)
         ).map(a => ApiFlightWithSplits(a.copy(PcpTime = Option(a.Scheduled)), Set())), Seq(), Seq())),
+        maybeAggregatedDbTables = Option(aggregatedDb)
       ))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(newAcl))
@@ -401,7 +403,12 @@ class AclFeedSpec extends CrunchTestLike {
           voyageNos == expected
       }
 
-      success
+      val flights = Await.result(
+        aggregatedDb.run(FlightDao().getForDateDate(defaultAirportConfig.portCode)(SDate(scheduledLive).toUtcDate)),
+        1.second
+      )
+
+      flights.map(_.apiFlight.VoyageNumber).toSet === expected
     }
 
     "Given one ACL arrival followed by the same single ACL arrival " +

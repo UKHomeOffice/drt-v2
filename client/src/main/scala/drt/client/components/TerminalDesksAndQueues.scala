@@ -24,6 +24,7 @@ import org.scalajs.dom.html.{Div, TableCell}
 import org.scalajs.dom.raw.Node
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.{EGate, Queue, Transfer}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
@@ -51,8 +52,8 @@ object TerminalDesksAndQueues {
                    viewMode: ViewMode,
                    loggedInUser: LoggedInUser,
                    featureFlags: FeatureFlags,
-                   windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
-                   dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
+                   windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
+                   dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                    terminal: Terminal,
                   ) extends UseValueEq

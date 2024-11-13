@@ -2,11 +2,12 @@ package services.crunch
 
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import drt.shared._
 import services.OptimiserWithFlexibleProcessors
 import services.graphstages.CrunchMocks
 import uk.gov.homeoffice.drt.arrivals._
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports.{AclFeedSource, ForecastFeedSource, LiveFeedSource, Queues}
@@ -364,11 +365,11 @@ class ForecastCrunchSpec extends CrunchTestLike {
     success
   }
 
-  def interestingPaxLoads(cms: Map[TQM, CrunchApi.CrunchMinute]): Map[String, Double] = {
+  def interestingPaxLoads(cms: Map[TQM, CrunchMinute]): Map[String, Double] = {
     cms.values.filter(cm => cm.paxLoad != 0).map(cm => (SDate(cm.minute).toISOString, cm.paxLoad)).toMap
   }
 
-  def interestingDeployments(cms: Map[TQM, CrunchApi.CrunchMinute]): scala.Seq[(MillisSinceEpoch, Terminal, Queue, Option[Int])] = {
+  def interestingDeployments(cms: Map[TQM, CrunchMinute]): scala.Seq[(MillisSinceEpoch, Terminal, Queue, Option[Int])] = {
     cms.values
       .filter(cm => cm.deployedDesks.getOrElse(0) != 0)
       .toSeq

@@ -10,12 +10,16 @@ import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import play.api.Configuration
 import play.api.mvc.{Headers, Session}
-import queueus.{AdjustmentsNoop, ChildEGateAdjustments}
+import queueus.{AdjustmentsNoop, ChildEGateAdjustments, QueueAdjustments}
+import services.liveviews.{FlightsLiveView, QueuesLiveView}
 import slickdb.{AggregatedDbTables, AkkaDbTables}
 import uk.gov.homeoffice.drt.AppEnvironment
 import uk.gov.homeoffice.drt.AppEnvironment.AppEnvironment
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
+import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
@@ -41,6 +45,21 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val aggregatedDb: AggregatedDbTables
   val akkaDb: AkkaDbTables
   val params: DrtParameters
+
+  private val flightDao = FlightDao()
+  private val queueSlotDao = QueueSlotDao()
+
+  val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
+    val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, aggregatedDb, airportConfig.portCode)
+    (updates, removals) =>
+      doUpdate(updates, removals)
+  }
+
+  val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
+    val doUpdate = QueuesLiveView.updateFlightsLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
+    (date, updates) =>
+      doUpdate(date, updates)
+  }
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
     if (params.isSuperUserMode) {
@@ -83,7 +102,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val feedService: FeedService
 
-  lazy val queueAdjustments = if (params.adjustEGateUseByUnder12s) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild) else AdjustmentsNoop
+  lazy val queueAdjustments: QueueAdjustments =
+    if (params.adjustEGateUseByUnder12s) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild) else AdjustmentsNoop
   lazy val splitsCalculator: SplitsCalculator = SplitsCalculator(airportConfig, queueAdjustments)
 
   lazy val applicationService: ApplicationService = ApplicationService(
@@ -102,6 +122,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     requestAndTerminateActor = actorService.requestAndTerminateActor,
     splitsCalculator,
   )
+
   def run(): Unit
 
 }
