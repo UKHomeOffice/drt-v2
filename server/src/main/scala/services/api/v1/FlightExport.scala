@@ -1,8 +1,8 @@
 package services.api.v1
 
-import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
+import services.AirportInfoService
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
@@ -15,8 +15,11 @@ import scala.util.Try
 object FlightExport {
 
   case class FlightJson(code: String,
-                        originPort: String,
+                        originPortIata: String,
+                        originPortName: String,
                         scheduledTime: Long,
+                        estimatedLandingTime: Option[Long],
+                        actualChocksTime: Option[Long],
                         estimatedPcpStartTime: Option[Long],
                         estimatedPcpEndTime: Option[Long],
                         estimatedPaxCount: Option[Int],
@@ -26,13 +29,16 @@ object FlightExport {
   object FlightJson {
     def apply(ar: Arrival)
              (implicit sourceOrderPreference: List[FeedSource]): FlightJson = FlightJson(
-      ar.flightCodeString,
-      ar.Origin.iata,
-      ar.Scheduled,
-      Try(ar.pcpRange(sourceOrderPreference).min).toOption,
-      Try(ar.pcpRange(sourceOrderPreference).max).toOption,
-      ar.bestPcpPaxEstimate(sourceOrderPreference),
-      ar.Status.description,
+      code = ar.flightCodeString,
+      originPortIata = ar.Origin.iata,
+      originPortName = AirportInfoService.airportInfo(ar.Origin).map(_.airportName).getOrElse("n/a"),
+      scheduledTime = ar.Scheduled,
+      estimatedLandingTime = ar.Estimated,
+      actualChocksTime = ar.ActualChox,
+      estimatedPcpStartTime = Try(ar.pcpRange(sourceOrderPreference).min).toOption,
+      estimatedPcpEndTime = Try(ar.pcpRange(sourceOrderPreference).max).toOption,
+      estimatedPaxCount = ar.bestPcpPaxEstimate(sourceOrderPreference),
+      status = ar.displayStatus.description,
     )
   }
 

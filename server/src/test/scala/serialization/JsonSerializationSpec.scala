@@ -3,7 +3,7 @@ package serialization
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.specs2.mutable.Specification
-import services.AirportToCountry
+import services.AirportInfoService
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
@@ -75,7 +75,7 @@ class JsonSerializationSpec extends Specification {
     }
 
     "AirportInfo" >> {
-      val info: Map[String, AirportInfo] = AirportToCountry.airportInfoByIataPortCode
+      val info: Map[String, AirportInfo] = AirportInfoService.airportInfoByIataPortCode
 
       val asJson: String = write(info)
 

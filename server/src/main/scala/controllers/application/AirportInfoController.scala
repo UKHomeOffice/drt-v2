@@ -3,7 +3,7 @@ package controllers.application
 import com.google.inject.Inject
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import services.AirportToCountry
+import services.AirportInfoService
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.PortCode
@@ -19,7 +19,7 @@ class AirportInfoController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
         .flatMap(_.headOption)
         .map(codes => codes
           .split(",")
-          .map(code => (PortCode(code), AirportToCountry.airportInfoByIataPortCode.get(code)))
+          .map(code => (PortCode(code), AirportInfoService.airportInfoByIataPortCode.get(code)))
           .collect {
             case (code, Some(info)) => (code, info)
           }

@@ -3,7 +3,7 @@ package services.exports.flights.templates
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals}
 import drt.shared._
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
-import services.AirportToCountry
+import services.AirportInfoService
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals._
@@ -26,7 +26,7 @@ trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
   val redListUpdates: RedListUpdates
 
   val directRedListFilter: LhrFlightDisplayFilter =
-    LhrFlightDisplayFilter(redListUpdates, AirportToCountry.isRedListed, LhrTerminalTypes(LhrRedListDatesImpl))
+    LhrFlightDisplayFilter(redListUpdates, AirportInfoService.isRedListed, LhrTerminalTypes(LhrRedListDatesImpl))
 
   override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean =
     directRedListFilter.filterReflectingDivertedRedListFlights
