@@ -8,6 +8,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{JSDateConversions, SPACircuit}
+import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
@@ -26,7 +27,7 @@ import org.scalajs.dom.html.{Div, Select}
 import org.scalajs.dom.window.confirm
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.mutable
 import scala.scalajs.js
@@ -305,9 +306,13 @@ object MonthlyStaffing {
                       )
                     ),
                     if (props.enableStaffPlanningChanges)
-                      MuiButton(color = Color.primary, variant = "outlined", size = "small", sx = SxProps(Map("backgroundColor" -> "white")))
+                      MuiButton(color = Color.primary,
+                        variant = "outlined",
+                        size = "small",
+                        sx = SxProps(Map("backgroundColor" -> "white")))
                       (MuiIcons(Groups)(fontSize = "small"),
                         <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
+                        VdomAttr("data-cy") := "edit-staff-button",
                         ^.onClick ==> handleShiftEditForm)
                     else EmptyVdom,
                     MuiButton(color = Color.primary, variant = "contained")
@@ -331,15 +336,7 @@ object MonthlyStaffing {
                   ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
                   interval = props.timeSlotMinutes,
                   handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
-                    val dayInMilliseconds = 1000 * 60 * 60 * 24
-                    val startDay = ssf.startDayAt.utc().toDate().getTime().toLong / dayInMilliseconds // Convert to days
-                    val endDay = ssf.endDayAt.utc().toDate().getTime().toLong / dayInMilliseconds // Convert to days
-                    val staffAssignments: Seq[StaffAssignment] = (startDay to endDay).map { day =>
-                      val dayAt = Moment(day * dayInMilliseconds) // Convert back to milliseconds
-                      val ssfDay = IUpdateStaffForTimeRangeData(dayAt, ssf.startTimeAt, ssf.endTimeAt, dayAt, ssf.actualStaff)
-                      IUpdateStaffForTimeRangeData.toStaffAssignment(ssfDay, props.terminalPageTab.terminal)
-                    }
-                    SPACircuit.dispatch(UpdateShifts(staffAssignments))
+                    SPACircuit.dispatch(UpdateShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
                     scope.modState(state => {
                       val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
                       newState
@@ -372,6 +369,23 @@ object MonthlyStaffing {
           )
         )
       )
+    }
+  }
+
+  private def staffAssignmentsFromForm(ssf: IUpdateStaffForTimeRangeData, terminal: Terminal): Seq[StaffAssignment] = {
+    val startDayLocal = LocalDate(ssf.startDayAt.year(), ssf.startDayAt.month() + 1, ssf.startDayAt.date())
+    val endDayLocal = LocalDate(ssf.endDayAt.year(), ssf.endDayAt.month() + 1, ssf.endDayAt.date())
+
+    val startHour = ssf.startTimeAt.hour()
+    val startMinute = ssf.startTimeAt.minute()
+
+    val endHour = ssf.endTimeAt.hour()
+    val endMinute = ssf.endTimeAt.minute()
+
+    DateRange(startDayLocal, endDayLocal).map { date =>
+      val startDateTime = SDate(date.year, date.month, date.day, startHour, startMinute)
+      val endDateTime = SDate(date.year, date.month, date.day, endHour, endMinute)
+      StaffAssignment(startDateTime.toISOString, terminal, startDateTime.millisSinceEpoch, endDateTime.millisSinceEpoch, ssf.actualStaff.toInt, None)
     }
   }
 

@@ -27,34 +27,6 @@ object IUpdateStaffForTimeRangeData {
     p.actualStaff = actualStaff
     p
   }
-
-  def toStaffAssignment(obj: IUpdateStaffForTimeRangeData, terminal: Terminal): StaffAssignment = {
-
-    val combinedStartTime: Double = new Date(
-      obj.startDayAt.year(),
-      obj.startDayAt.month(),
-      obj.startDayAt.date,
-      obj.startTimeAt.utc.toDate().getUTCHours.toInt,
-      obj.startTimeAt.utc.toDate().getUTCMinutes.toInt,
-      obj.startTimeAt.utc.toDate().getUTCSeconds.toInt
-    ).getTime()
-
-    val combinedEndTime: UndefOr[Double] = new Date(
-      obj.startDayAt.year(),
-      obj.startDayAt.month(),
-      obj.startDayAt.date(),
-      obj.endTimeAt.utc.toDate().getUTCHours.toInt,
-      obj.endTimeAt.utc.toDate().getUTCMinutes.toInt,
-      obj.endTimeAt.utc.toDate().getUTCSeconds.toInt
-    ).getTime()
-
-    StaffAssignment(obj.startDayAt.toISOString,
-      terminal,
-      combinedStartTime.toLong,
-      combinedEndTime.map(a => a.toLong).getOrElse(combinedStartTime.toLong),
-      obj.actualStaff.toInt,
-      None)
-  }
 }
 
 @js.native
@@ -66,7 +38,7 @@ trait IUpdateStaffForTimeRangeForm extends js.Object {
 }
 
 object IUpdateStaffForTimeRangeForm {
-  def apply(ustd: IUpdateStaffForTimeRangeData, interval:Int, handleSubmit: js.Function1[IUpdateStaffForTimeRangeData, Unit], cancelHandler: js.Function0[Unit]): IUpdateStaffForTimeRangeForm = {
+  def apply(ustd: IUpdateStaffForTimeRangeData, interval: Int, handleSubmit: js.Function1[IUpdateStaffForTimeRangeData, Unit], cancelHandler: js.Function0[Unit]): IUpdateStaffForTimeRangeForm = {
     val p = (new js.Object).asInstanceOf[IUpdateStaffForTimeRangeForm]
     p.ustd = ustd
     p.handleSubmit = handleSubmit
