@@ -11,7 +11,7 @@ import services.api.v1.FlightExport
 import services.api.v1.serialisation.FlightApiJsonProtocol
 import spray.json.enrichAny
 import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplits}
-import uk.gov.homeoffice.drt.auth.Roles.{ApiFlightAccess, ApiQueueAccess}
+import uk.gov.homeoffice.drt.auth.Roles.{ApiFlightAccess, ApiQueueAccess, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -63,7 +63,7 @@ class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
     }
 
   def populateFlights(start: String, end: String): Action[AnyContent] =
-    authByRole(ApiQueueAccess) {
+    authByRole(SuperAdmin) {
       Action {
         val startDate = UtcDate.parse(start).getOrElse(throw new Exception("Invalid start date"))
         val endDate = UtcDate.parse(end).getOrElse(throw new Exception("Invalid end date"))

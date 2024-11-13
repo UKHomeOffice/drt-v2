@@ -12,7 +12,7 @@ import providers.MinutesProvider
 import services.api.v1.QueueExport
 import services.api.v1.serialisation.QueueApiJsonProtocol
 import spray.json.enrichAny
-import uk.gov.homeoffice.drt.auth.Roles.ApiQueueAccess
+import uk.gov.homeoffice.drt.auth.Roles.{ApiQueueAccess, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues
@@ -55,7 +55,7 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     }
 
   def populateQueues(start: String, end: String): Action[AnyContent] =
-    authByRole(ApiQueueAccess) {
+    authByRole(SuperAdmin) {
       Action {
         val startDate = UtcDate.parse(start).getOrElse(throw new Exception("Invalid start date"))
         val endDate = UtcDate.parse(end).getOrElse(throw new Exception("Invalid end date"))
