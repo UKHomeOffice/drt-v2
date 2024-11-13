@@ -5,10 +5,9 @@ import actors.serializers.PortStateMessageConversion
 import akka.pattern.StatusReply
 import akka.persistence.query.EventEnvelope
 import akka.persistence.{SnapshotMetadata, SnapshotOffer}
-import drt.shared.CrunchApi.CrunchMinute
-import drt.shared.TQM
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}

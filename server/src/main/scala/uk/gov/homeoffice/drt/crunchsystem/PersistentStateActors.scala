@@ -10,6 +10,4 @@ trait PersistentStateActors {
   val deskRecsQueueActor: ActorRef
   val deploymentQueueActor: ActorRef
   val staffingQueueActor: ActorRef
-
-  val aggregatedArrivalsActor: ActorRef
 }

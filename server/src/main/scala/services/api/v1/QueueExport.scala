@@ -2,7 +2,8 @@ package services.api.v1
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch}
+import drt.shared.CrunchApi.MillisSinceEpoch
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

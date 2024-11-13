@@ -28,6 +28,4 @@ case class TestPersistentStateActors(system: ActorSystem,
     system.actorOf(Props(new TestDeploymentQueueActor(now = () => SDate.now(), terminals)), "deployments-queue-actor")
   override val staffingQueueActor: ActorRef =
     system.actorOf(Props(new TestStaffingUpdateQueueActor(now = () => SDate.now(), terminals)), "staffing-queue-actor")
-
-  override val aggregatedArrivalsActor: ActorRef = system.actorOf(Props(new MockAggregatedArrivalsActor()), "aggregated-arrivals-actor")
 }

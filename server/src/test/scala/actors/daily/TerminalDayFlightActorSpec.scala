@@ -117,6 +117,6 @@ class TerminalDayFlightActorSpec extends CrunchTestLike {
   }
 
   private def actorForTerminalAndDate(terminal: Terminal, date: UtcDate): ActorRef = {
-    system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), None, paxFeedSourceOrder, None, None, None))
+    system.actorOf(TerminalDayFlightActor.propsWithRemovalsCutoff(terminal, date, () => SDate(date), None, paxFeedSourceOrder, None, None, None, None))
   }
 }

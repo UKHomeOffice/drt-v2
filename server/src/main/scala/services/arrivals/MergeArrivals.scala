@@ -120,9 +120,8 @@ object MergeArrivals {
   def processingRequestToArrivalsDiff(mergeArrivalsForDate: (Terminal, UtcDate) => Future[ArrivalsDiff],
                                       setPcpTimes: Seq[Arrival] => Future[Seq[Arrival]],
                                       addArrivalPredictions: ArrivalsDiff => Future[ArrivalsDiff],
-                                      updateAggregatedArrivals: ArrivalsDiff => Unit,
                                      )
-                                     (implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, ArrivalsDiff, NotUsed] = {
+                                     (implicit ec: ExecutionContext): Flow[TerminalUpdateRequest, ArrivalsDiff, NotUsed] =
     Flow[TerminalUpdateRequest]
       .mapAsync(1) {
         request =>
@@ -133,6 +132,4 @@ object MergeArrivals {
                 .map(arrivals => diff.copy(toUpdate = arrivals.map(a => a.unique -> a).toMap))
             }
       }
-      .wireTap(updateAggregatedArrivals)
-  }
 }

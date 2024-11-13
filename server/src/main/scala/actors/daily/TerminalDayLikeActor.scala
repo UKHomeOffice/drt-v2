@@ -1,16 +1,17 @@
 package actors.daily
 
 import akka.persistence.SaveSnapshotSuccess
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.model.MinuteLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.mutable
 
@@ -31,6 +32,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   val persistenceIdType: String
 
   val state: mutable.Map[INDEX, VAL] = mutable.Map[INDEX, VAL]()
+
+  val onUpdate: Option[(UtcDate, Iterable[VAL]) => Unit] = None
 
   override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
@@ -86,6 +89,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       case noDifferences if noDifferences.isEmpty => sender() ! Set.empty[Long]
       case differences =>
         updateStateFromDiff(differences)
+        onUpdate.foreach(_(UtcDate(year, month, day), state.values))
         val messageToPersist = containerToMessage(differences)
         val updateRequests = if (shouldSendEffectsToSubscriber(container))
           differences

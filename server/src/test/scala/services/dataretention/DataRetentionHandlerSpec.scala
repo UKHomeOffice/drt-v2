@@ -141,7 +141,7 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
           testProbeGetSequenceNumberBeforeRetentionPeriod.ref ! (pid, rp)
           Future.successful(Option(lastSeqNrBeforeRetPeriod))
         },
-        deleteAggregatedArrivalsBeforeRetentionPeriod = () => {
+        deleteAggregatedDataBeforeRetentionPeriod = () => {
           testProbeDeleteAggregatedArrivalsBeforeRetentionPeriod.ref ! true
           Future.successful(1)
         },
@@ -200,7 +200,7 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
         },
         deleteLowerSequenceNumbers = (_, _) => Future.successful((0, 0)),
         getSequenceNumberBeforeRetentionPeriod = (_, _) => Future.successful(None),
-        deleteAggregatedArrivalsBeforeRetentionPeriod = () => Future.successful(0),
+        deleteAggregatedDataBeforeRetentionPeriod = () => Future.successful(0),
       )
 
       val start = UtcDate(2024, 5, 10)
@@ -238,13 +238,17 @@ class DataRetentionHandlerSpec extends AnyWordSpec with Matchers with BeforeAndA
       val retentionPeriod = 5 * 365.days
       val today = UtcDate(2024, 6, 3)
 
-      DataRetentionHandler.deleteAggregatedArrivalsBeforeRetentionPeriod(
-        deleteArrivalsBefore = date => {
-          testProbeDeletePersistenceId.ref ! date
-          Future.successful(1)
-        },
+      val doDeletion = DataRetentionHandler.deleteAggregatedDataBeforeRetentionPeriod(
+        Map(
+          "flights" -> (date => {
+            testProbeDeletePersistenceId.ref ! date
+            Future.successful(1)
+          })
+        ),
         DataRetentionHandler.retentionStartDate(retentionPeriod, () => SDate(today)),
-      )()
+      )
+
+      doDeletion()
 
       val retentionStartDate = UtcDate(2019, 6, 5)
 

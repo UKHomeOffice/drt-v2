@@ -1,13 +1,14 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, PassengersMinute}
-import drt.shared.{ArrivalGenerator, CrunchApi, TQM}
+import drt.shared.{ArrivalGenerator, CrunchApi}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
 import services.{OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.egates.Desk
+import uk.gov.homeoffice.drt.model.TQM
 import uk.gov.homeoffice.drt.ports.PaxTypes.GBRNational
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources

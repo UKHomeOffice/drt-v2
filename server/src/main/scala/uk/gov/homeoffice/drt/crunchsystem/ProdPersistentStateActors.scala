@@ -1,12 +1,9 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
+import actors.ManifestLookups
 import actors.persistent._
-import actors.{AggregatedArrivalsActor, ManifestLookups}
 import akka.actor.{ActorRef, ActorSystem, Props}
-import slickdb.ArrivalTable
-import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 
@@ -14,8 +11,6 @@ object ProdPersistentStateActors {
   def apply(system: ActorSystem,
             now: () => SDateLike,
             manifestLookups: ManifestLookups,
-            portCode: PortCode,
-            paxFeedSourceOrder: List[FeedSource],
             terminals: Iterable[Terminal],
            ): PersistentStateActors = new PersistentStateActors {
     override val manifestsRouterActor: ActorRef =
@@ -32,8 +27,5 @@ object ProdPersistentStateActors {
       system.actorOf(Props(new DeploymentQueueActor(now, terminals)), "deployments-queue-actor")
     override val staffingQueueActor: ActorRef =
       system.actorOf(Props(new StaffingUpdateQueueActor(now, terminals)), "staffing-queue-actor")
-
-    override val aggregatedArrivalsActor: ActorRef =
-      system.actorOf(Props(new AggregatedArrivalsActor(ArrivalTable(portCode, AggregateDb, paxFeedSourceOrder))), name = "aggregated-arrivals-actor")
   }
 }

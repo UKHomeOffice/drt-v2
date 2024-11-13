@@ -1,7 +1,8 @@
 package drt.shared
 
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute}
+import drt.shared.CrunchApi.DeskRecMinute
 import org.specs2.mutable.Specification
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 
@@ -33,6 +34,49 @@ class DeskRecMinuteSpec extends Specification {
     "When maybePaxInQueue is updated" >> {
       val drm = DeskRecMinute(T1, EeaDesk, 0L, paxLoad, workLoad, deskRec, waitTime, maybePaxInQueue.map(_ + 1))
       drm.maybeUpdated(cm, nowMillis) === Option(cm.copy(maybePaxInQueue = maybePaxInQueue.map(_ + 1), lastUpdated = Option(nowMillis)))
+    }
+  }
+
+  "Given a DeskRecMinute and a CrunchMinute" >> {
+    val crunchMinute: CrunchMinute = CrunchMinute(
+      terminal = T1,
+      queue = EeaDesk,
+      minute = 0L,
+      paxLoad = 1,
+      workLoad = 2,
+      deskRec = 3,
+      waitTime = 4,
+      maybePaxInQueue = Option(1),
+      deployedDesks = Option(2),
+      deployedWait = Option(3),
+      maybeDeployedPaxInQueue = Option(4),
+      actDesks = Option(5),
+      actWait = Option(6),
+      lastUpdated = Option(0L))
+
+    "We should be able to construct a DeskRecMinute from a CrunchMinute" >> {
+      DeskRecMinute.from(crunchMinute) === DeskRecMinute(
+        terminal = T1,
+        queue = EeaDesk,
+        minute = 0L,
+        paxLoad = 1,
+        workLoad = 2,
+        deskRec = 3,
+        waitTime = 4,
+        maybePaxInQueue = Option(1),
+      )
+    }
+
+    "When they have the same values `maybeUpdated` should return None" >> {
+      val deskRecMinute = DeskRecMinute.from(crunchMinute)
+      deskRecMinute.maybeUpdated(crunchMinute, 0L) === None
+    }
+    "When they have different values `maybeUpdated` should return Option with the updated values" >> {
+      val updatedCrunchMinute = crunchMinute.copy(deskRec = crunchMinute.deskRec + 1)
+
+      val deskRecMinute = DeskRecMinute.from(updatedCrunchMinute)
+
+      deskRecMinute.maybeUpdated(crunchMinute, 1L) === Option(updatedCrunchMinute.copy(lastUpdated = Option(1L)))
     }
   }
 }

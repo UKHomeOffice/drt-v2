@@ -24,6 +24,7 @@ import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSimulationUpload
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
@@ -120,7 +121,7 @@ class SimulationsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       Future.successful(banksUpdates)
     }
 
-  def summary(mins: DeskRecMinutes, terminal: Terminal): Map[Queues.Queue, List[CrunchApi.CrunchMinute]] = {
+  def summary(mins: DeskRecMinutes, terminal: Terminal): Map[Queues.Queue, List[CrunchMinute]] = {
     val ps = PortState(List(), mins.minutes.map(_.toMinute), List())
     val start = mins.minutes.map(_.minute).min
     val queues = mins.minutes.map(_.queue).toSet.toList

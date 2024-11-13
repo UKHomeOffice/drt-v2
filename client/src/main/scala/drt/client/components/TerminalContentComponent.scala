@@ -28,6 +28,7 @@ import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
 import uk.gov.homeoffice.drt.auth._
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
@@ -60,8 +61,8 @@ object TerminalContentComponent {
                    flightHighlight: FlightHighlight,
                    viewStart: SDateLike,
                    hoursToView: Int,
-                   windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
-                   dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchApi.CrunchMinute]]],
+                   windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
+                   dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                    defaultDesksAndQueuesViewType: String,
                   ) extends UseValueEq

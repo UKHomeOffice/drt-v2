@@ -22,7 +22,17 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val ec: ExecutionContext,
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends DrtSystemInterface {
-  override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+
+  lazy override val aggregatedDb: AggregatedDbTables = AggregateDb
+
+  lazy override val akkaDb: AkkaDbTables = AkkaDb
+
+  override val minuteLookups: MinuteLookupsLike = MinuteLookups(
+    now,
+    MilliTimes.oneDayMillis,
+    airportConfig.queuesByTerminal,
+    update15MinuteQueueSlotsLiveView
+  )
 
   override val flightLookups: FlightLookupsLike = FlightLookups(
     system,
@@ -31,6 +41,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     params.maybeRemovalCutOffSeconds,
     paxFeedSourceOrder,
     splitsCalculator.terminalSplits,
+    updateFlightsLiveView,
   )
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)
@@ -46,10 +57,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   override val dropInService: DropInTableLike = DropInTable(AggregateDb)
 
   override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(AggregateDb)
-
-  lazy override val aggregatedDb: AggregatedDbTables = AggregateDb
-
-  lazy override val akkaDb: AkkaDbTables = AkkaDb
 
   override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb.db)
 
@@ -83,8 +90,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     system,
     now,
     manifestLookups,
-    airportConfig.portCode,
-    feedService.paxFeedSourceOrder,
     airportConfig.terminals,
   )
 

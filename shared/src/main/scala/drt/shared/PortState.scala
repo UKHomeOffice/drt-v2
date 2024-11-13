@@ -2,6 +2,7 @@ package drt.shared
 
 import drt.shared.CrunchApi._
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -80,7 +81,7 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
               .map { minute => crunchMinutes.get(TQM(terminal, queue, minute)) }
               .collect { case Some(cm) => cm }
               .toList
-            (queue, crunchPeriodSummary(terminal, periodStart, queue, slotMinutes))
+            (queue, CrunchMinutes.periodSummary(terminal, periodStart, queue, slotMinutes))
           }
           .toMap
         (periodStart, queueMinutes)
@@ -99,7 +100,7 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
               .map { minute => crunchMinutes.get(TQM(terminal, queue, minute)) }
               .collect { case Some(cm) => cm }
               .toList
-            (queue, crunchPeriodSummary(terminal, dayStart.millisSinceEpoch, queue, slotMinutes))
+            (queue, CrunchMinutes.periodSummary(terminal, dayStart.millisSinceEpoch, queue, slotMinutes))
           }
           .toMap
         (dayStart.millisSinceEpoch, queueMinutes)
@@ -120,53 +121,6 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
         (periodStart, staffPeriodSummary(terminal, periodStart, slotMinutes))
       }
       .toMap
-  }
-
-  def crunchPeriodSummary(terminal: Terminal, periodStart: MillisSinceEpoch, queue: Queue, slotMinutes: List[CrunchMinute]): CrunchMinute = {
-    if (slotMinutes.nonEmpty) CrunchMinute(
-      terminal = terminal,
-      queue = queue,
-      minute = periodStart,
-      paxLoad = slotMinutes.map(_.paxLoad).sum,
-      workLoad = slotMinutes.map(_.workLoad).sum,
-      deskRec = slotMinutes.map(_.deskRec).max,
-      waitTime = slotMinutes.map(_.waitTime).max,
-      maybePaxInQueue = slotMinutes.map(_.maybePaxInQueue).max,
-      deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined))
-        Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max)
-      else
-        None,
-      deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined))
-        Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max)
-      else
-        None,
-      maybeDeployedPaxInQueue = if (slotMinutes.exists(cm => cm.maybeDeployedPaxInQueue.isDefined))
-        Option(slotMinutes.map(_.maybeDeployedPaxInQueue.getOrElse(0)).max)
-      else
-        None,
-      actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined))
-        Option(slotMinutes.map(_.actDesks.getOrElse(0)).max)
-      else
-        None,
-      actWait = if (slotMinutes.exists(cm => cm.actWait.isDefined))
-        Option(slotMinutes.map(_.actWait.getOrElse(0)).max)
-      else
-        None
-    )
-    else CrunchMinute(
-      terminal = terminal,
-      queue = queue,
-      minute = periodStart,
-      paxLoad = 0,
-      workLoad = 0,
-      deskRec = 0,
-      waitTime = 0,
-      maybePaxInQueue = None,
-      deployedDesks = None,
-      deployedWait = None,
-      maybeDeployedPaxInQueue = None,
-      actDesks = None,
-      actWait = None)
   }
 
   def staffPeriodSummary(terminal: Terminal, periodStart: MillisSinceEpoch, slotMinutes: List[StaffMinute]): StaffMinute = {
