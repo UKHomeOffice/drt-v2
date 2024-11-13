@@ -130,8 +130,11 @@ GET           /api/passengers/:startLocalDate/:endLocalDate/:terminalName       
 PUT           /api/passengers/:localDate                                              controllers.application.SummariesController.populatePassengersForDate(localDate: String)
 
 GET           /api/v1/queues                                                          controllers.application.api.v1.QueuesApiController.queues()
++ nocsrf
 PUT           /api/v1/queues/:startDateLocal/:endDateLocal                            controllers.application.api.v1.QueuesApiController.populateQueues(startDateLocal: String, endDateLocal: String)
+
 GET           /api/v1/flights                                                         controllers.application.api.v1.FlightsApiController.flights()
++ nocsrf
 PUT           /api/v1/flights/:startDateLocal/:endDateLocal                           controllers.application.api.v1.FlightsApiController.populateFlights(startDateLocal: String, endDateLocal: String)
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)

@@ -8,7 +8,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import scala.io.Codec
 import scala.util.Try
 
-object AirportToCountry {
+object AirportInfoService {
 
   lazy val airportInfoByIataPortCode: Map[String, AirportInfo] = {
     val bufferedSource = scala.io.Source.fromURL(getClass.getResource("/airports.dat"))(Codec.UTF8)
@@ -23,6 +23,8 @@ object AirportToCountry {
       })
     }.map(ai => (ai.code, ai)).toMap
   }
+
+  def airportInfo(code: PortCode): Option[AirportInfo] = airportInfoByIataPortCode.get(code.iata)
 
   def stripQuotes(row1: String): String = {
     row1.substring(1, row1.length - 1)

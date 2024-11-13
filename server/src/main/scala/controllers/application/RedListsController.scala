@@ -4,7 +4,7 @@ import akka.pattern.ask
 import com.google.inject.Inject
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import services.AirportToCountry
+import services.AirportInfoService
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -21,7 +21,7 @@ class RedListsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
     Action.async { _ =>
       ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].map { redListUpdates =>
         val forDate = SDate(dateString, europeLondonTimeZone).millisSinceEpoch
-        val redListPorts = AirportToCountry.airportInfoByIataPortCode.values.collect {
+        val redListPorts = AirportInfoService.airportInfoByIataPortCode.values.collect {
           case AirportInfo(_, _, country, portCode) if redListUpdates.countryCodesByName(forDate).contains(country) =>
             PortCode(portCode)
         }

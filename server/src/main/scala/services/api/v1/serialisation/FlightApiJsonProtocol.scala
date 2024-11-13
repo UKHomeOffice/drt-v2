@@ -12,8 +12,11 @@ trait FlightApiJsonProtocol extends DefaultJsonProtocol {
       val maybePax = obj.estimatedPaxCount.filter(_ > 0)
       JsObject(
         "code" -> obj.code.toJson,
-        "originPort" -> obj.originPort.toJson,
+        "originPortIata" -> obj.originPortIata.toJson,
+        "originPortName" -> obj.originPortName.toJson,
         "scheduledTime" -> SDate(obj.scheduledTime).toISOString.toJson,
+        "estimatedLandingTime" -> obj.estimatedLandingTime.map(SDate(_).toISOString).toJson,
+        "actualChocksTime" -> obj.actualChocksTime.map(SDate(_).toISOString).toJson,
         "estimatedPcpStartTime" -> maybePax.flatMap(_ => obj.estimatedPcpStartTime.map(SDate(_).toISOString)).toJson,
         "estimatedPcpEndTime" -> maybePax.flatMap(_ => obj.estimatedPcpEndTime.map(SDate(_).toISOString)).toJson,
         "estimatedPcpPaxCount" -> obj.estimatedPaxCount.toJson,
@@ -24,8 +27,11 @@ trait FlightApiJsonProtocol extends DefaultJsonProtocol {
     override def read(json: JsValue): FlightJson = json match {
       case JsObject(fields) => FlightJson(
         fields.get("code").map(_.convertTo[String]).getOrElse(""),
-        fields.get("originPort").map(_.convertTo[String]).getOrElse(""),
+        fields.get("originPortIata").map(_.convertTo[String]).getOrElse(""),
+        fields.get("originPortName").map(_.convertTo[String]).getOrElse(""),
         fields.get("scheduledTime").map(_.convertTo[Long]).getOrElse(0L),
+        fields.get("estimatedLandingTime").map(_.convertTo[Long]),
+        fields.get("actualChocksTime").map(_.convertTo[Long]),
         fields.get("estimatedPcpStartTime").map(_.convertTo[Long]),
         fields.get("estimatedPcpEndTime").map(_.convertTo[Long]),
         fields.get("estimatedPcpPaxCount").map(_.convertTo[Int]),
@@ -35,7 +41,7 @@ trait FlightApiJsonProtocol extends DefaultJsonProtocol {
     }
   }
 
-  implicit val flightJsonFormat: RootJsonFormat[FlightJson] = jsonFormat7(FlightJson.apply)
+  implicit val flightJsonFormat: RootJsonFormat[FlightJson] = jsonFormat10(FlightJson.apply)
 
   implicit object TerminalJsonFormat extends RootJsonFormat[Terminal] {
     override def write(obj: Terminal): JsValue = obj.toString.toJson
