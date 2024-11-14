@@ -1,9 +1,8 @@
 package drt.client.components
 
-import drt.client.modules.GoogleEventTracker
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, ScalaComponent}
 
 object TrainingMaterialComponent {
 

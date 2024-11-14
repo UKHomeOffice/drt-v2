@@ -12,7 +12,7 @@ import io.kinoplan.scalajs.react.material.ui.core.{MuiCard, MuiLinearProgress}
 import japgolly.scalajs.react.component.Js.{RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.vdom.all.VdomElement
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{BackendScope, Callback, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Queues.{Queue, displayName}

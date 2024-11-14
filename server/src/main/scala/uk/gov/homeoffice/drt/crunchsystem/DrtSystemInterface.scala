@@ -56,9 +56,12 @@ trait DrtSystemInterface extends UserRoleProviderLike
   }
 
   val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
-    val doUpdate = QueuesLiveView.updateFlightsLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
+    val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
     (date, updates) =>
       doUpdate(date, updates)
+        .recover { case e: Throwable =>
+          log.error(s"Error updating FlightsLiveView: ${e.getMessage}")
+        }
   }
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
