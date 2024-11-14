@@ -217,7 +217,7 @@ class TestDrtActor extends Actor {
           }
 
           val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
-            val doUpdate = QueuesLiveView.updateFlightsLiveView(queueSlotDao, dbTables, airportConfig.portCode)
+            val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, dbTables, airportConfig.portCode)
             (date, updates) => {
               doUpdate(date, updates)
             }

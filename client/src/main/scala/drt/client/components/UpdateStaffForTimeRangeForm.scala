@@ -1,12 +1,10 @@
 package drt.client.components
 
-import drt.shared.StaffAssignment
 import japgolly.scalajs.react.vdom.VdomElement
 import japgolly.scalajs.react.{Children, JsFnComponent}
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
-import scala.scalajs.js.{Date, UndefOr}
 
 @js.native
 sealed trait IUpdateStaffForTimeRangeData extends js.Object {
