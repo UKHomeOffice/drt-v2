@@ -178,6 +178,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      abFeatures: Pot[Seq[ABFeature]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
+                     showAccessibilityStatement: Boolean = false,
                      userSelectedPlanningTimePeriod: Pot[Int] = Empty,
                      flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], "")
                     )
@@ -260,6 +261,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
       new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v))),
       new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
+      new AccessibilityStatementHandler(zoomRW(_.showAccessibilityStatement)((m, v) => m.copy(showAccessibilityStatement = v))),
     )
     composedHandlers
   }

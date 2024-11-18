@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.AnyAction.aType
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain
@@ -30,12 +31,14 @@ object Layout {
                                       airportConfig: Pot[AirportConfig],
                                       abFeatures: Pot[Seq[ABFeature]],
                                       showFeedbackBanner: Pot[Boolean],
-                                      contactDetails: Pot[ContactDetails]) extends UseValueEq
+                                      contactDetails: Pot[ContactDetails],
+                                      showAccessibilityStatement: Boolean
+                                     ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .render_P { props: Props =>
       val layoutModelItemsRCP = SPACircuit.connect { m =>
-        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails)
+        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails, m.showAccessibilityStatement)
       }
       layoutModelItemsRCP { modelProxy =>
         <.div({
@@ -46,6 +49,7 @@ object Layout {
             user <- model.user
             abFeatures <- model.abFeatures
             showFeedbackBanner <- model.showFeedbackBanner
+            showAccessibilityStatement = model.showAccessibilityStatement
           } yield {
             val email = contactDetails.supportEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk")
             val aORbTest = abFeatures.headOption.map(_.abVersion).getOrElse("B")
@@ -93,22 +97,38 @@ object Layout {
               <.div(
                 Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
                 <.div(^.className := "main-container",
-                  <.div(^.className := "sub-nav-bar",
-                    props.currentLoc.page match {
-                      case TerminalPageTabLoc(terminalName, _, _, _) =>
-                        val terminal = Terminal(terminalName)
-                        <.div(^.className := "status-bar",
-                          ApiStatusComponent(ApiStatusComponent.Props(
-                            !airportConfig.noLivePortFeed,
-                            terminal)),
-                          PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
-                        )
-                      case _ => EmptyVdom
-                    },
-                  ),
-                  <.div(<.div(props.currentLoc.render()))
+                  if (showAccessibilityStatement) {
+                    AccessibilityStatement(email)
+                  } else {
+                    <.div(^.className := "sub-nav-bar",
+                      props.currentLoc.page match {
+                        case TerminalPageTabLoc(terminalName, _, _, _) =>
+                          val terminal = Terminal(terminalName)
+                          <.div(^.className := "status-bar",
+                            ApiStatusComponent(ApiStatusComponent.Props(
+                              !airportConfig.noLivePortFeed,
+                              terminal)),
+                            PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
+                          )
+                        case _ => EmptyVdom
+                      },
+                    )
+                    <.div(<.div(props.currentLoc.render()))
+                  },
                 ),
                 VersionUpdateNotice()
+              ),
+              <.div(^.className := "bottombar",
+                <.div(^.className := "contact",
+                  ^.style := js.Dictionary("display" -> "flex",
+                    "alignItems" -> "center",
+                    "paddingRight" -> "20px",
+                    "flexWrap" -> "wrap"),
+                  <.span(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingRight" -> "10px"), "Support links:"),
+                  <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", "Email us (support and queries)"),
+                  <.span(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingRight" -> "10px"), "/"),
+                  <.a(^.textDecoration := "underline", "Accessibility statement", ^.onClick --> Callback(SPACircuit.dispatch(ShowAccessibilityStatement))),
+                ),
               )
             )
           }
