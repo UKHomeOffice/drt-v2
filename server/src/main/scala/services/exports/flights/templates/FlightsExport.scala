@@ -8,7 +8,7 @@ import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManif
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.LocalDate
 
 trait FlightsExport {
 
@@ -16,9 +16,9 @@ trait FlightsExport {
 
   def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Iterable[String]
 
-  def start: SDateLike
+  def start: LocalDate
 
-  def end: SDateLike
+  def end: LocalDate
 
   def terminal: Terminal
 

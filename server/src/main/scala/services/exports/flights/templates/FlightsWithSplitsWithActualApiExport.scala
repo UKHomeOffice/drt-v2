@@ -7,11 +7,11 @@ import services.exports.FlightExports.{actualAPISplitsForFlightInHeadingOrder, a
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals._
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 
 trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
-  val request: FlightsRequest = GetFlightsForTerminalDateRange(start.millisSinceEpoch, end.millisSinceEpoch, terminal)
+  val request: FlightsRequest = GetFlightsForTerminalDateRange(SDate(start).millisSinceEpoch, SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch, terminal)
 
   override val headings: String = ArrivalExportHeadings.arrivalWithSplitsAndRawApiHeadings
 
@@ -25,6 +25,10 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
 
 }
 
-case class FlightsWithSplitsWithActualApiExportImpl(start: SDateLike, end: SDateLike, terminal: Terminal, paxFeedSourceOrder: List[FeedSource]) extends FlightsWithSplitsWithActualApiExport {
+case class FlightsWithSplitsWithActualApiExportImpl(start: LocalDate,
+                                                    end: LocalDate,
+                                                    terminal: Terminal,
+                                                    paxFeedSourceOrder: List[FeedSource],
+                                                   ) extends FlightsWithSplitsWithActualApiExport {
   override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = standardFilter
 }

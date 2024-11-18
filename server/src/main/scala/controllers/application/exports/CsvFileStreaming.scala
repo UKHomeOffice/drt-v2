@@ -8,7 +8,7 @@ import play.api.mvc.{ResponseHeader, Result}
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 object CsvFileStreaming {
 
@@ -46,6 +46,23 @@ object CsvFileStreaming {
                    portCode: PortCode): String = {
     val startLocal = SDate(start, europeLondonTimeZone)
     val endLocal = SDate(end, europeLondonTimeZone)
+    val endDate = if (startLocal.daysBetweenInclusive(endLocal) > 1)
+      f"-to-${endLocal.getFullYear}-${endLocal.getMonth}%02d-${endLocal.getDate}%02d"
+    else ""
+
+    val terminalStr = maybeTerminal.map(t => s"${t.toString}-").getOrElse("")
+
+    f"$portCode-$terminalStr$subject-" +
+      f"${startLocal.getFullYear}-${startLocal.getMonth}%02d-${startLocal.getDate}%02d" + endDate
+  }
+
+  def makeFileName(subject: String,
+                   maybeTerminal: Option[Terminal],
+                   start: LocalDate,
+                   end: LocalDate,
+                   portCode: PortCode): String = {
+    val startLocal = SDate(start)
+    val endLocal = SDate(end)
     val endDate = if (startLocal.daysBetweenInclusive(endLocal) > 1)
       f"-to-${endLocal.getFullYear}-${endLocal.getMonth}%02d-${endLocal.getDate}%02d"
     else ""

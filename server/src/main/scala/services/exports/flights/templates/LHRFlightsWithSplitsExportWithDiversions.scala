@@ -8,13 +8,13 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 
 trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
   val terminal: Terminal
-  val start: SDateLike
-  val end: SDateLike
+  val start: LocalDate
+  val end: LocalDate
 
   val terminalsToQuery: Seq[Terminal] = terminal match {
     case T2 => Seq(T2)
@@ -31,19 +31,19 @@ trait LHRFlightsWithSplitsExportWithDiversions extends FlightsExport {
   override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean =
     directRedListFilter.filterReflectingDivertedRedListFlights
 
-  override val request: FlightsRequest = GetFlightsForTerminals(start.millisSinceEpoch, end.millisSinceEpoch, terminalsToQuery)
+  override val request: FlightsRequest = GetFlightsForTerminals(SDate(start).millisSinceEpoch, SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch, terminalsToQuery)
 }
 
-case class LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start: SDateLike,
-                                                                           end: SDateLike,
+case class LHRFlightsWithSplitsWithoutActualApiExportWithRedListDiversions(start: LocalDate,
+                                                                           end: LocalDate,
                                                                            terminal: Terminal,
                                                                            redListUpdates: RedListUpdates,
                                                                            paxFeedSourceOrder: List[FeedSource],
                                                                           )
   extends FlightsWithSplitsWithoutActualApiExport with LHRFlightsWithSplitsExportWithDiversions
 
-case class LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start: SDateLike,
-                                                                        end: SDateLike,
+case class LHRFlightsWithSplitsWithActualApiExportWithRedListDiversions(start: LocalDate,
+                                                                        end: LocalDate,
                                                                         terminal: Terminal,
                                                                         redListUpdates: RedListUpdates,
                                                                         paxFeedSourceOrder: List[FeedSource],

@@ -95,17 +95,17 @@ object ExportLiveArrivalsFeed extends ExportType {
   override def toUrlString: String = "arrivals-feed"
 }
 
-case class ExportArrivalsWithRedListDiversions(label: String) extends ExportType {
-  override def toString: String = label
+//case class ExportArrivalsWithRedListDiversions(label: String) extends ExportType {
+//  override def toString: String = label
+//
+//  override def toUrlString: String = "arrivals-with-red-list-diversions"
+//}
 
-  override def toUrlString: String = "arrivals-with-red-list-diversions"
-}
-
-case class ExportArrivalsWithoutRedListDiversions(label: String) extends ExportType {
-  override def toString: String = label
-
-  override def toUrlString: String = "arrivals"
-}
+//case class ExportArrivalsWithoutRedListDiversions(label: String) extends ExportType {
+//  override def toString: String = label
+//
+//  override def toUrlString: String = "arrivals"
+//}
 
 object ExportArrivalsSingleTerminal extends ExportType {
   override def toString = "Single terminal"
@@ -116,7 +116,7 @@ object ExportArrivalsSingleTerminal extends ExportType {
 object ExportArrivalsCombinedTerminals extends ExportType {
   override def toString = "Combined terminals"
 
-  override def toUrlString: String = "arrivals-with-red-list-diversions"
+  override def toUrlString: String = "arrivals-combined"
 }
 
 object ExportStaffMovements extends ExportType {

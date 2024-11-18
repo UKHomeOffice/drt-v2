@@ -5,7 +5,7 @@ import services.exports.FlightExports.{apiIsInvalid, splitsForSources}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 
 trait AdminExport extends FlightsWithSplitsWithActualApiExport {
@@ -34,8 +34,8 @@ trait AdminExport extends FlightsWithSplitsWithActualApiExport {
   }
 }
 
-case class AdminExportImpl(start: SDateLike,
-                           end: SDateLike,
+case class AdminExportImpl(start: LocalDate,
+                           end: LocalDate,
                            terminal: Terminal,
                            paxFeedSourceOrder: List[FeedSource],
                           ) extends AdminExport {

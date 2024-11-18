@@ -46,7 +46,7 @@ object FlightExport {
 
   case class PortFlightsJson(portCode: PortCode, terminals: Iterable[TerminalFlightsJson])
 
-  def apply(minutesSource: (SDateLike, SDateLike, Terminal) => Future[Seq[Arrival]],
+  def apply(arrivalSource: (SDateLike, SDateLike, Terminal) => Future[Seq[Arrival]],
             terminals: Iterable[Terminal],
             portCode: PortCode,
            )
@@ -54,7 +54,7 @@ object FlightExport {
     (start, end) => {
       Source(terminals.toSeq)
         .mapAsync(terminals.size) { terminal =>
-          minutesSource(start, end, terminal).map {
+          arrivalSource(start, end, terminal).map {
             _.filter(_.hasPcpDuring(start, end, sourceOrderPreference))
               .map(FlightJson.apply(_))
           }

@@ -404,7 +404,7 @@ class AclFeedSpec extends CrunchTestLike {
       }
 
       val flights = Await.result(
-        aggregatedDb.run(FlightDao().getForDateDate(defaultAirportConfig.portCode)(SDate(scheduledLive).toUtcDate)),
+        aggregatedDb.run(FlightDao().getForDatePcpTime(defaultAirportConfig.portCode)(SDate(scheduledLive).toUtcDate)),
         1.second
       )
 

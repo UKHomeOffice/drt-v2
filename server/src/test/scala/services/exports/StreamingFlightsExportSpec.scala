@@ -5,18 +5,13 @@ import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.live
 import passengersplits.parsing.VoyageManifestParser._
 import services.crunch.CrunchTestLike
-import services.exports.flights.templates.{
-  FlightsWithSplitsWithActualApiExport,
-  FlightsWithSplitsWithActualApiExportImpl,
-  FlightsWithSplitsWithoutActualApiExport,
-  FlightsWithSplitsWithoutActualApiExportImpl
-}
+import services.exports.flights.templates.{FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExport, FlightsWithSplitsWithoutActualApiExportImpl}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
 import uk.gov.homeoffice.drt.arrivals.{Passengers, _}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.SDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -213,9 +208,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     """Invalid API,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
 
   private val withoutActualApiExport: FlightsWithSplitsWithoutActualApiExport =
-    FlightsWithSplitsWithoutActualApiExportImpl(SDate("2017-01-01"), SDate("2017-01-01"), T1, paxFeedSourceOrder)
+    FlightsWithSplitsWithoutActualApiExportImpl(LocalDate(2017, 1, 1), LocalDate(2017, 1, 1), T1, paxFeedSourceOrder)
   private val withActualApiExport: FlightsWithSplitsWithActualApiExport =
-    FlightsWithSplitsWithActualApiExportImpl(SDate("2017-01-01"), SDate("2017-01-01"), T1, paxFeedSourceOrder)
+    FlightsWithSplitsWithActualApiExportImpl(LocalDate(2017, 1, 1), LocalDate(2017, 1, 1), T1, paxFeedSourceOrder)
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data using live feed numbers when available" >> {
 

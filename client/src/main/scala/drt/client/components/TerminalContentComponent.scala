@@ -5,6 +5,7 @@ import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.components.ArrivalsExportComponent.componentFactory
 import drt.client.components.Icon.Icon
 import drt.client.components.ToolTips.staffMovementsTabTooltip
 import drt.client.components.scenarios.ScenarioSimulationComponent
@@ -97,7 +98,7 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
       val terminalName = terminal.toString
-      val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, props.viewStart)
+      val arrivalsExportForPort = componentFactory(props.airportConfig.terminals)//ArrivalsExportComponent(props.airportConfig.portCode, terminal, props.viewStart)
       val movementsExportDate: LocalDate = props.viewMode match {
         case ViewLive => SDate.now().toLocalDate
         case ViewDay(localDate, _) => localDate
@@ -176,7 +177,7 @@ object TerminalContentComponent {
                 StaffMovementsExport,
                 props.loggedInUser
               ),
-              MultiDayExportComponent(props.airportConfig.portCode, terminal, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser)))
+              MultiDayExportComponent(props.airportConfig.portCode, terminal, props.airportConfig.terminals, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser)))
           ,
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
