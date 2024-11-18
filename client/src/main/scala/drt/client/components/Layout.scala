@@ -6,6 +6,7 @@ import diode.data.Pot
 import drt.client.SPAMain
 import drt.client.SPAMain._
 import drt.client.components.styles.DrtTheme.buttonTheme
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.client.services.handlers._
 import drt.shared.ContactDetails
@@ -37,9 +38,15 @@ object Layout {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .render_P { props: Props =>
+      def clickAccessibility(): Callback = {
+        Callback(GoogleEventTracker.sendEvent(props.currentLoc.page.portCodeStr, "Accessibility", "Accessibility statement clicked")) >>
+          Callback(SPACircuit.dispatch(ShowAccessibilityStatement))
+      }
+
       val layoutModelItemsRCP = SPACircuit.connect { m =>
         LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails, m.showAccessibilityStatement)
       }
+
       layoutModelItemsRCP { modelProxy =>
         <.div({
           val model = modelProxy()
@@ -118,18 +125,14 @@ object Layout {
                 ),
                 VersionUpdateNotice()
               ),
-              <.div(^.className := "bottombar",
-                <.div(^.className := "contact",
-                  ^.style := js.Dictionary("display" -> "flex",
-                    "alignItems" -> "center",
-                    "paddingRight" -> "20px",
-                    "flexWrap" -> "wrap"),
-                  <.span(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingRight" -> "10px"), "Support links:"),
-                  <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", "Email us (support and queries)"),
-                  <.span(^.style := js.Dictionary("paddingLeft" -> "10px", "paddingRight" -> "10px"), "/"),
-                  <.a(^.textDecoration := "underline", "Accessibility statement", ^.onClick --> Callback(SPACircuit.dispatch(ShowAccessibilityStatement))),
-                ),
-              )
+              <.div(^.className := "bottom-bar",
+                <.div(^.style := js.Dictionary("paddingLeft" -> "10px"), "Support links:"),
+                <.div(^.style := js.Dictionary("paddingLeft" -> "10px"),
+                  <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", "Email us (support and queries)")),
+                <.div(^.className := "separator", ^.style := js.Dictionary("paddingLeft" -> "10px"), "/"),
+                <.div(^.style := js.Dictionary("paddingLeft" -> "10px"),
+                  <.a(^.textDecoration := "underline", "Accessibility statement", ^.onClick --> clickAccessibility)),
+              ),
             )
           }
           content.getOrElse(LoadingOverlay())

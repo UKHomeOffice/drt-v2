@@ -2386,13 +2386,24 @@ a i.fa.fa-remove {
   gap: 12px;
 }
 
-.bottombar {
+.bottom-bar {
+  padding-top: 10px;
   height: 70px;
   width: 96%;
   margin: auto;
   display: flex;
   gap: 12px;
-  border-top: 1px solid #000;
+  border-top: 1px solid #ddd;
+}
+
+@media (max-width: 600px) {
+  .bottom-bar  {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .separator {
+    display: none;
+  }
 }
 
 .has-alerts {
