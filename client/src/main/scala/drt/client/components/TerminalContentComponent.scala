@@ -152,16 +152,16 @@ object TerminalContentComponent {
               exportLink(
                 props.terminalPageTab.dateFromUrlOrNow,
                 terminalName,
-                ExportDeskRecs,
-                SPAMain.exportUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal),
+                ExportDeskRecs(props.terminalPageTab.terminal),
+                SPAMain.exportUrl(ExportDeskRecs(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
                 None,
                 "desk-recs",
               ),
               exportLink(
                 props.terminalPageTab.dateFromUrlOrNow,
                 terminalName,
-                ExportDeployments,
-                SPAMain.exportUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal),
+                ExportDeployments(props.terminalPageTab.terminal),
+                SPAMain.exportUrl(ExportDeployments(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
                 None,
                 "deployments"
               ),
@@ -169,7 +169,7 @@ object TerminalContentComponent {
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
-                  ExportStaffMovements,
+                  ExportStaffMovements(props.terminalPageTab.terminal),
                   SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
                   None,
                   "staff-movements",
@@ -290,14 +290,14 @@ object TerminalContentComponent {
       ^.key := keyValue,
       MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
         MuiIcons(GetApp)(fontSize = "small"),
-        s" $exportType",
+        s" ${exportType.linkLabel}",
         maybeExtraIcon.getOrElse(EmptyVdom),
         ^.className := "btn btn-default",
         ^.href := exportUrl,
         ^.target := "_blank",
         ^.id := s"export-day-${exportType.toUrlString}",
         ^.onClick --> {
-          Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", exportDay.toISODateOnly))
+          Callback(GoogleEventTracker.sendEvent(terminalName, s"Export ${exportType.linkLabel}", exportDay.toISODateOnly))
         }
       )
     )

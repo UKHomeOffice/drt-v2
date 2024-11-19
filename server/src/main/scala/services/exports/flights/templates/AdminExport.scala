@@ -5,7 +5,7 @@ import services.exports.FlightExports.{apiIsInvalid, splitsForSources}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.Terminals._
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import uk.gov.homeoffice.drt.time.LocalDate
 
 
 trait AdminExport extends FlightsWithSplitsWithActualApiExport {
@@ -19,7 +19,7 @@ trait AdminExport extends FlightsWithSplitsWithActualApiExport {
     .arrivalWithSplitsAndRawApiHeadings
     .replace("PCP Pax", "PCP Pax,Predicted PCP Pax,Old Forecast PCP Pax")
 
-  def predictedPcpPax(fws: ApiFlightWithSplits): String =
+  private def predictedPcpPax(fws: ApiFlightWithSplits): String =
     if (fws.apiFlight.Origin.isDomesticOrCta) "-"
     else fws.apiFlight.PassengerSources.get(MlFeedSource).flatMap(p => p.getPcpPax.map(_.toString)).getOrElse("-")
 
@@ -36,8 +36,8 @@ trait AdminExport extends FlightsWithSplitsWithActualApiExport {
 
 case class AdminExportImpl(start: LocalDate,
                            end: LocalDate,
-                           terminal: Terminal,
+                           terminals: Seq[Terminal],
                            paxFeedSourceOrder: List[FeedSource],
                           ) extends AdminExport {
-  override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = standardFilter
+  override val flightsFilter: (ApiFlightWithSplits, Seq[Terminal]) => Boolean = standardFilter
 }

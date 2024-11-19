@@ -95,7 +95,7 @@ object FlightExports {
   def flightWithSplitsToCsvFields(paxFeedSourceOrder: Seq[FeedSource]): Arrival => List[String] =
     arrival => List(
       arrival.flightCodeString,
-      arrival.flightCodeString,
+      arrival.Terminal.toString,
       arrival.Origin.toString,
       arrival.Gate.getOrElse("") + "/" + arrival.Stand.getOrElse(""),
       arrival.displayStatus.description,

@@ -8,10 +8,10 @@ import services.crunch.CrunchTestLike
 import services.exports.flights.templates.{FlightsWithSplitsWithActualApiExport, FlightsWithSplitsWithActualApiExportImpl, FlightsWithSplitsWithoutActualApiExport, FlightsWithSplitsWithoutActualApiExportImpl}
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.EventTypes.DC
-import uk.gov.homeoffice.drt.arrivals.{Passengers, _}
+import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, UtcDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -208,14 +208,14 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     """Invalid API,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
 
   private val withoutActualApiExport: FlightsWithSplitsWithoutActualApiExport =
-    FlightsWithSplitsWithoutActualApiExportImpl(LocalDate(2017, 1, 1), LocalDate(2017, 1, 1), T1, paxFeedSourceOrder)
+    FlightsWithSplitsWithoutActualApiExportImpl(LocalDate(2017, 1, 1), LocalDate(2017, 1, 1), Seq(T1), paxFeedSourceOrder)
   private val withActualApiExport: FlightsWithSplitsWithActualApiExport =
-    FlightsWithSplitsWithActualApiExportImpl(LocalDate(2017, 1, 1), LocalDate(2017, 1, 1), T1, paxFeedSourceOrder)
+    FlightsWithSplitsWithActualApiExportImpl(LocalDate(2017, 1, 1), LocalDate(2017, 1, 1), Seq(T1), paxFeedSourceOrder)
 
   "Given a list of arrivals with splits we should get back a CSV of arrival data using live feed numbers when available" >> {
 
     val resultStream = withoutActualApiExport
-      .csvStream(Source(List((FlightsWithSplits(flights), VoyageManifests.empty))))
+      .csvStream(Source(List((flights, VoyageManifests.empty))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
@@ -250,7 +250,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
     )
 
     val resultStream = withoutActualApiExport
-      .csvStream(Source(List((FlightsWithSplits(flightsWithPcpTimes), VoyageManifests.empty))))
+      .csvStream(Source(List((flightsWithPcpTimes, VoyageManifests.empty))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
@@ -267,7 +267,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "Given a list of arrivals with splits we should get back a CSV of arrival data with unique entry for code Share Arrival flight" >> {
 
     val resultStream = withoutActualApiExport
-      .csvStream(Source(List((FlightsWithSplits(codeShareFlights), VoyageManifests.empty))))
+      .csvStream(Source(List((codeShareFlights, VoyageManifests.empty))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
@@ -282,7 +282,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
   "Given a list of arrivals with splits and with live passenger numbers, we should use live passenger PCP numbers" >> {
     val resultStream = withoutActualApiExport
-      .csvStream(Source(List((FlightsWithSplits(List(flightWithAllTypesOfAPISplit)), VoyageManifests.empty))))
+      .csvStream(Source(List((List(flightWithAllTypesOfAPISplit), VoyageManifests.empty))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
@@ -315,7 +315,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
   "Given a list of Flights With Splits then I should get all the data for with API numbers when live numbers are missing" >> {
     val resultStream = withActualApiExport
-      .csvStream(Source(List((FlightsWithSplits(flightsIncludingOneWithNoPaxNos), VoyageManifests.empty))))
+      .csvStream(Source(List((flightsIncludingOneWithNoPaxNos, VoyageManifests.empty))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
@@ -340,7 +340,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
           PassengerInfoJson(None, Nationality("XXX"), EeaFlag("Y"), Option(PaxAge(30)), None, InTransit(false), None, Option(Nationality("FRA")), None),
         ))))
     val resultStream = withActualApiExport
-      .csvStream(Source(List((FlightsWithSplits(List(flightWithAllTypesOfAPISplit)), manifests))))
+      .csvStream(Source(List((List(flightWithAllTypesOfAPISplit), manifests))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
@@ -354,7 +354,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
 
   "Given a list of Flights With Splits then I should get all the data with unique entry for code Share Arrival flight including API numbers" >> {
     val resultStream = withActualApiExport
-      .csvStream(Source(List((FlightsWithSplits(codeShareFlights), VoyageManifests.empty))))
+      .csvStream(Source(List((codeShareFlights, VoyageManifests.empty))))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
 
@@ -370,9 +370,9 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   "Given a source of flights containing empty days and days with flights, then I should still get a CSV result" >> {
     val resultStream = withActualApiExport
       .csvStream(Source(List(
-        (FlightsWithSplits.empty, VoyageManifests.empty),
-        (FlightsWithSplits.empty, VoyageManifests.empty),
-        (FlightsWithSplits(codeShareFlights), VoyageManifests.empty))
+        (Seq.empty, VoyageManifests.empty),
+        (Seq.empty, VoyageManifests.empty),
+        (codeShareFlights, VoyageManifests.empty))
       ))
 
     val result: String = Await.result(resultStream.runWith(Sink.seq), 1.second).mkString
@@ -417,7 +417,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
         None)),
       SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC))
     val fws = ApiFlightWithSplits(arrival, Set(splits))
-    val eventualResult = withActualApiExport.csvStream(Source(List((FlightsWithSplits(Iterable(fws)), VoyageManifests.empty)))).runWith(Sink.seq)
+    val eventualResult = withActualApiExport.csvStream(Source(List((Iterable(fws), VoyageManifests.empty)))).runWith(Sink.seq)
     val result = Await.result(eventualResult, 1.second)
     val columnIndexOfInvalidApi = result.head.split(",").indexOf("Invalid API")
     val invalidApiFieldValue = result.drop(1).head.split(",")(columnIndexOfInvalidApi)

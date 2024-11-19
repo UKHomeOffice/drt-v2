@@ -16,11 +16,13 @@ import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feedback.UserFeedback
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import uk.gov.homeoffice.drt.training.FeatureGuide
+
 import scala.collection.immutable.{HashSet, Map}
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -68,61 +70,67 @@ case class ViewDay(localDate: LocalDate, timeMachineDate: Option[SDateLike]) ext
 }
 
 sealed trait ExportType {
+  def linkLabel: String
+
   def toUrlString: String
+
+  def maybeTerminal: Option[Terminal]
 }
 
-object ExportDeskRecs extends ExportType {
-  override def toString = "Recommendations"
+case class ExportDeskRecs(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Recommendations"
 
   override def toUrlString: String = "desk-recs"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
-object ExportDeployments extends ExportType {
-  override def toString = "Deployments"
+case class ExportDeployments(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Deployments"
 
   override def toUrlString: String = "desk-deps"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
-object ExportArrivals extends ExportType {
-  override def toString = "Arrivals"
-
-  override def toUrlString: String = toString.toLowerCase
-}
-
-object ExportLiveArrivalsFeed extends ExportType {
-  override def toString = "Live arrivals feed"
+case class ExportLiveArrivalsFeed(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Live arrivals feed"
 
   override def toUrlString: String = "arrivals-feed"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
-//case class ExportArrivalsWithRedListDiversions(label: String) extends ExportType {
-//  override def toString: String = label
-//
-//  override def toUrlString: String = "arrivals-with-red-list-diversions"
-//}
+case class ExportArrivals(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Arrivals"
 
-//case class ExportArrivalsWithoutRedListDiversions(label: String) extends ExportType {
-//  override def toString: String = label
-//
-//  override def toUrlString: String = "arrivals"
-//}
+  override def toUrlString: String = toString.toLowerCase
 
-object ExportArrivalsSingleTerminal extends ExportType {
-  override def toString = "Single terminal"
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
+}
+
+case class ExportArrivalsSingleTerminal(terminal: Terminal) extends ExportType {
+  override def linkLabel = s"Export ${terminal.toString}"
 
   override def toUrlString: String = "arrivals"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
 object ExportArrivalsCombinedTerminals extends ExportType {
-  override def toString = "Combined terminals"
+  override def linkLabel = "Export all terminals"
 
   override def toUrlString: String = "arrivals-combined"
+
+  override def maybeTerminal: Option[Terminal] = None
 }
 
-object ExportStaffMovements extends ExportType {
-  override def toString = "Movements"
+case class ExportStaffMovements(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Movements"
 
   override def toUrlString: String = "staff-movements"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
 case class LoadingState(isLoading: Boolean = false)

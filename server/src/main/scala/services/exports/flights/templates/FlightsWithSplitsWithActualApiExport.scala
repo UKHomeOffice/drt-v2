@@ -1,17 +1,15 @@
 package services.exports.flights.templates
 
-import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminalDateRange}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifest
 import services.exports.FlightExports.{actualAPISplitsForFlightInHeadingOrder, ageRangesFromSummary, nationalitiesFromSummary}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, ArrivalExportHeadings}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals._
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.LocalDate
 
 
 trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
-  val request: FlightsRequest = GetFlightsForTerminalDateRange(SDate(start).millisSinceEpoch, SDate(end).addDays(1).addMinutes(-1).millisSinceEpoch, terminal)
 
   override val headings: String = ArrivalExportHeadings.arrivalWithSplitsAndRawApiHeadings
 
@@ -27,8 +25,8 @@ trait FlightsWithSplitsWithActualApiExport extends FlightsWithSplitsExport {
 
 case class FlightsWithSplitsWithActualApiExportImpl(start: LocalDate,
                                                     end: LocalDate,
-                                                    terminal: Terminal,
+                                                    terminals: Seq[Terminal],
                                                     paxFeedSourceOrder: List[FeedSource],
                                                    ) extends FlightsWithSplitsWithActualApiExport {
-  override val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean = standardFilter
+  override val flightsFilter: (ApiFlightWithSplits, Seq[Terminal]) => Boolean = standardFilter
 }

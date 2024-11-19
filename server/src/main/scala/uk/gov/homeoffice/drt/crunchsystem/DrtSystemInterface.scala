@@ -49,14 +49,36 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val akkaDb: AkkaDbTables
   val params: DrtParameters
 
+  implicit val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    MlFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  ) else List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  )
+
   private val flightDao = FlightDao()
   private val queueSlotDao = QueueSlotDao()
 
-  val flightsForDateRange: (LocalDate, LocalDate, Terminal) => Source[(LocalDate, Iterable[ApiFlightWithSplits]), NotUsed] = {
-    val getFlights = flightDao.getForTerminalLocalDatePcpTime(airportConfig.portCode)
+  val flightsForPcpDateRange: (LocalDate, LocalDate, Seq[Terminal]) => Source[(UtcDate, Iterable[ApiFlightWithSplits]), NotUsed] = {
+    val getFlights = flightDao.getForTerminalsUtcDate(airportConfig.portCode)
 
-    (start, end, terminal) =>
-      Source(DateRange(start, end)).mapAsync(1)(date => aggregatedDb.run(getFlights(terminal, date).map(date -> _)))
+    (start, end, terminals) =>
+      val utcStart = SDate(start).addDays(-1).toUtcDate
+      val endPlusADay = SDate(end).addDays(1).toUtcDate
+      val utcEnd = UtcDate(endPlusADay.year, endPlusADay.month, endPlusADay.day)
+      Source(DateRange(utcStart, utcEnd)).mapAsync(1)(date => aggregatedDb.run(getFlights(terminals, date).map { flights =>
+        date -> flights.filter(_.apiFlight.hasPcpDuring(SDate(start), SDate(end).addDays(1).addMinutes(-1), paxFeedSourceOrder))
+      }))
   }
 
   val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
@@ -81,25 +103,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     } else userRolesFromHeader(headers)
   }
 
-
   val now: () => SDateLike
-
-  implicit val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
-    ScenarioSimulationSource,
-    LiveFeedSource,
-    ApiFeedSource,
-    MlFeedSource,
-    ForecastFeedSource,
-    HistoricApiFeedSource,
-    AclFeedSource,
-  ) else List(
-    ScenarioSimulationSource,
-    LiveFeedSource,
-    ApiFeedSource,
-    ForecastFeedSource,
-    HistoricApiFeedSource,
-    AclFeedSource,
-  )
 
   val manifestLookupService: ManifestLookupLike
 

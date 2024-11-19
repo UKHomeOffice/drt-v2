@@ -40,7 +40,7 @@ object CsvFileStreaming {
   }
 
   def makeFileName(subject: String,
-                   maybeTerminal: Option[Terminal],
+                   terminal: Seq[Terminal],
                    start: SDateLike,
                    end: SDateLike,
                    portCode: PortCode): String = {
@@ -50,14 +50,14 @@ object CsvFileStreaming {
       f"-to-${endLocal.getFullYear}-${endLocal.getMonth}%02d-${endLocal.getDate}%02d"
     else ""
 
-    val terminalStr = maybeTerminal.map(t => s"${t.toString}-").getOrElse("")
+    val terminalStr = terminal.map(t => s"${t.toString}-").mkString
 
     f"$portCode-$terminalStr$subject-" +
       f"${startLocal.getFullYear}-${startLocal.getMonth}%02d-${startLocal.getDate}%02d" + endDate
   }
 
   def makeFileName(subject: String,
-                   maybeTerminal: Option[Terminal],
+                   terminals: Seq[Terminal],
                    start: LocalDate,
                    end: LocalDate,
                    portCode: PortCode): String = {
@@ -67,7 +67,7 @@ object CsvFileStreaming {
       f"-to-${endLocal.getFullYear}-${endLocal.getMonth}%02d-${endLocal.getDate}%02d"
     else ""
 
-    val terminalStr = maybeTerminal.map(t => s"${t.toString}-").getOrElse("")
+    val terminalStr = terminals.map(t => s"${t.toString}-").mkString
 
     f"$portCode-$terminalStr$subject-" +
       f"${startLocal.getFullYear}-${startLocal.getMonth}%02d-${startLocal.getDate}%02d" + endDate
