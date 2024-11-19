@@ -3,19 +3,22 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.HideAccessibilityStatement
-import io.kinoplan.scalajs.react.material.ui.core.MuiIconButton
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiIconButton}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import diode.AnyAction.aType
+import drt.client.components.styles.DrtTheme.buttonTheme
+import drt.client.modules.GoogleEventTracker
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 
 import scala.scalajs.js
 
 object AccessibilityStatement {
 
-  case class Props(teamEmail: String) extends UseValueEq
+  case class Props(teamEmail: String, portCode: String) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("UserDashboard")
     .render_P(p => {
@@ -45,8 +48,8 @@ object AccessibilityStatement {
               <.li("navigate most of the website using a keyboard or speech recognition software"),
               <.li("listen to most of the website using a screen reader (including the most recent versions of JAWS, NVDA and VoiceOver)")),
             <.p("We’ve also made the website text as simple as possible to understand."),
-            <.p(<.a(^.href := "https://mcmw.abilitynet.org.uk/",
-              ^.target := "_blank", "AbilityNet"), " has advice on making your device easier to use if you have a disability.")
+            <.p(<.a(^.href := "https://mcmw.abilitynet.org.uk/", ^.target := "_blank", "AbilityNet"),
+              " has advice on making your device easier to use if you have a disability.")
           ),
           <.div(^.className := "accessibility-paragraph",
             <.h2(^.id := "how-accessible", "How accessible this service is"),
@@ -59,7 +62,16 @@ object AccessibilityStatement {
           <.div(^.className := "accessibility-paragraph",
             <.h2(^.id := "feedback", "Feedback and contact information"),
             <.p("The Dynamic Response Tool (DRT) team, which works within Technology Delivery Centre, is responsible for the accessibility of this service. We’re always looking to improve the accessibility of this website. If you find any problems not listed on this page or think we’re not meeting other accessibility requirements, contact us:"),
-            <.a(^.href := s"mailto:${p.teamEmail}", "Email us to report a problem")),
+            MuiButton(color = Color.primary, variant = "contained", size = "large",
+              sx = SxProps(Map("textTransform" -> "none",
+                "fontSize" -> buttonTheme.typography.button.fontSize)))(
+              s"Email us to report a problem",
+              ^.className := "btn btn-default",
+              ^.href := s"mailto:${p.teamEmail}",
+              ^.target := "_blank",
+              ^.onClick --> Callback(GoogleEventTracker.sendEvent(p.portCode, "Accessibility", "Email us to report a problem"))
+            )
+          ),
 
           <.div(^.className := "accessibility-paragraph",
             <.h2(^.id := "enforcement", "Enforcement procedure"),
@@ -106,5 +118,5 @@ object AccessibilityStatement {
     })
     .build
 
-  def apply(teamEmail: String): VdomElement = component(Props(teamEmail))
+  def apply(teamEmail: String, portCode: String): VdomElement = component(Props(teamEmail, portCode))
 }

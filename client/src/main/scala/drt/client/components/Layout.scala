@@ -105,7 +105,7 @@ object Layout {
                 Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
                 <.div(^.className := "main-container",
                   if (showAccessibilityStatement) {
-                    AccessibilityStatement(email)
+                    AccessibilityStatement(email, props.currentLoc.page.portCodeStr)
                   } else {
                     <.div(^.className := "sub-nav-bar",
                       props.currentLoc.page match {
@@ -128,10 +128,14 @@ object Layout {
               <.div(^.className := "bottom-bar",
                 <.div(^.style := js.Dictionary("paddingLeft" -> "10px"), "Support links:"),
                 <.div(^.style := js.Dictionary("paddingLeft" -> "10px"),
-                  <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", "Email us (support and queries)")),
+                  <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", "Email us")),
                 <.div(^.className := "separator", ^.style := js.Dictionary("paddingLeft" -> "10px"), "/"),
                 <.div(^.style := js.Dictionary("paddingLeft" -> "10px"),
                   <.a(^.textDecoration := "underline", "Accessibility statement", ^.onClick --> clickAccessibility)),
+                <.div(^.className := "separator", ^.style := js.Dictionary("paddingLeft" -> "10px"), "/"),
+                <.div(^.style := js.Dictionary("paddingLeft" -> "10px"),
+                  <.a(^.textDecoration := "underline", "Give feedback", ^.target := "_blank",
+                    ^.href := s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest"))
               ),
             )
           }
