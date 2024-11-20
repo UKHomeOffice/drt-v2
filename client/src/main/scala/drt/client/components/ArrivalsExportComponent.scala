@@ -30,7 +30,7 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
                    terminals: Iterable[Terminal],
                   ) extends UseValueEq
 
-  case class State(showDialogue: Boolean = false)
+  case class State(showDialogue: Boolean)
 
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MultiDayExportComponent")
@@ -98,7 +98,20 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
           )).toVdomArray
       ))
 
+  private val defaultArrivalsExport: (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement = (term, date, _, viewMode) =>
+    exportLink(
+      date,
+      term.toString,
+      ExportArrivals(term),
+      SPAMain.exportUrl(ExportArrivals(term), viewMode),
+      None,
+      "arrivals",
+    ).apply()
+
   def componentFactory(terminals: Iterable[Terminal]): (Terminal, SDateLike, LoggedInUser, ViewMode) => VdomElement =
     (terminal: Terminal, selectedDate: SDateLike, loggedInUser: LoggedInUser, viewMode: ViewMode) =>
-      component(Props(terminal, selectedDate, loggedInUser, viewMode, terminals))
+      if (terminals.size > 1)
+        component(Props(terminal, selectedDate, loggedInUser, viewMode, terminals))
+      else
+        defaultArrivalsExport(terminal, selectedDate, loggedInUser, viewMode)
 }

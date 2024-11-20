@@ -104,7 +104,7 @@ case class ExportLiveArrivalsFeed(terminal: Terminal) extends ExportType {
 case class ExportArrivals(terminal: Terminal) extends ExportType {
   override def linkLabel = "Arrivals"
 
-  override def toUrlString: String = toString.toLowerCase
+  override def toUrlString: String = "arrivals"
 
   override def maybeTerminal: Option[Terminal] = Option(terminal)
 }

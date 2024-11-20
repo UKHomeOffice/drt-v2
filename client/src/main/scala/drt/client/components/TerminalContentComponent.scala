@@ -98,7 +98,7 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
       val terminalName = terminal.toString
-      val arrivalsExportForPort = componentFactory(props.airportConfig.terminals)//ArrivalsExportComponent(props.airportConfig.portCode, terminal, props.viewStart)
+      val arrivalsExportForPort = componentFactory(props.airportConfig.terminals)
       val movementsExportDate: LocalDate = props.viewMode match {
         case ViewLive => SDate.now().toLocalDate
         case ViewDay(localDate, _) => localDate
