@@ -1,8 +1,10 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors._
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
@@ -20,6 +22,7 @@ import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
@@ -46,8 +49,28 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val akkaDb: AkkaDbTables
   val params: DrtParameters
 
+  implicit val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    MlFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  ) else List(
+    ScenarioSimulationSource,
+    LiveFeedSource,
+    ApiFeedSource,
+    ForecastFeedSource,
+    HistoricApiFeedSource,
+    AclFeedSource,
+  )
+
   private val flightDao = FlightDao()
   private val queueSlotDao = QueueSlotDao()
+
+  val flightsForPcpDateRange: (LocalDate, LocalDate, Seq[Terminal]) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+    flightDao.flightsForPcpDateRange(airportConfig.portCode, paxFeedSourceOrder, aggregatedDb.run)
 
   val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
     val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, aggregatedDb, airportConfig.portCode)
@@ -71,25 +94,7 @@ trait DrtSystemInterface extends UserRoleProviderLike
     } else userRolesFromHeader(headers)
   }
 
-
   val now: () => SDateLike
-
-  implicit val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
-    ScenarioSimulationSource,
-    LiveFeedSource,
-    ApiFeedSource,
-    MlFeedSource,
-    ForecastFeedSource,
-    HistoricApiFeedSource,
-    AclFeedSource,
-  ) else List(
-    ScenarioSimulationSource,
-    LiveFeedSource,
-    ApiFeedSource,
-    ForecastFeedSource,
-    HistoricApiFeedSource,
-    AclFeedSource,
-  )
 
   val manifestLookupService: ManifestLookupLike
 
