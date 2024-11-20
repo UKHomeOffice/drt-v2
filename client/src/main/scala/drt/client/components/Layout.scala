@@ -5,14 +5,16 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain
 import drt.client.SPAMain._
+import drt.client.components.styles.DrtTheme
 import drt.client.components.styles.DrtTheme.buttonTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
 import drt.client.services.handlers._
 import drt.shared.ContactDetails
 import io.kinoplan.scalajs.react.material.ui.core._
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import japgolly.scalajs.react._
+import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
 import japgolly.scalajs.react.vdom.html_<^._
@@ -38,9 +40,13 @@ object Layout {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .render_P { props: Props =>
-      def clickAccessibility(): Callback = {
+      def clickAccessibility() = {
         Callback(GoogleEventTracker.sendEvent(props.currentLoc.page.portCodeStr, "Accessibility", "Accessibility statement clicked")) >>
           Callback(SPACircuit.dispatch(ShowAccessibilityStatement))
+      }
+
+      def emailUsToReportProblem() = {
+        Callback(GoogleEventTracker.sendEvent(props.currentLoc.page.portCodeStr, "Accessibility", "Email us to report a problem"))
       }
 
       val layoutModelItemsRCP = SPACircuit.connect { m =>
@@ -105,7 +111,11 @@ object Layout {
                 Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
                 <.div(^.className := "main-container",
                   if (showAccessibilityStatement) {
-                    AccessibilityStatement(email, props.currentLoc.page.portCodeStr)
+                    ThemeProvider(DrtTheme.theme)(
+                      AccessibilityStatementComponent(
+                        IAccessibilityStatementProps(email, () => emailUsToReportProblem(), () => SPACircuit.dispatch(HideAccessibilityStatement))
+                      )
+                    )
                   } else {
                     <.div(^.className := "sub-nav-bar",
                       props.currentLoc.page match {

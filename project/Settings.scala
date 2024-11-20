@@ -99,7 +99,7 @@ object Settings {
     "react-markdown" -> "9.0.1",
     "@types/react-dom" -> react,
     "css-loader" -> "6.7.2",
-    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react/tree/1.5.6",
+    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#2063646e9d66947f6cdafd5fb49b5d8e05049c09",
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
