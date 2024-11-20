@@ -40,9 +40,9 @@ object Layout {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .render_P { props: Props =>
-      def clickAccessibility() = {
-        Callback(GoogleEventTracker.sendEvent(props.currentLoc.page.portCodeStr, "Accessibility", "Accessibility statement clicked")) >>
-          Callback(SPACircuit.dispatch(ShowAccessibilityStatement))
+      def clickAccessibility(): Unit = {
+        SPACircuit.dispatch(ShowAccessibilityStatement)
+        GoogleEventTracker.sendEvent(props.currentLoc.page.portCodeStr, "Accessibility", "Accessibility statement clicked")
       }
 
       def emailUsToReportProblem() = {
@@ -135,18 +135,9 @@ object Layout {
                 ),
                 VersionUpdateNotice()
               ),
-              <.div(^.className := "bottom-bar",
-                <.div(^.style := js.Dictionary("paddingLeft" -> "10px"), "Support links:"),
-                <.div(^.style := js.Dictionary("paddingLeft" -> "10px"),
-                  <.a(^.href := s"mailto:$email", ^.target := "_blank", ^.textDecoration := "underline", "Email us")),
-                <.div(^.className := "separator", ^.style := js.Dictionary("paddingLeft" -> "10px"), "/"),
-                <.div(^.style := js.Dictionary("paddingLeft" -> "10px"),
-                  <.a(^.textDecoration := "underline", "Accessibility statement", ^.onClick --> clickAccessibility)),
-                <.div(^.className := "separator", ^.style := js.Dictionary("paddingLeft" -> "10px"), "/"),
-                <.div(^.style := js.Dictionary("paddingLeft" -> "10px"),
-                  <.a(^.textDecoration := "underline", "Give feedback", ^.target := "_blank",
-                    ^.href := s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest"))
-              ),
+              ThemeProvider(DrtTheme.theme)(
+                BottomBarComponent(BottomBarProps(email, () => clickAccessibility(), s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest"))
+              )
             )
           }
           content.getOrElse(LoadingOverlay())
