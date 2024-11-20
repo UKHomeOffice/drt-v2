@@ -233,8 +233,6 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
 
         val csvDataSource = arrivalsExport.flightsDataSource(startDate, numberOfDays, terminal, fs, persistenceId)
 
-        //        implicit val writeable: Writeable[String] = Writeable((str: String) => ByteString.fromString(str), Option("application/csv"))
-
         val periodString = if (numberOfDays > 1)
           s"${startDate.getLocalLastMidnight.toISODateOnly}-to-${SDate(endPit).getLocalLastMidnight.toISODateOnly}"
         else
