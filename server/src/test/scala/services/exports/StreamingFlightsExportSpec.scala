@@ -203,7 +203,7 @@ class StreamingFlightsExportSpec extends CrunchTestLike {
   )
 
   private val flightHeadings =
-    """IATA,ICAO,Origin,Gate/Stand,Status,Scheduled,Predicted Arrival,Est Arrival,Act Arrival,Est Chocks,Act Chocks,Minutes off scheduled,Est PCP,Capacity,Total Pax,PCP Pax"""
+    """IATA,Terminal,Origin,Gate/Stand,Status,Scheduled,Predicted Arrival,Est Arrival,Act Arrival,Est Chocks,Act Chocks,Minutes off scheduled,Est PCP,Capacity,Total Pax,PCP Pax"""
   private val apiHeadings =
     """Invalid API,API e-Gates,API EEA,API Non-EEA,API Fast Track,Historical e-Gates,Historical EEA,Historical Non-EEA,Historical Fast Track,Terminal Average e-Gates,Terminal Average EEA,Terminal Average Non-EEA,Terminal Average Fast Track"""
 
