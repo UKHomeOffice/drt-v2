@@ -57,7 +57,7 @@ object FlightExports {
             val maybePaxSummary = maybeManifest.flatMap(PassengerInfo.manifestToFlightManifestSummary)
             val natsSummary = s""""${nationalitiesFromSummary(maybePaxSummary)}""""
             val agesSummary = s""""${ageRangesFromSummary(maybePaxSummary)}""""
-            s"$regionName,$portName,$terminalName,$flightPart,$invalidApi,$splitsPart,$apiPart,$natsSummary,$agesSummary\n"
+            s"$regionName,$portName,$flightPart,$invalidApi,$splitsPart,$apiPart,$natsSummary,$agesSummary\n"
           }
       }
     }
