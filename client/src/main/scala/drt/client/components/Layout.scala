@@ -34,8 +34,7 @@ object Layout {
                                       airportConfig: Pot[AirportConfig],
                                       abFeatures: Pot[Seq[ABFeature]],
                                       showFeedbackBanner: Pot[Boolean],
-                                      contactDetails: Pot[ContactDetails],
-                                      showAccessibilityStatement: Boolean
+                                      contactDetails: Pot[ContactDetails]
                                      ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
@@ -45,7 +44,7 @@ object Layout {
       }
 
       val layoutModelItemsRCP = SPACircuit.connect { m =>
-        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails, m.showAccessibilityStatement)
+        LayoutModelItems(m.loggedInUserPot, m.airportConfig, m.abFeatures, m.showFeedbackBanner, m.contactDetails)
       }
 
       layoutModelItemsRCP { modelProxy =>
