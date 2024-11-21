@@ -69,16 +69,16 @@ trait DrtSystemInterface extends UserRoleProviderLike
   private val flightDao = FlightDao()
   private val queueSlotDao = QueueSlotDao()
 
-  val flightsForPcpDateRange: (LocalDate, LocalDate, Seq[Terminal]) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+  lazy val flightsForPcpDateRange: (LocalDate, LocalDate, Seq[Terminal]) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     flightDao.flightsForPcpDateRange(airportConfig.portCode, paxFeedSourceOrder, aggregatedDb.run)
 
-  val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
+  lazy val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
     val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, aggregatedDb, airportConfig.portCode)
     (updates, removals) =>
       doUpdate(updates, removals)
   }
 
-  val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
+  lazy val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
     val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
     (date, updates) =>
       doUpdate(date, updates)

@@ -151,7 +151,7 @@ object Settings {
     "com.sun.xml.ws" % "rt" % rtVersion,
     "javax.xml.bind" % "jaxb-api" % "2.3.1",
 
-    "com.h2database" % "h2" % h2 % Test,
+    "com.h2database" % "h2" % h2,
     "com.typesafe" % "config" % typesafeConfig,
     "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
     "com.typesafe.akka" %% "akka-persistence-typed" % akka,
