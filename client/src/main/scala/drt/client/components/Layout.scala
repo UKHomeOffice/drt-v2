@@ -4,7 +4,7 @@ import diode.AnyAction.aType
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain
-import drt.client.SPAMain._
+import drt.client.SPAMain.{AccessibilityStatementLoc, _}
 import drt.client.components.styles.DrtTheme
 import drt.client.components.styles.DrtTheme.buttonTheme
 import drt.client.modules.GoogleEventTracker
@@ -17,7 +17,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.{Resolution, RouterCtl}
-import japgolly.scalajs.react.vdom.html_<^._
+import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import org.scalajs.dom
 import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -41,12 +41,7 @@ object Layout {
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .render_P { props: Props =>
       def clickAccessibility(): Unit = {
-        SPACircuit.dispatch(ShowAccessibilityStatement)
         GoogleEventTracker.sendEvent(props.currentLoc.page.portCodeStr, "Accessibility", "Accessibility statement clicked")
-      }
-
-      def emailUsToReportProblem() = {
-        Callback(GoogleEventTracker.sendEvent(props.currentLoc.page.portCodeStr, "Accessibility", "Email us to report a problem"))
       }
 
       val layoutModelItemsRCP = SPACircuit.connect { m =>
@@ -54,15 +49,13 @@ object Layout {
       }
 
       layoutModelItemsRCP { modelProxy =>
-        <.div({
-          val model = modelProxy()
+        {val model = modelProxy()
           val content = for {
             contactDetails <- model.contactDetails
             airportConfig <- model.airportConfig
             user <- model.user
             abFeatures <- model.abFeatures
             showFeedbackBanner <- model.showFeedbackBanner
-            showAccessibilityStatement = model.showAccessibilityStatement
           } yield {
             val email = contactDetails.supportEmail.getOrElse("drtpoiseteam@homeoffice.gov.uk")
             val aORbTest = abFeatures.headOption.map(_.abVersion).getOrElse("B")
@@ -70,7 +63,8 @@ object Layout {
               case "A" => ("Your feedback improves DRT for everyone", 4, 2, 5)
               case _ => ("Help us improve the DRT experience", 4, 2, 5)
             }
-            <.div(
+            <.div(^.id := "root",
+              <.div(^.className := "main-content",
               if (showFeedbackBanner) {
                 MuiPaper(sx = SxProps(Map("elevation" -> "4", "padding" -> "16px", "margin" -> "20px", "backgroundColor" -> "#0E2560")))(
                   MuiGrid(container = true)(
@@ -110,38 +104,35 @@ object Layout {
               <.div(
                 Navbar(Navbar.Props(props.ctl, props.currentLoc.page, user, airportConfig)),
                 <.div(^.className := "main-container",
-                  if (showAccessibilityStatement) {
-                    ThemeProvider(DrtTheme.theme)(
-                      AccessibilityStatementComponent(
-                        IAccessibilityStatementProps(email, () => emailUsToReportProblem(), () => SPACircuit.dispatch(HideAccessibilityStatement))
-                      )
-                    )
-                  } else {
-                    <.div(^.className := "sub-nav-bar",
-                      props.currentLoc.page match {
-                        case TerminalPageTabLoc(terminalName, _, _, _) =>
-                          val terminal = Terminal(terminalName)
-                          <.div(^.className := "status-bar",
-                            ApiStatusComponent(ApiStatusComponent.Props(
-                              !airportConfig.noLivePortFeed,
-                              terminal)),
-                            PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
-                          )
-                        case _ => EmptyVdom
-                      },
-                    )
-                    <.div(<.div(props.currentLoc.render()))
-                  },
+                  <.div(^.className := "sub-nav-bar",
+                    props.currentLoc.page match {
+                      case TerminalPageTabLoc(terminalName, _, _, _) =>
+                        val terminal = Terminal(terminalName)
+                        <.div(^.className := "status-bar",
+                          ApiStatusComponent(ApiStatusComponent.Props(
+                            !airportConfig.noLivePortFeed,
+                            terminal)),
+                          PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
+                        )
+                      case _ => EmptyVdom
+                    },
+                  ),
+                  <.div(<.div(props.currentLoc.render()))
                 ),
                 VersionUpdateNotice()
               ),
-              ThemeProvider(DrtTheme.theme)(
-                BottomBarComponent(BottomBarProps(email, () => clickAccessibility(), s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest"))
-              )
+            ),
+            <.footer(
+              ThemeProvider(DrtTheme.accessibilityTheme)(
+                BottomBarComponent(
+                  BottomBarProps(
+                    AccessibilityStatementLoc.title(None), email, () => clickAccessibility(), s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest")
+                )
+              ))
             )
           }
           content.getOrElse(LoadingOverlay())
-        })
+        }
       }
     }
     .componentDidMount { _ =>

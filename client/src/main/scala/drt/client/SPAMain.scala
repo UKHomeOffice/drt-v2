@@ -1,10 +1,12 @@
 package drt.client
 
 import diode.Action
+import diode.data.Pot
+import diode.react.ReactConnectProxy
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles._
-import drt.client.components.{FeedsStatusPage, ForecastUploadComponent, GlobalStyles, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
+import drt.client.components.{AccessibilityStatementComponent, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, IAccessibilityStatementProps, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -20,7 +22,7 @@ import org.scalajs.dom
 import org.scalajs.dom.{console, window}
 import scalacss.ProdDefaults._
 import uk.gov.homeoffice.drt.Urls
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -31,10 +33,12 @@ object SPAMain {
 
   sealed trait Loc {
     val url: String
+
     def href: String = window.location.href.split("#").headOption match {
       case Some(head) => head + url
       case None => url
     }
+
     val portCodeStr = dom.document.getElementById("port-code").getAttribute("value")
     val portConfig = DrtPortConfigs.confByPort(PortCode(portCodeStr))
 
@@ -112,6 +116,12 @@ object SPAMain {
 
   case class PortConfigPageLoc()
 
+  case object AccessibilityStatementLoc extends Loc {
+    val hashValue: String = "#accessibility"
+    override val url = s"$hashValue"
+
+    override def title(maybeTerminal: Option[Terminal]): String = title("Accessibility Statement", maybeTerminal)
+  }
 
   object TerminalPageTabLoc {
     val hashValue: String = "#terminal"
@@ -130,6 +140,7 @@ object SPAMain {
                                ) extends Loc {
     private val queryString = if (queryParams.nonEmpty) s"?${queryParams.map { case (k, v) => s"$k=$v" }.mkString("&")}" else ""
     override val url = s"${TerminalPageTabLoc.hashValue}/$terminalName/$modeStr/$subMode$queryString"
+
     def pageName = (modeStr.toLowerCase, subMode.toLowerCase) match {
       case ("current", "arrivals") => "Arrivals"
       case ("current", "desksandqueues") => "Desks and queues"
@@ -144,7 +155,9 @@ object SPAMain {
     override def title(maybeTerminal: Option[Terminal]): String = title(pageName, maybeTerminal)
 
     val terminal: Terminal = Terminal(terminalName)
+
     def dayRangeType = queryParams.get(UrlDayRangeType.paramName)
+
     val maybeViewDate: Option[LocalDate] = queryParams.get(UrlDateParameter.paramName)
       .filter(_.matches(".+"))
       .flatMap(dateStr => Try {
@@ -159,6 +172,7 @@ object SPAMain {
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
+
     def viewMode: ViewMode = {
       (mode, maybeViewDate) match {
         case (Current, Some(viewDate)) =>
@@ -207,47 +221,54 @@ object SPAMain {
   object PortDashboardLoc {
     val hashValue: String = "#portDashboard"
   }
+
   case class PortDashboardLoc(period: Option[Int]) extends Loc {
     override val url = s"${PortDashboardLoc.hashValue}/$period"
+
     override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
   }
 
   case object StatusLoc extends Loc {
     val hashValue: String = "#status"
     override val url = s"$hashValue"
+
     override def title(maybeTerminal: Option[Terminal]): String = title("Feeds status", maybeTerminal)
   }
 
   case object UserDashboardLoc extends Loc {
     val hashValue: String = ""
     override val url = ""
+
     override def title(maybeTerminal: Option[Terminal]): String = title("Dashboard", maybeTerminal)
   }
 
   object TrainingHubLoc {
     val hashValue: String = "#trainingHub"
   }
+
   case class TrainingHubLoc(modeStr: String = "dropInBooking") extends Loc {
     override val url = s"${TrainingHubLoc.hashValue}/$modeStr"
 
-    val subTtitle = modeStr match {
+    private val subTitle = modeStr match {
       case "dropInBooking" => "Book a drop-in"
       case "trainingMaterial" => "Training material"
       case _ => ""
     }
 
-    override def title(maybeTerminal: Option[Terminal]): String = title(s"Training hub - $subTtitle", maybeTerminal)
+    override def title(maybeTerminal: Option[Terminal]): String = title(s"Training hub - $subTitle", maybeTerminal)
   }
 
   case object PortConfigLoc extends Loc {
     val hashValue: String = "#config"
     override val url = s"$hashValue"
+
     override def title(maybeTerminal: Option[Terminal]): String = title("Port config", maybeTerminal)
   }
 
   case object ForecastFileUploadLoc extends Loc {
     val hashValue: String = "#forecastFileUpload"
     override val url = s"$hashValue"
+
     override def title(maybeTerminal: Option[Terminal]): String = title("Forecast upload", maybeTerminal)
   }
 
@@ -279,6 +300,7 @@ object SPAMain {
       import dsl._
 
       val rule = homeRoute(dsl) |
+        accessibilityRoute(dsl) |
         dashboardRoute(dsl) |
         terminalRoute(dsl) |
         statusRoute(dsl) |
@@ -314,6 +336,23 @@ object SPAMain {
       case terminalRegex(t) => Some(Terminal(t))
       case _ => None
     }
+  }
+
+  private def emailUsToReportProblem(portCode: String) = {
+    Callback(GoogleEventTracker.sendEvent(portCode, "Accessibility", "Email us to report a problem"))
+  }
+
+  private def accessibilityRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+    import dsl._
+
+    val proxy: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
+
+    staticRoute(AccessibilityStatementLoc.hashValue, AccessibilityStatementLoc) ~>
+      renderR(_ => proxy(ac =>
+        ThemeProvider(DrtTheme.accessibilityTheme)(AccessibilityStatementComponent(
+          IAccessibilityStatementProps(ac().map(_.contactEmail.toString).getOrElse(""),
+            () => emailUsToReportProblem(ac().map(_.portCode.iata).getOrElse("")))))
+      ))
   }
 
   def homeRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {

@@ -10,15 +10,13 @@ import scala.scalajs.js.annotation.JSImport
 trait IAccessibilityStatementProps extends js.Object {
   var teamEmail: String = js.native
   var emailUsToReportAProblem: js.Function0[Unit] = js.native
-  var onClose: js.Function0[Unit] = js.native
 }
 
 object IAccessibilityStatementProps {
-  def apply(teamEmail: String, emailUsToReportAProblemHandler: js.Function0[Unit], closeHandler: js.Function0[Unit]): IAccessibilityStatementProps = {
+  def apply(teamEmail: String, emailUsToReportAProblemHandler: js.Function0[Unit]): IAccessibilityStatementProps = {
     val p = (new js.Object).asInstanceOf[IAccessibilityStatementProps]
     p.teamEmail = teamEmail
     p.emailUsToReportAProblem = emailUsToReportAProblemHandler
-    p.onClose = closeHandler
     p
   }
 }

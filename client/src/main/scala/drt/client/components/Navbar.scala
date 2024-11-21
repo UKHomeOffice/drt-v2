@@ -28,7 +28,7 @@ case class NavbarModel(feedStatuses: Pot[Seq[FeedSourceStatuses]],
                        featureGuideViewIds: Pot[Seq[String]],
                        dropIns: Pot[Seq[DropIn]])
 
-object Navbar {
+object  Navbar {
   case class Props(
                     ctl: RouterCtl[Loc],
                     page: Loc,
