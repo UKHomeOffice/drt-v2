@@ -124,6 +124,7 @@ object TestActors {
         state = initialState
         val killSwitch = startUpdatesStream(lastSequenceNr)
         maybeKillSwitch = Option(killSwitch)
+        sender() ! Ack
     }
   }
 
