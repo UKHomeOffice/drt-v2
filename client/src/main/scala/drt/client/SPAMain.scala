@@ -116,9 +116,15 @@ object SPAMain {
 
   case class PortConfigPageLoc()
 
-  case object AccessibilityStatementLoc extends Loc {
+  object AccessibilityStatementLoc {
     val hashValue: String = "#accessibility"
-    override val url = s"$hashValue"
+  }
+
+  case class AccessibilityStatementLoc(section: Option[String] = None) extends Loc {
+    override val url: String = section match {
+      case Some(s) => s"$AccessibilityStatementLoc.hashValue/$s"
+      case None => AccessibilityStatementLoc.hashValue
+    }
 
     override def title(maybeTerminal: Option[Terminal]): String = title("Accessibility Statement", maybeTerminal)
   }
@@ -342,17 +348,21 @@ object SPAMain {
     Callback(GoogleEventTracker.sendEvent(portCode, "Accessibility", "Email us to report a problem"))
   }
 
-  private def accessibilityRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  def accessibilityRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     val proxy: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
 
-    staticRoute(AccessibilityStatementLoc.hashValue, AccessibilityStatementLoc) ~>
-      renderR(_ => proxy(ac =>
-        ThemeProvider(DrtTheme.accessibilityTheme)(AccessibilityStatementComponent(
-          IAccessibilityStatementProps(ac().map(_.contactEmail.toString).getOrElse(""),
-            () => sendReportProblemGaEvent(ac().map(_.portCode.iata).getOrElse("")))))
-      ))
+    dynamicRouteCT((AccessibilityStatementLoc.hashValue / string("[a-zA-Z0-9-]+").option).caseClass[AccessibilityStatementLoc]) ~>
+      dynRenderR { case (page: AccessibilityStatementLoc, _) =>
+        proxy(ac =>
+          AccessibilityStatementComponent(
+            IAccessibilityStatementProps(
+              ac().map(_.contactEmail.toString).getOrElse(""),
+              () => sendReportProblemGaEvent(ac().map(_.portCode.iata).getOrElse("")),
+              page.section.getOrElse("")))
+        )
+      }
   }
 
   def homeRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {

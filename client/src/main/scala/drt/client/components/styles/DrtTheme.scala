@@ -114,29 +114,4 @@ object DrtTheme extends StyleSheet.Inline with ScalaCssReactImplicits {
     )
   )
 
-  def accessibilityTheme: Theme = {
-    val accessibilityTypographyOptions = TypographyOptions(
-      fontSize = typographyOptions.fontSize,
-      htmlFontSize = typographyOptions.htmlFontSize,
-      button = typographyOptions.button,
-      fontFamily = typographyOptions.fontFamily,
-      h1 = typographyOptions.h1,
-      h2 = typographyOptions.h2,
-      h3 = typographyOptions.h3,
-      h4 = typographyOptions.h4,
-      h5 = typographyOptions.h5,
-      subtitle1 = typographyOptions.subtitle1,
-      subtitle2 = typographyOptions.subtitle2,
-      body1 = TypographyStyleOptions(
-        fontSize = "16px"
-      ),
-      body2 = typographyOptions.body2
-    )
-
-    createTheme(
-      options = ThemeOptions(
-        typography = accessibilityTypographyOptions
-      )
-    )
-  }
 }

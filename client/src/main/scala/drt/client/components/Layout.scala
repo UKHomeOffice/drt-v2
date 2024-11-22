@@ -4,7 +4,7 @@ import diode.AnyAction.aType
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain
-import drt.client.SPAMain.{AccessibilityStatementLoc, _}
+import drt.client.SPAMain._
 import drt.client.components.styles.DrtTheme
 import drt.client.components.styles.DrtTheme.buttonTheme
 import drt.client.modules.GoogleEventTracker
@@ -122,11 +122,8 @@ object Layout {
               ),
             ),
             <.footer(
-              ThemeProvider(DrtTheme.accessibilityTheme)(
                 BottomBarComponent(
-                  BottomBarProps(
-                    AccessibilityStatementLoc.title(None), email, () => onClickAccessibilityStatement(), s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest")
-                )
+                  BottomBarProps(email, () => onClickAccessibilityStatement(), s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest")
               ))
             )
           }
