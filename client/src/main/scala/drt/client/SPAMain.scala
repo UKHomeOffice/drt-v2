@@ -338,7 +338,7 @@ object SPAMain {
     }
   }
 
-  private def emailUsToReportProblem(portCode: String) = {
+  private def sendReportProblemGaEvent(portCode: String) = {
     Callback(GoogleEventTracker.sendEvent(portCode, "Accessibility", "Email us to report a problem"))
   }
 
@@ -351,7 +351,7 @@ object SPAMain {
       renderR(_ => proxy(ac =>
         ThemeProvider(DrtTheme.accessibilityTheme)(AccessibilityStatementComponent(
           IAccessibilityStatementProps(ac().map(_.contactEmail.toString).getOrElse(""),
-            () => emailUsToReportProblem(ac().map(_.portCode.iata).getOrElse("")))))
+            () => sendReportProblemGaEvent(ac().map(_.portCode.iata).getOrElse("")))))
       ))
   }
 

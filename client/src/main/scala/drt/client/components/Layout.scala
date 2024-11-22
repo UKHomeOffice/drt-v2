@@ -39,7 +39,7 @@ object Layout {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("Layout")
     .render_P { props: Props =>
-      def clickAccessibility(): Unit = {
+      def onClickAccessibilityStatement(): Unit = {
         GoogleEventTracker.sendEvent(props.currentLoc.page.portCodeStr, "Accessibility", "Accessibility statement clicked")
       }
 
@@ -125,7 +125,7 @@ object Layout {
               ThemeProvider(DrtTheme.accessibilityTheme)(
                 BottomBarComponent(
                   BottomBarProps(
-                    AccessibilityStatementLoc.title(None), email, () => clickAccessibility(), s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest")
+                    AccessibilityStatementLoc.title(None), email, () => onClickAccessibilityStatement(), s"${SPAMain.urls.rootUrl}/feedback/banner/$aORbTest")
                 )
               ))
             )
