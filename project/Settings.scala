@@ -174,8 +174,6 @@ object Settings {
     "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
     "com.typesafe.akka" %% "akka-stream" % akka,
 
-    "org.apache.pekko" %% "pekko-stream" % "1.0.1",
-
     "com.typesafe.play" %% "twirl-api" % twirlApi,
 
     "com.typesafe.slick" %% "slick" % slick,

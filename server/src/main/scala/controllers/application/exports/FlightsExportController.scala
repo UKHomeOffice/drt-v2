@@ -126,21 +126,6 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     }
   }
 
-//  def streamExport(terminals: Seq[Terminal], start: LocalDate, end: LocalDate, stream: Source[String, NotUsed], exportName: String): Result = {
-//    implicit val writeable: Writeable[String] = Writeable(ByteString.fromString, Option("text/csv"))
-//
-//    val header = ResponseHeader(OK)
-//    val fileName = makeFileName(exportName, terminals, start, end, airportConfig.portCode) + ".csv"
-//
-//    Result(
-//      header = header.copy(headers = header.headers ++ Results.contentDispositionHeader(inline = true, Option(fileName))),
-//      body = HttpEntity.Chunked(
-//        stream.map(c => HttpChunk.Chunk(writeable.transform(c))),
-//        fileMimeTypes.forFileName(fileName)
-//      )
-//    )
-//  }
-
   private def doExportForDateRangeLegacy(startLocalDateString: String,
                                          endLocalDateString: String,
                                          terminals: Seq[Terminal],
