@@ -5,14 +5,13 @@ import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsA
 import akka.NotUsed
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
-import akka.util.ByteString
 import com.google.inject.Inject
 import controllers.application.AuthController
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
-import play.api.http.{HttpChunk, HttpEntity, Writeable}
 import play.api.mvc._
+import services.exports.Exports.streamExport
 import services.exports.flights.ArrivalFeedExport
 import services.exports.flights.templates._
 import services.exports.{FlightExports, GeneralExport}
@@ -51,7 +50,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
           case Some(localDate) =>
             ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
               requestToCsvStream(Option(pointInTime), exportTerminalDateRange(user, airportConfig.portCode, redListUpdates)(localDate, localDate, terminals))
-                .map(streamExport(terminals, localDate, localDate, _, "flights"))
+                .map(streamExport(airportConfig.portCode, terminals, localDate, localDate, _, "flights"))
             }
           case _ =>
             Future(BadRequest("Invalid date format for export day."))
@@ -119,7 +118,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
           case (Some(start), Some(end)) =>
             ctrl.applicationService.redListUpdatesActor.ask(GetState).mapTo[RedListUpdates].flatMap { redListUpdates =>
               requestToCsvStream(None, exportTerminalDateRange(user, airportConfig.portCode, redListUpdates)(start, end, terminals))
-                .map(streamExport(terminals, start, end, _, "flights"))
+                .map(streamExport(airportConfig.portCode, terminals, start, end, _, "flights"))
             }
           case _ =>
             Future(BadRequest("Invalid date format for start or end date"))
@@ -127,20 +126,20 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
     }
   }
 
-  private def streamExport(terminals: Seq[Terminal], start: LocalDate, end: LocalDate, stream: Source[String, NotUsed], exportName: String): Result = {
-    implicit val writeable: Writeable[String] = Writeable(ByteString.fromString, Option("text/csv"))
-
-    val header = ResponseHeader(OK)
-    val fileName = makeFileName(exportName, terminals, start, end, airportConfig.portCode) + ".csv"
-
-    Result(
-      header = header.copy(headers = header.headers ++ Results.contentDispositionHeader(inline = true, Option(fileName))),
-      body = HttpEntity.Chunked(
-        stream.map(c => HttpChunk.Chunk(writeable.transform(c))),
-        fileMimeTypes.forFileName(fileName)
-      )
-    )
-  }
+//  def streamExport(terminals: Seq[Terminal], start: LocalDate, end: LocalDate, stream: Source[String, NotUsed], exportName: String): Result = {
+//    implicit val writeable: Writeable[String] = Writeable(ByteString.fromString, Option("text/csv"))
+//
+//    val header = ResponseHeader(OK)
+//    val fileName = makeFileName(exportName, terminals, start, end, airportConfig.portCode) + ".csv"
+//
+//    Result(
+//      header = header.copy(headers = header.headers ++ Results.contentDispositionHeader(inline = true, Option(fileName))),
+//      body = HttpEntity.Chunked(
+//        stream.map(c => HttpChunk.Chunk(writeable.transform(c))),
+//        fileMimeTypes.forFileName(fileName)
+//      )
+//    )
+//  }
 
   private def doExportForDateRangeLegacy(startLocalDateString: String,
                                          endLocalDateString: String,
@@ -251,7 +250,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
 
         val stream = csvDataSource.collect { case Some(s) => s }
 
-        streamExport(Seq(terminal), startDate.toLocalDate, endDate.toLocalDate, stream, s"flights-$feedSourceString-$terminal")
+        streamExport(airportConfig.portCode, Seq(terminal), startDate.toLocalDate, endDate.toLocalDate, stream, s"flights-$feedSourceString")
 
       case None =>
         NotFound(s"Unknown feed source $feedSourceString")
