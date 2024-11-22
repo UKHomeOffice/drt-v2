@@ -47,7 +47,7 @@ object Exports {
     val fileName = makeFileName(exportName, terminals, start, end, portCode) + ".csv"
 
     Result(
-      header = header.copy(headers = header.headers ++ Results.contentDispositionHeader(inline = true, Option(fileName)) ++ disableNginxProxyBuffering),
+      header = header.copy(headers = header.headers ++ Results.contentDispositionHeader(inline = true, Option(fileName)) ++ Option(disableNginxProxyBuffering)),
       body = HttpEntity.Chunked(
         stream.map(c => HttpChunk.Chunk(writeable.transform(c))),
         fileMimeTypes.forFileName(fileName).asScala
