@@ -12,8 +12,8 @@ import play.api.mvc.{Headers, Session}
 import slickdb._
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, DrtSystemInterface}
-import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.db.dao.{FlightDao, IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.service.FeedService
 import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
@@ -35,13 +35,17 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
 
   log.warn("Using test System")
 
-  lazy override val aggregatedDb: AggregatedDbTables = AggregateDbH2
-  lazy override val akkaDb: AkkaDbTables = AkkaDbH2
+  private val aggDbH2 = AggregateDbH2
+  private val akkaDbH2 = AkkaDbH2
+  override val aggregatedDb: AggregatedDbTables = aggDbH2
+  override val akkaDb: AkkaDbTables = akkaDbH2
+
+  aggDbH2.dropAndCreateH2Tables()
+  akkaDbH2.dropAndCreateH2Tables()
 
   override def getRoles(config: Configuration,
                         headers: Headers,
                         session: Session): Set[Role] = TestUserRoleProvider.getRoles(config, headers, session)
-
 
   override val userService: UserTableLike = MockUserTable()
   override val featureGuideService: FeatureGuideTableLike = MockFeatureGuideTable()

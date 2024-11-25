@@ -21,7 +21,7 @@ object PortExportDashboardPage {
           <.div(config.terminals.map(tn => {
             <.div(
               <.h3(s"Terminal $tn"),
-              MultiDayExportComponent(config.portCode, tn, ViewLive, SDate.now(), p.loggedInUser)
+              MultiDayExportComponent(config.portCode, tn, config.terminals, ViewLive, SDate.now(), p.loggedInUser)
             )
           }).toTagMod)
         }))

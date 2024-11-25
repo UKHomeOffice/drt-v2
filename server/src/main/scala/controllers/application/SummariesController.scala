@@ -58,7 +58,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
                                  ): Result =
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
-        val fileName = makeFileName("passengers", maybeTerminal, SDate(start), SDate(end), airportConfig.portCode) + ".csv"
+        val fileName = makeFileName("passengers", maybeTerminal.toSeq, SDate(start), SDate(end), airportConfig.portCode) + ".csv"
         val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"), acceptHeader(request))
 
         val result = if (acceptHeader(request) == "text/csv")

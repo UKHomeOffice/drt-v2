@@ -5,6 +5,7 @@ import diode.data.{Pending, Pot}
 import diode.react.{ModelProxy, ReactConnectProxy}
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.components.ArrivalsExportComponent.componentFactory
 import drt.client.components.Icon.Icon
 import drt.client.components.ToolTips.staffMovementsTabTooltip
 import drt.client.components.scenarios.ScenarioSimulationComponent
@@ -97,7 +98,7 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
       val terminalName = terminal.toString
-      val arrivalsExportForPort = ArrivalsExportComponent(props.airportConfig.portCode, terminal, props.viewStart)
+      val arrivalsExportForPort = componentFactory(props.airportConfig.terminals)
       val movementsExportDate: LocalDate = props.viewMode match {
         case ViewLive => SDate.now().toLocalDate
         case ViewDay(localDate, _) => localDate
@@ -151,16 +152,16 @@ object TerminalContentComponent {
               exportLink(
                 props.terminalPageTab.dateFromUrlOrNow,
                 terminalName,
-                ExportDeskRecs,
-                SPAMain.exportUrl(ExportDeskRecs, props.terminalPageTab.viewMode, terminal),
+                ExportDeskRecs(props.terminalPageTab.terminal),
+                SPAMain.exportUrl(ExportDeskRecs(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
                 None,
                 "desk-recs",
               ),
               exportLink(
                 props.terminalPageTab.dateFromUrlOrNow,
                 terminalName,
-                ExportDeployments,
-                SPAMain.exportUrl(ExportDeployments, props.terminalPageTab.viewMode, terminal),
+                ExportDeployments(props.terminalPageTab.terminal),
+                SPAMain.exportUrl(ExportDeployments(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
                 None,
                 "deployments"
               ),
@@ -168,7 +169,7 @@ object TerminalContentComponent {
                 exportLink(
                   props.terminalPageTab.dateFromUrlOrNow,
                   terminalName,
-                  ExportStaffMovements,
+                  ExportStaffMovements(props.terminalPageTab.terminal),
                   SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
                   None,
                   "staff-movements",
@@ -176,7 +177,7 @@ object TerminalContentComponent {
                 StaffMovementsExport,
                 props.loggedInUser
               ),
-              MultiDayExportComponent(props.airportConfig.portCode, terminal, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser)))
+              MultiDayExportComponent(props.airportConfig.portCode, terminal, props.airportConfig.terminals, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser)))
           ,
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
@@ -289,14 +290,14 @@ object TerminalContentComponent {
       ^.key := keyValue,
       MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
         MuiIcons(GetApp)(fontSize = "small"),
-        s" $exportType",
+        s" ${exportType.linkLabel}",
         maybeExtraIcon.getOrElse(EmptyVdom),
         ^.className := "btn btn-default",
         ^.href := exportUrl,
         ^.target := "_blank",
         ^.id := s"export-day-${exportType.toUrlString}",
         ^.onClick --> {
-          Callback(GoogleEventTracker.sendEvent(terminalName, s"Export $exportType", exportDay.toISODateOnly))
+          Callback(GoogleEventTracker.sendEvent(terminalName, s"Export ${exportType.linkLabel}", exportDay.toISODateOnly))
         }
       )
     )

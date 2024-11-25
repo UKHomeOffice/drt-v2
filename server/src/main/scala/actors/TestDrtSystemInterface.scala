@@ -6,11 +6,14 @@ import drt.server.feeds.FeedPoller.Enable
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
+import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
 import uk.gov.homeoffice.drt.testsystem.RestartActor
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.{MilliDate => _}
 
 import scala.collection.SortedSet
+import scala.concurrent.ExecutionContext
 
 trait TestDrtSystemActorsLike {
   val restartActor: ActorRef
@@ -21,9 +24,12 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
                                actorService: ActorsServiceLike,
                                persistentActors: PersistentStateActors,
                                config: Configuration)
-                              (implicit system: ActorSystem) extends TestDrtSystemActorsLike {
+                              (implicit system: ActorSystem, ec: ExecutionContext) extends TestDrtSystemActorsLike {
   val log: Logger = LoggerFactory.getLogger(getClass)
-  override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem)), name = "TestActor-ResetData")
+
+  val clearAggDb = () => AggregateDbH2.dropAndCreateH2Tables()
+
+  override val restartActor: ActorRef = system.actorOf(Props(new RestartActor(startSystem, clearAggDb)), name = "TestActor-ResetData")
 
   restartActor ! RestartActor.AddResetActors(Seq(
     feedService.forecastBaseFeedArrivalsActor,

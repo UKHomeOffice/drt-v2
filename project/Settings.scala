@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v958"
+    val drtLib = "v972"
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
@@ -151,7 +151,7 @@ object Settings {
     "com.sun.xml.ws" % "rt" % rtVersion,
     "javax.xml.bind" % "jaxb-api" % "2.3.1",
 
-    "com.h2database" % "h2" % h2 % Test,
+    "com.h2database" % "h2" % h2,
     "com.typesafe" % "config" % typesafeConfig,
     "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
     "com.typesafe.akka" %% "akka-persistence-typed" % akka,

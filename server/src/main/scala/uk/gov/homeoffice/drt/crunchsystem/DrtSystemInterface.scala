@@ -1,8 +1,10 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
 import actors._
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.stream.Materializer
+import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
 import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
@@ -20,6 +22,7 @@ import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.model.CrunchMinute
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
@@ -46,34 +49,6 @@ trait DrtSystemInterface extends UserRoleProviderLike
   val akkaDb: AkkaDbTables
   val params: DrtParameters
 
-  private val flightDao = FlightDao()
-  private val queueSlotDao = QueueSlotDao()
-
-  val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
-    val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, aggregatedDb, airportConfig.portCode)
-    (updates, removals) =>
-      doUpdate(updates, removals)
-  }
-
-  val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
-    val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
-    (date, updates) =>
-      doUpdate(date, updates)
-        .recover { case e: Throwable =>
-          log.error(s"Error updating FlightsLiveView: ${e.getMessage}")
-        }
-  }
-
-  def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
-    if (params.isSuperUserMode) {
-      system.log.debug(s"Using Super User Roles")
-      Roles.availableRoles
-    } else userRolesFromHeader(headers)
-  }
-
-
-  val now: () => SDateLike
-
   implicit val paxFeedSourceOrder: List[FeedSource] = if (params.usePassengerPredictions) List(
     ScenarioSimulationSource,
     LiveFeedSource,
@@ -90,6 +65,36 @@ trait DrtSystemInterface extends UserRoleProviderLike
     HistoricApiFeedSource,
     AclFeedSource,
   )
+
+  private val flightDao = FlightDao()
+  private val queueSlotDao = QueueSlotDao()
+
+  lazy val flightsForPcpDateRange: (LocalDate, LocalDate, Seq[Terminal]) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
+    flightDao.flightsForPcpDateRange(airportConfig.portCode, paxFeedSourceOrder, aggregatedDb.run)
+
+  lazy val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
+    val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, aggregatedDb, airportConfig.portCode)
+    (updates, removals) =>
+      doUpdate(updates, removals)
+  }
+
+  lazy val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
+    val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
+    (date, updates) =>
+      doUpdate(date, updates)
+        .recover { case e: Throwable =>
+          log.error(s"Error updating FlightsLiveView: ${e.getMessage}")
+        }
+  }
+
+  def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {
+    if (params.isSuperUserMode) {
+      system.log.debug(s"Using Super User Roles")
+      Roles.availableRoles
+    } else userRolesFromHeader(headers)
+  }
+
+  val now: () => SDateLike
 
   val manifestLookupService: ManifestLookupLike
 

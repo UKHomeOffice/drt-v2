@@ -451,15 +451,15 @@ object SPAMain {
     else s"$pathToThisApp/$relativeUrl"
   }
 
-  def exportUrl(exportType: ExportType, viewMode: ViewMode, terminal: Terminal): String = viewMode match {
+  def exportUrl(exportType: ExportType, viewMode: ViewMode): String = viewMode match {
     case ViewDay(localDate, Some(tmDate)) =>
-      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/$localDate/${tmDate.millisSinceEpoch}/$terminal")
+      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/snapshot/$localDate/${tmDate.millisSinceEpoch}${exportType.maybeTerminal.map(t => s"/${t.toString}").getOrElse("")}")
     case view =>
-      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}/$terminal")
+      SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${view.dayStart.toLocalDate.toISOString}/${view.dayEnd.toLocalDate.toISOString}${exportType.maybeTerminal.map(t => s"/${t.toString}").getOrElse("")}")
   }
 
-  def exportDatesUrl(exportType: ExportType, start: LocalDate, end: LocalDate, terminal: Terminal): String =
-    SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${start.toISOString}/${end.toISOString}/$terminal")
+  def exportDatesUrl(exportType: ExportType, start: LocalDate, end: LocalDate): String =
+    SPAMain.absoluteUrl(s"export/${exportType.toUrlString}/${start.toISOString}/${end.toISOString}${exportType.maybeTerminal.map(t => s"/${t.toString}").getOrElse("")}")
 
   @JSExportTopLevel("SPAMain")
   protected def getInstance(): this.type = this
