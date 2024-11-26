@@ -108,9 +108,7 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
                                    terminals: Seq[Terminal],
                                    exportTerminalDateRange: (LoggedInUser, PortCode, RedListUpdates)
                                      => (LocalDate, LocalDate, Seq[Terminal]) => FlightsExport,
-                                  ): Action[AnyContent] = {
-
-
+                                  ): Action[AnyContent] =
     Action.async {
       request =>
         val user = ctrl.getLoggedInUser(config, request.headers, request.session)
@@ -124,7 +122,6 @@ class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSyste
             Future(BadRequest("Invalid date format for start or end date"))
         }
     }
-  }
 
   private def doExportForDateRangeLegacy(startLocalDateString: String,
                                          endLocalDateString: String,
