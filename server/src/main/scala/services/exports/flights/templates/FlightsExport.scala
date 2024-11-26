@@ -34,9 +34,7 @@ trait FlightsExport {
 
   def csvStream(flightsStream: Source[(Iterable[ApiFlightWithSplits], VoyageManifests), NotUsed]): Source[String, NotUsed] =
     filterAndSort(flightsStream)
-      .map { case (fws, maybeManifest) =>
-        flightToCsvRow(fws, maybeManifest) + "\n"
-      }
+      .map { case (fws, maybeManifest) => flightToCsvRow(fws, maybeManifest) + "\n" }
       .prepend(Source(List(headings + "\n")))
 
   private def filterAndSort(flightsStream: Source[(Iterable[ApiFlightWithSplits], VoyageManifests), NotUsed],
@@ -51,5 +49,4 @@ trait FlightsExport {
           (fws, maybeManifest)
         }
     }
-
 }
