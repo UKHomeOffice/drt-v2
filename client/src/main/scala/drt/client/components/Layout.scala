@@ -67,7 +67,7 @@ object Layout {
               <.div(^.className := "main-content",
                 if (showFeedbackBanner) {
                   MuiPaper(sx = SxProps(Map("elevation" -> "4", "padding" -> "16px", "margin" -> "20px", "backgroundColor" -> "#0E2560")))(
-                    MuiGrid(container = true)(
+                    MuiGrid(container = true, alignItems = "center")(
                       MuiGrid(item = true, xs = gridItem1)(
                         MuiTypography(variant = "h4", sx = SxProps(Map("color" -> "white", "fontWeight" -> "bold")))(
                           bannerHead
@@ -78,7 +78,7 @@ object Layout {
                         ("Takes 2 minutes to complete")
                       ),
                       MuiGrid(item = true, xs = gridItem3)(
-                        MuiButton(variant = "outlined", sx = SxProps(Map(
+                        MuiButton(variant = "contained", sx = SxProps(Map(
                           "textTransform" -> "none",
                           "border" -> "1px solid white",
                           "color" -> "white",
