@@ -6,15 +6,15 @@ import drt.client.components.scenarios.SimulationFormFields
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
-import drt.shared.{Country, _}
 import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
+import drt.shared._
 import org.scalajs.dom.File
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
@@ -28,8 +28,6 @@ object Actions {
   case object TriggerReload extends Action
 
   case object GetApplicationVersion extends Action
-
-  case class ScheduleAction(delay: FiniteDuration, action: Action) extends Action
 
   case object GetLoggedInUser extends Action
 

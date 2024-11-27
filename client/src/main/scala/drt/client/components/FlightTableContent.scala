@@ -21,15 +21,13 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{HashSet, Seq}
 import scala.scalajs.js
 
 object FlightTableContent {
-  private val log = LoggerFactory.getLogger(getClass.getName)
-
   case class Props(flights: Pot[Seq[ApiFlightWithSplits]],
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    queueOrder: Seq[Queue],

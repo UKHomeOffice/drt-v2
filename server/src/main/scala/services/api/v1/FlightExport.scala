@@ -2,10 +2,10 @@ package services.api.v1
 
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Sink, Source}
-import services.AirportInfoService
 import uk.gov.homeoffice.drt.arrivals.Arrival
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
+import uk.gov.homeoffice.drt.services.AirportInfoService
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import scala.concurrent.{ExecutionContext, Future}

@@ -1,12 +1,11 @@
 package controllers.application
 
 import com.google.inject.Inject
-import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import services.AirportInfoService
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalsAndSplitsView
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{AirportInfo, PortCode}
+import uk.gov.homeoffice.drt.services.AirportInfoService
 
 
 class AirportInfoController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
