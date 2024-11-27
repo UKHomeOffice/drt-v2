@@ -11,15 +11,17 @@ import scala.scalajs.js.annotation.JSImport
 trait BottomBarProps extends js.Object {
   var email: String = js.native
   var onClickAccessibilityStatement: js.Function0[Unit] = js.native
-  var url: String = js.native
+  var accessibilityStatementUrl: String = js.native
+  var feedbackUrl: String = js.native
 }
 
 object BottomBarProps {
   def apply(teamEmail: String, onClickAccessibilityStatement: js.Function0[Unit], feedbackUrl: String): BottomBarProps = {
     val p = (new js.Object).asInstanceOf[BottomBarProps]
+    p.accessibilityStatementUrl = "#accessibility/"
     p.email = teamEmail
     p.onClickAccessibilityStatement = onClickAccessibilityStatement
-    p.url = feedbackUrl
+    p.feedbackUrl = feedbackUrl
     p
   }
 }
