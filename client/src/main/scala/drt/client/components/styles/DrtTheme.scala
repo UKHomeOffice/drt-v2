@@ -113,4 +113,5 @@ object DrtTheme extends StyleSheet.Inline with ScalaCssReactImplicits {
       ),
     )
   )
+
 }
