@@ -11,13 +11,13 @@ trait IAccessibilityStatementProps extends js.Object {
   var teamEmail: String = js.native
   var sendReportProblemGaEvent: js.Function0[Unit] = js.native
   var scrollSection: String = js.native
-  var url: String = js.native
+  var accessibilityStatementUrl: String = js.native
 }
 
 object IAccessibilityStatementProps {
   def apply(teamEmail: String, emailUsToReportAProblemHandler: js.Function0[Unit], scrollSection: String): IAccessibilityStatementProps = {
     val p = (new js.Object).asInstanceOf[IAccessibilityStatementProps]
-    p.url = "#accessibility/"
+    p.accessibilityStatementUrl = "#accessibility"
     p.teamEmail = teamEmail
     p.sendReportProblemGaEvent = emailUsToReportAProblemHandler
     p.scrollSection = scrollSection
