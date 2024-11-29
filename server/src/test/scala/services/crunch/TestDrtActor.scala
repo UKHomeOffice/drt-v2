@@ -37,7 +37,6 @@ import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, UniqueArrival, VoyageNumber}
-import uk.gov.homeoffice.drt.crunchsystem.PersistentStateActors
 import uk.gov.homeoffice.drt.db.dao.{FlightDao, QueueSlotDao}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.model.CrunchMinute
@@ -47,7 +46,6 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
 import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService}
-import uk.gov.homeoffice.drt.testsystem.TestActors.MockAggregatedArrivalsActor
 import uk.gov.homeoffice.drt.time._
 
 import scala.collection.SortedSet
@@ -195,36 +193,26 @@ class TestDrtActor extends Actor {
 
       val manifestsRouterActor: ActorRef = system.actorOf(Props(new ManifestRouterActor(manifestLookups.manifestsByDayLookup, manifestLookups.updateManifests)))
 
-      val actors = new PersistentStateActors() {
-        override val manifestsRouterActor: ActorRef = manifestsRouterActor
-
-        override val mergeArrivalsQueueActor: ActorRef = TestProbe("merge-arrivals-queue-actor").ref
-        override val crunchQueueActor: ActorRef = TestProbe("crunch-queue-actor").ref
-        override val deskRecsQueueActor: ActorRef = TestProbe("desk-recs-queue-actor").ref
-        override val deploymentQueueActor: ActorRef = TestProbe("deployments-queue-actor").ref
-        override val staffingQueueActor: ActorRef = TestProbe("staffing-queue-actor").ref
-      }
-
       val (updateFlightsLiveView, update15MinuteQueueSlotsLiveView) = tc.maybeAggregatedDbTables match {
         case Some(dbTables) =>
           val flightDao = FlightDao()
           val queueSlotDao = QueueSlotDao()
 
-          val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
+          val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
             val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, dbTables, airportConfig.portCode)
             (updates, removals) =>
               doUpdate(updates, removals)
           }
 
-          val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
+          val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
             val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, dbTables, airportConfig.portCode)
             (date, updates) => {
-              doUpdate(date, updates)
+              doUpdate(date, updates).map(_ => ())
             }
           }
           (updateFlightsLiveView, update15MinuteQueueSlotsLiveView)
         case None =>
-          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => (), (_: UtcDate, _: Iterable[CrunchMinute]) => ())
+          ((_: Iterable[ApiFlightWithSplits], _: Iterable[UniqueArrival]) => Future.successful(()), (_: UtcDate, _: Iterable[CrunchMinute]) => Future.successful(()))
       }
 
       val flightLookups: FlightLookups = FlightLookups(system, tc.now, tc.airportConfig.queuesByTerminal, None, paxFeedSourceOrder, _ => None, updateFlightsLiveView)

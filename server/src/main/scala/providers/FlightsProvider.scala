@@ -51,9 +51,8 @@ case class FlightsProvider(flightsRouterActor: ActorRef)
       val start = SDate(date)
       val end = start.addDays(1).addMinutes(-1)
       val request = PartitionedPortStateActor.GetFlights(start.millisSinceEpoch, end.millisSinceEpoch)
-      flightsByUtcDate(request).map { case (_, flights) =>
-        flights.filter(f => SDate(f.apiFlight.Scheduled).toUtcDate == date)
-      }
+      flightsByUtcDate(request)
+        .map { case (_, flights) => flights.filter(f => SDate(f.apiFlight.Scheduled).toUtcDate == date) }
     }
 
   def allTerminalsDateRangeScheduledOrPcp: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =

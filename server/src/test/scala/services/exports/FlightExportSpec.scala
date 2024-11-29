@@ -37,7 +37,7 @@ class FlightExportSpec extends AnyWordSpec with Matchers {
           ArrivalGenerator.arrival(iata = "BA0004", schDt = "2024-10-15T15:00", totalPax = Option(200), transPax = Option(10), feedSource = LiveFeedSource),
         ))
       }
-      val export = FlightExport(source, Seq(T1), PortCode("LHR"))
+      val `export` = FlightExport(source, Seq(T1), PortCode("LHR"))
       Await.result(export(startMinute, endMinute), 1.second) shouldEqual
         PortFlightsJson(
           PortCode("LHR"),

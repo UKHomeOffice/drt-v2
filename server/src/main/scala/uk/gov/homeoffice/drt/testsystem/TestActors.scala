@@ -383,7 +383,7 @@ object TestActors {
                                    day: Int,
                                    terminal: Terminal,
                                    now: () => SDateLike,
-                                   onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Unit],
+                                   onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
                                   ) extends TerminalDayQueuesActor(year, month, day, terminal, now, None, onUpdate) with Resettable {
     override def resetState(): Unit = state.clear()
 
@@ -409,7 +409,7 @@ object TestActors {
                                    paxFeedSourceOrder: List[FeedSource],
                                    requestHistoricSplitsActor: Option[ActorRef],
                                    requestHistoricPaxActor: Option[ActorRef],
-                                   maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit],
+                                   maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit]],
                                   )
     extends TerminalDayFlightActor(
       year,

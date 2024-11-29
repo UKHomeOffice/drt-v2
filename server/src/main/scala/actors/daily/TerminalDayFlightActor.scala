@@ -21,6 +21,7 @@ import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
+import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
 object TerminalDayFlightActor {
@@ -32,7 +33,7 @@ object TerminalDayFlightActor {
                               terminalSplits: Option[Splits],
                               requestHistoricSplitsActor: Option[ActorRef],
                               requestHistoricPaxActor: Option[ActorRef],
-                              maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit],
+                              maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit]],
                              ): Props =
     Props(new TerminalDayFlightActor(
       year = date.year,
@@ -84,7 +85,7 @@ class TerminalDayFlightActor(year: Int,
                              terminalSplits: Option[Splits],
                              maybeRequestHistoricSplitsActor: Option[ActorRef],
                              maybeRequestHistoricPaxActor: Option[ActorRef],
-                             maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit],
+                             maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit]],
                             ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -200,8 +201,8 @@ class TerminalDayFlightActor(year: Int,
     acceptableExistingSources.isEmpty
   }
 
-  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long], Iterable[ApiFlightWithSplits], Iterable[UniqueArrival])
-                                 ): Set[TerminalUpdateRequest] = {
+  private def applyDiffAndRequestMissingData(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long], Iterable[ApiFlightWithSplits], Iterable[UniqueArrival])
+                                            ): Set[TerminalUpdateRequest] = {
     val (updatedState, minutesToUpdate, updates, removals) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
 
     state = updatedState
@@ -218,7 +219,7 @@ class TerminalDayFlightActor(year: Int,
 
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =
     if (diff.nonEmpty) {
-      val updateRequests = applyDiffAndPersist(diff.applyTo)
+      val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
       val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
       persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
     }
@@ -226,7 +227,7 @@ class TerminalDayFlightActor(year: Int,
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
-      val updateRequests = applyDiffAndPersist(diff.applyTo)
+      val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
       val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
       persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
     } else sender() ! Set.empty
@@ -234,7 +235,7 @@ class TerminalDayFlightActor(year: Int,
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {
       val timestamp = now().millisSinceEpoch
-      val updateRequests = applyDiffAndPersist(diff.applyTo)
+      val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
       val message = splitsForArrivalsToMessage(diff, timestamp)
       persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
     } else sender() ! Set.empty
