@@ -45,7 +45,7 @@ object Settings {
     val bootstrap = "3.3.6"
 
     val renjin = "0.9.2725"
-    val csvCommons = "1.10.0"
+    val csvCommons = "1.12.0"
     val poi = "5.2.4"
     val pprint = "0.5.9"
     val akkaPersistenceJdbc = "5.2.0"
