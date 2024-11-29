@@ -11,7 +11,7 @@ addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.14.0")
 
 addSbtPlugin("ch.epfl.scala" % "sbt-web-scalajs-bundler" % "0.21.1")
 
-addSbtPlugin("com.typesafe.sbt" % "sbt-less" % "1.1.2")
+addSbtPlugin("com.github.sbt" % "sbt-less" % "1.5.0")
 
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.9")
 
