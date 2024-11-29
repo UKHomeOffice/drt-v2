@@ -46,7 +46,7 @@ object Settings {
 
     val renjin = "0.9.2725"
     val csvCommons = "1.10.0"
-    val poi = "5.2.4"
+    val poi = "5.2.5"
     val pprint = "0.5.9"
     val akkaPersistenceJdbc = "5.2.0"
     val bluebus = "v95"
