@@ -4,12 +4,10 @@ import controllers.ArrivalGenerator
 import controllers.ArrivalGenerator.{forecast, live}
 import drt.server.feeds.{ArrivalsFeedSuccess, DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared._
-import passengersplits.core.PassengerTypeCalculatorValues.DocumentType
 import passengersplits.parsing.VoyageManifestParser._
 import services.PcpArrival.pcpFrom
 import services.crunch.VoyageManifestGenerator.{euIdCard, xOfPaxType}
 import services.crunch.{CrunchGraphInputsAndProbes, CrunchTestLike, TestConfig}
-import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable

@@ -14,6 +14,7 @@ import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.mutable
+import scala.concurrent.Future
 
 
 abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor, M <: GeneratedMessage](year: Int,
@@ -23,6 +24,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                                                      now: () => SDateLike,
                                                                                                                      override val maybePointInTime: Option[MillisSinceEpoch],
                                                                                                                     ) extends RecoveryActorLike {
+  implicit val ec = context.dispatcher
+
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
@@ -33,7 +36,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   val state: mutable.Map[INDEX, VAL] = mutable.Map[INDEX, VAL]()
 
-  val onUpdate: Option[(UtcDate, Iterable[VAL]) => Unit] = None
+  val onUpdate: Option[(UtcDate, Iterable[VAL]) => Future[Unit]] = None
 
   override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 

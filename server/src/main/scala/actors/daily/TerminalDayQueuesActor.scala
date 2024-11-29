@@ -9,9 +9,11 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
+import scala.concurrent.Future
+
 
 object TerminalDayQueuesActor {
-  def props(maybeUpdateLiveView: Option[(UtcDate, Iterable[CrunchMinute]) => Unit])
+  def props(maybeUpdateLiveView: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]])
            (terminal: Terminal,
             date: UtcDate,
             now: () => SDateLike,
@@ -28,7 +30,7 @@ class TerminalDayQueuesActor(year: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
                              maybePointInTime: Option[MillisSinceEpoch],
-                             override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Unit],
+                             override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
                             ) extends
   TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"

@@ -28,7 +28,7 @@ import uk.gov.homeoffice.drt.routes.UserRoleProviderLike
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
 import uk.gov.homeoffice.drt.time._
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 trait DrtSystemInterface extends UserRoleProviderLike
   with FeatureGuideProviderLike
@@ -72,19 +72,16 @@ trait DrtSystemInterface extends UserRoleProviderLike
   lazy val flightsForPcpDateRange: (LocalDate, LocalDate, Seq[Terminal]) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed] =
     flightDao.flightsForPcpDateRange(airportConfig.portCode, paxFeedSourceOrder, aggregatedDb.run)
 
-  lazy val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit = {
+  lazy val updateFlightsLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit] = {
     val doUpdate = FlightsLiveView.updateFlightsLiveView(flightDao, aggregatedDb, airportConfig.portCode)
     (updates, removals) =>
       doUpdate(updates, removals)
   }
 
-  lazy val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit = {
+  lazy val update15MinuteQueueSlotsLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit] = {
     val doUpdate = QueuesLiveView.updateQueuesLiveView(queueSlotDao, aggregatedDb, airportConfig.portCode)
     (date, updates) =>
-      doUpdate(date, updates)
-        .recover { case e: Throwable =>
-          log.error(s"Error updating FlightsLiveView: ${e.getMessage}")
-        }
+      doUpdate(date, updates).map(_ => ())
   }
 
   def getRoles(config: Configuration, headers: Headers, session: Session): Set[Role] = {

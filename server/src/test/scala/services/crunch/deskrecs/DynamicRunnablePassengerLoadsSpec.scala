@@ -7,7 +7,6 @@ import akka.pattern.StatusReply
 import akka.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
-import drt.shared._
 import manifests.queues.SplitsCalculator
 import queueus._
 import services.TryCrunchWholePax

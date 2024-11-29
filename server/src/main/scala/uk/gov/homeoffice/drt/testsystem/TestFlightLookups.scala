@@ -18,7 +18,7 @@ case class TestFlightLookups(system: ActorSystem,
                              queuesByTerminal: Map[Terminal, Seq[Queue]],
                              paxFeedSourceOrder: List[FeedSource],
                              terminalSplits: Terminal => Option[Splits],
-                             updateLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit,
+                             updateLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit],
                             ) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-flights-lookup-kill-actor")
 

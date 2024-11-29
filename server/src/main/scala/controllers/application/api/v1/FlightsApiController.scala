@@ -10,8 +10,8 @@ import play.api.mvc._
 import services.api.v1.FlightExport
 import services.api.v1.serialisation.FlightApiJsonProtocol
 import spray.json.enrichAny
-import uk.gov.homeoffice.drt.arrivals.{Arrival, FlightsWithSplits}
-import uk.gov.homeoffice.drt.auth.Roles.{ApiFlightAccess, ApiQueueAccess, SuperAdmin}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
+import uk.gov.homeoffice.drt.auth.Roles.{ApiFlightAccess, SuperAdmin}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -72,16 +72,18 @@ class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
         }
         Source(DateRange(startDate, endDate))
           .mapAsync(1) { date =>
-            ctrl.applicationService.flightsProvider.allTerminalsScheduledOn(date).runForeach { flights =>
-              ctrl.updateFlightsLiveView(flights, Seq.empty)
-              log.info(s"Updated flights for $date")
-            }
+            log.info(s"Populating flights for $date")
+            ctrl.applicationService.flightsProvider.allTerminalsScheduledOn(date)
+              .runWith(Sink.fold(Seq.empty[ApiFlightWithSplits])(_ ++ _))
+              .flatMap { flights =>
+                ctrl.updateFlightsLiveView(flights, Seq.empty)
+                  .map(_ => log.info(s"Updated flights for $date"))
+              }
           }
           .runWith(Sink.ignore)
         Ok("Flights populating")
       }
     }
-
 
   private def parseOptionalEndDate(maybeString: Option[String], default: SDateLike): SDateLike =
     maybeString match {

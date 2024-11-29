@@ -50,7 +50,7 @@ class QueueExportSpec extends AnyWordSpec with Matchers {
           ),
         ))
       }
-      val export = QueueExport(source, Seq(T1), PortCode("LHR"))
+      val `export` = QueueExport(source, Seq(T1), PortCode("LHR"))
       Await.result(export(start, end, 15), 1.second) shouldEqual
         PortQueuesJson(
           PortCode("LHR"),

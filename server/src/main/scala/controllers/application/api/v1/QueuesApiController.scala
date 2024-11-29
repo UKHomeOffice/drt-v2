@@ -8,7 +8,6 @@ import controllers.application.AuthController
 import drt.shared.CrunchApi
 import drt.shared.CrunchApi.MinutesContainer
 import play.api.mvc._
-import providers.MinutesProvider
 import services.api.v1.QueueExport
 import services.api.v1.serialisation.QueueApiJsonProtocol
 import spray.json.enrichAny
