@@ -3,10 +3,6 @@ package services.workload
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
 import services.workload.QueueProcessor.processQueue
-import services.{OptimiserConfig, OptimiserWithFlexibleProcessors, OptimizerCrunchResult, TryRenjin, WorkloadProcessorsProvider}
-import uk.gov.homeoffice.drt.egates.Desk
-
-import scala.util.Try
 
 class QueueProcessorTest extends AnyWordSpec with Matchers {
   "applyCapacity" should {
