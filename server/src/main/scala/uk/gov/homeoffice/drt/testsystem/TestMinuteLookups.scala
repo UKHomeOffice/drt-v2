@@ -17,7 +17,7 @@ case class TestMinuteLookups(system: ActorSystem,
                              now: () => SDateLike,
                              expireAfterMillis: Int,
                              queuesByTerminal: Map[Terminal, Seq[Queue]],
-                             updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit,
+                             updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit],
                             )
                             (implicit val ec: ExecutionContext) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "test-minutes-lookup-kill-actor")

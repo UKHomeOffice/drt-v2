@@ -6,6 +6,7 @@ import controllers.application.AuthController
 import play.api.mvc._
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.time.{DateRange, UtcDate}
 
 
@@ -21,11 +22,13 @@ class QueuesApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         Source(DateRange(startDate, endDate))
           .mapAsync(1) {
             date =>
-              ctrl.applicationService.allTerminalsCrunchMinutesProvider(date, date).runForeach {
-                case (_, flights) =>
-                  ctrl.update15MinuteQueueSlotsLiveView(date, flights)
-                  log.info(s"Updated queue slots for $date")
-              }
+              ctrl.applicationService.allTerminalsCrunchMinutesProvider(date, date)
+                .map(_._2)
+                .runWith(Sink.fold(Seq.empty[CrunchMinute])(_ ++ _))
+                .flatMap { cms =>
+                  ctrl.update15MinuteQueueSlotsLiveView(date, cms)
+                    .map(_ => log.info(s"Updated queue slots for $date"))
+                }
           }
           .runWith(Sink.ignore)
         Ok("Queue slots populating")

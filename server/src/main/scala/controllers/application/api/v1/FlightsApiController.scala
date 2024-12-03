@@ -4,6 +4,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.google.inject.Inject
 import controllers.application.AuthController
 import play.api.mvc._
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.FeedSource
@@ -23,10 +24,13 @@ class FlightsApiController @Inject()(cc: ControllerComponents, ctrl: DrtSystemIn
         }
         Source(DateRange(startDate, endDate))
           .mapAsync(1) { date =>
-            ctrl.applicationService.flightsProvider.allTerminalsScheduledOn(date).runForeach { flights =>
-              ctrl.updateFlightsLiveView(flights, Seq.empty)
-              log.info(s"Updated flights for $date")
-            }
+            log.info(s"Populating flights for $date")
+            ctrl.applicationService.flightsProvider.allTerminalsScheduledOn(date)
+              .runWith(Sink.fold(Seq.empty[ApiFlightWithSplits])(_ ++ _))
+              .flatMap { flights =>
+                ctrl.updateFlightsLiveView(flights, Seq.empty)
+                  .map(_ => log.info(s"Updated flights for $date"))
+              }
           }
           .runWith(Sink.ignore)
         Ok("Flights populating")

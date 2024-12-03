@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -31,7 +31,7 @@ trait FlightLookupsLike {
   val terminalSplits: Terminal => Option[Splits]
 
   def updateFlights(removalMessageCutOff: Option[FiniteDuration],
-                    updateLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit,
+                    updateLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit],
                    )
                    (requestHistoricSplitsActor: Option[ActorRef],
                     requestHistoricPaxActor: Option[ActorRef],
@@ -66,7 +66,7 @@ case class FlightLookups(system: ActorSystem,
                          removalMessageCutOff: Option[FiniteDuration],
                          paxFeedSourceOrder: List[FeedSource],
                          terminalSplits: Terminal => Option[Splits],
-                         updateLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Unit,
+                         updateLiveView: (Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit],
 ) extends FlightLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "flights-lookup-kill-actor")
 

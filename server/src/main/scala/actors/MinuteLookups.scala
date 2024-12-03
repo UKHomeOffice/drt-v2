@@ -37,7 +37,7 @@ trait MinuteLookupsLike {
       requestAndTerminateActor.ask(RequestAndTerminate(actor, container)).mapTo[Set[TerminalUpdateRequest]]
     }
 
-  def updateCrunchMinutes(updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit): ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
+  def updateCrunchMinutes(updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit]): ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
     (terminalDate: (Terminal, UtcDate), container: MinutesContainer[CrunchMinute, TQM]) => {
       val (terminal, date) = terminalDate
       val actor = system.actorOf(TerminalDayQueuesActor.props(Option(updateLiveView))(terminal, date, now))
@@ -81,7 +81,7 @@ trait MinuteLookupsLike {
 case class MinuteLookups(now: () => SDateLike,
                          expireAfterMillis: Int,
                          queuesByTerminal: Map[Terminal, Seq[Queue]],
-                         updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Unit,
+                         updateLiveView: (UtcDate, Iterable[CrunchMinute]) => Future[Unit],
                         )
                         (implicit val ec: ExecutionContext, val system: ActorSystem) extends MinuteLookupsLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor()), "minutes-lookup-kill-actor")

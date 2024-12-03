@@ -33,7 +33,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
 
   "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
     "I should see the passenger minutes originally sent" >> {
-      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)), (_, _) => ())
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)), (_, _) => Future.successful(()))
       val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
       val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
       val result = lookups.queueLoadsMinutesActor
@@ -50,7 +50,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
 
   "When I send two sets of PassengerMinutes to a QueueMinutesActor and query it" >> {
     "I should see the combined set of minutes" >> {
-      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)), (_, _) => ())
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)), (_, _) => Future.successful(()))
       val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
       val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
       val newPassengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(2, 2), None)
