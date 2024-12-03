@@ -1,7 +1,7 @@
 package serialization
 
 import drt.shared.CrunchApi._
-import drt.shared._
+import drt.shared.{DrtPortConfigs, FixedPointAssignments, FlightUpdatesAndRemovals, PortState, StaffAssignment, TM}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
