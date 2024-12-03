@@ -8,8 +8,9 @@ import com.google.inject.Inject
 import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
 import uk.gov.homeoffice.drt.db._
-import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, UserFeedbackDao}
+import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, StaffShiftsDao, UserFeedbackDao}
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.service.staffing.{StaffShiftsService, StaffShiftsServiceImpl}
 import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
@@ -61,6 +62,9 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb.db)
 
   override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb.db)
+
+  override val staffShiftsService: StaffShiftsService = StaffShiftsServiceImpl(StaffShiftsDao(AggregateDb.db))
+
 
   lazy override val actorService: ActorsServiceLike = ActorsServiceService(
     journalType = StreamingJournal.forConfig(config),

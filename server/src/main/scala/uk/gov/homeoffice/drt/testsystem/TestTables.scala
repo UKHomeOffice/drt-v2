@@ -3,7 +3,7 @@ package uk.gov.homeoffice.drt.testsystem
 import actors.DrtParameters
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import drt.shared.DropIn
+import drt.shared.{DropIn, StaffShift}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import slickdb._
@@ -11,6 +11,7 @@ import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow}
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.service.staffing.StaffShiftsService
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.sql.Timestamp
@@ -148,5 +149,16 @@ case class MockAbFeatureDao() extends IABFeatureDao {
   override def getABFeaturesByEmailForFunction(email: String, functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
 
   override def getABFeatureByFunctionName(functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
+}
+
+case class MockStaffShiftsService() extends StaffShiftsService {
+
+  override def getShift(port: String, terminal: String, shiftName: String): Future[Option[StaffShift]] = Future.successful(None)
+
+  override def getShifts(port: String, terminal: String): Future[Seq[StaffShift]] = Future.successful(Seq.empty)
+
+  override def saveShift(shift: StaffShift): Future[Int] = Future.successful(1)
+
+  override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = Future.successful(1)
 }
 

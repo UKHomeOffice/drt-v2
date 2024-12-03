@@ -69,6 +69,10 @@ GET           /shifts                                                           
 POST          /shifts                                                                 controllers.application.StaffingController.saveShifts
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
+GET           /staff-shifts/:port/:terminal                                           controllers.application.StaffShiftsController.getShifts(port: String, terminal: String)
+GET           /staff-shifts/:port/:terminal/:shiftName                                controllers.application.StaffShiftsController.getShift(port: String, terminal: String, shiftName: String)
+POST          /staff-shifts/save                                                      controllers.application.StaffShiftsController.saveShift
+DELETE        /staff-shifts/remove/:port/:terminal/:shiftName                         controllers.application.StaffShiftsController.removeShift(port: String, terminal: String, shiftName: String)
 
 GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
 

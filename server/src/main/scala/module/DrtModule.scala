@@ -62,6 +62,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
     bind(classOf[PortStateController]).asEagerSingleton()
     bind(classOf[RedListsController]).asEagerSingleton()
     bind(classOf[StaffingController]).asEagerSingleton()
+    bind(classOf[StaffShiftsController]).asEagerSingleton()
     bind(classOf[SummariesController]).asEagerSingleton()
     bind(classOf[SimulationsController]).asEagerSingleton()
     bind(classOf[WalkTimeController]).asEagerSingleton()

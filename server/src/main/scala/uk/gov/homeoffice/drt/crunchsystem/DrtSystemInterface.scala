@@ -7,7 +7,7 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.Timeout
 import com.typesafe.config.ConfigFactory
-import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, UserFeedBackProviderLike}
+import controllers.{ABFeatureProviderLike, DropInProviderLike, FeatureGuideProviderLike, StaffShiftProviderLike, UserFeedBackProviderLike}
 import manifests.ManifestLookupLike
 import manifests.queues.SplitsCalculator
 import play.api.Configuration
@@ -34,7 +34,8 @@ trait DrtSystemInterface extends UserRoleProviderLike
   with FeatureGuideProviderLike
   with DropInProviderLike
   with UserFeedBackProviderLike
-  with ABFeatureProviderLike {
+  with ABFeatureProviderLike
+  with StaffShiftProviderLike {
   implicit val materializer: Materializer
   implicit val ec: ExecutionContext
   implicit val system: ActorSystem
