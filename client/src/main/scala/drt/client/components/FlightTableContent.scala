@@ -4,11 +4,10 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.components.ToolTips._
-import drt.client.logger.LoggerFactory
 import drt.client.services._
-import drt.shared._
+import drt.shared.{ArrivalKey, CodeShares, DefaultFlightDisplayFilter, FlightHighlight, LhrFlightDisplayFilter}
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
-import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
+import drt.shared.redlist.{DirectRedListFlight, IndirectRedListPax, LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
 import japgolly.scalajs.react.component.Scala.Component
@@ -21,15 +20,13 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 
 import scala.collection.immutable.{HashSet, Seq}
 import scala.scalajs.js
 
 object FlightTableContent {
-  private val log = LoggerFactory.getLogger(getClass.getName)
-
   case class Props(flights: Pot[Seq[ApiFlightWithSplits]],
                    flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
                    queueOrder: Seq[Queue],
@@ -103,14 +100,14 @@ object FlightTableContent {
                   sortedFlights.flatMap {
                     case (flightWithSplits, codeShares) =>
                       val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
-                      val directRedListFlight = redlist.DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
+                      val directRedListFlight = DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
                         props.portCode,
                         props.terminal,
                         flightWithSplits.apiFlight.Terminal,
                         isRedListOrigin)
                       val manifestSummary: Option[FlightManifestSummary] = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight))
 
-                      val redListPaxInfo = redlist.IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
+                      val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
 
                       def flightTableRow(showHightlighted: Boolean) = FlightTableRow.Props(
                         flightWithSplits = flightWithSplits,

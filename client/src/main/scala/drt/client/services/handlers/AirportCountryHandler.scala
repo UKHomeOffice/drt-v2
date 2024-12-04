@@ -4,8 +4,7 @@ import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.services.{DrtApi, PollDelay}
-import drt.shared.AirportInfo
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{AirportInfo, PortCode}
 import upickle.default.read
 
 import scala.concurrent.Future
