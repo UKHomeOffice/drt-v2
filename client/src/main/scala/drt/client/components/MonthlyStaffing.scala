@@ -48,6 +48,7 @@ object MonthlyStaffing {
                    changes: Map[(Int, Int), Int],
                    showEditStaffForm: Boolean,
                    showStaffSuccess: Boolean,
+                   addShiftForm: Boolean,
                    shifts: ShiftAssignments,
                    shiftsLastLoaded: Option[Long] = None,
                   )
@@ -234,6 +235,10 @@ object MonthlyStaffing {
         ^.onClick ==> handleShiftEditForm
       ))
       <.div(
+        <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
+          println("Get Started for adding shift staff")
+          scope.modState(state => state.copy(addShiftForm = true)).runNow()
+        }))),
         modelChangeDetection,
         <.div(
           if (state.showStaffSuccess)
@@ -537,6 +542,7 @@ object MonthlyStaffing {
       rowHeadings, Map.empty,
       showEditStaffForm = false,
       showStaffSuccess = false,
+      addShiftForm = false,
       ShiftAssignments.empty,
       None)
   }
