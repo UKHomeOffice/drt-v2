@@ -12,6 +12,7 @@ object TerminalPageModes {
     case "snapshot" => Snapshot
     case "planning" => Planning
     case "staffing" => Staffing
+    case "shifts" => Shifts
     case unknown =>
       throw new Exception(s"Unknown terminal page mode '$unknown'")
   }
@@ -34,6 +35,10 @@ object TerminalPageModes {
 
   case object Staffing extends TerminalPageMode {
     override val asString: String = "staffing"
+  }
+
+  case object Shifts extends TerminalPageMode {
+    override val asString: String = "shifts"
   }
 }
 

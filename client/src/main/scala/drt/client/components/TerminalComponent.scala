@@ -228,6 +228,9 @@ object TerminalComponent {
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
                       <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
+
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) =>
+                      <.div(StaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
                   }
                 }
               }
@@ -283,6 +286,14 @@ object TerminalComponent {
             subMode = if (enableStaffPlanningChange) "60" else "15",
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
           ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
+        ) else "",
+      if (loggedInUser.roles.contains(StaffEdit))
+        <.li(^.className := tabClass(Shifts),
+          props.router.link(props.terminalPageTab.update(
+            mode = Shifts,
+            subMode = if (enableStaffPlanningChange) "60" else "15",
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
+          ))(^.id := "StaffingShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Shifts", " ", monthlyStaffingTooltip)
         ) else "",
       <.li(^.className := tabClass(Dashboard),
         props.router.link(props.terminalPageTab.update(

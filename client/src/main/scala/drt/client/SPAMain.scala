@@ -155,6 +155,7 @@ object SPAMain {
       case ("dashboard", "summary") => "Terminal dashboard"
       case ("planning", _) => "Staff planning"
       case ("staffing", _) => "Monthly staffing"
+      case ("shifts", _) => "Shifts"
       case _ => ""
     }
 
