@@ -22,6 +22,8 @@ import scala.scalajs.js
 
 
 object EgatesScheduleEditor {
+  val maxGatesPerBank = 15
+
   case class Props(initialUpdates: EgateBanksUpdates) extends UseValueEq
 
   case class Editing(update: EgateBanksUpdate, originalDate: MillisSinceEpoch) {
@@ -46,7 +48,7 @@ object EgatesScheduleEditor {
           e.persist()
           scope.modState { currentState =>
             val maybeUpdatedEditing = currentState.editing.map { editing =>
-              editing.copy(update = editing.update.copy(banks = editing.update.banks :+ EgateBank(IndexedSeq.fill(10)(true))))
+              editing.copy(update = editing.update.copy(banks = editing.update.banks :+ EgateBank(IndexedSeq.fill(maxGatesPerBank)(true))))
             }
             currentState.copy(editing = maybeUpdatedEditing)
           }
@@ -125,7 +127,7 @@ object EgatesScheduleEditor {
             s.editing match {
               case Some(editing) =>
                 MuiDialog(open = s.editing.isDefined, maxWidth = "sm")(
-                  MuiDialogTitle()(s"${if (editing.originalDate == today) "Add" else "Edit"} SLA change"),
+                  MuiDialogTitle()(s"${if (editing.originalDate == today) "Add" else "Edit"} EGates change"),
                   MuiDialogContent()(
                     <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "column", "gap" -> "16px", "padding" -> "8px"),
                       MuiTextField(
