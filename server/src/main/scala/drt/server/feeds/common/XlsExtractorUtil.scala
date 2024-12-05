@@ -14,7 +14,7 @@ object XlsExtractorUtil {
 
   val sheetMapByIndex: (Int, Workbook) => Sheet = (index, workbook) => workbook.getSheetAt(index)
 
-  val getNumberOfSheets: Workbook => Int = workbook => workbook.getNumberOfSheets()
+  val getNumberOfSheets: Workbook => Int = workbook => workbook.getNumberOfSheets
 
   val stringCellOption: (Int, Row) => Option[String] = (index, row) => Option(row.getCell(index).getStringCellValue)
 
