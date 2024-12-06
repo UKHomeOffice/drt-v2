@@ -236,8 +236,7 @@ object MonthlyStaffing {
       ))
       <.div(
         <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
-          println("Get Started for adding shift staff")
-          scope.modState(state => state.copy(addShiftForm = true)).runNow()
+          props.router.set(props.terminalPageTab.copy(modeStr = s"shifts")).runNow()
         }))),
         modelChangeDetection,
         <.div(

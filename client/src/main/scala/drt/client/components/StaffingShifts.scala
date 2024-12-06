@@ -13,7 +13,7 @@ import scala.util.Try
 
 object StaffingShifts {
 
-  case class State()
+  case class State(confirmSummary: Boolean = false)
 
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
@@ -28,13 +28,19 @@ object StaffingShifts {
     }
   }
 
+
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
 
   class Backend(scope: BackendScope[Props, State]) {
+    def confirmHandler(shifts: Seq[Shift]): Unit = {
+      println(s"confirmHandler: $shifts")
+      scope.modState(state => state.copy(confirmSummary = true)).runNow()
+    }
+
     def render(props: Props, state: State): VdomTagOf[Div] = {
       <.div(
-        AddShiftFormComponent(ShiftsProps(30, Seq.empty[Shift]))
+        AddShiftFormComponent(ShiftsProps(30, Seq.empty[Shift], confirmHandler))
       )
     }
 
