@@ -29,14 +29,18 @@ object Shift {
 
 @js.native
 trait ShiftsProps extends js.Object {
+  var port: String = js.native
+  var terminal: String = js.native
   var interval: Int = js.native
   var initialShifts: Array[Shift] = js.native
   var confirmHandler: js.Function1[js.Array[Shift], Unit] = js.native
 }
 
 object ShiftsProps {
-  def apply(interval: Int, initialShifts: Seq[Shift], confirmHandler: Seq[Shift] => Unit): ShiftsProps = {
+  def apply(port: String, terminal: String, interval: Int, initialShifts: Seq[Shift], confirmHandler: Seq[Shift] => Unit): ShiftsProps = {
     val p = (new js.Object).asInstanceOf[ShiftsProps]
+    p.port = port
+    p.terminal = terminal
     p.interval = interval
     p.initialShifts = initialShifts.toArray
     p.confirmHandler = (shifts: js.Array[Shift]) => confirmHandler(shifts.toSeq)

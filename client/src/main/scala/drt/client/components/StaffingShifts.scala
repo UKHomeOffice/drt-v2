@@ -61,7 +61,7 @@ object StaffingShifts {
         } else {
           <.div(
             <.h2("Add Shifts"),
-            AddShiftFormComponent(ShiftsProps(30, Seq.empty[Shift], confirmHandler))
+            AddShiftFormComponent(ShiftsProps(props.airportConfig.portCode.toString, props.terminalPageTab.terminal.toString, 30, Seq.empty[Shift], confirmHandler))
           )
         }
       )
