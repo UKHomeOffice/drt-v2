@@ -12,11 +12,11 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import scala.concurrent.{ExecutionContext, Future}
 
 class StaffShiftsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) {
-  implicit val format: RootJsonFormat[StaffShift] = jsonFormat5(StaffShift.apply)
+  implicit val format: RootJsonFormat[StaffShift] = jsonFormat6(StaffShift.apply)
 
   private def convertTo(text: String) = {
     val json = text.parseJson
-    json.convertTo[StaffShift]
+    json.convertTo[Seq[StaffShift]]
   }
 
   def getShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {
@@ -35,8 +35,8 @@ class StaffShiftsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
   def saveShift: Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       try {
-        val shift = convertTo(text)
-        ctrl.staffShiftsService.saveShift(shift).map { result =>
+        val shifts = convertTo(text)
+        ctrl.staffShiftsService.saveShift(shifts).map { result =>
           Ok(s"Inserted $result shift(s)")
         }
       } catch {

@@ -157,8 +157,8 @@ case class MockStaffShiftsService() extends StaffShiftsService {
 
   override def getShifts(port: String, terminal: String): Future[Seq[StaffShift]] = Future.successful(Seq.empty)
 
-  override def saveShift(shift: StaffShift): Future[Int] = Future.successful(1)
-
   override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = Future.successful(1)
+
+  override def saveShift(shifts: Seq[StaffShift]): Future[Int] = Future.successful(1)
 }
 

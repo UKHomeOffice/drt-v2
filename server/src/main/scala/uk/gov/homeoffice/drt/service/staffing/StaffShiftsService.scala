@@ -12,7 +12,7 @@ trait StaffShiftsService {
 
   def getShifts(port: String, terminal: String): Future[Seq[StaffShift]]
 
-  def saveShift(shift: StaffShift): Future[Int]
+  def saveShift(shifts: Seq[StaffShift]): Future[Int]
 
   def deleteShift(port: String, terminal: String, shiftName: String): Future[Int]
 }
@@ -25,6 +25,7 @@ case class StaffShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: E
       shiftName = shift.shiftName,
       startTime = shift.startTime,
       endTime = shift.endTime,
+      staffNumber = shift.staffNumber,
       createdBy = createdBy,
       frequency = frequency,
       createdAt = createdAt
@@ -37,12 +38,15 @@ case class StaffShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: E
       terminal = row.terminal,
       shiftName = row.shiftName,
       startTime = row.startTime,
-      endTime = row.endTime
+      endTime = row.endTime,
+      staffNumber = row.staffNumber
     )
   }
 
-  override def saveShift(shift: StaffShift): Future[Int] =
-    staffShiftsDao.insertOrUpdate(toStaffShiftRow(shift, None, None, new Timestamp(System.currentTimeMillis())))
+  override def saveShift(shifts: Seq[StaffShift]): Future[Int] = {
+    val shiftRows = shifts.map(shift => toStaffShiftRow(shift, None, None, new Timestamp(System.currentTimeMillis())))
+    Future.sequence(shiftRows.map(staffShiftsDao.insertOrUpdate)).map(_.sum)
+  }
 
   override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = staffShiftsDao.deleteStaffShift(port, terminal, shiftName)
 

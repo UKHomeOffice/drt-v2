@@ -1,6 +1,12 @@
 package drt.client.components
 
+import diode.AnyAction.aType
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
+import drt.client.services.SPACircuit
+import drt.client.services.handlers.SaveShift
+import drt.shared.StaffShift
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import japgolly.scalajs.react.{BackendScope, CtorType, Reusability, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -33,14 +39,31 @@ object StaffingShifts {
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
 
   class Backend(scope: BackendScope[Props, State]) {
-    def confirmHandler(shifts: Seq[Shift]): Unit = {
-      println(s"confirmHandler: $shifts")
-      scope.modState(state => state.copy(confirmSummary = true)).runNow()
-    }
+
+    import upickle.default._
+    import upickle.default.{macroRW, ReadWriter => RW}
+
+    implicit val rw: RW[StaffShift] = macroRW
 
     def render(props: Props, state: State): VdomTagOf[Div] = {
+      def confirmHandler(shifts: Seq[Shift]): Unit = {
+        val staffShifts = shifts.map(s => StaffShift(props.airportConfig.portCode.toString, props.terminalPageTab.terminal.toString, s.name, s.startTime, s.endTime, s.defaultStaffNumber))
+        SPACircuit.dispatch(SaveShift(staffShifts))
+        scope.modState(state => state.copy(confirmSummary = true)).runNow()
+      }
+
       <.div(
-        AddShiftFormComponent(ShiftsProps(30, Seq.empty[Shift], confirmHandler))
+        if (state.confirmSummary) {
+          <.div(
+            <.h2("Shifts saved"),
+            MuiButton(color = Color.primary, variant = "outlined", size = "medium")(^.onClick --> scope.modState(_.copy(confirmSummary = false)), "Add more shifts")
+          )
+        } else {
+          <.div(
+            <.h2("Add Shifts"),
+            AddShiftFormComponent(ShiftsProps(30, Seq.empty[Shift], confirmHandler))
+          )
+        }
       )
     }
 
