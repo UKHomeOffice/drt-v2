@@ -1,7 +1,7 @@
 package drt.client.components
 
 import diode.data.{Empty, Pot, Ready}
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, TerminalShiftLoc, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.UpdateShifts
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -236,7 +236,7 @@ object MonthlyStaffing {
       ))
       <.div(
         <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
-          props.router.set(props.terminalPageTab.copy(modeStr = s"shifts")).runNow()
+          props.router.set(TerminalShiftLoc(props.terminalPageTab.terminalName)).runNow()
         }))),
         modelChangeDetection,
         <.div(
