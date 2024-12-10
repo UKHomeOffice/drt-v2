@@ -248,20 +248,20 @@ object AclFeed {
     val ArrDep: Int = allFields("ArrDep")
   }
 
-  def aclToPortMapping(portCode: PortCode): Terminal => Terminal = portCode match {
-    case PortCode("LGW") => (tIn: Terminal) =>
+  def aclToPortMapping(portCode: PortCode): Terminal => Terminal = portCode.iata match {
+    case "LGW" => (tIn: Terminal) =>
       Map[Terminal, Terminal](
         T1 -> S,
         T2 -> N,
       ).getOrElse(tIn, tIn)
-    case PortCode("EDI") => (tIn: Terminal) =>
+    case "EDI" => (tIn: Terminal) =>
       Map[Terminal, Terminal](T1 -> A2).getOrElse(tIn, tIn)
-    case PortCode("LCY") => (tIn: Terminal) =>
+    case "LCY" => (tIn: Terminal) =>
       Map[Terminal, Terminal](
         ACLTER -> T1,
         MainApron -> T1,
       ).getOrElse(tIn, tIn)
-    case PortCode("STN") =>
+    case "STN" =>
       (tIn: Terminal) => Map[Terminal, Terminal](CTA -> T1).getOrElse(tIn, tIn)
     case _ => (tIn: Terminal) => tIn
   }
