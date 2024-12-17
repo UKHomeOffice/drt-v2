@@ -1,21 +1,17 @@
 package services.staffing
 
-import akka.Done
 import akka.actor.ActorRef
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
-
-import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.homeoffice.drt.time.SDateLike
 
 case class StaffMinutesChecker(now: () => SDateLike,
                                staffingUpdateRequestQueue: ActorRef,
                                forecastMaxDays: Int,
                                airportConfig: AirportConfig,
-                              )
-                              (implicit ec: ExecutionContext) {
+                              ) {
   private val log = LoggerFactory.getLogger(getClass)
 
   def calculateForecastStaffMinutes(): Unit = {

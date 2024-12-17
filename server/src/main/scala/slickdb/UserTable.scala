@@ -84,7 +84,7 @@ case class UserTable(tables: AggregatedDbTables) extends UserTableLike {
   private def updateUser(user: UserRow): Future[Int] = {
     val query = userTableQuery.filter(_.email === user.email)
       .map(f => (f.latest_login, f.inactive_email_sent, f.revoked_access))
-      .update(user.latest_login, user.inactive_email_sent, user.revoked_access)
+      .update((user.latest_login, user.inactive_email_sent, user.revoked_access))
     tables.run(query)
   }
 

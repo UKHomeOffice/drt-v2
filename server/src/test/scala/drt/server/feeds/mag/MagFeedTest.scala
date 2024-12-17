@@ -39,6 +39,7 @@ class MagFeedTest extends AnyWordSpec with Matchers {
           carrierCode = "FR",
           flightCodeSuffix = None,
           origin = "JFK",
+          previousPort = None,
           scheduled = 1609459200000L,
           estimated = Option(1609459500000L),
           touchdown = Option(1609459800000L),

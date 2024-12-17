@@ -32,7 +32,7 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
-  private def timedEndPoint[A](name: String, maybeParams: Option[String] = None)(eventualThing: Future[A]): Future[A] = {
+  private def timedEndPoint[A](name: String, maybeParams: Option[String])(eventualThing: Future[A]): Future[A] = {
     val startMillis = SDate.now().millisSinceEpoch
     eventualThing.foreach { _ =>
       val endMillis = SDate.now().millisSinceEpoch

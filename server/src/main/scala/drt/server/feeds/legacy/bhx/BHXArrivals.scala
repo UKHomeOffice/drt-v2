@@ -48,6 +48,7 @@ trait BHXLiveArrivals extends BHXArrivals {
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = flightRecord.getOrigin,
+      previousPort = None,
       scheduled = convertToUTC(flightRecord.getScheduledTime).map(SDate(_).millisSinceEpoch).getOrElse(0),
       estimated = convertToUTC(flightRecord.getEstimatedTime).map(SDate(_).millisSinceEpoch),
       touchdown = convertToUTC(flightRecord.getTouchdownTime).map(SDate(_).millisSinceEpoch),
@@ -80,6 +81,7 @@ trait BHXForecastArrivals extends BHXArrivals {
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = flightRecord.getOrigin,
+      previousPort = None,
       scheduled = SDate(convertToUTCPlusOneHour(flightRecord.getScheduledTime)).millisSinceEpoch,
     )
   }

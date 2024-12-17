@@ -97,7 +97,28 @@ class JsonSerializationSpec extends Specification {
 
     "PortState" >> {
       val flightWithSplits = ApiFlightWithSplits(
-        Arrival(None, ArrivalStatus("scheduled"), None, Predictions(0L, Map()), None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
+        Arrival(
+          Operator = None,
+          Status = ArrivalStatus("scheduled"),
+          Estimated = None,
+          Predictions = Predictions(0L, Map()),
+          Actual = None,
+          EstimatedChox = None,
+          ActualChox = None,
+          Gate = None,
+          Stand = None,
+          MaxPax = None,
+          RunwayID = None,
+          BaggageReclaimId = None,
+          AirportID = PortCode("test"),
+          Terminal = T1,
+          rawICAO = "test",
+          rawIATA = "test",
+          Origin = PortCode("test"),
+          PreviousPort = None,
+          Scheduled = 0L,
+          PcpTime = None,
+          FeedSources = Set(AclFeedSource, LiveFeedSource)),
         Set(
           Splits(
             Set(
@@ -137,10 +158,30 @@ class JsonSerializationSpec extends Specification {
     }
 
     "PortStateUpdates" >> {
-      val arrival = Arrival(None, ArrivalStatus("scheduled"), None, Predictions(0L, Map()), None, None, None, None, None, None, None, None, PortCode("test"),
-        T1, "test", "test", PortCode("test"), 0L, None,
-        Set(AclFeedSource, LiveFeedSource),
-        PassengerSources = Map())
+      val arrival = Arrival(
+        Operator = None,
+        Status = ArrivalStatus("scheduled"),
+        Estimated = None,
+        Predictions = Predictions(0L, Map()),
+        Actual = None,
+        EstimatedChox = None,
+        ActualChox = None,
+        Gate = None,
+        Stand = None,
+        MaxPax = None,
+        RunwayID = None,
+        BaggageReclaimId = None,
+        AirportID = PortCode("test"),
+        Terminal = T1,
+        rawICAO = "test",
+        rawIATA = "test",
+        Origin = PortCode("test"),
+        PreviousPort = None,
+        Scheduled = 0L,
+        PcpTime = None,
+        FeedSources = Set(AclFeedSource, LiveFeedSource),
+        PassengerSources = Map()
+      )
       val splits = Set(Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)), None)),
         Historical,

@@ -39,6 +39,7 @@ class LhrForecastSpec extends Specification {
       rawICAO = "BA0058",
       rawIATA = "BA0058",
       Origin = PortCode("CPT"),
+      PreviousPort = None,
       FeedSources = Set(ForecastFeedSource),
       Scheduled = SDate("2018-02-22T04:45:00").millisSinceEpoch,
       PcpTime = None,

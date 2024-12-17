@@ -14,7 +14,7 @@ import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeed
 import org.slf4j.{Logger, LoggerFactory}
 import pdi.jwt.{Jwt, JwtAlgorithm, JwtHeader}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
-import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{FlightCode, LiveArrival}
 import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -175,6 +175,7 @@ object MagFeed {
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = ma.departureAirport.iata,
+      previousPort = None,
       scheduled = SDate(ma.arrival.scheduled).millisSinceEpoch,
       estimated = ma.arrival.estimated.map(str => SDate(str).millisSinceEpoch),
       touchdown = ma.arrival.actual.map(str => SDate(str).millisSinceEpoch),

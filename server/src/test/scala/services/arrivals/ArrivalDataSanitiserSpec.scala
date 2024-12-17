@@ -36,6 +36,7 @@ class ArrivalDataSanitiserSpec extends Specification {
       rawICAO = "TST100",
       rawIATA = "TST100",
       Origin = PortCode("TST"),
+      PreviousPort = Option(PortCode("JFK")),
       Scheduled = scheduled.millisSinceEpoch,
       PcpTime = None,
       FeedSources = Set()

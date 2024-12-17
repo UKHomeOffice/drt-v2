@@ -6,7 +6,6 @@ import drt.server.feeds.FeedPoller.Enable
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration
 import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, PersistentStateActors}
-import uk.gov.homeoffice.drt.db.AggregateDb
 import uk.gov.homeoffice.drt.service.{ApplicationService, FeedService}
 import uk.gov.homeoffice.drt.testsystem.RestartActor
 import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2

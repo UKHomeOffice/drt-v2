@@ -38,6 +38,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     AirportID = PortCode("LHR"),
     Terminal = T1,
     Origin = PortCode("JFK"),
+    PreviousPort = Option(PortCode("JFK")),
     Scheduled = 1000L,
     PcpTime = None,
   )
@@ -60,6 +61,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     PassengerSources = Map(source -> Passengers(Option(100), Option(10))),
     FlightCodeSuffix = Option(FlightCodeSuffix("A")),
     Predictions = Preds(10L, Map("a" -> 1)),
+    PreviousPort = Option(PortCode("ABZ")),
   )
 
   private def updateWithNoOptionals(source: FeedSource) = current.copy(
@@ -80,6 +82,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     PassengerSources = Map(source -> Passengers(Option(100), Option(10))),
     FlightCodeSuffix = None,
     Predictions = Preds(10L, Map("a" -> 1)),
+    PreviousPort = None,
   )
 
   "mergeArrivals" should {
@@ -111,6 +114,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         AirportID = updateWithAllOptionals(LiveFeedSource).AirportID,
         Terminal = updateWithAllOptionals(LiveFeedSource).Terminal,
         Origin = updateWithAllOptionals(LiveFeedSource).Origin,
+        PreviousPort = updateWithAllOptionals(LiveFeedSource).PreviousPort,
         Scheduled = updateWithAllOptionals(LiveFeedSource).Scheduled,
         PcpTime = updateWithAllOptionals(LiveFeedSource).PcpTime,
       ))
@@ -118,7 +122,8 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
     "overwrite the current arrival with the next arrival's values falling back on current value where next doesn't have one" in {
 
       val result = MergeArrivals.mergeArrivals(current, updateWithNoOptionals(LiveFeedSource))
-
+      //Arrival(Some(Operator("BA")), BA, 1200, Some(FlightCodeSuffix("A")), Landed, Some(1), Predictions(10, Map("a" -> 1)), Some(2), Some(3), Some(4), Some("G1"), Some("S1"), Some(100), Some("R1"), Some("B1"), LHR, T1, JFK, Some(JFK), 1000, None, Set(LiveFeedSource, ForecastFeedSource), Some(5), Some(6), Some(7), Map(LiveFeedSource -> Passengers(Some(100), Some(10)), ForecastFeedSource -> Passengers(Some(150), Some(2))))
+      //Arrival(Some(Operator("BA")), BA, 1200, Some(FlightCodeSuffix("A")), Landed, Some(1), Predictions(10, Map("a" -> 1)), Some(2), Some(3), Some(4), Some("G1"), Some("S1"), Some(100), Some("R1"), Some("B1"), LHR, T1, JFK, None, 1000, None, Set(ForecastFeedSource, LiveFeedSource), Some(5), Some(6), Some(7), Map(ForecastFeedSource -> Passengers(Some(150), Some(2)), LiveFeedSource -> Passengers(Some(100), Some(10))))
       result should ===(Arrival(
         Operator = updateWithNoOptionals(LiveFeedSource).Operator,
         CarrierCode = updateWithNoOptionals(LiveFeedSource).CarrierCode,
@@ -143,6 +148,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
         AirportID = updateWithNoOptionals(LiveFeedSource).AirportID,
         Terminal = updateWithNoOptionals(LiveFeedSource).Terminal,
         Origin = updateWithNoOptionals(LiveFeedSource).Origin,
+        PreviousPort = current.PreviousPort,
         Scheduled = updateWithNoOptionals(LiveFeedSource).Scheduled,
         PcpTime = current.PcpTime,
       ))

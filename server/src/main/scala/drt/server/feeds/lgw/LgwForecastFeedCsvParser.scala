@@ -66,6 +66,7 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
                 carrierCode = carrierCode.code,
                 flightCodeSuffix = maybeSuffix.map(_.suffix),
                 origin = origin,
+                previousPort = None,
                 scheduled = scheduled,
               ))
             case _ => None

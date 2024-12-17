@@ -137,6 +137,7 @@ class CiriumFeedSpec extends CrunchTestLike with Mockito {
       carrierCode = "TST",
       flightCodeSuffix = None,
       origin = "JFK",
+      previousPort = None,
       scheduled = SDate(publishedArrivalTime).millisSinceEpoch,
       estimated = Option(SDate(estRunwayArrival).millisSinceEpoch),
       touchdown = Option(SDate(actRunwayArrival).millisSinceEpoch),

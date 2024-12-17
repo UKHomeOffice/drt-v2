@@ -42,7 +42,6 @@ object FlightExports {
                               (implicit ec: ExecutionContext): (LocalDate, Seq[ApiFlightWithSplits]) => Future[Seq[String]] = {
     val regionName = PortRegion.fromPort(port).name
     val portName = port.iata
-    val terminalName = terminal.toString
     val toRow = flightWithSplitsToCsvFields(paxFeedSourceOrder)
     (localDate, flights) => {
       manifestsProvider(localDate).map { vms =>

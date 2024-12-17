@@ -115,6 +115,7 @@ object MergeArrivals {
       RedListPax = next.RedListPax.orElse(current.RedListPax),
       PassengerSources = next.PassengerSources ++ current.PassengerSources,
       FlightCodeSuffix = next.FlightCodeSuffix.orElse(current.FlightCodeSuffix),
+      PreviousPort = next.PreviousPort.orElse(current.PreviousPort),
     )
 
   def processingRequestToArrivalsDiff(mergeArrivalsForDate: (Terminal, UtcDate) => Future[ArrivalsDiff],

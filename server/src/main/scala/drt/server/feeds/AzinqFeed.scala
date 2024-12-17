@@ -92,6 +92,7 @@ trait AzinqArrival {
       carrierCode = carrierCode.code,
       flightCodeSuffix = maybeSuffix.map(_.suffix),
       origin = OriginDestAirportIATA,
+      previousPort = None,
       scheduled = SDate(ScheduledDateTime).millisSinceEpoch,
       estimated = maybeEstimated,
       touchdown = ALDT.map(SDate(_).millisSinceEpoch),

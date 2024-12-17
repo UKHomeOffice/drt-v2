@@ -29,6 +29,7 @@ class ApiFlightsToProtoBufSpec extends Specification {
         rawICAO = "BAA0001",
         rawIATA = "BA0001",
         Origin = PortCode("JFK"),
+        PreviousPort = Option(PortCode("ABZ")),
         PcpTime = Option(1451655000000L),
         Scheduled = SDate("2016-01-01T13:00:00Z").millisSinceEpoch,
         FeedSources = Set(ApiFeedSource),

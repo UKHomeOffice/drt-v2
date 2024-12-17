@@ -3,10 +3,8 @@ package drt.shared
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.arrivals._
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
-import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
+import uk.gov.homeoffice.drt.ports.FeedSource
 
-import scala.collection.immutable.{Map => IMap}
 import scala.language.postfixOps
 
 object FlightsApi {
