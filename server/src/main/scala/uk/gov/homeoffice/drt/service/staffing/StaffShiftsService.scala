@@ -3,8 +3,10 @@ package uk.gov.homeoffice.drt.service.staffing
 import drt.shared.StaffShift
 import uk.gov.homeoffice.drt.db.dao.StaffShiftsDao
 import uk.gov.homeoffice.drt.db.tables.StaffShiftRow
+import uk.gov.homeoffice.drt.time.LocalDate
 
-import java.sql.Timestamp
+import java.sql.{Date, Timestamp}
+import java.time.{LocalDate => JavaLocalDate}
 import scala.concurrent.{ExecutionContext, Future}
 
 trait StaffShiftsService {
@@ -18,16 +20,29 @@ trait StaffShiftsService {
 }
 
 case class StaffShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: ExecutionContext) extends StaffShiftsService {
+
+  private def convertToSqlDate(localDate: LocalDate): java.sql.Date = {
+    val javaLocalDate = JavaLocalDate.of(localDate.year, localDate.month, localDate.day)
+    Date.valueOf(javaLocalDate)
+  }
+
+  private def convertToLocalDate(sqlDate: java.sql.Date): LocalDate = {
+    val localDate = sqlDate.toLocalDate
+    LocalDate(localDate.getYear, localDate.getMonthValue, localDate.getDayOfMonth)
+  }
+
   private def toStaffShiftRow(shift: StaffShift, createdBy: Option[String], frequency: Option[String], createdAt: Timestamp): StaffShiftRow = {
     StaffShiftRow(
       port = shift.port,
       terminal = shift.terminal,
       shiftName = shift.shiftName,
+      startDate = convertToSqlDate(shift.startDate),
       startTime = shift.startTime,
       endTime = shift.endTime,
+      endDate = shift.endDate.map(convertToSqlDate),
       staffNumber = shift.staffNumber,
-      createdBy = createdBy,
-      frequency = frequency,
+      frequency = shift.frequency,
+      createdBy = shift.createdBy,
       createdAt = createdAt
     )
   }
@@ -37,9 +52,14 @@ case class StaffShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: E
       port = row.port,
       terminal = row.terminal,
       shiftName = row.shiftName,
+      startDate = convertToLocalDate(row.startDate),
       startTime = row.startTime,
       endTime = row.endTime,
-      staffNumber = row.staffNumber
+      endDate = row.endDate.map(convertToLocalDate),
+      staffNumber = row.staffNumber,
+      frequency = row.frequency,
+      createdBy = row.createdBy,
+      createdAt = row.createdAt.getTime
     )
   }
 

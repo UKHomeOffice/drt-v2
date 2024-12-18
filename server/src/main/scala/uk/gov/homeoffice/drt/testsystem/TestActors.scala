@@ -117,7 +117,7 @@ object TestActors {
                                                 snapshotMessageToState: Any => T,
                                                 eventToState: (T, Any) => (T, S),
                                                 query: (() => T, () => ActorRef) => PartialFunction[Any, Unit],
-                                       ) extends StreamingUpdatesActor[T, S](persistenceId, journalType, initialState, snapshotMessageToState, eventToState, query) {
+                                               ) extends StreamingUpdatesActor[T, S](persistenceId, journalType, initialState, snapshotMessageToState, eventToState, query) {
     override val receiveQuery: Receive = query(() => state, sender) orElse {
       case ResetData =>
         maybeKillSwitch.foreach(_.shutdown())
@@ -129,7 +129,8 @@ object TestActors {
   }
 
   object TestShiftsActor extends ShiftsActorLike {
-    override def streamingUpdatesProps(journalType: StreamingJournalLike,
+    override def streamingUpdatesProps(persistenceId: String,
+                                       journalType: StreamingJournalLike,
                                        now: () => SDateLike,
                                       ): Props =
       Props(new TestStreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
@@ -140,6 +141,8 @@ object TestActors {
         eventToState(now),
         query(now)
       ))
+
+    override def persistenceId: String = ???
   }
 
   object TestFixedPointsActor extends FixedPointsActorLike {

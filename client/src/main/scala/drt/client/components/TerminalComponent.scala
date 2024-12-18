@@ -41,6 +41,7 @@ object TerminalComponent {
 
   private case class TerminalModel(userSelectedPlanningTimePeriod: Pot[Int],
                                    potShifts: Pot[ShiftAssignments],
+                                   potStaffShifts: Pot[ShiftAssignments],
                                    potFixedPoints: Pot[FixedPointAssignments],
                                    potStaffMovements: Pot[StaffMovements],
                                    airportConfig: Pot[AirportConfig],
@@ -79,6 +80,7 @@ object TerminalComponent {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
         potShifts = model.dayOfShifts,
+        potStaffShifts = model.dayOfStaffShifts,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         airportConfig = model.airportConfig,
@@ -230,7 +232,7 @@ object TerminalComponent {
                       <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div("Shift view coming soon.....")
+                      <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
                   }
                 }
               }

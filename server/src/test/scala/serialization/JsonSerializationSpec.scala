@@ -76,11 +76,11 @@ class JsonSerializationSpec extends Specification {
     }
 
     "AirportInfo" >> {
-      val info: Map[String, AirportInfo] = AirportInfoService.airportInfoByIataPortCode
+      val info: Map[String, drt.shared.AirportInfo] = AirportInfoService.airportInfoByIataPortCode
 
       val asJson: String = write(info)
 
-      val deserialized = read[Map[String, AirportInfo]](asJson)
+      val deserialized = read[Map[String, drt.shared.AirportInfo]](asJson)
 
       deserialized === info
     }

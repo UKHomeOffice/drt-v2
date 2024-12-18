@@ -7,16 +7,13 @@ import drt.client.SPAMain.StatusLoc.portConfig
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles._
-import drt.client.components.{
-  AccessibilityStatementComponent, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, IAccessibilityStatementProps, Layout,
-  PortConfigPage, PortDashboardPage, StaffingShifts, TerminalComponent, TrainingHubComponent, UserDashboardPage
-}
+import drt.client.components.{AccessibilityStatementComponent, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, IAccessibilityStatementProps, Layout, PortConfigPage, PortDashboardPage, StaffingShifts, TerminalComponent, TrainingHubComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
-import drt.client.spa.TerminalPageModes.{Current, Staffing}
+import drt.client.spa.TerminalPageModes.{Current, Shifts, Staffing}
 import drt.client.spa.{TerminalPageMode, TerminalPageModes}
 import drt.shared.DrtPortConfigs
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
@@ -230,6 +227,8 @@ object SPAMain {
     def loadAction: Action = mode match {
       case Staffing =>
         GetAllShifts
+      case Shifts =>
+        GetAllStaffShifts
       case _ =>
         SetViewMode(viewMode)
     }

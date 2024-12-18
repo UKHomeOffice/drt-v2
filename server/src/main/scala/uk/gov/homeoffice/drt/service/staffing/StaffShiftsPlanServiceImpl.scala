@@ -16,18 +16,18 @@ import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object ShiftsServiceImpl {
+object StaffShiftsPlanServiceImpl {
   def pitActor(persistentId: String)(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
-    val actorName = s"shifts-read-actor-" + UUID.randomUUID().toString
+    val actorName = s"staff-store-read-actor-" + UUID.randomUUID().toString
     system.actorOf(ShiftsReadActor.props(persistentId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
   }
 }
 
-case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
-                             shiftsWriteActor: ActorRef,
-                             pitActor: SDateLike => ActorRef,
-                            )
-                            (implicit timeout: Timeout, ec: ExecutionContext) extends ShiftsService {
+case class StaffShiftsPlanServiceImpl(liveStaffShiftsReadActor: ActorRef,
+                                      shiftsStaffSequentialWritesActor: ActorRef,
+                                      pitActor: SDateLike => ActorRef,
+                                     )
+                                     (implicit timeout: Timeout, ec: ExecutionContext) extends StaffShiftsPlanService {
   override def shiftsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = {
     maybePointInTime match {
       case None =>
@@ -39,14 +39,14 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
   }
 
   override def allShifts: Future[ShiftAssignments] =
-    liveShiftsActor
+    liveStaffShiftsReadActor
       .ask(GetState)
       .mapTo[ShiftAssignments]
 
   private def liveShiftsForDate(date: LocalDate): Future[ShiftAssignments] = {
     val start = SDate(date).millisSinceEpoch
     val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
-    liveShiftsActor.ask(GetStateForDateRange(start, end))
+    shiftsStaffSequentialWritesActor.ask(GetStateForDateRange(start, end))
       .map { case sa: ShiftAssignments => sa }
   }
 
@@ -69,7 +69,8 @@ case class ShiftsServiceImpl(liveShiftsActor: ActorRef,
   }
 
   override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] =
-    shiftsWriteActor
+    shiftsStaffSequentialWritesActor
       .ask(UpdateShifts(shiftAssignments))
       .mapTo[ShiftAssignments]
 }
+

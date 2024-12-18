@@ -7,11 +7,12 @@ import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftStateSnapshotM
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object ShiftsReadActor {
-  def props(pointInTime: SDateLike, expireBefore: () => SDateLike): Props = Props(new ShiftsReadActor(pointInTime, expireBefore))
+  def props(persistentId: String, pointInTime: SDateLike, expireBefore: () => SDateLike): Props =
+    Props(new ShiftsReadActor(persistentId, pointInTime, expireBefore))
 }
 
-class ShiftsReadActor(pointInTime: SDateLike, expireBefore: () => SDateLike)
-  extends ShiftsActor(() => pointInTime, expireBefore, ShiftsActor.snapshotInterval) {
+class ShiftsReadActor(persistentId: String, pointInTime: SDateLike, expireBefore: () => SDateLike)
+  extends ShiftsActor(persistentId, () => pointInTime, expireBefore, ShiftsActor.snapshotInterval) {
   override def processSnapshotMessage: PartialFunction[Any, Unit] = {
     case snapshot: ShiftStateSnapshotMessage => state = shiftMessagesToStaffAssignments(snapshot.shifts)
   }

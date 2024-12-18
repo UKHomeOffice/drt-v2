@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.AnyAction.aType
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.SaveShift
 import drt.shared.StaffShift
@@ -12,6 +13,7 @@ import japgolly.scalajs.react.vdom.html_<^.VdomTagOf
 import org.scalajs.dom.html.Div
 import japgolly.scalajs.react.vdom.html_<^._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
 
 object StaffingShifts {
 
@@ -28,9 +30,26 @@ object StaffingShifts {
 
     implicit val rw: RW[StaffShift] = macroRW
 
+    private def startDateInLocalDate: uk.gov.homeoffice.drt.time.LocalDate = {
+      val today: SDateLike = SDate.now()
+      uk.gov.homeoffice.drt.time.LocalDate(today.getFullYear, today.getMonth, 1)
+    }
+
     def render(props: Props, state: State): VdomTagOf[Div] = {
       def confirmHandler(shifts: Seq[Shift]): Unit = {
-        val staffShifts = shifts.map(s => StaffShift(props.portCode, props.terminal.toString, s.name, s.startTime, s.endTime, s.defaultStaffNumber))
+        val staffShifts = shifts.map(s => StaffShift(
+          port = props.portCode,
+          terminal = props.terminal.toString,
+          shiftName = s.name,
+          startDate = startDateInLocalDate,
+          startTime = s.startTime,
+          endTime = s.endTime,
+          endDate = None,
+          staffNumber = s.defaultStaffNumber,
+          frequency = None,
+          createdBy = None,
+          createdAt = System.currentTimeMillis()
+        ))
         SPACircuit.dispatch(SaveShift(staffShifts))
         scope.modState(state => state.copy(confirmSummary = true)).runNow()
       }
@@ -39,7 +58,8 @@ object StaffingShifts {
         if (state.confirmSummary) {
           <.div(
             <.h2("Shifts saved"),
-            MuiButton(color = Color.primary, variant = "outlined", size = "medium")(^.onClick --> scope.modState(_.copy(confirmSummary = false)), "Add more shifts")
+            MuiButton(color = Color.primary, variant = "outlined", size = "medium")
+            (^.onClick --> scope.modState(_.copy(confirmSummary = false)), "Add more shifts")
           )
         } else {
           <.div(

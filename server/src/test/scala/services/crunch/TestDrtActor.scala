@@ -175,7 +175,7 @@ class TestDrtActor extends Actor {
         AclFeedSource -> forecastBaseFeedStatusWriteActor,
       )
 
-      val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
+      val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(ShiftsActor.persistenceId,
         journalType, tc.now), name = "shifts-read-actor")
       val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
         journalType, tc.now, tc.forecastMaxDays), name = "fixed-points-read-actor")
