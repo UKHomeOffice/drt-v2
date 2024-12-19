@@ -6,8 +6,8 @@ import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import akka.stream.{Materializer, javadsl}
+import akka.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -18,7 +18,8 @@ import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.{Await, Future}
 import scala.util.Try
 import scala.xml.{Node, NodeSeq}
 
@@ -105,10 +106,15 @@ trait BHXClientLike extends ScalaXmlSupport {
     implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
 
     val headers: List[HttpHeader] = List(
-      SoapActionHeader("http://www.iata.org/IATA/2007/00/IRequestFlightService/RequestFlightData")
+      RawHeader("SOAPAction", "\"\""),
+//      `Content-Type`(ContentTypes.`text/xml(UTF-8)`),
+      RawHeader("Accept-Encoding", "gzip,deflate"),
+//      SoapActionHeader("http://www.iata.org/IATA/2007/00/IRequestFlightService/RequestFlightData")
     )
 
-    makeRequest(soapEndPoint, headers, postXml)
+    println(s"Making request to $soapEndPoint\nHeaders: $headers\nPost XML: $postXml")
+
+    makeRequest(soapEndPoint, headers , postXml)
       .map(res => {
         log.info(s"Got a response from BHX ${res.status}")
         val bhxResponse = Unmarshal[HttpResponse](res).to[BHXFlightsResponse]
@@ -135,12 +141,12 @@ trait BHXClientLike extends ScalaXmlSupport {
 
   def postXMLTemplate(fullRefresh: String)(username: String): String = {
     val postXML =
-      s"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.iata.org/IATA/2007/00">
-         |    <soapenv:Header/>
-         |    <soapenv:Body>
-         |        <ns:userID>$username</ns:userID>
-         |        <ns:fullRefresh>$fullRefresh</ns:fullRefresh>
-         |    </soapenv:Body>
+      s"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:req="http://www.airport2020.com/RequestAIDX/">
+         |   <soapenv:Header/>
+         |   <soapenv:Body>
+         |      <req:userID>$username</req:userID>
+         |      <req:fullRefresh>$fullRefresh</req:fullRefresh>
+         |   </soapenv:Body>
          |</soapenv:Envelope>""".stripMargin
     postXML
   }
@@ -153,8 +159,24 @@ trait BHXClientLike extends ScalaXmlSupport {
 case class BHXClient(bhxLiveFeedUser: String, soapEndPoint: String) extends BHXClientLike {
 
   def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
-                 (implicit system: ActorSystem): Future[HttpResponse] =
-    Http().singleRequest(HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)))
+                 (implicit system: ActorSystem): Future[HttpResponse] = {
+    println(s"sending that request")
+    val request = HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(postXML))
+    println(s"request: ${request.getHeaders()}")
+    Http().singleRequest(request)
+      .recoverWith {
+        case f =>
+          f.printStackTrace()
+          println(s"Failed to get BHX Live Feed")
+          Future.failed(f)
+      }
+      .map { r =>
+        val value: Source[String, AnyRef] = r.entity.getDataBytes().map(_.utf8String).asScala
+        val string = Await.result(value.runWith(Sink.fold("")(_ + _)), 1.second)
+        println(s"Hello: $string")
+        r
+      }
+  }
 
 }
 
