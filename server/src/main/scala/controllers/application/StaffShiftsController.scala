@@ -1,18 +1,16 @@
 package controllers.application
 
-import actors.persistent.staffing.StaffingUtil.generateDailyAssignments
-import drt.shared.StaffShift
-
-import javax.inject._
+import actors.persistent.staffing.StaffingUtil
+import drt.shared.{ShiftAssignments, StaffShift}
 import play.api.mvc._
-import spray.json.{DeserializationException, RootJsonFormat}
 import spray.json._
-import uk.gov.homeoffice.drt.auth.Roles.FixedPointsView
+import uk.gov.homeoffice.drt.auth.Roles.{FixedPointsView, StaffEdit}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.service.staffing.StaffShiftsPlanService
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
-import upickle.default.write
+import upickle.default.{read, write}
 
+import javax.inject._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 
@@ -103,6 +101,29 @@ class StaffShiftsController @Inject()(cc: ControllerComponents,
     }
   }
 
+  def saveDefaultShift: Action[AnyContent] = Action.async { request =>
+    request.body.asText.map { text =>
+      try {
+        val shifts = convertTo(text)
+        ctrl.staffShiftsService.saveShift(shifts).flatMap { result =>
+          staffShiftsPlanService.allShifts.flatMap { allShifts =>
+            val startTime = System.currentTimeMillis()
+            val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
+            println(s"Updated assignments in ${System.currentTimeMillis() - startTime} ms")
+            staffShiftsPlanService.updateShifts(updatedAssignments).map { _ =>
+              Ok(s"Inserted $result shift(s)")
+            }
+          }.recoverWith {
+            case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
+          }
+        }
+      } catch {
+        case _: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
+      }
+    }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
+  }
+
+
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
       val date = SDate(localDateStr).toLocalDate
@@ -116,26 +137,18 @@ class StaffShiftsController @Inject()(cc: ControllerComponents,
     staffShiftsPlanService.allShifts.map(s => Ok(write(s)))
   }
 
-  def saveShift: Action[AnyContent] = Action.async { request =>
-    request.body.asText.map { text =>
-      try {
-        val shifts = convertTo(text)
-        ctrl.staffShiftsService.saveShift(shifts).map { result =>
-          Future.sequence(
-            shifts.map { shift =>
-              val staffAssignments = generateDailyAssignments(shift)
-              staffShiftsPlanService.updateShifts(staffAssignments)
-            }).recoverWith(
-            {
-              case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))
-            }
-          )
-          Ok(s"Inserted $result shift(s)")
-        }
-      } catch {
-        case e: DeserializationException => Future.successful(BadRequest("Invalid shift format"))
+  def saveShifts: Action[AnyContent] = authByRole(StaffEdit) {
+    Action.async { request =>
+      request.body.asText match {
+        case Some(text) =>
+          val shifts = read[ShiftAssignments](text)
+          staffShiftsPlanService
+            .updateShifts(shifts.assignments)
+            .map(allShifts => Accepted(write(allShifts)))
+        case None =>
+          Future.successful(BadRequest)
       }
-    }.getOrElse(Future.successful(BadRequest("Expecting JSON data")))
+    }
   }
 
   def removeShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {

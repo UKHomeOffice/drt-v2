@@ -1,11 +1,9 @@
 package actors.persistent.staffing
 
-import drt.shared.{StaffAssignment, StaffShift}
+import drt.shared.{ShiftAssignments, StaffAssignment, StaffShift}
 import org.specs2.mutable.Specification
-import uk.gov.homeoffice.drt.time.LocalDate
-
-import java.time.{LocalTime, ZoneId, LocalDate => JavaLocalDate}
-
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 class StaffingUtilSpec extends Specification {
 
@@ -31,25 +29,69 @@ class StaffingUtilSpec extends Specification {
 
       assignments.foreach { assignment =>
         assignment.name must beEqualTo("Morning Shift")
-        assignment.terminal must beEqualTo("T1")
+        assignment.terminal.toString must beEqualTo("T1")
         assignment.numberOfStaff must beEqualTo(5)
-        assignment.createdBy must beEqualTo(Some("test"))
+        assignment.createdBy must beSome("test")
       }
 
-      val expectedStartMillis = JavaLocalDate.of(2023, 10, 1)
-        .atTime(LocalTime.of(8, 0))
-        .atZone(ZoneId.systemDefault())
-        .toInstant
-        .toEpochMilli
+      val expectedStartMillis = SDate(2023, 10, 1, 8, 0).millisSinceEpoch
 
-      val expectedEndMillis = JavaLocalDate.of(shift.endDate.get.year, shift.endDate.get.month, shift.endDate.get.day)
-        .atTime(LocalTime.of(16, 0))
-        .atZone(ZoneId.systemDefault())
-        .toInstant
-        .toEpochMilli
+      val expectedEndMillis = SDate(2023, 10, 1, 16, 0).millisSinceEpoch
 
       assignments.head.start must beEqualTo(expectedStartMillis)
       assignments.last.end must beEqualTo(expectedEndMillis)
     }
   }
+
+  "updateWithDefaultShift" should {
+    "update assignments with zero staff" in {
+      val shifts = Seq(
+        StaffShift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
+      )
+
+      val allShifts = ShiftAssignments(Seq(
+        StaffAssignment("afternoon", Terminal("terminal"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 0, None).splitIntoSlots(15).head,
+      ))
+
+      val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
+
+      updatedAssignments should have size 8
+      updatedAssignments === List(
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 14, 14).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 15).millisSinceEpoch, SDate(2023, 10, 1, 14, 29).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 30).millisSinceEpoch, SDate(2023, 10, 1, 14, 44).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 45).millisSinceEpoch, SDate(2023, 10, 1, 14, 59).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 14).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 15).millisSinceEpoch, SDate(2023, 10, 1, 15, 29).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 30).millisSinceEpoch, SDate(2023, 10, 1, 15, 44).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 45).millisSinceEpoch, SDate(2023, 10, 1, 15, 59).millisSinceEpoch, 5, None))
+
+    }
+
+    "not update assignments with non-zero staff" in {
+      val shifts = Seq(
+        StaffShift("LHR", "T1", "afternoon", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
+      )
+
+      val allShifts = ShiftAssignments(
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 3, None).splitIntoSlots(15),
+      )
+
+      val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
+
+      updatedAssignments should have size 8
+
+      updatedAssignments.toSet === Set(
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 14, 14).millisSinceEpoch, 3, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 15).millisSinceEpoch, SDate(2023, 10, 1, 14, 29).millisSinceEpoch, 3, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 30).millisSinceEpoch, SDate(2023, 10, 1, 14, 44).millisSinceEpoch, 3, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 45).millisSinceEpoch, SDate(2023, 10, 1, 14, 59).millisSinceEpoch, 3, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 14).millisSinceEpoch, 5, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 15).millisSinceEpoch, SDate(2023, 10, 1, 15, 29).millisSinceEpoch, 5, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 30).millisSinceEpoch, SDate(2023, 10, 1, 15, 44).millisSinceEpoch, 5, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 45).millisSinceEpoch, SDate(2023, 10, 1, 15, 59).millisSinceEpoch, 5, None))
+
+    }
+  }
+
 }
