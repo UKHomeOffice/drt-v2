@@ -24,6 +24,7 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.ChromaLiveFeed
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.common.{ManualUploadArrivalFeed, ProdHttpClient}
+import drt.server.feeds.cwl.{CWLClient, CWLFeed}
 import drt.server.feeds.edi.EdiFeed
 import drt.server.feeds.gla.GlaFeed
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
@@ -429,6 +430,8 @@ case class ProdFeedService(journalType: StreamingJournalLike,
         Feed(LGWFeed(azureClient)(system).source(Feed.actorRefSource), 5.seconds, 100.milliseconds)
       case "BHX" if params.bhxIataEndPointUrl.nonEmpty =>
         Feed(BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), Feed.actorRefSource), 5.seconds, 80.seconds)
+      case "CWL" if params.cwlIataEndPointUrl.nonEmpty =>
+        Feed(CWLFeed(CWLClient(params.cwlIataUsername, params.cwlIataEndPointUrl), Feed.actorRefSource), 5.seconds, 80.seconds)
       case "LCY" if params.lcyLiveEndPointUrl.nonEmpty =>
         Feed(LCYFeed(LCYClient(ProdHttpClient(), params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), Feed.actorRefSource), 5.seconds, 80.seconds)
       case "LTN" =>

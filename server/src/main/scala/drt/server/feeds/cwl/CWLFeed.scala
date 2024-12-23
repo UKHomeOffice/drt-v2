@@ -1,13 +1,13 @@
 package drt.server.feeds.cwl
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
+import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
@@ -22,8 +22,7 @@ import java.security.SecureRandom
 import javax.net.ssl.SSLContext
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.Future
 import scala.util.Try
 import scala.xml.{Node, NodeSeq}
 
@@ -115,8 +114,6 @@ trait CWLClientLike extends ScalaXmlSupport {
       RawHeader("Accept-Encoding", "gzip,deflate"),
     )
 
-    println(s"Making request to $soapEndPoint\nHeaders: $headers\nPost XML: $postXml")
-
     makeRequest(soapEndPoint, headers, postXml)
       .map { res =>
         log.info(s"Got a response from CWL ${res.status}")
@@ -124,7 +121,8 @@ trait CWLClientLike extends ScalaXmlSupport {
 
         response.map {
           case s: CWLFlightsResponseSuccess =>
-            ArrivalsFeedSuccess(s.flights.map(fs => CWLFlight.portFlightToArrival(fs)))
+            val arrivals = s.flights.map(fs => CWLFlight.portFlightToArrival(fs))
+            ArrivalsFeedSuccess(arrivals)
 
           case f: CWLFlightsResponseFailure =>
             ArrivalsFeedFailure(f.message)
@@ -167,14 +165,8 @@ case class CWLClient(cwlLiveFeedUser: String, soapEndPoint: String) extends CWLC
     val tls12Context = SSLContext.getInstance("TLSv1.2")
     tls12Context.init(null, null, new SecureRandom())
 
-    Http().singleRequest(request, connectionContext = ConnectionContext.httpsClient(tls12Context))
-      //      .map { r =>
-      //        val x = r.entity.getDataBytes().map(_.utf8String).asScala.runWith(Sink.fold("")(_ + _)).map { body =>
-      //          println(s"Got response from CWL: ${r.status} $body")
-      //        }
-      //        Await.result(x, 30.seconds)
-      //        r
-      //      }
+    Http()
+      .singleRequest(request, connectionContext = ConnectionContext.httpsClient(tls12Context))
       .recoverWith {
         case f =>
           log.error(s"Failed to get CWL Live Feed: ${f.getMessage}")
@@ -220,8 +212,6 @@ object CWLFlight extends NodeSeqUnmarshaller {
 
 
     val flightNodeSeq = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "FlightLeg"
-
-    println(s"Got ${flightNodeSeq.length} flights in CWL XML")
 
     val flights = flightNodeSeq
       .filter { n =>
@@ -322,7 +312,7 @@ object CWLFlight extends NodeSeqUnmarshaller {
       maxPax = f.seatCapacity,
       totalPax = f.paxCount,
       transPax = None,
-      terminal = Terminal(s"T${f.aircraftTerminal}"),
+      terminal = Terminal(f.aircraftTerminal),
       voyageNumber = voyageNumber.numeric,
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
