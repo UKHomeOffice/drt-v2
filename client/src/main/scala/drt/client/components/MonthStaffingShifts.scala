@@ -8,6 +8,7 @@ import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDay
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.handlers.GetShifts
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.client.util.DateRange
 import drt.shared.{StaffShift, _}
@@ -35,7 +36,7 @@ import scala.scalajs.js
 import scala.util.{Random, Try}
 
 
-object MonthlyShifts {
+object MonthlyStaffingShifts {
 
   case class TimeSlotDay(timeSlot: Int, day: Int) {
     def key: (Int, Int) = (timeSlot, day)
@@ -201,20 +202,61 @@ object MonthlyShifts {
       shiftsData
     }
 
-//    def componentDidUpdate(prevProps: Props, prevState: State): Callback = {
-//      scope.props.flatMap { props =>
-//        scope.state.flatMap { state =>
-//          if (prevState.shifts != state.shifts) {
-//            val newInitialShifts: Seq[ShiftData] = generateShiftData(props.terminalPageTab.terminal, props.staffShifts, state.shifts, 60)
-//            scope.modState(_.copy(initialShifts = newInitialShifts))
-//          } else {
-//            Callback.empty
-//          }
-//        }
-//      }
-//    }
+    //    def componentDidUpdate(prevProps: Props, prevState: State): Callback = {
+    //      scope.props.flatMap { props =>
+    //        scope.state.flatMap { state =>
+    //          if (prevState.shifts != state.shifts) {
+    //            val newInitialShifts: Seq[ShiftData] = generateShiftData(props.terminalPageTab.terminal, props.staffShifts, state.shifts, 60)
+    //            scope.modState(_.copy(initialShifts = newInitialShifts))
+    //          } else {
+    //            Callback.empty
+    //          }
+    //        }
+    //      }
+    //    }
 
     def render(props: Props, state: State): VdomTagOf[Div] = {
+
+      //      def generateTempData = {
+      //        val staffShifts = List(
+      //          StaffShift("BHX", "T2", "Morning shift", LocalDate(2025, 1, 1), "06:00", "12:00", Some(LocalDate(2025, 4, 1)), 2, Some("daily"), Some("Someone"), 1734945011541L),
+      //          StaffShift("BHX", "T2", "Afternoon shift", LocalDate(2025, 12, 1), "13:00", "18:00", None, 3, None, None, 1734945011541L),
+      //          StaffShift("BHX", "T2", "Evening shift", LocalDate(2025, 12, 1), "19:00", "23:00", None, 4, None, None, 1734945011541L),
+      //        )
+      //
+      //        val assignments = scala.collection.mutable.Seq[ShiftAssignment]()
+      //        val daysInMonth = 31 // Assuming 31 days in the month
+      //        val month = 1 // Assuming January (month is 1-indexed in LocalDate)
+      //
+      //        def randomInt: Int = Random.between(1, 21).intValue
+      //
+      //        val shiftsData: Seq[ShiftData] = staffShifts.zipWithIndex.map { case (s, index) => ShiftData(index = index,
+      //          defaultShift = DefaultShift(s.shiftName, s.staffNumber, s.startTime, s.endTime),
+      //          assignments = (1 to daysInMonth).flatMap { day =>
+      //            val Array(startHour, startMinute) = s.startTime.split(":").map(_.toInt)
+      //            val Array(endHour, endMinute) = s.endTime.split(":").map(_.toInt)
+      //            val current = SDate(2025, month, day, startHour, startMinute).millisSinceEpoch
+      //            val end = SDate(2025, month, day, endHour, endMinute).millisSinceEpoch
+      //            var rowId = 0
+      //            (1 to 5).map { a =>
+      //              rowId += 1
+      //              val starTime = SDate(current)
+      //              val endTime = SDate(current).addMinutes(60)
+      //              ShiftAssignment(
+      //                column = day,
+      //                row = rowId,
+      //                name = s.shiftName,
+      //                staffNumber = randomInt,
+      //                startTime = ShiftDate(starTime.getFullYear, starTime.getMonth, starTime.getDate, starTime.getHours, starTime.getMinutes),
+      //                endTime = ShiftDate(endTime.getFullYear, endTime.getMonth, endTime.getDate, endTime.getHours, endTime.getMinutes)
+      //              )
+      //            }
+      //          })
+      //        }
+      //        shiftsData.map(sd => println(sd.index, sd.defaultShift.startTime, sd.defaultShift.name, sd.assignments.length.toString))
+      //        shiftsData
+      //      }
+
 
       val handleShiftEditForm = (e: Event) => Callback {
         e.preventDefault()
@@ -261,6 +303,13 @@ object MonthlyShifts {
       case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments])
       val staffRCP = SPACircuit.connect(m => Model(m.allStaffShifts))
 
+      //      val staffShiftsTemp = List(
+      //        StaffShift("BHX", "T2", "Morning Shift", LocalDate(2025, 12, 1), "00:00", "23:00", None, 10, None, None, 1734945011541L),
+      //        StaffShift("BHX", "T2", "Afternoon Shift", LocalDate(2025, 12, 1), "01:00", "18:00", None, 10, None, None, 1734945011541L),
+      //        StaffShift("BHX", "T2", "Evening Shift", LocalDate(2025, 12, 1), "07:00", "23:00", None, 10, None, None, 1734945011541L)
+      //      )
+      //      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], airportConfigPot: Pot[AirportConfig])
+      //      val staffRCP = SPACircuit.connect(m => Model(m.allStaffShifts, m.airportConfig))
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
@@ -469,6 +518,7 @@ object MonthlyShifts {
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
+    //    .componentDidUpdate(_.backend.componentDidUpdate(_,_))
     .build
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int],

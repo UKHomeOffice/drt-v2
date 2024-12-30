@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.AnyAction.aType
 import diode.data.Pot
 import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
@@ -10,7 +11,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.GetUserPreferenceIntervalMinutes
+import drt.client.services.handlers.{GetShifts, GetUserPreferenceIntervalMinutes}
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -56,6 +57,7 @@ object TerminalComponent {
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
+                                   staffShiftsPot: Pot[Seq[StaffShift]]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -95,6 +97,7 @@ object TerminalComponent {
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
+        staffShiftsPot = model.staffShifts
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -108,6 +111,7 @@ object TerminalComponent {
             airportConfig <- model.airportConfig
             loggedInUser <- model.loggedInUserPot
             redListUpdates <- model.redListUpdates
+            staffShifts <- model.staffShiftsPot
           } yield {
             val timeRangeHours: TimeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
@@ -232,7 +236,11 @@ object TerminalComponent {
                       <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
+//                      <.div(MonthlyStaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, staffShifts))
+                      <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, staffShifts))
+
+                    case StaffingShifts if loggedInUser.roles.contains(StaffEdit) =>
+                      <.div(MonthlyStaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, staffShifts))
                   }
                 }
               }
@@ -246,7 +254,10 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())))
+    .componentDidMount(p => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
+      Callback(SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString)))
+    )
+
     .build
 
   private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean, enableStaffPlanningChange: Boolean): VdomTagOf[UList] = {
@@ -295,7 +306,15 @@ object TerminalComponent {
             mode = Shifts,
             subMode = if (enableStaffPlanningChange) "60" else "15",
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))(^.id := "StaffingShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Shifts", " ", monthlyStaffingTooltip)
+          ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Shifts", " ", monthlyStaffingTooltip)
+        ) else "",
+      if (loggedInUser.roles.contains(StaffEdit))
+        <.li(^.className := tabClass(StaffingShifts),
+          props.router.link(props.terminalPageTab.update(
+            mode = StaffingShifts,
+            subMode = if (enableStaffPlanningChange) "60" else "15",
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
+          ))(^.id := "StaffingShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing-Shifts", " ", monthlyStaffingTooltip)
         ) else "",
       <.li(^.className := tabClass(Dashboard),
         props.router.link(props.terminalPageTab.update(

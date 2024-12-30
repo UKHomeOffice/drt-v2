@@ -168,6 +168,7 @@ object SPAMain {
       case ("planning", _) => "Staff planning"
       case ("staffing", _) => "Monthly staffing"
       case ("shifts", _) => "Shifts"
+      case ("staffing-shifts", _) => "Staffing shifts"
       case _ => ""
     }
 
@@ -228,6 +229,8 @@ object SPAMain {
       case Staffing =>
         GetAllShifts
       case Shifts =>
+        GetAllStaffShifts
+      case drt.client.spa.TerminalPageModes.StaffingShifts =>
         GetAllStaffShifts
       case _ =>
         SetViewMode(viewMode)

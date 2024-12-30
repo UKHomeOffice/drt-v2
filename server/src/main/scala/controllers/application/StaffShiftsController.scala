@@ -97,7 +97,7 @@ class StaffShiftsController @Inject()(cc: ControllerComponents,
 
   def getDefaultShifts(port: String, terminal: String): Action[AnyContent] = Action.async {
     ctrl.staffShiftsService.getShifts(port, terminal).map { shifts =>
-      Ok(shifts.toString)
+      Ok(shifts.toJson.compactPrint)
     }
   }
 
