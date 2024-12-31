@@ -26,7 +26,7 @@ sealed trait StaffAssignmentLike extends Expireable {
 }
 
 object StaffAssignmentLike {
-  implicit val rw: RW[StaffAssignmentLike] = RW.merge(/*CompleteStaffMovement.rw, */StaffAssignment.rw)
+  implicit val rw: RW[StaffAssignmentLike] = RW.merge(/*CompleteStaffMovement.rw, */ StaffAssignment.rw)
 }
 
 case class StaffAssignment(name: String,
@@ -82,6 +82,7 @@ object ShiftAssignments {
 
 case class ShiftAssignments(indexedAssignments: Map[TM, StaffAssignmentLike]) extends StaffAssignmentsLike with HasExpireables[ShiftAssignments] {
   lazy val assignments: Seq[StaffAssignmentLike] = indexedAssignments.values.toSeq
+
   def terminalStaffAt(terminalName: Terminal, date: SDateLike, msToSd: MillisSinceEpoch => SDateLike): Int = {
     val dateMinutesSinceEpoch = date.millisSinceEpoch / 60000
 

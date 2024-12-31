@@ -314,7 +314,7 @@ object TerminalComponent {
             mode = StaffingShifts,
             subMode = if (enableStaffPlanningChange) "60" else "15",
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))(^.id := "StaffingShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing-Shifts", " ", monthlyStaffingTooltip)
+          ))(^.id := "StaffingShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing Shifts", " ", monthlyStaffingTooltip)
         ) else "",
       <.li(^.className := tabClass(Dashboard),
         props.router.link(props.terminalPageTab.update(

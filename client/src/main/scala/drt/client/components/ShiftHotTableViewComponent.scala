@@ -95,15 +95,17 @@ object ShiftData {
 @js.native
 trait ShiftHotTableViewProps extends js.Object {
   var month: Int = js.native
+  var year: Int = js.native
   var interval: Int = js.native
   var initialShifts: js.Array[ShiftData] = js.native
   var handleSaveChanges: js.Function1[js.Array[ShiftData], Unit] = js.native
 }
 
 object ShiftHotTableViewProps {
-  def apply(month: Int, interval: Int, initialShifts: Seq[ShiftData], handleSaveChanges: Seq[ShiftData] => Unit): ShiftHotTableViewProps = {
+  def apply(month: Int, year :Int, interval: Int, initialShifts: Seq[ShiftData], handleSaveChanges: Seq[ShiftData] => Unit): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
     p.month = month
+    p.year = year
     p.interval = interval
     p.initialShifts = initialShifts.toJSArray
     p.handleSaveChanges = (shifts: js.Array[ShiftData]) => handleSaveChanges(shifts.toSeq)
