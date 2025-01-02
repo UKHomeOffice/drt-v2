@@ -6,6 +6,7 @@ import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRang
 import drt.client.actions.Actions.UpdateStaffShifts
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.client.util.DateRange
@@ -24,6 +25,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
 import moment.Moment
 import org.scalajs.dom.html.{Div, Select}
+import org.scalajs.dom.window.confirm
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
@@ -36,9 +38,9 @@ import scala.util.Try
 
 object MonthlyShifts {
 
-  case class TimeSlotDay(timeSlot: Int, day: Int) {
-    def key: (Int, Int) = (timeSlot, day)
-  }
+//  case class TimeSlotDay(timeSlot: Int, day: Int) {
+//    def key: (Int, Int) = (timeSlot, day)
+//  }
 
   case class ColumnHeader(day: String, dayOfWeek: String)
 
@@ -52,7 +54,8 @@ object MonthlyShifts {
                     addShiftForm: Boolean,
                     shifts: ShiftAssignments,
                     shiftsLastLoaded: Option[Long] = None,
-                    shiftsData: Seq[ShiftData] = Seq.empty
+                    shiftsData: Seq[ShiftData] = Seq.empty,
+                    changedAssignments: Seq[ShiftAssignment] = Seq.empty
                   )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -171,6 +174,7 @@ object MonthlyShifts {
 
     def generateShiftData(viewingDate: SDateLike, terminal: Terminal, staffShifts: Seq[StaffShift], shifts: ShiftAssignments, interval: Int): Seq[ShiftData] = {
       println("generateShiftData ...")
+
       def daysInMonth(year: Int, month: Int): Int = {
         val date = new Date(year, month, 0)
         date.getDate().toInt
@@ -220,12 +224,12 @@ object MonthlyShifts {
         )
       }
 
-      shiftsData.foreach(sd =>
-        println(sd.index,
-          sd.defaultShift.startTime,
-          sd.defaultShift.name,
-          sd.assignments.length.toString)
-      )
+//      shiftsData.foreach(sd =>
+//        println(sd.index,
+//          sd.defaultShift.startTime,
+//          sd.defaultShift.name,
+//          sd.assignments.length.toString)
+//      )
       shiftsData
     }
 
@@ -241,7 +245,11 @@ object MonthlyShifts {
         navigationArrows(props, previousDate, nextDate)
       }
 
-      def confirmAndSave(viewingDate: SDateLike, shiftsData: Seq[ShiftData]): ReactEventFromInput => Callback = (_: ReactEventFromInput) => Callback {
+      def whatDayChanged(changedAssignments: Seq[ShiftAssignment]) = {
+        changedAssignments.map(_.startTime.day).distinct.mkString(", ")
+      }
+
+      def confirmAndSave(viewingDate: SDateLike, shiftsData: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): ReactEventFromInput => Callback = (_: ReactEventFromInput) => Callback {
         println("confirmAndSave ...", shiftsData)
         val changedShifts: Seq[StaffAssignment] = shiftsData.flatMap(_.assignments.toSeq.map(ShiftAssignmentConverter.toStaffAssignment(_, props.terminalPageTab.terminal)))
 
@@ -251,8 +259,15 @@ object MonthlyShifts {
           props.terminalPageTab.terminal,
           props.timeSlotMinutes,
           props.terminalPageTab.dayRangeType.getOrElse("monthly"))
-        changedShiftSlots.foreach(s => println(SDate(s.start).toISOString, SDate(s.end).toISOString, s.numberOfStaff))
-        SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
+        val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
+
+        if (confirm(s"You have updated staff for ${whatDayChanged(changedAssignments)} $updatedMonth - do you want to save these changes?")) {
+          GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}",
+            "Save Monthly Staffing",
+            s"updated staff for ${whatDayChanged(changedAssignments)} $updatedMonth")
+          SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
+          scope.modState(state => state.copy(changedAssignments = Seq.empty[ShiftAssignment])).runNow()
+        }
       }
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
@@ -364,7 +379,7 @@ object MonthlyShifts {
                   else EmptyVdom,
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                    ^.onClick ==> confirmAndSave(viewingDate, state.shiftsData))
+                    ^.onClick ==> confirmAndSave(viewingDate, state.shiftsData ,state.changedAssignments))
                 ))
             ),
             MuiSwipeableDrawer(open = state.showEditStaffForm,
@@ -400,17 +415,17 @@ object MonthlyShifts {
                     year = viewingDate.getFullYear,
                     interval = props.timeSlotMinutes,
                     initialShifts = state.shiftsData,
-                    handleSaveChanges = (shifts: Seq[ShiftData]) => {
-                      println("handleSaveChanges ...")
-                      println(shifts)
-                      scope.modState(state => state.copy(shiftsData = shifts)).runNow()
+                    handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments:Seq[ShiftAssignment]) => {
+                      println("handleSaveChanges shifts...", shifts)
+                      println("handleSaveChanges changedAssignments...", state.changedAssignments ++ changedAssignments)
+                      scope.modState(state => state.copy(shiftsData = shifts, changedAssignments = state.changedAssignments ++ changedAssignments)).runNow()
                     }))
                 )
               ),
               <.div(^.className := "terminal-staffing-content-header",
                 MuiButton(color = Color.primary, variant = "contained")
                 (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                  ^.onClick ==> confirmAndSave(viewingDate, state.shiftsData))
+                  ^.onClick ==> confirmAndSave(viewingDate, state.shiftsData, state.changedAssignments))
               )
             )
           )

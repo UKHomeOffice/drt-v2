@@ -25,7 +25,7 @@ object ShiftDate {
     p.day = day
     p.hour = hour
     p.minute = minute
-//    println(s"ShiftDate.apply: $p")
+    //    println(s"ShiftDate.apply: $p")
     p
   }
 }
@@ -45,7 +45,7 @@ object DefaultShift {
     p.defaultStaffNumber = defaultStaffNumber
     p.startTime = startTime
     p.endTime = endTime
-//    println(s"DefaultShift.apply: $p")
+    //    println(s"DefaultShift.apply: $p")
     p
   }
 }
@@ -69,7 +69,7 @@ object ShiftAssignment {
     p.staffNumber = staffNumber
     p.startTime = startTime
     p.endTime = endTime
-//    println(s"ShiftAssignment.apply: $p")
+    //    println(s"ShiftAssignment.apply: $p")
     p
   }
 }
@@ -87,7 +87,7 @@ object ShiftData {
     p.index = index
     p.defaultShift = defaultShift
     p.assignments = assignments.toJSArray
-//    println(s"ShiftData.apply: $p")
+    //    println(s"ShiftData.apply: $p")
     p
   }
 }
@@ -98,17 +98,17 @@ trait ShiftHotTableViewProps extends js.Object {
   var year: Int = js.native
   var interval: Int = js.native
   var initialShifts: js.Array[ShiftData] = js.native
-  var handleSaveChanges: js.Function1[js.Array[ShiftData], Unit] = js.native
+  var handleSaveChanges: js.Function2[js.Array[ShiftData], js.Array[ShiftAssignment], Unit] = js.native
 }
 
 object ShiftHotTableViewProps {
-  def apply(month: Int, year :Int, interval: Int, initialShifts: Seq[ShiftData], handleSaveChanges: Seq[ShiftData] => Unit): ShiftHotTableViewProps = {
+  def apply(month: Int, year: Int, interval: Int, initialShifts: Seq[ShiftData], handleSaveChanges: (Seq[ShiftData], Seq[ShiftAssignment]) => Unit): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
     p.month = month
     p.year = year
     p.interval = interval
     p.initialShifts = initialShifts.toJSArray
-    p.handleSaveChanges = (shifts: js.Array[ShiftData]) => handleSaveChanges(shifts.toSeq)
+    p.handleSaveChanges = (shifts: js.Array[ShiftData], changedAssignments: js.Array[ShiftAssignment]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
     p
   }
 }

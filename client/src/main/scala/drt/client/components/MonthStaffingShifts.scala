@@ -400,15 +400,15 @@ object MonthlyStaffingShifts {
                       },
                       lastDataRefresh = lastLoaded
                     )),
-                    ShiftHotTableViewComponent(ShiftHotTableViewProps(
-                      month = viewingDate.getMonth,
-                      year = viewingDate.getFullYear,
-                      interval = props.timeSlotMinutes,
-                      initialShifts = state.shiftsData,
-                      handleSaveChanges = (shifts: Seq[ShiftData]) => {
-                        println("handleSaveChanges ...")
-                        println(shifts)
-                      }))
+//                    ShiftHotTableViewComponent(ShiftHotTableViewProps(
+//                      month = viewingDate.getMonth,
+//                      year = viewingDate.getFullYear,
+//                      interval = props.timeSlotMinutes,
+//                      initialShifts = state.shiftsData,
+//                      handleSaveChanges = (shifts: Seq[ShiftData]) => {
+//                        println("handleSaveChanges ...")
+//                        println(shifts)
+//                      }))
                   )
                 ),
                 <.div(^.className := "terminal-staffing-content-header",
