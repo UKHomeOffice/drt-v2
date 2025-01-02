@@ -88,19 +88,16 @@ trait BHXClientLike extends ScalaXmlSupport {
   val soapEndPoint: String
 
   def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
-
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(bhxLiveFeedUser))
   }
 
   def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
-
     log.info(s"Making update Feed Request")
     sendXMLRequest(updateXml()(bhxLiveFeedUser))
   }
 
   def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
-
     implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
     implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
 
@@ -151,11 +148,9 @@ trait BHXClientLike extends ScalaXmlSupport {
 }
 
 case class BHXClient(bhxLiveFeedUser: String, soapEndPoint: String) extends BHXClientLike {
-
   def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
                  (implicit system: ActorSystem): Future[HttpResponse] =
     Http().singleRequest(HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)))
-
 }
 
 trait NodeSeqUnmarshaller {
@@ -192,7 +187,6 @@ object BHXFlight extends NodeSeqUnmarshaller {
   def scheduledTime: NodeSeq => Option[String] = operationTimeFromNodeSeq("SCT", "ONB")
 
   implicit val unmarshaller: Unmarshaller[NodeSeq, BHXFlightsResponse] = Unmarshaller.strict[NodeSeq, BHXFlightsResponse] { xml =>
-
 
     val flightNodeSeq = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "FlightLeg"
 

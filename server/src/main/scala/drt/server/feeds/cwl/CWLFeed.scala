@@ -92,19 +92,16 @@ trait CWLClientLike extends ScalaXmlSupport {
   val soapEndPoint: String
 
   def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
-
     log.info(s"Making initial Live Feed Request")
     sendXMLRequest(fullRefreshXml(cwlLiveFeedUser))
   }
 
   def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
-
     log.info(s"Making update Feed Request")
     sendXMLRequest(updateXml()(cwlLiveFeedUser))
   }
 
   def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
-
     implicit val xmlToResUM: Unmarshaller[NodeSeq, CWLFlightsResponse] = CWLFlight.unmarshaller
     implicit val resToCWLResUM: Unmarshaller[HttpResponse, CWLFlightsResponse] = CWLFlight.responseToAUnmarshaller
 
@@ -155,7 +152,6 @@ trait CWLClientLike extends ScalaXmlSupport {
 }
 
 case class CWLClient(cwlLiveFeedUser: String, soapEndPoint: String) extends CWLClientLike {
-
   def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
                  (implicit system: ActorSystem): Future[HttpResponse] = {
     val byteString: ByteString = ByteString.fromString(postXML, UTF_8.INSTANCE)
@@ -209,8 +205,6 @@ object CWLFlight extends NodeSeqUnmarshaller {
   def scheduledTime: NodeSeq => Option[String] = operationTimeFromNodeSeq("SCT", "ONB")
 
   implicit val unmarshaller: Unmarshaller[NodeSeq, CWLFlightsResponse] = Unmarshaller.strict[NodeSeq, CWLFlightsResponse] { xml =>
-
-
     val flightNodeSeq = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "FlightLeg"
 
     val flights = flightNodeSeq
