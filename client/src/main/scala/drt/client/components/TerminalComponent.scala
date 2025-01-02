@@ -240,7 +240,7 @@ object TerminalComponent {
                       <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, staffShifts))
 
                     case StaffingShifts if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, staffShifts))
+                      <.div(MonthlyStaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
                   }
                 }
               }

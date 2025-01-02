@@ -1,0 +1,94 @@
+package drt.client.components
+
+import drt.client.services.JSDateConversions.SDate
+import drt.shared.{ShiftAssignments, StaffAssignment, StaffShift}
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.SDateLike
+
+import scala.scalajs.js.Date
+
+
+object MonthlyShiftsUtil {
+
+  def generateShiftData(viewingDate: SDateLike, terminal: Terminal, staffShifts: Seq[StaffShift], shifts: ShiftAssignments, interval: Int): Seq[ShiftData] = {
+    println("generateShiftData ...")
+
+    def daysInMonth(year: Int, month: Int): Int = {
+      val date = new Date(year, month, 0)
+      date.getDate().toInt
+    }
+
+    val month = viewingDate.getMonth
+    val year = viewingDate.getFullYear
+    val numberOfDaysInMonth = daysInMonth(year, month)
+    println("month - year", month, year)
+    println("numberOfDaysInMonth", numberOfDaysInMonth)
+    val shiftsData: Seq[ShiftData] = staffShifts.zipWithIndex.map { case (s, index) =>
+      ShiftData(
+        index = index,
+        defaultShift = DefaultShift(s.shiftName, s.staffNumber, s.startTime, s.endTime),
+        assignments = (1 to numberOfDaysInMonth).flatMap { day =>
+          val Array(startHour, startMinute) = s.startTime.split(":").map(_.toInt)
+          val Array(endHour, endMinute) = s.endTime.split(":").map(_.toInt)
+          val start = SDate(year, month, day, startHour, startMinute).millisSinceEpoch
+          val end = SDate(year, month, day, endHour, endMinute).millisSinceEpoch
+          val assignments: Seq[StaffAssignment] = StaffAssignment(s.shiftName, terminal, start, end, s.staffNumber, None).splitIntoSlots(interval).sortBy(_.start)
+          assignments.zipWithIndex.map { case (a, index) =>
+            val startTime = SDate(a.start)
+            val endTime = SDate(a.end)
+            val matchingAssignments = shifts.assignments.filter(sa => sa.start >= a.start && sa.end <= a.end).sortBy(_.start)
+            matchingAssignments.headOption match {
+              case Some(sa) =>
+                ShiftAssignment(
+                  column = day,
+                  row = index + 1, // Start rowId from 1
+                  name = sa.name,
+                  staffNumber = sa.numberOfStaff,
+                  startTime = ShiftDate(startTime.getFullYear, startTime.getMonth, startTime.getDate, startTime.getHours, startTime.getMinutes),
+                  endTime = ShiftDate(endTime.getFullYear, endTime.getMonth, endTime.getDate, endTime.getHours, endTime.getMinutes)
+                )
+              case None =>
+                ShiftAssignment(
+                  column = day,
+                  row = index + 1, // Start rowId from 1
+                  name = s.shiftName,
+                  staffNumber = a.numberOfStaff,
+                  startTime = ShiftDate(startTime.getFullYear, startTime.getMonth, startTime.getDate, startTime.getHours, startTime.getMinutes),
+                  endTime = ShiftDate(endTime.getFullYear, endTime.getMonth, endTime.getDate, endTime.getHours, endTime.getMinutes)
+                )
+            }
+          }
+        }
+      )
+    }
+    shiftsData
+  }
+
+  private def toStringShiftDate(shiftDate: ShiftDate) = {
+    s"${shiftDate.year}-${shiftDate.month}-${shiftDate.day} ${shiftDate.hour}:${shiftDate.minute}"
+  }
+
+  def updateChangeAssignment(previousChange: Seq[ShiftAssignment], newChange: Seq[ShiftAssignment]): Seq[ShiftAssignment] = {
+    val previousChangeMap = previousChange.map(a => (toStringShiftDate(a.startTime)) -> a).toMap
+    val newChangeMap = newChange.map(a => (toStringShiftDate(a.startTime)) -> a).toMap
+    val mergedMap = previousChangeMap ++ newChangeMap
+    mergedMap.values.toSeq
+  }
+
+  def updateAssignments(shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): Seq[ShiftData] = {
+    val changedAssignmentsMap = changedAssignments.map(a => (toStringShiftDate(a.startTime)) -> a).toMap
+    println(s"changedAssignmentsMap: ${changedAssignmentsMap.map { case (k, v) => s"$k -> ${v.staffNumber}" }}")
+    shifts.map { shift =>
+      println(s"shift: ${shift.index} ${shift.defaultShift.name}")
+      val updatedAssignments = shift.assignments.map { assignment =>
+        println(s"startTime: ${toStringShiftDate(assignment.startTime)}, key: ${toStringShiftDate(assignment.startTime)}, value: ${changedAssignmentsMap.get(toStringShiftDate(assignment.startTime)).map(_.staffNumber)}")
+        changedAssignmentsMap.getOrElse(toStringShiftDate(assignment.startTime), assignment)
+      }
+
+      updatedAssignments.foreach { assignment =>
+        println(s"assignment: ${assignment.startTime} ${assignment.staffNumber}")
+      }
+      ShiftData(shift.index, shift.defaultShift, updatedAssignments.toSeq)
+    }
+  }
+}

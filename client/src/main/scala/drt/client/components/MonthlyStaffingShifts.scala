@@ -8,10 +8,9 @@ import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDay
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.GetShifts
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.client.util.DateRange
-import drt.shared.{StaffShift, _}
+import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiSwipeableDrawer}
@@ -33,7 +32,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.mutable
 import scala.scalajs.js
-import scala.util.{Random, Try}
+import scala.util.Try
 
 
 object MonthlyStaffingShifts {
@@ -53,7 +52,6 @@ object MonthlyStaffingShifts {
                    addShiftForm: Boolean,
                    shifts: ShiftAssignments,
                    shiftsLastLoaded: Option[Long] = None,
-                   shiftsData: Seq[ShiftData] = Seq.empty
                   )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -61,8 +59,7 @@ object MonthlyStaffingShifts {
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
                    airportConfig: AirportConfig,
-                   enableStaffPlanningChanges: Boolean,
-                   staffShifts: Seq[StaffShift]
+                   enableStaffPlanningChanges: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
@@ -169,39 +166,6 @@ object MonthlyStaffingShifts {
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
 
   class Backend(scope: BackendScope[Props, State]) {
-
-    def generateShiftData(terminal: Terminal, staffShifts: Seq[StaffShift], shifts: ShiftAssignments, interval: Int): Seq[ShiftData] = {
-      val assignments = scala.collection.mutable.Seq[ShiftAssignment]()
-      val daysInMonth = 31 // Assuming 31 days in the month
-      val month = 1 // Assuming January (month is 1-indexed in LocalDate)
-      val shiftsData: Seq[ShiftData] = staffShifts.zipWithIndex.map { case (s, index) => ShiftData(index = index,
-        defaultShift = DefaultShift(s.shiftName, s.staffNumber, s.startTime, s.endTime),
-        assignments = (1 to daysInMonth).flatMap { day =>
-          val Array(startHour, startMinute) = s.startTime.split(":").map(_.toInt)
-          val Array(endHour, endMinute) = s.endTime.split(":").map(_.toInt)
-          val start = SDate(2025, month, day, startHour, startMinute).millisSinceEpoch
-          val end = SDate(2025, month, day, endHour, endMinute).millisSinceEpoch
-          var rowId = 0
-          shifts.assignments.filter(a => a.terminal == terminal && a.start >= start && a.end <= end).map { a =>
-            val starTime = SDate(a.start)
-            val endTime = SDate(a.end)
-            val assignment = ShiftAssignment(
-              column = day,
-              row = rowId,
-              name = s.shiftName,
-              staffNumber = a.numberOfStaff,
-              startTime = ShiftDate(starTime.getFullYear, starTime.getMonth, starTime.getDate, starTime.getHours, starTime.getMinutes),
-              endTime = ShiftDate(endTime.getFullYear, endTime.getMonth, endTime.getDate, endTime.getHours, endTime.getMinutes)
-            )
-            rowId += 1
-            assignment
-          }
-        })
-      }
-      shiftsData.map(sd => println(sd.index, sd.defaultShift.startTime, sd.defaultShift.name, sd.assignments.length.toString))
-      shiftsData
-    }
-
     def render(props: Props, state: State): VdomTagOf[Div] = {
 
       val handleShiftEditForm = (e: Event) => Callback {
@@ -255,15 +219,13 @@ object MonthlyStaffingShifts {
           monthOfShifts <- model.monthOfStaffShiftsPot
         } yield {
           if (monthOfShifts != state.shifts || state.timeSlots.isEmpty) {
-            val initialShift: Seq[ShiftData] = generateShiftData(props.terminalPageTab.terminal, props.staffShifts, monthOfShifts, 60)
-            println("initialShift", initialShift)
             val slots = slotsFromShifts(monthOfShifts,
               props.terminalPageTab.terminal,
               viewingDate,
               props.timeSlotMinutes,
               props.terminalPageTab.dayRangeType.getOrElse("monthly"))
             scope.modState(state => state.copy(shifts = monthOfShifts, timeSlots = Ready(slots),
-              shiftsLastLoaded = Option(SDate.now().millisSinceEpoch), shiftsData = initialShift)).runNow()
+              shiftsLastLoaded = Option(SDate.now().millisSinceEpoch))).runNow()
           }
           <.div()
         }
@@ -399,16 +361,7 @@ object MonthlyStaffingShifts {
                         }.runNow()
                       },
                       lastDataRefresh = lastLoaded
-                    )),
-//                    ShiftHotTableViewComponent(ShiftHotTableViewProps(
-//                      month = viewingDate.getMonth,
-//                      year = viewingDate.getFullYear,
-//                      interval = props.timeSlotMinutes,
-//                      initialShifts = state.shiftsData,
-//                      handleSaveChanges = (shifts: Seq[ShiftData]) => {
-//                        println("handleSaveChanges ...")
-//                        println(shifts)
-//                      }))
+                    ))
                   )
                 ),
                 <.div(^.className := "terminal-staffing-content-header",
@@ -451,7 +404,6 @@ object MonthlyStaffingShifts {
         ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))))
     )
   }
-
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("MonthShiftStaffing")
     .initialStateFromProps(stateFromProps)
@@ -591,14 +543,13 @@ object MonthlyStaffingShifts {
       showEditStaffForm = false,
       showStaffSuccess = false,
       addShiftForm = false,
-      shifts = ShiftAssignments.empty,
+      ShiftAssignments.empty,
       None)
   }
 
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
-            enableStaffPlanningChange: Boolean,
-            staffShifts: Seq[StaffShift]
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange, staffShifts))
+            enableStaffPlanningChange: Boolean
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange))
 }

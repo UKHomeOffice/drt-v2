@@ -4,6 +4,7 @@ import diode.AnyAction.aType
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.UpdateStaffShifts
+import drt.client.components.MonthlyShiftsUtil.{generateShiftData, updateAssignments, updateChangeAssignment}
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -38,18 +39,7 @@ import scala.util.Try
 
 object MonthlyShifts {
 
-//  case class TimeSlotDay(timeSlot: Int, day: Int) {
-//    def key: (Int, Int) = (timeSlot, day)
-//  }
-
-  case class ColumnHeader(day: String, dayOfWeek: String)
-
-  case class State(
-                    //                    timeSlots: Pot[Seq[Seq[Any]]],
-                    //                   colHeadings: Seq[ColumnHeader],
-                    //                   rowHeadings: Seq[String],
-                    //                   changes: Map[(Int, Int), Int],
-                    showEditStaffForm: Boolean,
+  case class State( showEditStaffForm: Boolean,
                     showStaffSuccess: Boolean,
                     addShiftForm: Boolean,
                     shifts: ShiftAssignments,
@@ -171,67 +161,6 @@ object MonthlyShifts {
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
 
   class Backend(scope: BackendScope[Props, State]) {
-
-    def generateShiftData(viewingDate: SDateLike, terminal: Terminal, staffShifts: Seq[StaffShift], shifts: ShiftAssignments, interval: Int): Seq[ShiftData] = {
-      println("generateShiftData ...")
-
-      def daysInMonth(year: Int, month: Int): Int = {
-        val date = new Date(year, month, 0)
-        date.getDate().toInt
-      }
-
-      val month = viewingDate.getMonth
-      val year = viewingDate.getFullYear
-      val numberOfDaysInMonth = daysInMonth(year, month)
-      println("month - year", month, year)
-      println("numberOfDaysInMonth", numberOfDaysInMonth)
-      val shiftsData: Seq[ShiftData] = staffShifts.zipWithIndex.map { case (s, index) =>
-        ShiftData(
-          index = index,
-          defaultShift = DefaultShift(s.shiftName, s.staffNumber, s.startTime, s.endTime),
-          assignments = (1 to numberOfDaysInMonth).flatMap { day =>
-            val Array(startHour, startMinute) = s.startTime.split(":").map(_.toInt)
-            val Array(endHour, endMinute) = s.endTime.split(":").map(_.toInt)
-            val start = SDate(year, month, day, startHour, startMinute).millisSinceEpoch
-            val end = SDate(year, month, day, endHour, endMinute).millisSinceEpoch
-            val assignments: Seq[StaffAssignment] = StaffAssignment(s.shiftName, terminal, start, end, s.staffNumber, None).splitIntoSlots(interval).sortBy(_.start)
-            assignments.zipWithIndex.map { case (a, index) =>
-              val startTime = SDate(a.start)
-              val endTime = SDate(a.end)
-              val matchingAssignments = shifts.assignments.filter(sa => sa.start >= a.start && sa.end <= a.end).sortBy(_.start)
-              matchingAssignments.headOption match {
-                case Some(sa) =>
-                  ShiftAssignment(
-                    column = day,
-                    row = index + 1, // Start rowId from 1
-                    name = sa.name,
-                    staffNumber = sa.numberOfStaff,
-                    startTime = ShiftDate(startTime.getFullYear, startTime.getMonth, startTime.getDate, startTime.getHours, startTime.getMinutes),
-                    endTime = ShiftDate(endTime.getFullYear, endTime.getMonth, endTime.getDate, endTime.getHours, endTime.getMinutes)
-                  )
-                case None =>
-                  ShiftAssignment(
-                    column = day,
-                    row = index + 1, // Start rowId from 1
-                    name = s.shiftName,
-                    staffNumber = a.numberOfStaff,
-                    startTime = ShiftDate(startTime.getFullYear, startTime.getMonth, startTime.getDate, startTime.getHours, startTime.getMinutes),
-                    endTime = ShiftDate(endTime.getFullYear, endTime.getMonth, endTime.getDate, endTime.getHours, endTime.getMinutes)
-                  )
-              }
-            }
-          }
-        )
-      }
-
-//      shiftsData.foreach(sd =>
-//        println(sd.index,
-//          sd.defaultShift.startTime,
-//          sd.defaultShift.name,
-//          sd.assignments.length.toString)
-//      )
-      shiftsData
-    }
 
     def render(props: Props, state: State): VdomTagOf[Div] = {
 
@@ -415,10 +344,15 @@ object MonthlyShifts {
                     year = viewingDate.getFullYear,
                     interval = props.timeSlotMinutes,
                     initialShifts = state.shiftsData,
-                    handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments:Seq[ShiftAssignment]) => {
+                    handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]) => {
                       println("handleSaveChanges shifts...", shifts)
-                      println("handleSaveChanges changedAssignments...", state.changedAssignments ++ changedAssignments)
-                      scope.modState(state => state.copy(shiftsData = shifts, changedAssignments = state.changedAssignments ++ changedAssignments)).runNow()
+                      val updateChanges = updateChangeAssignment(state.changedAssignments , changedAssignments)
+                      println("handleSaveChanges changedAssignments...", updateChanges)
+                      val updateShifts = updateAssignments(shifts, updateChanges)
+                      scope.modState(state => state.copy(
+                        shiftsData = updateShifts,
+                        changedAssignments = state.changedAssignments ++ changedAssignments
+                      )).runNow()
                     }))
                 )
               ),
