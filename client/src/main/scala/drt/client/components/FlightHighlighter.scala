@@ -37,7 +37,7 @@ object FlightHighlighter {
                                   showHighlightedRows: Boolean,
                                   showRequireAllSelected: Boolean): Int = {
     val flightManifestSummary: Seq[FlightManifestSummary] = sortedFlights.flatMap {
-      case (flightWithSplits, _) => flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight))
+      case (flightWithSplits, _) => flightManifestSummaries.get(ArrivalKey.forManifest(flightWithSplits.apiFlight))
     }
     val flaggedInSummary: Seq[Option[Int]] = flightManifestSummary.map { manifestSummary =>
 

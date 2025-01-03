@@ -13,6 +13,7 @@ import manifests.passengers.ManifestLike
 import org.slf4j.LoggerFactory
 import providers.FlightsProvider
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, UniqueArrival}
+import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.UtcDate
 
@@ -33,9 +34,18 @@ object ManifestPersistence {
             case (_, flights) =>
               manifests
                 .map { manifest =>
-                  val maybeSplits = flights
-                    .find(fws => manifest.maybeKey.contains(ArrivalKey(fws.apiFlight)))
-                    .map(fws => (fws.unique, splitsFromManifest(manifest, fws.apiFlight.Terminal)))
+                  val flightsByFlexibleKey = flights.map { fws =>
+                    val arrivalKey = ArrivalKey(fws.apiFlight).copy(
+                      origin = fws.apiFlight.PreviousPort.getOrElse(fws.apiFlight.Origin)
+                    )
+                    arrivalKey -> fws
+                  }
+
+                  val maybeSplits = flightsByFlexibleKey
+                    .find { case (key, _) => manifest.maybeKey.contains(key) }
+                    .map { case (key, fws) =>
+                      (fws.unique, splitsFromManifest(manifest, fws.apiFlight.Terminal))
+                    }
 
                   if (maybeSplits.isEmpty) log.warn(s"Failed to find flight for manifest: ${manifest.maybeKey}")
 

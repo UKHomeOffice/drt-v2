@@ -105,7 +105,8 @@ object FlightTableContent {
                         props.terminal,
                         flightWithSplits.apiFlight.Terminal,
                         isRedListOrigin)
-                      val manifestSummary: Option[FlightManifestSummary] = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight))
+
+                      val maybeManifestSummary = props.flightManifestSummaries.get(ArrivalKey.forManifest(flightWithSplits.apiFlight))
 
                       val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
 
@@ -128,12 +129,12 @@ object FlightTableContent {
                         showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
                         showHighlightedRows = props.flightHighlight.showNumberOfVisaNationals,
                         showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
-                        manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
+                        maybeManifestSummary = maybeManifestSummary,
                         paxFeedSourceOrder = props.paxFeedSourceOrder,
                         showHighLighted = showHightlighted
                       )
 
-                      FlightHighlighter.highlightedFlight(manifestSummary,
+                      FlightHighlighter.highlightedFlight(maybeManifestSummary,
                           props.flightHighlight.selectedNationalities,
                           ageGroups,
                           props.flightHighlight.showNumberOfVisaNationals,

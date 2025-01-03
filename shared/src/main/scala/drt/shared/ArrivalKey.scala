@@ -35,6 +35,8 @@ object ArrivalKey {
 
   def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)
 
+  def forManifest(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.PreviousPort.getOrElse(arrival.Origin), arrival.VoyageNumber, arrival.Scheduled)
+
   def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
 }
 

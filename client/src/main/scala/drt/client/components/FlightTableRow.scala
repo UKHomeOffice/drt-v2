@@ -50,7 +50,7 @@ object FlightTableRow {
                    showNumberOfVisaNationals: Boolean,
                    showHighlightedRows: Boolean,
                    showRequireAllSelected: Boolean,
-                   manifestSummary: Option[FlightManifestSummary],
+                   maybeManifestSummary: Option[FlightManifestSummary],
                    paxFeedSourceOrder: List[FeedSource],
                    showHighLighted: Boolean,
                   ) extends UseValueEq
@@ -58,7 +58,7 @@ object FlightTableRow {
   implicit val propsReuse: Reusability[Props] = Reusability {
     (a, b) =>
       a.flightWithSplits.lastUpdated == b.flightWithSplits.lastUpdated &&
-        a.manifestSummary == b.manifestSummary &&
+        a.maybeManifestSummary == b.maybeManifestSummary &&
         a.flaggedNationalities == b.flaggedNationalities &&
         a.flaggedAgeGroups == b.flaggedAgeGroups
   }
@@ -77,7 +77,7 @@ object FlightTableRow {
 
       val highlighterIsActive = props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
 
-      val highlightPaxExists: Boolean = FlightHighlighter.highlightedFlight(props.manifestSummary,
+      val highlightPaxExists: Boolean = FlightHighlighter.highlightedFlight(props.maybeManifestSummary,
         props.flaggedNationalities,
         props.flaggedAgeGroups,
         props.showNumberOfVisaNationals,
@@ -90,7 +90,7 @@ object FlightTableRow {
           props.showRequireAllSelected,
           props.flaggedAgeGroups,
           props.flaggedNationalities,
-          props.manifestSummary)
+          props.maybeManifestSummary)
         if (chip != EmptyVdom) Some(chip) else None
       } else None
 
@@ -154,7 +154,7 @@ object FlightTableRow {
 
       val expectedContent = maybeLocalTimeWithPopup(bestExpectedTime, Option(timesPopUp), None)
 
-      val charts = (flightWithSplits.hasApi, props.manifestSummary) match {
+      val charts = (flightWithSplits.hasApi, props.maybeManifestSummary) match {
         case (true, Some(manifestSummary)) =>
           val maybeLivePcpPax = flightWithSplits.apiFlight.bestPcpPaxEstimate(Seq(LiveFeedSource))
           val maybePaxDiffAndPct = maybeLivePcpPax.map { pcpPax =>
