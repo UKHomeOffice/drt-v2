@@ -51,7 +51,6 @@ object MonthlyShifts {
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
                    airportConfig: AirportConfig,
-                   enableStaffPlanningChanges: Boolean,
                    staffShifts: Seq[StaffShift]
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
@@ -207,16 +206,15 @@ object MonthlyShifts {
                     case _ => s"Staff numbers in ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
                   })),
                 <.span(^.className := "staffing-controls-title-options",
-                  if (props.enableStaffPlanningChanges)
-                    <.div(^.className := "staffing-controls-select",
-                      drawSelect(
-                        values = Seq("monthly", "weekly", "daily"),
-                        names = Seq("View: Monthly", "View: Weekly", "View: Daily"),
-                        defaultValue = s"${props.dayRangeType}",
-                        callback = (e: ReactEventFromInput) =>
-                          props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
-                      )
-                    ) else EmptyVdom,
+                  <.div(^.className := "staffing-controls-select",
+                    drawSelect(
+                      values = Seq("monthly", "weekly", "daily"),
+                      names = Seq("View: Monthly", "View: Weekly", "View: Daily"),
+                      defaultValue = s"${props.dayRangeType}",
+                      callback = (e: ReactEventFromInput) =>
+                        props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
+                    )
+                  ),
                   if (props.dayRangeType != "weekly" && props.dayRangeType != "daily") {
                     <.div(^.className := "staffing-controls-select",
                       drawSelect(
@@ -228,9 +226,9 @@ object MonthlyShifts {
                         }
                       ))
                   } else EmptyVdom,
-                  if (props.enableStaffPlanningChanges) <.div(^.className := "staffing-controls-navigation ",
+                  <.div(^.className := "staffing-controls-navigation ",
                     handleNavigation(props, viewingDate)
-                  ) else EmptyVdom,
+                  ),
                   <.div(^.className := "staffing-controls-select",
                     drawSelect(
                       values = Seq("15", "30", "60"),
@@ -240,16 +238,14 @@ object MonthlyShifts {
                         props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
                     )
                   ),
-                  if (props.enableStaffPlanningChanges)
-                    MuiButton(color = Color.primary,
-                      variant = "outlined",
-                      size = "small",
-                      sx = SxProps(Map("backgroundColor" -> "white")))
-                    (MuiIcons(Groups)(fontSize = "small"),
-                      <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
-                      VdomAttr("data-cy") := "edit-staff-button",
-                      ^.onClick ==> handleShiftEditForm)
-                  else EmptyVdom,
+                  MuiButton(color = Color.primary,
+                    variant = "outlined",
+                    size = "small",
+                    sx = SxProps(Map("backgroundColor" -> "white")))
+                  (MuiIcons(Groups)(fontSize = "small"),
+                    <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
+                    VdomAttr("data-cy") := "edit-staff-button",
+                    ^.onClick ==> handleShiftEditForm),
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
                     ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments))
@@ -370,7 +366,6 @@ object MonthlyShifts {
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
-            enableStaffPlanningChange: Boolean,
             staffShifts: Seq[StaffShift]
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange, staffShifts))
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, staffShifts))
 }

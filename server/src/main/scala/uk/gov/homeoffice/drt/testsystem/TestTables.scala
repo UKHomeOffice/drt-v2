@@ -129,6 +129,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
   override val enableStaffPlanningChange: Boolean = true
+  override val enableShiftPlanningChange: Boolean = true
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {
