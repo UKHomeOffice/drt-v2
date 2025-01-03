@@ -75,7 +75,6 @@ object TerminalComponent {
     (startOfView, endOfView)
   }
 
-
   class Backend {
     def render(props: Props): VdomElement = {
 
@@ -237,10 +236,10 @@ object TerminalComponent {
                       <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, staffShifts))
-
-                    case StaffingShifts if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
+                      if (props.terminalPageTab.toggleShiftView.isDefined)
+                        <.div(MonthlyStaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
+                      else
+                        <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, staffShifts))
                   }
                 }
               }
@@ -307,14 +306,6 @@ object TerminalComponent {
             subMode = if (enableStaffPlanningChange) "60" else "15",
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
           ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Shifts", " ", monthlyStaffingTooltip)
-        ) else "",
-      if (loggedInUser.roles.contains(StaffEdit) && enableShiftPlanningChange)
-        <.li(^.className := tabClass(StaffingShifts),
-          props.router.link(props.terminalPageTab.update(
-            mode = StaffingShifts,
-            subMode = if (enableStaffPlanningChange) "60" else "15",
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
-          ))(^.id := "StaffingShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing Shifts", " ", monthlyStaffingTooltip)
         ) else "",
       <.li(^.className := tabClass(Dashboard),
         props.router.link(props.terminalPageTab.update(

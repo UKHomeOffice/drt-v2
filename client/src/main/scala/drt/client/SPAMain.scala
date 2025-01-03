@@ -114,6 +114,15 @@ object SPAMain {
     }
   }
 
+  object ToggleShiftView {
+    val paramName = "toggleShift"
+
+    def apply(viewType: Option[String]): UrlParameter = new UrlParameter {
+      override val name: String = paramName
+      override val value: Option[String] = viewType
+    }
+  }
+
 
   case class PortConfigPageLoc()
 
@@ -192,6 +201,7 @@ object SPAMain {
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
+    val toggleShiftView: Option[String] = queryParams.get(ToggleShiftView.paramName)
 
     def viewMode: ViewMode = {
       (mode, maybeViewDate) match {

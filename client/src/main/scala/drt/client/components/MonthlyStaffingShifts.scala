@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, TerminalShiftLoc, UrlDateParameter, UrlDayRangeType}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.UpdateStaffShifts
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -320,7 +320,12 @@ object MonthlyStaffingShifts {
                     else EmptyVdom,
                     MuiButton(color = Color.primary, variant = "contained")
                     (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                      ^.onClick ==> confirmAndSave(viewingDate, timeSlots))
+                      ^.onClick ==> confirmAndSave(viewingDate, timeSlots)),
+                  )),
+                <.div(^.className := "staffing-controls-toggle",
+                  MuiButton(color = Color.secondary, variant = "outlined")
+                  (<.span(^.style := js.Dictionary("paddingRight" -> "5px"), "Toggle Shift view"),
+                    ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ToggleShiftView(None)))
                   ))
               ),
               MuiSwipeableDrawer(open = state.showEditStaffForm,

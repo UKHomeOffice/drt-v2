@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.Pot
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.UpdateStaffShifts
 import drt.client.components.MonthlyShiftsUtil.{generateShiftData, updateAssignments, updateChangeAssignment}
 import drt.client.components.StaffingUtil.navigationDates
@@ -249,7 +249,14 @@ object MonthlyShifts {
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
                     ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments))
-                ))
+                ),
+              ),
+              <.div(^.className := "staffing-controls-toggle",
+                MuiButton(color = Color.secondary, variant = "outlined")
+                (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Toggle Shift view"),
+                  ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ToggleShiftView(Some("table"))))
+                )
+              )
             ),
             MuiSwipeableDrawer(open = state.showEditStaffForm,
               anchor = "right",
