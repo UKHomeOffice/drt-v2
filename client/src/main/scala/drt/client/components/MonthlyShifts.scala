@@ -294,11 +294,11 @@ object MonthlyShifts {
                     handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]) => {
                       println("handleSaveChanges shifts...", shifts)
                       val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
-                      println("handleSaveChanges changedAssignments...", updateChanges)
+                       updateChanges.map(a => println("handleSaveChanges changedAssignments...",a.row, a. column, a.startTime, a.endTime, a.staffNumber))
                       val updateShifts = updateAssignments(shifts, updateChanges)
                       scope.modState(state => state.copy(
                         shiftsData = updateShifts,
-                        changedAssignments = state.changedAssignments ++ changedAssignments
+                        changedAssignments = updateChanges
                       )).runNow()
                     }))
                 )
