@@ -7,6 +7,23 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 import scala.scalajs.js.JSConverters._
 
+@js.native
+trait ViewDate extends js.Object {
+  var day: Int = js.native
+  var month: Int = js.native
+  var year: Int = js.native
+}
+
+object ViewDate {
+  def apply(day: Int, month: Int, year: Int): ViewDate = {
+    val p = (new js.Object).asInstanceOf[ViewDate]
+    p.day = day
+    p.month = month
+    p.year = year
+    //    println(s"ViewDate.apply: $p")
+    p
+  }
+}
 
 @js.native
 trait ShiftDate extends js.Object {
@@ -94,18 +111,18 @@ object ShiftData {
 
 @js.native
 trait ShiftHotTableViewProps extends js.Object {
-  var month: Int = js.native
-  var year: Int = js.native
+  var viewDate: ViewDate = js.native
+  var dayRange : String = js.native
   var interval: Int = js.native
   var initialShifts: js.Array[ShiftData] = js.native
   var handleSaveChanges: js.Function2[js.Array[ShiftData], js.Array[ShiftAssignment], Unit] = js.native
 }
 
 object ShiftHotTableViewProps {
-  def apply(month: Int, year: Int, interval: Int, initialShifts: Seq[ShiftData], handleSaveChanges: (Seq[ShiftData], Seq[ShiftAssignment]) => Unit): ShiftHotTableViewProps = {
+  def apply(viewDate: ViewDate, dayRange:String, interval: Int, initialShifts: Seq[ShiftData], handleSaveChanges: (Seq[ShiftData], Seq[ShiftAssignment]) => Unit): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
-    p.month = month
-    p.year = year
+    p.viewDate = viewDate
+    p.dayRange = dayRange
     p.interval = interval
     p.initialShifts = initialShifts.toJSArray
     p.handleSaveChanges = (shifts: js.Array[ShiftData], changedAssignments: js.Array[ShiftAssignment]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)

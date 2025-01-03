@@ -39,13 +39,13 @@ import scala.util.Try
 
 object MonthlyShifts {
 
-  case class State( showEditStaffForm: Boolean,
-                    showStaffSuccess: Boolean,
-                    addShiftForm: Boolean,
-                    shifts: ShiftAssignments,
-                    shiftsLastLoaded: Option[Long] = None,
-                    shiftsData: Seq[ShiftData] = Seq.empty,
-                    changedAssignments: Seq[ShiftAssignment] = Seq.empty
+  case class State(showEditStaffForm: Boolean,
+                   showStaffSuccess: Boolean,
+                   addShiftForm: Boolean,
+                   shifts: ShiftAssignments,
+                   shiftsLastLoaded: Option[Long] = None,
+                   shiftsData: Seq[ShiftData] = Seq.empty,
+                   changedAssignments: Seq[ShiftAssignment] = Seq.empty
                   )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -211,7 +211,7 @@ object MonthlyShifts {
           monthOfShifts <- model.monthOfStaffShiftsPot
         } yield {
           if (monthOfShifts != state.shifts) {
-            val initialShift: Seq[ShiftData] = generateShiftData(viewingDate, props.terminalPageTab.terminal, props.staffShifts, monthOfShifts, props.timeSlotMinutes)
+            val initialShift: Seq[ShiftData] = generateShiftData(viewingDate, props.terminalPageTab.dayRangeType.getOrElse("monthly"), props.terminalPageTab.terminal, props.staffShifts, monthOfShifts, props.timeSlotMinutes)
             println("initialShift", initialShift)
             scope.modState(state => state.copy(shifts = monthOfShifts,
               shiftsLastLoaded = Option(SDate.now().millisSinceEpoch), shiftsData = initialShift)).runNow()
@@ -308,7 +308,7 @@ object MonthlyShifts {
                   else EmptyVdom,
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                    ^.onClick ==> confirmAndSave(viewingDate, state.shiftsData ,state.changedAssignments))
+                    ^.onClick ==> confirmAndSave(viewingDate, state.shiftsData, state.changedAssignments))
                 ))
             ),
             MuiSwipeableDrawer(open = state.showEditStaffForm,
@@ -340,13 +340,13 @@ object MonthlyShifts {
               state.shiftsLastLoaded.map(lastLoaded =>
                 <.div(^.className := "staffing-table-content",
                   ShiftHotTableViewComponent(ShiftHotTableViewProps(
-                    month = viewingDate.getMonth,
-                    year = viewingDate.getFullYear,
+                    ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
+                    dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
                     interval = props.timeSlotMinutes,
                     initialShifts = state.shiftsData,
                     handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]) => {
                       println("handleSaveChanges shifts...", shifts)
-                      val updateChanges = updateChangeAssignment(state.changedAssignments , changedAssignments)
+                      val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
                       println("handleSaveChanges changedAssignments...", updateChanges)
                       val updateShifts = updateAssignments(shifts, updateChanges)
                       scope.modState(state => state.copy(
