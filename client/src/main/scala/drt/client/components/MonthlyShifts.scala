@@ -5,11 +5,11 @@ import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.UpdateStaffShifts
 import drt.client.components.MonthlyShiftsUtil.{generateShiftData, updateAssignments, updateChangeAssignment}
-import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
+import drt.client.components.StaffingUtil.navigationDates
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{JSDateConversions, SPACircuit}
+import drt.client.services.SPACircuit
 import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
@@ -31,9 +31,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
-import scala.collection.mutable
 import scala.scalajs.js
-import scala.scalajs.js.Date
 import scala.util.Try
 
 
@@ -73,35 +71,6 @@ object MonthlyShifts {
     })
   }
 
-  def timeZoneSafeTimeSlots(slots: Seq[SDateLike], slotMinutes: Int): Seq[Option[SDateLike]] = {
-    val slotsPerHour = 60 / slotMinutes
-    val slotsInRegularDay = slotsPerHour * 24
-
-    if (itsARegularDayInOctober(slots, slotsInRegularDay)) {
-      handleBstToUtcChange(slots, slotsPerHour)
-    }
-    else if (itsTheDayWeSwitchToBst(slots, slotsInRegularDay))
-      handleUtcToBstDay(slots, slotsPerHour)
-    else
-      slots.map(Option(_))
-  }
-
-  private def itsTheDayWeSwitchToBst(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean = slots.size < slotsInRegularDay
-
-  private def itsARegularDayInOctober(slots: Seq[SDateLike], slotsInRegularDay: Int): Boolean =
-    slots.head.getMonth == 10 && slots.size == slotsInRegularDay
-
-  private def handleBstToUtcChange(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] =
-    slots.map(Option(_)).patch(2 * slotsPerHour, List.fill(slotsPerHour)(None), 0)
-
-  private def handleUtcToBstDay(slots: Seq[SDateLike], slotsPerHour: Int): Seq[Option[SDateLike]] =
-    slots.sliding(2).flatMap(dates =>
-      if (dates.head.getTimeZoneOffsetMillis < dates(1).getTimeZoneOffsetMillis)
-        Option(dates.head) :: List.fill(slotsPerHour)(None)
-      else
-        Option(dates.head) :: Nil
-    ).toSeq ++ Seq(Option(slots.last))
-
   private def minutesInDay(date: SDateLike): Int = {
     val startOfDay = SDate.midnightOf(date)
     val endOfDay = SDate.midnightOf(date.addDays(1))
@@ -126,36 +95,7 @@ object MonthlyShifts {
   def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5)
     .map(i => SDate.firstDayOfMonth(date).addMonths(i))
 
-  def applyRecordedChangesToShiftState(staffTimeSlotDays: Seq[Seq[Any]], changes: Map[(Int, Int), Int]): Seq[Seq[Any]] =
-    changes.foldLeft(staffTimeSlotDays) {
-      case (staffSoFar, ((slotIdx, dayIdx), newStaff)) =>
-        staffSoFar.updated(slotIdx, staffSoFar(slotIdx).updated(dayIdx, newStaff))
-    }
-
-  def whatDayChanged(startingSlots: Seq[Seq[Any]], updatedSlots: Seq[Seq[Any]]): Set[Int] =
-    toDaysWithIndexSet(updatedSlots)
-      .diff(toDaysWithIndexSet(startingSlots)).map { case (_, dayIndex) => dayIndex }
-
-  private def toDaysWithIndexSet(updatedSlots: Seq[Seq[Any]]): Set[(Seq[Any], Int)] = updatedSlots
-    .transpose
-    .zipWithIndex
-    .toSet
-
-  def dateListToString(dates: List[String]): String = dates.map(_.toInt).sorted match {
-    case Nil => ""
-    case head :: Nil => head.toString
-    case dateList => dateList.dropRight(1).mkString(", ") + " and " + dateList.last
-  }
-
   private val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
-
-  def getQuarterHourlySlotChanges(timeSlotMinutes: Int, changes: Map[(Int, Int), Int]): Map[(Int, Int), Int] = {
-    timeSlotMinutes match {
-      case 15 => changes
-      case 30 => halfHourlyToQuarterHourlySlots(changes)
-      case 60 => hourlyToQuarterHourlySlots(changes)
-    }
-  }
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
@@ -178,16 +118,15 @@ object MonthlyShifts {
         changedAssignments.map(_.startTime.day).distinct.mkString(", ")
       }
 
-      def confirmAndSave(viewingDate: SDateLike, shiftsData: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): ReactEventFromInput => Callback = (_: ReactEventFromInput) => Callback {
+      def confirmAndSave(shiftsData: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): ReactEventFromInput => Callback = (_: ReactEventFromInput) => Callback {
         println("confirmAndSave ...", shiftsData)
         val changedShifts: Seq[StaffAssignment] = shiftsData.flatMap(_.assignments.toSeq.map(ShiftAssignmentConverter.toStaffAssignment(_, props.terminalPageTab.terminal)))
 
         val changedShiftSlots: Seq[StaffAssignment] = updatedConvertedShiftAssignments(
           changedShifts,
-          viewingDate,
           props.terminalPageTab.terminal,
-          props.timeSlotMinutes,
-          props.terminalPageTab.dayRangeType.getOrElse("monthly"))
+          props.timeSlotMinutes)
+
         val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
 
         if (confirm(s"You have updated staff for ${whatDayChanged(changedAssignments)} $updatedMonth - do you want to save these changes?")) {
@@ -211,7 +150,12 @@ object MonthlyShifts {
           monthOfShifts <- model.monthOfStaffShiftsPot
         } yield {
           if (monthOfShifts != state.shifts) {
-            val initialShift: Seq[ShiftData] = generateShiftData(viewingDate, props.terminalPageTab.dayRangeType.getOrElse("monthly"), props.terminalPageTab.terminal, props.staffShifts, monthOfShifts, props.timeSlotMinutes)
+            val initialShift: Seq[ShiftData] = generateShiftData(viewingDate,
+              props.terminalPageTab.dayRangeType.getOrElse("monthly"),
+              props.terminalPageTab.terminal,
+              props.staffShifts,
+              monthOfShifts,
+              props.timeSlotMinutes)
             println("initialShift", initialShift)
             scope.modState(state => state.copy(shifts = monthOfShifts,
               shiftsLastLoaded = Option(SDate.now().millisSinceEpoch), shiftsData = initialShift)).runNow()
@@ -308,7 +252,7 @@ object MonthlyShifts {
                   else EmptyVdom,
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                    ^.onClick ==> confirmAndSave(viewingDate, state.shiftsData, state.changedAssignments))
+                    ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments))
                 ))
             ),
             MuiSwipeableDrawer(open = state.showEditStaffForm,
@@ -359,7 +303,7 @@ object MonthlyShifts {
               <.div(^.className := "terminal-staffing-content-header",
                 MuiButton(color = Color.primary, variant = "contained")
                 (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                  ^.onClick ==> confirmAndSave(viewingDate, state.shiftsData, state.changedAssignments))
+                  ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments))
               )
             )
           )
@@ -398,168 +342,29 @@ object MonthlyShifts {
 
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("ShiftStaffing")
-    .initialStateFromProps(stateFromProps)
+    .initialStateFromProps(_ => State(showEditStaffForm = false,
+      showStaffSuccess = false,
+      addShiftForm = false,
+      shifts = ShiftAssignments.empty,
+      None))
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build
 
 
-  def updatedConvertedShiftAssignments(changes: Seq[StaffAssignment],
-                                       viewingDate: SDateLike,
-                                       terminalName: Terminal,
-                                       timeSlotMinutes: Int,
-                                       dayRange: String
-                                      ): Seq[StaffAssignment] = changes.map { change =>
-    //    val timeSlots: Seq[Seq[Option[SDateLike]]] =
-    //      dayRange match {
-    //        case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes))
-    //        case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes))
-    //        case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map(Seq(_))
-    //      }
+  private def updatedConvertedShiftAssignments(changes: Seq[StaffAssignment],
+                                               terminalName: Terminal,
+                                               timeSlotMinutes: Int
+                                              ): Seq[StaffAssignment] = changes.map { change =>
     val startMd = change.start
     val endMd = SDate(startMd).addMinutes(timeSlotMinutes - 1).millisSinceEpoch
-
-    //        val startMd = slotStart.millisSinceEpoch
-    //        val endMd = slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch
     StaffAssignment(change.name, terminalName, startMd, endMd, change.numberOfStaff, None)
   }
 
 
-  //  def updatedShiftAssignments(changes: Map[(Int, Int), Int],
-  //                              viewingDate: SDateLike,
-  //                              terminalName: Terminal,
-  //                              timeSlotMinutes: Int,
-  //                              dayRange: String
-  //                             ): Seq[StaffAssignment] = changes.toSeq.map {
-  //    case ((slotIdx, dayIdx), staff) =>
-  //      val timeSlots: Seq[Seq[Option[SDateLike]]] =
-  //        dayRange match {
-  //          case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes))
-  //          case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes))
-  //          case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map(Seq(_))
-  //        }
-  //      timeSlots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
-  //        val startMd = slotStart.millisSinceEpoch
-  //        val endMd = slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch
-  //        StaffAssignment(slotStart.toISOString, terminalName, startMd, endMd, staff, None)
-  //      })
-  //  }.collect {
-  //    case Some(a) => a
-  //  }
-
-  private def hourlyToQuarterHourlySlots(slots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = slots.flatMap {
-    case ((slotIdx, dayIdx), staff) =>
-      (0 to 3).map(offset => (((slotIdx * 4) + offset, dayIdx), staff))
-  }
-
-  private def halfHourlyToQuarterHourlySlots(slots: Map[(Int, Int), Int]): Map[(Int, Int), Int] = slots.flatMap {
-    case ((slotIdx, dayIdx), staff) =>
-      (0 to 1).map(offset => (((slotIdx * 2) + offset, dayIdx), staff))
-  }
-
-  private def memoize[I, O](f: I => O): I => O = new mutable.HashMap[I, O]() {
-    override def apply(key: I): O = getOrElseUpdate(key, f(key))
-  }
-
-  lazy val dayTimeSlot: ((SDateLike, Int)) => Seq[Option[SDateLike]] = memoize {
-    case (viewingDate, timeSlotMinutes) => timeZoneSafeTimeSlots(slotsInDay(viewingDate, timeSlotMinutes), timeSlotMinutes)
-  }
-
-  lazy val daysInWeekByTimeSlot: ((SDateLike, Int)) => Seq[Seq[Option[SDateLike]]] = memoize {
-    case (viewingDate, timeSlotMinutes) => daysInWeekByTimeSlotCalc(viewingDate, timeSlotMinutes)
-  }
-
-  private def daysInWeekByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] = {
-    val daysInWeek: Seq[Seq[Option[SDateLike]]] = StaffingUtil.consecutiveDayForWeek(viewingDate)
-      .map { day =>
-        timeZoneSafeTimeSlots(
-          slotsInDay(day._1, timeSlotMinutes),
-          timeSlotMinutes
-        )
-      }
-
-    val maxLength = daysInWeek.map(_.length).max
-
-    val paddedDaysInWeek = daysInWeek.map { seq =>
-      seq.padTo(maxLength, None)
-    }
-
-    try {
-      paddedDaysInWeek.transpose
-    } catch {
-      case e: Throwable =>
-        throw e
-    }
-
-  }
-
-  lazy val daysInMonthByTimeSlot: ((SDateLike, Int)) => Seq[Seq[Option[SDateLike]]] = memoize {
-    case (viewingDate, timeSlotMinutes) => daysInMonthByTimeSlotCalc(viewingDate, timeSlotMinutes)
-  }
-
-  private def daysInMonthByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] =
-    consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
-      .map { day =>
-        timeZoneSafeTimeSlots(
-          slotsInDay(day._1, timeSlotMinutes),
-          timeSlotMinutes
-        )
-      }
-      .transpose
-
   private def maybeClockChangeDate(viewingDate: SDateLike): Option[SDateLike] = {
     val lastDay = SDate.lastDayOfMonth(viewingDate)
     (0 to 10).map(offset => lastDay.addDays(-1 * offset)).find(date => slotsInDay(date, 60).length == 25)
-  }
-
-  private def slotsFromShifts(shifts: StaffAssignmentsLike, terminal: Terminal, viewingDate: SDateLike, timeSlotMinutes: Int, dayRange: String): Seq[Seq[Any]] =
-    dayRange match {
-      case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
-        case Some(slotDateTime) =>
-          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
-        case None => "-"
-      })
-
-      case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
-        case Some(slotDateTime) =>
-          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
-        case None => "-"
-      })
-
-      case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map {
-        case Some(slotDateTime) =>
-          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
-        case None => "-"
-      }.map(Seq(_))
-    }
-
-  private def stateFromProps(props: Props): State = {
-    import drt.client.services.JSDateConversions._
-
-    val viewingDate = props.terminalPageTab.dateFromUrlOrNow
-
-    val daysInDayRange: Seq[(SDateLike, String)] = props.terminalPageTab.dayRangeType match {
-      case Some("weekly") => consecutiveDayForWeek(viewingDate)
-      case Some("daily") => dateRangeDays(viewingDate, 1)
-      case _ => consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
-    }
-
-    val dayForRowLabels = if (viewingDate.getMonth != 10)
-      viewingDate.startOfTheMonth
-    else
-      SDate.lastDayOfMonth(viewingDate).getLastSunday
-
-    val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
-
-    State(
-      //      Empty,
-      //      daysInDayRange.map(a => ColumnHeader(a._1.getDate.toString, a._2.substring(0, 3))),
-      //      rowHeadings, Map.empty,
-      showEditStaffForm = false,
-      showStaffSuccess = false,
-      addShiftForm = false,
-      shifts = ShiftAssignments.empty,
-      None)
   }
 
   def apply(terminalPageTab: TerminalPageTabLoc,
