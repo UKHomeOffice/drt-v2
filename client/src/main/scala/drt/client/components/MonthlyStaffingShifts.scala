@@ -3,11 +3,12 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
-import drt.client.actions.Actions.UpdateStaffShifts
+import drt.client.actions.Actions.{GetAllStaffShifts, UpdateStaffShifts}
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.handlers.GetShifts
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.client.util.DateRange
 import drt.shared._
@@ -414,6 +415,10 @@ object MonthlyStaffingShifts {
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount(p => Callback(
+      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString))) >>
+      Callback(SPACircuit.dispatch(GetAllStaffShifts))
+    )
     .build
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int],

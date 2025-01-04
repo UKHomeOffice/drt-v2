@@ -3,13 +3,14 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
-import drt.client.actions.Actions.UpdateStaffShifts
+import drt.client.actions.Actions.{GetAllStaffShifts, UpdateStaffShifts}
 import drt.client.components.MonthlyShiftsUtil.{generateShiftData, updateAssignments, updateChangeAssignment}
 import drt.client.components.StaffingUtil.navigationDates
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
+import drt.client.services.handlers.GetShifts
 import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
@@ -50,9 +51,7 @@ object MonthlyShifts {
 
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
-                   airportConfig: AirportConfig,
-                   staffShifts: Seq[StaffShift]
-                  ) {
+                   airportConfig: AirportConfig) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
     def dayRangeType: String = terminalPageTab.dayRangeType match {
@@ -139,20 +138,21 @@ object MonthlyShifts {
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
-      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments])
-      val staffRCP = SPACircuit.connect(m => Model(m.allStaffShifts))
+      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[StaffShift]])
+      val staffRCP = SPACircuit.connect(m => Model(m.allStaffShifts, m.staffShifts))
 
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
         val content = for {
           monthOfShifts <- model.monthOfStaffShiftsPot
+          staffShifts <- model.staffShiftsPot
         } yield {
           if (monthOfShifts != state.shifts) {
             val initialShift: Seq[ShiftData] = generateShiftData(viewingDate,
               props.terminalPageTab.dayRangeType.getOrElse("monthly"),
               props.terminalPageTab.terminal,
-              props.staffShifts,
+              staffShifts,
               monthOfShifts,
               props.timeSlotMinutes)
             println("initialShift", initialShift)
@@ -294,7 +294,7 @@ object MonthlyShifts {
                     handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]) => {
                       println("handleSaveChanges shifts...", shifts)
                       val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
-                       updateChanges.map(a => println("handleSaveChanges changedAssignments...",a.row, a. column, a.startTime, a.endTime, a.staffNumber))
+                      updateChanges.map(a => println("handleSaveChanges changedAssignments...", a.row, a.column, a.startTime, a.endTime, a.staffNumber))
                       val updateShifts = updateAssignments(shifts, updateChanges)
                       scope.modState(state => state.copy(
                         shiftsData = updateShifts,
@@ -352,6 +352,10 @@ object MonthlyShifts {
       None))
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
+    .componentDidMount(p => Callback(
+      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString)))
+      >> Callback(SPACircuit.dispatch(GetAllStaffShifts))
+    )
     .build
 
 
@@ -372,7 +376,6 @@ object MonthlyShifts {
 
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
-            airportConfig: AirportConfig,
-            staffShifts: Seq[StaffShift]
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, staffShifts))
+            airportConfig: AirportConfig
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig))
 }
