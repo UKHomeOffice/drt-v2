@@ -240,7 +240,9 @@ object TerminalComponent {
                         <.div(MonthlyStaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
                       else
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig))
-                  }
+
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && staffShifts.isEmpty =>
+                      <.div(^.className := "staffing-container-empty", "No staff shifts available, visit the ", <.strong("Staffing"), " tab to create some or select one of the other tabs.")                  }
                 }
               }
               )
@@ -305,14 +307,15 @@ object TerminalComponent {
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
           ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
         ) else "",
-      if (loggedInUser.roles.contains(StaffEdit) && enableShiftPlanningChange && isStaffShiftsNonEmpty)
+      if (loggedInUser.roles.contains(StaffEdit) && enableShiftPlanningChange && isStaffShiftsNonEmpty) {
         <.li(^.className := tabClass(Shifts),
           props.router.link(props.terminalPageTab.update(
             mode = Shifts,
             subMode = if (enableStaffPlanningChange) "60" else "15",
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None), ToggleShiftView(None)).queryParams
           ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Shifts", " ", monthlyStaffingTooltip)
-        ) else "",
+        )
+      } else "",
       <.li(^.className := tabClass(Dashboard),
         props.router.link(props.terminalPageTab.update(
           mode = Dashboard,

@@ -1,0 +1,196 @@
+package drt.client.components
+
+import utest._
+import drt.shared._
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
+import drt.client.services.JSDateConversions.SDate
+
+object MonthlyShiftsUtilSpec extends TestSuite {
+  val tests: Tests = Tests {
+    test("numberOfDaysInMonth should return correct number of days") {
+      val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
+      val result = MonthlyShiftsUtil.numberOfDaysInMonth(viewingDate)
+      assert(result == 31)
+    }
+
+    test("daysCount should return correct number of days for monthly dayRange") {
+      val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
+      val result = MonthlyShiftsUtil.daysCount("monthly", viewingDate)
+      assert(result == 31)
+    }
+
+    test("daysCount should return correct number of days for weekly dayRange") {
+      val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
+      val result = MonthlyShiftsUtil.daysCount("weekly", viewingDate)
+      assert(result == 7)
+    }
+
+    test("daysCount should return correct number of days for daily dayRange") {
+      val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
+      val result = MonthlyShiftsUtil.daysCount("daily", viewingDate)
+      assert(result == 1)
+    }
+
+    test("firstDay should return correct first day for monthly dayRange") {
+      val viewingDate: SDateLike = SDate("2023-10-15T00:00:00Z")
+      val result = MonthlyShiftsUtil.firstDay("monthly", viewingDate)
+      assert(result == SDate(2023, 10, 1))
+    }
+
+    test("firstDay should return correct first day for weekly dayRange") {
+      val viewingDate: SDateLike = SDate("2023-10-15T00:00:00Z")
+      val result = MonthlyShiftsUtil.firstDay("weekly", viewingDate)
+      assert(result == SDate(2023, 10, 9, 1)) // Assuming the week starts on Monday
+    }
+
+    test("firstDay should return correct first day for daily dayRange") {
+      val viewingDate: SDateLike = SDate("2023-10-15T00:00:00Z")
+      val result = MonthlyShiftsUtil.firstDay("daily", viewingDate)
+      assert(result == viewingDate)
+    }
+
+    test("assignmentsForShift should generate correct row and col values for monthly dayRange") {
+      val firstDay: SDateLike = SDate("2023-10-01T00:00:00Z")
+      val daysCount = 31
+      val interval = 60
+      val terminal = Terminal("T1")
+      val staffShift = StaffShift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Morning",
+        startDate = LocalDate(2023, 10, 1),
+        startTime = "08:00",
+        endTime = "09:00",
+        endDate = None,
+        staffNumber = 5,
+        frequency = None,
+        createdBy = None,
+        createdAt = 0L
+      )
+      val shifts = ShiftAssignments(Seq.empty)
+
+      val result = MonthlyShiftsUtil.assignmentsForShift(firstDay, daysCount, interval, terminal, staffShift, shifts)
+
+      assert(result.nonEmpty)
+      assert(result.head.name == "Morning")
+      assert(result.head.staffNumber == 5)
+      assert(result.size == daysCount * (1 * 60 / interval))
+      assert(result.head.column == 1)
+      assert(result.head.row == 1)
+      assert(result.last.column == 31)
+      assert(result.last.row == 1)
+    }
+
+    test("assignmentsForShift should generate correct row and col values for weekly dayRange") {
+      val firstDay: SDateLike = SDate("2023-10-01T00:00:00Z")
+      val daysCount = 7
+      val interval = 60
+      val terminal = Terminal("T1")
+      val staffShift = StaffShift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Morning",
+        startDate = LocalDate(2023, 10, 1),
+        startTime = "08:00",
+        endTime = "09:00",
+        endDate = None,
+        staffNumber = 5,
+        frequency = None,
+        createdBy = None,
+        createdAt = 0L
+      )
+      val shifts = ShiftAssignments(Seq.empty)
+
+      val result = MonthlyShiftsUtil.assignmentsForShift(firstDay, daysCount, interval, terminal, staffShift, shifts)
+
+      assert(result.nonEmpty)
+      assert(result.head.name == "Morning")
+      assert(result.head.staffNumber == 5)
+      assert(result.size == daysCount * (1 * 60 / interval))
+      assert(result.head.column == 1)
+      assert(result.head.row == 1)
+      assert(result.last.column == 7)
+      assert(result.last.row == 1)
+    }
+
+    test("assignmentsForShift should generate correct row and col values for daily dayRange") {
+      val firstDay: SDateLike = SDate("2023-10-01T00:00:00Z")
+      val daysCount = 1
+      val interval = 60
+      val terminal = Terminal("T1")
+      val staffShift = StaffShift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Morning",
+        startDate = LocalDate(2023, 10, 1),
+        startTime = "08:00",
+        endTime = "09:00",
+        endDate = None,
+        staffNumber = 5,
+        frequency = None,
+        createdBy = None,
+        createdAt = 0L
+      )
+      val shifts = ShiftAssignments(Seq.empty)
+
+      val result = MonthlyShiftsUtil.assignmentsForShift(firstDay, daysCount, interval, terminal, staffShift, shifts)
+
+      assert(result.nonEmpty)
+      assert(result.head.name == "Morning")
+      assert(result.head.staffNumber == 5)
+      assert(result.size == daysCount * (1 * 60 / interval))
+      assert(result.head.column == 1)
+      assert(result.head.row == 1)
+      assert(result.last.column == 1)
+      assert(result.last.row == 1)
+    }
+
+    test("generateShiftData should generate correct shift data for monthly dayRange") {
+      val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
+      val dayRange = "monthly"
+      val terminal = Terminal("T1")
+      val staffShifts = Seq(
+        StaffShift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Morning",
+          startDate = LocalDate(2023, 10, 1),
+          startTime = "08:00",
+          endTime = "16:00",
+          endDate = None,
+          staffNumber = 5,
+          frequency = None,
+          createdBy = None,
+          createdAt = 0L
+        ),
+        StaffShift(
+          port = "LHR",
+          terminal = "T1",
+          shiftName = "Evening",
+          startDate = LocalDate(2023, 10, 1),
+          startTime = "16:00",
+          endTime = "00:00",
+          endDate = None,
+          staffNumber = 3,
+          frequency = None,
+          createdBy = None,
+          createdAt = 0L
+        )
+      )
+      val shifts = ShiftAssignments(Seq.empty)
+      val interval = 60
+
+      val result: Seq[ShiftData] = MonthlyShiftsUtil.generateShiftData(viewingDate, dayRange, terminal, staffShifts, shifts, interval)
+
+      assert(result.size == 2)
+      assert(result.head.defaultShift.name == "Morning")
+      assert(result.head.assignments.nonEmpty)
+      assert(result.head.assignments.head.staffNumber == 5)
+      assert(result.head.assignments.head.column == 1)
+      assert(result.head.assignments.head.row == 1)
+      assert(result.head.assignments.last.column == 31)
+      assert(result.head.assignments.last.row == 8)
+    }
+  }
+}
