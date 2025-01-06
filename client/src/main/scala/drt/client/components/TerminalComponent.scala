@@ -8,7 +8,6 @@ import drt.client.SPAMain._
 import drt.client.components.TerminalDesksAndQueues.Ideal
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, _}
 import drt.client.services.handlers.{GetShifts, GetUserPreferenceIntervalMinutes}
@@ -20,13 +19,13 @@ import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, ReactEventFromInput, Reusability, ScalaComponent}
+import japgolly.scalajs.react.{CtorType, Reusability, ScalaComponent}
 import org.scalajs.dom.html.UList
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 

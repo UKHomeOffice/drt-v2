@@ -136,11 +136,9 @@ GET           /api/passengers/:startLocalDate/:endLocalDate                     
 GET           /api/passengers/:startLocalDate/:endLocalDate/:terminalName             controllers.application.SummariesController.exportPassengersByTerminalForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)
 PUT           /api/passengers/:localDate                                              controllers.application.SummariesController.populatePassengersForDate(localDate: String)
 
-GET           /api/v1/queues                                                          controllers.application.api.v1.QueuesApiController.queues()
 + nocsrf
 PUT           /api/v1/queues/:startDateLocal/:endDateLocal                            controllers.application.api.v1.QueuesApiController.populateQueues(startDateLocal: String, endDateLocal: String)
 
-GET           /api/v1/flights                                                         controllers.application.api.v1.FlightsApiController.flights()
 + nocsrf
 PUT           /api/v1/flights/:startDateLocal/:endDateLocal                           controllers.application.api.v1.FlightsApiController.populateFlights(startDateLocal: String, endDateLocal: String)
 

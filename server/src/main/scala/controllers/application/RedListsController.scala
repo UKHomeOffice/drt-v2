@@ -2,14 +2,13 @@ package controllers.application
 
 import akka.pattern.ask
 import com.google.inject.Inject
-import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
-import services.AirportInfoService
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.ports.{AirportInfo, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdate, RedListUpdates, SetRedListUpdate}
+import uk.gov.homeoffice.drt.services.AirportInfoService
 import uk.gov.homeoffice.drt.time.SDate
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import upickle.default._

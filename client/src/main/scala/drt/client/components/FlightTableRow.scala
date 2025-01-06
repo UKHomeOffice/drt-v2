@@ -8,7 +8,7 @@ import drt.client.components.FlightComponents.paxFeedSourceClass
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared._
+import drt.shared.MinuteAsAdjective
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist._
 import japgolly.scalajs.react.component.Scala.Component
@@ -22,7 +22,7 @@ import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.ArrivalSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, LiveFeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.splits.ApiSplitsToSplitRatio
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
@@ -45,7 +45,7 @@ object FlightTableRow {
                    redListUpdates: RedListUpdates,
                    includeIndirectRedListColumn: Boolean,
                    walkTimes: WalkTimes,
-                   flaggedNationalities: Set[Country],
+                   flaggedNationalities: Set[drt.shared.Country],
                    flaggedAgeGroups: Set[PaxAgeRange],
                    showNumberOfVisaNationals: Boolean,
                    showHighlightedRows: Boolean,

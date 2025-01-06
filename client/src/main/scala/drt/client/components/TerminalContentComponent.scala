@@ -32,7 +32,7 @@ import uk.gov.homeoffice.drt.auth._
 import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 

@@ -42,12 +42,6 @@ trait PortStateQueueLoadMinutes extends PortStateMinutes[PassengersMinute, TQM]
 trait PortStateStaffMinutes extends PortStateMinutes[StaffMinute, TM]
 
 
-case class AirportInfo(airportName: String, city: String, country: String, code: String)
-
-object AirportInfo {
-  implicit val rw: ReadWriter[AirportInfo] = macroRW
-}
-
 case class BuildVersion(version: String, requiresReload: Boolean = false)
 
 object BuildVersion {

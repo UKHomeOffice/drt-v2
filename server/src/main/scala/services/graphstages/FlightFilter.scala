@@ -1,11 +1,11 @@
 package services.graphstages
 
 import drt.shared.redlist.{LhrRedListDatesImpl, LhrTerminalTypes}
-import services.AirportInfoService
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{AirportConfig, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import uk.gov.homeoffice.drt.services.AirportInfoService
 
 case class FlightFilter(filters: List[(ApiFlightWithSplits, RedListUpdates) => Boolean]) {
   def +(other: FlightFilter): FlightFilter = FlightFilter(filters ++ other.filters)
