@@ -237,7 +237,7 @@ object MonthlyStaffing {
         ^.onClick ==> handleShiftEditForm
       ))
       <.div(
-        if (props.staffShiftsCount > 0)
+        if (props.staffShiftsCount > 0 && !props.enableStaffPlanningChanges)
           EmptyVdom
         else
           <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
