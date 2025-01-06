@@ -52,8 +52,6 @@ object FlightTable {
 
   case class State(showHighlightedRows: Boolean)
 
-  implicit val stateReuse: Reusability[State] = Reusability.always
-
   val ageGroups: js.Array[String] =
     js.Array(AgeRange(0, 9).title,
       AgeRange(10, 24).title,

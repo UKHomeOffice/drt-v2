@@ -10,7 +10,7 @@ import drt.shared.CrunchApi._
 import drt.shared._
 import drt.shared.api.FlightManifestSummary
 import org.scalajs.dom
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, UniqueArrival, VoyageNumber}
+import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, SplitsForArrivals, UniqueArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages
 import uk.gov.homeoffice.drt.ports.{FeedSource, PortCode}
@@ -53,7 +53,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
           val scheduledUpdateRequest = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
 
-          val manifestRequest = manifestsRequest(crunchUpdates)
+          val manifestRequest = manifestsRequest(crunchUpdates.updatesAndRemovals.splitsUpdates.values)
 
           val newOriginCodes = crunchUpdates.updatesAndRemovals.arrivalUpdates.flatMap(_._2.toUpdate.map(_._1.origin)).toSet
 
@@ -82,23 +82,29 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     airportsRequest
   }
 
-  private def manifestsRequest(crunchUpdates: PortStateUpdates): List[EffectSingle[GetManifestSummaries]] = {
+  private def manifestsRequest(splits: Iterable[SplitsForArrivals]): List[EffectSingle[GetManifestSummaries]] = {
     val existingManifests = manifestSummariesModel.value
-    val manifestsToFetch = crunchUpdates.updatesAndRemovals
-      .splitsUpdates
-      .flatMap { case (_, splitsForArrivals) =>
+    val manifestsToFetch = splits
+      .flatMap { splitsForArrivals =>
         splitsForArrivals.splits.filter { case (_, splits) =>
           splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)
         }
       }
-      .keys
-      .map(ua => ArrivalKey(ua.origin, VoyageNumber(ua.number), ua.scheduled))
+      .toMap.keys
+      .map(manifestArrivalKey)
       .toSet
       .diff(existingManifests.keySet)
 
     if (manifestsToFetch.nonEmpty) {
       List(Effect(Future(GetManifestSummaries(manifestsToFetch))))
     } else List.empty
+  }
+
+  private def manifestArrivalKey(ua: UniqueArrival): ArrivalKey = {
+    value._1.map(_.flights.get(ua)).getOrElse(None) match {
+      case Some(fws) => ArrivalKey.forManifest(fws.apiFlight)
+      case None => ArrivalKey(ua.origin, VoyageNumber(ua.number), ua.scheduled)
+    }
   }
 
   private def processUpdatesRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] =
@@ -133,7 +139,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
   private def updateAndTrimCrunch(crunchUpdates: PortStateUpdates,
                                   existingState: PortState,
                                   keepFromMillis: MillisSinceEpoch,
-                         ): SortedMap[TQM, CrunchMinute] = {
+                                 ): SortedMap[TQM, CrunchMinute] = {
     val relevantMinutes = existingState.crunchMinutes.dropWhile {
       case (TQM(_, _, m), _) => m < keepFromMillis
     }

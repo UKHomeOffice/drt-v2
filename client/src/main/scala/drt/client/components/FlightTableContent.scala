@@ -107,7 +107,6 @@ object FlightTableContent {
                         isRedListOrigin)
 
                       val maybeManifestSummary = props.flightManifestSummaries.get(ArrivalKey.forManifest(flightWithSplits.apiFlight))
-
                       val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
 
                       def flightTableRow(showHightlighted: Boolean) = FlightTableRow.Props(

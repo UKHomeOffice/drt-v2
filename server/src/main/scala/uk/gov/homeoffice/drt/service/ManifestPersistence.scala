@@ -13,7 +13,6 @@ import manifests.passengers.ManifestLike
 import org.slf4j.LoggerFactory
 import providers.FlightsProvider
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, UniqueArrival}
-import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.UtcDate
 
@@ -34,16 +33,11 @@ object ManifestPersistence {
             case (_, flights) =>
               manifests
                 .map { manifest =>
-                  val flightsByFlexibleKey = flights.map { fws =>
-                    val arrivalKey = ArrivalKey(fws.apiFlight).copy(
-                      origin = fws.apiFlight.PreviousPort.getOrElse(fws.apiFlight.Origin)
-                    )
-                    arrivalKey -> fws
-                  }
+                  val flightsByManifestArrivalKey = flights.map(fws => ArrivalKey.forManifest(fws.apiFlight) -> fws)
 
-                  val maybeSplits = flightsByFlexibleKey
+                  val maybeSplits = flightsByManifestArrivalKey
                     .find { case (key, _) => manifest.maybeKey.contains(key) }
-                    .map { case (key, fws) =>
+                    .map { case (_, fws) =>
                       (fws.unique, splitsFromManifest(manifest, fws.apiFlight.Terminal))
                     }
 
