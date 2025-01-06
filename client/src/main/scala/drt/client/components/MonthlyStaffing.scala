@@ -60,6 +60,7 @@ object MonthlyStaffing {
                    router: RouterCtl[Loc],
                    airportConfig: AirportConfig,
                    enableStaffPlanningChanges: Boolean,
+                   enableShiftPlanningChanges: Boolean,
                    staffShiftsCount: Int
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
@@ -237,7 +238,7 @@ object MonthlyStaffing {
         ^.onClick ==> handleShiftEditForm
       ))
       <.div(
-        if (props.staffShiftsCount > 0 && !props.enableStaffPlanningChanges)
+        if (props.staffShiftsCount > 0 && !props.enableShiftPlanningChanges)
           EmptyVdom
         else
           <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
@@ -555,6 +556,7 @@ object MonthlyStaffing {
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
             enableStaffPlanningChange: Boolean,
+            enableShiftPlanningChange: Boolean,
             staffShiftsCount: Int
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange, staffShiftsCount))
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange, enableShiftPlanningChange, staffShiftsCount))
 }

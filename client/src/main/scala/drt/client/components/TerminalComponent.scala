@@ -232,7 +232,7 @@ object TerminalComponent {
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, staffShifts.size))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, featureFlags.enableShiftPlanningChange, staffShifts.size))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && staffShifts.nonEmpty =>
                       if (props.terminalPageTab.toggleShiftView.isDefined)
