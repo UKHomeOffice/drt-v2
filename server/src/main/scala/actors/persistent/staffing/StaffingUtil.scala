@@ -1,6 +1,6 @@
 package actors.persistent.staffing
 
-import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike, StaffShift}
+import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike, StaffShift, TM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
@@ -33,32 +33,20 @@ object StaffingUtil {
 
   def updateWithDefaultShift(shifts: Seq[StaffShift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
     val updatedAssignments: Seq[StaffAssignmentLike] = shifts.flatMap { shift =>
-      val dailyAssignments = generateDailyAssignments(shift)
-      val splitDailyAssignments = dailyAssignments.flatMap(_.splitIntoSlots(15))
-      val existingAllAssignments = allShifts.assignments.sortBy(_.start)//.flatMap(_.splitIntoSlots(15))
-      existingAllAssignments.map { existing =>
-        splitDailyAssignments.find { assignment =>
-          val existingStart = SDate(existing.start)
-          val existingEnd = SDate(existing.end)
-          val assignmentStart = SDate(assignment.start)
-          val assignmentEnd = SDate(assignment.end)
+      val dailyAssignments: Seq[StaffAssignment] = generateDailyAssignments(shift)
+      val splitDailyAssignments = dailyAssignments.flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
+        .map(a => TM(a.terminal, a.start) -> a)
+        .toMap
+      val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
 
-          existingStart == assignmentStart && existingEnd == assignmentEnd
-        }.map { assignment =>
-          if (existing.numberOfStaff == 0) assignment else existing
-        }.getOrElse(existing)
-      } ++
-      splitDailyAssignments.map { assignment =>
-        existingAllAssignments.find { existing =>
-          val existingStart = SDate(existing.start)
-          val existingEnd = SDate(existing.end)
-          val assignmentStart = SDate(assignment.start)
-          val assignmentEnd = SDate(assignment.end)
-          existingStart == assignmentStart && existingEnd == assignmentEnd
-        }.map { existing =>
-          if (existing.numberOfStaff == 0) assignment else existing
-        }.getOrElse(assignment)
-      }
+      splitDailyAssignments.map {
+        case (tm, assignment) =>
+          existingAllAssignments.get(tm) match {
+            case Some(existing) =>
+              if (existing.numberOfStaff == 0) assignment else existing
+            case None => assignment
+          }
+      }.toSeq.sortBy(_.start)
     }
     updatedAssignments
   }

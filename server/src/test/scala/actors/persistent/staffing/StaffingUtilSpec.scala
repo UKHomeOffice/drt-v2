@@ -36,10 +36,10 @@ class StaffingUtilSpec extends Specification {
 
       val expectedStartMillis = SDate(2023, 10, 1, 8, 0).millisSinceEpoch
 
-      val expectedEndMillis = SDate(2023, 10, 1, 16, 0).millisSinceEpoch
+      val expectedEndMillis = SDate(2023, 10, 3, 16, 0).millisSinceEpoch
 
-      assignments.head.start must beEqualTo(expectedStartMillis)
-      assignments.last.end must beEqualTo(expectedEndMillis)
+      SDate(assignments.head.start).toISOString must beEqualTo(SDate(expectedStartMillis).toISOString)
+      SDate(assignments.last.end).toISOString must beEqualTo(SDate(expectedEndMillis).toISOString)
     }
   }
 
@@ -49,12 +49,13 @@ class StaffingUtilSpec extends Specification {
         StaffShift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
       )
 
-      val allShifts = ShiftAssignments(Seq(
-        StaffAssignment("afternoon", Terminal("terminal"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 0, None).splitIntoSlots(15).head,
-      ))
+      val allShifts = ShiftAssignments(
+        StaffAssignment("afternoon", Terminal("terminal"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 0, None).splitIntoSlots(15),
+      )
 
       val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
 
+      updatedAssignments.map(a => println(SDate(a.start).toISOString, SDate(a.end).toISOString , a.numberOfStaff))
       updatedAssignments should have size 8
       updatedAssignments === List(
         StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 14, 14).millisSinceEpoch, 5, None),
