@@ -10,7 +10,7 @@ import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services._
+import drt.client.services.{SPACircuit, _}
 import drt.client.services.handlers.{GetShifts, GetUserPreferenceIntervalMinutes}
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
@@ -56,7 +56,8 @@ object TerminalComponent {
                                    redListUpdates: Pot[RedListUpdates],
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
-                                   paxFeedSourceOrder: List[FeedSource]
+                                   paxFeedSourceOrder: List[FeedSource],
+                                   staffShiftsPot: Pot[Seq[StaffShift]]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -94,7 +95,8 @@ object TerminalComponent {
         redListUpdates = model.redListUpdates,
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
-        paxFeedSourceOrder = model.paxFeedSourceOrder
+        paxFeedSourceOrder = model.paxFeedSourceOrder,
+        staffShiftsPot = model.staffShifts
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -108,6 +110,7 @@ object TerminalComponent {
             airportConfig <- model.airportConfig
             loggedInUser <- model.loggedInUserPot
             redListUpdates <- model.redListUpdates
+            staffShifts <- model.staffShiftsPot
           } yield {
             val timeRangeHours: TimeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
@@ -115,7 +118,7 @@ object TerminalComponent {
 
             <.div(
               <.div(^.className := "terminal-nav-wrapper",
-                terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled, featureFlags.enableStaffPlanningChange, featureFlags.enableShiftPlanningChange)),
+                terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled, featureFlags.enableStaffPlanningChange, featureFlags.enableShiftPlanningChange, staffShifts.nonEmpty)),
               <.div(^.className := "tab-content", {
                 val rcp = SPACircuit.connect(m =>
                   (m.minuteTicker,
@@ -230,9 +233,9 @@ object TerminalComponent {
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, staffShifts.size))
 
-                    case Shifts if loggedInUser.roles.contains(StaffEdit) =>
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && staffShifts.nonEmpty =>
                       if (props.terminalPageTab.toggleShiftView.isDefined)
                         <.div(MonthlyStaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
                       else
@@ -250,11 +253,19 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())))
+    .componentDidMount(p => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
+      Callback(SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString)))
+    )
 
     .build
 
-  private def terminalTabs(props: Props, loggedInUser: LoggedInUser, airportConfig: AirportConfig, timeMachineEnabled: Boolean, enableStaffPlanningChange: Boolean, enableShiftPlanningChange: Boolean): VdomTagOf[UList] = {
+  private def terminalTabs(props: Props,
+                           loggedInUser: LoggedInUser,
+                           airportConfig: AirportConfig,
+                           timeMachineEnabled: Boolean,
+                           enableStaffPlanningChange: Boolean,
+                           enableShiftPlanningChange: Boolean,
+                           isStaffShiftsNonEmpty: Boolean): VdomTagOf[UList] = {
     val terminalName = props.terminalPageTab.terminal.toString
 
     val subMode = if (props.terminalPageTab.mode != Current && props.terminalPageTab.mode != Snapshot)
@@ -294,7 +305,7 @@ object TerminalComponent {
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
           ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
         ) else "",
-      if (loggedInUser.roles.contains(StaffEdit) && enableShiftPlanningChange)
+      if (loggedInUser.roles.contains(StaffEdit) && enableShiftPlanningChange && isStaffShiftsNonEmpty)
         <.li(^.className := tabClass(Shifts),
           props.router.link(props.terminalPageTab.update(
             mode = Shifts,

@@ -1,5 +1,6 @@
 package drt.client.components
 
+import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, TerminalShiftLoc, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.UpdateShifts
@@ -58,7 +59,8 @@ object MonthlyStaffing {
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
                    airportConfig: AirportConfig,
-                   enableStaffPlanningChanges: Boolean
+                   enableStaffPlanningChanges: Boolean,
+                   staffShiftsCount: Int
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
@@ -235,9 +237,12 @@ object MonthlyStaffing {
         ^.onClick ==> handleShiftEditForm
       ))
       <.div(
-        <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
-          props.router.set(TerminalShiftLoc(props.terminalPageTab.terminalName)).runNow()
-        }))),
+        if (props.staffShiftsCount > 0)
+          EmptyVdom
+        else
+          <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
+            props.router.set(TerminalShiftLoc(props.terminalPageTab.terminalName)).runNow()
+          }))),
         modelChangeDetection,
         <.div(
           if (state.showStaffSuccess)
@@ -542,13 +547,14 @@ object MonthlyStaffing {
       showEditStaffForm = false,
       showStaffSuccess = false,
       addShiftForm = false,
-      ShiftAssignments.empty,
-      None)
+      shifts = ShiftAssignments.empty,
+      shiftsLastLoaded = None)
   }
 
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
-            enableStaffPlanningChange: Boolean
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange))
+            enableStaffPlanningChange: Boolean,
+            staffShiftsCount: Int
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange, staffShiftsCount))
 }

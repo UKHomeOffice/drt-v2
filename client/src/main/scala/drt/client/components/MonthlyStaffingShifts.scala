@@ -415,10 +415,7 @@ object MonthlyStaffingShifts {
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(p => Callback(
-      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString))) >>
-      Callback(SPACircuit.dispatch(GetAllStaffShifts))
-    )
+    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetAllStaffShifts)))
     .build
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int],

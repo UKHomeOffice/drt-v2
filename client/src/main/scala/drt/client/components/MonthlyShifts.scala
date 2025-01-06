@@ -10,7 +10,6 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.GetShifts
 import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
@@ -42,7 +41,6 @@ object MonthlyShifts {
                    showStaffSuccess: Boolean,
                    addShiftForm: Boolean,
                    shifts: ShiftAssignments,
-                   shiftsLastLoaded: Option[Long] = None,
                    shiftsData: Seq[ShiftData] = Seq.empty,
                    changedAssignments: Seq[ShiftAssignment] = Seq.empty
                   )
@@ -117,7 +115,7 @@ object MonthlyShifts {
       }
 
       def confirmAndSave(shiftsData: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): ReactEventFromInput => Callback = (_: ReactEventFromInput) => Callback {
-        println("confirmAndSave ...", shiftsData)
+        //        println("confirmAndSave ...", shiftsData)
         val changedShifts: Seq[StaffAssignment] = shiftsData.flatMap(_.assignments.toSeq.map(ShiftAssignmentConverter.toStaffAssignment(_, props.terminalPageTab.terminal)))
 
         val changedShiftSlots: Seq[StaffAssignment] = updatedConvertedShiftAssignments(
@@ -153,11 +151,11 @@ object MonthlyShifts {
               props.terminalPageTab.dayRangeType.getOrElse("monthly"),
               props.terminalPageTab.terminal,
               staffShifts,
-              monthOfShifts,
+              ShiftAssignments(monthOfShifts.forTerminal(props.terminalPageTab.terminal)),
               props.timeSlotMinutes)
-            println("initialShift", initialShift)
+            //            println("initialShift", initialShift)
             scope.modState(state => state.copy(shifts = monthOfShifts,
-              shiftsLastLoaded = Option(SDate.now().millisSinceEpoch), shiftsData = initialShift)).runNow()
+              shiftsData = initialShift)).runNow()
           }
           <.div()
         }
@@ -284,24 +282,22 @@ object MonthlyShifts {
                   scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
                 })))),
             <.div(^.className := "staffing-table",
-              state.shiftsLastLoaded.map(lastLoaded =>
-                <.div(^.className := "staffing-table-content",
-                  ShiftHotTableViewComponent(ShiftHotTableViewProps(
-                    ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
-                    dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
-                    interval = props.timeSlotMinutes,
-                    initialShifts = state.shiftsData,
-                    handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]) => {
-                      println("handleSaveChanges shifts...", shifts)
-                      val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
-                      updateChanges.map(a => println("handleSaveChanges changedAssignments...", a.row, a.column, a.startTime, a.endTime, a.staffNumber))
-                      val updateShifts = updateAssignments(shifts, updateChanges)
-                      scope.modState(state => state.copy(
-                        shiftsData = updateShifts,
-                        changedAssignments = updateChanges
-                      )).runNow()
-                    }))
-                )
+              <.div(^.className := "staffing-table-content",
+                ShiftHotTableViewComponent(ShiftHotTableViewProps(
+                  ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
+                  dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
+                  interval = props.timeSlotMinutes,
+                  initialShifts = state.shiftsData,
+                  handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]) => {
+                    //                    println("handleSaveChanges shifts...", shifts)
+                    val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
+                    //                    updateChanges.map(a => println("handleSaveChanges changedAssignments...", a.row, a.column, a.startTime, a.endTime, a.staffNumber))
+                    val updateShifts = updateAssignments(shifts, updateChanges)
+                    scope.modState(state => state.copy(
+                      shiftsData = updateShifts,
+                      changedAssignments = updateChanges
+                    )).runNow()
+                  }))
               ),
               <.div(^.className := "terminal-staffing-content-header",
                 MuiButton(color = Color.primary, variant = "contained")
@@ -348,14 +344,10 @@ object MonthlyShifts {
     .initialStateFromProps(_ => State(showEditStaffForm = false,
       showStaffSuccess = false,
       addShiftForm = false,
-      shifts = ShiftAssignments.empty,
-      None))
+      shifts = ShiftAssignments.empty))
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(p => Callback(
-      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString)))
-      >> Callback(SPACircuit.dispatch(GetAllStaffShifts))
-    )
+    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetAllStaffShifts)))
     .build
 
 

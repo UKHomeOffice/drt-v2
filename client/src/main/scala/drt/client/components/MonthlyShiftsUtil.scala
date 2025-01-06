@@ -4,15 +4,12 @@ import drt.client.services.JSDateConversions.SDate
 import drt.shared.{ShiftAssignments, StaffAssignment, StaffShift}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
-
 import scala.scalajs.js.Date
 
 
 object MonthlyShiftsUtil {
 
   def generateShiftData(viewingDate: SDateLike, dayRange: String, terminal: Terminal, staffShifts: Seq[StaffShift], shifts: ShiftAssignments, interval: Int): Seq[ShiftData] = {
-    println("generateShiftData ...")
-
     def daysInMonth(year: Int, month: Int): Int = {
       val date = new Date(year, month, 0)
       date.getDate().toInt
@@ -92,17 +89,17 @@ object MonthlyShiftsUtil {
 
   def updateAssignments(shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): Seq[ShiftData] = {
     val changedAssignmentsMap = changedAssignments.map(a => (toStringShiftDate(a.startTime)) -> a).toMap
-    println(s"changedAssignmentsMap: ${changedAssignmentsMap.map { case (k, v) => s"$k -> ${v.staffNumber}" }}")
+    //    println(s"changedAssignmentsMap: ${changedAssignmentsMap.map { case (k, v) => s"$k -> ${v.staffNumber}" }}")
     shifts.map { shift =>
-      println(s"shift: ${shift.index} ${shift.defaultShift.name}")
+      //      println(s"shift: ${shift.index} ${shift.defaultShift.name}")
       val updatedAssignments = shift.assignments.map { assignment =>
-        println(s"startTime: ${toStringShiftDate(assignment.startTime)}, key: ${toStringShiftDate(assignment.startTime)}, value: ${changedAssignmentsMap.get(toStringShiftDate(assignment.startTime)).map(_.staffNumber)}")
+        //        println(s"startTime: ${toStringShiftDate(assignment.startTime)}, key: ${toStringShiftDate(assignment.startTime)}, value: ${changedAssignmentsMap.get(toStringShiftDate(assignment.startTime)).map(_.staffNumber)}")
         changedAssignmentsMap.getOrElse(toStringShiftDate(assignment.startTime), assignment)
       }
 
-      updatedAssignments.foreach { assignment =>
-        println(s"assignment: ${assignment.startTime} ${assignment.staffNumber}")
-      }
+      //      updatedAssignments.foreach { assignment =>
+      //        println(s"assignment: ${assignment.startTime} ${assignment.staffNumber}")
+      //      }
       ShiftData(shift.index, shift.defaultShift, updatedAssignments.toSeq)
     }
   }
