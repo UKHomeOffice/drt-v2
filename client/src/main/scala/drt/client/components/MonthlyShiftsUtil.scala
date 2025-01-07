@@ -95,17 +95,10 @@ object MonthlyShiftsUtil {
 
   def updateAssignments(shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): Seq[ShiftData] = {
     val changedAssignmentsMap = changedAssignments.map(a => (toStringShiftDate(a.startTime)) -> a).toMap
-    //    println(s"changedAssignmentsMap: ${changedAssignmentsMap.map { case (k, v) => s"$k -> ${v.staffNumber}" }}")
     shifts.map { shift =>
-      //      println(s"shift: ${shift.index} ${shift.defaultShift.name}")
       val updatedAssignments = shift.assignments.map { assignment =>
-        //        println(s"startTime: ${toStringShiftDate(assignment.startTime)}, key: ${toStringShiftDate(assignment.startTime)}, value: ${changedAssignmentsMap.get(toStringShiftDate(assignment.startTime)).map(_.staffNumber)}")
         changedAssignmentsMap.getOrElse(toStringShiftDate(assignment.startTime), assignment)
       }
-
-      //      updatedAssignments.foreach { assignment =>
-      //        println(s"assignment: ${assignment.startTime} ${assignment.staffNumber}")
-      //      }
       ShiftData(shift.index, shift.defaultShift, updatedAssignments.toSeq)
     }
   }

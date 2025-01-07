@@ -55,7 +55,6 @@ class StaffingUtilSpec extends Specification {
 
       val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
 
-      updatedAssignments.map(a => println(SDate(a.start).toISOString, SDate(a.end).toISOString , a.numberOfStaff))
       updatedAssignments should have size 8
       updatedAssignments === List(
         StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 14, 14).millisSinceEpoch, 5, None),

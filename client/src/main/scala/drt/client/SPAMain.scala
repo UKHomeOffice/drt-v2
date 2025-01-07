@@ -13,7 +13,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
-import drt.client.spa.TerminalPageModes.{Current, Shifts, Staffing,StaffingShifts}
+import drt.client.spa.TerminalPageModes.{Current, Shifts, Staffing}
 import drt.client.spa.{TerminalPageMode, TerminalPageModes}
 import drt.shared.DrtPortConfigs
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
@@ -177,7 +177,6 @@ object SPAMain {
       case ("planning", _) => "Staff planning"
       case ("staffing", _) => "Monthly staffing"
       case ("shifts", _) => "Shifts"
-      case ("staffingShifts", _) => "Staffing shifts"
       case _ => ""
     }
 
@@ -239,8 +238,6 @@ object SPAMain {
       case Staffing =>
         GetAllShifts
       case Shifts =>
-        GetAllStaffShifts
-      case drt.client.spa.TerminalPageModes.StaffingShifts =>
         GetAllStaffShifts
       case _ =>
         SetViewMode(viewMode)

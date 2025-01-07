@@ -34,7 +34,6 @@ class StaffShiftHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffShift]]]) extends Lo
       val apiCallEffect = Effect(DrtApi.get(s"default-staff-shifts/$port/$terminal")
         .map { r =>
           val shifts = read[Seq[StaffShift]](r.responseText)
-          println(s"GetShifts shifts: $shifts")
           SetShifts(shifts)
         }
         .recoverWith {
@@ -75,7 +74,6 @@ class StaffShiftHandler[M](modelRW: ModelRW[M, Pot[Seq[StaffShift]]]) extends Lo
       updated(Pot.empty, apiCallEffect)
 
     case SetShifts(staffShifts) =>
-      println(s"SetShifts staffShifts: $staffShifts")
       updated(Ready(staffShifts))
   }
 }

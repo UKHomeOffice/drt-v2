@@ -20,7 +20,6 @@ object ViewDate {
     p.day = day
     p.month = month
     p.year = year
-    //    println(s"ViewDate.apply: $p")
     p
   }
 }
@@ -42,7 +41,6 @@ object ShiftDate {
     p.day = day
     p.hour = hour
     p.minute = minute
-    //    println(s"ShiftDate.apply: $p")
     p
   }
 }
@@ -62,7 +60,6 @@ object DefaultShift {
     p.defaultStaffNumber = defaultStaffNumber
     p.startTime = startTime
     p.endTime = endTime
-    //    println(s"DefaultShift.apply: $p")
     p
   }
 }
@@ -86,7 +83,6 @@ object ShiftAssignment {
     p.staffNumber = staffNumber
     p.startTime = startTime
     p.endTime = endTime
-    //    println(s"ShiftAssignment.apply: $p")
     p
   }
 }
@@ -104,7 +100,6 @@ object ShiftData {
     p.index = index
     p.defaultShift = defaultShift
     p.assignments = assignments.toJSArray
-    //    println(s"ShiftData.apply: $p")
     p
   }
 }

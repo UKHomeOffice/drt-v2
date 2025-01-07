@@ -115,7 +115,6 @@ object MonthlyShifts {
       }
 
       def confirmAndSave(shiftsData: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): ReactEventFromInput => Callback = (_: ReactEventFromInput) => Callback {
-        //        println("confirmAndSave ...", shiftsData)
         val changedShifts: Seq[StaffAssignment] = shiftsData.flatMap(_.assignments.toSeq.map(ShiftAssignmentConverter.toStaffAssignment(_, props.terminalPageTab.terminal)))
 
         val changedShiftSlots: Seq[StaffAssignment] = updatedConvertedShiftAssignments(
@@ -153,7 +152,6 @@ object MonthlyShifts {
               staffShifts,
               ShiftAssignments(monthOfShifts.forTerminal(props.terminalPageTab.terminal)),
               props.timeSlotMinutes)
-            //            println("initialShift", initialShift)
             scope.modState(state => state.copy(shifts = monthOfShifts,
               shiftsData = initialShift)).runNow()
           }
@@ -289,9 +287,7 @@ object MonthlyShifts {
                   interval = props.timeSlotMinutes,
                   initialShifts = state.shiftsData,
                   handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]) => {
-                    //                    println("handleSaveChanges shifts...", shifts)
                     val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
-                    //                    updateChanges.map(a => println("handleSaveChanges changedAssignments...", a.row, a.column, a.startTime, a.endTime, a.staffNumber))
                     val updateShifts = updateAssignments(shifts, updateChanges)
                     scope.modState(state => state.copy(
                       shiftsData = updateShifts,
