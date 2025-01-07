@@ -1,35 +1,39 @@
-package drt.server.feeds.bhx
+package drt.server.feeds.cwl
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.headers._
 import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshal, Unmarshaller}
+import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
+import sun.nio.cs.UTF_8
 import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
 
+import java.security.SecureRandom
+import javax.net.ssl.SSLContext
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Try
 import scala.xml.{Node, NodeSeq}
 
-object BHXFeed {
+object CWLFeed {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  def apply[FT](client: BHXClientLike, source: Source[FeedTick, FT])
+  def apply[FT](client: CWLClientLike, source: Source[FeedTick, FT])
                (implicit actorSystem: ActorSystem, materializer: Materializer): Source[ArrivalsFeedResponse, FT] = {
     var initialRequest = true
     source.mapAsync(1) { _ =>
-      log.info(s"Requesting BHX Feed")
+      log.info(s"Requesting CWL Feed")
       if (initialRequest)
         client.initialFlights.map {
           case s: ArrivalsFeedSuccess =>
@@ -44,7 +48,7 @@ object BHXFeed {
   }
 }
 
-case class BHXFlight(
+case class CWLFlight(
                       airline: String,
                       flightNumber: String,
                       departureAirport: String,
@@ -81,47 +85,50 @@ object SoapActionHeader extends ModeledCustomHeaderCompanion[SoapActionHeader] {
   override def parse(value: String): Try[SoapActionHeader] = Try(new SoapActionHeader(value))
 }
 
-trait BHXClientLike extends ScalaXmlSupport {
+trait CWLClientLike extends ScalaXmlSupport {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
-  val bhxLiveFeedUser: String
+  val cwlLiveFeedUser: String
   val soapEndPoint: String
 
   def initialFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
     log.info(s"Making initial Live Feed Request")
-    sendXMLRequest(fullRefreshXml(bhxLiveFeedUser))
+    sendXMLRequest(fullRefreshXml(cwlLiveFeedUser))
   }
 
   def updateFlights(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
     log.info(s"Making update Feed Request")
-    sendXMLRequest(updateXml()(bhxLiveFeedUser))
+    sendXMLRequest(updateXml()(cwlLiveFeedUser))
   }
 
   def sendXMLRequest(postXml: String)(implicit actorSystem: ActorSystem, materializer: Materializer): Future[ArrivalsFeedResponse] = {
-    implicit val xmlToResUM: Unmarshaller[NodeSeq, BHXFlightsResponse] = BHXFlight.unmarshaller
-    implicit val resToBHXResUM: Unmarshaller[HttpResponse, BHXFlightsResponse] = BHXFlight.responseToAUnmarshaller
+    implicit val xmlToResUM: Unmarshaller[NodeSeq, CWLFlightsResponse] = CWLFlight.unmarshaller
+    implicit val resToCWLResUM: Unmarshaller[HttpResponse, CWLFlightsResponse] = CWLFlight.responseToAUnmarshaller
 
     val headers: List[HttpHeader] = List(
-      SoapActionHeader("http://www.iata.org/IATA/2007/00/IRequestFlightService/RequestFlightData")
+      RawHeader("SOAPAction", "\"\""),
+      RawHeader("Accept", "*/*"),
+      RawHeader("Accept-Encoding", "gzip,deflate"),
     )
 
     makeRequest(soapEndPoint, headers, postXml)
-      .map(res => {
-        log.info(s"Got a response from BHX ${res.status}")
-        val bhxResponse = Unmarshal[HttpResponse](res).to[BHXFlightsResponse]
+      .map { res =>
+        log.info(s"Got a response from CWL ${res.status}")
+        val response = Unmarshal[HttpResponse](res).to[CWLFlightsResponse]
 
-        bhxResponse.map {
-          case s: BHXFlightsResponseSuccess =>
-            ArrivalsFeedSuccess(s.flights.map(fs => BHXFlight.bhxFlightToArrival(fs)))
+        response.map {
+          case s: CWLFlightsResponseSuccess =>
+            val arrivals = s.flights.map(fs => CWLFlight.portFlightToArrival(fs))
+            ArrivalsFeedSuccess(arrivals)
 
-          case f: BHXFlightsResponseFailure =>
+          case f: CWLFlightsResponseFailure =>
             ArrivalsFeedFailure(f.message)
         }
-      })
+      }
       .flatMap(identity)
       .recoverWith {
         case f =>
-          log.error(s"Failed to get BHX Live Feed", f)
+          log.error(s"Failed to get CWL Live Feed", f)
           Future(ArrivalsFeedFailure(f.getMessage))
       }
   }
@@ -130,27 +137,38 @@ trait BHXClientLike extends ScalaXmlSupport {
 
   def updateXml(): String => String = postXMLTemplate(fullRefresh = "0")
 
-  def postXMLTemplate(fullRefresh: String)(username: String): String = {
-    val postXML =
-      s"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="http://www.iata.org/IATA/2007/00">
-         |    <soapenv:Header/>
-         |    <soapenv:Body>
-         |        <ns:userID>$username</ns:userID>
-         |        <ns:fullRefresh>$fullRefresh</ns:fullRefresh>
-         |    </soapenv:Body>
-         |</soapenv:Envelope>""".stripMargin
-    postXML
-  }
+  def postXMLTemplate(fullRefresh: String)(username: String): String =
+    s"""<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:req="http://www.airport2020.com/RequestAIDX/">
+       |   <soapenv:Header/>
+       |   <soapenv:Body>
+       |      <req:userID>$username</req:userID>
+       |      <req:fullRefresh>$fullRefresh</req:fullRefresh>
+       |   </soapenv:Body>
+       |</soapenv:Envelope>""".stripMargin
 
   def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
                  (implicit system: ActorSystem): Future[HttpResponse]
 
 }
 
-case class BHXClient(bhxLiveFeedUser: String, soapEndPoint: String) extends BHXClientLike {
+case class CWLClient(cwlLiveFeedUser: String, soapEndPoint: String) extends CWLClientLike {
   def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
-                 (implicit system: ActorSystem): Future[HttpResponse] =
-    Http().singleRequest(HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(ContentTypes.`text/xml(UTF-8)`, postXML)))
+                 (implicit system: ActorSystem): Future[HttpResponse] = {
+    val byteString: ByteString = ByteString.fromString(postXML, UTF_8.INSTANCE)
+    val contentType: ContentType = ContentTypes.`text/xml(UTF-8)`
+    val request = HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(contentType, byteString))
+
+    val tls12Context = SSLContext.getInstance("TLSv1.2")
+    tls12Context.init(null, null, new SecureRandom())
+
+    Http()
+      .singleRequest(request, connectionContext = ConnectionContext.httpsClient(tls12Context))
+      .recoverWith {
+        case f =>
+          log.error(s"Failed to get CWL Live Feed: ${f.getMessage}")
+          Future.failed(f)
+      }
+  }
 }
 
 trait NodeSeqUnmarshaller {
@@ -160,13 +178,13 @@ trait NodeSeqUnmarshaller {
   }
 }
 
-sealed trait BHXFlightsResponse
+sealed trait CWLFlightsResponse
 
-case class BHXFlightsResponseSuccess(flights: List[BHXFlight]) extends BHXFlightsResponse
+case class CWLFlightsResponseSuccess(flights: List[CWLFlight]) extends CWLFlightsResponse
 
-case class BHXFlightsResponseFailure(message: String) extends BHXFlightsResponse
+case class CWLFlightsResponseFailure(message: String) extends CWLFlightsResponse
 
-object BHXFlight extends NodeSeqUnmarshaller {
+object CWLFlight extends NodeSeqUnmarshaller {
   def operationTimeFromNodeSeq(timeType: String, qualifier: String)(nodeSeq: NodeSeq): Option[String] = {
     nodeSeq.find(p =>
       attributeFromNode(p, "OperationQualifier").contains(qualifier) &&
@@ -186,53 +204,56 @@ object BHXFlight extends NodeSeqUnmarshaller {
 
   def scheduledTime: NodeSeq => Option[String] = operationTimeFromNodeSeq("SCT", "ONB")
 
-  implicit val unmarshaller: Unmarshaller[NodeSeq, BHXFlightsResponse] = Unmarshaller.strict[NodeSeq, BHXFlightsResponse] { xml =>
-
+  implicit val unmarshaller: Unmarshaller[NodeSeq, CWLFlightsResponse] = Unmarshaller.strict[NodeSeq, CWLFlightsResponse] { xml =>
     val flightNodeSeq = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "FlightLeg"
 
-    log.info(s"Got ${flightNodeSeq.length} flights in BHX XML")
+    val flights = flightNodeSeq
+      .filter { n =>
+        (n \ "LegData" \ "AirportResources" \ "Resource").exists { p =>
+          attributeFromNode(p, "DepartureOrArrival") == Option("Arrival")
+        }
+      }
+      .map { n =>
+        val airline = (n \ "LegIdentifier" \ "Airline").text
+        val flightNumber = (n \ "LegIdentifier" \ "FlightNumber").text
+        val departureAirport = (n \ "LegIdentifier" \ "DepartureAirport").text
+        val aircraftTerminal = (n \ "LegData" \ "AirportResources" \ "Resource" \ "AircraftTerminal").text
+        val status = (n \ "LegData" \ "RemarkFreeText").text
+        val airportParkingLocation = maybeNodeText(n \ "LegData" \ "AirportResources" \ "Resource" \ "AircraftParkingPosition")
+        val passengerGate = maybeNodeText(n \ "LegData" \ "AirportResources" \ "Resource" \ "PassengerGate")
 
-    val flights = flightNodeSeq.map(n => {
-      val airline = (n \ "LegIdentifier" \ "Airline").text
-      val flightNumber = (n \ "LegIdentifier" \ "FlightNumber").text
-      val departureAirport = (n \ "LegIdentifier" \ "DepartureAirport").text
-      val aircraftTerminal = (n \ "LegData" \ "AirportResources" \ "Resource" \ "AircraftTerminal").text
-      val status = (n \ "LegData" \ "RemarkFreeText").text
-      val airportParkingLocation = maybeNodeText(n \ "LegData" \ "AirportResources" \ "Resource" \ "AircraftParkingPosition")
-      val passengerGate = maybeNodeText(n \ "LegData" \ "AirportResources" \ "Resource" \ "PassengerGate")
+        val cabins = n \ "LegData" \ "CabinClass"
+        val maxPax = paxFromCabin(cabins, "SeatCapacity")
+        val totalPax = paxFromCabin(cabins, "PaxCount")
 
-      val cabins = n \ "LegData" \ "CabinClass"
-      val maxPax = paxFromCabin(cabins, "SeatCapacity")
-      val totalPax = paxFromCabin(cabins, "PaxCount")
+        val operationTimes = n \ "LegData" \ "OperationTime"
 
-      val operationTimes = n \ "LegData" \ "OperationTime"
+        val scheduledOnBlocks = scheduledTime(operationTimes).get
+        val maybeActualTouchDown = actualTouchDown(operationTimes)
+        val maybeEstTouchDown = estTouchDown(operationTimes)
+        val maybeEstChox = estChox(operationTimes)
+        val maybeActualChox = actualChox(operationTimes)
 
-      val scheduledOnBlocks = scheduledTime(operationTimes).get
-      val maybeActualTouchDown = actualTouchDown(operationTimes)
-      val maybeEstTouchDown = estTouchDown(operationTimes)
-      val maybeEstChox = estChox(operationTimes)
-      val maybeActualChox = actualChox(operationTimes)
-
-      BHXFlight(
-        airline,
-        flightNumber,
-        departureAirport,
-        "BHX",
-        aircraftTerminal,
-        status,
-        scheduledOnBlocks,
-        arrival = true,
-        international = true,
-        maybeEstChox,
-        maybeActualChox,
-        maybeEstTouchDown,
-        maybeActualTouchDown,
-        airportParkingLocation,
-        passengerGate,
-        maxPax,
-        totalPax
-      )
-    }).toList
+        CWLFlight(
+          airline,
+          flightNumber,
+          departureAirport,
+          "CWL",
+          aircraftTerminal,
+          status,
+          scheduledOnBlocks,
+          arrival = true,
+          international = true,
+          maybeEstChox,
+          maybeActualChox,
+          maybeEstTouchDown,
+          maybeActualTouchDown,
+          airportParkingLocation,
+          passengerGate,
+          maxPax,
+          totalPax
+        )
+      }.toList
 
     val warningNode = xml \ "Body" \ "IATA_AIDX_FlightLegRS" \ "Warnings" \ "Warning"
 
@@ -240,12 +261,12 @@ object BHXFlight extends NodeSeqUnmarshaller {
       val typeCode = attributeFromNode(w, "Type").getOrElse("No error type code")
       s"Code: $typeCode  Message:${w.text}"
     })
-    warnings.foreach(w => log.warn(s"BHX Live Feed warning: $w"))
+    warnings.foreach(w => log.warn(s"CWL Live Feed warning: $w"))
 
     if (flights.isEmpty && warnings.nonEmpty)
-      BHXFlightsResponseFailure(warnings.mkString(", "))
+      CWLFlightsResponseFailure(warnings.mkString(", "))
     else
-      BHXFlightsResponseSuccess(flights)
+      CWLFlightsResponseSuccess(flights)
   }
 
   def paxFromCabin(cabinPax: NodeSeq, seatingField: String): Option[Int] = cabinPax match {
@@ -277,7 +298,7 @@ object BHXFlight extends NodeSeqUnmarshaller {
     case _ => None
   }
 
-  def bhxFlightToArrival(f: BHXFlight): FeedArrival = {
+  def portFlightToArrival(f: CWLFlight): FeedArrival = {
     val (carrierCode, voyageNumber, suffix) = FlightCode.flightCodeToParts(f.airline + f.flightNumber)
 
     LiveArrival(
@@ -285,12 +306,11 @@ object BHXFlight extends NodeSeqUnmarshaller {
       maxPax = f.seatCapacity,
       totalPax = f.paxCount,
       transPax = None,
-      terminal = Terminal(s"T${f.aircraftTerminal}"),
+      terminal = Terminal(f.aircraftTerminal),
       voyageNumber = voyageNumber.numeric,
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = f.departureAirport,
-      previousPort = None,
       scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
       estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
       touchdown = maybeTimeStringToMaybeMillis(f.actualTouchDown),
