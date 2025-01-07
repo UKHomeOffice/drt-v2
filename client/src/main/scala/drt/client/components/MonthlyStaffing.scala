@@ -238,12 +238,13 @@ object MonthlyStaffing {
         ^.onClick ==> handleShiftEditForm
       ))
       <.div(
-        if (props.staffShiftsCount > 0 && !props.enableShiftPlanningChanges)
+        if (props.staffShiftsCount > 0 || !props.enableShiftPlanningChanges) {
           EmptyVdom
-        else
+        } else {
           <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
             props.router.set(TerminalShiftLoc(props.terminalPageTab.terminalName)).runNow()
-          }))),
+          })))
+        },
         modelChangeDetection,
         <.div(
           if (state.showStaffSuccess)
