@@ -92,6 +92,35 @@ class StaffingUtilSpec extends Specification {
         StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 45).millisSinceEpoch, SDate(2023, 10, 1, 15, 59).millisSinceEpoch, 5, None))
 
     }
-  }
 
-}
+    "overlapping shifts to sum if they overlap" in {
+      val shifts = Seq(
+        StaffShift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L),
+        StaffShift("LHR", "T1", "day", LocalDate(2023, 10, 1), "15:00", "17:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
+      )
+
+      val allShifts = ShiftAssignments(
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 0, None).splitIntoSlots(15),
+      )
+
+      val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
+
+      updatedAssignments should have size 12
+
+      updatedAssignments.toSet === Set(
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 14, 14).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 15).millisSinceEpoch, SDate(2023, 10, 1, 14, 29).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 30).millisSinceEpoch, SDate(2023, 10, 1, 14, 44).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 45).millisSinceEpoch, SDate(2023, 10, 1, 14, 59).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 0).millisSinceEpoch,  SDate(2023, 10, 1, 15, 14).millisSinceEpoch, 10, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 15).millisSinceEpoch, SDate(2023, 10, 1, 15, 29).millisSinceEpoch, 10, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 30).millisSinceEpoch, SDate(2023, 10, 1, 15, 44).millisSinceEpoch, 10, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 45).millisSinceEpoch, SDate(2023, 10, 1, 15, 59).millisSinceEpoch, 10, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 0).millisSinceEpoch,  SDate(2023, 10, 1, 16, 14).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 15).millisSinceEpoch, SDate(2023, 10, 1, 16, 29).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 30).millisSinceEpoch, SDate(2023, 10, 1, 16, 44).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 45).millisSinceEpoch, SDate(2023, 10, 1, 16, 59).millisSinceEpoch, 5, None))
+    }
+
+  }
+  }

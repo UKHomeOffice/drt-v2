@@ -32,23 +32,32 @@ object StaffingUtil {
   }
 
   def updateWithDefaultShift(shifts: Seq[StaffShift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
-    val updatedAssignments: Seq[StaffAssignmentLike] = shifts.flatMap { shift =>
-      val dailyAssignments: Seq[StaffAssignment] = generateDailyAssignments(shift)
-      val splitDailyAssignments = dailyAssignments.flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
-        .map(a => TM(a.terminal, a.start) -> a)
-        .toMap
-      val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
 
-      splitDailyAssignments.map {
-        case (tm, assignment) =>
-          existingAllAssignments.get(tm) match {
-            case Some(existing) =>
-              if (existing.numberOfStaff == 0) assignment else existing
-            case None => assignment
-          }
-      }.toSeq.sortBy(_.start)
+    val allShiftsStaff: Seq[StaffAssignment] = shifts.flatMap { shift =>
+      generateDailyAssignments(shift)
     }
-    updatedAssignments
+
+    val splitDailyAssignmentsWithOverlap = allShiftsStaff
+      .flatMap(_.splitIntoSlots(ShiftAssignments.periodLengthMinutes))
+      .groupBy(a => TM(a.terminal, a.start))
+      .map { case (tm, assignments) =>
+        val combinedAssignment = assignments.reduce { (a1, a2) =>
+          a1.copy(numberOfStaff = a1.numberOfStaff + a2.numberOfStaff)
+        }
+        tm -> combinedAssignment
+      }
+
+    val existingAllAssignments = allShifts.assignments.map(a => TM(a.terminal, a.start) -> a).toMap
+
+    splitDailyAssignmentsWithOverlap.map {
+      case (tm, assignment) =>
+        existingAllAssignments.get(tm) match {
+          case Some(existing) =>
+            if (existing.numberOfStaff == 0) assignment else existing
+          case None => assignment
+        }
+    }.toSeq.sortBy(_.start)
+
   }
 
 }

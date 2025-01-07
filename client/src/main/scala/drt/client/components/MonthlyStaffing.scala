@@ -243,7 +243,7 @@ object MonthlyStaffing {
         ^.onClick ==> handleShiftEditForm
       ))
       <.div(
-        if (props.isStaffShiftPage) {
+        if (!props.isStaffShiftPage) {
           if (props.staffShiftsCount > 0 || !props.enableShiftPlanningChanges) {
             EmptyVdom
           } else {
