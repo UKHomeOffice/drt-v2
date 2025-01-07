@@ -311,6 +311,7 @@ object CWLFlight extends NodeSeqUnmarshaller {
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = f.departureAirport,
+      previousPort = None,
       scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
       estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
       touchdown = maybeTimeStringToMaybeMillis(f.actualTouchDown),
