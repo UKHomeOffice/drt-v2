@@ -6,6 +6,7 @@ import diode.data._
 import drt.client.actions.Actions._
 import drt.client.logger._
 import drt.client.services._
+import drt.client.services.handlers.PortStateUpdatesHandler.splitsToManifestArrivalKeys
 import drt.shared.CrunchApi._
 import drt.shared._
 import drt.shared.api.FlightManifestSummary
@@ -21,6 +22,29 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+
+object PortStateUpdatesHandler {
+  def splitsToManifestArrivalKeys(incomingSplits: Iterable[SplitsForArrivals],
+                                  flights: Map[UniqueArrival, ApiFlightWithSplits],
+                                  existingManifestKeys: Set[ArrivalKey]
+                                 ): Set[ArrivalKey] =
+    incomingSplits
+      .flatMap { splitsForArrivals =>
+        splitsForArrivals.splits.filter { case (_, splits) =>
+          splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)
+        }
+      }
+      .toMap.keys
+      .map(ua => manifestArrivalKey(ua, flights))
+      .toSet
+      .diff(existingManifestKeys)
+
+  def manifestArrivalKey(ua: UniqueArrival, flights: Map[UniqueArrival, ApiFlightWithSplits]): ArrivalKey =
+    flights.get(ua) match {
+      case Some(fws) => ArrivalKey.forManifest(fws.apiFlight)
+      case None => ArrivalKey(ua.origin, VoyageNumber(ua.number), ua.scheduled)
+    }
+}
 
 class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
                                  portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch)],
@@ -53,7 +77,11 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
           val newState = updateStateFromUpdates(viewMode.dayStart.millisSinceEpoch, crunchUpdates, existingState)
           val scheduledUpdateRequest = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
 
-          val manifestRequest = manifestsRequest(crunchUpdates.updatesAndRemovals.splitsUpdates.values)
+          val existingFlights = value._1.map(_.flights).getOrElse(Map.empty)
+          val manifestRequestArrivalKeys = splitsToManifestArrivalKeys(crunchUpdates.updatesAndRemovals.splitsUpdates.values, existingFlights, manifestSummariesModel.value.keySet)
+          val manifestRequest = if (manifestRequestArrivalKeys.nonEmpty) {
+            List(Effect(Future(GetManifestSummaries(manifestRequestArrivalKeys))))
+          } else List.empty
 
           val newOriginCodes = crunchUpdates.updatesAndRemovals.arrivalUpdates.flatMap(_._2.toUpdate.map(_._1.origin)).toSet
 
@@ -74,38 +102,11 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
     case SchedulePortStateUpdateRequest(viewMode) => effectOnly(getCrunchUpdatesAfterDelay(viewMode))
   }
 
-  private def airportsRequest(newOriginCodes: Set[PortCode]) = {
-    val airportsRequest = if (newOriginCodes.nonEmpty)
+  private def airportsRequest(newOriginCodes: Set[PortCode]): List[EffectSingle[GetAirportInfos]] =
+    if (newOriginCodes.nonEmpty)
       List(Effect(Future(GetAirportInfos(newOriginCodes))))
     else
       List.empty
-    airportsRequest
-  }
-
-  private def manifestsRequest(splits: Iterable[SplitsForArrivals]): List[EffectSingle[GetManifestSummaries]] = {
-    val existingManifests = manifestSummariesModel.value
-    val manifestsToFetch = splits
-      .flatMap { splitsForArrivals =>
-        splitsForArrivals.splits.filter { case (_, splits) =>
-          splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages)
-        }
-      }
-      .toMap.keys
-      .map(manifestArrivalKey)
-      .toSet
-      .diff(existingManifests.keySet)
-
-    if (manifestsToFetch.nonEmpty) {
-      List(Effect(Future(GetManifestSummaries(manifestsToFetch))))
-    } else List.empty
-  }
-
-  private def manifestArrivalKey(ua: UniqueArrival): ArrivalKey = {
-    value._1.map(_.flights.get(ua)).getOrElse(None) match {
-      case Some(fws) => ArrivalKey.forManifest(fws.apiFlight)
-      case None => ArrivalKey(ua.origin, VoyageNumber(ua.number), ua.scheduled)
-    }
-  }
 
   private def processUpdatesRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] =
     call

@@ -9,9 +9,9 @@ import scala.scalajs.js.Date
 
 
 object SDateTests extends TestSuite {
-  override def tests = Tests {
-    'SDate - {
-      "You can add days to an SDate" - {
+  val tests: Tests = Tests {
+    test("SDate") {
+      test("You can add days to an SDate") - {
         import drt.client.services.JSDateConversions._
 
         val february = 2
