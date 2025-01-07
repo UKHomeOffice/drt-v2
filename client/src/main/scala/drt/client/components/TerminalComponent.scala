@@ -232,16 +232,17 @@ object TerminalComponent {
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, featureFlags.enableShiftPlanningChange, staffShifts.size))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, featureFlags.enableShiftPlanningChange, staffShifts.size, false))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && staffShifts.nonEmpty =>
                       if (props.terminalPageTab.toggleShiftView.isDefined)
-                        <.div(MonthlyStaffingShifts(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange))
+                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, featureFlags.enableShiftPlanningChange, staffShifts.size, true))
                       else
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && staffShifts.isEmpty =>
-                      <.div(^.className := "staffing-container-empty", "No staff shifts available, visit the ", <.strong("Staffing"), " tab to create some or select one of the other tabs.")                  }
+                      <.div(^.className := "staffing-container-empty", "No staff shifts available, visit the ", <.strong("Staffing"), " tab to create some or select one of the other tabs.")
+                  }
                 }
               }
               )

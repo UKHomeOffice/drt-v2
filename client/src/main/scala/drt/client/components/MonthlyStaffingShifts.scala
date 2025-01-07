@@ -2,13 +2,12 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
-import drt.client.actions.Actions.{GetAllStaffShifts, UpdateStaffShifts}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, TerminalShiftLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
+import drt.client.actions.Actions.{GetAllStaffShifts, UpdateShifts, UpdateStaffShifts}
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.GetShifts
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.client.util.DateRange
 import drt.shared._
@@ -60,7 +59,10 @@ object MonthlyStaffingShifts {
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
                    airportConfig: AirportConfig,
-                   enableStaffPlanningChanges: Boolean
+                   enableStaffPlanningChanges: Boolean,
+                   enableShiftPlanningChanges: Boolean,
+                   staffShiftsCount: Int,
+                   isStaffShiftPage: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
@@ -205,19 +207,22 @@ object MonthlyStaffingShifts {
             GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}",
               "Save Monthly Staffing",
               s"updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth")
-            SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
+            if (props.isStaffShiftPage)
+              SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
+            else
+              SPACircuit.dispatch(UpdateShifts(changedShiftSlots))
           }
         }
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
-      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments])
-      val staffRCP = SPACircuit.connect(m => Model(m.allStaffShifts))
+      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], monthOfShiftsPot: Pot[ShiftAssignments])
+      val staffRCP = SPACircuit.connect(m => Model(m.allStaffShifts, m.allShifts))
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
         val content = for {
-          monthOfShifts <- model.monthOfStaffShiftsPot
+          monthOfShifts <- if (props.isStaffShiftPage) model.monthOfStaffShiftsPot else model.monthOfShiftsPot
         } yield {
           if (monthOfShifts != state.shifts || state.timeSlots.isEmpty) {
             val slots = slotsFromShifts(monthOfShifts,
@@ -238,6 +243,15 @@ object MonthlyStaffingShifts {
         ^.onClick ==> handleShiftEditForm
       ))
       <.div(
+        if (props.isStaffShiftPage) {
+          if (props.staffShiftsCount > 0 || !props.enableShiftPlanningChanges) {
+            EmptyVdom
+          } else {
+            <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
+              props.router.set(TerminalShiftLoc(props.terminalPageTab.terminalName)).runNow()
+            })))
+          }
+        } else EmptyVdom,
         modelChangeDetection,
         <.div(
           if (state.showStaffSuccess)
@@ -323,11 +337,13 @@ object MonthlyStaffingShifts {
                     (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
                       ^.onClick ==> confirmAndSave(viewingDate, timeSlots)),
                   )),
-                <.div(^.className := "staffing-controls-toggle",
-                  MuiButton(color = Color.secondary, variant = "outlined")
-                  (<.span(^.style := js.Dictionary("paddingRight" -> "5px"), "Toggle Shift view"),
-                    ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ToggleShiftView(None)))
-                  ))
+                if (props.isStaffShiftPage) {
+                  <.div(^.className := "staffing-controls-toggle",
+                    MuiButton(color = Color.secondary, variant = "outlined")
+                    (<.span(^.style := js.Dictionary("paddingRight" -> "5px"), "Toggle Shift view"),
+                      ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ToggleShiftView(None)))
+                    ))
+                } else EmptyVdom
               ),
               MuiSwipeableDrawer(open = state.showEditStaffForm,
                 anchor = "right",
@@ -345,7 +361,10 @@ object MonthlyStaffingShifts {
                   ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
                   interval = props.timeSlotMinutes,
                   handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
-                    SPACircuit.dispatch(UpdateStaffShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                    if (props.isStaffShiftPage)
+                      SPACircuit.dispatch(UpdateStaffShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                    else
+                      SPACircuit.dispatch(UpdateShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
                     scope.modState(state => {
                       val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
                       newState
@@ -415,7 +434,10 @@ object MonthlyStaffingShifts {
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetAllStaffShifts)))
+    .componentDidMount(p =>
+      if (p.props.isStaffShiftPage) Callback(SPACircuit.dispatch(GetAllStaffShifts)) else
+        Callback(print("componentDidMount is not monthly staffShift but monthly shift"))
+    )
     .build
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int],
@@ -557,6 +579,9 @@ object MonthlyStaffingShifts {
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
-            enableStaffPlanningChange: Boolean
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange))
+            enableStaffPlanningChange: Boolean,
+            enableShiftPlanningChange: Boolean,
+            staffShiftsCount: Int,
+            isStaffShiftPage: Boolean
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableStaffPlanningChange, enableShiftPlanningChange, staffShiftsCount, isStaffShiftPage: Boolean))
 }
