@@ -1,8 +1,12 @@
 package drt.client.components
 
+import drt.client.services.JSDateConversions.SDate
+import drt.shared.CrunchApi.MillisSinceEpoch
 import japgolly.scalajs.react.{Children, JsFnComponent}
 import japgolly.scalajs.react.vdom.VdomElement
+import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 
+import scala.concurrent.duration.DurationInt
 import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 import scala.scalajs.js.JSConverters._
@@ -75,6 +79,28 @@ trait ShiftAssignment extends js.Object {
 }
 
 object ShiftAssignment {
+  private def shiftDateToSDate(shiftDate: ShiftDate) = {
+    SDate(shiftDate.year, shiftDate.month, shiftDate.day, shiftDate.hour, shiftDate.minute)
+  }
+
+  private def sDateToShiftDate(date: MillisSinceEpoch) = {
+    val s_date = SDate(date)
+    ShiftDate(s_date.getFullYear, s_date.getMonth, s_date.getDate, s_date.getHours, s_date.getMinutes)
+  }
+
+  def splitIntoSlots(shiftAssignment: ShiftAssignment, slotMinutes: Int): Seq[ShiftAssignment] =
+    (shiftDateToSDate(shiftAssignment.startTime).millisSinceEpoch until shiftDateToSDate(shiftAssignment.endTime).millisSinceEpoch by slotMinutes.minutes.toMillis).map(start =>
+      ShiftAssignment(
+        column = shiftAssignment.column,
+        row = shiftAssignment.row,
+        name = shiftAssignment.name,
+        staffNumber = shiftAssignment.staffNumber,
+        startTime = sDateToShiftDate(start),
+        endTime = sDateToShiftDate(start + (slotMinutes.minutes.toMillis - oneMinuteMillis)
+        )
+      )
+    )
+
   def apply(column: Int, row: Int, name: String, staffNumber: Int, startTime: ShiftDate, endTime: ShiftDate): ShiftAssignment = {
     val p = (new js.Object).asInstanceOf[ShiftAssignment]
     p.column = column
@@ -107,14 +133,14 @@ object ShiftData {
 @js.native
 trait ShiftHotTableViewProps extends js.Object {
   var viewDate: ViewDate = js.native
-  var dayRange : String = js.native
+  var dayRange: String = js.native
   var interval: Int = js.native
   var initialShifts: js.Array[ShiftData] = js.native
   var handleSaveChanges: js.Function2[js.Array[ShiftData], js.Array[ShiftAssignment], Unit] = js.native
 }
 
 object ShiftHotTableViewProps {
-  def apply(viewDate: ViewDate, dayRange:String, interval: Int, initialShifts: Seq[ShiftData], handleSaveChanges: (Seq[ShiftData], Seq[ShiftAssignment]) => Unit): ShiftHotTableViewProps = {
+  def apply(viewDate: ViewDate, dayRange: String, interval: Int, initialShifts: Seq[ShiftData], handleSaveChanges: (Seq[ShiftData], Seq[ShiftAssignment]) => Unit): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
     p.viewDate = viewDate
     p.dayRange = dayRange

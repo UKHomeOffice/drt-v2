@@ -119,8 +119,7 @@ object MonthlyShifts {
 
         val changedShiftSlots: Seq[StaffAssignment] = updatedConvertedShiftAssignments(
           changedShifts,
-          props.terminalPageTab.terminal,
-          props.timeSlotMinutes)
+          props.terminalPageTab.terminal)
 
         val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
 
@@ -288,7 +287,7 @@ object MonthlyShifts {
                   initialShifts = state.shiftsData,
                   handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]) => {
                     val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
-                    val updateShifts = updateAssignments(shifts, updateChanges)
+                    val updateShifts = updateAssignments(shifts, updateChanges, 15)
                     scope.modState(state => state.copy(
                       shiftsData = updateShifts,
                       changedAssignments = updateChanges
@@ -348,12 +347,8 @@ object MonthlyShifts {
 
 
   private def updatedConvertedShiftAssignments(changes: Seq[StaffAssignment],
-                                               terminalName: Terminal,
-                                               timeSlotMinutes: Int
-                                              ): Seq[StaffAssignment] = changes.map { change =>
-    val startMd = change.start
-    val endMd = SDate(startMd).addMinutes(timeSlotMinutes - 1).millisSinceEpoch
-    StaffAssignment(change.name, terminalName, startMd, endMd, change.numberOfStaff, None)
+                                               terminalName: Terminal): Seq[StaffAssignment] = changes.map { change =>
+    StaffAssignment(change.name, terminalName, change.start, change.end, change.numberOfStaff, None)
   }
 
 

@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.services.JSDateConversions.SDate
-import drt.shared.{ShiftAssignments, StaffAssignment, StaffShift}
+import drt.shared.{ShiftAssignments, StaffAssignmentLike, StaffShift}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 import scala.scalajs.js.Date
@@ -36,36 +36,47 @@ object MonthlyShiftsUtil {
   }
 
   def assignmentsForShift(firstDay: SDateLike, daysCount: Int, interval: Int, terminal: Terminal, s: StaffShift, shifts: ShiftAssignments): Seq[ShiftAssignment] = {
+    val Array(startHour, startMinute) = s.startTime.split(":").map(_.toInt)
+    val Array(endHour, endMinute) = s.endTime.split(":").map(_.toInt)
     var nextDay = firstDay
+
     (1 to daysCount).flatMap { day =>
-      val Array(startHour, startMinute) = s.startTime.split(":").map(_.toInt)
-      val Array(endHour, endMinute) = s.endTime.split(":").map(_.toInt)
-      val start = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, startHour, startMinute).millisSinceEpoch
-      val end = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, endHour, endMinute).millisSinceEpoch
-      val assignments: Seq[StaffAssignment] = StaffAssignment(s.shiftName, terminal, start, end, s.staffNumber, None).splitIntoSlots(interval).sortBy(_.start)
+      val start = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, startHour, startMinute)
+      val end = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, endHour, endMinute)
+      val dayAssignments: Seq[StaffAssignmentLike] = shifts.assignments.filter(assignment => assignment.start >= start.millisSinceEpoch && assignment.end <= end.millisSinceEpoch)
       nextDay = nextDay.addDays(1)
-      assignments.zipWithIndex.map { case (a, index) =>
-        val startTime = SDate(a.start)
-        val endTime = SDate(a.end)
-        val matchingAssignments = shifts.assignments.filter(sa => sa.start >= a.start && sa.end <= a.end).sortBy(_.start)
-        matchingAssignments.headOption match {
+
+      Iterator.iterate(start) { intervalTime =>
+        if ((intervalTime.getMinutes == 30 && interval == 60) || (intervalTime.getHours == endHour && interval == 60 && endMinute == 30)) {
+          intervalTime.addMinutes(30)
+        } else {
+          intervalTime.addMinutes(interval)
+        }
+      }.takeWhile(_ < end).toSeq.zipWithIndex.map { case (currentTime, index) =>
+        val nextTime = if ((currentTime.getMinutes == 30 && interval == 60) || (currentTime.getHours == endHour && interval == 60 && endMinute == 30)) {
+          currentTime.addMinutes(30)
+        } else {
+          currentTime.addMinutes(interval)
+        }
+        val matchedAssignments = dayAssignments.find(assignment => assignment.start == currentTime.millisSinceEpoch && assignment.terminal == terminal)
+        matchedAssignments match {
           case Some(sa) =>
             ShiftAssignment(
               column = day,
-              row = index + 1, // Start rowId from 1
+              row = index + 1,
               name = sa.name,
               staffNumber = sa.numberOfStaff,
-              startTime = ShiftDate(startTime.getFullYear, startTime.getMonth, startTime.getDate, startTime.getHours, startTime.getMinutes),
-              endTime = ShiftDate(endTime.getFullYear, endTime.getMonth, endTime.getDate, endTime.getHours, endTime.getMinutes)
+              startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
+              endTime = ShiftDate(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
             )
           case None =>
             ShiftAssignment(
               column = day,
-              row = index + 1, // Start rowId from 1
+              row = index + 1,
               name = s.shiftName,
-              staffNumber = a.numberOfStaff,
-              startTime = ShiftDate(startTime.getFullYear, startTime.getMonth, startTime.getDate, startTime.getHours, startTime.getMinutes),
-              endTime = ShiftDate(endTime.getFullYear, endTime.getMonth, endTime.getDate, endTime.getHours, endTime.getMinutes)
+              staffNumber = s.staffNumber,
+              startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
+              endTime = ShiftDate(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
             )
         }
       }
@@ -93,9 +104,10 @@ object MonthlyShiftsUtil {
     mergedMap.values.toSeq
   }
 
-  def updateAssignments(shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): Seq[ShiftData] = {
-    val changedAssignmentsMap = changedAssignments.map(a => (toStringShiftDate(a.startTime)) -> a).toMap
-    shifts.map { shift =>
+  def updateAssignments(shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment], slotMinutes: Int): Seq[ShiftData] = {
+    val changedAssignmentsWithSlotMap: Seq[ShiftAssignment] = changedAssignments.flatMap(a => ShiftAssignment.splitIntoSlots(a, slotMinutes))
+    val changedAssignmentsMap: Map[String, ShiftAssignment] = changedAssignmentsWithSlotMap.map(a => (toStringShiftDate(a.startTime)) -> a).toMap
+    shifts.map { shift: ShiftData =>
       val updatedAssignments = shift.assignments.map { assignment =>
         changedAssignmentsMap.getOrElse(toStringShiftDate(assignment.startTime), assignment)
       }
