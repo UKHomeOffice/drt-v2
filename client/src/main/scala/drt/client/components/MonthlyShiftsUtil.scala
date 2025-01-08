@@ -73,7 +73,7 @@ object MonthlyShiftsUtil {
   }
 
   def generateShiftData(viewingDate: SDateLike, dayRange: String, terminal: Terminal, staffShifts: Seq[StaffShift], shifts: ShiftAssignments, interval: Int): Seq[ShiftData] = {
-    staffShifts.zipWithIndex.map { case (s, index) =>
+    staffShifts.sortBy(_.startTime).zipWithIndex.map { case (s, index) =>
       ShiftData(
         index = index,
         defaultShift = DefaultShift(s.shiftName, s.staffNumber, s.startTime, s.endTime),
