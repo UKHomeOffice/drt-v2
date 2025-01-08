@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.shared.ArrivalKey
+import drt.shared.ManifestKey
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange}
 import japgolly.scalajs.react.vdom.{VdomElement, html_<^}
 import japgolly.scalajs.react.vdom.all.EmptyVdom
@@ -30,14 +30,14 @@ object FlightHighlighter {
   }
 
   def findHighlightedFlightsCount(sortedFlights: Seq[(ApiFlightWithSplits, Seq[String])],
-                                  flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                                  flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                                   flaggedNationalities: Set[drt.shared.Country],
                                   flaggedAgeGroups: Set[PaxAgeRange],
                                   showNumberOfVisaNationals: Boolean,
                                   showHighlightedRows: Boolean,
                                   showRequireAllSelected: Boolean): Int = {
     val flightManifestSummary: Seq[FlightManifestSummary] = sortedFlights.flatMap {
-      case (flightWithSplits, _) => flightManifestSummaries.get(ArrivalKey.forManifest(flightWithSplits.apiFlight))
+      case (flightWithSplits, _) => flightManifestSummaries.get(ManifestKey(flightWithSplits.apiFlight))
     }
     val flaggedInSummary: Seq[Option[Int]] = flightManifestSummary.map { manifestSummary =>
 

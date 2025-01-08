@@ -2,7 +2,7 @@ package services.exports.flights.templates
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import drt.shared.{ArrivalKey, CodeShares}
+import drt.shared.{ManifestKey, CodeShares}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.FeedSource
@@ -45,7 +45,7 @@ trait FlightsExport {
         .toSeq
         .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
         .map { fws =>
-          val maybeManifest = manifests.manifests.find(_.maybeKey.exists(_ == ArrivalKey(fws.apiFlight)))
+          val maybeManifest = manifests.manifests.find(_.maybeKey.exists(_ == ManifestKey(fws.apiFlight)))
           (fws, maybeManifest)
         }
     }

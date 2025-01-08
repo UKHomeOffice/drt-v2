@@ -6,7 +6,7 @@ import diode.data._
 import drt.client.actions.Actions._
 import drt.client.logger._
 import drt.client.services._
-import drt.client.services.handlers.PortStateUpdatesHandler.splitsToManifestArrivalKeys
+import drt.client.services.handlers.PortStateUpdatesHandler.splitsToManifestKeys
 import drt.shared.CrunchApi._
 import drt.shared._
 import drt.shared.api.FlightManifestSummary
@@ -24,10 +24,10 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 object PortStateUpdatesHandler {
-  def splitsToManifestArrivalKeys(incomingSplits: Iterable[SplitsForArrivals],
-                                  flights: Map[UniqueArrival, ApiFlightWithSplits],
-                                  existingManifestKeys: Set[ArrivalKey]
-                                 ): Set[ArrivalKey] =
+  def splitsToManifestKeys(incomingSplits: Iterable[SplitsForArrivals],
+                           flights: Map[UniqueArrival, ApiFlightWithSplits],
+                           existingManifestKeys: Set[ManifestKey]
+                                 ): Set[ManifestKey] =
     incomingSplits
       .flatMap { splitsForArrivals =>
         splitsForArrivals.splits.filter { case (_, splits) =>
@@ -39,16 +39,16 @@ object PortStateUpdatesHandler {
       .toSet
       .diff(existingManifestKeys)
 
-  def manifestArrivalKey(ua: UniqueArrival, flights: Map[UniqueArrival, ApiFlightWithSplits]): ArrivalKey =
+  def manifestArrivalKey(ua: UniqueArrival, flights: Map[UniqueArrival, ApiFlightWithSplits]): ManifestKey =
     flights.get(ua) match {
-      case Some(fws) => ArrivalKey.forManifest(fws.apiFlight)
-      case None => ArrivalKey(ua.origin, VoyageNumber(ua.number), ua.scheduled)
+      case Some(fws) => ManifestKey(fws.apiFlight)
+      case None => ManifestKey(ua.origin, VoyageNumber(ua.number), ua.scheduled)
     }
 }
 
 class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
                                  portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch)],
-                                 manifestSummariesModel: ModelR[M, Map[ArrivalKey, FlightManifestSummary]],
+                                 manifestSummariesModel: ModelR[M, Map[ManifestKey, FlightManifestSummary]],
                                  paxFeedSourceOrder: ModelR[M, List[FeedSource]],
                                 ) extends LoggingActionHandler(portStateModel) {
   private val liveRequestFrequency: FiniteDuration = 2 seconds
@@ -78,7 +78,7 @@ class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
           val scheduledUpdateRequest = Effect(Future(SchedulePortStateUpdateRequest(viewMode)))
 
           val existingFlights = value._1.map(_.flights).getOrElse(Map.empty)
-          val manifestRequestArrivalKeys = splitsToManifestArrivalKeys(crunchUpdates.updatesAndRemovals.splitsUpdates.values, existingFlights, manifestSummariesModel.value.keySet)
+          val manifestRequestArrivalKeys = splitsToManifestKeys(crunchUpdates.updatesAndRemovals.splitsUpdates.values, existingFlights, manifestSummariesModel.value.keySet)
           val manifestRequest = if (manifestRequestArrivalKeys.nonEmpty) {
             List(Effect(Future(GetManifestSummaries(manifestRequestArrivalKeys))))
           } else List.empty

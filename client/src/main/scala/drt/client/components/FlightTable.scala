@@ -45,7 +45,7 @@ object FlightTable {
                    paxFeedSourceOrder: List[FeedSource],
                    flightHighlight: FlightHighlight,
                    flights: Pot[Seq[ApiFlightWithSplits]],
-                   flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                   flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    originMapper: (PortCode, html_<^.TagMod) => VdomNode,
                   ) extends UseValueEq

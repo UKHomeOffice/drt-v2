@@ -8,7 +8,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
 import drt.server.feeds.ManifestsFeedResponse
-import drt.shared.ArrivalKey
+import drt.shared.ManifestKey
 import manifests.passengers.ManifestLike
 import org.slf4j.LoggerFactory
 import providers.FlightsProvider
@@ -33,7 +33,7 @@ object ManifestPersistence {
             case (_, flights) =>
               manifests
                 .map { manifest =>
-                  val flightsByManifestArrivalKey = flights.map(fws => ArrivalKey.forManifest(fws.apiFlight) -> fws)
+                  val flightsByManifestArrivalKey = flights.map(fws => ManifestKey(fws.apiFlight) -> fws)
 
                   val maybeSplits = flightsByManifestArrivalKey
                     .find { case (key, _) => manifest.maybeKey.contains(key) }

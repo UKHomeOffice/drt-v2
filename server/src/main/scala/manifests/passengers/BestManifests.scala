@@ -36,9 +36,9 @@ trait ManifestLike {
       nonUniquePassengers
   }
 
-  def maybeKey: Option[ArrivalKey] = voyageNumber match {
+  def maybeKey: Option[ManifestKey] = voyageNumber match {
     case vn: VoyageNumber =>
-      Option(ArrivalKey(departurePortCode, vn, scheduled.millisSinceEpoch))
+      Option(ManifestKey(departurePortCode, vn, scheduled.millisSinceEpoch))
     case _ => None
   }
 }
@@ -60,7 +60,7 @@ object BestAvailableManifest {
   def historic(manifest: VoyageManifest): BestAvailableManifest =
     fromManifest(manifest, SplitSources.Historical)
 
-  def fromManifest(manifest: VoyageManifest, source: SplitSource): BestAvailableManifest = {
+  private def fromManifest(manifest: VoyageManifest, source: SplitSource): BestAvailableManifest = {
     BestAvailableManifest(
       source = source,
       arrivalPortCode = manifest.ArrivalPortCode,

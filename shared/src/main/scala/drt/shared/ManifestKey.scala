@@ -14,10 +14,10 @@ object FeedSourceArrival {
 }
 
 
-case class ArrivalKey(origin: PortCode,
-                      voyageNumber: VoyageNumber,
-                      scheduled: Long) extends Ordered[ArrivalKey] with WithTimeAccessor {
-  override def compare(that: ArrivalKey): Int =
+case class ManifestKey(origin: PortCode,
+                       voyageNumber: VoyageNumber,
+                       scheduled: Long) extends Ordered[ManifestKey] with WithTimeAccessor {
+  override def compare(that: ManifestKey): Int =
     scheduled.compareTo(that.scheduled) match {
       case 0 => origin.compare(that.origin) match {
         case 0 => voyageNumber.compare(that.voyageNumber)
@@ -29,15 +29,13 @@ case class ArrivalKey(origin: PortCode,
   override def timeValue: MillisSinceEpoch = scheduled
 }
 
-object ArrivalKey {
+object ManifestKey {
 
-  implicit val rw: ReadWriter[ArrivalKey] = macroRW
+  implicit val rw: ReadWriter[ManifestKey] = macroRW
 
-  def apply(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled)
+  def apply(arrival: Arrival): ManifestKey = ManifestKey(arrival.PreviousPort.getOrElse(arrival.Origin), arrival.VoyageNumber, arrival.Scheduled)
 
-  def forManifest(arrival: Arrival): ArrivalKey = ArrivalKey(arrival.PreviousPort.getOrElse(arrival.Origin), arrival.VoyageNumber, arrival.Scheduled)
-
-  def atTime: MillisSinceEpoch => ArrivalKey = (time: MillisSinceEpoch) => ArrivalKey(PortCode(""), VoyageNumber(0), time)
+  def atTime: MillisSinceEpoch => ManifestKey = (time: MillisSinceEpoch) => ManifestKey(PortCode(""), VoyageNumber(0), time)
 }
 
 

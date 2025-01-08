@@ -1,11 +1,11 @@
 package drt.shared.api
 
-import drt.shared.ArrivalKey
+import drt.shared.ManifestKey
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.ports.PaxType
-import upickle.default.{macroRW, _}
+import upickle.default._
 
-case class FlightManifestSummary(arrivalKey: ArrivalKey,
+case class FlightManifestSummary(arrivalKey: ManifestKey,
                                  ageRanges: Map[PaxAgeRange, Int],
                                  nationalities: Map[Nationality, Int],
                                  paxTypes: Map[PaxType, Int]

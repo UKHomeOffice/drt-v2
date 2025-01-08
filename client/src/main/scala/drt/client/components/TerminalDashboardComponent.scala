@@ -41,7 +41,7 @@ object TerminalDashboardComponent {
                    walkTimes: Pot[WalkTimes],
                    paxFeedSourceOrder: List[FeedSource],
                    portState: Pot[PortState],
-                   flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                   flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    flightHighlight: FlightHighlight,
                   ) extends UseValueEq

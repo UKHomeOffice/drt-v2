@@ -3,7 +3,7 @@ package actors.daily
 import actors.serializers.ManifestMessageConversion
 import akka.actor.Props
 import akka.persistence.SaveSnapshotSuccess
-import drt.shared.ArrivalKey
+import drt.shared.ManifestKey
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
@@ -44,7 +44,7 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 
-  var state: Map[ArrivalKey, VoyageManifest] = Map()
+  var state: Map[ManifestKey, VoyageManifest] = Map()
 
   override def receiveCommand: Receive = {
     case manifests: VoyageManifests =>

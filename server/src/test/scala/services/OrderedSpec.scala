@@ -14,8 +14,8 @@ class OrderedSpec extends Specification {
     "Given two CodeShareKeyOrderedByDupes with identical sch, term & origin, but one with 2 ArrivalKeys and the other with one " +
       "When adding them in order of number of arrival keys and then sorting them " +
       "The head item should be the one with 2 arrival keys" >> {
-      val cs1 = CodeShareKeyOrderedByDupes(0L, T1, PortCode("LHR"), Set(ArrivalKey(PortCode("LHR"), VoyageNumber(1), 0L)))
-      val cs2 = CodeShareKeyOrderedByDupes(0L, T1, PortCode("LHR"), Set(ArrivalKey(PortCode("LHR"), VoyageNumber(1), 0L), ArrivalKey(PortCode("LHR"), VoyageNumber(1), 0L)))
+      val cs1 = CodeShareKeyOrderedByDupes(0L, T1, PortCode("LHR"), Set(ManifestKey(PortCode("LHR"), VoyageNumber(1), 0L)))
+      val cs2 = CodeShareKeyOrderedByDupes(0L, T1, PortCode("LHR"), Set(ManifestKey(PortCode("LHR"), VoyageNumber(1), 0L), ManifestKey(PortCode("LHR"), VoyageNumber(1), 0L)))
 
       val sorted = Seq(cs1, cs2).sorted
 
@@ -27,8 +27,8 @@ class OrderedSpec extends Specification {
     "Given two ArrivalKey with identical origin, voyage number & scheduled " +
       "When adding them to a Set " +
       "The Set's size should be 1" >> {
-      val cs1 = ArrivalKey(PortCode("AAA"), VoyageNumber(0), 0L)
-      val cs2 = ArrivalKey(PortCode("AAA"), VoyageNumber(0), 0L)
+      val cs1 = ManifestKey(PortCode("AAA"), VoyageNumber(0), 0L)
+      val cs2 = ManifestKey(PortCode("AAA"), VoyageNumber(0), 0L)
 
       val setSize = Set(cs1, cs2).size
 
@@ -38,8 +38,8 @@ class OrderedSpec extends Specification {
     "Given two ArrivalKey with identical origin & voyage number, but scheduleds of 0 & 1 " +
       "When adding them to a SortedSet " +
       "They should be ordered with 0 first, and 1 last" >> {
-      val cs1 = ArrivalKey(PortCode("AAA"), VoyageNumber(0), 1L)
-      val cs2 = ArrivalKey(PortCode("AAA"), VoyageNumber(0), 0L)
+      val cs1 = ManifestKey(PortCode("AAA"), VoyageNumber(0), 1L)
+      val cs2 = ManifestKey(PortCode("AAA"), VoyageNumber(0), 0L)
 
       val sorted = SortedSet(cs1, cs2).toSeq
 
@@ -49,8 +49,8 @@ class OrderedSpec extends Specification {
     "Given two ArrivalKey with identical origin & scheduled, but voyage numbers 0 & 1 " +
       "When adding them to a SortedSet " +
       "They should be ordered with 0 first, and 1 last" >> {
-      val cs1 = ArrivalKey(PortCode("AAA"), VoyageNumber(1), 0L)
-      val cs2 = ArrivalKey(PortCode("AAA"), VoyageNumber(0), 0L)
+      val cs1 = ManifestKey(PortCode("AAA"), VoyageNumber(1), 0L)
+      val cs2 = ManifestKey(PortCode("AAA"), VoyageNumber(0), 0L)
 
       val sorted = SortedSet(cs1, cs2).toSeq
 
@@ -60,8 +60,8 @@ class OrderedSpec extends Specification {
     "Given two ArrivalKey with identical voyage numbers & scheduleds, but origins of AAA & BBB " +
       "When adding them to a SortedSet " +
       "They should be ordered with 0 first, and 1 last" >> {
-      val cs1 = ArrivalKey(PortCode("BBB"), VoyageNumber(0), 0L)
-      val cs2 = ArrivalKey(PortCode("AAA"), VoyageNumber(0), 0L)
+      val cs1 = ManifestKey(PortCode("BBB"), VoyageNumber(0), 0L)
+      val cs2 = ManifestKey(PortCode("AAA"), VoyageNumber(0), 0L)
 
       val sorted = SortedSet(cs1, cs2).toSeq
 

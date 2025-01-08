@@ -56,7 +56,7 @@ object TerminalContentComponent {
                    walkTimes: Pot[WalkTimes],
                    paxFeedSourceOrder: List[FeedSource],
                    flights: Pot[Seq[ApiFlightWithSplits]],
-                   flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                   flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    simulationResult: Pot[SimulationResult],
                    flightHighlight: FlightHighlight,
