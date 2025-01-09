@@ -33,7 +33,6 @@ object PortStateUpdatesHandlerTest extends TestSuite {
       test("return a ManifestKey with the Origin when there's no matching arrival") {
         val key = PortStateUpdatesHandler.manifestArrivalKey(flight.unique, Map.empty)
 
-        println(s"$key != ${ManifestKey(flight.apiFlight)}")
         assert(key.origin == flight.unique.origin)
         assert(key == ManifestKey(arrival.Origin, arrival.VoyageNumber, arrival.Scheduled))
       }

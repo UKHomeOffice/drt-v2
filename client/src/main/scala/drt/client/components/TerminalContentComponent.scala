@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.{Pending, Pot}
-import diode.react.{ModelProxy, ReactConnectProxy}
+import diode.react.ReactConnectProxy
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.components.ArrivalsExportComponent.componentFactory
@@ -72,16 +72,31 @@ object TerminalContentComponent {
 
   def airportWrapper(portCode: PortCode): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
-  def originMapper(portCode: PortCode, style: html_<^.TagMod): VdomElement = airportWrapper(portCode) {
-    proxy: ModelProxy[Pot[AirportInfo]] =>
+  def originMapper(origin: PortCode, maybePrevious: Option[PortCode], style: html_<^.TagMod): VdomElement =
+    airportWrapper(origin) { originProxy => {
+      val prevPort = maybePrevious.map(previousPortMapper(_, style)) match {
+        case Some(prevPort) => <.div(s"via ", prevPort)
+        case None => <.span()
+      }
       <.span(
         style,
-        proxy().render(ai =>
+        originProxy().render(ai =>
           <.dfn(^.className := "flight-origin-dfn", Tippy.describe(<.span(s"${ai.airportName}, ${ai.city}, ${ai.country}"),
-            <.abbr(^.className := "dotted-underline", s"${portCode.toString}")), s", ${ai.country}")),
-        proxy().renderEmpty(<.abbr(^.className := "dotted-underline", portCode.toString))
+            <.abbr(^.className := "dotted-underline", s"${origin.toString}")), <.span(s", ${ai.country}", prevPort))),
+        originProxy().renderEmpty(<.abbr(^.className := "dotted-underline", <.span(origin.toString, prevPort)))
       )
-  }
+    }}
+
+  def previousPortMapper(previous: PortCode, style: html_<^.TagMod): VdomElement =
+    airportWrapper(previous) { previousProxy =>
+      <.span(
+        style,
+        previousProxy().render(ai =>
+          <.dfn(^.className := "flight-origin-dfn", Tippy.describe(<.span(s"${ai.airportName}, ${ai.city}, ${ai.country}"),
+            <.abbr(^.className := "dotted-underline", s"${previous.toString}")), s", ${ai.country}")),
+        previousProxy().renderEmpty(<.abbr(^.className := "dotted-underline", previous.toString))
+      )
+    }
 
   class Backend {
     def render(props: Props, state: State): TagOf[Div] = {

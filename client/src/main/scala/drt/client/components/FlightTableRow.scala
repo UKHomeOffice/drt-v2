@@ -34,7 +34,7 @@ object FlightTableRow {
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShareFlightCodes: Seq[String],
-                   originMapper: (PortCode, html_<^.TagMod) => VdomNode,
+                   originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                    splitsQueueOrder: Seq[Queue],
                    loggedInUser: LoggedInUser,
                    viewMode: ViewMode,
@@ -172,6 +172,8 @@ object FlightTableRow {
       val highlighterClass = s"arrivals__table__flight-code__highlighter-${if (highlighterIsActive) "on" else "off"}"
       val isHighlightedClass = if (highlighterIsActive) "arrivals__table__flight-code-wrapper__highlighted" else ""
 
+      val maybePreviousPort = None //flight.PreviousPort.filter(_ != flight.Origin)
+
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(^.cls := s"$highlighterClass $isHighlightedClass arrivals__table__flight-code-wrapper",
@@ -181,13 +183,13 @@ object FlightTableRow {
           .getOrElse {
             if (highlighterIsActive) <.td(^.className := "arrivals__table__flags-column", "") else EmptyVdom
           },
-        <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
+        <.td(TerminalContentComponent.airportWrapper(flight.Origin) { airportInfoPot: ModelProxy[Pot[AirportInfo]] =>
           <.span(
-            proxy().renderEmpty(props.originMapper(flight.Origin, EmptyVdom)),
-            proxy().render { ai =>
+            airportInfoPot().renderEmpty(props.originMapper(flight.Origin, maybePreviousPort, EmptyVdom)),
+            airportInfoPot().render { ai =>
               val redListCountry = props.indirectRedListPax.isEnabled && isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)
               val style: html_<^.TagMod = if (redListCountry) ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField) else EmptyVdom
-              props.originMapper(flight.Origin, style)
+              props.originMapper(flight.Origin, maybePreviousPort, style)
             }
           )
         }),

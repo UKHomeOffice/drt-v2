@@ -44,7 +44,7 @@ object FlightTableContent {
                    flightHighlight: FlightHighlight,
                    paxFeedSourceOrder: List[FeedSource],
                    shortLabel: Boolean = false,
-                   originMapper: (PortCode, html_<^.TagMod) => VdomNode,
+                   originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                   ) extends UseValueEq
 
   case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]]) extends UseValueEq

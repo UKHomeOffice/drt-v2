@@ -47,7 +47,7 @@ object FlightTable {
                    flights: Pot[Seq[ApiFlightWithSplits]],
                    flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                   originMapper: (PortCode, html_<^.TagMod) => VdomNode,
+                   originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                   ) extends UseValueEq
 
   case class State(showHighlightedRows: Boolean)
