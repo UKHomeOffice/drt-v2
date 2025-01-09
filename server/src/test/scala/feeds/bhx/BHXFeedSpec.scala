@@ -395,6 +395,7 @@ class BHXFeedSpec extends CrunchTestLike {
       carrierCode = "SA",
       flightCodeSuffix = None,
       origin = "JNB",
+      previousPort = None,
       scheduled = SDate(scheduledTimeString).millisSinceEpoch,
       estimated = Option(SDate(estimatedTouchDownTimeString).millisSinceEpoch),
       touchdown = Option(SDate(actualTouchDownTimeString).millisSinceEpoch),

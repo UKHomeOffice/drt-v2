@@ -378,7 +378,7 @@ class TestDrtActor extends Actor {
         splitsCalculator.splitsForManifest,
       )
 
-      val manifestsLiveResponseSource: SourceQueueWithComplete[ManifestsFeedResponse] = manifestsSource.mapAsync(1)(persistManifests).toMat(Sink.ignore)(Keep.left).run
+      val manifestsLiveResponseSource: SourceQueueWithComplete[ManifestsFeedResponse] = manifestsSource.mapAsync(1)(persistManifests).toMat(Sink.ignore)(Keep.left).run()
 
       val liveArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)
       val liveBaseArrivals: Source[ArrivalsFeedResponse, SourceQueueWithComplete[ArrivalsFeedResponse]] = Source.queue[ArrivalsFeedResponse](0, OverflowStrategy.backpressure)

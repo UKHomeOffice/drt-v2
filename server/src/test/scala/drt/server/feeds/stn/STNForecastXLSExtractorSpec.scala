@@ -43,6 +43,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         carrierCode = "TST",
         flightCodeSuffix = None,
         origin = "AGP",
+        previousPort = None,
         scheduled = SDate("2020-08-03T23:00").millisSinceEpoch,
       ),
       ForecastArrival(
@@ -55,6 +56,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         carrierCode = "TST",
         flightCodeSuffix = None,
         origin = "DLM",
+        previousPort = None,
         scheduled = SDate("2020-08-04T00:15").millisSinceEpoch,
       ),
       ForecastArrival(
@@ -67,6 +69,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         carrierCode = "TST",
         flightCodeSuffix = None,
         origin = "CGN",
+        previousPort = None,
         scheduled = SDate("2020-08-04T06:05").millisSinceEpoch,
       ),
       ForecastArrival(
@@ -79,6 +82,7 @@ class STNForecastXLSExtractorSpec extends Specification {
         carrierCode = "TST",
         flightCodeSuffix = None,
         origin = "SXF",
+        previousPort = None,
         scheduled = SDate("2020-08-04T06:20").millisSinceEpoch,
       )
     )

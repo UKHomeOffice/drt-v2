@@ -160,6 +160,7 @@ class AclFeedSpec extends CrunchTestLike {
         carrierCode = "4U",
         flightCodeSuffix = None,
         origin = "CGN",
+        previousPort = Option("CGN"),
         scheduled = 1507878600000L,
       ))
 
@@ -213,6 +214,7 @@ class AclFeedSpec extends CrunchTestLike {
         carrierCode = "4U",
         flightCodeSuffix = None,
         origin = "CGN",
+        previousPort = Option("CGN"),
         scheduled = 1507878600000L,
       ))
       arrivals === expected
@@ -237,6 +239,7 @@ class AclFeedSpec extends CrunchTestLike {
         carrierCode = "4U",
         flightCodeSuffix = None,
         origin = "CGN",
+        previousPort = Option("CGN"),
         scheduled = 1507878600000L,
       ))
       arrivals === expected

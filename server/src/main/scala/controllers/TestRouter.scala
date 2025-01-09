@@ -1,14 +1,14 @@
 package controllers
 
-import play.api.mvc._
 import play.api.routing.sird._
 import play.api.routing.{Router, SimpleRouter}
 import router.Routes
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
+
 import javax.inject.{Inject, Singleton}
 
 @Singleton
-class TestRouter @Inject()(cc: ControllerComponents, testController: TestController) extends SimpleRouter {
+class TestRouter @Inject()(testController: TestController) extends SimpleRouter {
 
   val router: Router = Router.from {
 

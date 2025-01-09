@@ -102,7 +102,7 @@ object MinutesActorLikeCommon {
                                                                          end: UtcDate,
                                                                          maybePointInTime: Option[MillisSinceEpoch]
                                                                         )
-                                                                        (implicit ec: ExecutionContext, mat: Materializer): Source[(UtcDate, MinutesContainer[A, B]), NotUsed] =
+                                                                        (implicit ec: ExecutionContext): Source[(UtcDate, MinutesContainer[A, B]), NotUsed] =
     Source(DateRange(start, end))
       .mapAsync(1) { day =>
         handleLookup(lookup((terminal, day), maybePointInTime)).map(r => (day, r))

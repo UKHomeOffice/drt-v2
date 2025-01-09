@@ -100,6 +100,7 @@ case class LtnLiveFeed(feedRequester: LtnFeedRequestLike, timeZone: DateTimeZone
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = ltnFeedFlight.OriginDestAirportIATA.getOrElse(throw new Exception("Missing origin IATA port code")),
+      previousPort = None,
       scheduled = sdateWithTimeZoneApplied(ltnFeedFlight.ScheduledDateTime.getOrElse(throw new Exception("Missing scheduled date time"))),
       estimated = ltnFeedFlight.EstimatedDateTime.map(sdateWithTimeZoneApplied),
       touchdown = ltnFeedFlight.ALDT.map(sdateWithTimeZoneApplied),

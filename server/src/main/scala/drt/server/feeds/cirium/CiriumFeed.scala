@@ -82,6 +82,7 @@ object CiriumFeed {
       carrierCode = carrierCode.code,
       flightCodeSuffix = maybeSuffix.map(_.suffix),
       origin = f.departureAirportFsCode,
+      previousPort = None,
       scheduled = scheduledToNearest5Mins,
       estimated = f.estimated,
       touchdown = f.actualTouchdown,

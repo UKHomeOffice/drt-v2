@@ -36,7 +36,7 @@ object ManifestRouterActor extends StreamingFeedStatusUpdates {
   override val sourceType: FeedSource = ApiFeedSource
   override val persistenceId: String = "arrival-manifests"
 
-  case class GetForArrival(arrival: ArrivalKey)
+  case class GetForArrival(arrival: ManifestKey)
 
   sealed trait ManifestResult
 

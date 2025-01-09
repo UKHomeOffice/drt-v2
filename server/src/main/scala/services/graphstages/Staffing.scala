@@ -18,8 +18,7 @@ object Staffing {
   def staffAvailableByTerminalAndQueue(dropBeforeMillis: MillisSinceEpoch,
                                        shifts: ShiftAssignments,
                                        fixedPoints: FixedPointAssignments,
-                                       optionalMovements: Option[Seq[StaffMovement]])
-                                      (implicit m: MillisSinceEpoch => SDateLike): StaffSources = {
+                                       optionalMovements: Option[Seq[StaffMovement]]): StaffSources = {
     val movements = optionalMovements.getOrElse(Seq())
 
     val relevantShifts = removeOldShifts(dropBeforeMillis, shifts)

@@ -45,14 +45,12 @@ object FlightTable {
                    paxFeedSourceOrder: List[FeedSource],
                    flightHighlight: FlightHighlight,
                    flights: Pot[Seq[ApiFlightWithSplits]],
-                   flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                   flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
-                   originMapper: (PortCode, html_<^.TagMod) => VdomNode,
+                   originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                   ) extends UseValueEq
 
   case class State(showHighlightedRows: Boolean)
-
-  implicit val stateReuse: Reusability[State] = Reusability.always
 
   val ageGroups: js.Array[String] =
     js.Array(AgeRange(0, 9).title,

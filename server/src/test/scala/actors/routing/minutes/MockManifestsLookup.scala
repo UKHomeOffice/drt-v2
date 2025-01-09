@@ -19,10 +19,7 @@ case class MockManifestsLookup(probe: ActorRef, terminals: Iterable[Terminal]) {
       .groupBy { vm: VoyageManifest => vm.scheduleArrivalDateTime.map(_.toUtcDate) }
       .collect { case (Some(date), vms) => date -> VoyageManifests(vms) }
 
-    (d: UtcDate, pit: Option[MillisSinceEpoch]) => {
-      Future(byDay(d))
-    }
-
+    (d: UtcDate, _: Option[MillisSinceEpoch]) => Future(byDay(d))
   }
 
   def update: ManifestsUpdate = (date: UtcDate, manifests: VoyageManifests) => {

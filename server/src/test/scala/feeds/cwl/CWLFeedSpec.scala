@@ -141,8 +141,8 @@ class CWLFeedSpec extends CrunchTestLike {
       .result(client.initialFlights, 1.second).asInstanceOf[ArrivalsFeedSuccess].arrivals
 
     result === List(
-      LiveArrival(Some("TOM"), Some(189), None, None, T1, 7623, "TOM", None, "PFO", 1535842800000L, None, Some(1535842800000L), None, Some(1535843100000L), "ARR", Some("44"), Some("54L"), None, None),
-      LiveArrival(Some("FR"), Some(189), None, None, T2, 8045, "FR", None, "CHQ", 1537311600000L, None, Some(1537311600000L), None, Some(1537311900000L), "ARR", Some("1"), Some("1"), None, None)
+      LiveArrival(Some("TOM"), Some(189), None, None, T1, 7623, "TOM", None, "PFO", None, 1535842800000L, None, Some(1535842800000L), None, Some(1535843100000L), "ARR", Some("44"), Some("54L"), None, None),
+      LiveArrival(Some("FR"), Some(189), None, None, T2, 8045, "FR", None, "CHQ", None, 1537311600000L, None, Some(1537311600000L), None, Some(1537311900000L), "ARR", Some("1"), Some("1"), None, None)
     )
   }
 

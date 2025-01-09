@@ -177,6 +177,7 @@ object LCYFlightTransform extends NodeSeqUnmarshaller {
       carrierCode = carrierCode.code,
       flightCodeSuffix = maybeSuffix.map(_.suffix),
       origin = f.departureAirport,
+      previousPort = None,
       scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
       estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
       touchdown = maybeTimeStringToMaybeMillis(f.actualTouchDown),

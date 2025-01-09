@@ -5,15 +5,15 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.services._
-import drt.shared.{ArrivalKey, CodeShares, DefaultFlightDisplayFilter, FlightHighlight, LhrFlightDisplayFilter}
+import drt.shared.{ManifestKey, CodeShares, DefaultFlightDisplayFilter, FlightHighlight, LhrFlightDisplayFilter}
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist.{DirectRedListFlight, IndirectRedListPax, LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
+import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react._
 import org.scalajs.dom
 import org.scalajs.dom.html.{TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
@@ -28,7 +28,7 @@ import scala.scalajs.js
 
 object FlightTableContent {
   case class Props(flights: Pot[Seq[ApiFlightWithSplits]],
-                   flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary],
+                   flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    queueOrder: Seq[Queue],
                    hasEstChox: Boolean,
                    loggedInUser: LoggedInUser,
@@ -44,7 +44,7 @@ object FlightTableContent {
                    flightHighlight: FlightHighlight,
                    paxFeedSourceOrder: List[FeedSource],
                    shortLabel: Boolean = false,
-                   originMapper: (PortCode, html_<^.TagMod) => VdomNode,
+                   originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                   ) extends UseValueEq
 
   case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]]) extends UseValueEq
@@ -105,8 +105,8 @@ object FlightTableContent {
                         props.terminal,
                         flightWithSplits.apiFlight.Terminal,
                         isRedListOrigin)
-                      val manifestSummary: Option[FlightManifestSummary] = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight))
 
+                      val maybeManifestSummary = props.flightManifestSummaries.get(ManifestKey(flightWithSplits.apiFlight))
                       val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
 
                       def flightTableRow(showHightlighted: Boolean) = FlightTableRow.Props(
@@ -128,12 +128,12 @@ object FlightTableContent {
                         showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
                         showHighlightedRows = props.flightHighlight.showNumberOfVisaNationals,
                         showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
-                        manifestSummary = props.flightManifestSummaries.get(ArrivalKey(flightWithSplits.apiFlight)),
+                        maybeManifestSummary = maybeManifestSummary,
                         paxFeedSourceOrder = props.paxFeedSourceOrder,
                         showHighLighted = showHightlighted
                       )
 
-                      FlightHighlighter.highlightedFlight(manifestSummary,
+                      FlightHighlighter.highlightedFlight(maybeManifestSummary,
                           props.flightHighlight.selectedNationalities,
                           ageGroups,
                           props.flightHighlight.showNumberOfVisaNationals,
