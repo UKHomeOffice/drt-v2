@@ -25,7 +25,7 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v1020"
+    val drtLib = "v1041"
 
     val scala = "2.13.12"
     val scalaDom = "2.8.0"
@@ -60,7 +60,7 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
-    val uPickle = "3.1.3"
+    val uPickle = "3.1.5"
     val akkaHttp = "10.5.2"
     val slick = "3.4.1"
     val censorinus = "2.1.16"
