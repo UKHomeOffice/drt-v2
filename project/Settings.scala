@@ -45,7 +45,7 @@ object Settings {
     val bootstrap = "3.3.6"
 
     val renjin = "0.9.2725"
-    val csvCommons = "1.10.0"
+    val csvCommons = "1.13.0"
     val poi = "5.2.4"
     val pprint = "0.5.9"
     val akkaPersistenceJdbc = "5.5.0"
@@ -68,11 +68,11 @@ object Settings {
     val scalaJsReactMaterialUi = "0.1.18"
     val scalaTestVersion = "3.2.17"
     val twirlApi = "1.6.3"
-    val mockitoVersion = "4.11.0"
+    val mockito = "5.15.2"
     val rtVersion = "4.0.2"
     val jakartaXmlWsApi = "4.0.1"
     val scalatestplusPlay = "7.0.0"
-    val nettyAll = "4.1.101.Final"
+    val nettyAll = "4.1.116.Final"
     val jwtCore = "9.4.5"
   }
 
@@ -182,6 +182,7 @@ object Settings {
 
     "joda-time" % "joda-time" % jodaTime,
 
+//    "ch.qos.logback" % "logback-classic" % "1.3.15",
     "ch.qos.logback" % "logback-classic" % "1.3.5",
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
@@ -198,10 +199,9 @@ object Settings {
     "org.specs2" %% "specs2-core" % specs2 % Test,
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
-    "org.mockito" % "mockito-core" % mockitoVersion % Test,
+    "org.mockito" % "mockito-core" % mockito % Test,
     "org.scalatestplus.play" %% "scalatestplus-play" % scalatestplusPlay % Test,
     "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
-    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
 
     "io.netty" % "netty-all" % nettyAll,
