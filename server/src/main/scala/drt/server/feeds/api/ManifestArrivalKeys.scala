@@ -38,15 +38,15 @@ case class DbManifestArrivalKeys(tables: AggregatedDbTables, destinationPortCode
 
   def manifestsQuery(ts: String): DBIOAction[Option[(Seq[UniqueArrivalKey], Long)], NoStream, Effect] =
     sql"""SELECT pj.departure_port_code, pj.voyage_number, EXTRACT(EPOCH FROM pj.scheduled) * 1000, MAX(EXTRACT(EPOCH FROM pz.processed_at)) * 1000
-         |FROM processed_json pj
-         |INNER JOIN processed_zip pz on pz.zip_file_name=pj.zip_file_name
-         |WHERE
-         |  pz.processed_at > TIMESTAMP '#$ts'
-         |  AND pj.arrival_port_code = ${destinationPortCode.iata}
-         |  AND event_code = 'DC'
-         |GROUP BY pj.departure_port_code, pj.voyage_number, pj.scheduled
-         |ORDER BY pj.scheduled
-         |""".stripMargin
+          FROM processed_json pj
+          INNER JOIN processed_zip pz on pz.zip_file_name=pj.zip_file_name
+             WHERE
+                pz.processed_at > TIMESTAMP '#$ts'
+               AND pj.arrival_port_code = ${destinationPortCode.iata}
+                  AND event_code = 'DC'
+          GROUP BY pj.departure_port_code, pj.voyage_number, pj.scheduled
+          ORDER BY pj.scheduled
+                """
       .as[(String, Int, Long, Long)]
       .map { rows =>
         if (rows.nonEmpty) {

@@ -58,9 +58,9 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(AggregateDb)
 
-  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb.db)
+  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb)
 
-  override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb.db)
+  override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb)
 
   lazy override val actorService: ActorsServiceLike = ActorsServiceService(
     journalType = StreamingJournal.forConfig(config),

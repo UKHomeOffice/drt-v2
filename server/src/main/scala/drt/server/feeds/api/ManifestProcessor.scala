@@ -56,23 +56,23 @@ case class DbManifestProcessor(tables: AggregatedDbTables,
     val scheduled = SDate(uniqueArrivalKey.scheduled.millisSinceEpoch).toISOString
     val query =
       sql"""SELECT
-           |  document_type,
-           |  document_issuing_country_code,
-           |  eea_flag,
-           |  age,
-           |  disembarkation_port_code,
-           |  in_transit_flag,
-           |  disembarkation_port_country_code,
-           |  nationality_country_code,
-           |  passenger_identifier
-           |FROM voyage_manifest_passenger_info
-           |WHERE
-           |  event_code ='DC'
-           |  and arrival_port_code=${uniqueArrivalKey.arrivalPort.iata}
-           |  and departure_port_code=${uniqueArrivalKey.departurePort.iata}
-           |  and voyage_number=${uniqueArrivalKey.voyageNumber.numeric}
-           |  and scheduled_date = TIMESTAMP '#$scheduled'
-           |""".stripMargin.as[(String, String, String, Int, String, String, String, String, String)]
+              document_type,
+              document_issuing_country_code,
+              eea_flag,
+              age,
+              disembarkation_port_code,
+              in_transit_flag,
+              disembarkation_port_country_code,
+              nationality_country_code,
+              passenger_identifier
+            FROM voyage_manifest_passenger_info
+            WHERE
+              event_code ='DC'
+              and arrival_port_code=${uniqueArrivalKey.arrivalPort.iata}
+              and departure_port_code=${uniqueArrivalKey.departurePort.iata}
+              and voyage_number=${uniqueArrivalKey.voyageNumber.numeric}
+              and scheduled_date = TIMESTAMP '#$scheduled'
+            """.as[(String, String, String, Int, String, String, String, String, String)]
         .map {
           _.map {
             case (dt, dcc, eea, age, disPc, it, disPcc, natCc, pId) =>
