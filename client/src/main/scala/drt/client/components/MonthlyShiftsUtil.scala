@@ -40,9 +40,19 @@ object MonthlyShiftsUtil {
     val Array(endHour, endMinute) = s.endTime.split(":").map(_.toInt)
     var nextDay = firstDay
 
+    val isShiftEndAfterMidNight = endHour < startHour || (endHour == startHour && endMinute < startMinute)
+
     (1 to daysCount).flatMap { day =>
       val start = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, startHour, startMinute)
-      val end = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, endHour, endMinute)
+
+      val endDate = if (isShiftEndAfterMidNight) {
+        nextDay.addDays(1)
+      } else {
+        nextDay
+      }
+
+      val end = SDate(endDate.getFullYear, endDate.getMonth, endDate.getDate, endHour, endMinute)
+
       val dayAssignments: Seq[StaffAssignmentLike] = shifts.assignments.filter(assignment => assignment.start >= start.millisSinceEpoch && assignment.end <= end.millisSinceEpoch)
       nextDay = nextDay.addDays(1)
 
@@ -63,7 +73,7 @@ object MonthlyShiftsUtil {
           case Some(sa) =>
             ShiftAssignment(
               column = day,
-              row = index + 1,
+              row = index,
               name = sa.name,
               staffNumber = sa.numberOfStaff,
               startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
@@ -72,7 +82,7 @@ object MonthlyShiftsUtil {
           case None =>
             ShiftAssignment(
               column = day,
-              row = index + 1,
+              row = index,
               name = s.shiftName,
               staffNumber = s.staffNumber,
               startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),

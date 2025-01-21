@@ -7,6 +7,7 @@ import drt.client.services.handlers.SaveShift
 import drt.shared.StaffShift
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.{BackendScope, CtorType, Reusability, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.VdomTagOf
@@ -59,7 +60,9 @@ object StaffingShifts {
           <.div(
             <.h2("Shifts saved"),
             MuiButton(color = Color.primary, variant = "outlined", size = "medium")
-            (^.onClick --> scope.modState(_.copy(confirmSummary = false)), "Add more shifts")
+            (^.onClick --> scope.modState(_.copy(confirmSummary = false)), "Add more shifts"),
+            MuiButton(color = Color.primary, variant = "outlined", size = "medium", component = "a", sx = SxProps(Map("marginLeft" -> "10px")))
+            (^.href := s"#terminal/${props.terminal}/shifts/60/")("View Shifts and Pax")
           )
         } else {
           <.div(
