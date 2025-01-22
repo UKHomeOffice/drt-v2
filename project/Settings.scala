@@ -214,8 +214,8 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "4.1.1-RELEASE",
-    "software.amazon.awssdk" % "s3" % "2.16.96",
+    "uk.gov.service.notify" % "notifications-java-client" % "5.2.1-RELEASE",
+    "software.amazon.awssdk" % "s3" % "2.30.2",
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
