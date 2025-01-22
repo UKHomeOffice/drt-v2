@@ -402,7 +402,7 @@ object SPAMain {
     val requiredTerminalName = string("[a-zA-Z0-9]+")
     dynamicRouteCT((TerminalShiftLoc.hashValue / requiredTerminalName).caseClass[TerminalShiftLoc]) ~>
       dynRenderR { case (page: TerminalShiftLoc, router) =>
-        drt.client.components.StaffingShifts(Terminal(page.terminalName), portConfig.portCode.iata)
+        drt.client.components.StaffingShifts(Terminal(page.terminalName), portConfig.portCode.iata, router)
       }
   }
 

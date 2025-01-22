@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.AnyAction.aType
+import drt.client.SPAMain.Loc
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.SaveShift
@@ -10,6 +11,7 @@ import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.{BackendScope, CtorType, Reusability, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
+import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.VdomTagOf
 import org.scalajs.dom.html.Div
 import japgolly.scalajs.react.vdom.html_<^._
@@ -20,7 +22,7 @@ object StaffingShifts {
 
   case class State(confirmSummary: Boolean = false, shifts: Seq[Shift])
 
-  case class Props(terminal: Terminal, portCode: String)
+  case class Props(terminal: Terminal, portCode: String, router: RouterCtl[Loc])
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
@@ -58,7 +60,6 @@ object StaffingShifts {
       <.div(
         if (state.confirmSummary) {
           <.div(
-            <.h2("Shifts saved"),
             ShiftSummaryComponent(InitialShiftsProps(state.shifts.map(s => DefaultShift(s.name, s.defaultStaffNumber, s.startTime, s.endTime)))),
             MuiButton(color = Color.primary, variant = "outlined", size = "medium")
             (^.onClick --> scope.modState(_.copy(confirmSummary = false)), "Add more shifts"),
@@ -67,7 +68,6 @@ object StaffingShifts {
           )
         } else {
           <.div(
-            <.h2("Add Shifts"),
             AddShiftFormComponent(ShiftsProps(props.portCode, props.terminal.toString, 30, Seq.empty[Shift], confirmHandler))
           )
         }
@@ -86,5 +86,5 @@ object StaffingShifts {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, portCode: String): Unmounted[Props, State, Backend] = component(Props(terminal, portCode))
+  def apply(terminal: Terminal, portCode: String, router: RouterCtl[Loc]): Unmounted[Props, State, Backend] = component(Props(terminal, portCode,router))
 }
