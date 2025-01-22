@@ -1,14 +1,11 @@
 package drt.client.components
 
 import diode.AnyAction.aType
-import drt.client.SPAMain.Loc
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.SaveShift
 import drt.shared.StaffShift
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.{BackendScope, CtorType, Reusability, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -20,7 +17,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 object StaffingShifts {
 
-  case class State(confirmSummary: Boolean = false, shifts: Seq[Shift])
+  case class State()
 
   case class Props(terminal: Terminal, portCode: String, router: RouterCtl[Loc])
 
@@ -54,30 +51,16 @@ object StaffingShifts {
           createdAt = System.currentTimeMillis()
         ))
         SPACircuit.dispatch(SaveShift(staffShifts))
-        scope.modState(state => state.copy(confirmSummary = true, shifts = shifts)).runNow()
+        props.router.set(TerminalPageTabLoc(props.terminal.toString, "shifts", "60", Map.empty)).runNow()
       }
 
-      <.div(
-        if (state.confirmSummary) {
-          <.div(
-            ShiftSummaryComponent(InitialShiftsProps(state.shifts.map(s => DefaultShift(s.name, s.defaultStaffNumber, s.startTime, s.endTime)))),
-            MuiButton(color = Color.primary, variant = "outlined", size = "medium")
-            (^.onClick --> scope.modState(_.copy(confirmSummary = false)), "Add more shifts"),
-            MuiButton(color = Color.primary, variant = "outlined", size = "medium", component = "a", sx = SxProps(Map("marginLeft" -> "10px")))
-            (^.href := s"#terminal/${props.terminal}/shifts/60/")("View Shifts and Pax")
-          )
-        } else {
-          <.div(
-            AddShiftFormComponent(ShiftsProps(props.portCode, props.terminal.toString, 30, Seq.empty[Shift], confirmHandler))
-          )
-        }
-      )
+      <.div(AddShiftFormComponent(ShiftsProps(props.portCode, props.terminal.toString, 30, Seq.empty[Shift], confirmHandler)))
     }
 
   }
 
   private def stateFromProps(props: Props): State = {
-    State(confirmSummary = false, shifts = Seq.empty)
+    State()
   }
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingShiftsV2")
