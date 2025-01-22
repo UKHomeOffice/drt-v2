@@ -36,7 +36,7 @@ object MonthlyShiftsUtil {
   }
 
 
-  def assignmentsForShift(firstDay: SDateLike, daysCount: Int, interval: Int, terminal: Terminal, s: StaffShift, shifts: ShiftAssignments ,dayRange:String): Seq[ShiftAssignment] = {
+  def assignmentsForShift(firstDay: SDateLike, daysCount: Int, interval: Int, terminal: Terminal, s: StaffShift, shifts: ShiftAssignments): Seq[ShiftAssignment] = {
     val Array(startHour, startMinute) = s.startTime.split(":").map(_.toInt)
     val Array(endHour, endMinute) = s.endTime.split(":").map(_.toInt)
     var nextDay = firstDay
@@ -106,7 +106,7 @@ object MonthlyShiftsUtil {
       ShiftData(
         index = index,
         defaultShift = DefaultShift(s.shiftName, s.staffNumber, s.startTime, s.endTime),
-        assignments = assignmentsForShift(firstDay(dayRange, viewingDate), daysCount(dayRange, viewingDate), interval, terminal, s, shifts, dayRange)
+        assignments = assignmentsForShift(firstDay(dayRange, viewingDate), daysCount(dayRange, viewingDate), interval, terminal, s, shifts)
       )
     }
   }
