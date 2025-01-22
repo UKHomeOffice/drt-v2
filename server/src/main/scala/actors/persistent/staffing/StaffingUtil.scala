@@ -12,13 +12,21 @@ object StaffingUtil {
     val (endHH, endMM) = shift.endTime.split(":") match {
       case Array(hh, mm) => (hh.toInt, mm.toInt)
     }
+
     val startDate = SDate(shift.startDate.year, shift.startDate.month, shift.startDate.day)
     val endDate = shift.endDate.map(ed => SDate(ed.year, ed.month, ed.day)).getOrElse(startDate.addMonths(6))
+
     val daysBetween = startDate.daysBetweenInclusive(endDate) - 1
     (0 to daysBetween).map { day =>
       val currentDate: SDateLike = startDate.addDays(day)
       val startMillis = SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM).millisSinceEpoch
-      val endMillis = SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM).millisSinceEpoch
+
+      val isShiftEndAfterMidNight = endHH < startHH || (endHH == startHH && endMM < startMM)
+      val endMillis = if (isShiftEndAfterMidNight) {
+        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM).addDays(1).millisSinceEpoch
+      } else {
+        SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM).millisSinceEpoch
+      }
 
       StaffAssignment(
         name = shift.shiftName,
