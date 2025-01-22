@@ -42,7 +42,7 @@ object Settings {
     val specs2 = "4.20.3"
     val react = "18.2.0"
 
-    val bootstrap = "5.3.3"
+    val bootstrap = "3.3.6"
 
     val renjin = "0.9.2725"
     val csvCommons = "1.13.0"
@@ -204,7 +204,7 @@ object Settings {
     "org.scalatestplus.play" %% "scalatestplus-play" % scalatestplusPlay % Test,
     "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
 
-    "org.webjars" % "font-awesome" % "6.7.1" % Provided,
+    "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
     "org.webjars" %% "webjars-play" % "3.0.2",
     "org.webjars" % "webjars-locator" % "0.52",

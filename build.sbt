@@ -97,6 +97,7 @@ lazy val clients = Seq(client)
 // instantiate the JVM project for SBT with some additional settings
 lazy val server = (project in file("server"))
   .enablePlugins(PlayScala)
+  .enablePlugins(SbtWeb)
   .enablePlugins(WebScalaJSBundlerPlugin)
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
