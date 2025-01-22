@@ -18,7 +18,7 @@ import uk.gov.homeoffice.drt.time.SDateLike
 
 object StaffingShifts {
 
-  case class State(confirmSummary: Boolean = false)
+  case class State(confirmSummary: Boolean = false, shifts: Seq[Shift])
 
   case class Props(terminal: Terminal, portCode: String)
 
@@ -52,13 +52,14 @@ object StaffingShifts {
           createdAt = System.currentTimeMillis()
         ))
         SPACircuit.dispatch(SaveShift(staffShifts))
-        scope.modState(state => state.copy(confirmSummary = true)).runNow()
+        scope.modState(state => state.copy(confirmSummary = true, shifts = shifts)).runNow()
       }
 
       <.div(
         if (state.confirmSummary) {
           <.div(
             <.h2("Shifts saved"),
+            ShiftSummaryComponent(InitialShiftsProps(state.shifts.map(s => DefaultShift(s.name, s.defaultStaffNumber, s.startTime, s.endTime)))),
             MuiButton(color = Color.primary, variant = "outlined", size = "medium")
             (^.onClick --> scope.modState(_.copy(confirmSummary = false)), "Add more shifts"),
             MuiButton(color = Color.primary, variant = "outlined", size = "medium", component = "a", sx = SxProps(Map("marginLeft" -> "10px")))
@@ -76,7 +77,7 @@ object StaffingShifts {
   }
 
   private def stateFromProps(props: Props): State = {
-    State()
+    State(confirmSummary = false, shifts = Seq.empty)
   }
 
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("StaffingShiftsV2")
