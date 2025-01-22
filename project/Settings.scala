@@ -27,32 +27,31 @@ object Settings {
   object versions {
     val drtLib = "v1063"
 
-    val scala = "2.13.12"
+    val scala = "2.13.16"
     val scalaDom = "2.8.0"
-    val scalajsReact = "2.1.1"
+    val scalajsReact = "2.1.2"
     val scalaCSS = "1.0.0"
     val scalaJsMomentJs = "0.10.9"
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
-    val h2 = "2.2.224"
+    val h2 = "2.3.232"
 
     val akka = "2.10.0"
 
-    val specs2 = "4.20.3"
+    val specs2 = "4.20.9"
     val react = "18.2.0"
 
     val bootstrap = "3.3.6"
 
     val renjin = "0.9.2725"
     val csvCommons = "1.13.0"
-    val poi = "5.2.4"
-    val pprint = "0.5.9"
+    val poi = "5.2.5"
     val akkaPersistenceJdbc = "5.5.0"
     val bluebus = "v95"
-    val postgres = "42.7.0"
-    val sshJ = "0.33.0"
-    val jodaTime = "2.12.5"
+    val postgres = "42.7.5"
+    val sshJ = "0.39.0"
+    val jodaTime = "2.12.7"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.4.3"
@@ -64,16 +63,16 @@ object Settings {
     val akkaHttp = "10.7.0"
     val slick = "3.5.2"
     val censorinus = "2.1.16"
-    val janinoVersion = "3.1.9"
+    val janinoVersion = "3.1.12"
     val scalaJsReactMaterialUi = "0.1.18"
-    val scalaTestVersion = "3.2.17"
-    val twirlApi = "1.6.3"
+    val scalaTestVersion = "3.2.19"
+    val twirlApi = "2.0.2"
     val mockito = "5.15.2"
-    val rtVersion = "4.0.2"
-    val jakartaXmlWsApi = "4.0.1"
+    val rtVersion = "4.0.3"
+    val jakartaXmlWsApi = "4.0.2"
     val scalatestplusPlay = "7.0.1"
-    val nettyAll = "4.1.116.Final"
-    val jwtCore = "9.4.5"
+    val nettyAll = "4.1.117.Final"
+    val jwtCore = "9.4.6"
   }
 
   import versions.*
@@ -115,7 +114,6 @@ object Settings {
     "org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0",
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
-    "com.lihaoyi" %% "pprint" % pprint,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs,
 
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
@@ -175,7 +173,7 @@ object Settings {
     "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
     "com.typesafe.akka" %% "akka-stream" % akka,
 
-    "com.typesafe.play" %% "twirl-api" % twirlApi,
+    "org.playframework.twirl" %% "twirl-api" % twirlApi,
 
     "com.typesafe.slick" %% "slick" % slick,
     "com.typesafe.slick" %% "slick-hikaricp" % slick,
@@ -183,8 +181,8 @@ object Settings {
 
     "joda-time" % "joda-time" % jodaTime,
 
-//    "ch.qos.logback" % "logback-classic" % "1.3.15",
-    "ch.qos.logback" % "logback-classic" % "1.3.5",
+    "ch.qos.logback" % "logback-classic" % "1.3.15",
+//    "ch.qos.logback" % "logback-classic" % "1.3.5",
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
@@ -216,7 +214,7 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "4.1.0-RELEASE",
+    "uk.gov.service.notify" % "notifications-java-client" % "4.1.1-RELEASE",
     "software.amazon.awssdk" % "s3" % "2.16.96",
   ))
 
