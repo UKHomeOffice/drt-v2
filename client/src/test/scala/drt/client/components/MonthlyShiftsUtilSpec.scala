@@ -192,5 +192,37 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       assert(result.head.assignments.last.column == 31)
       assert(result.head.assignments.last.row == 7)
     }
+
+    test("assignmentsForShift should generate correct row and col values for shifts ending after midnight") {
+      val firstDay: SDateLike = SDate("2023-10-01T00:00:00Z")
+      val daysCount = 1
+      val interval = 60
+      val terminal = Terminal("T1")
+      val staffShift = StaffShift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Night",
+        startDate = LocalDate(2023, 10, 1),
+        startTime = "22:00",
+        endTime = "02:00",
+        endDate = None,
+        staffNumber = 5,
+        frequency = None,
+        createdBy = None,
+        createdAt = 0L
+      )
+      val shifts = ShiftAssignments(Seq.empty)
+
+      val result = MonthlyShiftsUtil.assignmentsForShift(firstDay, daysCount, interval, terminal, staffShift, shifts)
+
+      assert(result.nonEmpty)
+      assert(result.head.name == "Night")
+      assert(result.head.staffNumber == 5)
+      assert(result.size == 4) // 4 intervals of 60 minutes from 22:00 to 02:00
+      assert(result.head.column == 1)
+      assert(result.head.row == 0)
+      assert(result.last.column == 1)
+      assert(result.last.row == 3)
+    }
   }
 }
