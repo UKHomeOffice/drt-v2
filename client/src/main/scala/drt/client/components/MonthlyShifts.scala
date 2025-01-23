@@ -111,7 +111,7 @@ object MonthlyShifts {
       }
 
       def whatDayChanged(changedAssignments: Seq[ShiftAssignment]) = {
-        changedAssignments.map(_.startTime.day).distinct.mkString(", ")
+        changedAssignments.map(_.startTime.day).sortBy(_.toInt).distinct.mkString(", ")
       }
 
       def confirmAndSave(shiftsData: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): ReactEventFromInput => Callback = (_: ReactEventFromInput) => Callback {

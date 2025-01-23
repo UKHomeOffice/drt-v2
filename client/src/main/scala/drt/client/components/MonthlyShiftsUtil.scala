@@ -43,7 +43,7 @@ object MonthlyShiftsUtil {
 
     val isShiftEndAfterMidNight = endHour < startHour || (endHour == startHour && endMinute < startMinute)
 
-    def IteratorForShiftAssignment(day: Int, start: SDateLike, end: SDateLike, isFirstDayForShiftEndAfterMidNight: Boolean) = {
+    def IteratorForShiftAssignment(day: Int, start: SDateLike, end: SDateLike, isFirstDayForShiftEndAfterMidNight: Boolean, addToIndex: Int) = {
       val dayAssignments: Seq[StaffAssignmentLike] = shifts.assignments.filter(assignment => assignment.start >= start.millisSinceEpoch && assignment.end <= end.millisSinceEpoch)
       Iterator.iterate(start) { intervalTime =>
         if ((intervalTime.getMinutes == 30 && interval == 60) || (intervalTime.getHours == endHour && interval == 60 && endMinute == 30)) {
@@ -62,7 +62,7 @@ object MonthlyShiftsUtil {
           case Some(sa) =>
             ShiftAssignment(
               column = day,
-              row = index,
+              row = if (isShiftEndAfterMidNight) index + addToIndex else index,
               name = sa.name,
               staffNumber = sa.numberOfStaff,
               startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
@@ -71,7 +71,7 @@ object MonthlyShiftsUtil {
           case None =>
             ShiftAssignment(
               column = day,
-              row = index,
+              row = if (isShiftEndAfterMidNight) index + addToIndex else index,
               name = s.shiftName,
               staffNumber = if (isFirstDayForShiftEndAfterMidNight) 0 else s.staffNumber,
               startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
@@ -84,20 +84,16 @@ object MonthlyShiftsUtil {
     (1 to daysCount).flatMap { day =>
       val start = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, startHour, startMinute)
 
-      val endDate = if (isShiftEndAfterMidNight) nextDay.addDays(1) else nextDay
+      val end = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, endHour, endMinute)
 
-      val end = SDate(endDate.getFullYear, endDate.getMonth, endDate.getDate, endHour, endMinute)
-
-      nextDay = nextDay.addDays(1)
-
-      val shiftAssignmentFirstDayMidnight = if (isShiftEndAfterMidNight && day == 1) {
-        val start = SDate(firstDay.getFullYear, firstDay.getMonth, firstDay.getDate, 0, 0)
-        val end = SDate(firstDay.getFullYear, firstDay.getMonth, firstDay.getDate, endHour, endMinute)
-        IteratorForShiftAssignment(day, start, end, isFirstDayForShiftEndAfterMidNight = true)
+      val beforeMidnight = IteratorForShiftAssignment(day, start, if (isShiftEndAfterMidNight) SDate(end.getFullYear, end.getMonth, end.getDate, 0, 0).addDays(1) else end, isFirstDayForShiftEndAfterMidNight = false, 0)
+      val afterMightNight = if (isShiftEndAfterMidNight) {
+        val start = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, 0, 0)
+        IteratorForShiftAssignment(day, start, end, isFirstDayForShiftEndAfterMidNight = true, beforeMidnight.size)
       } else Seq.empty
 
-      shiftAssignmentFirstDayMidnight ++ IteratorForShiftAssignment(day, start, end, isFirstDayForShiftEndAfterMidNight = false)
-
+      nextDay = nextDay.addDays(1)
+      beforeMidnight ++ afterMightNight
     }
   }
 
