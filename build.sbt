@@ -47,6 +47,7 @@ lazy val clientMacrosJS: Project = (project in file("client-macros"))
       "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact withSources(),
       "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact withSources()
     ),
+    resolvers += Resolver.defaultLocal,
   )
 
 
@@ -76,8 +77,8 @@ lazy val client: Project = (project in file("client"))
     //    useYarn := true,
     // yes, we want to package JS dependencies
     packageJSDependencies / skip := false,
-    resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     resolvers += Resolver.defaultLocal,
+    resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // use uTest framework for tests
@@ -123,6 +124,7 @@ lazy val server = (project in file("server"))
     // triggers scalaJSPipeline when using compile or continuous compilation
     Compile / compile := ((Compile / compile) dependsOn scalaJSPipeline).value,
     testFrameworks += new TestFramework("utest.runner.Framework"),
+    resolvers += Resolver.defaultLocal,
     resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
     resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
     resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
