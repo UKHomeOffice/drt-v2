@@ -102,7 +102,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
   def provideStaffShiftsPlanService: StaffShiftsPlanService = StaffShiftsPlanServiceImpl(
     provideDrtSystemInterface.actorService.liveStaffShiftsReadActor,
     provideDrtSystemInterface.actorService.shiftsStaffSequentialWritesActor,
-    ShiftsServiceImpl.pitActor(ShiftsStaffActor.persistenceId)(provideActorSystem),
+    StaffShiftsPlanServiceImpl.pitActor(ShiftsStaffActor.persistenceId)(provideActorSystem),
   )
 
   @Provides
