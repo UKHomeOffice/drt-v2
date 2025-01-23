@@ -241,7 +241,10 @@ object TerminalComponent {
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && staffShifts.isEmpty =>
-                      <.div(^.className := "staffing-container-empty", "No staff shifts available, visit the ", <.strong("Staffing"), " tab to create some or select one of the other tabs.")
+                      <.div(^.className := "staffing-container-empty",
+                        "No staff shifts are currently available. Please visit the ", <.strong("Staffing"), " tab to create new shifts or select a different tab." +
+                          "If you have already created shifts, kindly refresh the page."
+                      )
                   }
                 }
               }

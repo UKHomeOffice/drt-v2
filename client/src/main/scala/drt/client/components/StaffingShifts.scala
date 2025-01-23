@@ -51,7 +51,7 @@ object StaffingShifts {
           createdAt = System.currentTimeMillis()
         ))
         SPACircuit.dispatch(SaveShift(staffShifts))
-        props.router.set(TerminalPageTabLoc(props.terminal.toString, "shifts", "60", Map.empty)).runNow()
+        props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map.empty)).runNow()
       }
 
       <.div(AddShiftFormComponent(ShiftsProps(props.portCode, props.terminal.toString, 30, Seq.empty[Shift], confirmHandler)))
@@ -69,5 +69,5 @@ object StaffingShifts {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def apply(terminal: Terminal, portCode: String, router: RouterCtl[Loc]): Unmounted[Props, State, Backend] = component(Props(terminal, portCode,router))
+  def apply(terminal: Terminal, portCode: String, router: RouterCtl[Loc]): Unmounted[Props, State, Backend] = component(Props(terminal, portCode, router))
 }

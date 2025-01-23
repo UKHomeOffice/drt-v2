@@ -156,9 +156,11 @@ object MonthlyShifts {
           }
           <.div()
         }
-        <.div(content.render(identity))
+        if (model.monthOfStaffShiftsPot.isReady && model.staffShiftsPot.isReady)
+          <.div(content.render(identity))
+        else
+          <.div("loading...")
       }
-
       <.div(<.input.button(^.value := "staff updates",
         ^.className := "btn btn-primary",
         ^.onClick ==> handleShiftEditForm
