@@ -3,7 +3,7 @@ package uk.gov.homeoffice.drt.service.staffing
 import actors.DrtStaticParameters.time48HoursAgo
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.staffing.ShiftsActor.UpdateShifts
-import actors.persistent.staffing.ShiftsReadActor
+import actors.persistent.staffing.{ShiftsReadActor, ShiftsStaffActor}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -17,9 +17,9 @@ import scala.concurrent.{ExecutionContext, Future}
 
 
 object StaffShiftsPlanServiceImpl {
-  def pitActor(persistentId: String)(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
+  def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
     val actorName = s"staff-store-read-actor-" + UUID.randomUUID().toString
-    system.actorOf(ShiftsReadActor.props(persistentId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
+    system.actorOf(ShiftsReadActor.props(ShiftsStaffActor.persistenceId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
   }
 }
 
