@@ -117,7 +117,7 @@ object TerminalComponent {
 
             <.div(
               <.div(^.className := "terminal-nav-wrapper",
-                terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled, featureFlags.enableStaffPlanningChange, featureFlags.enableShiftPlanningChange, staffShifts.nonEmpty)),
+                terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled, featureFlags.enableShiftPlanningChange, staffShifts.nonEmpty)),
               <.div(^.className := "tab-content", {
                 val rcp = SPACircuit.connect(m =>
                   (m.minuteTicker,
@@ -232,11 +232,11 @@ object TerminalComponent {
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, featureFlags.enableShiftPlanningChange, staffShifts.size, false))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableShiftPlanningChange, staffShifts.size, false))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && staffShifts.nonEmpty =>
                       if (props.terminalPageTab.toggleShiftView.isDefined)
-                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableStaffPlanningChange, featureFlags.enableShiftPlanningChange, staffShifts.size, true))
+                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableShiftPlanningChange, staffShifts.size, true))
                       else
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig))
 
@@ -268,7 +268,6 @@ object TerminalComponent {
                            loggedInUser: LoggedInUser,
                            airportConfig: AirportConfig,
                            timeMachineEnabled: Boolean,
-                           enableStaffPlanningChange: Boolean,
                            enableShiftPlanningChange: Boolean,
                            isStaffShiftsNonEmpty: Boolean): VdomTagOf[UList] = {
     val terminalName = props.terminalPageTab.terminal.toString
@@ -306,7 +305,7 @@ object TerminalComponent {
         <.li(^.className := tabClass(Staffing),
           props.router.link(props.terminalPageTab.update(
             mode = Staffing,
-            subMode = if (enableStaffPlanningChange) "60" else "15",
+            subMode = if (enableShiftPlanningChange) "60" else "15",
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
           ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
         ) else "",
@@ -314,7 +313,7 @@ object TerminalComponent {
         <.li(^.className := tabClass(Shifts),
           props.router.link(props.terminalPageTab.update(
             mode = Shifts,
-            subMode = if (enableStaffPlanningChange) "60" else "15",
+            subMode = if (enableShiftPlanningChange) "60" else "15",
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None), ToggleShiftView(None)).queryParams
           ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Shifts", " ", monthlyStaffingTooltip)
         )

@@ -5,7 +5,6 @@ import upickle.default._
 case class FeatureFlags(useApiPaxNos: Boolean,
                         displayWaitTimesToggle: Boolean,
                         displayRedListInfo: Boolean,
-                        enableStaffPlanningChange: Boolean,
                         enableShiftPlanningChange: Boolean)
 
 object FeatureFlags {
