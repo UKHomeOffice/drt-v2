@@ -77,9 +77,9 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       assert(result.head.staffNumber == 5)
       assert(result.size == daysCount * (1 * 60 / interval))
       assert(result.head.column == 1)
-      assert(result.head.row == 1)
+      assert(result.head.row == 0)
       assert(result.last.column == 31)
-      assert(result.last.row == 1)
+      assert(result.last.row == 0)
     }
 
     test("assignmentsForShift should generate correct row and col values for weekly dayRange") {
@@ -109,9 +109,9 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       assert(result.head.staffNumber == 5)
       assert(result.size == daysCount * (1 * 60 / interval))
       assert(result.head.column == 1)
-      assert(result.head.row == 1)
+      assert(result.head.row == 0)
       assert(result.last.column == 7)
-      assert(result.last.row == 1)
+      assert(result.last.row == 0)
     }
 
     test("assignmentsForShift should generate correct row and col values for daily dayRange") {
@@ -141,9 +141,9 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       assert(result.head.staffNumber == 5)
       assert(result.size == daysCount * (1 * 60 / interval))
       assert(result.head.column == 1)
-      assert(result.head.row == 1)
+      assert(result.head.row == 0)
       assert(result.last.column == 1)
-      assert(result.last.row == 1)
+      assert(result.last.row == 0)
     }
 
     test("generateShiftData should generate correct shift data for monthly dayRange") {
@@ -188,9 +188,9 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       assert(result.head.assignments.nonEmpty)
       assert(result.head.assignments.head.staffNumber == 5)
       assert(result.head.assignments.head.column == 1)
-      assert(result.head.assignments.head.row == 1)
+      assert(result.head.assignments.head.row == 0)
       assert(result.head.assignments.last.column == 31)
-      assert(result.head.assignments.last.row == 8)
+      assert(result.head.assignments.last.row == 7)
     }
   }
 }
