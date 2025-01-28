@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, TerminalShiftLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.{GetAllStaffShifts, UpdateShifts, UpdateStaffShifts}
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -247,7 +247,7 @@ object MonthlyStaffing {
             EmptyVdom
           } else {
             <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
-              props.router.set(TerminalShiftLoc(props.terminalPageTab.terminalName)).runNow()
+              props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "staffing", "createShifts")).runNow()
             })))
           }
         } else EmptyVdom,

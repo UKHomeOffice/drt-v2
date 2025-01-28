@@ -231,6 +231,8 @@ object TerminalComponent {
                         TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod, airportConfig))
                       })
 
+                    case Staffing if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" =>
+                      <.div(drt.client.components.StaffingShifts(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
                       <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableShiftPlanningChange, staffShifts.size, false))
 

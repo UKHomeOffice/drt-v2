@@ -3,7 +3,6 @@ package drt.client
 import diode.Action
 import diode.data.Pot
 import diode.react.ReactConnectProxy
-import drt.client.SPAMain.StatusLoc.portConfig
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles._
@@ -138,17 +137,6 @@ object SPAMain {
 
     override def title(maybeTerminal: Option[Terminal]): String = title("Accessibility Statement", maybeTerminal)
   }
-
-  object TerminalShiftLoc {
-    val hashValue: String = "#create-shifts"
-  }
-
-  case class TerminalShiftLoc(terminalName: String) extends Loc {
-    override val url: String = s"${TerminalShiftLoc.hashValue}/$terminalName"
-
-    override def title(maybeTerminal: Option[Terminal]): String = title("Staff shifts", maybeTerminal)
-  }
-
 
   object TerminalPageTabLoc {
     val hashValue: String = "#terminal"
@@ -334,7 +322,6 @@ object SPAMain {
         accessibilityRoute(dsl) |
         dashboardRoute(dsl) |
         terminalRoute(dsl) |
-        terminalShiftRoute(dsl) |
         statusRoute(dsl) |
         trainingHubRoute(dsl) |
         portConfigRoute(dsl) |
@@ -395,15 +382,6 @@ object SPAMain {
     import dsl._
 
     staticRoute(root, UserDashboardLoc) ~> renderR((router: RouterCtl[Loc]) => UserDashboardPage(router))
-  }
-
-  private def terminalShiftRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
-    import dsl._
-    val requiredTerminalName = string("[a-zA-Z0-9]+")
-    dynamicRouteCT((TerminalShiftLoc.hashValue / requiredTerminalName).caseClass[TerminalShiftLoc]) ~>
-      dynRenderR { case (page: TerminalShiftLoc, router) =>
-        drt.client.components.StaffingShifts(Terminal(page.terminalName), portConfig.portCode.iata, router)
-      }
   }
 
   private def dashboardRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
