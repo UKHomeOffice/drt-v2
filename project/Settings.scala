@@ -25,9 +25,16 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v1066"
-
     val scala = "2.13.16"
+
+    val drtLib = "v1069"
+
+    val akka = "2.9.5" // last version with license key requirement
+    val akkaHttp = "10.6.3" // last version dependent on akka 2.9.5
+    val akkaPersistenceJdbc = "5.4.2"
+    val slick = "3.5.2"
+
+
     val scalaDom = "2.8.0"
     val scalajsReact = "2.1.2"
     val scalaCSS = "1.0.0"
@@ -37,17 +44,14 @@ object Settings {
     val uTest = "0.7.4"
     val h2 = "2.3.232"
 
-    val akka = "2.10.0"
-
     val specs2 = "4.20.9"
     val react = "18.2.0"
 
     val bootstrap = "3.3.6"
 
+    val poi = "5.2.5"
     val renjin = "0.9.2725"
     val csvCommons = "1.13.0"
-    val poi = "5.2.5"
-    val akkaPersistenceJdbc = "5.5.0"
     val bluebus = "v95"
     val postgres = "42.7.5"
     val sshJ = "0.39.0"
@@ -60,8 +64,6 @@ object Settings {
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
     val uPickle = "3.1.5"
-    val akkaHttp = "10.7.0"
-    val slick = "3.5.2"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.12"
     val scalaJsReactMaterialUi = "0.1.18"
