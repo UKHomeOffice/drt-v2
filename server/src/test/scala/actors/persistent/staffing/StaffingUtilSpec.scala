@@ -43,7 +43,7 @@ class StaffingUtilSpec extends Specification {
     }
   }
 
-  "updateWithDefaultShift" should {
+  "updateWithShiftDefaultStaff" should {
     "update assignments with zero staff" in {
       val shifts = Seq(
         Shift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)

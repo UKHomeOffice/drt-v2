@@ -279,6 +279,8 @@ object TerminalComponent {
     else
       props.terminalPageTab.subMode
 
+    val subModeInterval = if (enableShiftPlanningChange) "60" else "15"
+
     def tabClass(mode: TerminalPageMode): String = if (props.terminalPageTab.mode == mode) activeClass else ""
 
     def viewTypeQueryParam: SPAMain.UrlParameter =
@@ -307,7 +309,7 @@ object TerminalComponent {
         <.li(^.className := tabClass(Staffing),
           props.router.link(props.terminalPageTab.update(
             mode = Staffing,
-            subMode = if (enableShiftPlanningChange) "60" else "15",
+            subMode = subModeInterval,
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
           ))(^.id := "monthlyStaffingTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
         ) else "",
@@ -315,7 +317,7 @@ object TerminalComponent {
         <.li(^.className := tabClass(Shifts),
           props.router.link(props.terminalPageTab.update(
             mode = Shifts,
-            subMode = if (enableShiftPlanningChange) "60" else "15",
+            subMode = subModeInterval,
             queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None), ShiftViewEnabled(false)).queryParams
           ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Shifts", " ", monthlyStaffingTooltip)
         )

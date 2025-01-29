@@ -86,7 +86,8 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
 
 class ShiftsController @Inject()(cc: ControllerComponents,
                                  ctrl: DrtSystemInterface,
-                                 staffShiftsPlanService: StaffAssignmentsService)(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
+                                 staffAssignmentsService: StaffAssignmentsService,
+                                )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
 
   def getShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {
     ctrl.shiftsService.getShift(port, terminal, shiftName).map {
@@ -106,9 +107,9 @@ class ShiftsController @Inject()(cc: ControllerComponents,
       try {
         val shifts = convertTo(text)
         ctrl.shiftsService.saveShift(shifts).flatMap { result =>
-          staffShiftsPlanService.allStaffAssignments.flatMap { allShifts =>
+          staffAssignmentsService.allStaffAssignments.flatMap { allShifts =>
             val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
-            staffShiftsPlanService.updateStaffAssignments(updatedAssignments).map { _ =>
+            staffAssignmentsService.updateStaffAssignments(updatedAssignments).map { _ =>
               Ok(s"Inserted $result shift(s)")
             }
           }.recoverWith {
@@ -126,13 +127,13 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     Action.async { request: Request[AnyContent] =>
       val date = SDate(localDateStr).toLocalDate
       val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
-      staffShiftsPlanService.staffAssignmentsForDate(date, maybePointInTime)
+      staffAssignmentsService.staffAssignmentsForDate(date, maybePointInTime)
         .map(sa => Ok(write(sa)))
     }
   }
 
   def getAllStaffAssignments: Action[AnyContent] = Action.async {
-    staffShiftsPlanService.allStaffAssignments.map(s => Ok(write(s)))
+    staffAssignmentsService.allStaffAssignments.map(s => Ok(write(s)))
   }
 
   def saveStaffAssignments: Action[AnyContent] = authByRole(StaffEdit) {
@@ -140,7 +141,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
-          staffShiftsPlanService
+          staffAssignmentsService
             .updateStaffAssignments(shifts.assignments)
             .map(allShifts => Accepted(write(allShifts)))
         case None =>

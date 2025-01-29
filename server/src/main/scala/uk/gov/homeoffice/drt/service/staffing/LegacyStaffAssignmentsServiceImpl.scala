@@ -34,7 +34,7 @@ case class LegacyStaffAssignmentsServiceImpl(liveShiftsActor: ActorRef,
         liveShiftsForDate(date)
 
       case Some(millis) =>
-        shiftsForPointInTime(SDate(millis))
+        staffAssignmentsForPointInTime(SDate(millis))
     }
   }
 
@@ -50,7 +50,7 @@ case class LegacyStaffAssignmentsServiceImpl(liveShiftsActor: ActorRef,
       .map { case sa: ShiftAssignments => sa }
   }
 
-  private def shiftsForPointInTime(pointInTime: SDateLike): Future[ShiftAssignments] = {
+  private def staffAssignmentsForPointInTime(pointInTime: SDateLike): Future[ShiftAssignments] = {
     val shiftsReadActor: ActorRef = pitActor(pointInTime)
 
     val start = pointInTime.getLocalLastMidnight.millisSinceEpoch
