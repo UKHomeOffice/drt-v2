@@ -34,6 +34,7 @@ object Settings {
     val akkaPersistenceJdbc = "5.4.2"
     val slick = "3.5.2"
 
+    val aws = "2.30.2"
 
     val scalaDom = "2.8.0"
     val scalajsReact = "2.1.2"
@@ -184,7 +185,6 @@ object Settings {
     "joda-time" % "joda-time" % jodaTime,
 
     "ch.qos.logback" % "logback-classic" % "1.3.15",
-//    "ch.qos.logback" % "logback-classic" % "1.3.5",
     "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
     "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
     "org.codehaus.janino" % "janino" % janinoVersion,
@@ -217,7 +217,7 @@ object Settings {
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
     "uk.gov.service.notify" % "notifications-java-client" % "5.2.1-RELEASE",
-    "software.amazon.awssdk" % "s3" % "2.30.2",
+    "software.amazon.awssdk" % "s3" % aws,
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order
