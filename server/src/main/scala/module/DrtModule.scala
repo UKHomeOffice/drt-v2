@@ -1,7 +1,7 @@
 package module
 
 import actors.DrtParameters
-import actors.persistent.staffing.{ShiftsActor, ShiftsStaffActor}
+import actors.persistent.staffing.{ShiftsActor, StaffAssignmentsActor}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.util.Timeout
@@ -15,7 +15,7 @@ import play.api.Configuration
 import play.api.libs.concurrent.AkkaGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.service.staffing.{StaffShiftsPlanService, _}
+import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -63,7 +63,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
     bind(classOf[PortStateController]).asEagerSingleton()
     bind(classOf[RedListsController]).asEagerSingleton()
     bind(classOf[StaffingController]).asEagerSingleton()
-    bind(classOf[StaffShiftsController]).asEagerSingleton()
+    bind(classOf[ShiftsController]).asEagerSingleton()
     bind(classOf[SummariesController]).asEagerSingleton()
     bind(classOf[SimulationsController]).asEagerSingleton()
     bind(classOf[WalkTimeController]).asEagerSingleton()
@@ -91,18 +91,18 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   @Singleton
-  def provideShiftsService: ShiftsService = ShiftsServiceImpl(
-    provideDrtSystemInterface.actorService.liveShiftsReadActor,
-    provideDrtSystemInterface.actorService.shiftsSequentialWritesActor,
-    ShiftsServiceImpl.pitActor(provideActorSystem),
+  def provideShiftsService: LegacyStaffAssignmentsService = LegacyStaffAssignmentsServiceImpl(
+    provideDrtSystemInterface.actorService.legacyStaffAssignmentsReadActor,
+    provideDrtSystemInterface.actorService.legacyStaffAssignmentsSequentialWritesActor,
+    LegacyStaffAssignmentsServiceImpl.pitActor(provideActorSystem),
     )
 
   @Provides
   @Singleton
-  def provideStaffShiftsPlanService: StaffShiftsPlanService = StaffShiftsPlanServiceImpl(
-    provideDrtSystemInterface.actorService.liveStaffShiftsReadActor,
-    provideDrtSystemInterface.actorService.shiftsStaffSequentialWritesActor,
-    StaffShiftsPlanServiceImpl.pitActor(provideActorSystem),
+  def provideStaffShiftsPlanService: StaffAssignmentsService = StaffAssignmentsServiceImpl(
+    provideDrtSystemInterface.actorService.liveStaffAssignmentsReadActor,
+    provideDrtSystemInterface.actorService.staffAssignmentsSequentialWritesActor,
+    StaffAssignmentsServiceImpl.pitActor(provideActorSystem),
   )
 
   @Provides

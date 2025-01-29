@@ -11,10 +11,10 @@ import uk.gov.homeoffice.drt.time.SDateLike
 import scala.concurrent.ExecutionContext
 
 
-object ShiftsStaffActor extends ShiftsActorLike {
+object StaffAssignmentsActor extends ShiftsActorLike {
   val snapshotInterval = 5000
 
-  val persistenceId = "shifts-staff-store"
+  val persistenceId = "staff-assignments"
 
   case class ReplaceAllShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
@@ -27,7 +27,7 @@ object ShiftsStaffActor extends ShiftsActorLike {
                            )
                            (implicit timeout: Timeout, ec: ExecutionContext): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
-      val actor = system.actorOf(Props(new ShiftsActor(persistenceId, now, expireBefore, snapshotInterval)), s"shifts-staff-actor-writes")
+      val actor = system.actorOf(Props(new ShiftsActor(persistenceId, now, expireBefore, snapshotInterval)), s"staff-assignments-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 

@@ -1,6 +1,6 @@
 package actors.persistent.staffing
 
-import drt.shared.{ShiftAssignments, StaffAssignment, StaffShift}
+import drt.shared.{ShiftAssignments, StaffAssignment, Shift}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
@@ -9,7 +9,7 @@ class StaffingUtilSpec extends Specification {
 
   "StaffingUtil" should {
     "generate daily assignments for each day between start and end date" in {
-      val shift = StaffShift(
+      val shift = Shift(
         port = "LHR",
         terminal = "T1",
         shiftName = "Morning Shift",
@@ -46,14 +46,14 @@ class StaffingUtilSpec extends Specification {
   "updateWithDefaultShift" should {
     "update assignments with zero staff" in {
       val shifts = Seq(
-        StaffShift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
+        Shift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
       )
 
       val allShifts = ShiftAssignments(
         StaffAssignment("afternoon", Terminal("terminal"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 0, None).splitIntoSlots(15),
       )
 
-      val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
+      val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
 
       updatedAssignments should have size 8
       updatedAssignments === List(
@@ -70,14 +70,14 @@ class StaffingUtilSpec extends Specification {
 
     "not update assignments with non-zero staff" in {
       val shifts = Seq(
-        StaffShift("LHR", "T1", "afternoon", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
+        Shift("LHR", "T1", "afternoon", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
       )
 
       val allShifts = ShiftAssignments(
         StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 3, None).splitIntoSlots(15),
       )
 
-      val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
+      val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
 
       updatedAssignments should have size 8
 
@@ -95,15 +95,15 @@ class StaffingUtilSpec extends Specification {
 
     "overlapping shifts to sum if they overlap" in {
       val shifts = Seq(
-        StaffShift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L),
-        StaffShift("LHR", "T1", "day", LocalDate(2023, 10, 1), "15:00", "17:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
+        Shift("LHR", "T1", "day", LocalDate(2023, 10, 1), "14:00", "16:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L),
+        Shift("LHR", "T1", "day", LocalDate(2023, 10, 1), "15:00", "17:00", Some(LocalDate(2023, 10, 1)), 5, None, None, 0L)
       )
 
       val allShifts = ShiftAssignments(
         StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 0, None).splitIntoSlots(15),
       )
 
-      val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
+      val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
 
       updatedAssignments should have size 12
 

@@ -1,5 +1,6 @@
 package drt.client.components
 
+import drt.client.components.MonthlyShiftsUtil.iteratorForShiftAssignment
 import utest._
 import drt.shared._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -55,7 +56,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val daysCount = 31
       val interval = 60
       val terminal = Terminal("T1")
-      val staffShift = StaffShift(
+      val staffShift = Shift(
         port = "LHR",
         terminal = "T1",
         shiftName = "Morning",
@@ -87,7 +88,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val daysCount = 7
       val interval = 60
       val terminal = Terminal("T1")
-      val staffShift = StaffShift(
+      val staffShift = Shift(
         port = "LHR",
         terminal = "T1",
         shiftName = "Morning",
@@ -119,7 +120,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val daysCount = 1
       val interval = 60
       val terminal = Terminal("T1")
-      val staffShift = StaffShift(
+      val staffShift = Shift(
         port = "LHR",
         terminal = "T1",
         shiftName = "Morning",
@@ -151,7 +152,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val dayRange = "monthly"
       val terminal = Terminal("T1")
       val staffShifts = Seq(
-        StaffShift(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Morning",
@@ -164,7 +165,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
           createdBy = None,
           createdAt = 0L
         ),
-        StaffShift(
+        Shift(
           port = "LHR",
           terminal = "T1",
           shiftName = "Evening",
@@ -181,16 +182,16 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val shifts = ShiftAssignments(Seq.empty)
       val interval = 60
 
-      val result: Seq[ShiftData] = MonthlyShiftsUtil.generateShiftData(viewingDate, dayRange, terminal, staffShifts, shifts, interval)
+      val result: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftData(viewingDate, dayRange, terminal, staffShifts, shifts, interval)
 
       assert(result.size == 2)
-      assert(result.head.defaultShift.name == "Morning")
-      assert(result.head.assignments.nonEmpty)
-      assert(result.head.assignments.head.staffNumber == 5)
-      assert(result.head.assignments.head.column == 1)
-      assert(result.head.assignments.head.row == 0)
-      assert(result.head.assignments.last.column == 31)
-      assert(result.head.assignments.last.row == 7)
+      assert(result.head.shiftSummary.name == "Morning")
+      assert(result.head.staffTableEntries.nonEmpty)
+      assert(result.head.staffTableEntries.head.staffNumber == 5)
+      assert(result.head.staffTableEntries.head.column == 1)
+      assert(result.head.staffTableEntries.head.row == 0)
+      assert(result.head.staffTableEntries.last.column == 31)
+      assert(result.head.staffTableEntries.last.row == 7)
     }
 
     test("assignmentsForShift should generate correct row and col values for shifts ending after midnight") {
@@ -198,7 +199,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val daysCount = 1
       val interval = 60
       val terminal = Terminal("T1")
-      val staffShift = StaffShift(
+      val staffShift = Shift(
         port = "LHR",
         terminal = "T1",
         shiftName = "Night",
@@ -224,5 +225,57 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       assert(result.last.column == 1)
       assert(result.last.row == 3)
     }
+
+    test("IteratorForShiftAssignment should generate correct assignments for shifts ending after midnight") {
+      val interval = 60
+      val terminal = Terminal("T1")
+      val staffShift = Shift(
+        port = "LHR",
+        terminal = "T1",
+        shiftName = "Night",
+        startDate = LocalDate(2023, 10, 1),
+        startTime = "22:00",
+        endTime = "02:00",
+        endDate = None,
+        staffNumber = 5,
+        frequency = None,
+        createdBy = None,
+        createdAt = 0L
+      )
+      val shifts = ShiftAssignments(Seq.empty)
+
+      val result = iteratorForShiftAssignment(
+        isShiftEndAfterMidNight = true,
+        day = 1,
+        start = SDate(2023, 10, 1, 22, 0),
+        end = SDate(2023, 10, 2, 2, 0),
+        endHour = 2,
+        endMinute = 0,
+        isFirstDayForShiftEndAfterMidNight = false,
+        addToIndex = 0,
+        interval = interval,
+        terminal = terminal,
+        s = staffShift,
+        shifts = shifts
+      )
+
+      val expected = Seq(
+        StaffTableEntry(1, 0, "Night", 5, ShiftDate(2023, 10, 1, 22, 0), ShiftDate(2023, 10, 1, 23, 0)),
+        StaffTableEntry(1, 1, "Night", 5, ShiftDate(2023, 10, 1, 23, 0), ShiftDate(2023, 10, 2, 0, 0)),
+        StaffTableEntry(1, 2, "Night", 5, ShiftDate(2023, 10, 2, 0, 0), ShiftDate(2023, 10, 2, 1, 0)),
+        StaffTableEntry(1, 3, "Night", 5, ShiftDate(2023, 10, 2, 1, 0), ShiftDate(2023, 10, 2, 2, 0))
+      )
+
+      assert(result.size == expected.size)
+      result.zip(expected).foreach { case (res, exp) =>
+        assert(res.column == exp.column)
+        assert(res.row == exp.row)
+        assert(res.name == exp.name)
+        assert(res.staffNumber == exp.staffNumber)
+        assert(ShiftDate.isEqual(res.startTime, exp.startTime))
+        assert(ShiftDate.isEqual(res.endTime, exp.endTime))
+      }
+    }
+
   }
 }

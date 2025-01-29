@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ShiftViewEnabled, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.{GetAllStaffShifts, UpdateShifts, UpdateStaffShifts}
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -59,8 +59,7 @@ object MonthlyStaffing {
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
                    airportConfig: AirportConfig,
-                   enableShiftPlanningChanges: Boolean,
-                   staffShiftsCount: Int,
+                   showAddShifts: Boolean,
                    isStaffShiftPage: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
@@ -216,7 +215,7 @@ object MonthlyStaffing {
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
       case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], monthOfShiftsPot: Pot[ShiftAssignments])
-      val staffRCP = SPACircuit.connect(m => Model(m.allStaffShifts, m.allShifts))
+      val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.allShifts))
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
@@ -243,7 +242,7 @@ object MonthlyStaffing {
       ))
       <.div(
         if (!props.isStaffShiftPage) {
-          if (props.staffShiftsCount > 0 || !props.enableShiftPlanningChanges) {
+          if (props.showAddShifts) {
             EmptyVdom
           } else {
             <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
@@ -338,7 +337,7 @@ object MonthlyStaffing {
                   <.div(^.className := "staffing-controls-toggle",
                     MuiButton(color = Color.secondary, variant = "outlined")
                     (<.span(^.style := js.Dictionary("paddingRight" -> "5px"), "Toggle Shift view"),
-                      ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ToggleShiftView(None)))
+                      ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(false)))
                     ))
                 } else EmptyVdom
               ),
@@ -432,10 +431,6 @@ object MonthlyStaffing {
     .initialStateFromProps(stateFromProps)
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(p =>
-      if (p.props.isStaffShiftPage) Callback(SPACircuit.dispatch(GetAllStaffShifts)) else
-        Callback(print("componentDidMount is not monthly staffShift but monthly shift"))
-    )
     .build
 
   def updatedShiftAssignments(changes: Map[(Int, Int), Int],
@@ -577,8 +572,7 @@ object MonthlyStaffing {
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
-            enableShiftPlanningChange: Boolean,
-            staffShiftsCount: Int,
+            showAddShifts: Boolean,
             isStaffShiftPage: Boolean
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, enableShiftPlanningChange, staffShiftsCount, isStaffShiftPage: Boolean))
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, showAddShifts, isStaffShiftPage: Boolean))
 }

@@ -4,8 +4,8 @@ import diode.AnyAction.aType
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.SaveShift
-import drt.shared.StaffShift
+import drt.client.services.handlers.SaveShifts
+import drt.shared.Shift
 import japgolly.scalajs.react.{BackendScope, CtorType, Reusability, ScalaComponent}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -15,7 +15,7 @@ import japgolly.scalajs.react.vdom.html_<^._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 
-object StaffingShifts {
+object ShiftsComponent {
 
   case class State()
 
@@ -28,7 +28,7 @@ object StaffingShifts {
 
     import upickle.default.{macroRW, ReadWriter => RW}
 
-    implicit val rw: RW[StaffShift] = macroRW
+    implicit val rw: RW[Shift] = macroRW
 
     private def startDateInLocalDate: uk.gov.homeoffice.drt.time.LocalDate = {
       val today: SDateLike = SDate.now()
@@ -36,8 +36,8 @@ object StaffingShifts {
     }
 
     def render(props: Props, state: State): VdomTagOf[Div] = {
-      def confirmHandler(shifts: Seq[Shift]): Unit = {
-        val staffShifts = shifts.map(s => StaffShift(
+      def confirmHandler(shifts: Seq[ShiftForm]): Unit = {
+        val staffShifts = shifts.map(s => Shift(
           port = props.portCode,
           terminal = props.terminal.toString,
           shiftName = s.name,
@@ -50,11 +50,11 @@ object StaffingShifts {
           createdBy = None,
           createdAt = System.currentTimeMillis()
         ))
-        SPACircuit.dispatch(SaveShift(staffShifts))
+        SPACircuit.dispatch(SaveShifts(staffShifts))
         props.router.set(TerminalPageTabLoc(props.terminal.toString, "Shifts", "60", Map.empty)).runNow()
       }
 
-      <.div(AddShiftFormComponent(ShiftsProps(props.portCode, props.terminal.toString, 30, Seq.empty[Shift], confirmHandler)))
+      <.div(AddShiftFormComponent(ShiftsFormProps(props.portCode, props.terminal.toString, 30, Seq.empty[ShiftForm], confirmHandler)))
     }
 
   }

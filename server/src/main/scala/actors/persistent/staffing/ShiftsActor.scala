@@ -123,7 +123,7 @@ object ShiftsActor extends ShiftsActorLike {
 class ShiftsActor(val persistenceId: String,
                   val now: () => SDateLike,
                   val expireBefore: () => SDateLike,
-                  val snapshotInterval: Int
+                  val snapshotInterval: Int,
                  ) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
   val log: Logger = LoggerFactory.getLogger(getClass)
 

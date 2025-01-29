@@ -4,9 +4,9 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import spray.json._
 import uk.gov.homeoffice.drt.time.LocalDate
-import drt.shared.StaffShift
+import drt.shared.Shift
 
-class StaffShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
+class ShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson {
 
   "LocalDate JSON format" should "serialize and deserialize correctly" in {
     val date = LocalDate(2023, 10, 25)
@@ -17,7 +17,7 @@ class StaffShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson
 
   "StaffShift JSON format" should "serialize and deserialize correctly" in {
 
-    val shift = StaffShift(
+    val shift = Shift(
       port = "BHX",
       terminal = "T1",
       shiftName = "shift1",
@@ -31,7 +31,7 @@ class StaffShiftsJsonSpec extends AnyFlatSpec with Matchers with StaffShiftsJson
       createdAt = 1l
     )
     val json = shift.toJson
-    json.convertTo[StaffShift] shouldBe shift
+    json.convertTo[Shift] shouldBe shift
   }
 
   "convertTo" should "convert JSON string to Seq[StaffShift]" in {

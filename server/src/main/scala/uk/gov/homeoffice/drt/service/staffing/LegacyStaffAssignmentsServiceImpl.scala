@@ -3,7 +3,7 @@ package uk.gov.homeoffice.drt.service.staffing
 import actors.DrtStaticParameters.time48HoursAgo
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.staffing.ShiftsActor.UpdateShifts
-import actors.persistent.staffing.{ShiftsReadActor, ShiftsStaffActor}
+import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor}
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
 import akka.pattern.ask
 import akka.util.Timeout
@@ -16,18 +16,18 @@ import java.util.UUID
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object StaffShiftsPlanServiceImpl {
+object LegacyStaffAssignmentsServiceImpl {
   def pitActor(implicit system: ActorSystem): SDateLike => ActorRef = pointInTime => {
-    val actorName = s"staff-store-read-actor-" + UUID.randomUUID().toString
-    system.actorOf(ShiftsReadActor.props(ShiftsStaffActor.persistenceId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
+    val actorName = s"shifts-read-actor-" + UUID.randomUUID().toString
+    system.actorOf(ShiftsReadActor.props(ShiftsActor.persistenceId, pointInTime, time48HoursAgo(() => pointInTime)), actorName)
   }
 }
 
-case class StaffShiftsPlanServiceImpl(liveStaffShiftsReadActor: ActorRef,
-                                      shiftsStaffSequentialWritesActor: ActorRef,
-                                      pitActor: SDateLike => ActorRef,
-                                     )
-                                     (implicit timeout: Timeout, ec: ExecutionContext) extends StaffShiftsPlanService {
+case class LegacyStaffAssignmentsServiceImpl(liveShiftsActor: ActorRef,
+                                             shiftsWriteActor: ActorRef,
+                                             pitActor: SDateLike => ActorRef,
+                            )
+                                            (implicit timeout: Timeout, ec: ExecutionContext) extends LegacyStaffAssignmentsService {
   override def shiftsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] = {
     maybePointInTime match {
       case None =>
@@ -39,14 +39,14 @@ case class StaffShiftsPlanServiceImpl(liveStaffShiftsReadActor: ActorRef,
   }
 
   override def allShifts: Future[ShiftAssignments] =
-    liveStaffShiftsReadActor
+    liveShiftsActor
       .ask(GetState)
       .mapTo[ShiftAssignments]
 
   private def liveShiftsForDate(date: LocalDate): Future[ShiftAssignments] = {
     val start = SDate(date).millisSinceEpoch
     val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
-    shiftsStaffSequentialWritesActor.ask(GetStateForDateRange(start, end))
+    liveShiftsActor.ask(GetStateForDateRange(start, end))
       .map { case sa: ShiftAssignments => sa }
   }
 
@@ -69,8 +69,7 @@ case class StaffShiftsPlanServiceImpl(liveStaffShiftsReadActor: ActorRef,
   }
 
   override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] =
-    shiftsStaffSequentialWritesActor
+    shiftsWriteActor
       .ask(UpdateShifts(shiftAssignments))
       .mapTo[ShiftAssignments]
 }
-

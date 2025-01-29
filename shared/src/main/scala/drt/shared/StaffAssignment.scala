@@ -26,7 +26,7 @@ sealed trait StaffAssignmentLike extends Expireable {
 }
 
 object StaffAssignmentLike {
-  implicit val rw: RW[StaffAssignmentLike] = RW.merge(/*CompleteStaffMovement.rw, */ StaffAssignment.rw)
+  implicit val rw: RW[StaffAssignmentLike] = RW.merge(StaffAssignment.rw)
 }
 
 case class StaffAssignment(name: String,

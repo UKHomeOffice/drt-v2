@@ -19,7 +19,7 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.keycloak.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
 import uk.gov.homeoffice.drt.ports._
-import uk.gov.homeoffice.drt.service.staffing.StaffShiftsService
+import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
@@ -74,8 +74,8 @@ trait ABFeatureProviderLike {
   val abFeatureService: IABFeatureDao
 }
 
-trait StaffShiftProviderLike {
-  val staffShiftsService: StaffShiftsService
+trait ShiftsProviderLike {
+  val shiftsService: ShiftsService
 }
 
 class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)

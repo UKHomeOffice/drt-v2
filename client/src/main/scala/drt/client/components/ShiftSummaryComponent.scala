@@ -8,27 +8,26 @@ import scala.scalajs.js.annotation.JSImport
 import scala.scalajs.js.JSConverters._
 
 @js.native
-trait InitialShiftsProps extends js.Object {
-  var shifts: js.Array[DefaultShift] = js.native
-
+trait ShiftSummaryProps extends js.Object {
+  var shiftSummaries: js.Array[ShiftSummary] = js.native
 }
 
-object InitialShiftsProps {
-  def apply(shifts: Seq[DefaultShift]): InitialShiftsProps = {
-    val p = (new js.Object).asInstanceOf[InitialShiftsProps]
-    p.shifts = shifts.toJSArray
+object ShiftSummaryProps {
+  def apply(shiftSummaries: Seq[ShiftSummary]): ShiftSummaryProps = {
+    val p = (new js.Object).asInstanceOf[ShiftSummaryProps]
+    p.shiftSummaries = shiftSummaries.toJSArray
     p
   }
 }
 
 object ShiftSummaryComponent {
   @js.native
-  @JSImport("@drt/drt-react", "ShiftSummary")
+  @JSImport("@drt/drt-react", "ShiftSummaryView")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[InitialShiftsProps, Children.None](RawComponent)
+  val component = JsFnComponent[ShiftsFormProps, Children.None](RawComponent)
 
-  def apply(props: InitialShiftsProps): VdomElement = {
+  def apply(props: ShiftsFormProps): VdomElement = {
     component(props)
   }
 

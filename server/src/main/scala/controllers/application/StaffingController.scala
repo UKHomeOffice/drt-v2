@@ -18,7 +18,7 @@ import scala.concurrent.Future
 
 class StaffingController @Inject()(cc: ControllerComponents,
                                    ctrl: DrtSystemInterface,
-                                   shiftsService: ShiftsService,
+                                   shiftsService: LegacyStaffAssignmentsService,
                                    fixedPointsService: FixedPointsService,
                                    movementsService: StaffMovementsService) extends AuthController(cc, ctrl) {
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {

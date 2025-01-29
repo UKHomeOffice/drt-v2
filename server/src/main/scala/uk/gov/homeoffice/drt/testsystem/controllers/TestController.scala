@@ -165,7 +165,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
         maybeShifts match {
           case Some(shifts) =>
             log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
-            ctrl.actorService.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
+            ctrl.actorService.legacyStaffAssignmentsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
             Created
           case _ =>
             BadRequest("{\"error\": \"Unable to parse data\"}")

@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class StaffShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, Pot[ShiftAssignments]]) extends LoggingActionHandler(modelRW) {
+class StaffAssignmentsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, Pot[ShiftAssignments]]) extends LoggingActionHandler(modelRW) {
   def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetShifts(viewMode))).after(2 seconds)
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
@@ -30,7 +30,7 @@ class StaffShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW
       noChange
 
     case GetStaffShifts(viewMode) =>
-      val url = s"staff-shifts/${viewMode.localDate.toISOString}" +
+      val url = s"staff-assignments/${viewMode.localDate.toISOString}" +
         viewMode.maybePointInTime.map(pit => s"?pointInTime=$pit").getOrElse("")
 
       val apiCallEffect: EffectSingle[Action] = Effect(
@@ -45,7 +45,7 @@ class StaffShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW
       effectOnly(apiCallEffect)
 
     case UpdateStaffShifts(assignments) =>
-      val futureResponse = DrtApi.post("staff-shifts", write(ShiftAssignments(assignments)))
+      val futureResponse = DrtApi.post("staff-assignments", write(ShiftAssignments(assignments)))
         .map(r => SetAllShifts(read[ShiftAssignments](r.responseText)))
         .recoverWith {
           case _ =>

@@ -56,7 +56,7 @@ object TerminalComponent {
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
-                                   staffShiftsPot: Pot[Seq[StaffShift]]
+                                   shiftsPot: Pot[Seq[Shift]]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -79,8 +79,8 @@ object TerminalComponent {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
-        potShifts = model.dayOfShifts,
-        potStaffShifts = model.dayOfStaffShifts,
+        potShifts = model.legacyDayOfStaffAssignments,
+        potStaffShifts = model.dayOfStaffAssignments,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         airportConfig = model.airportConfig,
@@ -95,7 +95,7 @@ object TerminalComponent {
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
-        staffShiftsPot = model.staffShifts
+        shiftsPot = model.shifts
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -109,7 +109,7 @@ object TerminalComponent {
             airportConfig <- model.airportConfig
             loggedInUser <- model.loggedInUserPot
             redListUpdates <- model.redListUpdates
-            staffShifts <- model.staffShiftsPot
+            shifts <- model.shiftsPot
           } yield {
             val timeRangeHours: TimeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
@@ -117,7 +117,7 @@ object TerminalComponent {
 
             <.div(
               <.div(^.className := "terminal-nav-wrapper",
-                terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled, featureFlags.enableShiftPlanningChange, staffShifts.nonEmpty)),
+                terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled, featureFlags.enableShiftPlanningChange, shifts.nonEmpty)),
               <.div(^.className := "tab-content", {
                 val rcp = SPACircuit.connect(m =>
                   (m.minuteTicker,
@@ -232,17 +232,17 @@ object TerminalComponent {
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" =>
-                      <.div(drt.client.components.StaffingShifts(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
+                      <.div(drt.client.components.ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableShiftPlanningChange, staffShifts.size, false))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, shifts.nonEmpty, false))
 
-                    case Shifts if loggedInUser.roles.contains(StaffEdit) && staffShifts.nonEmpty =>
-                      if (props.terminalPageTab.toggleShiftView.isDefined)
-                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, featureFlags.enableShiftPlanningChange, staffShifts.size, true))
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.nonEmpty =>
+                      if (props.terminalPageTab.shiftViewEnabled)
+                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, shifts.nonEmpty, true))
                       else
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig))
 
-                    case Shifts if loggedInUser.roles.contains(StaffEdit) && staffShifts.isEmpty =>
+                    case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.isEmpty =>
                       <.div(^.className := "staffing-container-empty",
                         "No staff shifts are currently available. Please visit the ", <.strong("Staffing"), " tab to create new shifts or select a different tab." +
                           "If you have already created shifts, kindly refresh the page."
@@ -316,7 +316,7 @@ object TerminalComponent {
           props.router.link(props.terminalPageTab.update(
             mode = Shifts,
             subMode = if (enableShiftPlanningChange) "60" else "15",
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None), ToggleShiftView(None)).queryParams
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None), ShiftViewEnabled(false)).queryParams
           ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Shifts", " ", monthlyStaffingTooltip)
         )
       } else "",

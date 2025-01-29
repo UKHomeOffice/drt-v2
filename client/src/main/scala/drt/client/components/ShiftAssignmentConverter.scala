@@ -5,7 +5,7 @@ import drt.client.services.JSDateConversions.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object ShiftAssignmentConverter {
-  def toStaffAssignment(shiftAssignment: ShiftAssignment, terminal: Terminal): StaffAssignment = {
+  def toStaffAssignment(shiftAssignment: StaffTableEntry, terminal: Terminal): StaffAssignment = {
     StaffAssignment(
       name = shiftAssignment.name,
       terminal = terminal,

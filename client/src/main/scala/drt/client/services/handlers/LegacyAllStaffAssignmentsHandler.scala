@@ -11,10 +11,10 @@ import upickle.default.read
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class AllShiftsHandler[M](modelRW: ModelRW[M, Pot[ShiftAssignments]]) extends LoggingActionHandler(modelRW) {
+class LegacyAllStaffAssignmentsHandler[M](modelRW: ModelRW[M, Pot[ShiftAssignments]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAllShifts =>
-      val apiCallEffect = Effect(DrtApi.get("shifts")
+      val apiCallEffect = Effect(DrtApi.get("legacy-staff-assignments")
         .map(r => SetAllShifts(read[ShiftAssignments](r.responseText)))
         .recoverWith {
           case t =>

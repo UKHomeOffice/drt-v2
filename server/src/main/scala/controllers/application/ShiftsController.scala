@@ -1,12 +1,12 @@
 package controllers.application
 
 import actors.persistent.staffing.StaffingUtil
-import drt.shared.{ShiftAssignments, StaffShift}
+import drt.shared.{ShiftAssignments, Shift}
 import play.api.mvc._
 import spray.json._
 import uk.gov.homeoffice.drt.auth.Roles.{FixedPointsView, StaffEdit}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
-import uk.gov.homeoffice.drt.service.staffing.StaffShiftsPlanService
+import uk.gov.homeoffice.drt.service.staffing.StaffAssignmentsService
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import upickle.default.{read, write}
 
@@ -30,8 +30,8 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
     }
   }
 
-  implicit val staffShiftFormat: RootJsonFormat[StaffShift] = new RootJsonFormat[StaffShift] {
-    override def write(shift: StaffShift): JsValue = JsObject(
+  implicit val staffShiftFormat: RootJsonFormat[Shift] = new RootJsonFormat[Shift] {
+    override def write(shift: Shift): JsValue = JsObject(
       "port" -> JsString(shift.port),
       "terminal" -> JsString(shift.terminal),
       "shiftName" -> JsString(shift.shiftName),
@@ -45,9 +45,9 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
       "createdAt" -> JsNumber(shift.createdAt)
     )
 
-    override def read(json: JsValue): StaffShift = {
+    override def read(json: JsValue): Shift = {
       val fields = json.asJsObject.fields
-      StaffShift(
+      Shift(
         port = fields("port").convertTo[String],
         terminal = fields("terminal").convertTo[String],
         shiftName = fields("shiftName").convertTo[String],
@@ -76,41 +76,39 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
     }
   }
 
-  def convertTo(text: String): Seq[StaffShift] = {
+  def convertTo(text: String): Seq[Shift] = {
     val json = text.parseJson
-    json.convertTo[Seq[StaffShift]]
+    json.convertTo[Seq[Shift]]
   }
 
 
 }
 
-class StaffShiftsController @Inject()(cc: ControllerComponents,
-                                      ctrl: DrtSystemInterface,
-                                      staffShiftsPlanService: StaffShiftsPlanService)(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
+class ShiftsController @Inject()(cc: ControllerComponents,
+                                 ctrl: DrtSystemInterface,
+                                 staffShiftsPlanService: StaffAssignmentsService)(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) with StaffShiftsJson {
 
-  def getDefaultShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {
-    ctrl.staffShiftsService.getShift(port, terminal, shiftName).map {
+  def getShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getShift(port, terminal, shiftName).map {
       case Some(shift) => Ok(shift.toString)
       case None => NotFound
     }
   }
 
-  def getDefaultShifts(port: String, terminal: String): Action[AnyContent] = Action.async {
-    ctrl.staffShiftsService.getShifts(port, terminal).map { shifts =>
+  def getShifts(port: String, terminal: String): Action[AnyContent] = Action.async {
+    ctrl.shiftsService.getShifts(port, terminal).map { shifts =>
       Ok(shifts.toJson.compactPrint)
     }
   }
 
-  def saveDefaultShift: Action[AnyContent] = Action.async { request =>
+  def saveShifts: Action[AnyContent] = Action.async { request =>
     request.body.asText.map { text =>
       try {
         val shifts = convertTo(text)
-        ctrl.staffShiftsService.saveShift(shifts).flatMap { result =>
-          staffShiftsPlanService.allShifts.flatMap { allShifts =>
-            val startTime = System.currentTimeMillis()
-            val updatedAssignments = StaffingUtil.updateWithDefaultShift(shifts, allShifts)
-            println(s"Updated assignments in ${System.currentTimeMillis() - startTime} ms")
-            staffShiftsPlanService.updateShifts(updatedAssignments).map { _ =>
+        ctrl.shiftsService.saveShift(shifts).flatMap { result =>
+          staffShiftsPlanService.allStaffAssignments.flatMap { allShifts =>
+            val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
+            staffShiftsPlanService.updateStaffAssignments(updatedAssignments).map { _ =>
               Ok(s"Inserted $result shift(s)")
             }
           }.recoverWith {
@@ -124,26 +122,26 @@ class StaffShiftsController @Inject()(cc: ControllerComponents,
   }
 
 
-  def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
+  def getStaffAssignments(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
       val date = SDate(localDateStr).toLocalDate
       val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
-      staffShiftsPlanService.shiftsForDate(date, maybePointInTime)
+      staffShiftsPlanService.staffAssignmentsForDate(date, maybePointInTime)
         .map(sa => Ok(write(sa)))
     }
   }
 
-  def getAllShifts: Action[AnyContent] = Action.async {
-    staffShiftsPlanService.allShifts.map(s => Ok(write(s)))
+  def getAllStaffAssignments: Action[AnyContent] = Action.async {
+    staffShiftsPlanService.allStaffAssignments.map(s => Ok(write(s)))
   }
 
-  def saveShifts: Action[AnyContent] = authByRole(StaffEdit) {
+  def saveStaffAssignments: Action[AnyContent] = authByRole(StaffEdit) {
     Action.async { request =>
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
           staffShiftsPlanService
-            .updateShifts(shifts.assignments)
+            .updateStaffAssignments(shifts.assignments)
             .map(allShifts => Accepted(write(allShifts)))
         case None =>
           Future.successful(BadRequest)
@@ -151,9 +149,4 @@ class StaffShiftsController @Inject()(cc: ControllerComponents,
     }
   }
 
-  def removeShift(port: String, terminal: String, shiftName: String): Action[AnyContent] = Action.async {
-    ctrl.staffShiftsService.deleteShift(port, terminal, shiftName).map { result =>
-      Ok(s"Deleted $result shift(s)")
-    }
-  }
 }

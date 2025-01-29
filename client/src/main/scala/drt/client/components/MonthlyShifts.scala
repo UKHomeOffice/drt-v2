@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.Pot
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ToggleShiftView, UrlDateParameter, UrlDayRangeType}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ShiftViewEnabled, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.{GetAllStaffShifts, UpdateStaffShifts}
 import drt.client.components.MonthlyShiftsUtil.{generateShiftData, updateAssignments, updateChangeAssignment}
 import drt.client.components.StaffingUtil.navigationDates
@@ -41,8 +41,8 @@ object MonthlyShifts {
                    showStaffSuccess: Boolean,
                    addShiftForm: Boolean,
                    shifts: ShiftAssignments,
-                   shiftsData: Seq[ShiftData] = Seq.empty,
-                   changedAssignments: Seq[ShiftAssignment] = Seq.empty
+                   shiftsData: Seq[ShiftSummaryStaffing] = Seq.empty,
+                   changedAssignments: Seq[StaffTableEntry] = Seq.empty
                   )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
@@ -110,12 +110,12 @@ object MonthlyShifts {
         navigationArrows(props, previousDate, nextDate)
       }
 
-      def whatDayChanged(changedAssignments: Seq[ShiftAssignment]) = {
+      def whatDayChanged(changedAssignments: Seq[StaffTableEntry]) = {
         changedAssignments.map(_.startTime.day).sortBy(_.toInt).distinct.mkString(", ")
       }
 
-      def confirmAndSave(shiftsData: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]): ReactEventFromInput => Callback = (_: ReactEventFromInput) => Callback {
-        val changedShifts: Seq[StaffAssignment] = shiftsData.flatMap(_.assignments.toSeq.map(ShiftAssignmentConverter.toStaffAssignment(_, props.terminalPageTab.terminal)))
+      def confirmAndSave(shiftsData: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]): ReactEventFromInput => Callback = (_: ReactEventFromInput) => Callback {
+        val changedShifts: Seq[StaffAssignment] = shiftsData.flatMap(_.staffTableEntries.toSeq.map(ShiftAssignmentConverter.toStaffAssignment(_, props.terminalPageTab.terminal)))
 
         val changedShiftSlots: Seq[StaffAssignment] = updatedConvertedShiftAssignments(
           changedShifts,
@@ -128,14 +128,14 @@ object MonthlyShifts {
             "Save Monthly Staffing",
             s"updated staff for ${whatDayChanged(changedAssignments)} $updatedMonth")
           SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
-          scope.modState(state => state.copy(changedAssignments = Seq.empty[ShiftAssignment])).runNow()
+          scope.modState(state => state.copy(changedAssignments = Seq.empty[StaffTableEntry])).runNow()
         }
       }
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
-      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[StaffShift]])
-      val staffRCP = SPACircuit.connect(m => Model(m.allStaffShifts, m.staffShifts))
+      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]])
+      val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.shifts))
 
 
       val modelChangeDetection = staffRCP { modelMP =>
@@ -145,7 +145,7 @@ object MonthlyShifts {
           staffShifts <- model.staffShiftsPot
         } yield {
           if (monthOfShifts != state.shifts) {
-            val initialShift: Seq[ShiftData] = generateShiftData(viewingDate,
+            val initialShift: Seq[ShiftSummaryStaffing] = generateShiftData(viewingDate,
               props.terminalPageTab.dayRangeType.getOrElse("monthly"),
               props.terminalPageTab.terminal,
               staffShifts,
@@ -251,7 +251,7 @@ object MonthlyShifts {
               <.div(^.className := "staffing-controls-toggle",
                 MuiButton(color = Color.secondary, variant = "outlined")
                 (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Toggle Shift view"),
-                  ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ToggleShiftView(Some("table"))))
+                  ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(true)))
                 )
               )
             ),
@@ -287,7 +287,7 @@ object MonthlyShifts {
                   dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
                   interval = props.timeSlotMinutes,
                   initialShifts = state.shiftsData,
-                  handleSaveChanges = (shifts: Seq[ShiftData], changedAssignments: Seq[ShiftAssignment]) => {
+                  handleSaveChanges = (shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]) => {
                     val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
                     val updateShifts = updateAssignments(shifts, updateChanges, 15)
                     scope.modState(state => state.copy(

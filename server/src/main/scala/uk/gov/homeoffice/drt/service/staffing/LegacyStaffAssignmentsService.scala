@@ -6,7 +6,7 @@ import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch
 
 import scala.concurrent.Future
 
-trait StaffShiftsPlanService {
+trait LegacyStaffAssignmentsService {
   def shiftsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments]
 
   def allShifts: Future[ShiftAssignments]

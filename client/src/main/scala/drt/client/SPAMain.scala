@@ -6,7 +6,7 @@ import diode.react.ReactConnectProxy
 import drt.client.actions.Actions._
 import drt.client.components.TerminalDesksAndQueues.{ChartsView, Deployments, DeskType, DisplayType, Ideal, TableView}
 import drt.client.components.styles._
-import drt.client.components.{AccessibilityStatementComponent, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, IAccessibilityStatementProps, Layout, PortConfigPage, PortDashboardPage, StaffingShifts, TerminalComponent, TrainingHubComponent, UserDashboardPage}
+import drt.client.components.{AccessibilityStatementComponent, FeedsStatusPage, ForecastUploadComponent, GlobalStyles, IAccessibilityStatementProps, Layout, PortConfigPage, PortDashboardPage, TerminalComponent, TrainingHubComponent, UserDashboardPage}
 import drt.client.logger._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -113,12 +113,12 @@ object SPAMain {
     }
   }
 
-  object ToggleShiftView {
-    val paramName = "toggleShift"
+  object ShiftViewEnabled {
+    val paramName = "shiftViewEnabled"
 
-    def apply(viewType: Option[String]): UrlParameter = new UrlParameter {
+    def apply(viewType: Boolean): UrlParameter = new UrlParameter {
       override val name: String = paramName
-      override val value: Option[String] = viewType
+      override val value: Option[String] = Option(viewType.toString)
     }
   }
 
@@ -188,8 +188,7 @@ object SPAMain {
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
-    val toggleShiftView: Option[String] = queryParams.get(ToggleShiftView.paramName)
-
+    val shiftViewEnabled: Boolean = queryParams.get(ShiftViewEnabled.paramName).exists(_.toBoolean)
     def viewMode: ViewMode = {
       (mode, maybeViewDate) match {
         case (Current, Some(viewDate)) =>

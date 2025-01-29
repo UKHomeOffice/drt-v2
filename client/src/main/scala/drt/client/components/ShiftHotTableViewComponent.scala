@@ -38,6 +38,18 @@ trait ShiftDate extends js.Object {
 }
 
 object ShiftDate {
+  def toString(shiftDate: ShiftDate): String = {
+    s"${shiftDate.year}-${shiftDate.month}-${shiftDate.day} ${shiftDate.hour}:${shiftDate.minute}"
+  }
+
+  def isEqual(shiftDate1: ShiftDate, shiftDate2: ShiftDate): Boolean = {
+    shiftDate1.year == shiftDate2.year &&
+      shiftDate1.month == shiftDate2.month &&
+      shiftDate1.day == shiftDate2.day &&
+      shiftDate1.hour == shiftDate2.hour &&
+      shiftDate1.minute == shiftDate2.minute
+  }
+
   def apply(year: Int, month: Int, day: Int, hour: Int, minute: Int): ShiftDate = {
     val p = (new js.Object).asInstanceOf[ShiftDate]
     p.year = year
@@ -50,16 +62,16 @@ object ShiftDate {
 }
 
 @js.native
-trait DefaultShift extends js.Object {
+trait ShiftSummary extends js.Object {
   var name: String
   var defaultStaffNumber: Int
   var startTime: String
   var endTime: String
 }
 
-object DefaultShift {
-  def apply(name: String, defaultStaffNumber: Int, startTime: String, endTime: String): DefaultShift = {
-    val p = (new js.Object).asInstanceOf[DefaultShift]
+object ShiftSummary {
+  def apply(name: String, defaultStaffNumber: Int, startTime: String, endTime: String): ShiftSummary = {
+    val p = (new js.Object).asInstanceOf[ShiftSummary]
     p.name = name
     p.defaultStaffNumber = defaultStaffNumber
     p.startTime = startTime
@@ -69,7 +81,7 @@ object DefaultShift {
 }
 
 @js.native
-trait ShiftAssignment extends js.Object {
+trait StaffTableEntry extends js.Object {
   var column: Int
   var row: Int
   var name: String
@@ -78,7 +90,7 @@ trait ShiftAssignment extends js.Object {
   var endTime: ShiftDate
 }
 
-object ShiftAssignment {
+object StaffTableEntry {
   private def shiftDateToSDate(shiftDate: ShiftDate) = {
     SDate(shiftDate.year, shiftDate.month, shiftDate.day, shiftDate.hour, shiftDate.minute)
   }
@@ -88,9 +100,9 @@ object ShiftAssignment {
     ShiftDate(s_date.getFullYear, s_date.getMonth, s_date.getDate, s_date.getHours, s_date.getMinutes)
   }
 
-  def splitIntoSlots(shiftAssignment: ShiftAssignment, slotMinutes: Int): Seq[ShiftAssignment] =
+  def splitIntoSlots(shiftAssignment: StaffTableEntry, slotMinutes: Int): Seq[StaffTableEntry] =
     (shiftDateToSDate(shiftAssignment.startTime).millisSinceEpoch until shiftDateToSDate(shiftAssignment.endTime).millisSinceEpoch by slotMinutes.minutes.toMillis).map(start =>
-      ShiftAssignment(
+      StaffTableEntry(
         column = shiftAssignment.column,
         row = shiftAssignment.row,
         name = shiftAssignment.name,
@@ -101,8 +113,8 @@ object ShiftAssignment {
       )
     )
 
-  def apply(column: Int, row: Int, name: String, staffNumber: Int, startTime: ShiftDate, endTime: ShiftDate): ShiftAssignment = {
-    val p = (new js.Object).asInstanceOf[ShiftAssignment]
+  def apply(column: Int, row: Int, name: String, staffNumber: Int, startTime: ShiftDate, endTime: ShiftDate): StaffTableEntry = {
+    val p = (new js.Object).asInstanceOf[StaffTableEntry]
     p.column = column
     p.row = row
     p.name = name
@@ -114,18 +126,18 @@ object ShiftAssignment {
 }
 
 @js.native
-trait ShiftData extends js.Object {
+trait ShiftSummaryStaffing extends js.Object {
   var index: Int
-  var defaultShift: DefaultShift
-  var assignments: js.Array[ShiftAssignment]
+  var shiftSummary: ShiftSummary
+  var staffTableEntries: js.Array[StaffTableEntry]
 }
 
-object ShiftData {
-  def apply(index: Int, defaultShift: DefaultShift, assignments: Seq[ShiftAssignment]): ShiftData = {
-    val p = (new js.Object).asInstanceOf[ShiftData]
+object ShiftSummaryStaffing {
+  def apply(index: Int, shiftSummary: ShiftSummary, assignments: Seq[StaffTableEntry]): ShiftSummaryStaffing = {
+    val p = (new js.Object).asInstanceOf[ShiftSummaryStaffing]
     p.index = index
-    p.defaultShift = defaultShift
-    p.assignments = assignments.toJSArray
+    p.shiftSummary = shiftSummary
+    p.staffTableEntries = assignments.toJSArray
     p
   }
 }
@@ -135,18 +147,18 @@ trait ShiftHotTableViewProps extends js.Object {
   var viewDate: ViewDate = js.native
   var dayRange: String = js.native
   var interval: Int = js.native
-  var initialShifts: js.Array[ShiftData] = js.native
-  var handleSaveChanges: js.Function2[js.Array[ShiftData], js.Array[ShiftAssignment], Unit] = js.native
+  var shiftSummaries: js.Array[ShiftSummaryStaffing] = js.native
+  var handleSaveChanges: js.Function2[js.Array[ShiftSummaryStaffing], js.Array[StaffTableEntry], Unit] = js.native
 }
 
 object ShiftHotTableViewProps {
-  def apply(viewDate: ViewDate, dayRange: String, interval: Int, initialShifts: Seq[ShiftData], handleSaveChanges: (Seq[ShiftData], Seq[ShiftAssignment]) => Unit): ShiftHotTableViewProps = {
+  def apply(viewDate: ViewDate, dayRange: String, interval: Int, initialShifts: Seq[ShiftSummaryStaffing], handleSaveChanges: (Seq[ShiftSummaryStaffing], Seq[StaffTableEntry]) => Unit): ShiftHotTableViewProps = {
     val p = (new js.Object).asInstanceOf[ShiftHotTableViewProps]
     p.viewDate = viewDate
     p.dayRange = dayRange
     p.interval = interval
-    p.initialShifts = initialShifts.toJSArray
-    p.handleSaveChanges = (shifts: js.Array[ShiftData], changedAssignments: js.Array[ShiftAssignment]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
+    p.shiftSummaries = initialShifts.toJSArray
+    p.handleSaveChanges = (shifts: js.Array[ShiftSummaryStaffing], changedAssignments: js.Array[StaffTableEntry]) => handleSaveChanges(shifts.toSeq, changedAssignments.toSeq)
     p
   }
 }

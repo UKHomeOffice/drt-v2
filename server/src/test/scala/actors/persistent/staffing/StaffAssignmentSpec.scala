@@ -5,7 +5,7 @@ import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
-class StaffExtraSpec extends Specification {
+class StaffAssignmentSpec extends Specification {
   def millisSinceEpochToUTCSDate(millis: Long): UtcDate = SDate(millis).toUtcDate
 
   "StaffAssignment" should {

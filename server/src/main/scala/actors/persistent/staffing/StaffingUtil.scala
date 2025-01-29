@@ -1,11 +1,11 @@
 package actors.persistent.staffing
 
-import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike, StaffShift, TM}
+import drt.shared.{ShiftAssignments, StaffAssignment, StaffAssignmentLike, Shift, TM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 object StaffingUtil {
-  def generateDailyAssignments(shift: StaffShift): Seq[StaffAssignment] = {
+  def generateDailyAssignments(shift: Shift): Seq[StaffAssignment] = {
     val (startHH, startMM) = shift.startTime.split(":") match {
       case Array(hh, mm) => (hh.toInt, mm.toInt)
     }
@@ -39,7 +39,7 @@ object StaffingUtil {
     }
   }
 
-  def updateWithDefaultShift(shifts: Seq[StaffShift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
+  def updateWithShiftDefaultStaff(shifts: Seq[Shift], allShifts: ShiftAssignments): Seq[StaffAssignmentLike] = {
 
     val allShiftsStaff: Seq[StaffAssignment] = shifts.flatMap { shift =>
       generateDailyAssignments(shift)

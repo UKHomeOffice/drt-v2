@@ -5,12 +5,12 @@ import akka.actor.ActorRef
 trait ActorsServiceLike {
   val requestAndTerminateActor: ActorRef
   val portStateActor: ActorRef
-  val liveStaffShiftsReadActor: ActorRef
-  val liveShiftsReadActor: ActorRef
+  val legacyStaffAssignmentsReadActor: ActorRef
+  val liveStaffAssignmentsReadActor: ActorRef
   val liveFixedPointsReadActor: ActorRef
   val liveStaffMovementsReadActor: ActorRef
-  val shiftsStaffSequentialWritesActor: ActorRef
-  val shiftsSequentialWritesActor: ActorRef
+  val legacyStaffAssignmentsSequentialWritesActor: ActorRef
+  val staffAssignmentsSequentialWritesActor: ActorRef
   val fixedPointsSequentialWritesActor: ActorRef
   val staffMovementsSequentialWritesActor: ActorRef
 
