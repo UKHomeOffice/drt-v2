@@ -13,7 +13,7 @@ addSbtPlugin("ch.epfl.scala" % "sbt-web-scalajs-bundler" % "0.21.1")
 
 addSbtPlugin("com.github.sbt" % "sbt-less" % "2.0.0")
 
-addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.9")
+addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.16")
 
 addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.9.6")
 

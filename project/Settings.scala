@@ -27,7 +27,7 @@ object Settings {
   object versions {
     val scala = "2.13.16"
 
-    val drtLib = "v1069"
+    val drtLib = "v1070"
 
     val akka = "2.9.5" // last version with license key requirement
     val akkaHttp = "10.6.3" // last version dependent on akka 2.9.5
@@ -76,6 +76,8 @@ object Settings {
     val scalatestplusPlay = "7.0.1"
     val nettyAll = "4.1.117.Final"
     val jwtCore = "9.4.6"
+    val logback = "1.3.15"
+    val logbackContrib = "0.1.5"
   }
 
   import versions.*
@@ -164,7 +166,6 @@ object Settings {
     "com.typesafe.akka" %% "akka-serialization-jackson" % akka,
     "com.typesafe.akka" %% "akka-pki" % akka,
     "com.typesafe.akka" %% "akka-stream-typed" % akka,
-    "com.typesafe.akka" %% "akka-persistence-testkit" % akka,
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-persistence" % akka,
@@ -184,9 +185,9 @@ object Settings {
 
     "joda-time" % "joda-time" % jodaTime,
 
-    "ch.qos.logback" % "logback-classic" % "1.3.15",
-    "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
-    "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
+    "ch.qos.logback" % "logback-classic" % logback,
+    "ch.qos.logback.contrib" % "logback-json-classic" % logbackContrib,
+    "ch.qos.logback.contrib" % "logback-jackson" % logbackContrib,
     "org.codehaus.janino" % "janino" % janinoVersion,
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
