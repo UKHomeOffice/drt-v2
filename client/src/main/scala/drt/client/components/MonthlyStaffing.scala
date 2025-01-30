@@ -59,7 +59,7 @@ object MonthlyStaffing {
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
                    airportConfig: AirportConfig,
-                   showAddShifts: Boolean,
+                   hideAddShifts: Boolean,
                    isStaffShiftPage: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
@@ -242,7 +242,7 @@ object MonthlyStaffing {
       ))
       <.div(
         if (!props.isStaffShiftPage) {
-          if (props.showAddShifts) {
+          if (props.hideAddShifts) {
             EmptyVdom
           } else {
             <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
