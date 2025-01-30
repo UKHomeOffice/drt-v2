@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 import scala.collection.mutable.ArrayBuffer
@@ -140,6 +140,10 @@ object AclFeed {
 
     val file: InMemoryDestFile = new InMemoryDestFile {
       override def getOutputStream: ByteArrayOutputStream = outputStream
+
+      override def getLength: Long = outputStream.size()
+
+      override def getOutputStream(append: Boolean): OutputStream = outputStream
     }
 
     sftp.get(latestFileName, file)
