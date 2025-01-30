@@ -25,9 +25,9 @@ object ShiftSummaryComponent {
   @JSImport("@drt/drt-react", "ShiftSummaryView")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[ShiftsFormProps, Children.None](RawComponent)
+  val component = JsFnComponent[ShiftFormProps, Children.None](RawComponent)
 
-  def apply(props: ShiftsFormProps): VdomElement = {
+  def apply(props: ShiftFormProps): VdomElement = {
     component(props)
   }
 

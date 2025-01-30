@@ -337,7 +337,7 @@ class TestDrtActor extends Actor {
         val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = RunnableStaffing(
           staffingQueueActor = TestProbe().ref,
           staffQueue = SortedSet.empty[TerminalUpdateRequest],
-          shiftsActor = liveShiftsReadActor,
+          legacyStaffAssignmentsReadActor = liveShiftsReadActor,
           fixedPointsActor = liveFixedPointsReadActor,
           movementsActor = liveStaffMovementsReadActor,
           staffMinutesActor = portStateActor,

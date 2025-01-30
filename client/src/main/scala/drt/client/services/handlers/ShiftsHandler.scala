@@ -44,7 +44,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
       updated(Pot.empty, apiCallEffect)
 
     case GetShift(port, terminal, shiftName) =>
-      val apiCallEffect = Effect(DrtApi.get(s"shift/$port/$terminal/$shiftName")
+      val apiCallEffect = Effect(DrtApi.get(s"shifts/$port/$terminal/$shiftName")
         .map(r => SetShifts(read[Seq[Shift]](r.responseText)))
         .recoverWith {
           case t =>

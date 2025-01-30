@@ -34,7 +34,7 @@ class ViewModeHandler[M](now: () => SDateLike,
     val effects = Effect(Future(GetInitialPortState(newViewMode))) +
       Effect(Future(GetStaffMovements(newViewMode))) +
       Effect(Future(GetShifts(newViewMode))) +
-      Effect(Future(GetStaffShifts(newViewMode))) +
+      Effect(Future(GetStaffAssignments(newViewMode))) +
       Effect(Future(GetFixedPoints(newViewMode))) +
       Effect(Future(GetManifestSummariesForDate(newViewMode.dayEnd.toUtcDate))) +
       Effect(Future(GetManifestSummariesForDate(newViewMode.dayEnd.addDays(-1).toUtcDate)))

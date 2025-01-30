@@ -4,7 +4,7 @@ import diode.AnyAction.aType
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ShiftViewEnabled, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.{GetAllStaffShifts, UpdateStaffShifts}
-import drt.client.components.MonthlyShiftsUtil.{generateShiftData, updateAssignments, updateChangeAssignment}
+import drt.client.components.MonthlyShiftsUtil.{generateShiftSummaries, updateAssignments, updateChangeAssignment}
 import drt.client.components.StaffingUtil.navigationDates
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -145,7 +145,7 @@ object MonthlyShifts {
           staffShifts <- model.staffShiftsPot
         } yield {
           if (monthOfShifts != state.shifts) {
-            val initialShift: Seq[ShiftSummaryStaffing] = generateShiftData(viewingDate,
+            val initialShift: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(viewingDate,
               props.terminalPageTab.dayRangeType.getOrElse("monthly"),
               props.terminalPageTab.terminal,
               staffShifts,

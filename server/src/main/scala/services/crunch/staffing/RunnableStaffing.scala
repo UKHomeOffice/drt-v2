@@ -26,7 +26,7 @@ object RunnableStaffing extends DrtRunnableGraph {
 
   def apply(staffingQueueActor: ActorRef,
             staffQueue: SortedSet[TerminalUpdateRequest],
-            shiftsActor: ActorRef,
+            legacyStaffAssignmentsReadActor: ActorRef,
             fixedPointsActor: ActorRef,
             movementsActor: ActorRef,
             staffMinutesActor: ActorRef,
@@ -34,7 +34,7 @@ object RunnableStaffing extends DrtRunnableGraph {
             setUpdatedAtForDay: (Terminal, LocalDate, Long) => Future[Done],
            )
            (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val shiftsProvider = (r: TerminalUpdateRequest) => shiftsActor.ask(r).mapTo[ShiftAssignments]
+    val shiftsProvider = (r: TerminalUpdateRequest) => legacyStaffAssignmentsReadActor.ask(r).mapTo[ShiftAssignments]
     val fixedPointsProvider = (r: TerminalUpdateRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
     val movementsProvider = (r: TerminalUpdateRequest) => movementsActor.ask(r).mapTo[StaffMovements]
 

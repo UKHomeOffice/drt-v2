@@ -91,7 +91,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   @Singleton
-  def provideShiftsService: LegacyStaffAssignmentsService = LegacyStaffAssignmentsServiceImpl(
+  def provideLegacyStaffAssignmentsService: LegacyStaffAssignmentsService = LegacyStaffAssignmentsServiceImpl(
     provideDrtSystemInterface.actorService.legacyStaffAssignmentsReadActor,
     provideDrtSystemInterface.actorService.legacyStaffAssignmentsSequentialWritesActor,
     LegacyStaffAssignmentsServiceImpl.pitActor(provideActorSystem),
@@ -99,7 +99,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   @Singleton
-  def provideStaffShiftsPlanService: StaffAssignmentsService = StaffAssignmentsServiceImpl(
+  def provideStaffAssignmentsService: StaffAssignmentsService = StaffAssignmentsServiceImpl(
     provideDrtSystemInterface.actorService.liveStaffAssignmentsReadActor,
     provideDrtSystemInterface.actorService.staffAssignmentsSequentialWritesActor,
     StaffAssignmentsServiceImpl.pitActor(provideActorSystem),

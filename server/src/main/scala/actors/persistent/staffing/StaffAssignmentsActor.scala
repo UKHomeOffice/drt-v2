@@ -16,9 +16,9 @@ object StaffAssignmentsActor extends ShiftsActorLike {
 
   val persistenceId = "staff-assignments"
 
-  case class ReplaceAllShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
+  case class ReplaceAllStaffAssignments(newStaffAssignments: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
-  case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
+  case class UpdateStaffAssignments(staffAssignmentsToUpdate: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
   def sequentialWritesProps(now: () => SDateLike,
                             expireBefore: () => SDateLike,

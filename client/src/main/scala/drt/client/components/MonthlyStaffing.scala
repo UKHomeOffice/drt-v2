@@ -572,7 +572,7 @@ object MonthlyStaffing {
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
-            showAddShifts: Boolean,
+            hideAddShifts: Boolean,
             isStaffShiftPage: Boolean
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, showAddShifts, isStaffShiftPage: Boolean))
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, hideAddShifts, isStaffShiftPage: Boolean))
 }

@@ -28,7 +28,7 @@ object ShiftForm {
 }
 
 @js.native
-trait ShiftsFormProps extends js.Object {
+trait ShiftFormProps extends js.Object {
   var port: String = js.native
   var terminal: String = js.native
   var interval: Int = js.native
@@ -36,9 +36,9 @@ trait ShiftsFormProps extends js.Object {
   var confirmHandler: js.Function1[js.Array[ShiftForm], Unit] = js.native
 }
 
-object ShiftsFormProps {
-  def apply(port: String, terminal: String, interval: Int, initialShifts: Seq[ShiftForm], confirmHandler: Seq[ShiftForm] => Unit): ShiftsFormProps = {
-    val p = (new js.Object).asInstanceOf[ShiftsFormProps]
+object ShiftFormProps {
+  def apply(port: String, terminal: String, interval: Int, initialShifts: Seq[ShiftForm], confirmHandler: Seq[ShiftForm] => Unit): ShiftFormProps = {
+    val p = (new js.Object).asInstanceOf[ShiftFormProps]
     p.port = port
     p.terminal = terminal
     p.interval = interval
@@ -53,9 +53,9 @@ object AddShiftFormComponent {
   @JSImport("@drt/drt-react", "AddShiftForm")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[ShiftsFormProps, Children.None](RawComponent)
+  val component = JsFnComponent[ShiftFormProps, Children.None](RawComponent)
 
-  def apply(props: ShiftsFormProps): VdomElement = {
+  def apply(props: ShiftFormProps): VdomElement = {
     component(props)
   }
 

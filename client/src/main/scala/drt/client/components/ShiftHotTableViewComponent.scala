@@ -133,11 +133,11 @@ trait ShiftSummaryStaffing extends js.Object {
 }
 
 object ShiftSummaryStaffing {
-  def apply(index: Int, shiftSummary: ShiftSummary, assignments: Seq[StaffTableEntry]): ShiftSummaryStaffing = {
+  def apply(index: Int, shiftSummary: ShiftSummary, staffTableEntries: Seq[StaffTableEntry]): ShiftSummaryStaffing = {
     val p = (new js.Object).asInstanceOf[ShiftSummaryStaffing]
     p.index = index
     p.shiftSummary = shiftSummary
-    p.staffTableEntries = assignments.toJSArray
+    p.staffTableEntries = staffTableEntries.toJSArray
     p
   }
 }

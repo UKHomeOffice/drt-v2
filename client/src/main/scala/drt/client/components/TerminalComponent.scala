@@ -103,21 +103,21 @@ object TerminalComponent {
       <.div(
         dialogueStateRCP(dialogueStateMP => <.div(dialogueStateMP().map(dialogueState => StaffAdjustmentDialogue(dialogueState)()).whenDefined)),
         modelRCP(modelMP => {
-          val model: TerminalModel = modelMP()
+          val terminalModel: TerminalModel = modelMP()
           for {
-            featureFlags <- model.featureFlags
-            airportConfig <- model.airportConfig
-            loggedInUser <- model.loggedInUserPot
-            redListUpdates <- model.redListUpdates
-            shifts <- model.shiftsPot
+            featureFlags <- terminalModel.featureFlags
+            airportConfig <- terminalModel.airportConfig
+            loggedInUser <- terminalModel.loggedInUserPot
+            redListUpdates <- terminalModel.redListUpdates
+            shifts <- terminalModel.shiftsPot
           } yield {
-            val timeRangeHours: TimeRangeHours = if (model.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
+            val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
             val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeWindow)
 
             <.div(
               <.div(^.className := "terminal-nav-wrapper",
-                terminalTabs(props, loggedInUser, airportConfig, model.timeMachineEnabled, featureFlags.enableShiftPlanningChange, shifts.nonEmpty)),
+                terminalTabs(props, loggedInUser, airportConfig, terminalModel.timeMachineEnabled, featureFlags.enableShiftPlanningChange, shifts.nonEmpty)),
               <.div(^.className := "tab-content", {
                 val rcp = SPACircuit.connect(m =>
                   (m.minuteTicker,
@@ -135,7 +135,7 @@ object TerminalComponent {
 
                   props.terminalPageTab.mode match {
                     case Current =>
-                      val headerClass = if (model.timeMachineEnabled) "terminal-content-header__time-machine" else ""
+                      val headerClass = if (terminalModel.timeMachineEnabled) "terminal-content-header__time-machine" else ""
 
                       def filterFlights(flights: List[ApiFlightWithSplits],
                                         filter: String,
@@ -147,14 +147,14 @@ object TerminalComponent {
                       }
 
                       def flightsForWindow(start: SDateLike, end: SDateLike): Pot[List[ApiFlightWithSplits]] = ps.map { ps =>
-                        val psw = ps.window(start, end, model.paxFeedSourceOrder)
+                        val psw = ps.window(start, end, terminalModel.paxFeedSourceOrder)
                         filterFlights(psw.flights.values.toList, fhl.filterFlightSearch, ai)
                       }
 
                       val hoursToView = timeWindow.end - timeWindow.start
 
                       val terminal = props.terminalPageTab.terminal
-                      val queues = model.airportConfig.map(_.nonTransferQueues(terminal).toList)
+                      val queues = terminalModel.airportConfig.map(_.nonTransferQueues(terminal).toList)
                       val windowCrunchSummaries = queues.flatMap(q => ps.map(ps => ps.crunchSummary(viewStart, hoursToView * 4, 15, terminal, q).toMap))
                       val dayCrunchSummaries = queues.flatMap(q => ps.map(_.crunchSummary(viewStart.getLocalLastMidnight, 96 * 4, 15, terminal, q)))
                       val windowStaffSummaries = ps.map(_.staffSummary(viewStart, hoursToView * 4, 15, terminal).toMap)
@@ -171,27 +171,27 @@ object TerminalComponent {
                             DaySelectorComponent.Props(
                               router = props.router,
                               terminalPageTab = props.terminalPageTab,
-                              loadingState = model.loadingState,
+                              loadingState = terminalModel.loadingState,
                             )),
-                          PcpPaxSummariesComponent(model.viewMode, mt, ps.map(_.crunchMinutes.values.toSeq))
+                          PcpPaxSummariesComponent(terminalModel.viewMode, mt, ps.map(_.crunchMinutes.values.toSeq))
                         ),
                         TerminalContentComponent(TerminalContentComponent.Props(
-                          potShifts = model.potShifts,
-                          potFixedPoints = model.potFixedPoints,
-                          potStaffMovements = model.potStaffMovements,
+                          potShifts = terminalModel.potShifts,
+                          potFixedPoints = terminalModel.potFixedPoints,
+                          potStaffMovements = terminalModel.potStaffMovements,
                           airportConfig = airportConfig,
                           slaConfigs = slas,
                           terminalPageTab = props.terminalPageTab,
                           defaultTimeRangeHours = timeRangeHours,
                           router = props.router,
-                          showActuals = model.showActuals,
-                          viewMode = model.viewMode,
+                          showActuals = terminalModel.showActuals,
+                          viewMode = terminalModel.viewMode,
                           loggedInUser = loggedInUser,
-                          featureFlags = model.featureFlags,
-                          redListPorts = model.redListPorts,
-                          redListUpdates = model.redListUpdates,
-                          walkTimes = model.walkTimes,
-                          paxFeedSourceOrder = model.paxFeedSourceOrder,
+                          featureFlags = terminalModel.featureFlags,
+                          redListPorts = terminalModel.redListPorts,
+                          redListUpdates = terminalModel.redListUpdates,
+                          walkTimes = terminalModel.walkTimes,
+                          paxFeedSourceOrder = terminalModel.paxFeedSourceOrder,
                           flights = flightsForWindow(viewStart, viewEnd),
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
@@ -213,12 +213,12 @@ object TerminalComponent {
                           airportConfig = airportConfig,
                           slaConfigs = slas,
                           router = props.router,
-                          featureFlags = model.featureFlags,
+                          featureFlags = terminalModel.featureFlags,
                           loggedInUser = loggedInUser,
-                          redListPorts = model.redListPorts,
+                          redListPorts = terminalModel.redListPorts,
                           redListUpdates = redListUpdates,
-                          walkTimes = model.walkTimes,
-                          paxFeedSourceOrder = model.paxFeedSourceOrder,
+                          walkTimes = terminalModel.walkTimes,
+                          paxFeedSourceOrder = terminalModel.paxFeedSourceOrder,
                           portState = ps,
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
@@ -227,7 +227,7 @@ object TerminalComponent {
                       )
 
                     case Planning =>
-                      <.div(model.userSelectedPlanningTimePeriod.render { timePeriod =>
+                      <.div(terminalModel.userSelectedPlanningTimePeriod.render { timePeriod =>
                         TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod, airportConfig))
                       })
 

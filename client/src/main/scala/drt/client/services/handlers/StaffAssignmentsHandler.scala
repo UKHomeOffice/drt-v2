@@ -19,23 +19,23 @@ class StaffAssignmentsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: Mo
   def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetShifts(viewMode))).after(2 seconds)
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetStaffShifts(viewMode, shifts, _) =>
+    case SetStaffAssignments(viewMode, shifts, _) =>
       if (viewMode.isHistoric(SDate.now()))
         updated(Ready(shifts))
       else
         updated(Ready(shifts), scheduledRequest(viewMode))
 
-    case GetStaffShifts(viewMode) if viewMode.isDifferentTo(getCurrentViewMode()) =>
+    case GetStaffAssignments(viewMode) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring old view response")
       noChange
 
-    case GetStaffShifts(viewMode) =>
+    case GetStaffAssignments(viewMode) =>
       val url = s"staff-assignments/${viewMode.localDate.toISOString}" +
         viewMode.maybePointInTime.map(pit => s"?pointInTime=$pit").getOrElse("")
 
       val apiCallEffect: EffectSingle[Action] = Effect(
         DrtApi.get(url)
-          .map(r => SetStaffShifts(viewMode, read[ShiftAssignments](r.responseText), None))
+          .map(r => SetStaffAssignments(viewMode, read[ShiftAssignments](r.responseText), None))
           .recoverWith {
             case _ =>
               log.error(s"Failed to get fixed points. Polling will continue")

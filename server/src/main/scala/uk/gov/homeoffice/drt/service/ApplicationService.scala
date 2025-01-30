@@ -312,7 +312,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
       val (staffingUpdateRequestQueue: ActorRef, staffingUpdateKillSwitch: UniqueKillSwitch) = RunnableStaffing(
         staffingQueueActor = actors.staffingQueueActor,
         staffQueue = staffQueue,
-        shiftsActor = actorService.legacyStaffAssignmentsReadActor,
+        legacyStaffAssignmentsReadActor = actorService.legacyStaffAssignmentsReadActor,
         fixedPointsActor = actorService.liveFixedPointsReadActor,
         movementsActor = actorService.liveStaffMovementsReadActor,
         staffMinutesActor = minuteLookups.staffMinutesRouterActor,

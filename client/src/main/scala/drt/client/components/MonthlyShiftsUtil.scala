@@ -9,6 +9,22 @@ import scala.scalajs.js.Date
 
 object MonthlyShiftsUtil {
 
+  case class ShiftDetails(shift: Shift,
+                          terminal: Terminal,
+                          shiftAssignments: ShiftAssignments) {
+
+  }
+
+  case class ShiftPeriod(start: SDateLike,
+                         end: SDateLike,
+                         endHour: Int,
+                         endMinute: Int,
+                         interval: Int,
+                         day: Int,
+                         isShiftEndAfterMidnight: Boolean,
+                         isFirstDayForShiftEndAfterMidnight: Boolean,
+                         addToIndex: Int)
+
   val numberOfDaysInMonth: SDateLike => Int = { viewingDate: SDateLike =>
     def daysInMonth(year: Int, month: Int): Int = {
       val date = new Date(year, month, 0)
@@ -18,7 +34,7 @@ object MonthlyShiftsUtil {
     daysInMonth(viewingDate.getFullYear, viewingDate.getMonth)
   }
 
-  val daysCount: (String, SDateLike) => Int = { (dayRange, viewingDate) =>
+  val daysCountByDayRange: (String, SDateLike) => Int = { (dayRange, viewingDate) =>
     dayRange match {
       case "weekly" => 7
       case "daily" => 1
@@ -26,7 +42,7 @@ object MonthlyShiftsUtil {
     }
   }
 
-  val firstDay: (String, SDateLike) => SDateLike = { (dayRange, viewingDate) =>
+  val firstDayByDayRange: (String, SDateLike) => SDateLike = { (dayRange, viewingDate) =>
     dayRange match {
       case "weekly" =>
         SDate.firstDayOfWeek(viewingDate)
@@ -35,86 +51,134 @@ object MonthlyShiftsUtil {
     }
   }
 
-  def iteratorForShiftAssignment(isShiftEndAfterMidNight: Boolean,
-                                 day: Int,
-                                 start: SDateLike,
-                                 end: SDateLike,
-                                 endHour: Int,
-                                 endMinute: Int,
-                                 isFirstDayForShiftEndAfterMidNight: Boolean,
-                                 addToIndex: Int,
-                                 interval: Int,
-                                 terminal: Terminal, s: Shift,
-                                 shifts: ShiftAssignments) = {
-    val dayAssignments: Seq[StaffAssignmentLike] = shifts.assignments.filter(assignment => assignment.start >= start.millisSinceEpoch && assignment.end <= end.millisSinceEpoch)
-    Iterator.iterate(start) { intervalTime =>
-      if ((intervalTime.getMinutes == 30 && interval == 60) || (intervalTime.getHours == endHour && interval == 60 && endMinute == 30)) {
-        intervalTime.addMinutes(30)
-      } else {
-        intervalTime.addMinutes(interval)
-      }
-    }.takeWhile(_ < end).toSeq.zipWithIndex.map { case (currentTime, index) =>
-      val nextTime = if ((currentTime.getMinutes == 30 && interval == 60) || (currentTime.getHours == endHour && interval == 60 && endMinute == 30)) {
-        currentTime.addMinutes(30)
-      } else {
-        currentTime.addMinutes(interval)
-      }
-      val matchedAssignments = dayAssignments.find(assignment => assignment.start == currentTime.millisSinceEpoch && assignment.terminal == terminal)
-      matchedAssignments match {
-        case Some(sa) =>
-          StaffTableEntry(
-            column = day,
-            row = if (isShiftEndAfterMidNight) index + addToIndex else index,
-            name = sa.name,
-            staffNumber = sa.numberOfStaff,
-            startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
-            endTime = ShiftDate(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
-          )
-        case None =>
-          StaffTableEntry(
-            column = day,
-            row = if (isShiftEndAfterMidNight) index + addToIndex else index,
-            name = s.shiftName,
-            staffNumber = if (isFirstDayForShiftEndAfterMidNight) 0 else s.staffNumber,
-            startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
-            endTime = ShiftDate(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
-          )
-      }
-    }
-  }
+  def createStaffTableEntries(startDate: SDateLike,
+                              daysCount: Int,
+                              interval: Int,
+                              shiftDetails: ShiftDetails
+                             ): Seq[StaffTableEntry] = {
 
-  def assignmentsForShift(firstDay: SDateLike, daysCount: Int, interval: Int, terminal: Terminal, s: Shift, shifts: ShiftAssignments): Seq[StaffTableEntry] = {
-    val Array(startHour, startMinute) = s.startTime.split(":").map(_.toInt)
-    val Array(endHour, endMinute) = s.endTime.split(":").map(_.toInt)
-    var nextDay = firstDay
+    val Array(shiftStartHour, shiftStartMinute) = shiftDetails.shift.startTime.split(":").map(_.toInt)
+    val Array(shiftEndHour, shiftEndMinute) = shiftDetails.shift.endTime.split(":").map(_.toInt)
+    var currentDay = startDate
 
-    val isShiftEndAfterMidNight = endHour < startHour || (endHour == startHour && endMinute < startMinute)
-
+    val isShiftEndAfterMidnight = shiftEndHour < shiftStartHour || (shiftEndHour == shiftStartHour && shiftEndMinute < shiftStartMinute)
+    //For all the days in the period, create the staff table entries for the shift
     (1 to daysCount).flatMap { day =>
-      val start = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, startHour, startMinute)
+      val shiftStartTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftStartHour, shiftStartMinute)
+      val shiftEndTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
+      val midnightNextDay = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0).addDays(1)
+      val beforeMidnightPeriod = ShiftPeriod(
+        start = shiftStartTime,
+        end = if (isShiftEndAfterMidnight) midnightNextDay else shiftEndTime,
+        endHour = shiftEndHour,
+        endMinute = shiftEndMinute,
+        interval = interval,
+        day = day,
+        isShiftEndAfterMidnight = isShiftEndAfterMidnight,
+        isFirstDayForShiftEndAfterMidnight = false,
+        addToIndex = 0
+      )
 
-      val end = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, endHour, endMinute)
+      val beforeFirstDateStartTime = if (day == 1 && isShiftEndAfterMidnight && daysCount > 7) {
+        val midnightStart = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0)
+        val endTime = shiftStartTime
 
-      val beforeMidnight = iteratorForShiftAssignment(isShiftEndAfterMidNight,
-        day, start, if (isShiftEndAfterMidNight) SDate(end.getFullYear, end.getMonth, end.getDate, 0, 0).addDays(1) else end, endHour, endMinute,
-        isFirstDayForShiftEndAfterMidNight = false, 0, interval, terminal, s, shifts)
-      val afterMightNight = if (isShiftEndAfterMidNight) {
-        val start = SDate(nextDay.getFullYear, nextDay.getMonth, nextDay.getDate, 0, 0)
-        iteratorForShiftAssignment(isShiftEndAfterMidNight, day, start, end, endHour, endMinute,
-          isFirstDayForShiftEndAfterMidNight = true, beforeMidnight.size, interval, terminal, s, shifts)
+        val firstDayMidnightToStartTimePeriod = beforeMidnightPeriod.copy(
+          start = midnightStart,
+          end = endTime,
+          isFirstDayForShiftEndAfterMidnight = true,
+          addToIndex = 0
+        )
+
+        staffTableEntriesForShift(firstDayMidnightToStartTimePeriod, shiftDetails)
       } else Seq.empty
 
-      nextDay = nextDay.addDays(1)
-      beforeMidnight ++ afterMightNight
+      val beforeMidnightEntries = staffTableEntriesForShift(beforeMidnightPeriod.copy(addToIndex = beforeFirstDateStartTime.size), shiftDetails)
+
+      val afterMidnightEntries = if (isShiftEndAfterMidnight) {
+        val midnightStart = midnightNextDay
+        val afterMidnightPeriod = beforeMidnightPeriod.copy(
+          start = midnightStart,
+          end = shiftEndTime.addDays(1),
+          isFirstDayForShiftEndAfterMidnight = false,
+          addToIndex = beforeMidnightEntries.size
+        )
+        staffTableEntriesForShift(afterMidnightPeriod, shiftDetails)
+      } else Seq.empty
+
+      currentDay = currentDay.addDays(1)
+      beforeFirstDateStartTime ++ beforeMidnightEntries ++ afterMidnightEntries
     }
   }
 
-  def generateShiftData(viewingDate: SDateLike, dayRange: String, terminal: Terminal, staffShifts: Seq[Shift], shifts: ShiftAssignments, interval: Int): Seq[ShiftSummaryStaffing] = {
-    staffShifts.sortBy(_.startTime).zipWithIndex.map { case (s, index) =>
+  def staffTableEntriesForShift(shiftPeriod: ShiftPeriod, shiftDetails: ShiftDetails): Seq[StaffTableEntry] = {
+    val dayAssignments = shiftDetails.shiftAssignments.assignments
+      .filter(assignment => assignment.start >= shiftPeriod.start.millisSinceEpoch && assignment.end <= shiftPeriod.end.millisSinceEpoch)
+
+    Iterator.iterate(shiftPeriod.start) { intervalTime =>
+      isStartOrEndTimeFinishAtThirtyMinutesPastAndHour(shiftPeriod, intervalTime)
+    }.takeWhile(_ < shiftPeriod.end).toSeq.zipWithIndex.map { case (currentTime, index) =>
+      val nextTime = isStartOrEndTimeFinishAtThirtyMinutesPastAndHour(shiftPeriod, currentTime)
+
+      println(s"currentTime: $currentTime, nextTime: $nextTime")
+      findAndCreateDayTableAssignment(shiftPeriod, shiftDetails.terminal, shiftDetails.shift, dayAssignments, currentTime, index, nextTime)
+    }
+  }
+
+  private def isStartOrEndTimeFinishAtThirtyMinutesPastAndHour(shiftPeriod: ShiftPeriod, intervalTime: SDateLike) = {
+    //if hours is starting or ending in :30 then add 30 minutes interval instead of 60 mins
+    if ((intervalTime.getMinutes == 30 && shiftPeriod.interval == 60) ||
+      (intervalTime.getHours == shiftPeriod.endHour && shiftPeriod.interval == 60 && shiftPeriod.endMinute == 30)) {
+      intervalTime.addMinutes(30)
+    } else {
+      intervalTime.addMinutes(shiftPeriod.interval)
+    }
+  }
+
+  private def findAndCreateDayTableAssignment(shiftPeriod: ShiftPeriod,
+                                              terminal: Terminal,
+                                              shift: Shift,
+                                              dayAssignments: Seq[StaffAssignmentLike],
+                                              currentTime: SDateLike,
+                                              index: Int,
+                                              nextTime: SDateLike) = {
+    val foundAssignment = dayAssignments.find(assignment => assignment.start == currentTime.millisSinceEpoch && assignment.terminal == terminal)
+    foundAssignment match {
+      case Some(assignment) =>
+        StaffTableEntry(
+          column = shiftPeriod.day,
+          row = if (shiftPeriod.isShiftEndAfterMidnight) index + shiftPeriod.addToIndex else index,
+          name = assignment.name,
+          staffNumber = assignment.numberOfStaff,
+          startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
+          endTime = ShiftDate(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
+        )
+      case None =>
+        StaffTableEntry(
+          column = shiftPeriod.day,
+          row = if (shiftPeriod.isShiftEndAfterMidnight) index + shiftPeriod.addToIndex else index,
+          name = shift.shiftName,
+          staffNumber = if (shiftPeriod.isFirstDayForShiftEndAfterMidnight) 0 else shift.staffNumber,
+          startTime = ShiftDate(currentTime.getFullYear, currentTime.getMonth, currentTime.getDate, currentTime.getHours, currentTime.getMinutes),
+          endTime = ShiftDate(nextTime.getFullYear, nextTime.getMonth, nextTime.getDate, nextTime.getHours, nextTime.getMinutes)
+        )
+    }
+  }
+
+  def generateShiftSummaries(viewingDate: SDateLike,
+                             dayRange: String,
+                             terminal: Terminal,
+                             shifts: Seq[Shift],
+                             shiftAssignments: ShiftAssignments,
+                             interval: Int): Seq[ShiftSummaryStaffing] = {
+    shifts.sortBy(_.startTime).zipWithIndex.map { case (s, index) =>
       ShiftSummaryStaffing(
         index = index,
         shiftSummary = ShiftSummary(s.shiftName, s.staffNumber, s.startTime, s.endTime),
-        assignments = assignmentsForShift(firstDay(dayRange, viewingDate), daysCount(dayRange, viewingDate), interval, terminal, s, shifts)
+        staffTableEntries = createStaffTableEntries(firstDayByDayRange(dayRange, viewingDate),
+          daysCountByDayRange(dayRange, viewingDate),
+          interval,
+          ShiftDetails(s, terminal, shiftAssignments))
       )
     }
   }
