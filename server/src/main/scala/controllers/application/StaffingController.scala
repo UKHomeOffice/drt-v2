@@ -18,14 +18,14 @@ import scala.concurrent.Future
 
 class StaffingController @Inject()(cc: ControllerComponents,
                                    ctrl: DrtSystemInterface,
-                                   shiftsService: ShiftsService,
+                                   legacyStaffAssignmentsService: LegacyStaffAssignmentsService,
                                    fixedPointsService: FixedPointsService,
                                    movementsService: StaffMovementsService) extends AuthController(cc, ctrl) {
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
       val date = SDate(localDateStr).toLocalDate
       val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
-      shiftsService.shiftsForDate(date, maybePointInTime)
+      legacyStaffAssignmentsService.shiftsForDate(date, maybePointInTime)
         .map(sa => Ok(write(sa)))
     }
   }
@@ -35,7 +35,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
-          shiftsService
+          legacyStaffAssignmentsService
             .updateShifts(shifts.assignments)
             .map(allShifts => Accepted(write(allShifts)))
         case None =>
@@ -46,7 +46,7 @@ class StaffingController @Inject()(cc: ControllerComponents,
 
   def getAllShifts: Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
-      shiftsService.allShifts.map(s => Ok(write(s)))
+      legacyStaffAssignmentsService.allShifts.map(s => Ok(write(s)))
     }
   }
 

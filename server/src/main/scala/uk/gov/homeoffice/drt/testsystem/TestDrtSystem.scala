@@ -15,6 +15,7 @@ import uk.gov.homeoffice.drt.crunchsystem.{ActorsServiceLike, DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.FeedService
+import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.testsystem.RestartActor.StartTestSystem
 import uk.gov.homeoffice.drt.testsystem.crunchsystem.TestPersistentStateActors
 import uk.gov.homeoffice.drt.testsystem.db.{AggregateDbH2, AkkaDbH2}
@@ -54,6 +55,7 @@ case class TestDrtSystem @Inject()(airportConfig: AirportConfig,
   override val dropInRegistrationService: DropInsRegistrationTableLike = MockDropInsRegistrationTable()
   override val userFeedbackService: IUserFeedbackDao = MockUserFeedbackDao()
   override val abFeatureService: IABFeatureDao = MockAbFeatureDao()
+  override val shiftsService: ShiftsService = MockStaffShiftsService()
 
   override val minuteLookups: MinuteLookupsLike = TestMinuteLookups(
     system,

@@ -1,57 +1,79 @@
 package drt.client.services.handlers
 
-import diode.Implicits.runAfterImpl
-import diode._
+import diode.AnyAction.aType
 import diode.data.{Pot, Ready}
-import drt.client.actions.Actions._
+import diode.{ActionResult, Effect, ModelRW, NoAction}
 import drt.client.logger.log
-import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{DrtApi, PollDelay, ViewMode}
-import drt.shared.ShiftAssignments
-import upickle.default.{read, write}
-
+import drt.client.services.DrtApi
+import drt.shared.Shift
+import uk.gov.homeoffice.drt.time.LocalDate
 import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class ShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelRW[M, Pot[ShiftAssignments]]) extends LoggingActionHandler(modelRW) {
-  def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetShifts(viewMode))).after(2 seconds)
+case class GetShifts(port: String, terminal: String)
 
-  protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case SetShifts(viewMode, shifts, _) =>
-      if (viewMode.isHistoric(SDate.now()))
-        updated(Ready(shifts))
-      else
-        updated(Ready(shifts), scheduledRequest(viewMode))
+case class GetShift(port: String, terminal: String, shiftName: String)
 
-    case GetShifts(viewMode) if viewMode.isDifferentTo(getCurrentViewMode()) =>
-      log.info(s"Ignoring old view response")
-      noChange
+case class SaveShifts(staffShifts: Seq[Shift])
 
-    case GetShifts(viewMode) =>
-      val url = s"shifts/${viewMode.localDate.toISOString}" +
-        viewMode.maybePointInTime.map(pit => s"?pointInTime=$pit").getOrElse("")
+case class RemoveShift(port: String, terminal: String, shiftName: String)
 
-      val apiCallEffect: EffectSingle[Action] = Effect(
-        DrtApi.get(url)
-          .map(r => SetShifts(viewMode, read[ShiftAssignments](r.responseText), None))
-          .recoverWith {
-            case _ =>
-              log.error(s"Failed to get fixed points. Polling will continue")
-              Future(NoAction)
-          }
-      )
-      effectOnly(apiCallEffect)
+case class SetShifts(staffShifts: Seq[Shift])
 
-    case UpdateShifts(assignments) =>
-      val futureResponse = DrtApi.post("shifts", write(ShiftAssignments(assignments)))
-        .map(r => SetAllShifts(read[ShiftAssignments](r.responseText)))
-        .recoverWith {
-          case _ =>
-            log.error(s"Failed to save Shifts. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(UpdateShifts(assignments), PollDelay.recoveryDelay))
+
+class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActionHandler(modelRW) {
+
+  import upickle.default.{macroRW, ReadWriter => RW}
+  import upickle.default._
+
+  implicit val localDateRW: RW[LocalDate] = macroRW
+  implicit val staffShiftRW: RW[Shift] = macroRW
+
+  override protected def handle: PartialFunction[Any, ActionResult[M]] = {
+    case GetShifts(port, terminal) =>
+      val apiCallEffect = Effect(DrtApi.get(s"shifts/$port/$terminal")
+        .map { r =>
+          val shifts = read[Seq[Shift]](r.responseText)
+          SetShifts(shifts)
         }
-      effectOnly(Effect(futureResponse))
+        .recoverWith {
+          case t =>
+            log.error(msg = s"Failed to get shifts: ${t.getMessage}")
+            Future(NoAction)
+        })
+      updated(Pot.empty, apiCallEffect)
+
+    case GetShift(port, terminal, shiftName) =>
+      val apiCallEffect = Effect(DrtApi.get(s"shifts/$port/$terminal/$shiftName")
+        .map(r => SetShifts(read[Seq[Shift]](r.responseText)))
+        .recoverWith {
+          case t =>
+            log.error(msg = s"Failed to get shift: ${t.getMessage}")
+            Future(NoAction)
+        })
+      updated(Pot.empty, apiCallEffect)
+
+    case SaveShifts(staffShifts) =>
+      val apiCallEffect = Effect(DrtApi.post("shifts/save", write(staffShifts))
+        .map(_ => NoAction)
+        .recoverWith {
+          case t =>
+            log.error(msg = s"Failed to save shift: ${t.getMessage}")
+            Future(NoAction)
+        })
+      updated(Pot.empty, apiCallEffect)
+
+    case RemoveShift(port, terminal, shiftName) =>
+      val apiCallEffect = Effect(DrtApi.delete(s"shifts/remove/$port/$terminal/$shiftName")
+        .map(_ => NoAction)
+        .recoverWith {
+          case t =>
+            log.error(msg = s"Failed to remove shift: ${t.getMessage}")
+            Future(NoAction)
+        })
+      updated(Pot.empty, apiCallEffect)
+
+    case SetShifts(staffShifts) =>
+      updated(Ready(staffShifts))
   }
 }

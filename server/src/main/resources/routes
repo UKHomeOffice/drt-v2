@@ -64,11 +64,17 @@ GET           /sla-configs                                                      
 DELETE        /sla-configs/:effectiveFrom                                             controllers.application.SlaConfigsController.removeSlaConfig(effectiveFrom: Long)
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
-GET           /shifts/:localDate                                                      controllers.application.StaffingController.getShifts(localDate: String)
-GET           /shifts                                                                 controllers.application.StaffingController.getAllShifts
-POST          /shifts                                                                 controllers.application.StaffingController.saveShifts
+GET           /legacy-staff-assignments/:localDate                                    controllers.application.StaffingController.getShifts(localDate: String)
+GET           /legacy-staff-assignments                                               controllers.application.StaffingController.getAllShifts
+POST          /legacy-staff-assignments                                               controllers.application.StaffingController.saveShifts
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
+POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
+GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getShifts(port: String, terminal: String)
+GET           /shifts/:port/:terminal/:shiftName                                       controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
+POST          /staff-assignments                                                      controllers.application.ShiftsController.saveStaffAssignments
+GET           /staff-assignments                                                      controllers.application.ShiftsController.getAllStaffAssignments
+GET           /staff-assignments/:localDate                                           controllers.application.ShiftsController.getStaffAssignments(localDate: String)
 
 GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
 

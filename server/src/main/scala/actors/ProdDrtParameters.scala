@@ -68,7 +68,7 @@ trait DrtParameters {
 
   val isTestEnvironment: Boolean
 
-  val enableStaffPlanningChange: Boolean
+  val enableShiftPlanningChange: Boolean
 }
 
 object DrtParameters {
@@ -145,5 +145,5 @@ case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParamet
 
   override val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
 
-  override val enableStaffPlanningChange: Boolean = config.get[Boolean]("feature-flags.enable-ports-staff-planning-change")
+  override val enableShiftPlanningChange: Boolean = config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
 }

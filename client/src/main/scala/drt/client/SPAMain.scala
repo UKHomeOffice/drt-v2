@@ -12,7 +12,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.GetFeedSourceStatuses
-import drt.client.spa.TerminalPageModes.{Current, Staffing}
+import drt.client.spa.TerminalPageModes.{Current, Shifts, Staffing}
 import drt.client.spa.{TerminalPageMode, TerminalPageModes}
 import drt.shared.DrtPortConfigs
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
@@ -113,6 +113,15 @@ object SPAMain {
     }
   }
 
+  object ShiftViewEnabled {
+    val paramName = "shiftViewEnabled"
+
+    def apply(viewType: Boolean): UrlParameter = new UrlParameter {
+      override val name: String = paramName
+      override val value: Option[String] = Option(viewType.toString)
+    }
+  }
+
 
   case class PortConfigPageLoc()
 
@@ -155,6 +164,7 @@ object SPAMain {
       case ("dashboard", "summary") => "Terminal dashboard"
       case ("planning", _) => "Staff planning"
       case ("staffing", _) => "Monthly staffing"
+      case ("shifts", _) => "Shifts"
       case _ => ""
     }
 
@@ -178,7 +188,7 @@ object SPAMain {
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
-
+    val shiftViewEnabled: Boolean = queryParams.get(ShiftViewEnabled.paramName).exists(_.toBoolean)
     def viewMode: ViewMode = {
       (mode, maybeViewDate) match {
         case (Current, Some(viewDate)) =>
@@ -214,6 +224,8 @@ object SPAMain {
     def loadAction: Action = mode match {
       case Staffing =>
         GetAllShifts
+      case Shifts =>
+        GetAllStaffShifts
       case _ =>
         SetViewMode(viewMode)
     }
@@ -299,7 +311,7 @@ object SPAMain {
     GetSlaConfigs,
   )
 
-  def sendInitialRequests(): Unit = initialRequestsActions.foreach(SPACircuit.dispatch(_))
+  private def sendInitialRequests(): Unit = initialRequestsActions.foreach(SPACircuit.dispatch(_))
 
   val routerConfig: RouterConfig[Loc] = RouterConfigDsl[Loc]
     .buildConfig { dsl: RouterConfigDsl[Loc, Unit] =>
@@ -348,7 +360,7 @@ object SPAMain {
     Callback(GoogleEventTracker.sendEvent(portCode, "Accessibility", "Email us to report a problem"))
   }
 
-  def accessibilityRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  private def accessibilityRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     val proxy: ReactConnectProxy[Pot[AirportConfig]] = SPACircuit.connect(_.airportConfig)
@@ -365,13 +377,13 @@ object SPAMain {
       }
   }
 
-  def homeRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  private def homeRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     staticRoute(root, UserDashboardLoc) ~> renderR((router: RouterCtl[Loc]) => UserDashboardPage(router))
   }
 
-  def dashboardRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  private def dashboardRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     val proxy = SPACircuit.connect(_.airportConfig)
@@ -382,7 +394,7 @@ object SPAMain {
       }
   }
 
-  def terminalRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  private def terminalRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     val requiredTerminalName = string("[a-zA-Z0-9]+")
@@ -397,7 +409,7 @@ object SPAMain {
       }
   }
 
-  def statusRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  private def statusRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
@@ -405,7 +417,7 @@ object SPAMain {
     staticRoute(StatusLoc.hashValue, StatusLoc) ~> renderR(_ => proxy(p => FeedsStatusPage(p()._1, p()._2)))
   }
 
-  def trainingHubRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  private def trainingHubRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     val proxy = SPACircuit.connect(m => (m.loggedInUserPot, m.airportConfig))
@@ -420,7 +432,7 @@ object SPAMain {
       }
   }
 
-  def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  private def portConfigRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
     val proxy = SPACircuit.connect(m =>
       PortConfigPage.Props(m.redListUpdates, m.egateBanksUpdates, m.slaConfigs, m.loggedInUserPot, m.airportConfig, m.gateStandWalkTime)
@@ -428,7 +440,7 @@ object SPAMain {
     staticRoute(PortConfigLoc.hashValue, PortConfigLoc) ~> render(proxy(props => PortConfigPage(props())))
   }
 
-  def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
+  private def forecastFileUploadRoute(dsl: RouterConfigDsl[Loc, Unit]): dsl.Rule = {
     import dsl._
 
     val proxy = SPACircuit.connect(_.airportConfig)

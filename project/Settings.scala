@@ -27,7 +27,7 @@ object Settings {
   object versions {
     val scala = "2.13.16"
 
-    val drtLib = "v1072"
+    val drtLib = "v1077"
 
     val akka = "2.9.5" // last version with license key requirement
     val akkaHttp = "10.6.3" // last version dependent on akka 2.9.5
@@ -103,7 +103,7 @@ object Settings {
     "react-markdown" -> "9.0.1",
     "@types/react-dom" -> react,
     "css-loader" -> "6.7.2",
-    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#1.6.3",
+    "@drt/drt-react"-> "https://github.com/UKHomeOffice/drt-react.git#1.6.5",
   )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */

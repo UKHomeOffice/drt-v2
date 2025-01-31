@@ -3,7 +3,7 @@ package uk.gov.homeoffice.drt.testsystem
 import actors.DrtParameters
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import drt.shared.DropIn
+import drt.shared.{DropIn, Shift}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import slickdb._
@@ -11,6 +11,7 @@ import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow}
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.sql.Timestamp
@@ -129,7 +130,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val retainDataForYears: Int = 5
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
-  override val enableStaffPlanningChange: Boolean = true
+  override val enableShiftPlanningChange: Boolean = true
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {
@@ -150,5 +151,16 @@ case class MockAbFeatureDao() extends IABFeatureDao {
   override def getABFeaturesByEmailForFunction(email: String, functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
 
   override def getABFeatureByFunctionName(functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
+}
+
+case class MockStaffShiftsService() extends ShiftsService {
+
+  override def getShift(port: String, terminal: String, shiftName: String): Future[Option[Shift]] = Future.successful(None)
+
+  override def getShifts(port: String, terminal: String): Future[Seq[Shift]] = Future.successful(Seq.empty)
+
+  override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = Future.successful(1)
+
+  override def saveShift(shifts: Seq[Shift]): Future[Int] = Future.successful(1)
 }
 

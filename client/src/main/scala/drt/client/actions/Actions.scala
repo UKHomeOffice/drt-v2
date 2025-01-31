@@ -99,6 +99,16 @@ object Actions {
 
   case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment]) extends Action
 
+  case class SetStaffAssignments(viewMode: ViewMode, shifts: ShiftAssignments, terminalName: Option[String]) extends Action
+
+  case class GetStaffAssignments(viewMode: ViewMode) extends Action
+
+  case class SetAllStaffShifts(allShifts: ShiftAssignments) extends Action
+
+  case object GetAllStaffShifts extends Action
+
+  case class UpdateStaffShifts(shiftsToUpdate: Seq[StaffAssignment]) extends Action
+
   case class AddStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
 
   case class RemoveStaffMovements(uUID: String) extends Action

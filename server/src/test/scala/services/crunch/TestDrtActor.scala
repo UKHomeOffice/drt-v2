@@ -175,7 +175,7 @@ class TestDrtActor extends Actor {
         AclFeedSource -> forecastBaseFeedStatusWriteActor,
       )
 
-      val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
+      val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(ShiftsActor.persistenceId,
         journalType, tc.now), name = "shifts-read-actor")
       val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
         journalType, tc.now, tc.forecastMaxDays), name = "fixed-points-read-actor")
@@ -337,7 +337,7 @@ class TestDrtActor extends Actor {
         val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = RunnableStaffing(
           staffingQueueActor = TestProbe().ref,
           staffQueue = SortedSet.empty[TerminalUpdateRequest],
-          shiftsActor = liveShiftsReadActor,
+          legacyStaffAssignmentsReadActor = liveShiftsReadActor,
           fixedPointsActor = liveFixedPointsReadActor,
           movementsActor = liveStaffMovementsReadActor,
           staffMinutesActor = portStateActor,

@@ -28,7 +28,7 @@ class ShiftsServiceImplSpec extends TestKit(ActorSystem("test")) with AnyWordSpe
   val pitProbe: TestProbe = TestProbe("pit")
 
   "A ShiftsServiceImpl" should {
-    val service = ShiftsServiceImpl(mockActor(liveProbe.ref), mockActor(writeProbe.ref), _ => mockActor(pitProbe.ref))
+    val service = LegacyStaffAssignmentsServiceImpl(mockActor(liveProbe.ref), mockActor(writeProbe.ref), _ => mockActor(pitProbe.ref))
     val assignments = ShiftAssignments(Seq(StaffAssignment("assignment", T1, SDate("2024-07-01T05:00").millisSinceEpoch, SDate("2024-07-01T12:00").millisSinceEpoch, 1, None)))
     "return a list of staff assignments for a given date" in {
       MockActor.response = assignments

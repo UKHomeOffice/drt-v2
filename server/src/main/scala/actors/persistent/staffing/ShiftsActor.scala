@@ -30,8 +30,11 @@ import scala.util.Try
 
 case object GetFeedStatuses
 
+trait ShiftUpdate
+
 trait ShiftsActorLike {
-  def persistenceId = "shifts-store"
+
+  def persistenceId: String
 
   val snapshotMessageToState: Any => ShiftAssignments = {
     case snapshot: ShiftStateSnapshotMessage =>
@@ -66,7 +69,7 @@ trait ShiftsActorLike {
         getSender() ! assignmentsForDate
     }
 
-  def streamingUpdatesProps(journalType: StreamingJournalLike, now: () => SDateLike): Props =
+  def streamingUpdatesProps(persistenceId: String, journalType: StreamingJournalLike, now: () => SDateLike): Props =
     Props(new StreamingUpdatesActor[ShiftAssignments, Iterable[TerminalUpdateRequest]](
       persistenceId,
       journalType,
@@ -90,7 +93,8 @@ trait ShiftsActorLike {
 object ShiftsActor extends ShiftsActorLike {
   val snapshotInterval = 5000
 
-  trait ShiftUpdate
+  val persistenceId = "shifts-store"
+
 
   case class ReplaceAllShifts(newShifts: Seq[StaffAssignmentLike]) extends ShiftUpdate
 
@@ -109,12 +113,13 @@ object ShiftsActor extends ShiftsActorLike {
                            )
                            (implicit timeout: Timeout): Props =
     Props(new SequentialWritesActor[ShiftUpdate](update => {
-      val actor = system.actorOf(Props(new ShiftsActor(now, expireBefore, snapshotInterval)), s"shifts-actor-writes")
+      val actor = system.actorOf(Props(new ShiftsActor(persistenceId, now, expireBefore, snapshotInterval)), s"shifts-actor-writes")
       requestAndTerminateActor.ask(RequestAndTerminate(actor, update))
     }))
 }
 
-class ShiftsActor(val now: () => SDateLike,
+class ShiftsActor(val persistenceId: String,
+                  val now: () => SDateLike,
                   val expireBefore: () => SDateLike,
                   val snapshotInterval: Int,
                  ) extends ExpiryActorLike[ShiftAssignments] with RecoveryActorLike with PersistentDrtActor[ShiftAssignments] {
@@ -123,8 +128,6 @@ class ShiftsActor(val now: () => SDateLike,
   implicit val scheduler: Scheduler = this.context.system.scheduler
 
   override val maybeSnapshotInterval: Option[Int] = Option(snapshotInterval)
-
-  override def persistenceId: String = ShiftsActor.persistenceId
 
   var state: ShiftAssignments = initialState
 
