@@ -83,6 +83,7 @@ object LhrForecastArrival {
         rawIATA = flightCode(fields),
         rawICAO = flightCode(fields),
         Origin = origin(fields),
+        PreviousPort = None,
         Scheduled = scheduled(fields).millisSinceEpoch,
         PcpTime = None,
         FeedSources = Set(ForecastFeedSource),

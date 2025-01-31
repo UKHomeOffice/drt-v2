@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.ports.{PortCode, Terminals}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, OutputStream}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.zip.{ZipEntry, ZipInputStream}
 import scala.collection.mutable.ArrayBuffer
@@ -140,6 +140,10 @@ object AclFeed {
 
     val file: InMemoryDestFile = new InMemoryDestFile {
       override def getOutputStream: ByteArrayOutputStream = outputStream
+
+      override def getLength: Long = outputStream.size()
+
+      override def getOutputStream(append: Boolean): OutputStream = outputStream
     }
 
     sftp.get(latestFileName, file)
@@ -205,6 +209,10 @@ object AclFeed {
       val actPax = (fields(AclColIndex.MaxPax).toInt * fields(AclColIndex.LoadFactor).toDouble).round.toInt
       val aclTerminal = Terminals.Terminal(fields(AclColIndex.Terminal))
       val portTerminal = aclToPortTerminal(aclTerminal)
+      val prevPort = fields(AclColIndex.LastNext) match {
+        case "" => None
+        case s => Some(s)
+      }
 
       val (_, voyageNumber, suffix) = FlightCode.flightCodeToParts(fields(AclColIndex.FlightNumber))
 
@@ -218,6 +226,7 @@ object AclFeed {
         carrierCode = fields(AclColIndex.Operator),
         flightCodeSuffix = suffix.map(_.suffix),
         origin = fields(AclColIndex.Origin),
+        previousPort = prevPort,
         scheduled = SDate(dateAndTimeToDateTimeIso(fields(AclColIndex.Date), fields(AclColIndex.Time))).millisSinceEpoch,
       )
     } match {
@@ -244,6 +253,7 @@ object AclFeed {
     val Time: Int = allFields("Time")
     val Operator: Int = allFields("Ope")
     val Origin: Int = allFields("OrigDest")
+    val LastNext: Int = allFields("LastNext")
     val Terminal: Int = allFields("Term")
     val ArrDep: Int = allFields("ArrDep")
   }

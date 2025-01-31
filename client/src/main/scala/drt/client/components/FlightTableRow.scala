@@ -34,7 +34,7 @@ object FlightTableRow {
 
   case class Props(flightWithSplits: ApiFlightWithSplits,
                    codeShareFlightCodes: Seq[String],
-                   originMapper: (PortCode, html_<^.TagMod) => VdomNode,
+                   originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                    splitsQueueOrder: Seq[Queue],
                    loggedInUser: LoggedInUser,
                    viewMode: ViewMode,
@@ -50,7 +50,7 @@ object FlightTableRow {
                    showNumberOfVisaNationals: Boolean,
                    showHighlightedRows: Boolean,
                    showRequireAllSelected: Boolean,
-                   manifestSummary: Option[FlightManifestSummary],
+                   maybeManifestSummary: Option[FlightManifestSummary],
                    paxFeedSourceOrder: List[FeedSource],
                    showHighLighted: Boolean,
                   ) extends UseValueEq
@@ -58,7 +58,7 @@ object FlightTableRow {
   implicit val propsReuse: Reusability[Props] = Reusability {
     (a, b) =>
       a.flightWithSplits.lastUpdated == b.flightWithSplits.lastUpdated &&
-        a.manifestSummary == b.manifestSummary &&
+        a.maybeManifestSummary == b.maybeManifestSummary &&
         a.flaggedNationalities == b.flaggedNationalities &&
         a.flaggedAgeGroups == b.flaggedAgeGroups
   }
@@ -77,7 +77,7 @@ object FlightTableRow {
 
       val highlighterIsActive = props.flaggedNationalities.nonEmpty || props.flaggedAgeGroups.nonEmpty || props.showNumberOfVisaNationals
 
-      val highlightPaxExists: Boolean = FlightHighlighter.highlightedFlight(props.manifestSummary,
+      val highlightPaxExists: Boolean = FlightHighlighter.highlightedFlight(props.maybeManifestSummary,
         props.flaggedNationalities,
         props.flaggedAgeGroups,
         props.showNumberOfVisaNationals,
@@ -90,7 +90,7 @@ object FlightTableRow {
           props.showRequireAllSelected,
           props.flaggedAgeGroups,
           props.flaggedNationalities,
-          props.manifestSummary)
+          props.maybeManifestSummary)
         if (chip != EmptyVdom) Some(chip) else None
       } else None
 
@@ -154,7 +154,7 @@ object FlightTableRow {
 
       val expectedContent = maybeLocalTimeWithPopup(bestExpectedTime, Option(timesPopUp), None)
 
-      val charts = (flightWithSplits.hasApi, props.manifestSummary) match {
+      val charts = (flightWithSplits.hasApi, props.maybeManifestSummary) match {
         case (true, Some(manifestSummary)) =>
           val maybeLivePcpPax = flightWithSplits.apiFlight.bestPcpPaxEstimate(Seq(LiveFeedSource))
           val maybePaxDiffAndPct = maybeLivePcpPax.map { pcpPax =>
@@ -172,6 +172,8 @@ object FlightTableRow {
       val highlighterClass = s"arrivals__table__flight-code__highlighter-${if (highlighterIsActive) "on" else "off"}"
       val isHighlightedClass = if (highlighterIsActive) "arrivals__table__flight-code-wrapper__highlighted" else ""
 
+      val maybePreviousPort = None //flight.PreviousPort.filter(_ != flight.Origin)
+
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
           <.div(^.cls := s"$highlighterClass $isHighlightedClass arrivals__table__flight-code-wrapper",
@@ -181,13 +183,13 @@ object FlightTableRow {
           .getOrElse {
             if (highlighterIsActive) <.td(^.className := "arrivals__table__flags-column", "") else EmptyVdom
           },
-        <.td(TerminalContentComponent.airportWrapper(flight.Origin) { proxy: ModelProxy[Pot[AirportInfo]] =>
+        <.td(TerminalContentComponent.airportWrapper(flight.Origin) { airportInfoPot: ModelProxy[Pot[AirportInfo]] =>
           <.span(
-            proxy().renderEmpty(props.originMapper(flight.Origin, EmptyVdom)),
-            proxy().render { ai =>
+            airportInfoPot().renderEmpty(props.originMapper(flight.Origin, maybePreviousPort, EmptyVdom)),
+            airportInfoPot().render { ai =>
               val redListCountry = props.indirectRedListPax.isEnabled && isRedListCountry(ai.country, props.viewMode.dayEnd, props.redListUpdates)
               val style: html_<^.TagMod = if (redListCountry) ScalaCssReact.scalacssStyleaToTagMod(ArrivalsPageStylesDefault.redListCountryField) else EmptyVdom
-              props.originMapper(flight.Origin, style)
+              props.originMapper(flight.Origin, maybePreviousPort, style)
             }
           )
         }),

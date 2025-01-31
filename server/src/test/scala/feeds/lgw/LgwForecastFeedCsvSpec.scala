@@ -39,6 +39,7 @@ class LgwForecastFeedCsvSpec extends Specification {
       totalPax = Option(114),
       transPax = None,
       origin = "ALC",
+      previousPort = None,
       terminal = S,
       scheduled = 1675427700000L,
     )

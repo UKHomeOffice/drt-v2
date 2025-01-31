@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 
-import scala.compat.java8.OptionConverters.RichOptionalGeneric
+import scala.jdk.OptionConverters.RichOptional
 
 
 object Exports {
@@ -50,7 +50,7 @@ object Exports {
       header = header.copy(headers = header.headers ++ Results.contentDispositionHeader(inline = true, Option(fileName)) ++ Option(disableNginxProxyBuffering)),
       body = HttpEntity.Chunked(
         stream.map(c => HttpChunk.Chunk(writeable.transform(c))),
-        fileMimeTypes.forFileName(fileName).asScala
+        fileMimeTypes.forFileName(fileName).toScala
       )
     )
   }

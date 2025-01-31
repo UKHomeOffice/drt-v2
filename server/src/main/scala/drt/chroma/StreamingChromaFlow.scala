@@ -50,6 +50,7 @@ object StreamingChromaFlow {
         carrierCode = carrierCode.code,
         flightCodeSuffix = maybeSuffix.map(_.suffix),
         origin = flight.Origin,
+        previousPort = None,
         scheduled = SDate(flight.SchDT).millisSinceEpoch,
         estimated = if (est == 0) None else Option(est),
         touchdown = if (act == 0) None else Option(act),

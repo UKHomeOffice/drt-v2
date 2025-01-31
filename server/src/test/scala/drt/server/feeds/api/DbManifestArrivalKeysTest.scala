@@ -31,13 +31,13 @@ class DbManifestArrivalKeysTest
 
   def createTables(): Unit = {
     AggregateDbH2.schema.createStatements.toList.foreach { query =>
-      Await.result(AggregateDbH2.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
+      Await.result(AggregateDbH2.db.run(SQLActionBuilder(query, SetUnit).asUpdate), 1.second)
     }
   }
 
   def dropTables(): Unit = {
     AggregateDbH2.schema.dropStatements.toList.reverse.foreach { query =>
-      Await.result(AggregateDbH2.db.run(SQLActionBuilder(List(query), SetUnit).asUpdate), 1.second)
+      Await.result(AggregateDbH2.db.run(SQLActionBuilder(query, SetUnit).asUpdate), 1.second)
     }
   }
 

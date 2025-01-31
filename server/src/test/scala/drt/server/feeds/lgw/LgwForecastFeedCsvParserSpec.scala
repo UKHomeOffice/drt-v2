@@ -32,6 +32,7 @@ class LgwForecastFeedCsvParserSpec extends Specification {
           carrierCode = carrierCode,
           flightCodeSuffix = None,
           origin = origin,
+          previousPort = None,
           scheduled = scheduled.millisSinceEpoch,
         )), 0)
     }
@@ -57,6 +58,7 @@ class LgwForecastFeedCsvParserSpec extends Specification {
           carrierCode = carrierCode,
           flightCodeSuffix = None,
           origin = origin,
+          previousPort = None,
           scheduled = scheduled.millisSinceEpoch,
         ),
       ), 0)

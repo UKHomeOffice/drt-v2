@@ -127,6 +127,7 @@ class LHRForecastCSVSpec extends Specification {
         carrierCode = "TS",
         flightCodeSuffix = None,
         origin = "TST",
+        previousPort = None,
         scheduled = SDate("2019-04-04T05:00Z").millisSinceEpoch,
       ),
 
@@ -140,6 +141,7 @@ class LHRForecastCSVSpec extends Specification {
         carrierCode = "TS",
         flightCodeSuffix = None,
         origin = "TST",
+        previousPort = None,
         scheduled = SDate("2019-05-04T05:00Z").millisSinceEpoch,
       )
     )

@@ -84,7 +84,6 @@ GET           /export/desk-deps/:startLocalDate/:endLocalDate/:terminalName     
 GET           /export/desk-deps/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesDepsAtPointInTimeCSV(localDate, pointInTime, terminalName)
 GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName              controllers.application.exports.FlightsExportController.exportTerminalFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
 GET           /export/arrivals-combined/:startLocalDay/:endLocalDay                   controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String)
-GET           /export/arrivals-combined-legacy/:startLocalDay/:endLocalDay            controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeCSVLegacy(startLocalDay: String, endLocalDay: String)
 GET           /export/arrivals/snapshot/:localDate/:pointInTime/:terminalName         controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long, terminalName: String)
 
 GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.application.exports.FlightsExportController.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
@@ -129,7 +128,6 @@ GET           /data/user/has-port-access                                        
 GET           /data/actor-tree                                                        controllers.application.DebugController.getActorTree
 
 # v2 exports
-GET           /api/arrivals/:startLocalDate/:endLocalDate/:terminalName               controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)
 + nocsrf
 GET           /api/passengers/:startLocalDate/:endLocalDate                           controllers.application.SummariesController.exportPassengersByPortForDateRangeApi(startLocalDate: String, endLocalDate: String)
 GET           /api/passengers/:startLocalDate/:endLocalDate/:terminalName             controllers.application.SummariesController.exportPassengersByTerminalForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)

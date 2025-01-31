@@ -18,6 +18,7 @@ lazy val shared = (crossProject(JSPlatform, JVMPlatform).crossType(CrossType.Pur
   .settings(
     scalaVersion := Settings.versions.scala,
     libraryDependencies ++= Settings.sharedDependencies.value,
+    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
   )
@@ -45,7 +46,8 @@ lazy val clientMacrosJS: Project = (project in file("client-macros"))
     libraryDependencies ++= Seq(
       "com.github.japgolly.scalajs-react" %%% "core" % scalajsReact withSources(),
       "com.github.japgolly.scalajs-react" %%% "extra" % scalajsReact withSources()
-    )
+    ),
+    resolvers += Resolver.defaultLocal,
   )
 
 
@@ -72,11 +74,11 @@ lazy val client: Project = (project in file("client"))
     Compile / npmDependencies ++= Settings.clientNpmDependencies,
     Compile / npmDevDependencies += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
-//    useYarn := true,
+    //    useYarn := true,
     // yes, we want to package JS dependencies
     packageJSDependencies / skip := false,
-    resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     resolvers += Resolver.defaultLocal,
+    resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // use uTest framework for tests
@@ -96,6 +98,7 @@ lazy val clients = Seq(client)
 // instantiate the JVM project for SBT with some additional settings
 lazy val server = (project in file("server"))
   .enablePlugins(PlayScala)
+  .enablePlugins(SbtWeb)
   .enablePlugins(WebScalaJSBundlerPlugin)
   .enablePlugins(BuildInfoPlugin)
   .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
@@ -112,7 +115,7 @@ lazy val server = (project in file("server"))
     libraryDependencies += guice,
     excludeDependencies += ExclusionRule("org.slf4j", "slf4j-log4j12"),
 
-    dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.1.1",
+    dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0",
 
     commands += ReleaseCmd,
     // connect to the client project
@@ -121,10 +124,11 @@ lazy val server = (project in file("server"))
     // triggers scalaJSPipeline when using compile or continuous compilation
     Compile / compile := ((Compile / compile) dependsOn scalaJSPipeline).value,
     testFrameworks += new TestFramework("utest.runner.Framework"),
+    resolvers += Resolver.defaultLocal,
     resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
     resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
-    resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/",
-    resolvers += "Artifactory Realm release local" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release-local/",
+    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
+    resolvers += "Artifactory Realm release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
     resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
     resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases/",
@@ -137,7 +141,7 @@ lazy val server = (project in file("server"))
     TwirlKeys.templateImports += "buildinfo._",
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
-    dependencyCheckFormats := Seq("XML", "JSON" ,"HTML")
+    dependencyCheckFormats := Seq("XML", "JSON", "HTML")
   )
   .aggregate(clients.map(projectToRef) *)
   .dependsOn(sharedJVM)

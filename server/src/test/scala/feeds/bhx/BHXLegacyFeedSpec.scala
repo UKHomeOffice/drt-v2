@@ -101,6 +101,7 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         carrierCode = carrierCode.code,
         flightCodeSuffix = suffix.map(_.suffix),
         origin = "CPH",
+        previousPort = None,
         scheduled = 1338619560000L,
         estimated = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
         touchdown = Some(SDate("2012-06-02T06:46:00Z", DateTimeZone.UTC).millisSinceEpoch),
@@ -132,6 +133,7 @@ class BHXLegacyFeedSpec extends CrunchTestLike with Mockito {
         carrierCode = carrierCode.code,
         flightCodeSuffix = suffix.map(_.suffix),
         origin = "CPH",
+        previousPort = None,
         scheduled = 1338623160000L,
       )
     }

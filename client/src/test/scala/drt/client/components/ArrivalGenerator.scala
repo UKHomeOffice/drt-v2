@@ -12,6 +12,7 @@ object ArrivalGenerator {
               maxPax: Option[Int] = None,
               terminal: Terminal = T1,
               origin: PortCode = PortCode("JFK"),
+              previousPort: Option[PortCode] = None,
               operator: Option[Operator] = None,
               status: ArrivalStatus = ArrivalStatus(""),
               estDt: String = "",
@@ -27,7 +28,7 @@ object ArrivalGenerator {
               feedSource: FeedSource,
              ): Arrival = {
     val actualArrival = live(
-      iata, schDt, maxPax, terminal, origin, operator, status, estDt, actDt, estChoxDt,
+      iata, schDt, maxPax, terminal, origin, previousPort, operator, status, estDt, actDt, estChoxDt,
       actChoxDt, gate, stand, runwayId, baggageReclaimId, totalPax, transPax
     )
       .toArrival(feedSource)
@@ -39,6 +40,7 @@ object ArrivalGenerator {
            maxPax: Option[Int] = None,
            terminal: Terminal = T1,
            origin: PortCode = PortCode("JFK"),
+           previousPort: Option[PortCode] = None,
            operator: Option[Operator] = None,
            status: ArrivalStatus = ArrivalStatus(""),
            estDt: String = "",
@@ -64,6 +66,7 @@ object ArrivalGenerator {
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = origin.iata,
+      previousPort = previousPort.map(_.iata),
       scheduled = if (schDt.nonEmpty) SDate(schDt).millisSinceEpoch else 0,
       estimated = if (estDt.nonEmpty) Option(SDate(estDt).millisSinceEpoch) else None,
       touchdown = if (actDt.nonEmpty) Option(SDate(actDt).millisSinceEpoch) else None,

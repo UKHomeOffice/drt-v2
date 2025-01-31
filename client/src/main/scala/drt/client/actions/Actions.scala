@@ -133,7 +133,7 @@ object Actions {
 
   case class GetManifestSummariesForDate(date: UtcDate) extends Action
 
-  case class GetManifestSummaries(arrivalKeys: Set[ArrivalKey]) extends Action
+  case class GetManifestSummaries(arrivalKeys: Set[ManifestKey]) extends Action
 
   case class SetManifestSummaries(summaries: Set[FlightManifestSummary]) extends Action
 

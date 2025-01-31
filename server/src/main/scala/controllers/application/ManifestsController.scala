@@ -3,7 +3,7 @@ package controllers.application
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import drt.shared.{ArrivalKey, ErrorResponse}
+import drt.shared.{ManifestKey, ErrorResponse}
 import manifests.passengers.PassengerInfo
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
@@ -20,7 +20,7 @@ class ManifestsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInte
   private val manifestsForDay: UtcDate => Future[VoyageManifests] =
     (date: UtcDate) => ctrl.applicationService.manifestsProvider(date, date).map(_._2).runFold(VoyageManifests.empty)(_ ++ _)
 
-  private val manifestsForFlights: List[ArrivalKey] => Future[VoyageManifests] = ManifestsController.manifestsForFlights(manifestsForDay)
+  private val manifestsForFlights: List[ManifestKey] => Future[VoyageManifests] = ManifestsController.manifestsForFlights(manifestsForDay)
 
   def getManifestSummariesForDay(utcDateString: String): Action[AnyContent] =
     authByRole(EnhancedApiView) {
@@ -37,7 +37,7 @@ class ManifestsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInte
       request.queryString.get("keys") match {
         case Some(strings) =>
           val arrivalKeys = strings.headOption
-            .map(read[Set[ArrivalKey]](_))
+            .map(read[Set[ManifestKey]](_))
             .getOrElse(Set())
 
           manifestsForFlights(arrivalKeys.toList)
@@ -53,7 +53,7 @@ class ManifestsController@Inject()(cc: ControllerComponents, ctrl: DrtSystemInte
 
 object ManifestsController {
   def manifestsForFlights(manifestsProvider: UtcDate => Future[VoyageManifests])
-                         (arrivalKeys: List[ArrivalKey])
+                         (arrivalKeys: List[ManifestKey])
                          (implicit mat: Materializer): Future[VoyageManifests] = {
     val distinctArrivalDays = arrivalKeys.map(k => SDate(k.scheduled).toUtcDate).distinct
     Source(distinctArrivalDays)

@@ -30,6 +30,7 @@ object FlightsRouterActor {
   private val log: Logger = LoggerFactory.getLogger(getClass)
 
   case class AddHistoricSplitsRequestActor(actor: ActorRef)
+
   case class AddHistoricPaxRequestActor(actor: ActorRef)
 
   def scheduledInRange(start: SDateLike, end: SDateLike, scheduled: MillisSinceEpoch): Boolean = {
@@ -63,7 +64,7 @@ object FlightsRouterActor {
       .map { case (d, flights) => (d, flights.scheduledOrPcpWindow(start, end, paxFeedSourceOrder)) }
       .recover {
         case e: Throwable =>
-           log.error(s"Error in multiTerminalFlightsByDaySource: ${e.getMessage}")
+          log.error(s"Error in multiTerminalFlightsByDaySource: ${e.getMessage}")
           (dates.toList.head, FlightsWithSplits.empty)
       }
       .filter { case (_, flights) => flights.nonEmpty }
@@ -73,18 +74,20 @@ object FlightsRouterActor {
     val reducedFlightsWithSplits = allFlightsWithSplits
       .reduce(_ ++ _)
       .flights.values.toList.sortBy { fws =>
-      val arrival = fws.apiFlight
-      (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
-    }
+        val arrival = fws.apiFlight
+        (arrival.PcpTime, arrival.VoyageNumber.numeric, arrival.Origin.iata)
+      }
     FlightsWithSplits(reducedFlightsWithSplits)
   }
 
   def runAndCombine(eventualSource: Future[Source[(UtcDate, FlightsWithSplits), NotUsed]])
-                   (implicit mat: Materializer, ec: ExecutionContext): Future[FlightsWithSplits] = eventualSource
-    .flatMap(source => source
-      .log(getClass.getName)
-      .runWith(Sink.fold(FlightsWithSplits.empty)(_ ++ _._2))
-    )
+                   (implicit mat: Materializer, ec: ExecutionContext): Future[FlightsWithSplits] =
+    eventualSource
+      .flatMap { source =>
+        source
+          .log(getClass.getName)
+          .runWith(Sink.fold(FlightsWithSplits.empty)(_ ++ _._2))
+      }
 
   def persistSplits(flightsRouterActor: ActorRef)
                    (implicit timeout: Timeout, ec: ExecutionContext): Iterable[(UniqueArrival, Splits)] => Future[Done] =

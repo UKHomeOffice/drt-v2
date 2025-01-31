@@ -82,6 +82,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
             carrierCode = carrierCode.code,
             flightCodeSuffix = maybeSuffix.map(_.suffix),
             origin = flight.Origin,
+            previousPort = None,
             scheduled = SDate(flight.SchDT).millisSinceEpoch,
             estimated = Option(SDate(flight.EstDT).millisSinceEpoch),
             touchdown = Option(SDate(flight.ActDT).millisSinceEpoch),

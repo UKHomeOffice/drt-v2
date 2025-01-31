@@ -25,34 +25,38 @@ object Settings {
   /** Declare global dependency versions here to avoid mismatches in multi part dependencies */
   //noinspection ScalaStyle
   object versions {
-    val drtLib = "v1017"
+    val scala = "2.13.16"
 
-    val scala = "2.13.12"
+    val drtLib = "v1077"
+
+    val akka = "2.9.5" // last version with license key requirement
+    val akkaHttp = "10.6.3" // last version dependent on akka 2.9.5
+    val akkaPersistenceJdbc = "5.4.2"
+    val slick = "3.5.2"
+
+    val aws = "2.30.2"
+
     val scalaDom = "2.8.0"
-    val scalajsReact = "2.1.1"
+    val scalajsReact = "2.1.2"
     val scalaCSS = "1.0.0"
     val scalaJsMomentJs = "0.10.9"
     val booPickle = "1.3.3"
     val diode = "1.2.0-RC4"
     val uTest = "0.7.4"
-    val h2 = "2.2.224"
+    val h2 = "2.3.232"
 
-    val akka = "2.8.5"
-
-    val specs2 = "4.20.3"
+    val specs2 = "4.20.9"
     val react = "18.2.0"
 
     val bootstrap = "3.3.6"
 
+    val poi = "5.2.5"
     val renjin = "0.9.2725"
-    val csvCommons = "1.10.0"
-    val poi = "5.2.4"
-    val pprint = "0.5.9"
-    val akkaPersistenceJdbc = "5.2.0"
+    val csvCommons = "1.13.0"
     val bluebus = "v95"
-    val postgres = "42.7.0"
-    val sshJ = "0.33.0"
-    val jodaTime = "2.12.5"
+    val postgres = "42.7.5"
+    val sshJ = "0.39.0"
+    val jodaTime = "2.12.7"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.4.3"
@@ -60,20 +64,20 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
-    val uPickle = "3.1.3"
-    val akkaHttp = "10.5.2"
-    val slick = "3.4.1"
+    val uPickle = "3.1.5"
     val censorinus = "2.1.16"
-    val janinoVersion = "3.1.9"
+    val janinoVersion = "3.1.12"
     val scalaJsReactMaterialUi = "0.1.18"
-    val scalaTestVersion = "3.2.17"
-    val twirlApi = "1.6.3"
-    val mockitoVersion = "4.11.0"
-    val rtVersion = "4.0.2"
-    val jakartaXmlWsApi = "4.0.1"
-    val scalatestplusPlay = "7.0.0"
-    val nettyAll = "4.1.101.Final"
-    val jwtCore = "9.4.5"
+    val scalaTestVersion = "3.2.19"
+    val twirlApi = "2.0.2"
+    val mockito = "5.15.2"
+    val rtVersion = "4.0.3"
+    val jakartaXmlWsApi = "4.0.2"
+    val scalatestplusPlay = "7.0.1"
+    val nettyAll = "4.1.117.Final"
+    val jwtCore = "9.4.6"
+    val logback = "1.3.15"
+    val logbackContrib = "0.1.5"
   }
 
   import versions.*
@@ -115,7 +119,6 @@ object Settings {
     "org.scala-js" %%% "scalajs-java-securerandom" % "1.0.0",
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
-    "com.lihaoyi" %% "pprint" % pprint,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs,
 
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
@@ -137,6 +140,7 @@ object Settings {
     "com.lihaoyi" %%% "upickle" % uPickle,
     "uk.gov.homeoffice" %%% "drt-lib" % drtLib exclude("org.apache.spark", "spark-mllib_2.13"),
     "io.suzaku" %%% "boopickle" % booPickle,
+    "org.webjars" % "webjars-locator" % "0.52",
   ))
 
   /** Dependencies only used by the JVM project */
@@ -162,7 +166,6 @@ object Settings {
     "com.typesafe.akka" %% "akka-serialization-jackson" % akka,
     "com.typesafe.akka" %% "akka-pki" % akka,
     "com.typesafe.akka" %% "akka-stream-typed" % akka,
-    "com.typesafe.akka" %% "akka-persistence-testkit" % akka,
     "com.typesafe.akka" %% "akka-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
     "com.typesafe.akka" %% "akka-persistence" % akka,
@@ -174,7 +177,7 @@ object Settings {
     "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
     "com.typesafe.akka" %% "akka-stream" % akka,
 
-    "com.typesafe.play" %% "twirl-api" % twirlApi,
+    "org.playframework.twirl" %% "twirl-api" % twirlApi,
 
     "com.typesafe.slick" %% "slick" % slick,
     "com.typesafe.slick" %% "slick-hikaricp" % slick,
@@ -182,9 +185,9 @@ object Settings {
 
     "joda-time" % "joda-time" % jodaTime,
 
-    "ch.qos.logback" % "logback-classic" % "1.3.5",
-    "ch.qos.logback.contrib" % "logback-json-classic" % "0.1.5",
-    "ch.qos.logback.contrib" % "logback-jackson" % "0.1.5",
+    "ch.qos.logback" % "logback-classic" % logback,
+    "ch.qos.logback.contrib" % "logback-json-classic" % logbackContrib,
+    "ch.qos.logback.contrib" % "logback-jackson" % logbackContrib,
     "org.codehaus.janino" % "janino" % janinoVersion,
     "org.pac4j" % "pac4j-saml" % pac4jSaml,
     "org.apache.commons" % "commons-csv" % csvCommons,
@@ -198,11 +201,14 @@ object Settings {
     "org.specs2" %% "specs2-core" % specs2 % Test,
     "org.specs2" %% "specs2-junit" % specs2 % Test,
     "org.specs2" %% "specs2-mock" % specs2 % Test,
-    "org.mockito" % "mockito-core" % mockitoVersion % Test,
+    "org.mockito" % "mockito-core" % mockito % Test,
     "org.scalatestplus.play" %% "scalatestplus-play" % scalatestplusPlay % Test,
     "org.scalatestplus" %% "mockito-3-4" % "3.2.10.0" % Test,
+
     "org.webjars" % "font-awesome" % "4.7.0" % Provided,
     "org.webjars" % "bootstrap" % bootstrap % Provided,
+    "org.webjars" %% "webjars-play" % "3.0.2",
+    "org.webjars" % "webjars-locator" % "0.52",
 
     "io.netty" % "netty-all" % nettyAll,
 
@@ -211,8 +217,8 @@ object Settings {
     "uk.gov.homeoffice" %% "drt-lib" % drtLib,
     "uk.gov.homeoffice" %% "bluebus" % bluebus,
 
-    "uk.gov.service.notify" % "notifications-java-client" % "4.1.0-RELEASE",
-    "software.amazon.awssdk" % "s3" % "2.16.96",
+    "uk.gov.service.notify" % "notifications-java-client" % "5.2.1-RELEASE",
+    "software.amazon.awssdk" % "s3" % aws,
   ))
 
   /** Dependencies for external JS libs that are bundled into a single .js file according to dependency order

@@ -1,12 +1,12 @@
 package services.imports
 
-import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRange}
-import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
 import akka.actor.{Actor, ActorLogging, PoisonPill}
 import akka.pattern.{StatusReply, pipe}
 import akka.stream.scaladsl.Source
 import drt.shared.CrunchApi.DeskRecMinutes
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
+import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.arrivals.FlightsWithSplits
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -16,7 +16,7 @@ import scala.util.Try
 class ArrivalCrunchSimulationActor(fws: FlightsWithSplits) extends Actor with ActorLogging {
   implicit val dispatcher: ExecutionContextExecutor = context.dispatcher
 
-  var promisedResult: Promise[DeskRecMinutes] = Promise[DeskRecMinutes]
+  var promisedResult: Promise[DeskRecMinutes] = Promise[DeskRecMinutes]()
 
   override def receive: Receive = {
     case GetFlightsForTerminalDateRange(_, _, _) =>

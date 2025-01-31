@@ -63,6 +63,7 @@ class AzinqEdiFeedSpec extends Specification {
     carrierCode = "ZT",
     flightCodeSuffix = None,
     origin = "EMA",
+    previousPort = None,
     scheduled = 1694669400000L,
     estimated = None,
     touchdown = Some(1694669040000L),

@@ -9,11 +9,11 @@ import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
+import akka.util.ByteString.UTF_8
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
-import sun.nio.cs.UTF_8
 import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
@@ -154,7 +154,7 @@ trait CWLClientLike extends ScalaXmlSupport {
 case class CWLClient(cwlLiveFeedUser: String, soapEndPoint: String) extends CWLClientLike {
   def makeRequest(endpoint: String, headers: List[HttpHeader], postXML: String)
                  (implicit system: ActorSystem): Future[HttpResponse] = {
-    val byteString: ByteString = ByteString.fromString(postXML, UTF_8.INSTANCE)
+    val byteString: ByteString = ByteString.fromString(postXML, UTF_8)
     val contentType: ContentType = ContentTypes.`text/xml(UTF-8)`
     val request = HttpRequest(HttpMethods.POST, endpoint, headers, HttpEntity(contentType, byteString))
 
@@ -311,6 +311,7 @@ object CWLFlight extends NodeSeqUnmarshaller {
       carrierCode = carrierCode.code,
       flightCodeSuffix = suffix.map(_.suffix),
       origin = f.departureAirport,
+      previousPort = None,
       scheduled = SDate(f.scheduledOnBlocks).millisSinceEpoch,
       estimated = maybeTimeStringToMaybeMillis(f.estimatedTouchDown),
       touchdown = maybeTimeStringToMaybeMillis(f.actualTouchDown),

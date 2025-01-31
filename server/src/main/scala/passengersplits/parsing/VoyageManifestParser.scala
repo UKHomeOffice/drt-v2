@@ -55,7 +55,7 @@ object VoyageManifestParser {
 
   case class VoyageManifests(manifests: Iterable[VoyageManifest]) {
 
-    def toMap: Map[ArrivalKey, VoyageManifest] = manifests.collect {
+    def toMap: Map[ManifestKey, VoyageManifest] = manifests.collect {
       case vm if vm.maybeKey.isDefined =>
         vm.maybeKey.get -> vm
     }.toMap

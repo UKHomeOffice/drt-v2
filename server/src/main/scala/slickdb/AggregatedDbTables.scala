@@ -3,6 +3,7 @@ package slickdb
 
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
+import uk.gov.homeoffice.drt.db.CentralDatabase
 import uk.gov.homeoffice.drt.db.tables.{FlightTable, QueueSlotTable, StatusDailyTable}
 
 import java.sql.Timestamp
@@ -62,7 +63,7 @@ case class ArrivalStatsRow(portCode: String,
 
 
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
-trait AggregatedDbTables {
+trait AggregatedDbTables extends CentralDatabase {
   val profile: slick.jdbc.JdbcProfile
 
   def run[R](a: DBIOAction[R, NoStream, Nothing]): Future[R]
