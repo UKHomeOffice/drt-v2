@@ -3,7 +3,7 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ShiftViewEnabled, UrlDateParameter, UrlDayRangeType}
-import drt.client.actions.Actions.{GetAllStaffShifts, UpdateShifts, UpdateStaffShifts}
+import drt.client.actions.Actions.{UpdateShifts, UpdateStaffShifts}
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker

@@ -344,7 +344,7 @@ object MonthlyShifts {
       shifts = ShiftAssignments.empty))
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetAllStaffShifts)))
+//    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetAllStaffShifts)))
     .build
 
 
