@@ -187,7 +187,7 @@ object MonthlyShifts {
               ))
             },
             <.div(^.className := "staffing-controls-save",
-              <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
+              <.div(^.style := js.Dictionary("display" -> "flex", "align-items" -> "center"),
                 <.span(^.className := "staffing-controls-title",
                   <.strong(props.terminalPageTab.dayRangeType match {
                     case Some("monthly") => s"Staff numbers: ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
