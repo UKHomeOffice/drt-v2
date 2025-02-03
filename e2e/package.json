@@ -11,7 +11,7 @@
   "devDependencies": {
     "@types/node": "^20.17.16",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
+    "@typescript-eslint/parser": "^8.23.0",
     "cypress": "^14.0.0",
     "eslint": "^8.57.1",
     "eslint-plugin-cypress": "^4.1.0",
