@@ -64,7 +64,7 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
-    val uPickle = "3.1.5"
+    val uPickle = "3.3.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.12"
     val scalaJsReactMaterialUi = "0.1.18"
