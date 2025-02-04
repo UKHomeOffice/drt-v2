@@ -34,7 +34,7 @@ object Settings {
     val akkaPersistenceJdbc = "5.4.2"
     val slick = "3.5.2"
 
-    val aws = "2.30.2"
+    val aws = "2.30.12"
 
     val scalaDom = "2.8.0"
     val scalajsReact = "2.1.2"
