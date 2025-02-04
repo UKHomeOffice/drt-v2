@@ -15,7 +15,7 @@ addSbtPlugin("com.github.sbt" % "sbt-less" % "2.0.0")
 
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.9.16")
 
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.9.6")
+addSbtPlugin("org.playframework" % "sbt-plugin" % "3.0.6")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-digest" % "1.1.4")
 
