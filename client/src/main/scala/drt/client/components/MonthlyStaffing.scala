@@ -330,16 +330,15 @@ object MonthlyStaffing {
                       ^.onClick ==> handleShiftEditForm),
                     MuiButton(color = Color.primary, variant = "contained")
                     (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                      ^.onClick ==> confirmAndSave(viewingDate, timeSlots))
-                    ,
+                      ^.onClick ==> confirmAndSave(viewingDate, timeSlots)),
+                    if (props.isStaffShiftPage) {
+                      <.div(^.className := "staffing-controls-toggle",
+                        MuiButton(color = Color.secondary, variant = "outlined")
+                        (<.span(^.style := js.Dictionary("paddingRight" -> "5px"), "Toggle Shift view"),
+                          ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(false)))
+                        ))
+                    } else EmptyVdom
                   )),
-                if (props.isStaffShiftPage) {
-                  <.div(^.className := "staffing-controls-toggle",
-                    MuiButton(color = Color.secondary, variant = "outlined")
-                    (<.span(^.style := js.Dictionary("paddingRight" -> "5px"), "Toggle Shift view"),
-                      ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(false)))
-                    ))
-                } else EmptyVdom
               ),
               MuiSwipeableDrawer(open = state.showEditStaffForm,
                 anchor = "right",
