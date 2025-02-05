@@ -288,7 +288,6 @@ object MonthlyShifts {
                   interval = props.timeSlotMinutes,
                   initialShifts = state.shiftsData.map(_.toClientShiftSummaryStaffing),
                   handleSaveChanges = (shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]) => {
-                    //                    changedAssignments.map(a => println(s"Changed assignment: ${a.column}, ${a.row}, ${a.name}, ${a.staffNumber}, ${ShiftDate.toString(a.startTime)}, ${ShiftDate.toString(a.endTime)}"))
                     val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
                     val updateShifts = updateAssignments(shifts, updateChanges, 15)
                     scope.modState(state => state.copy(
