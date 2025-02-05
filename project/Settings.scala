@@ -27,11 +27,11 @@ object Settings {
   object versions {
     val scala = "2.13.16"
 
-    val drtLib = "v1079"
-    val drtCirium = "v324"
-    val bluebus = "v137"
+    val drtLib = "v1081"
+    val drtCirium = "v326"
+    val bluebus = "v140"
 
-    val pekko = "1.1.1"
+    val pekko = "1.1.3"
     val pekkoHttp = "1.1.0"
     val pekkoPersistenceJdbc = "1.1.0"
     val slick = "3.5.2"
