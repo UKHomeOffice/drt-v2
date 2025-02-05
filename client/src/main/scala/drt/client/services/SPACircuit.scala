@@ -190,6 +190,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
                      userSelectedPlanningTimePeriod: Pot[Int] = Empty,
                      shifts: Pot[Seq[Shift]] = Empty,
+                     shiftSummaryStaffings:Pot[Seq[ShiftSummaryData.ShiftSummaryStaffing]] = Empty,
                      flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
                     )
 
@@ -274,6 +275,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v))),
       new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
       new ShiftsHandler(zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
+      new ShiftSummaryStaffingHandler(zoomRW(_.shiftSummaryStaffings)((m, v) => m.copy(shiftSummaryStaffings = v))),
     )
     composedHandlers
   }

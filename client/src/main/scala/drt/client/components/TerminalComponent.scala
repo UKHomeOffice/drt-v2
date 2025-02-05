@@ -5,12 +5,13 @@ import diode.data.Pot
 import diode.{FastEqLowPri, UseValueEq}
 import drt.client.SPAMain
 import drt.client.SPAMain._
+import drt.client.actions.Actions.GetAllStaffShifts
 import drt.client.components.TerminalDesksAndQueues.Ideal
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, _}
-import drt.client.services.handlers.{GetShifts, GetUserPreferenceIntervalMinutes}
+import drt.client.services.handlers.{GetShiftSummaryStaffing, GetShifts, GetUserPreferenceIntervalMinutes}
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -261,6 +262,13 @@ object TerminalComponent {
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
     .componentDidMount(p => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
+      Callback(SPACircuit.dispatch(GetAllStaffShifts)) >>
+      Callback(SPACircuit.dispatch(
+        GetShiftSummaryStaffing(p.props.terminalPageTab.portCodeStr,
+          p.props.terminalPageTab.terminal.toString,
+          p.props.terminalPageTab.localDateFromUrl,
+          p.props.terminalPageTab.subModeInterval,
+          p.props.terminalPageTab.dayRangeType.getOrElse("monthly")))) >>
       Callback(SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString)))
     )
 

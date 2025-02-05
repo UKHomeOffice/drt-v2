@@ -2,10 +2,11 @@ package drt.client.components
 
 import drt.shared.StaffAssignment
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.handlers.ShiftSummaryData
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object ShiftAssignmentConverter {
-  def toStaffAssignment(shiftAssignment: StaffTableEntry, terminal: Terminal): StaffAssignment = {
+  def toStaffAssignment(shiftAssignment: ShiftSummaryData.StaffTableEntry, terminal: Terminal): StaffAssignment = {
     StaffAssignment(
       name = shiftAssignment.name,
       terminal = terminal,

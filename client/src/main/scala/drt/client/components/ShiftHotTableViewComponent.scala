@@ -1,6 +1,9 @@
 package drt.client.components
 
+import drt.client.components.ShiftDate.toShiftDateData
+import drt.client.components.ShiftSummary.toShiftSummaryData
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.handlers.ShiftSummaryData
 import drt.shared.CrunchApi.MillisSinceEpoch
 import japgolly.scalajs.react.{Children, JsFnComponent}
 import japgolly.scalajs.react.vdom.VdomElement
@@ -38,6 +41,14 @@ trait ShiftDate extends js.Object {
 }
 
 object ShiftDate {
+  def toShiftDateData(shiftDate: ShiftDate): ShiftSummaryData.ShiftDate = ShiftSummaryData.ShiftDate(
+    shiftDate.year,
+    shiftDate.month,
+    shiftDate.day,
+    shiftDate.hour,
+    shiftDate.minute
+  )
+
   def toString(shiftDate: ShiftDate): String = {
     s"${shiftDate.year}-${shiftDate.month}-${shiftDate.day} ${shiftDate.hour}:${shiftDate.minute}"
   }
@@ -70,6 +81,13 @@ trait ShiftSummary extends js.Object {
 }
 
 object ShiftSummary {
+  def toShiftSummaryData(shiftSummary:ShiftSummary): ShiftSummaryData.ShiftSummary = ShiftSummaryData.ShiftSummary(
+    shiftSummary.name,
+    shiftSummary.defaultStaffNumber,
+    shiftSummary.startTime,
+    shiftSummary.endTime
+  )
+
   def apply(name: String, defaultStaffNumber: Int, startTime: String, endTime: String): ShiftSummary = {
     val p = (new js.Object).asInstanceOf[ShiftSummary]
     p.name = name
@@ -91,6 +109,17 @@ trait StaffTableEntry extends js.Object {
 }
 
 object StaffTableEntry {
+  def toStaffTableEntryData(staffTableEntry: StaffTableEntry): ShiftSummaryData.StaffTableEntry = {
+    ShiftSummaryData.StaffTableEntry(
+      staffTableEntry.column,
+      staffTableEntry.row,
+      staffTableEntry.name,
+      staffTableEntry.staffNumber,
+      toShiftDateData(staffTableEntry.startTime),
+      toShiftDateData(staffTableEntry.endTime)
+    )
+  }
+
   private def shiftDateToSDate(shiftDate: ShiftDate) = {
     SDate(shiftDate.year, shiftDate.month, shiftDate.day, shiftDate.hour, shiftDate.minute)
   }
@@ -132,7 +161,16 @@ trait ShiftSummaryStaffing extends js.Object {
   var staffTableEntries: js.Array[StaffTableEntry]
 }
 
+
 object ShiftSummaryStaffing {
+  def toStaffTableEntries(shiftSummaryStaffing: ShiftSummaryStaffing): ShiftSummaryData.ShiftSummaryStaffing = {
+    ShiftSummaryData.ShiftSummaryStaffing(
+      shiftSummaryStaffing.index,
+      toShiftSummaryData(shiftSummaryStaffing.shiftSummary),
+      shiftSummaryStaffing.staffTableEntries.map(StaffTableEntry.toStaffTableEntryData).toSeq
+    )
+  }
+
   def apply(index: Int, shiftSummary: ShiftSummary, staffTableEntries: Seq[StaffTableEntry]): ShiftSummaryStaffing = {
     val p = (new js.Object).asInstanceOf[ShiftSummaryStaffing]
     p.index = index
