@@ -1,6 +1,6 @@
 package controllers.application
 
-import akka.http.scaladsl.model.StatusCodes.OK
+import org.apache.pekko.http.scaladsl.model.StatusCodes.OK
 import drt.shared.Alert
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec

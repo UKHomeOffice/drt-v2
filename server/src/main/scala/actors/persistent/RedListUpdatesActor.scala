@@ -3,10 +3,10 @@ package actors.persistent
 import actors.persistent.RedListUpdatesActor.{AddSubscriber, ReceivedSubscriberAck, SendToSubscriber}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.RedListUpdatesMessageConversion
-import akka.persistence._
-import akka.stream.QueueOfferResult.Enqueued
-import akka.stream.scaladsl.SourceQueueWithComplete
-import akka.util.Timeout
+import org.apache.pekko.persistence._
+import org.apache.pekko.stream.QueueOfferResult.Enqueued
+import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
+import org.apache.pekko.util.Timeout
 import drt.shared.redlist._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

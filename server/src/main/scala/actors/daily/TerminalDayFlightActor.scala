@@ -1,7 +1,7 @@
 package actors.daily
 
-import akka.actor.{ActorRef, Props}
-import akka.persistence.SaveSnapshotSuccess
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.persistence.SaveSnapshotSuccess
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi._

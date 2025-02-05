@@ -1,7 +1,7 @@
 package controllers.application
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import akka.pattern.ask
+import org.apache.pekko.pattern.ask
 import com.google.inject.Inject
 import drt.shared.CrunchApi.MillisSinceEpoch
 import play.api.mvc.{Action, AnyContent, ControllerComponents}

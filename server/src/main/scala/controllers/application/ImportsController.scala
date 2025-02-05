@@ -1,8 +1,8 @@
 package controllers.application
 
 import actors.persistent.nebo.NeboArrivalActor
-import akka.actor.ActorRef
-import akka.pattern.ask
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
 import com.google.inject.Inject
 import controllers.model.RedListCounts
 import controllers.model.RedListCountsJsonFormats._

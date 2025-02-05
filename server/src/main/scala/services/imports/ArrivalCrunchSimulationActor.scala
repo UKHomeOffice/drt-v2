@@ -1,9 +1,9 @@
 package services.imports
 
 import actors.PartitionedPortStateActor.GetFlightsForTerminalDateRange
-import akka.actor.{Actor, ActorLogging, PoisonPill}
-import akka.pattern.{StatusReply, pipe}
-import akka.stream.scaladsl.Source
+import org.apache.pekko.actor.{Actor, ActorLogging, PoisonPill}
+import org.apache.pekko.pattern.{StatusReply, pipe}
+import org.apache.pekko.stream.scaladsl.Source
 import drt.shared.CrunchApi.DeskRecMinutes
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamInitialized}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState

@@ -1,10 +1,10 @@
 package services.crunch.deskrecs
 
 import actors.persistent.SortedActorRefSource
-import akka.actor.ActorRef
-import akka.stream.scaladsl.Flow
-import akka.stream.{Materializer, UniqueKillSwitch}
-import akka.{Done, NotUsed}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.stream.scaladsl.Flow
+import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
+import org.apache.pekko.{Done, NotUsed}
 import org.slf4j.LoggerFactory
 import slick.lifted.Rep
 import slickdb.AggregatedDbTables

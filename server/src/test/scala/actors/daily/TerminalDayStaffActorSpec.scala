@@ -1,8 +1,8 @@
 package actors.daily
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import akka.actor.{ActorRef, Props}
-import akka.pattern.ask
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern.ask
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared.TM
 import uk.gov.homeoffice.drt.time.SDate

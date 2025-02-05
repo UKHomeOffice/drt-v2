@@ -1,10 +1,10 @@
 package actors.routing
 
 import actors.routing.SequentialAccessActor.{ProcessNextRequest, RequestFinished}
-import akka.actor.{Actor, ActorRef}
-import akka.pattern.StatusReply.Ack
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.actor.{Actor, ActorRef}
+import org.apache.pekko.pattern.StatusReply.Ack
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 

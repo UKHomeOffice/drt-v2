@@ -2,8 +2,8 @@ package uk.gov.homeoffice.drt.testsystem
 
 import actors.FlightLookupsLike
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Splits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Queues.Queue

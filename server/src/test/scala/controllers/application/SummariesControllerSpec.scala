@@ -1,8 +1,8 @@
 package controllers.application
 
-import akka.actor.ActorSystem
-import akka.pattern.ask
-import akka.stream.Materializer
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.Materializer
 import drt.shared.CrunchApi.MinutesContainer
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
@@ -27,7 +27,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.DurationInt
 
 class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
-  implicit val system: ActorSystem = akka.actor.ActorSystem("test")
+  implicit val system: ActorSystem = ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
 
   val schemas = Seq(CapacityHourlyDao.table.schema, PassengersHourlyDao.table.schema)

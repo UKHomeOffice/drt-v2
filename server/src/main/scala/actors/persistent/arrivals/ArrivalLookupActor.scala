@@ -1,8 +1,8 @@
 package actors.persistent.arrivals
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import akka.actor.Props
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import org.apache.pekko.actor.Props
+import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.FeedSourceArrival
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}

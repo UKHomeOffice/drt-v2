@@ -5,10 +5,10 @@ import actors.daily.RequestAndTerminate
 import actors.persistent.StreamingUpdatesActor
 import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements, staffMovementMessagesToStaffMovements, terminalUpdateRequests}
 import actors.routing.SequentialWritesActor
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.{StatusReply, ask}
-import akka.persistence._
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.persistence._
+import org.apache.pekko.util.Timeout
 import drt.shared.{StaffMovement, StaffMovements}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

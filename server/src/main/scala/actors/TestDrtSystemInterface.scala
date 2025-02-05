@@ -1,7 +1,7 @@
 package actors
 
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.stream.KillSwitch
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.stream.KillSwitch
 import drt.server.feeds.FeedPoller.Enable
 import org.slf4j.{Logger, LoggerFactory}
 import play.api.Configuration

@@ -2,8 +2,8 @@ package uk.gov.homeoffice.drt.testsystem
 
 import actors.MinuteLookupsLike
 import actors.daily.{RequestAndTerminate, RequestAndTerminateActor}
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
 import drt.shared.CrunchApi.MillisSinceEpoch
 import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.Queue

@@ -1,7 +1,7 @@
 package actors.debug
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

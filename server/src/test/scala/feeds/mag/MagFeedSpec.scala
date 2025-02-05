@@ -1,7 +1,7 @@
 package feeds.mag
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.model._
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.model._
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.server.feeds.mag.{FeedRequesterLike, MagFeed, ProdFeedRequester}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}

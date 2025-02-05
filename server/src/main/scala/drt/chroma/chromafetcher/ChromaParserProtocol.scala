@@ -1,6 +1,6 @@
 package drt.chroma.chromafetcher
 
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaForecastFlight, ChromaLiveFlight, ChromaToken}
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 

@@ -2,10 +2,10 @@ package actors
 
 import actors.StoppableActor.StopYourself
 import actors.supervised.RestartOnStop
-import akka.Done
-import akka.actor.{Actor, ActorSystem, Props}
-import akka.pattern.StatusReply
-import akka.testkit.{ImplicitSender, TestKit}
+import org.apache.pekko.Done
+import org.apache.pekko.actor.{Actor, ActorSystem, Props}
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.testkit.{ImplicitSender, TestKit}
 import org.slf4j.LoggerFactory
 import org.specs2.mutable.SpecificationLike
 import org.specs2.specification.BeforeAfterAll

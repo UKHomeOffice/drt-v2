@@ -1,8 +1,8 @@
 package drt.server.feeds
 
-import akka.actor.typed
-import akka.actor.typed.Behavior
-import akka.actor.typed.scaladsl.{Behaviors, TimerScheduler}
+import org.apache.pekko.actor.typed
+import org.apache.pekko.actor.typed.Behavior
+import org.apache.pekko.actor.typed.scaladsl.{Behaviors, TimerScheduler}
 import drt.server.feeds.Feed.{EnabledFeedWithFrequency, FeedTick, Tick}
 import org.slf4j.{Logger, LoggerFactory}
 

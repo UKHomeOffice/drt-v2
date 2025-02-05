@@ -1,12 +1,12 @@
 package services.scenarios
 
 import actors.persistent.SortedActorRefSource
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.{StatusReply, ask}
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Source}
-import akka.util.Timeout
-import akka.{Done, NotUsed}
+import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Flow, Source}
+import org.apache.pekko.util.Timeout
+import org.apache.pekko.{Done, NotUsed}
 import drt.shared.CrunchApi.DeskRecMinutes
 import drt.shared.SimulationParams
 import manifests.queues.SplitsCalculator

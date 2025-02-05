@@ -1,8 +1,8 @@
 package services.exports
 
 import actors.routing.minutes.MockMinutesLookup
-import akka.NotUsed
-import akka.stream.scaladsl.Source
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.scaladsl.Source
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared.TM
 import services.crunch.CrunchTestLike

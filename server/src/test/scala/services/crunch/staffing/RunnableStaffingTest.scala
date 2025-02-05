@@ -1,9 +1,9 @@
 package services.crunch.staffing
 
-import akka.Done
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
-import akka.testkit.TestProbe
+import org.apache.pekko.Done
+import org.apache.pekko.stream.OverflowStrategy
+import org.apache.pekko.stream.scaladsl.{Sink, Source, SourceQueueWithComplete}
+import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute}
 import drt.shared._
 import services.crunch.CrunchTestLike

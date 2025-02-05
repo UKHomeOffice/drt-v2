@@ -1,8 +1,8 @@
 package controllers
 
-import akka.event.Logging
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import org.apache.pekko.event.Logging
+import org.apache.pekko.http.scaladsl.Http
+import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
 import buildinfo.BuildInfo
 import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory

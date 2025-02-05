@@ -2,9 +2,9 @@ package uk.gov.homeoffice.drt.testsystem.controllers
 
 import actors.persistent.staffing.ShiftsActor.ReplaceAllShifts
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
-import akka.actor.ActorSystem
-import akka.pattern.ask
-import akka.util.Timeout
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import com.google.inject.Inject
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._

@@ -1,7 +1,7 @@
 package feeds.lgw
 
-import akka.stream.scaladsl.Sink
-import akka.testkit.TestProbe
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.lgw.{LGWAzureClient, LGWFeed, ResponseToArrivals}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess, Feed}
 import org.specs2.mock.Mockito

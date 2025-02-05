@@ -1,7 +1,7 @@
 package drt.server.feeds.legacy.bhx
 
-import akka.actor.typed
-import akka.stream.scaladsl.Source
+import org.apache.pekko.actor.typed
+import org.apache.pekko.stream.scaladsl.Source
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import org.slf4j.{Logger, LoggerFactory}

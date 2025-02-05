@@ -1,10 +1,10 @@
 package services.crunch
 
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
-import akka.actor.ActorRef
-import akka.pattern.StatusReply.Ack
-import akka.stream._
-import akka.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.StatusReply.Ack
+import org.apache.pekko.stream._
+import org.apache.pekko.stream.scaladsl.{Broadcast, GraphDSL, RunnableGraph, Sink, Source}
 import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared.CrunchApi._
 import org.slf4j.{Logger, LoggerFactory}
@@ -38,7 +38,7 @@ object RunnableCrunch {
 
     val arrivalsKillSwitch = KillSwitches.single[FeedArrivals]
 
-    import akka.stream.scaladsl.GraphDSL.Implicits._
+    import org.apache.pekko.stream.scaladsl.GraphDSL.Implicits._
 
     val graph = GraphDSL.createGraph(
       forecastBaseArrivalsSource,

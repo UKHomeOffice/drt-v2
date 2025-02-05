@@ -2,7 +2,7 @@ package drt.users
 
 import java.util.UUID
 
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import org.apache.pekko.http.scaladsl.model.{HttpRequest, HttpResponse}
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import services.crunch.CrunchTestLike
 

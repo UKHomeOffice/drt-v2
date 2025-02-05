@@ -1,8 +1,8 @@
 package manifests
 
-import akka.pattern.StatusReply
-import akka.stream.scaladsl.Sink
-import akka.testkit.TestProbe
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.testkit.TestProbe
 import controllers.ArrivalGenerator
 import manifests.passengers.{BestAvailableManifest, ManifestLike, ManifestPaxCount}
 import services.crunch.VoyageManifestGenerator.euPassport

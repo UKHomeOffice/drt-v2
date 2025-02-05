@@ -27,11 +27,13 @@ object Settings {
   object versions {
     val scala = "2.13.16"
 
-    val drtLib = "v1077"
+    val drtLib = "v1079"
+    val drtCirium = "v324"
+    val bluebus = "v137"
 
-    val akka = "2.9.5" // last version with license key requirement
-    val akkaHttp = "10.6.3" // last version dependent on akka 2.9.5
-    val akkaPersistenceJdbc = "5.4.2"
+    val pekko = "1.1.1"
+    val pekkoHttp = "1.1.0"
+    val pekkoPersistenceJdbc = "1.1.0"
     val slick = "3.5.2"
 
     val aws = "2.30.2"
@@ -53,7 +55,6 @@ object Settings {
     val poi = "5.2.5"
     val renjin = "0.9.2725"
     val csvCommons = "1.13.0"
-    val bluebus = "v95"
     val postgres = "42.7.5"
     val sshJ = "0.39.0"
     val jodaTime = "2.12.7"
@@ -63,7 +64,6 @@ object Settings {
     val reactHandsontable = "3.1.2"
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
-    val drtCirium = "186"
     val uPickle = "3.1.5"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.12"
@@ -157,25 +157,25 @@ object Settings {
 
     "com.h2database" % "h2" % h2,
     "com.typesafe" % "config" % typesafeConfig,
-    "com.lightbend.akka" %% "akka-persistence-jdbc" % akkaPersistenceJdbc,
-    "com.typesafe.akka" %% "akka-persistence-typed" % akka,
-    "com.typesafe.akka" %% "akka-remote" % akka,
-    "com.typesafe.akka" %% "akka-persistence-testkit" % akka,
-    "com.typesafe.akka" %% "akka-actor-testkit-typed" % akka,
-    "com.typesafe.akka" %% "akka-testkit" % akka,
-    "com.typesafe.akka" %% "akka-serialization-jackson" % akka,
-    "com.typesafe.akka" %% "akka-pki" % akka,
-    "com.typesafe.akka" %% "akka-stream-typed" % akka,
-    "com.typesafe.akka" %% "akka-testkit" % akka % "test",
-    "com.typesafe.akka" %% "akka-stream-testkit" % akka % "test",
-    "com.typesafe.akka" %% "akka-persistence" % akka,
-    "com.typesafe.akka" %% "akka-persistence-query" % akka,
-    "com.typesafe.akka" %% "akka-slf4j" % akka,
-    "com.typesafe.akka" %% "akka-http" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-caching" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp,
-    "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
-    "com.typesafe.akka" %% "akka-stream" % akka,
+    "org.apache.pekko" %% "pekko-persistence-jdbc" % pekkoPersistenceJdbc,
+    "org.apache.pekko" %% "pekko-persistence-typed" % pekko,
+    "org.apache.pekko" %% "pekko-remote" % pekko,
+    "org.apache.pekko" %% "pekko-persistence-testkit" % pekko,
+    "org.apache.pekko" %% "pekko-actor-testkit-typed" % pekko,
+    "org.apache.pekko" %% "pekko-testkit" % pekko,
+    "org.apache.pekko" %% "pekko-serialization-jackson" % pekko,
+    "org.apache.pekko" %% "pekko-pki" % pekko,
+    "org.apache.pekko" %% "pekko-stream-typed" % pekko,
+    "org.apache.pekko" %% "pekko-testkit" % pekko % "test",
+    "org.apache.pekko" %% "pekko-stream-testkit" % pekko % "test",
+    "org.apache.pekko" %% "pekko-persistence" % pekko,
+    "org.apache.pekko" %% "pekko-persistence-query" % pekko,
+    "org.apache.pekko" %% "pekko-slf4j" % pekko,
+    "org.apache.pekko" %% "pekko-http" % pekkoHttp,
+    "org.apache.pekko" %% "pekko-http-caching" % pekkoHttp,
+    "org.apache.pekko" %% "pekko-http-spray-json" % pekkoHttp,
+    "org.apache.pekko" %% "pekko-http-xml" % pekkoHttp,
+    "org.apache.pekko" %% "pekko-stream" % pekko,
 
     "org.playframework.twirl" %% "twirl-api" % twirlApi,
 

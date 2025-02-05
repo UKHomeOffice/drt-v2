@@ -1,6 +1,6 @@
 package services
 
-import akka.stream.{ActorAttributes, Attributes, Supervision}
+import org.apache.pekko.stream.{ActorAttributes, Attributes, Supervision}
 import org.slf4j.{Logger, LoggerFactory}
 
 object StreamSupervision {

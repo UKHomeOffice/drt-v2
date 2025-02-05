@@ -1,7 +1,7 @@
 package controllers.application.exports
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.AuthController
 import drt.shared.CrunchApi.MillisSinceEpoch

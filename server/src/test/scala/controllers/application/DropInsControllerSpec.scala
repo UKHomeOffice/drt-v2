@@ -1,8 +1,8 @@
 package controllers.application
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
 import email.GovNotifyEmail
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import org.scalatest.BeforeAndAfterAll
 import org.scalatestplus.mockito.MockitoSugar
 import org.scalatestplus.play.PlaySpec
@@ -13,7 +13,7 @@ import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import scala.concurrent.ExecutionContext
 
 class DropInsControllerSpec extends PlaySpec with MockitoSugar with BeforeAndAfterAll {
-  implicit val system: ActorSystem = akka.actor.ActorSystem("test")
+  implicit val system: ActorSystem = ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
   implicit val ec: ExecutionContext = system.dispatcher
 

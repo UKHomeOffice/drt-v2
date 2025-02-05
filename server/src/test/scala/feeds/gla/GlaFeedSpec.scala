@@ -1,9 +1,9 @@
 package feeds.gla
 
-import akka.actor.typed.ActorRef
-import akka.http.scaladsl.model._
-import akka.stream.scaladsl.{Sink, Source}
-import akka.testkit.TestProbe
+import org.apache.pekko.actor.typed.ActorRef
+import org.apache.pekko.http.scaladsl.model._
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds._
 import drt.server.feeds.gla.GlaFeed
 import services.crunch.CrunchTestLike

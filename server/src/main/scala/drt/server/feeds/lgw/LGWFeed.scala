@@ -1,8 +1,8 @@
 package drt.server.feeds.lgw
 
-import akka.actor.{ActorSystem, typed}
-import akka.stream.scaladsl.Source
-import akka.stream.{ActorAttributes, Supervision}
+import org.apache.pekko.actor.{ActorSystem, typed}
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.stream.{ActorAttributes, Supervision}
 import bluebus.client.ServiceBusClient
 import bluebus.configuration.SBusConfig
 import drt.server.feeds.Feed.FeedTick

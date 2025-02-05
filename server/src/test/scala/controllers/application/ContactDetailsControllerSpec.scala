@@ -1,6 +1,6 @@
 package controllers.application
 
-import akka.util.Timeout
+import org.apache.pekko.util.Timeout
 import module.DrtModule
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._

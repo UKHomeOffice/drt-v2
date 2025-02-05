@@ -1,7 +1,7 @@
 package feeds.cirium
 
-import akka.stream.scaladsl.Sink
-import akka.testkit.TestProbe
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.{ArrivalsFeedSuccess, Feed}
 import org.specs2.mock.Mockito

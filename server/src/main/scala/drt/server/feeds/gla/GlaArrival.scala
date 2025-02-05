@@ -1,6 +1,6 @@
 package drt.server.feeds.gla
 
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import drt.server.feeds.AzinqArrival
 import spray.json.{DefaultJsonProtocol, RootJsonFormat}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

@@ -1,6 +1,6 @@
 package drt.server.feeds.lcy
 
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
+import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
 import drt.server.feeds.common.ProdHttpClient
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import org.specs2.mock.Mockito

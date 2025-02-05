@@ -1,6 +1,6 @@
 package services.accuracy
 
-import akka.testkit.TestProbe
+import org.apache.pekko.testkit.TestProbe
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

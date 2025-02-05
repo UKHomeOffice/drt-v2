@@ -2,9 +2,9 @@ package controllers.application.exports
 
 import actors.PartitionedPortStateActor.{FlightsRequest, GetFlightsForTerminals, PointInTimeQuery}
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import akka.NotUsed
-import akka.pattern.ask
-import akka.stream.scaladsl.Source
+import org.apache.pekko.NotUsed
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.AuthController
 import drt.shared.CrunchApi.MillisSinceEpoch

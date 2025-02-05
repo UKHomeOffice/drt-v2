@@ -1,12 +1,12 @@
 package actors
 
 import actors.daily._
-import akka.NotUsed
-import akka.actor.{Actor, ActorRef, Props}
-import akka.pattern.{StatusReply, ask, pipe}
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
-import akka.util.Timeout
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.pattern.{StatusReply, ask, pipe}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}

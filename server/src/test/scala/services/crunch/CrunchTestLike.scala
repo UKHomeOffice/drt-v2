@@ -1,15 +1,15 @@
 package services.crunch
 
-import akka.actor.{ActorRef, ActorSystem, Props, Terminated, typed}
-import akka.pattern.ask
-import akka.persistence.testkit.{PersistenceTestKitPlugin, PersistenceTestKitSnapshotPlugin}
-import akka.stream.QueueOfferResult.Enqueued
-import akka.stream.Supervision.Stop
-import akka.stream.scaladsl.SourceQueueWithComplete
-import akka.stream.testkit.TestSubscriber.Probe
-import akka.stream.{Materializer, QueueOfferResult}
-import akka.testkit.{TestKit, TestProbe}
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, Terminated, typed}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.persistence.testkit.{PersistenceTestKitPlugin, PersistenceTestKitSnapshotPlugin}
+import org.apache.pekko.stream.QueueOfferResult.Enqueued
+import org.apache.pekko.stream.Supervision.Stop
+import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
+import org.apache.pekko.stream.testkit.TestSubscriber.Probe
+import org.apache.pekko.stream.{Materializer, QueueOfferResult}
+import org.apache.pekko.testkit.{TestKit, TestProbe}
+import org.apache.pekko.util.Timeout
 import com.typesafe.config.ConfigFactory
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
