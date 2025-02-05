@@ -98,7 +98,6 @@ class ShiftSummaryStaffingHandler[M](modelRW: ModelRW[M, Pot[Seq[ShiftSummaryDat
       updated(Pot.empty, apiCallEffect)
 
     case SetShiftSummaryStaffing(staffShifts) =>
-      //      println(s"staffShifts: $staffShifts......")
       updated(Ready(staffShifts))
 
     case UpdateShiftSummaryStaffingWithAssignment(shiftAssignments, port, terminal, viewDate, interval, dayRange) =>

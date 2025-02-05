@@ -27,7 +27,7 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
     override def read(json: JsValue): LocalDate = json.asJsObject.getFields("year", "month", "day") match {
       case Seq(JsNumber(year), JsNumber(month), JsNumber(day)) =>
         LocalDate(year.toInt, month.toInt, day.toInt)
-      case _ => throw new DeserializationException("Expected LocalDate as JsObject with year, month, and day")
+      case _ => throw DeserializationException("Expected LocalDate as JsObject with year, month, and day")
     }
   }
 
@@ -38,9 +38,10 @@ trait StaffShiftsJson extends DefaultJsonProtocol {
   implicit val shiftSummaryStaffings: RootJsonFormat[ShiftSummaryStaffing] = jsonFormat3(ShiftSummaryStaffing)
   implicit val shiftSummaryStaffingSeqFormat: RootJsonFormat[Seq[ShiftSummaryStaffing]] = new RootJsonFormat[Seq[ShiftSummaryStaffing]] {
     override def write(seq: Seq[ShiftSummaryStaffing]): JsValue = JsArray(seq.map(_.toJson).toVector)
+
     override def read(json: JsValue): Seq[ShiftSummaryStaffing] = json match {
       case JsArray(elements) => elements.map(_.convertTo[ShiftSummaryStaffing])
-      case _ => throw new DeserializationException("Expected Seq[ShiftSummaryStaffing] as JsArray")
+      case _ => throw DeserializationException("Expected Seq[ShiftSummaryStaffing] as JsArray")
     }
   }
 
@@ -139,42 +140,38 @@ class ShiftsController @Inject()(cc: ControllerComponents,
   def getShiftsWithStaffAssignments(port: String, terminal: String, viewDate: String, interval: Int, dayRange: String): Action[AnyContent] = Action.async {
     ctrl.shiftsService.getShifts(port, terminal).map { shifts =>
       staffAssignmentsService.allStaffAssignments.map { staffAssignments =>
-        val shiftSummaryStaffings: Seq[ShiftSummaryStaffing] = ShiftsHelpers.generateShiftSummaries(SDate(viewDate),
-          dayRange,
-          Terminal(terminal),
-          shifts,
-          staffAssignments,
-          interval)
-        Ok(shiftSummaryStaffings.toJson.compactPrint)
+        shiftsWithStaffAssignments(staffAssignments, terminal, viewDate, interval, dayRange, shifts)
       }
     }.flatten
   }
 
-  def saveShiftsWithStaffAssignments(port: String, terminal: String, viewDate: String, interval: Int, dayRange: String) = Action.async {
+  private def shiftsWithStaffAssignments(staffAssignments: ShiftAssignments,
+                                         terminal: String,
+                                         viewDate: String,
+                                         interval: Int,
+                                         dayRange: String,
+                                         shifts: Seq[Shift]) = {
+    val shiftSummaryStaffing: Seq[ShiftSummaryStaffing] = ShiftsHelpers.generateShiftSummaries(SDate(viewDate),
+      dayRange,
+      Terminal(terminal),
+      shifts,
+      staffAssignments,
+      interval)
+    Ok(shiftSummaryStaffing.toJson.compactPrint)
+  }
+
+  def saveShiftsWithStaffAssignments(port: String, terminal: String, viewDate: String, interval: Int, dayRange: String): Action[AnyContent] = Action.async {
     request =>
       request.body.asText match {
         case Some(text) =>
           val shiftAssignments = read[ShiftAssignments](text)
           ctrl.shiftsService.getShifts(port, terminal).map { shifts =>
-            //      staffAssignmentsService.allStaffAssignments.map { staffAssignments =>
-            //        val shiftsWithStaff = StaffingUtil.addStaffToShifts(shifts, staffAssignments)
-            val shiftSummaryStaffings: Seq[ShiftSummaryStaffing] = ShiftsHelpers.generateShiftSummaries(SDate(viewDate),
-              dayRange,
-              Terminal(terminal),
-              shifts,
-              shiftAssignments,
-              interval)
-            Ok(shiftSummaryStaffings.toJson.compactPrint)
+            shiftsWithStaffAssignments(shiftAssignments, terminal, viewDate, interval, dayRange, shifts)
           }
-//          staffAssignmentsService
-//            .updateStaffAssignments(shifts.assignments)
-//            .map(allShifts => Accepted(write(allShifts)))
+
         case None =>
           Future.successful(BadRequest)
       }
-
-
-
   }
 
   def getStaffAssignments(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {

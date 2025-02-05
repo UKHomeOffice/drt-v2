@@ -12,7 +12,6 @@ class ShiftsHelpersSpec extends Specification {
     "return correct number of days for monthly dayRange" in {
       val viewingDate = SDate("2025-02-04")
       val result = daysCountByDayRange("monthly", viewingDate)
-      println(s"result = $result")
       result === 28
     }
 
@@ -118,7 +117,6 @@ class ShiftsHelpersSpec extends Specification {
     }
 
     "assignmentsForShift should generate correct row and col values for daily dayRange" in {
-      val firstDay: SDateLike = SDate("2023-10-01T00:00:00Z")
       val daysCount = 1
       val interval = 60
       val terminal = Terminal("T1")
@@ -209,8 +207,6 @@ class ShiftsHelpersSpec extends Specification {
     }
 
     "createStaffTableEntries for first day of month should generate correct assignments for shifts ending after midnight" in {
-//      val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
-//      val dayRange = "monthly"
       val interval = 60
       val terminal = Terminal("T1")
       val staffShift = Shift(
@@ -253,8 +249,8 @@ class ShiftsHelpersSpec extends Specification {
     }
 
     "createStaffTableEntries for other day of month should generate correct assignments for shifts ending after midnight" in {
-//      val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
-//      val dayRange = "monthly"
+      //      val viewingDate: SDateLike = SDate("2023-10-01T00:00:00Z")
+      //      val dayRange = "monthly"
       val interval = 60
       val terminal = Terminal("T1")
       val staffShift = Shift(

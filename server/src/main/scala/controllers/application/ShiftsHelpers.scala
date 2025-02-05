@@ -2,7 +2,7 @@ package controllers.application
 
 import drt.shared.{Shift, ShiftAssignments, StaffAssignmentLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 case class ShiftDetails(shift: Shift,
                         terminal: Terminal,
@@ -66,13 +66,13 @@ object ShiftsHelpers {
     }
   }
 
-  def firstDayOfWeek(date: SDateLike): SDateLike = {
+  private def firstDayOfWeek(date: SDateLike): SDateLike = {
     val dayOfWeek = date.getDayOfWeek
     val daysToSubtract = if (dayOfWeek == 1) 0 else dayOfWeek - 1
     date.addDays(-daysToSubtract)
   }
 
-  def firstDayOfMonth(today: SDateLike): SDateLike = SDate(y = today.getFullYear, m = today.getMonth, d = 1)
+  private def firstDayOfMonth(today: SDateLike): SDateLike = SDate(y = today.getFullYear, m = today.getMonth, d = 1)
 
   val firstDayByDayRange: (String, SDateLike) => SDateLike = { (dayRange, viewingDate) =>
     dayRange match {
@@ -132,11 +132,10 @@ object ShiftsHelpers {
     val Array(shiftStartHour, shiftStartMinute) = shiftDetails.shift.startTime.split(":").map(_.toInt)
     val Array(shiftEndHour, shiftEndMinute) = shiftDetails.shift.endTime.split(":").map(_.toInt)
     var currentDay = startDate
-    println(s"........createStaffTableEntries: startDate: ${startDate.toISOString}, daysCount: $daysCount, interval: $interval, shiftStartHour: $shiftStartHour shiftStartMinute: $shiftStartMinute shiftEndHour: $shiftEndHour shiftEndMinute: $shiftEndMinute")
-    //    println(s"shift details $shiftDetails")
+
     val isShiftEndAfterMidnight = shiftEndHour < shiftStartHour || (shiftEndHour == shiftStartHour && shiftEndMinute < shiftStartMinute)
     //For all the days in the period, create the staff table entries for the shift
-    val data = (1 to daysCount).flatMap { day =>
+    (1 to daysCount).flatMap { day =>
       val shiftStartTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftStartHour, shiftStartMinute)
       val shiftEndTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
       val midnightNextDay = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0).addDays(1)
@@ -155,10 +154,8 @@ object ShiftsHelpers {
 
       val beforeMidnightEntries = staffTableEntriesForShift(beforeMidnightPeriod, shiftDetails)
 
-      println(s"beforeMidnightEntries $beforeMidnightEntries")
-
       val isFirstNightShiftForMonth = day == 1 && isShiftEndAfterMidnight && daysCount > 7
-      val beforeFirstDateStartTime = if (isShiftEndAfterMidnight) {
+      val fromMidNightDateStartTime = if (isShiftEndAfterMidnight) {
         val midnightStart = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0)
         val endTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
 
@@ -172,26 +169,10 @@ object ShiftsHelpers {
         staffTableEntriesForShift(firstDayMidnightToStartTimePeriod, shiftDetails)
       } else Seq.empty
 
-//      println(s"........createStaffTableEntries: beforeFirstDateStartTime: $beforeFirstDateStartTime")
-
-//      val afterMidnightEntries = if (isShiftEndAfterMidnight) {
-//        val midnightStart = midnightNextDay
-//        val afterMidnightPeriod = beforeMidnightPeriod.copy(
-//          start = midnightStart,
-//          end = shiftEndTime.addDays(1),
-//          isFirstDayForShiftEndAfterMidnight = false,
-//          addToIndex = if(isShiftEndAfterMidnight) beforeFirstDateStartTime.size else beforeMidnightEntries.size
-//        )
-//        staffTableEntriesForShift(afterMidnightPeriod, shiftDetails)
-//      } else Seq.empty
-
-//      println(s"afterMidnightEntries $afterMidnightEntries")
       currentDay = currentDay.addDays(1)
 
-      beforeMidnightEntries ++ beforeFirstDateStartTime //++ afterMidnightEntries
+      beforeMidnightEntries ++ fromMidNightDateStartTime
     }
-//    data.map(a => println(s"........createStaffTableEntries: column: ${a.column}, row: ${a.row}, name: ${a.name}, staffNumber: ${a.staffNumber}, startTime: ${a.startTime}, endTime: ${a.endTime}"))
-    data
   }
 
   def staffTableEntriesForShift(shiftPeriod: ShiftPeriod, shiftDetails: ShiftDetails): Seq[StaffTableEntry] = {
@@ -211,9 +192,7 @@ object ShiftsHelpers {
                              shifts: Seq[Shift],
                              shiftAssignments: ShiftAssignments,
                              interval: Int): Seq[ShiftSummaryStaffing] = {
-//    println(s"........shift $shifts")
-    //    println(s"generateShiftSummaries: viewingDate: ${viewingDate.toISOString}, dayRange: $dayRange, terminal: $terminal, shifts: $shifts, shiftAssignments: $shiftAssignments, interval: $interval")
-    val shiftWithAssignments = shifts.sortBy(_.startTime).zipWithIndex.map { case (s, index) =>
+    shifts.sortBy(_.startTime).zipWithIndex.map { case (s, index) =>
       ShiftSummaryStaffing(
         index = index,
         shiftSummary = ShiftSummary(s.shiftName, s.staffNumber, s.startTime, s.endTime),
@@ -223,8 +202,5 @@ object ShiftsHelpers {
           ShiftDetails(s, terminal, shiftAssignments))
       )
     }
-
-//    shiftWithAssignments.map(a => println(a.index, a.shiftSummary, a.staffTableEntries.map(b => println(b.column, b.row, b.name, b.staffNumber, b.startTime, b.endTime))))
-    shiftWithAssignments
   }
 }
