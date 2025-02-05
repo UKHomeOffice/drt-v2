@@ -280,8 +280,8 @@ object MonthlyShifts {
                 cancelHandler = () => {
                   scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
                 })))),
-            <.div(^.className := "staffing-table",
-              <.div(^.className := "staffing-table-content",
+            <.div(^.className := "shifts-table",
+              <.div(^.className := "shifts-table-content",
                 ShiftHotTableViewComponent(ShiftHotTableViewProps(
                   ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
                   dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
