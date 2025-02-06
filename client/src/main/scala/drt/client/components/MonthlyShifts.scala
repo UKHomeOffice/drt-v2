@@ -246,15 +246,15 @@ object MonthlyShifts {
                     ^.onClick ==> handleShiftEditForm),
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                    ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments))
+                    ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments)),
+                  <.div(^.className := "staffing-controls-toggle",
+                    MuiButton(color = Color.secondary, variant = "outlined")
+                    (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Toggle Shift view"),
+                      ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(true)))
+                    )
+                  )
                 ),
               ),
-              <.div(^.className := "staffing-controls-toggle",
-                MuiButton(color = Color.secondary, variant = "outlined")
-                (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Toggle Shift view"),
-                  ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(true)))
-                )
-              )
             ),
             MuiSwipeableDrawer(open = state.showEditStaffForm,
               anchor = "right",
@@ -281,8 +281,8 @@ object MonthlyShifts {
                 cancelHandler = () => {
                   scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
                 })))),
-            <.div(^.className := "staffing-table",
-              <.div(^.className := "staffing-table-content",
+            <.div(^.className := "shifts-table",
+              <.div(^.className := "shifts-table-content",
                 ShiftHotTableViewComponent(ShiftHotTableViewProps(
                   ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
                   dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
