@@ -133,6 +133,8 @@ object TerminalComponent {
                 rcp { mp =>
                   val (mt, ps, ai, slas, manSums, arrSources, simRes, fhl) = mp()
 
+                  val hideAddShiftsMessage = shifts.nonEmpty || !featureFlags.enableShiftPlanningChange
+
                   props.terminalPageTab.mode match {
                     case Current =>
                       val headerClass = if (terminalModel.timeMachineEnabled) "terminal-content-header__time-machine" else ""
@@ -234,11 +236,11 @@ object TerminalComponent {
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" =>
                       <.div(drt.client.components.ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, (shifts.nonEmpty || !featureFlags.enableShiftPlanningChange), false))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, false))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.nonEmpty =>
                       if (props.terminalPageTab.shiftViewEnabled)
-                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, (shifts.nonEmpty || !featureFlags.enableShiftPlanningChange), true))
+                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, true))
                       else
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig))
 
