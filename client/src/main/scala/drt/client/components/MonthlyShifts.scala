@@ -3,7 +3,7 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ShiftViewEnabled, UrlDateParameter, UrlDayRangeType}
-import drt.client.actions.Actions.{GetAllStaffShifts, UpdateStaffShifts}
+import drt.client.actions.Actions.{GetAllStaffAssignments, UpdateStaffShifts}
 import drt.client.components.MonthlyShiftsUtil.{generateShiftSummaries, updateAssignments, updateChangeAssignment}
 import drt.client.components.StaffingUtil.navigationDates
 import drt.client.logger.{Logger, LoggerFactory}
@@ -145,14 +145,15 @@ object MonthlyShifts {
           staffShifts <- model.staffShiftsPot
         } yield {
           if (monthOfShifts != state.shifts) {
-            val initialShift: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(viewingDate,
+            val shiftSummaries = MonthlyShiftsUtil.generateShiftSummaries(
+              viewingDate,
               props.terminalPageTab.dayRangeType.getOrElse("monthly"),
               props.terminalPageTab.terminal,
               staffShifts,
               ShiftAssignments(monthOfShifts.forTerminal(props.terminalPageTab.terminal)),
               props.timeSlotMinutes)
             scope.modState(state => state.copy(shifts = monthOfShifts,
-              shiftsData = initialShift)).runNow()
+              shiftsData = shiftSummaries)).runNow()
           }
           <.div()
         }
@@ -336,7 +337,6 @@ object MonthlyShifts {
     )
   }
 
-
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("ShiftStaffing")
     .initialStateFromProps(_ => State(showEditStaffForm = false,
       showStaffSuccess = false,
@@ -344,15 +344,12 @@ object MonthlyShifts {
       shifts = ShiftAssignments.empty))
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetAllStaffShifts)))
     .build
-
 
   private def updatedConvertedShiftAssignments(changes: Seq[StaffAssignment],
                                                terminalName: Terminal): Seq[StaffAssignment] = changes.map { change =>
     StaffAssignment(change.name, terminalName, change.start, change.end, change.numberOfStaff, None)
   }
-
 
   private def maybeClockChangeDate(viewingDate: SDateLike): Option[SDateLike] = {
     val lastDay = SDate.lastDayOfMonth(viewingDate)

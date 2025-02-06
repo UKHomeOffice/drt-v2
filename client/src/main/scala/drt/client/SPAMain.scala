@@ -223,9 +223,9 @@ object SPAMain {
 
     def loadAction: Action = mode match {
       case Staffing =>
-        GetAllShifts
+        GetAllLegacyStaffAssignments
       case Shifts =>
-        GetAllStaffShifts
+        GetAllStaffAssignments
       case _ =>
         SetViewMode(viewMode)
     }

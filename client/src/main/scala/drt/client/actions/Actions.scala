@@ -95,7 +95,7 @@ object Actions {
 
   case class SetAllShifts(allShifts: ShiftAssignments) extends Action
 
-  case object GetAllShifts extends Action
+  case object GetAllLegacyStaffAssignments extends Action
 
   case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment]) extends Action
 
@@ -105,7 +105,7 @@ object Actions {
 
   case class SetAllStaffShifts(allShifts: ShiftAssignments) extends Action
 
-  case object GetAllStaffShifts extends Action
+  case object GetAllStaffAssignments extends Action
 
   case class UpdateStaffShifts(shiftsToUpdate: Seq[StaffAssignment]) extends Action
 
