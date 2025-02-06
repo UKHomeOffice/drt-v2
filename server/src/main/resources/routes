@@ -73,7 +73,7 @@ POST          /shifts/save                                                      
 GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getShifts(port: String, terminal: String)
 GET           /shifts/:port/:terminal/:shiftName                                      controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
 GET           /shifts/staff-assignments/:port/:terminal/:viewDate/:interval/:dayRange controllers.application.ShiftsController.getShiftsWithStaffAssignments(port: String, terminal: String, viewDate: String, interval: Int, dayRange: String)
-POST          /shifts/staff-assignments/:port/:terminal/:viewDate/:interval/:dayRange controllers.application.ShiftsController.saveShiftsWithStaffAssignments(port: String, terminal: String, viewDate: String, interval: Int, dayRange: String)
+POST          /shifts/staff-assignments/:port/:terminal/:viewDate/:interval/:dayRange controllers.application.ShiftsController.generateShiftSummariesWithStaffAssignments(port: String, terminal: String, viewDate: String, interval: Int, dayRange: String)
 POST          /staff-assignments                                                      controllers.application.ShiftsController.saveStaffAssignments
 GET           /staff-assignments                                                      controllers.application.ShiftsController.getAllStaffAssignments
 GET           /staff-assignments/:localDate                                           controllers.application.ShiftsController.getStaffAssignments(localDate: String)

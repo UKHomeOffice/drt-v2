@@ -11,7 +11,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
-import drt.client.services.handlers.{ShiftSummaryData, UpdateStaffShiftsWithSummary}
+import drt.client.services.handlers.UpdateStaffAssignments
 import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
@@ -128,7 +128,8 @@ object MonthlyShifts {
           GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}",
             "Save Monthly Staffing",
             s"updated staff for ${whatDayChanged(changedAssignments)} $updatedMonth")
-          SPACircuit.dispatch(UpdateStaffShiftsWithSummary(changedShiftSlots,
+          SPACircuit.dispatch(UpdateStaffAssignments(
+            changedShiftSlots,
             props.terminalPageTab.portCodeStr,
             props.terminalPageTab.terminal.toString,
             props.terminalPageTab.localDateFromUrl,
@@ -146,11 +147,9 @@ object MonthlyShifts {
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
-        val content = for {
-          shiftSummaryStaffings <- model.shiftSummaryStaffings
-        } yield {
+        val content = model.shiftSummaryStaffings.map { shiftSummaryStaffings =>
           if (shiftSummaryStaffings != state.shiftsData && state.changedAssignments.isEmpty) {
-            scope.modState(state => state.copy(shiftsData = shiftSummaryStaffings)).runNow()
+            scope.modState(_.copy(shiftsData = shiftSummaryStaffings)).runNow()
           }
           <.div()
         }
@@ -185,7 +184,7 @@ object MonthlyShifts {
               ))
             },
             <.div(^.className := "staffing-controls-save",
-              <.div(^.style := js.Dictionary("display" -> "flex", "align-items" -> "center"),
+              <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center"),
                 <.span(^.className := "staffing-controls-title",
                   <.strong(props.terminalPageTab.dayRangeType match {
                     case Some("monthly") => s"Staff numbers: ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
@@ -286,7 +285,7 @@ object MonthlyShifts {
                   ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
                   dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
                   interval = props.timeSlotMinutes,
-                  initialShifts = state.shiftsData.map(_.toClientShiftSummaryStaffing),
+                  initialShifts = state.shiftsData.map(ShiftSummaryStaffing.toClientShiftSummaryStaffing),
                   handleSaveChanges = (shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]) => {
                     val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
                     val updateShifts = updateAssignments(shifts, updateChanges, 15)

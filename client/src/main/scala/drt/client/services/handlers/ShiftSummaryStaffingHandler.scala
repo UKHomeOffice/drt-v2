@@ -5,7 +5,7 @@ import diode.{ActionResult, Effect, ModelRW, NoAction}
 import diode.data.{Pot, Ready}
 import drt.client.logger.log
 import drt.client.services.DrtApi
-import drt.shared.ShiftAssignments
+import drt.shared.{ShiftAssignments, ShiftSummaryData}
 import uk.gov.homeoffice.drt.time.LocalDate
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import scala.concurrent.Future

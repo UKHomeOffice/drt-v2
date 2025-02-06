@@ -1,5 +1,6 @@
 package controllers.application
 
+import drt.shared.ShiftSummaryData.{ShiftDate, ShiftSummary, ShiftSummaryStaffing, StaffTableEntry}
 import drt.shared.{Shift, ShiftAssignments, StaffAssignmentLike}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
@@ -7,38 +8,6 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 case class ShiftDetails(shift: Shift,
                         terminal: Terminal,
                         shiftAssignments: ShiftAssignments)
-
-case class ShiftDate(year: Int, month: Int, day: Int, hour: Int, minute: Int) {
-  def isEqual(shiftDate: ShiftDate): Boolean = {
-    year == shiftDate.year &&
-      month == shiftDate.month &&
-      day == shiftDate.day &&
-      hour == shiftDate.hour &&
-      minute == shiftDate.minute
-  }
-}
-
-case class StaffTableEntry(
-                            column: Int,
-                            row: Int,
-                            name: String,
-                            staffNumber: Int,
-                            startTime: ShiftDate,
-                            endTime: ShiftDate
-                          )
-
-case class ShiftSummary(
-                         name: String,
-                         defaultStaffNumber: Int,
-                         startTime: String,
-                         endTime: String
-                       )
-
-case class ShiftSummaryStaffing(
-                                 index: Int,
-                                 shiftSummary: ShiftSummary,
-                                 staffTableEntries: Seq[StaffTableEntry]
-                               )
 
 case class ShiftPeriod(start: SDateLike,
                        end: SDateLike,
@@ -133,7 +102,7 @@ object ShiftsHelpers {
     val Array(shiftEndHour, shiftEndMinute) = shiftDetails.shift.endTime.split(":").map(_.toInt)
     var currentDay = startDate
 
-    val isShiftEndAfterMidnight = shiftEndHour < shiftStartHour || (shiftEndHour == shiftStartHour && shiftEndMinute < shiftStartMinute)
+    val shiftEndsAfterMidnight = shiftEndHour < shiftStartHour || (shiftEndHour == shiftStartHour && shiftEndMinute < shiftStartMinute)
     //For all the days in the period, create the staff table entries for the shift
     (1 to daysCount).flatMap { day =>
       val shiftStartTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftStartHour, shiftStartMinute)
@@ -141,12 +110,12 @@ object ShiftsHelpers {
       val midnightNextDay = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0).addDays(1)
       val beforeMidnightPeriod = ShiftPeriod(
         start = shiftStartTime,
-        end = if (isShiftEndAfterMidnight) midnightNextDay else shiftEndTime,
+        end = if (shiftEndsAfterMidnight) midnightNextDay else shiftEndTime,
         endHour = shiftEndHour,
         endMinute = shiftEndMinute,
         interval = interval,
         day = day,
-        isShiftEndAfterMidnight = isShiftEndAfterMidnight,
+        isShiftEndAfterMidnight = shiftEndsAfterMidnight,
         isFirstDayForShiftEndAfterMidnight = false,
         addToIndex = 0
       )
@@ -154,8 +123,8 @@ object ShiftsHelpers {
 
       val beforeMidnightEntries = staffTableEntriesForShift(beforeMidnightPeriod, shiftDetails)
 
-      val isFirstNightShiftForMonth = day == 1 && isShiftEndAfterMidnight && daysCount > 7
-      val fromMidNightDateStartTime = if (isShiftEndAfterMidnight) {
+      val isFirstNightShiftForMonth = day == 1 && shiftEndsAfterMidnight && daysCount > 7
+      val fromMidNightDateStartTime = if (shiftEndsAfterMidnight) {
         val midnightStart = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, 0, 0)
         val endTime = SDate(currentDay.getFullYear, currentDay.getMonth, currentDay.getDate, shiftEndHour, shiftEndMinute)
 

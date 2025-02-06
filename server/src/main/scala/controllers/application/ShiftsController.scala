@@ -1,6 +1,7 @@
 package controllers.application
 
 import actors.persistent.staffing.StaffingUtil
+import drt.shared.ShiftSummaryData.{ShiftDate, ShiftSummary, ShiftSummaryStaffing, StaffTableEntry}
 import drt.shared.{Shift, ShiftAssignments}
 import play.api.mvc._
 import spray.json._
@@ -160,7 +161,7 @@ class ShiftsController @Inject()(cc: ControllerComponents,
     Ok(shiftSummaryStaffing.toJson.compactPrint)
   }
 
-  def saveShiftsWithStaffAssignments(port: String, terminal: String, viewDate: String, interval: Int, dayRange: String): Action[AnyContent] = Action.async {
+  def generateShiftSummariesWithStaffAssignments(port: String, terminal: String, viewDate: String, interval: Int, dayRange: String): Action[AnyContent] = Action.async {
     request =>
       request.body.asText match {
         case Some(text) =>

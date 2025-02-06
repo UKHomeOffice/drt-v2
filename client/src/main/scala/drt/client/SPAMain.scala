@@ -225,7 +225,7 @@ object SPAMain {
 
     def dateFromUrlOrNow: SDateLike = maybeViewDate.map(ld => SDate(ld)).getOrElse(SDate.now())
 
-    def localDateFromUrl : LocalDate =   LocalDate(dateFromUrlOrNow.getFullYear, dateFromUrlOrNow.getMonth, dateFromUrlOrNow.getDate)
+    def localDateFromUrl: LocalDate =   LocalDate(dateFromUrlOrNow.getFullYear, dateFromUrlOrNow.getMonth, dateFromUrlOrNow.getDate)
 
     def updateRequired(p: TerminalPageTabLoc): Boolean =
       (terminal != p.terminal) || (maybeViewDate != p.maybeViewDate) || (mode != p.mode) || (maybeTimeMachineDate != p.maybeTimeMachineDate)

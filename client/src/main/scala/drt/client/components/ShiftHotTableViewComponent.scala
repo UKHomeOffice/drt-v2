@@ -3,8 +3,8 @@ package drt.client.components
 import drt.client.components.ShiftDate.toShiftDateData
 import drt.client.components.ShiftSummary.toShiftSummaryData
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.ShiftSummaryData
 import drt.shared.CrunchApi.MillisSinceEpoch
+import drt.shared.ShiftSummaryData
 import japgolly.scalajs.react.{Children, JsFnComponent}
 import japgolly.scalajs.react.vdom.VdomElement
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
@@ -41,6 +41,13 @@ trait ShiftDate extends js.Object {
 }
 
 object ShiftDate {
+  def toClientShiftDate(shiftDate: ShiftSummaryData.ShiftDate): ShiftDate = ShiftDate(
+    shiftDate.year,
+    shiftDate.month,
+    shiftDate.day,
+    shiftDate.hour,
+    shiftDate.minute)
+
   def toShiftDateData(shiftDate: ShiftDate): ShiftSummaryData.ShiftDate = ShiftSummaryData.ShiftDate(
     shiftDate.year,
     shiftDate.month,
@@ -51,14 +58,6 @@ object ShiftDate {
 
   def toString(shiftDate: ShiftDate): String = {
     s"${shiftDate.year}-${shiftDate.month}-${shiftDate.day} ${shiftDate.hour}:${shiftDate.minute}"
-  }
-
-  def isEqual(shiftDate1: ShiftDate, shiftDate2: ShiftDate): Boolean = {
-    shiftDate1.year == shiftDate2.year &&
-      shiftDate1.month == shiftDate2.month &&
-      shiftDate1.day == shiftDate2.day &&
-      shiftDate1.hour == shiftDate2.hour &&
-      shiftDate1.minute == shiftDate2.minute
   }
 
   def apply(year: Int, month: Int, day: Int, hour: Int, minute: Int): ShiftDate = {
@@ -81,7 +80,10 @@ trait ShiftSummary extends js.Object {
 }
 
 object ShiftSummary {
-  def toShiftSummaryData(shiftSummary:ShiftSummary): ShiftSummaryData.ShiftSummary = ShiftSummaryData.ShiftSummary(
+  def toClientShiftSummary(shiftSummary: ShiftSummaryData.ShiftSummary): ShiftSummary =
+    ShiftSummary(shiftSummary.name, shiftSummary.defaultStaffNumber, shiftSummary.startTime, shiftSummary.endTime)
+
+  def toShiftSummaryData(shiftSummary: ShiftSummary): ShiftSummaryData.ShiftSummary = ShiftSummaryData.ShiftSummary(
     shiftSummary.name,
     shiftSummary.defaultStaffNumber,
     shiftSummary.startTime,
@@ -109,6 +111,15 @@ trait StaffTableEntry extends js.Object {
 }
 
 object StaffTableEntry {
+  def toClientStaffTableEntry(staffTableEntry: ShiftSummaryData.StaffTableEntry): StaffTableEntry = {
+    StaffTableEntry(staffTableEntry.column,
+      staffTableEntry.row,
+      staffTableEntry.name,
+      staffTableEntry.staffNumber,
+      ShiftDate.toClientShiftDate(staffTableEntry.startTime),
+      ShiftDate.toClientShiftDate(staffTableEntry.endTime))
+  }
+
   def toStaffTableEntryData(staffTableEntry: StaffTableEntry): ShiftSummaryData.StaffTableEntry = {
     ShiftSummaryData.StaffTableEntry(
       staffTableEntry.column,
@@ -163,6 +174,12 @@ trait ShiftSummaryStaffing extends js.Object {
 
 
 object ShiftSummaryStaffing {
+
+  def toClientShiftSummaryStaffing(shiftSummaryStaffing: ShiftSummaryData.ShiftSummaryStaffing): ShiftSummaryStaffing =
+    ShiftSummaryStaffing(shiftSummaryStaffing.index,
+      ShiftSummary.toClientShiftSummary(shiftSummaryStaffing.shiftSummary),
+      shiftSummaryStaffing.staffTableEntries.map(StaffTableEntry.toClientStaffTableEntry))
+
   def toStaffTableEntries(shiftSummaryStaffing: ShiftSummaryStaffing): ShiftSummaryData.ShiftSummaryStaffing = {
     ShiftSummaryData.ShiftSummaryStaffing(
       shiftSummaryStaffing.index,
