@@ -174,6 +174,13 @@ object SPAMain {
 
     def dayRangeType = queryParams.get(UrlDayRangeType.paramName)
 
+    def subModeInterval = subMode match {
+      case "60" => 60
+      case "30" => 30
+      case "15" => 15
+      case _ => 60
+    }
+
     val maybeViewDate: Option[LocalDate] = queryParams.get(UrlDateParameter.paramName)
       .filter(_.matches(".+"))
       .flatMap(dateStr => Try {
@@ -217,6 +224,8 @@ object SPAMain {
     def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
 
     def dateFromUrlOrNow: SDateLike = maybeViewDate.map(ld => SDate(ld)).getOrElse(SDate.now())
+
+    def localDateFromUrl: LocalDate =   LocalDate(dateFromUrlOrNow.getFullYear, dateFromUrlOrNow.getMonth, dateFromUrlOrNow.getDate)
 
     def updateRequired(p: TerminalPageTabLoc): Boolean =
       (terminal != p.terminal) || (maybeViewDate != p.maybeViewDate) || (mode != p.mode) || (maybeTimeMachineDate != p.maybeTimeMachineDate)

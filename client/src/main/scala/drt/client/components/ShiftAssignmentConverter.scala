@@ -1,17 +1,17 @@
 package drt.client.components
 
-import drt.shared.StaffAssignment
+import drt.shared.{ShiftSummaryData, StaffAssignment}
 import drt.client.services.JSDateConversions.SDate
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 
 object ShiftAssignmentConverter {
-  def toStaffAssignment(shiftAssignment: StaffTableEntry, terminal: Terminal): StaffAssignment = {
+  def toStaffAssignment(staffTableEntry: ShiftSummaryData.StaffTableEntry, terminal: Terminal): StaffAssignment = {
     StaffAssignment(
-      name = shiftAssignment.name,
+      name = staffTableEntry.name,
       terminal = terminal,
-      start = SDate(shiftAssignment.startTime.year, shiftAssignment.startTime.month, shiftAssignment.startTime.day, shiftAssignment.startTime.hour, shiftAssignment.startTime.minute).millisSinceEpoch,
-      end = SDate(shiftAssignment.endTime.year, shiftAssignment.endTime.month, shiftAssignment.endTime.day, shiftAssignment.endTime.hour, shiftAssignment.endTime.minute).millisSinceEpoch,
-      numberOfStaff = shiftAssignment.staffNumber,
+      start = SDate(staffTableEntry.startTime.year, staffTableEntry.startTime.month, staffTableEntry.startTime.day, staffTableEntry.startTime.hour, staffTableEntry.startTime.minute).millisSinceEpoch,
+      end = SDate(staffTableEntry.endTime.year, staffTableEntry.endTime.month, staffTableEntry.endTime.day, staffTableEntry.endTime.hour, staffTableEntry.endTime.minute).millisSinceEpoch,
+      numberOfStaff = staffTableEntry.staffNumber,
       createdBy = None
     )
   }
