@@ -234,8 +234,8 @@ object MonthlyShiftsUtilSpec extends TestSuite {
       val expected = Seq(
         StaffTableEntry(1, 0, "Night", 5, ShiftDate(2023, 10, 1, 22, 0), ShiftDate(2023, 10, 1, 23, 0)),
         StaffTableEntry(1, 1, "Night", 5, ShiftDate(2023, 10, 1, 23, 0), ShiftDate(2023, 10, 2, 0, 0)),
-        StaffTableEntry(1, 2, "Night", 5, ShiftDate(2023, 10, 2, 0, 0), ShiftDate(2023, 10, 2, 1, 0)),
-        StaffTableEntry(1, 3, "Night", 5, ShiftDate(2023, 10, 2, 1, 0), ShiftDate(2023, 10, 2, 2, 0))
+        StaffTableEntry(1, 2, "Night", 5, ShiftDate(2023, 10, 1, 0, 0), ShiftDate(2023, 10, 1, 1, 0)),
+        StaffTableEntry(1, 3, "Night", 5, ShiftDate(2023, 10, 1, 1, 0), ShiftDate(2023, 10, 1, 2, 0))
       )
 
       assert(result.size == expected.size)
