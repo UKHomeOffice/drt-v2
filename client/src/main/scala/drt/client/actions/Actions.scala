@@ -93,7 +93,7 @@ object Actions {
 
   case class GetShifts(viewMode: ViewMode) extends Action
 
-  case class SetAllShifts(allShifts: ShiftAssignments) extends Action
+  case class SetAllLegacyStaffAssignments(allShifts: ShiftAssignments) extends Action
 
   case object GetAllLegacyStaffAssignments extends Action
 
