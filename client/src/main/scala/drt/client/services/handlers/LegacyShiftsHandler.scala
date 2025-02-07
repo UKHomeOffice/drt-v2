@@ -46,7 +46,7 @@ class LegacyShiftsHandler[M](getCurrentViewMode: () => ViewMode, modelRW: ModelR
 
     case UpdateShifts(assignments) =>
       val futureResponse = DrtApi.post("legacy-staff-assignments", write(ShiftAssignments(assignments)))
-        .map(r => SetAllShifts(read[ShiftAssignments](r.responseText)))
+        .map(r => SetAllLegacyStaffAssignments(read[ShiftAssignments](r.responseText)))
         .recoverWith {
           case _ =>
             log.error(s"Failed to save Shifts. Re-requesting after ${PollDelay.recoveryDelay}")

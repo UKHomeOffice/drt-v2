@@ -2,7 +2,7 @@ package drt.client.services.handlers
 
 import diode._
 import diode.data.{Pending, Pot, Ready}
-import drt.client.actions.Actions.{GetAllLegacyStaffAssignments, GetAllStaffAssignments, SetAllShifts, SetAllStaffShifts}
+import drt.client.actions.Actions.{GetAllStaffAssignments, SetAllStaffShifts}
 import drt.client.logger.log
 import drt.client.services.DrtApi
 import drt.shared.ShiftAssignments

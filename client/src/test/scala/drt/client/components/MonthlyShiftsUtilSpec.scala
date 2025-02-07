@@ -147,7 +147,7 @@ object MonthlyShiftsUtilSpec extends TestSuite {
         addToIndex = 0
       )
       val shiftDetails = ShiftDetails(shift, terminal, shiftAssignments)
-      val result = MonthlyShiftsUtil.staffTableEntriesForShift(shiftPeriod, shiftDetails)
+      val result = MonthlyShiftsUtil.staffTableEntriesForShift(shiftPeriod, shiftDetails, shiftAssignments.assignments)
 
       assert(result.nonEmpty)
       assert(result.head.name == "Morning")
@@ -228,7 +228,8 @@ object MonthlyShiftsUtilSpec extends TestSuite {
 
       val shiftDetails = ShiftDetails(staffShift, terminal, shifts)
 
-      val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22, 0), 1, interval, shiftDetails)
+      val assignmentsByDate: Map[LocalDate, Seq[StaffAssignmentLike]] = Map.empty
+      val result = MonthlyShiftsUtil.createStaffTableEntries(SDate(2023, 10, 1, 22, 0), 1, interval, shiftDetails, assignmentsByDate)
 
       val expected = Seq(
         StaffTableEntry(1, 0, "Night", 5, ShiftDate(2023, 10, 1, 22, 0), ShiftDate(2023, 10, 1, 23, 0)),

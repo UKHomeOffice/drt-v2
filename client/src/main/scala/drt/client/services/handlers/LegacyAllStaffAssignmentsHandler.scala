@@ -2,7 +2,7 @@ package drt.client.services.handlers
 
 import diode._
 import diode.data.{Pending, Pot, Ready}
-import drt.client.actions.Actions.{GetAllLegacyStaffAssignments, SetAllShifts}
+import drt.client.actions.Actions.{GetAllLegacyStaffAssignments, SetAllLegacyStaffAssignments}
 import drt.client.logger.log
 import drt.client.services.DrtApi
 import drt.shared.ShiftAssignments
@@ -15,7 +15,7 @@ class LegacyAllStaffAssignmentsHandler[M](modelRW: ModelRW[M, Pot[ShiftAssignmen
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAllLegacyStaffAssignments =>
       val apiCallEffect = Effect(DrtApi.get("legacy-staff-assignments")
-        .map(r => SetAllShifts(read[ShiftAssignments](r.responseText)))
+        .map(r => SetAllLegacyStaffAssignments(read[ShiftAssignments](r.responseText)))
         .recoverWith {
           case t =>
             log.error(msg = s"Failed to get all shifts: ${t.getMessage}")
@@ -23,7 +23,7 @@ class LegacyAllStaffAssignmentsHandler[M](modelRW: ModelRW[M, Pot[ShiftAssignmen
         })
       updated(Pending(), apiCallEffect)
 
-    case SetAllShifts(monthOfRawShifts) =>
+    case SetAllLegacyStaffAssignments(monthOfRawShifts) =>
       updated(Ready(monthOfRawShifts))
   }
 }
