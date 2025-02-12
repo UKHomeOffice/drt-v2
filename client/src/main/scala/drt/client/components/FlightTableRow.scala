@@ -212,14 +212,17 @@ object FlightTableRow {
           ^.className := "arrivals__table__flight-est-pcp"
         ),
         <.td(
-          <.div(^.className := "flight-pax",
-            FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
-          if (props.hidePaxDataSource) pcpPaxDataQuality.map(dq =>
-            DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false))
-          else
-            pcpPaxDataQuality.map(dq => PaxDatasourceComponent(IPaxDatasource(dq.text))),
-          ^.className := s"pcp-pax",
-        )
+            pcpPaxDataQuality.map(dq =>
+              if (props.hidePaxDataSource) {
+                <.div(^.className := "text-data-quality",
+                  FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
+                  DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false))
+              } else {
+                <.div(^.className := "icon-data-quality",
+                  PaxDatasourceComponent(IPaxDatasource(dq.text)),
+                  FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder))
+              }
+          ), ^.className := s"pcp-pax"),
       )
 
       val flightFields = firstCells ++ lastCells
@@ -228,19 +231,26 @@ object FlightTableRow {
 
       val splitsDataQuality = FlightComponents.splitsDataQuality(flightWithSplits)
 
+      val splits = <.span(^.className := "flex-uniform-size",
+        props.splitsQueueOrder.map { q =>
+          val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
+          <.div(
+            <.div(^.className := "arrivals_table__Splits__split-number", pax),
+            ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
+        }.toTagMod,
+      )
+
       val queueSplits = <.td(
-        <.span(^.className := "flex-uniform-size",
-          props.splitsQueueOrder.map { q =>
-            val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
-            <.div(
-              <.div(^.className := "arrivals_table__Splits__split-number", pax),
-              ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
-          }.toTagMod,
-        ),
-        if (props.hidePaxDataSource)
-          splitsDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false))
-        else
-          splitsDataQuality.map(dq => pcpPaxDataQuality.map(dq => PaxDatasourceComponent(IPaxDatasource(dq.text))))
+        splitsDataQuality.map(dq =>
+          if (props.hidePaxDataSource)
+            <.div(^.className := "text-data-quality",
+              splits,
+              DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false))
+          else
+            <.div(^.className := "icon-data-quality",
+              PaxDatasourceComponent(IPaxDatasource(dq.text)),
+              splits)
+        )
       )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""

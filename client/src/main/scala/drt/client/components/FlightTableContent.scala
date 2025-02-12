@@ -54,7 +54,6 @@ object FlightTableContent {
 
     val handleTogglePaxSourceIcon = (e: ReactEventFromInput) => Callback {
       e.preventDefault()
-      //      println(s"e.target.checked ${e.target.checked}")
       SPACircuit.dispatch(UpdateHidePaxDataSource(!e.target.checked))
     }
 
@@ -68,7 +67,7 @@ object FlightTableContent {
       val modelRCP = SPACircuit.connect(model => Model(airportInfos = model.airportInfos, hidePaxDataSource = model.hidePaxDataSourceIcon))
       modelRCP(modelProxy => {
         val model: Model = modelProxy()
-        <.div(model.hidePaxDataSource.renderReady { hide =>
+        <.div(model.hidePaxDataSource.renderReady { hidePaxDataSource =>
           val content = for {
             flights <- props.flights
           } yield {
@@ -105,15 +104,17 @@ object FlightTableContent {
 
                       MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
                     },
-                    <.div(
+                    <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"),
                       MuiFormControl()(
-                        MuiSwitch(sx = SxProps(Map("padding" -> "16px 0 16px 0")), defaultChecked = !hide)
-                        (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e)), "pax data sources")
-                      ))
+                        MuiSwitch(defaultChecked = !hidePaxDataSource)
+                        (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e)))
+                      ),
+                      MuiTypography()("Pax data sources")
+                    )
                   ),
                   <.div(<.table(
                     ^.className := "arrivals-table table-striped",
-                    tableHead(props, props.queueOrder, redListPaxExist, props.shortLabel, showFlagger),
+                    tableHead(props, props.queueOrder, redListPaxExist, props.shortLabel, showFlagger, hidePaxDataSource),
                     <.tbody(
                       sortedFlights.flatMap {
                         case (flightWithSplits, codeShares) =>
@@ -149,7 +150,7 @@ object FlightTableContent {
                             maybeManifestSummary = maybeManifestSummary,
                             paxFeedSourceOrder = props.paxFeedSourceOrder,
                             showHighLighted = showHightlighted,
-                            hidePaxDataSource = hide
+                            hidePaxDataSource = hidePaxDataSource
                           )
 
                           FlightHighlighter.highlightedFlight(maybeManifestSummary,
@@ -199,7 +200,8 @@ object FlightTableContent {
                 queues: Seq[Queue],
                 redListPaxExist: Boolean,
                 shortLabel: Boolean,
-                showFlagger: Boolean
+                showFlagger: Boolean,
+                hidePaxDataSource: Boolean
                ): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val isMobile = dom.window.innerWidth < 800
@@ -208,7 +210,9 @@ object FlightTableContent {
     val portColumnThs = columnHeadersWithClasses(columns, props.hasEstChox, props.displayRedListInfo, redListPaxExist, redListHeading).toTagMod
 
     val queueDisplayNames = <.th(
+
       <.span(^.className := "flex-uniform-size",
+        if (hidePaxDataSource) "" else <.div("", " ", ^.className := "arrivals_table__splits__icon-queue-pax flex-horizontally"),
         queues.map(q => <.div(Queues.displayName(q), " ", ^.className := "arrivals_table__splits__queue-pax flex-horizontally")).toTagMod
       ),
       ^.className := "arrivals__table__flight-splits",
