@@ -5,15 +5,15 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.services._
-import drt.shared.{ManifestKey, CodeShares, DefaultFlightDisplayFilter, FlightHighlight, LhrFlightDisplayFilter}
+import drt.client.services.handlers.{ShouldHidePaxDataSource, UpdateHidePaxDataSource}
+import drt.shared.{CodeShares, DefaultFlightDisplayFilter, FlightHighlight, LhrFlightDisplayFilter, ManifestKey}
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist.{DirectRedListFlight, IndirectRedListPax, LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiFormControl, MuiSwitch, MuiTypography}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import japgolly.scalajs.react._
 import org.scalajs.dom
 import org.scalajs.dom.html.{TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
@@ -22,6 +22,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
 
 import scala.collection.immutable.{HashSet, Seq}
 import scala.scalajs.js
@@ -47,117 +48,138 @@ object FlightTableContent {
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                   ) extends UseValueEq
 
-  case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]]) extends UseValueEq
+  case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]], hidePaxDataSource: Pot[Boolean]) extends UseValueEq
 
   class Backend {
+
+    val handleTogglePaxSourceIcon = (e: ReactEventFromInput) => Callback {
+      e.preventDefault()
+      //      println(s"e.target.checked ${e.target.checked}")
+      SPACircuit.dispatch(UpdateHidePaxDataSource(!e.target.checked))
+    }
+
+
     def render(props: Props): VdomElement = {
       val flightDisplayFilter = props.airportConfig.portCode match {
         case PortCode("LHR") => LhrFlightDisplayFilter(props.redListUpdates, (portCode, _, _) =>
           props.redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
         case _ => DefaultFlightDisplayFilter
       }
+      val modelRCP = SPACircuit.connect(model => Model(airportInfos = model.airportInfos, hidePaxDataSource = model.hidePaxDataSourceIcon))
+      modelRCP(modelProxy => {
+        val model: Model = modelProxy()
+        <.div(model.hidePaxDataSource.renderReady { hide =>
+          val content = for {
+            flights <- props.flights
+          } yield {
+            val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
+            val flightsWithCodeShares = CodeShares.uniqueFlightsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
+            val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
+            val ageGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet
+            val showFlagger = props.flightHighlight.selectedNationalities.nonEmpty ||
+              ageGroups.nonEmpty ||
+              props.flightHighlight.showNumberOfVisaNationals
 
+            val highlightedFlightsCount: Int = FlightHighlighter
+              .findHighlightedFlightsCount(sortedFlights,
+                props.flightManifestSummaries,
+                props.flightHighlight.selectedNationalities,
+                ageGroups,
+                props.flightHighlight.showNumberOfVisaNationals,
+                props.flightHighlight.showOnlyHighlightedRows,
+                props.flightHighlight.showRequireAllSelected)
 
-      val content = for {
-        flights <- props.flights
-      } yield {
-        val flightsForTerminal = flightDisplayFilter.forTerminalIncludingIncomingDiversions(flights, props.terminal)
-        val flightsWithCodeShares = CodeShares.uniqueFlightsWithCodeShares(props.paxFeedSourceOrder)(flightsForTerminal.toSeq)
-        val sortedFlights = flightsWithCodeShares.sortBy(_._1.apiFlight.PcpTime.getOrElse(0L))
-        val ageGroups = props.flightHighlight.selectedAgeGroups.map(PaxAgeRange.parse).toSet
-        val showFlagger = props.flightHighlight.selectedNationalities.nonEmpty ||
-          ageGroups.nonEmpty ||
-          props.flightHighlight.showNumberOfVisaNationals
-
-        val highlightedFlightsCount: Int = FlightHighlighter
-          .findHighlightedFlightsCount(sortedFlights,
-            props.flightManifestSummaries,
-            props.flightHighlight.selectedNationalities,
-            ageGroups,
-            props.flightHighlight.showNumberOfVisaNationals,
-            props.flightHighlight.showOnlyHighlightedRows,
-            props.flightHighlight.showRequireAllSelected)
-
-        <.div(
-          if (sortedFlights.nonEmpty) {
-            val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
-              <.div {
-                val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || ageGroups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals
-                val flightCounts = if (flaggerInUse && props.flightHighlight.showOnlyHighlightedRows)
-                  <.span(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} shown and highlighted")
-                else if (flaggerInUse)
-                  <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown", " | ", <.b(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} highlighted"))
-                else
-                  <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown")
+              if (sortedFlights.nonEmpty) {
+                val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
+                <.div(
+                  <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"))(
+                    <.div {
+                      val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || ageGroups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals
+                      val flightCounts = if (flaggerInUse && props.flightHighlight.showOnlyHighlightedRows)
+                        <.span(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} shown and highlighted")
+                      else if (flaggerInUse)
+                        <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown", " | ", <.b(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} highlighted"))
+                      else
+                        <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown")
 
-                MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
-              },
-              <.div(<.table(
-                ^.className := "arrivals-table table-striped",
-                tableHead(props, props.queueOrder, redListPaxExist, props.shortLabel, showFlagger),
-                <.tbody(
-                  sortedFlights.flatMap {
-                    case (flightWithSplits, codeShares) =>
-                      val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
-                      val directRedListFlight = DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
-                        props.portCode,
-                        props.terminal,
-                        flightWithSplits.apiFlight.Terminal,
-                        isRedListOrigin)
+                      MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
+                    },
+                    <.div(
+                      MuiFormControl()(
+                        MuiSwitch(sx = SxProps(Map("padding" -> "16px 0 16px 0")), defaultChecked = !hide)
+                        (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e)), "pax data sources")
+                      ))
+                  ),
+                  <.div(<.table(
+                    ^.className := "arrivals-table table-striped",
+                    tableHead(props, props.queueOrder, redListPaxExist, props.shortLabel, showFlagger),
+                    <.tbody(
+                      sortedFlights.flatMap {
+                        case (flightWithSplits, codeShares) =>
+                          val isRedListOrigin = props.redListPorts.contains(flightWithSplits.apiFlight.Origin)
+                          val directRedListFlight = DirectRedListFlight(props.viewMode.dayEnd.millisSinceEpoch,
+                            props.portCode,
+                            props.terminal,
+                            flightWithSplits.apiFlight.Terminal,
+                            isRedListOrigin)
 
-                      val maybeManifestSummary = props.flightManifestSummaries.get(ManifestKey(flightWithSplits.apiFlight))
-                      val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
+                          val maybeManifestSummary = props.flightManifestSummaries.get(ManifestKey(flightWithSplits.apiFlight))
+                          val redListPaxInfo = IndirectRedListPax(props.displayRedListInfo, flightWithSplits)
 
-                      def flightTableRow(showHightlighted: Boolean) = FlightTableRow.Props(
-                        flightWithSplits = flightWithSplits,
-                        codeShareFlightCodes = codeShares,
-                        originMapper = props.originMapper,
-                        splitsQueueOrder = props.queueOrder,
-                        loggedInUser = props.loggedInUser,
-                        viewMode = props.viewMode,
-                        hasTransfer = props.hasTransfer,
-                        indirectRedListPax = redListPaxInfo,
-                        directRedListFlight = directRedListFlight,
-                        airportConfig = props.airportConfig,
-                        redListUpdates = props.redListUpdates,
-                        includeIndirectRedListColumn = redListPaxExist,
-                        walkTimes = props.walkTimes,
-                        flaggedNationalities = props.flightHighlight.selectedNationalities,
-                        flaggedAgeGroups = ageGroups,
-                        showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
-                        showHighlightedRows = props.flightHighlight.showNumberOfVisaNationals,
-                        showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
-                        maybeManifestSummary = maybeManifestSummary,
-                        paxFeedSourceOrder = props.paxFeedSourceOrder,
-                        showHighLighted = showHightlighted
-                      )
+                          def flightTableRow(showHightlighted: Boolean) = FlightTableRow.Props(
+                            flightWithSplits = flightWithSplits,
+                            codeShareFlightCodes = codeShares,
+                            originMapper = props.originMapper,
+                            splitsQueueOrder = props.queueOrder,
+                            loggedInUser = props.loggedInUser,
+                            viewMode = props.viewMode,
+                            hasTransfer = props.hasTransfer,
+                            indirectRedListPax = redListPaxInfo,
+                            directRedListFlight = directRedListFlight,
+                            airportConfig = props.airportConfig,
+                            redListUpdates = props.redListUpdates,
+                            includeIndirectRedListColumn = redListPaxExist,
+                            walkTimes = props.walkTimes,
+                            flaggedNationalities = props.flightHighlight.selectedNationalities,
+                            flaggedAgeGroups = ageGroups,
+                            showNumberOfVisaNationals = props.flightHighlight.showNumberOfVisaNationals,
+                            showHighlightedRows = props.flightHighlight.showNumberOfVisaNationals,
+                            showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
+                            maybeManifestSummary = maybeManifestSummary,
+                            paxFeedSourceOrder = props.paxFeedSourceOrder,
+                            showHighLighted = showHightlighted,
+                            hidePaxDataSource = hide
+                          )
 
-                      FlightHighlighter.highlightedFlight(maybeManifestSummary,
-                          props.flightHighlight.selectedNationalities,
-                          ageGroups,
-                          props.flightHighlight.showNumberOfVisaNationals,
-                          props.flightHighlight.showOnlyHighlightedRows,
-                          props.flightHighlight.showRequireAllSelected)
-                        .map(h => FlightTableRow.component(flightTableRow(h)))
+                          FlightHighlighter.highlightedFlight(maybeManifestSummary,
+                              props.flightHighlight.selectedNationalities,
+                              ageGroups,
+                              props.flightHighlight.showNumberOfVisaNationals,
+                              props.flightHighlight.showOnlyHighlightedRows,
+                              props.flightHighlight.showRequireAllSelected)
+                            .map(h => FlightTableRow.component(flightTableRow(h)))
 
-                  }.toTagMod
-                ))))
+                      }.toTagMod
+                    )))
+                )
+              }
+              else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
+                if (flights.isEmpty) {
+                  <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
+                    MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
+                    (MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights to display.")))
+                } else {
+                  <.div(^.style := js.Dictionary("border" -> "1px solid #99001E"),
+                    MuiAlert(variant = MuiAlert.Variant.standard, color = "error", severity = "error")(
+                      MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights found."), "Check the flight number or time period."))
+                }
+              )
+            )
           }
-          else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
-            if (flights.isEmpty) {
-              <.div(^.style := js.Dictionary("border" -> "1px solid #014361"),
-                MuiAlert(variant = MuiAlert.Variant.standard, color = "info", severity = "info")
-                (MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights to display.")))
-            } else {
-              <.div(^.style := js.Dictionary("border" -> "1px solid #99001E"),
-                MuiAlert(variant = MuiAlert.Variant.standard, color = "error", severity = "error")(
-                  MuiTypography(sx = SxProps(Map("fontWeight" -> "bold")))("No flights found."), "Check the flight number or time period."))
-            }
-          )
-        )
-      }
-      content.getOrElse(<.div())
+          content.getOrElse(<.div())
+        })
+      })
     }
   }
 
@@ -168,6 +190,7 @@ object FlightTableContent {
   val component: Component[Props, Unit, Backend, CtorType.Props] =
     ScalaComponent.builder[Props]("FlightTableContent")
       .renderBackend[Backend]
+      .componentDidMount(_ => Callback(SPACircuit.dispatch(ShouldHidePaxDataSource())))
       .build
 
   def apply(props: Props): VdomElement = component(props)

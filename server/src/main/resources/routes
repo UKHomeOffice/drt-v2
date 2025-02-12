@@ -112,6 +112,10 @@ POST          /data/close-banner                                                
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
+POST          /data/hide-pax-datasource-icon/:hide                                    controllers.Application.updateHidePaxDataSourceIcon(hide: Boolean)
+
+GET           /data/hide-pax-datasource-icon                                          controllers.Application.hideDataSourceIcon
+
 GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
 
 PUT           /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod()

@@ -53,6 +53,7 @@ object FlightTableRow {
                    maybeManifestSummary: Option[FlightManifestSummary],
                    paxFeedSourceOrder: List[FeedSource],
                    showHighLighted: Boolean,
+                   hidePaxDataSource: Boolean
                   ) extends UseValueEq
 
   implicit val propsReuse: Reusability[Props] = Reusability {
@@ -213,8 +214,10 @@ object FlightTableRow {
         <.td(
           <.div(^.className := "flight-pax",
             FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
-          pcpPaxDataQuality.map(dq =>
-            DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false)),
+          if (props.hidePaxDataSource) pcpPaxDataQuality.map(dq =>
+            DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false))
+          else
+            pcpPaxDataQuality.map(dq => PaxDatasourceComponent(IPaxDatasource(dq.text))),
           ^.className := s"pcp-pax",
         )
       )
@@ -234,8 +237,10 @@ object FlightTableRow {
               ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
           }.toTagMod,
         ),
-        splitsDataQuality.map(dq =>
-          DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false)),
+        if (props.hidePaxDataSource)
+          splitsDataQuality.map(dq => DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false))
+        else
+          splitsDataQuality.map(dq => pcpPaxDataQuality.map(dq => PaxDatasourceComponent(IPaxDatasource(dq.text))))
       )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""

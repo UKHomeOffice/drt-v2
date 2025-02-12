@@ -14,14 +14,17 @@ case class UserRow(
                     drop_in_notification_at: Option[java.sql.Timestamp],
                     created_at: Option[java.sql.Timestamp],
                     feedback_banner_closed_at: Option[java.sql.Timestamp],
-                    staff_planning_interval_minutes: Option[Int]
-)
+                    staff_planning_interval_minutes: Option[Int],
+                    hide_pax_data_source_icon: Option[Boolean]
+                  )
 
 trait UserTableLike {
 
   def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]]
 
   def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int]
+
+  def updateHidePaxDataSourceIcon(email: String, hide: Boolean)(implicit ec: ExecutionContext): Future[Int]
 
   def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int]
 
@@ -98,6 +101,17 @@ case class UserTable(tables: AggregatedDbTables) extends UserTableLike {
     tables.run(query).recover {
       case throwable =>
         log.error(s"updateStaffPlanningTimePeriod failed", throwable)
+        0
+    }
+  }
+
+  override def updateHidePaxDataSourceIcon(email: String, hide: Boolean)(implicit ec: ExecutionContext): Future[Int] = {
+    val query = userTableQuery.filter(_.email === email)
+      .map(f => (f.hide_pax_data_source_icon))
+      .update(Option(hide))
+    tables.run(query).recover {
+      case throwable =>
+        log.error(s"updateCloseBanner failed", throwable)
         0
     }
   }

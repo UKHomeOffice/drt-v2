@@ -138,7 +138,7 @@ trait AggregatedDbTables extends CentralDatabase {
   }
 
   class UserTable(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
-    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at, feedback_banner_closed_at, staff_planning_interval_minutes) <> (UserRow.tupled, UserRow.unapply)
+    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at, feedback_banner_closed_at, staff_planning_interval_minutes, hide_pax_data_source_icon) <> (UserRow.tupled, UserRow.unapply)
 
     val id: Rep[String] = column[String]("id")
     val userName: Rep[String] = column[String]("username")
@@ -150,6 +150,7 @@ trait AggregatedDbTables extends CentralDatabase {
     val created_at = column[Option[Timestamp]]("created_at")
     val feedback_banner_closed_at = column[Option[java.sql.Timestamp]]("feedback_banner_closed_at")
     val staff_planning_interval_minutes = column[Option[Int]]("staff_planning_interval_minutes")
+    val hide_pax_data_source_icon = column[Option[Boolean]]("hide_pax_data_source_icon")
 
     val pk = primaryKey("user_pkey", (id))
 

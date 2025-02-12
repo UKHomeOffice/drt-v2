@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
+import drt.client.components.FlightComponents.PcpPaxDataQuality.TrustedPortData.text
 import drt.client.components.FlightComponents.SplitsDataQuality.{CarrierData, HistoricalCarrierData, TerminalAverageData, TrustedCarrierData}
 import drt.shared.redlist.DirectRedListFlight
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -24,6 +25,7 @@ object FlightComponents {
   trait PcpPaxDataQuality extends DataQuality {
     val `type`: String
     val text: String
+    val component = PaxDatasourceComponent(IPaxDatasource(text))
   }
   object PcpPaxDataQuality {
     object TrustedPortData extends PcpPaxDataQuality {
