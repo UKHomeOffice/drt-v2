@@ -212,7 +212,7 @@ object FlightTableContent {
     val queueDisplayNames = <.th(
 
       <.span(^.className := "flex-uniform-size",
-//        if (hidePaxDataSource) "" else <.div("", " ", ^.className := "arrivals_table__splits__icon-queue-pax flex-horizontally"),
+        if (hidePaxDataSource) "" else <.div("", "", ^.className := "icon-header-data-quality"),
         queues.map(q => <.div(Queues.displayName(q), " ", ^.className := "arrivals_table__splits__queue-pax flex-horizontally")).toTagMod
       ),
       ^.className := "arrivals__table__flight-splits",
