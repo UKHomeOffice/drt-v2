@@ -218,7 +218,7 @@ object FlightTableRow {
                   FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
                   DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false))
               } else {
-                <.div(^.className := "pcp-icon-data-quality",
+                <.div(^.className := s"pcp-icon-data-quality pax-rag-${dq.`type`}",
                   PaxDatasourceComponent(IPaxDatasource(dq.text)),
                   FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder))
               }
@@ -247,7 +247,7 @@ object FlightTableRow {
               splits,
               DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false))
           else
-            <.div(^.className := "icon-row-data-quality",
+            <.div(^.className := s"icon-row-data-quality splits-rag-${dq.`type`}",
               <.span(^.className := "icon-data-quality", PaxDatasourceComponent(IPaxDatasource(dq.text))),
               splits)
         )
