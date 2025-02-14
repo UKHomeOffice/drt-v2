@@ -4,7 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
-import drt.client.components.FlightComponents.paxFeedSourceClass
+import drt.client.components.FlightComponents.{SplitsDataQuality, paxFeedSourceClass}
 import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -212,16 +212,16 @@ object FlightTableRow {
           ^.className := "arrivals__table__flight-est-pcp"
         ),
         <.td(
-            pcpPaxDataQuality.map(dq =>
-              if (props.hidePaxDataSource) {
-                <.div(^.className := "text-data-quality",
-                  FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
-                  DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false))
-              } else {
-                <.div(^.className := s"pcp-icon-data-quality pax-rag-${dq.`type`}",
-                  PaxDatasourceComponent(IPaxDatasource(dq.text)),
-                  FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder))
-              }
+          pcpPaxDataQuality.map(dq =>
+            if (props.hidePaxDataSource) {
+              <.div(^.className := "text-data-quality",
+                FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
+                DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false))
+            } else {
+              <.div(^.className := s"pcp-icon-data-quality pax-rag-${dq.`type`}",
+                PaxDatasourceComponent(IPaxDatasource(dq.text)),
+                FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder))
+            }
           ), ^.className := s"pcp-pax"),
       )
 
@@ -231,26 +231,26 @@ object FlightTableRow {
 
       val splitsDataQuality = FlightComponents.splitsDataQuality(flightWithSplits)
 
-      val splits = <.span(^.className := "flex-uniform-size",
-        props.splitsQueueOrder.map { q =>
-          val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
-          <.div(
-            <.div(^.className := "arrivals_table__Splits__split-number", pax),
-            ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
-        }.toTagMod,
-      )
+      val splitsOrder = props.splitsQueueOrder.map { q =>
+        val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
+        <.div(
+          <.div(^.className := "arrivals_table__Splits__split-number", pax),
+          ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
+      }.toTagMod
+
+      def splits(dq: SplitsDataQuality) = if (props.hidePaxDataSource)
+        <.div(
+          <.span(^.className := "flex-uniform-size", splitsOrder),
+          DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false)
+        ) else
+        <.div(
+          <.span(^.className := "flex-uniform-size",
+            <.span(^.className := "icon-data-quality", PaxDatasourceComponent(IPaxDatasource(dq.text))),
+            splitsOrder)
+        )
 
       val queueSplits = <.td(
-        splitsDataQuality.map(dq =>
-          if (props.hidePaxDataSource)
-            <.div(
-              splits,
-              DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false))
-          else
-            <.div(^.className := s"icon-row-data-quality splits-rag-${dq.`type`}",
-              <.span(^.className := "icon-data-quality", PaxDatasourceComponent(IPaxDatasource(dq.text))),
-              splits)
-        )
+        splitsDataQuality.map(dq => splits(dq))
       )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
