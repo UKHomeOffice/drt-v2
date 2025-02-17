@@ -54,7 +54,7 @@ object FlightTableContent {
 
     val handleTogglePaxSourceIcon = (e: ReactEventFromInput) => Callback {
       e.preventDefault()
-      SPACircuit.dispatch(UpdateHidePaxDataSource(!e.target.checked))
+      SPACircuit.dispatch(UpdateHidePaxDataSource(e.target.checked))
     }
 
 
@@ -106,10 +106,10 @@ object FlightTableContent {
                     },
                     <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"),
                       MuiFormControl()(
-                        MuiSwitch(defaultChecked = !hidePaxDataSource)
+                        MuiSwitch(defaultChecked = hidePaxDataSource)
                         (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e)))
                       ),
-                      MuiTypography()("Pax data sources")
+                      MuiTypography()("Pax data source descriptions")
                     )
                   ),
                   <.div(<.table(
