@@ -44,7 +44,7 @@ object PcpPaxSummariesComponent {
     def render(props: Props): html_<^.VdomNode = {
       val now = SDate.now()
       val fiveMinutes = 5
-      val queues = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
+      val queues: Seq[Queue] = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
       val boxes = Seq("next 5 minutes", "5-10 minutes", "10-15 minutes")
       if (props.viewMode.isLive) {
         props.crunchMinutesPot.render(cms =>
@@ -55,13 +55,25 @@ object PcpPaxSummariesComponent {
                 case (label, box) =>
                   val start = now.addMinutes(box * 5)
                   val summary = PcpPaxSummary(start, fiveMinutes, cms, queues.toSet)
-                  summaryBox(box, label, start, queues, summary)
-              }.toVdomArray
+//                  summaryBox(box, label, start, queues, summary)
+                  PaxCardComponent(
+                    IPaxCard(
+                      portQueue(queues, summary),
+                      label,
+                      new  scala.scalajs.js.Date(start.millisSinceEpoch),
+                      new scala.scalajs.js.Date(start.addMinutes(5).millisSinceEpoch)))}
+                .toVdomArray
             )
           }
         )
       }
       else EmptyVdom
+    }
+  }
+
+  private def portQueue(queues: Seq[Queue], summary: PcpPaxSummary): Seq[PortQueue] = {
+    queues.map { qn =>
+      PortQueue(Queues.displayName(qn), summary.queuesPax.getOrElse(qn, 0d).round.toInt)
     }
   }
 
