@@ -201,7 +201,7 @@ object FlightTableContent {
                 redListPaxExist: Boolean,
                 shortLabel: Boolean,
                 showFlagger: Boolean,
-                hidePaxDataSource: Boolean
+                hidePaxDataSourceDescription: Boolean
                ): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val isMobile = dom.window.innerWidth < 800
@@ -211,7 +211,7 @@ object FlightTableContent {
 
     val queueDisplayNames = <.th(
       <.span(^.className := "flex-uniform-size",
-        (Seq(if (hidePaxDataSource) EmptyVdom else <.div("", "", ^.className := "icon-header-data-quality")) ++
+        (Seq(if (hidePaxDataSourceDescription) <.div("", "", ^.className := "icon-header-data-quality") else EmptyVdom ) ++
           queues.map(q => <.div(Queues.displayName(q), " ", ^.className := "arrivals_table__splits__queue-pax flex-horizontally"))).toTagMod
       ),
       ^.className := "arrivals__table__flight-splits",
