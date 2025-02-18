@@ -53,7 +53,7 @@ object FlightTableRow {
                    maybeManifestSummary: Option[FlightManifestSummary],
                    paxFeedSourceOrder: List[FeedSource],
                    showHighLighted: Boolean,
-                   hidePaxDataSource: Boolean
+                   hidePaxDataSourceDescription: Boolean
                   ) extends UseValueEq
 
   implicit val propsReuse: Reusability[Props] = Reusability {
@@ -213,14 +213,14 @@ object FlightTableRow {
         ),
         <.td(
           pcpPaxDataQuality.map(dq =>
-            if (props.hidePaxDataSource) {
-              <.div(^.className := "text-data-quality",
-                FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
-                DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false))
-            } else {
+            if (props.hidePaxDataSourceDescription) {
               <.div(^.className := s"pcp-icon-data-quality pax-rag-${dq.`type`}",
                 PaxDatasourceComponent(IPaxDatasource(dq.text)),
                 FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder))
+            } else {
+              <.div(^.className := "text-data-quality",
+                FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
+                DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false))
             }
           ), ^.className := s"pcp-pax"),
       )
@@ -238,15 +238,15 @@ object FlightTableRow {
           ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
       }.toTagMod
 
-      def splits(dq: SplitsDataQuality) = if (props.hidePaxDataSource)
-        <.div(
-          <.span(^.className := "flex-uniform-size", splitsOrder),
-          DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false)
-        ) else
+      def splits(dq: SplitsDataQuality) = if (props.hidePaxDataSourceDescription)
         <.div(
           <.span(^.className := "flex-uniform-size",
             <.span(^.className := "icon-data-quality", PaxDatasourceComponent(IPaxDatasource(dq.text))),
             splitsOrder)
+        ) else
+        <.div(
+          <.span(^.className := "flex-uniform-size", splitsOrder),
+          DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false)
         )
 
       val queueSplits = <.td(

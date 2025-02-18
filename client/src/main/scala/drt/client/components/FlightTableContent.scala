@@ -48,13 +48,13 @@ object FlightTableContent {
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                   ) extends UseValueEq
 
-  case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]], hidePaxDataSource: Pot[Boolean]) extends UseValueEq
+  case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]], hidePaxDataSourceDescription: Pot[Boolean]) extends UseValueEq
 
   class Backend {
 
     val handleTogglePaxSourceIcon = (e: ReactEventFromInput) => Callback {
       e.preventDefault()
-      SPACircuit.dispatch(UpdateHidePaxDataSource(e.target.checked))
+      SPACircuit.dispatch(UpdateHidePaxDataSource(!e.target.checked))
     }
 
 
@@ -64,10 +64,10 @@ object FlightTableContent {
           props.redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
         case _ => DefaultFlightDisplayFilter
       }
-      val modelRCP = SPACircuit.connect(model => Model(airportInfos = model.airportInfos, hidePaxDataSource = model.hidePaxDataSourceIcon))
+      val modelRCP = SPACircuit.connect(model => Model(airportInfos = model.airportInfos, hidePaxDataSourceDescription = model.hidePaxDataSourceDescription))
       modelRCP(modelProxy => {
         val model: Model = modelProxy()
-        <.div(model.hidePaxDataSource.renderReady { hidePaxDataSource =>
+        <.div(model.hidePaxDataSourceDescription.renderReady { hidePaxDataSource =>
           val content = for {
             flights <- props.flights
           } yield {
@@ -106,7 +106,7 @@ object FlightTableContent {
                     },
                     <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"),
                       MuiFormControl()(
-                        MuiSwitch(defaultChecked = hidePaxDataSource)
+                        MuiSwitch(defaultChecked = !hidePaxDataSource)
                         (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e)))
                       ),
                       MuiTypography()("Pax data source descriptions")
@@ -150,7 +150,7 @@ object FlightTableContent {
                             maybeManifestSummary = maybeManifestSummary,
                             paxFeedSourceOrder = props.paxFeedSourceOrder,
                             showHighLighted = showHightlighted,
-                            hidePaxDataSource = hidePaxDataSource
+                            hidePaxDataSourceDescription = hidePaxDataSource
                           )
 
                           FlightHighlighter.highlightedFlight(maybeManifestSummary,

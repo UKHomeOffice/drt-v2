@@ -14,17 +14,13 @@ case class SetHidePaxDataSource(hide: Boolean) extends Action
 
 case class UpdateHidePaxDataSource(hide: Boolean) extends Action
 
-//case class HidePaxDataSource() extends Action
-//
-//case class ShowPaxDataSource() extends Action
-
 case class ShouldHidePaxDataSource() extends Action
 
 class UserHidePaxDataSourceHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends LoggingActionHandler(modelRW) {
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
     case ShouldHidePaxDataSource() =>
-      val apiCallEffect = Effect(DrtApi.get("data/hide-pax-datasource-icon")
+      val apiCallEffect = Effect(DrtApi.get("data/hide-pax-datasource-description")
         .map(r => SetHidePaxDataSource(r.responseText == "true"))
         .recoverWith {
           case _ =>
@@ -37,7 +33,7 @@ class UserHidePaxDataSourceHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends
       updated(Ready(status))
 
     case UpdateHidePaxDataSource(status) =>
-      val apiCallEffect = Effect(DrtApi.post(s"data/hide-pax-datasource-icon/$status", "")
+      val apiCallEffect = Effect(DrtApi.post(s"data/hide-pax-datasource-description/$status", "")
         .map(_ => SetHidePaxDataSource(status))
         .recoverWith {
           case _ =>
@@ -47,14 +43,4 @@ class UserHidePaxDataSourceHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends
       effectOnly(apiCallEffect)
   }
 }
-//    case HidePaxDataSource() =>
-//      val apiCallEffect = Effect(DrtApi.post("data/hide-pax-datasource-icon/true", "")
-//        .map(_ => SetHidePaxDataSource(true))
-//        .recoverWith {
-//          case _ =>
-//            log.error(s"Failed to update hide data source with api. Re-requesting after ${PollDelay.recoveryDelay}")
-//            Future(RetryActionAfter(HidePaxDataSource(), PollDelay.recoveryDelay))
-//        })
-//      effectOnly(apiCallEffect)
-//  }
-//}
+

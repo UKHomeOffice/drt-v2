@@ -15,7 +15,7 @@ case class UserRow(
                     created_at: Option[java.sql.Timestamp],
                     feedback_banner_closed_at: Option[java.sql.Timestamp],
                     staff_planning_interval_minutes: Option[Int],
-                    hide_pax_data_source_icon: Option[Boolean]
+                    hide_pax_data_source_description: Option[Boolean]
                   )
 
 trait UserTableLike {
@@ -24,7 +24,7 @@ trait UserTableLike {
 
   def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int]
 
-  def updateHidePaxDataSourceIcon(email: String, hide: Boolean)(implicit ec: ExecutionContext): Future[Int]
+  def updateHidePaxDataSourceDescription(email: String, hide: Boolean)(implicit ec: ExecutionContext): Future[Int]
 
   def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int]
 
@@ -105,9 +105,9 @@ case class UserTable(tables: AggregatedDbTables) extends UserTableLike {
     }
   }
 
-  override def updateHidePaxDataSourceIcon(email: String, hide: Boolean)(implicit ec: ExecutionContext): Future[Int] = {
+  override def updateHidePaxDataSourceDescription(email: String, hide: Boolean)(implicit ec: ExecutionContext): Future[Int] = {
     val query = userTableQuery.filter(_.email === email)
-      .map(f => (f.hide_pax_data_source_icon))
+      .map(f => (f.hide_pax_data_source_description))
       .update(Option(hide))
     tables.run(query).recover {
       case throwable =>
