@@ -65,7 +65,8 @@ object HotTable {
         "rowHeaders" -> rowHeadings.toJSArray,
         "colHeaders" -> colHeadings.toJSArray,
         "afterChange" -> afterChange,
-        "colWidth" -> colWidths
+        "colWidth" -> colWidths,
+        "licenseKey" -> "non-commercial-and-evaluation",
       )
 
       props
