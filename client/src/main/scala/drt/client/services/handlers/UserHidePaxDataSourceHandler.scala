@@ -14,18 +14,18 @@ case class SetHidePaxDataSource(hide: Boolean) extends Action
 
 case class UpdateHidePaxDataSource(hide: Boolean) extends Action
 
-case class ShouldHidePaxDataSource() extends Action
+case object GetShouldHidePaxDataSource extends Action
 
 class UserHidePaxDataSourceHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends LoggingActionHandler(modelRW) {
   override protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
-    case ShouldHidePaxDataSource() =>
+    case GetShouldHidePaxDataSource =>
       val apiCallEffect = Effect(DrtApi.get("data/hide-pax-datasource-description")
         .map(r => SetHidePaxDataSource(r.responseText == "true"))
         .recoverWith {
           case _ =>
             log.error(s"Failed to get show pax data source. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(ShouldHidePaxDataSource(), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetShouldHidePaxDataSource, PollDelay.recoveryDelay))
         })
       effectOnly(apiCallEffect)
 

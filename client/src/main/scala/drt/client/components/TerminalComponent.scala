@@ -56,7 +56,8 @@ object TerminalComponent {
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
-                                   shiftsPot: Pot[Seq[Shift]]
+                                   shiftsPot: Pot[Seq[Shift]],
+                                   hidePaxDataSourceDescription: Pot[Boolean],
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -95,7 +96,8 @@ object TerminalComponent {
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
-        shiftsPot = model.shifts
+        shiftsPot = model.shifts,
+        hidePaxDataSourceDescription = model.hidePaxDataSourceDescription,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -110,6 +112,7 @@ object TerminalComponent {
             loggedInUser <- terminalModel.loggedInUserPot
             redListUpdates <- terminalModel.redListUpdates
             shifts <- terminalModel.shiftsPot
+            hidePaxDataSourceDescription <- terminalModel.hidePaxDataSourceDescription
           } yield {
             val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
@@ -205,6 +208,7 @@ object TerminalComponent {
                           dayCrunchSummaries = dayCrunchSummaries,
                           windowStaffSummaries = windowStaffSummaries,
                           defaultDesksAndQueuesViewType = defaultDesksAndQueuesViewType,
+                          hidePaxDataSourceDescription = hidePaxDataSourceDescription,
                         ))
                       )
 
@@ -225,6 +229,7 @@ object TerminalComponent {
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
                           flightHighlight = fhl,
+                          hidePaxDataSourceDescription = hidePaxDataSourceDescription,
                         )
                       )
 
