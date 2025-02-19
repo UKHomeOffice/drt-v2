@@ -1,0 +1,62 @@
+package drt.client.components
+
+import japgolly.scalajs.react.{Children, JsFnComponent}
+import japgolly.scalajs.react.vdom.VdomElement
+import scala.scalajs.js
+import scala.scalajs.js.Date
+import scala.scalajs.js.annotation.JSImport
+
+@js.native
+trait PaxSearchFormState extends js.Object {
+  var day: String
+  var time: String
+  var arrivalDate: Date
+  var fromDate: Date
+  var toDate: Date
+  var timeMachine: Boolean
+}
+
+object PaxSearchFormState {
+  def apply(day: String, time: String, arrivalDate: Date, fromDate: Date, toDate: Date, timeMachine: Boolean): PaxSearchFormState = {
+    val p = (new js.Object).asInstanceOf[PaxSearchFormState]
+    p.day = day
+    p.time = time
+    p.arrivalDate = arrivalDate
+    p.fromDate = fromDate
+    p.toDate = toDate
+    p.timeMachine = timeMachine
+    p
+  }
+}
+
+@js.native
+trait IPaxSearchForm extends PaxSearchFormState {
+  var onChange: js.Function1[PaxSearchFormState, Unit]
+}
+
+object IPaxSearchForm {
+  def apply(day: String, time: String, arrivalDate: Date, fromDate: Date, toDate: Date, timeMachine: Boolean, onChange: PaxSearchFormState => Unit): IPaxSearchForm = {
+    val p = (new js.Object).asInstanceOf[IPaxSearchForm]
+    p.day = day
+    p.time = time
+    p.arrivalDate = arrivalDate
+    p.fromDate = fromDate
+    p.toDate = toDate
+    p.timeMachine = timeMachine
+    p.onChange = onChange
+    p
+  }
+}
+
+object PaxSearchFormComponent {
+  @js.native
+  @JSImport("@drt/drt-react", "PaxSearchForm")
+  object RawComponent extends js.Object
+
+  val component = JsFnComponent[IPaxSearchForm, Children.None](RawComponent)
+
+  def apply(props: IPaxSearchForm): VdomElement = {
+    component(props)
+  }
+
+}

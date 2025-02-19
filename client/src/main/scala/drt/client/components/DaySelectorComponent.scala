@@ -150,90 +150,109 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       val isTomorrow = state.selectedDate.ddMMyyString == SDate.now().addDays(1).ddMMyyString
 
-      def defaultTimeRangeWindow: TimeRangeHours = if (isToday) CurrentWindow() else WholeDayWindow()
+//      def defaultTimeRangeWindow: TimeRangeHours = if (isToday) CurrentWindow() else WholeDayWindow()
+//
+//      val liveViewButtonTheme = if (state.maybeTimeMachineDate.isEmpty) buttonSelectedTheme else buttonTheme
+//      val timeMachineViewButtonTheme = if (state.maybeTimeMachineDate.nonEmpty) buttonSelectedTheme else buttonTheme
+//
+//      val yesterdayButtonTheme = if (isYesterday) buttonSelectedTheme else buttonTheme
+//      val todayButtonTheme = if (isToday) buttonSelectedTheme else buttonTheme
+//      val tomorrowButtonTheme = if (isTomorrow) buttonSelectedTheme else buttonTheme
 
-      val liveViewButtonTheme = if (state.maybeTimeMachineDate.isEmpty) buttonSelectedTheme else buttonTheme
-      val timeMachineViewButtonTheme = if (state.maybeTimeMachineDate.nonEmpty) buttonSelectedTheme else buttonTheme
-
-      val yesterdayButtonTheme = if (isYesterday) buttonSelectedTheme else buttonTheme
-      val todayButtonTheme = if (isToday) buttonSelectedTheme else buttonTheme
-      val tomorrowButtonTheme = if (isTomorrow) buttonSelectedTheme else buttonTheme
-
-      <.div(
-        ^.className := s"flex-horz-between",
-        <.div(
-          ^.className := "date-component-wrapper",
-          <.div(
-            ^.className := "date-select-wrapper",
-            MuiButtonGroup(variant = "contained")(
-              ThemeProvider(theme = yesterdayButtonTheme)(MuiButton()("Yesterday", ^.onClick ==> selectYesterday, ^.id := "yesterday")),
-              ThemeProvider(theme = todayButtonTheme)(MuiButton()("Today", ^.onClick ==> selectToday, ^.id := "today")),
-              ThemeProvider(theme = tomorrowButtonTheme)(MuiButton()("Tomorrow", ^.onClick ==> selectTomorrow, ^.id := "tomorrow")),
-            ),
-            <.div(
-              ^.className := "date-picker",
-              MuiTextField()(
-                ^.width := "100%",
-                ^.`type` := "date",
-                ^.defaultValue := s"${state.stateDate.date.toISOString}",
-                ^.onChange ==> updateDisplayDate,
-              ),
-            )
-          ),
-          TimeRangeFilter(
-            TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isToday)
-          ),
-          MuiDivider()(),
-          <.div(^.className := "time-machine",
-            <.div(^.className := "time-machine-switch",
-              <.div(^.className := "time-machine-switch-label flex-horizontally",
-                "Time machine",
-                Tippy(interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")),
-                  content = <.div(
-                    <.p("See what DRT was showing for this day on a specific date & time in the past."),
-                    <.p("This can be useful to compare what DRT forecasted for a date compared to what ended up happening."),
-                  )
-                ),
-              ),
-              MuiButtonGroup(variant = "contained")(
-                ThemeProvider(liveViewButtonTheme)(MuiButton()(^.id := "live-view", s"Off", ^.onClick ==> selectLatestView)),
-                ThemeProvider(timeMachineViewButtonTheme)(MuiButton()(^.id := "time-machine-view", "On", ^.onClick ==> selectTimeMachineView)),
-              ),
-            ),
-          ),
-        ),
-        state.maybeTimeMachineDate match {
-          case Some(tmDate) =>
-            <.div(^.className := "time-machine-info",
-              <.div(^.className := "not-live-banner", "You are not viewing live data"),
-              <.div(^.className := "not-live-message",
-                s"Show",
-                <.div(^.className := "time-machine-display-date", state.stateDate.date.ddmmyyyy),
-                "as it was on",
-                MuiTextField(
-                  InputProps = js.Dynamic.literal(
-                    "style" -> js.Dictionary(
-                      "fontSize" -> "18px",
-                      "fontWeight" -> "bold",
-                    )
-                  ).asInstanceOf[js.Object]
-                )(
-                  ^.className := "time-machine-datetime-selector",
-                  ^.`type` := "datetime-local",
-                  ^.defaultValue := s"${tmDate.date.toISODateOnly}T${tmDate.date.prettyTime}",
-                  ^.onChange ==> updateTimeMachineDate
-                ),
-                <.div(^.className := "date-go-button",
-                  goButton(
-                    loading = props.loadingState.isLoading,
-                    dateIsUpdated = tmDateIsChanged,
-                  ),
-                )
-              ),
-            )
-          case None => EmptyVdom
-        },
+      val selectedDateJs = new scala.scalajs.js.Date(state.selectedDate.millisSinceEpoch)
+      val dayDisplayText = if(isYesterday) "Yesterday" else if(isTomorrow) "Tomorrow" else "Today"
+      PaxSearchFormComponent(
+        IPaxSearchForm(
+          day = dayDisplayText,
+          time = "Now",
+          arrivalDate = selectedDateJs,
+          fromDate = selectedDateJs,
+          toDate = selectedDateJs,
+          timeMachine = state.maybeTimeMachineDate.nonEmpty,
+          onChange = (s: PaxSearchFormState) => {
+            log.info(s"onChange: $s")
+            scope.modState { _ =>
+              val newDate = LocalDate.parse(s.day).getOrElse(state.stateDate.date)
+              State(DisplayDate(date = newDate, isNotValid = false), state.maybeTimeMachineDate.map(td =>TimeMachineDate(td.date, isNotValid = false)))
+            }
+          }
+        )
       )
+//      <.div(
+//        ^.className := s"flex-horz-between",
+//        <.div(
+//          ^.className := "date-component-wrapper",
+//          <.div(
+//            ^.className := "date-select-wrapper",
+//            MuiButtonGroup(variant = "contained")(
+//              ThemeProvider(theme = yesterdayButtonTheme)(MuiButton()("Yesterday", ^.onClick ==> selectYesterday, ^.id := "yesterday")),
+//              ThemeProvider(theme = todayButtonTheme)(MuiButton()("Today", ^.onClick ==> selectToday, ^.id := "today")),
+//              ThemeProvider(theme = tomorrowButtonTheme)(MuiButton()("Tomorrow", ^.onClick ==> selectTomorrow, ^.id := "tomorrow")),
+//            ),
+//            <.div(
+//              ^.className := "date-picker",
+//              MuiTextField()(
+//                ^.width := "100%",
+//                ^.`type` := "date",
+//                ^.defaultValue := s"${state.stateDate.date.toISOString}",
+//                ^.onChange ==> updateDisplayDate,
+//              ),
+//            )
+//          ),
+//          TimeRangeFilter(
+//            TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isToday)
+//          ),
+//          MuiDivider()(),
+//          <.div(^.className := "time-machine",
+//            <.div(^.className := "time-machine-switch",
+//              <.div(^.className := "time-machine-switch-label flex-horizontally",
+//                "Time machine",
+//                Tippy(interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")),
+//                  content = <.div(
+//                    <.p("See what DRT was showing for this day on a specific date & time in the past."),
+//                    <.p("This can be useful to compare what DRT forecasted for a date compared to what ended up happening."),
+//                  )
+//                ),
+//              ),
+//              MuiButtonGroup(variant = "contained")(
+//                ThemeProvider(liveViewButtonTheme)(MuiButton()(^.id := "live-view", s"Off", ^.onClick ==> selectLatestView)),
+//                ThemeProvider(timeMachineViewButtonTheme)(MuiButton()(^.id := "time-machine-view", "On", ^.onClick ==> selectTimeMachineView)),
+//              ),
+//            ),
+//          ),
+//        ),
+//        state.maybeTimeMachineDate match {
+//          case Some(tmDate) =>
+//            <.div(^.className := "time-machine-info",
+//              <.div(^.className := "not-live-banner", "You are not viewing live data"),
+//              <.div(^.className := "not-live-message",
+//                s"Show",
+//                <.div(^.className := "time-machine-display-date", state.stateDate.date.ddmmyyyy),
+//                "as it was on",
+//                MuiTextField(
+//                  InputProps = js.Dynamic.literal(
+//                    "style" -> js.Dictionary(
+//                      "fontSize" -> "18px",
+//                      "fontWeight" -> "bold",
+//                    )
+//                  ).asInstanceOf[js.Object]
+//                )(
+//                  ^.className := "time-machine-datetime-selector",
+//                  ^.`type` := "datetime-local",
+//                  ^.defaultValue := s"${tmDate.date.toISODateOnly}T${tmDate.date.prettyTime}",
+//                  ^.onChange ==> updateTimeMachineDate
+//                ),
+//                <.div(^.className := "date-go-button",
+//                  goButton(
+//                    loading = props.loadingState.isLoading,
+//                    dateIsUpdated = tmDateIsChanged,
+//                  ),
+//                )
+//              ),
+//            )
+//          case None => EmptyVdom
+//        },
+//      )
     }
     .configure(Reusability.shouldComponentUpdate)
     .build
