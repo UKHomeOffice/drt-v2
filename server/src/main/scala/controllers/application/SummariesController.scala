@@ -34,7 +34,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
     maybeDateRange match {
       case Some(range) =>
-        println(s"Populating passengers for ${range.min} to ${range.max}")
         Action.async(
           Source(range)
             .mapAsync(1) { date =>
