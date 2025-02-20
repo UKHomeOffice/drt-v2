@@ -27,8 +27,8 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       startDate <- LocalDate.parse(startDateStr)
       endDate <- LocalDate.parse(endDateStr)
     } yield {
-      val utcStart = Seq(SDate(startDate).toUtcDate, SDate(startDate).addDays(1).addMinutes(-1).toUtcDate).min
-      val utcEnd = Seq(SDate(endDate).toUtcDate, SDate(endDate).addDays(1).addMinutes(-1).toUtcDate).max
+      val utcStart = SDate(startDate).toUtcDate
+      val utcEnd = SDate(endDate).addDays(1).addMinutes(-1).toUtcDate
       DateRange(utcStart, utcEnd)
     }
 
