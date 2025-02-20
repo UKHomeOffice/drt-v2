@@ -1,5 +1,6 @@
 package slickdb
 
+import drt.shared.UserPreferences
 import org.slf4j.{Logger, LoggerFactory}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -14,8 +15,9 @@ case class UserRow(
                     drop_in_notification_at: Option[java.sql.Timestamp],
                     created_at: Option[java.sql.Timestamp],
                     feedback_banner_closed_at: Option[java.sql.Timestamp],
-                    staff_planning_interval_minutes: Option[Int]
-)
+                    staff_planning_interval_minutes: Option[Int],
+                    hide_pax_data_source_description: Option[Boolean]
+                  )
 
 trait UserTableLike {
 
@@ -28,6 +30,8 @@ trait UserTableLike {
   def updateCloseBanner(email: String, at: java.sql.Timestamp)(implicit ec: ExecutionContext): Future[Int]
 
   def updateStaffPlanningIntervalMinutes(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int]
+
+  def updateUserPreferences(email: String, userPreferences: UserPreferences)(implicit ec: ExecutionContext): Future[Int]
 }
 
 case class UserTable(tables: AggregatedDbTables) extends UserTableLike {
@@ -101,4 +105,44 @@ case class UserTable(tables: AggregatedDbTables) extends UserTableLike {
         0
     }
   }
+
+  override def updateUserPreferences(email: String, userPreferences: UserPreferences)(implicit ec: ExecutionContext): Future[Int] = {
+    (userPreferences.userSelectedPlanningTimePeriod, userPreferences.hidePaxDataSourceDescription) match {
+      case (Some(_), Some(_)) =>
+        val query = userTableQuery.filter(_.email === email)
+          .map(f => (f.staff_planning_interval_minutes, f.hide_pax_data_source_description))
+          .update(userPreferences.userSelectedPlanningTimePeriod, userPreferences.hidePaxDataSourceDescription)
+        tables.run(query).recover {
+          case throwable =>
+            log.error(s"updateUserPreferences failed", throwable)
+            0
+        }
+      case (Some(_), None) =>
+        val query = userTableQuery.filter(_.email === email)
+          .map(f => (f.staff_planning_interval_minutes))
+          .update(userPreferences.userSelectedPlanningTimePeriod)
+        tables.run(query).recover {
+          case throwable =>
+            log.error(s"updateUserPreferences failed", throwable)
+            0
+        }
+
+      case (None, Some(_)) =>
+        val query = userTableQuery.filter(_.email === email)
+          .map(f => (f.hide_pax_data_source_description))
+          .update(userPreferences.hidePaxDataSourceDescription)
+        tables.run(query).recover {
+          case throwable =>
+            log.error(s"updateUserPreferences failed", throwable)
+            0
+        }
+
+      case _ => {
+        log.error(s"updateUserPreferences: $email, $userPreferences")
+         Future.successful(0)
+      }
+
+    }
+  }
+
 }
