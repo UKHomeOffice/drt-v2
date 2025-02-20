@@ -132,10 +132,10 @@ GET           /data/user/has-port-access                                        
 GET           /data/actor-tree                                                        controllers.application.DebugController.getActorTree
 
 # v2 exports
-+ nocsrf
 GET           /api/passengers/:startLocalDate/:endLocalDate                           controllers.application.SummariesController.exportPassengersByPortForDateRangeApi(startLocalDate: String, endLocalDate: String)
 GET           /api/passengers/:startLocalDate/:endLocalDate/:terminalName             controllers.application.SummariesController.exportPassengersByTerminalForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)
-PUT           /api/passengers/:localDate                                              controllers.application.SummariesController.populatePassengersForDate(localDate: String)
++ nocsrf
+PUT           /api/passengers/:startDate/:endDate                                     controllers.application.SummariesController.populatePassengersForDate(startDate: String, endDate: String)
 
 + nocsrf
 PUT           /api/v1/queues/:startDateLocal/:endDateLocal                            controllers.application.api.v1.QueuesApiController.populateQueues(startDateLocal: String, endDateLocal: String)
