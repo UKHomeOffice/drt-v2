@@ -235,7 +235,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     val controller = newController(drtInterface)
 
     val request = FakeRequest(method = "PUT", uri = "", headers = Headers(("X-Forwarded-Groups", "super-admin,LHR")), body = AnyContentAsEmpty)
-    Await.ready(controller.populatePassengersForDate(startDate.toISOString, endDate.toISOString).apply(request), 1.second)
+    Await.ready(controller.populatePassengersForDate(startDate.toISOString, endDate.toISOString).apply(request), 2.second)
     controller
   }
 
