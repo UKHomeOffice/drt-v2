@@ -309,7 +309,7 @@ object SPAMain {
     GetManifestSummariesForDate(SDate.now().toUtcDate),
     GetManifestSummariesForDate(SDate.now().addDays(-1).toUtcDate),
     GetSlaConfigs,
-    GetUserPreferences()
+    GetUserPreferences
   )
 
   private def sendInitialRequests(): Unit = initialRequestsActions.foreach(SPACircuit.dispatch(_))

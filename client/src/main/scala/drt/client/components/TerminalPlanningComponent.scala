@@ -35,7 +35,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.scalajs.js
 
 object TerminalPlanningComponent {
-  private case class TerminalPlanningModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines])
+  private case class TerminalPlanningModel(forecastPeriodPot: Pot[ForecastPeriodWithHeadlines], userPreferences: Pot[UserPreferences])
 
   def getLastSunday(start: SDateLike): SDateLike = {
     val sunday = start.getLastSunday
@@ -55,10 +55,11 @@ object TerminalPlanningComponent {
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TerminalForecast")
     .initialStateFromProps(p => State(downloadingHeadlines = false, downloadingStaff = false, timePeriod = p.timePeriod))
     .renderPS { (scope, props, state) =>
-      val modelRCP = SPACircuit.connect(model => TerminalPlanningModel(forecastPeriodPot = model.forecastPeriodPot))
+      val modelRCP = SPACircuit.connect(model => TerminalPlanningModel(forecastPeriodPot = model.forecastPeriodPot, userPreferences = model.userPreferences))
       modelRCP(modelProxy => {
         val model: TerminalPlanningModel = modelProxy()
         <.div(model.forecastPeriodPot.renderReady { forecastPeriod =>
+          model.userPreferences.renderReady { userPreferences =>
           val sortedDays = forecastPeriod.forecast.days.toList.sortBy(_._1)
           val byTimeSlot: Seq[List[Option[ForecastTimeSlot]]] = Forecast.periodByTimeSlotAcrossDays(forecastPeriod.forecast)
 
@@ -165,7 +166,7 @@ object TerminalPlanningComponent {
                   "fontWeight" -> "bold")))(<.span("Time Period")),
                 MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
                   scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
-                    Callback(SPACircuit.dispatch(UpdateUserPreferences(UserPreferences(Some(e.target.value.toInt), None)))) >>
+                    Callback(SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(userSelectedPlanningTimePeriod = e.target.value.toInt)))) >>
                       Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt)))
                 }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
                   MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")
@@ -200,7 +201,7 @@ object TerminalPlanningComponent {
               )
             )
           )
-        })
+        }})
       })
     }
     .configure(Reusability.shouldComponentUpdate)

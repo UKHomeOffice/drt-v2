@@ -117,8 +117,8 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.userService.selectUser(userEmail.trim).map {
         case Some(user) => Ok(write(UserPreferences(
-          user.staff_planning_interval_minutes,
-          user.hide_pax_data_source_description)))
+          user.staff_planning_interval_minutes.getOrElse(60),
+          user.hide_pax_data_source_description.getOrElse(false))))
         case None => Ok("")
       }
     }

@@ -206,7 +206,7 @@ object TerminalComponent {
                           dayCrunchSummaries = dayCrunchSummaries,
                           windowStaffSummaries = windowStaffSummaries,
                           defaultDesksAndQueuesViewType = defaultDesksAndQueuesViewType,
-                          hidePaxDataSourceDescription = userPreferences.hidePaxDataSourceDescription
+                          userPreferences = userPreferences
                         ))
                       )
 
@@ -227,14 +227,14 @@ object TerminalComponent {
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
                           flightHighlight = fhl,
-                          hidePaxDataSourceDescription = userPreferences.hidePaxDataSourceDescription,
+                          userPreferences = userPreferences,
                         )
                       )
 
                     case Planning =>
                       <.div(terminalModel.userPreferences.render { userPreferences =>
                         TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router,
-                          userPreferences.userSelectedPlanningTimePeriod.getOrElse(60),
+                          userPreferences.userSelectedPlanningTimePeriod,
                           airportConfig))
                       })
 
@@ -267,7 +267,7 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(p => Callback(SPACircuit.dispatch(GetUserPreferences())) >>
+    .componentDidMount(p => Callback(SPACircuit.dispatch(GetUserPreferences)) >>
       Callback(SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString)))
     )
 

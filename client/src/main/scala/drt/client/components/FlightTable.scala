@@ -48,7 +48,7 @@ object FlightTable {
                    flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
-                   hidePaxDataSourceDescription: Option[Boolean],
+                   userPreferences: UserPreferences,
                   ) extends UseValueEq
 
   case class State(showHighlightedRows: Boolean)
@@ -185,7 +185,7 @@ object FlightTable {
               paxFeedSourceOrder = props.paxFeedSourceOrder,
               originMapper = props.originMapper,
               flightHighlight = props.flightHighlight,
-              hidePaxDataSourceDescription = props.hidePaxDataSourceDescription,
+              userPreferences = props.userPreferences,
             )
           )
         },

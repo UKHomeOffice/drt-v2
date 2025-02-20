@@ -44,7 +44,7 @@ object TerminalDashboardComponent {
                    flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    flightHighlight: FlightHighlight,
-                   hidePaxDataSourceDescription: Option[Boolean],
+                   userPreferences: UserPreferences
                   ) extends UseValueEq
 
   private val defaultSlotSize = 120
@@ -117,7 +117,7 @@ object TerminalDashboardComponent {
                       flightManifestSummaries = props.flightManifestSummaries,
                       arrivalSources = props.arrivalSources,
                       originMapper = originMapper,
-                      hidePaxDataSourceDescription = props.hidePaxDataSourceDescription,
+                      userPreferences = props.userPreferences,
                     )
                   )
                 ),

@@ -107,41 +107,13 @@ case class UserTable(tables: AggregatedDbTables) extends UserTableLike {
   }
 
   override def updateUserPreferences(email: String, userPreferences: UserPreferences)(implicit ec: ExecutionContext): Future[Int] = {
-    (userPreferences.userSelectedPlanningTimePeriod, userPreferences.hidePaxDataSourceDescription) match {
-      case (Some(_), Some(_)) =>
-        val query = userTableQuery.filter(_.email === email)
-          .map(f => (f.staff_planning_interval_minutes, f.hide_pax_data_source_description))
-          .update(userPreferences.userSelectedPlanningTimePeriod, userPreferences.hidePaxDataSourceDescription)
-        tables.run(query).recover {
-          case throwable =>
-            log.error(s"updateUserPreferences failed", throwable)
-            0
-        }
-      case (Some(_), None) =>
-        val query = userTableQuery.filter(_.email === email)
-          .map(f => (f.staff_planning_interval_minutes))
-          .update(userPreferences.userSelectedPlanningTimePeriod)
-        tables.run(query).recover {
-          case throwable =>
-            log.error(s"updateUserPreferences failed", throwable)
-            0
-        }
-
-      case (None, Some(_)) =>
-        val query = userTableQuery.filter(_.email === email)
-          .map(f => (f.hide_pax_data_source_description))
-          .update(userPreferences.hidePaxDataSourceDescription)
-        tables.run(query).recover {
-          case throwable =>
-            log.error(s"updateUserPreferences failed", throwable)
-            0
-        }
-
-      case _ => {
-        log.error(s"updateUserPreferences: $email, $userPreferences")
-         Future.successful(0)
-      }
-
+    val query = userTableQuery.filter(_.email === email)
+      .map(f => (f.staff_planning_interval_minutes, f.hide_pax_data_source_description))
+      .update(Option(userPreferences.userSelectedPlanningTimePeriod), Option(userPreferences.hidePaxDataSourceDescription))
+    tables.run(query).recover {
+      case throwable =>
+        log.error(s"updateUserPreferences failed", throwable)
+        0
     }
   }
 

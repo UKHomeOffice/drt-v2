@@ -10,7 +10,7 @@ import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 import drt.shared.UserPreferences.rw
 
-case class GetUserPreferences() extends Action
+case object GetUserPreferences extends Action
 
 case class SetUserPreferences(userPreferences: UserPreferences) extends Action
 
@@ -22,13 +22,13 @@ class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[UserPreferences]]) exten
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
-    case GetUserPreferences() =>
+    case GetUserPreferences =>
       val apiCallEffect = Effect(DrtApi.get("data/user-preferences")
         .map(r => SetUserPreferences(read[UserPreferences](r.responseText)))
         .recoverWith {
           case _ =>
             log.error(s"Failed to get User Preferences data. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(GetUserPreferences(), PollDelay.recoveryDelay))
+            Future(RetryActionAfter(GetUserPreferences, PollDelay.recoveryDelay))
         })
       effectOnly(apiCallEffect)
 

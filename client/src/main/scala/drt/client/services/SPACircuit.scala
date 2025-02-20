@@ -189,7 +189,6 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
                      userPreferences: Pot[UserPreferences] = Empty,
-                     hidePaxDataSourceDescription: Pot[Boolean] = Empty,
                      shifts: Pot[Seq[Shift]] = Empty,
                      flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
                     )
