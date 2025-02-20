@@ -5,7 +5,8 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.components.ToolTips._
 import drt.client.services._
-import drt.client.services.handlers.{GetShouldHidePaxDataSource, UpdateHidePaxDataSource}
+import drt.client.services.handlers.{GetUserPreferences, UpdateUserPreferences}
+import drt.shared.UserPreferences
 import drt.shared.{CodeShares, DefaultFlightDisplayFilter, FlightHighlight, LhrFlightDisplayFilter, ManifestKey}
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist.{DirectRedListFlight, IndirectRedListPax, LhrRedListDatesImpl, LhrTerminalTypes}
@@ -46,16 +47,14 @@ object FlightTableContent {
                    paxFeedSourceOrder: List[FeedSource],
                    shortLabel: Boolean = false,
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
-                   hidePaxDataSourceDescription: Boolean,
+                   hidePaxDataSourceDescription: Option[Boolean],
                   ) extends UseValueEq
-
-  case class Model(hidePaxDataSourceDescription: Pot[Boolean]) extends UseValueEq
 
   class Backend {
 
     val handleTogglePaxSourceIcon = (e: ReactEventFromInput) => Callback {
       e.preventDefault()
-      SPACircuit.dispatch(UpdateHidePaxDataSource(!e.target.checked))
+      SPACircuit.dispatch(UpdateUserPreferences(UserPreferences(None , Some(!e.target.checked))))
     }
 
 
@@ -103,7 +102,7 @@ object FlightTableContent {
                 },
                 <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"),
                   MuiFormControl()(
-                    MuiSwitch(defaultChecked = !props.hidePaxDataSourceDescription)
+                    MuiSwitch(defaultChecked = !props.hidePaxDataSourceDescription.getOrElse(false))
                     (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e)))
                   ),
                   MuiTypography()("Pax data source descriptions")
@@ -186,7 +185,6 @@ object FlightTableContent {
   val component: Component[Props, Unit, Backend, CtorType.Props] =
     ScalaComponent.builder[Props]("FlightTableContent")
       .renderBackend[Backend]
-//      .componentDidMount(_ => Callback(SPACircuit.dispatch(ShouldHidePaxDataSource())))
       .build
 
   def apply(props: Props): VdomElement = component(props)
@@ -196,7 +194,7 @@ object FlightTableContent {
                 redListPaxExist: Boolean,
                 shortLabel: Boolean,
                 showFlagger: Boolean,
-                hidePaxDataSourceDescription: Boolean
+                hidePaxDataSourceDescription: Option[Boolean]
                ): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val isMobile = dom.window.innerWidth < 800
@@ -206,7 +204,7 @@ object FlightTableContent {
 
     val queueDisplayNames = <.th(
       <.span(^.className := "flex-uniform-size",
-        (Seq(if (hidePaxDataSourceDescription) <.div("", "", ^.className := "icon-header-data-quality") else EmptyVdom) ++
+        (Seq(hidePaxDataSourceDescription.map(flag => if (flag) <.div("", "", ^.className := "icon-header-data-quality") else EmptyVdom).getOrElse(EmptyVdom)) ++
           queues.map(q => <.div(Queues.displayName(q), " ", ^.className := "arrivals_table__splits__queue-pax flex-horizontally"))).toTagMod
       ),
       ^.className := "arrivals__table__flight-splits",

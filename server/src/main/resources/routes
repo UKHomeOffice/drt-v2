@@ -112,13 +112,13 @@ POST          /data/close-banner                                                
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
-POST          /data/hide-pax-datasource-description/:hide                             controllers.Application.updateHidePaxDataSourceDescription(hide: Boolean)
-
-GET           /data/hide-pax-datasource-description                                   controllers.Application.hideDataSourceDescription
-
 GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
 
-PUT           /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod()
+PUT           /data/user-preference-planning-interval-minutes                         controllers.Application.setUserSelectedTimePeriod()
+
+GET           /data/user-preferences                                                   controllers.Application.userPreferences
+
+POST          /data/user-preferences                                                   controllers.Application.setUserPreferences
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin

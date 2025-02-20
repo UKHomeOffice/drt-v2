@@ -68,20 +68,6 @@ abstract class AuthController(cc: ControllerComponents, ctrl: DrtSystemInterface
     Future.successful(Ok(s"User-tracked"))
   }
 
-  def hideDataSourceDescription: Action[AnyContent] = Action.async { implicit request =>
-    val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
-    ctrl.userService.selectUser(userEmail.trim).map(_.map(_.hide_pax_data_source_description)).map {
-      case Some(show) if show.getOrElse(false)  => Ok(true.toString);
-      case _ => Ok(false.toString)
-    }
-  }
-
-  def updateHidePaxDataSourceDescription(hide: Boolean): Action[AnyContent] = Action.async { implicit request =>
-    val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
-    val result: Future[Int] = ctrl.userService.updateHidePaxDataSourceDescription(email = userEmail, hide = hide)
-    result.map(_ => Ok("Successfully closed banner"))
-  }
-
   def closeBanner: Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
     val result: Future[Int] = ctrl.userService.updateCloseBanner(email = userEmail, at = new Timestamp(ctrl.now().millisSinceEpoch))

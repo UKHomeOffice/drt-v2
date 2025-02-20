@@ -66,7 +66,7 @@ object TerminalContentComponent {
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                    defaultDesksAndQueuesViewType: String,
-                   hidePaxDataSourceDescription: Boolean,
+                   hidePaxDataSourceDescription: Option[Boolean],
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)

@@ -53,7 +53,7 @@ object FlightTableRow {
                    maybeManifestSummary: Option[FlightManifestSummary],
                    paxFeedSourceOrder: List[FeedSource],
                    showHighLighted: Boolean,
-                   hidePaxDataSourceDescription: Boolean
+                   hidePaxDataSourceDescription: Option[Boolean]
                   ) extends UseValueEq
 
   implicit val propsReuse: Reusability[Props] = Reusability {
@@ -213,7 +213,7 @@ object FlightTableRow {
         ),
         <.td(
           pcpPaxDataQuality.map(dq =>
-            if (props.hidePaxDataSourceDescription) {
+            if (props.hidePaxDataSourceDescription.getOrElse(false)) {
               <.div(^.className := s"pcp-icon-data-quality pax-rag-${dq.`type`}",
                 PaxDatasourceComponent(IPaxDatasource(dq.text)),
                 FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder))
@@ -238,7 +238,7 @@ object FlightTableRow {
           ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
       }.toTagMod
 
-      def splits(dq: SplitsDataQuality) = if (props.hidePaxDataSourceDescription)
+      def splits(dq: SplitsDataQuality) = if (props.hidePaxDataSourceDescription.getOrElse(false))
         <.div(
           <.span(^.className := "flex-uniform-size",
             <.span(^.className := "icon-data-quality", PaxDatasourceComponent(IPaxDatasource(dq.text))),

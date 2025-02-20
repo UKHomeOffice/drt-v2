@@ -6,9 +6,9 @@ import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.actions.Actions.GetForecastWeek
 import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.styles.DrtTheme
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.handlers.SendSelectedTimeInterval
+import drt.client.services.handlers.UpdateUserPreferences
+import drt.shared.UserPreferences
 import drt.client.services.{DrtApi, SPACircuit}
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
 import drt.shared.Forecast
@@ -165,8 +165,8 @@ object TerminalPlanningComponent {
                   "fontWeight" -> "bold")))(<.span("Time Period")),
                 MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
                   scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
-                    Callback(SPACircuit.dispatch(SendSelectedTimeInterval(e.target.value.toInt))) >>
-                    Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt)))
+                    Callback(SPACircuit.dispatch(UpdateUserPreferences(UserPreferences(Some(e.target.value.toInt), None)))) >>
+                      Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt)))
                 }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
                   MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")
                 ))

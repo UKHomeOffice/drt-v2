@@ -44,7 +44,7 @@ object TerminalDashboardComponent {
                    flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    flightHighlight: FlightHighlight,
-                   hidePaxDataSourceDescription: Boolean,
+                   hidePaxDataSourceDescription: Option[Boolean],
                   ) extends UseValueEq
 
   private val defaultSlotSize = 120

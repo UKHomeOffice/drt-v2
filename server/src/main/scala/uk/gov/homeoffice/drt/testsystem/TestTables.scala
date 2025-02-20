@@ -3,7 +3,7 @@ package uk.gov.homeoffice.drt.testsystem
 import actors.DrtParameters
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import drt.shared.{DropIn, Shift}
+import drt.shared.{DropIn, Shift, UserPreferences}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import slickdb._
@@ -45,7 +45,7 @@ case class MockUserTable() extends UserTableLike {
 
   override def updateStaffPlanningIntervalMinutes(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def updateHidePaxDataSourceDescription(email: String, hide: Boolean)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+  override def updateUserPreferences(email: String, userPreferences: UserPreferences)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 }
 
 case class MockFeatureGuideTable() extends FeatureGuideTableLike {
