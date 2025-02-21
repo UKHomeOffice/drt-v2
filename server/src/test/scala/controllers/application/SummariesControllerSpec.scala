@@ -64,9 +64,9 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       Await.ready(drtInterface.minuteLookups.queueMinutesRouterActor.ask(minutes), 5.second)
       val controller = newController(drtInterface)
 
-      val authHeader = Headers(("X-Forwarded-Groups" -> "super-admin,LHR"))
+      val authHeader = Headers("X-Forwarded-Groups" -> "super-admin,LHR")
       val result = controller
-        .populatePassengersForDate("2024-06-01")
+        .populatePassengersForDate("2024-06-01", "2024-06-01")
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
@@ -82,7 +82,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   "exportPassengersByTerminalForDateRangeApi" should {
     val acceptHeader = Headers(("Accept", "text/csv"), "X-Forwarded-Groups" -> "LHR")
     "generate a csv with the correct headers for the given port" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
 
@@ -91,7 +91,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentAsString(result) must ===(s"Heathrow,LHR,$capacity,$portPaxPerDay,0,0,$terminalPaxPerDay,$terminalPaxPerDay,0\n")
     }
     "generate a daily breakdown csv with the correct headers for the given port" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-02").apply(csvRequest)
 
@@ -103,7 +103,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
            |""".stripMargin)
     }
     "generate an hourly breakdown csv with the correct headers for the given port" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-02").apply(csvRequest)
 
@@ -117,7 +117,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       )
     }
     "generate a csv with the correct headers for the given terminal" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
@@ -126,7 +126,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentAsString(result) must ===(s"Heathrow,LHR,T3,0,${queuePaxPerDay * queues.size},0,0,$queuePaxPerDay,$queuePaxPerDay,0\n")
     }
     "generate a daily breakdown csv with the correct headers for the given terminal" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-02", "T3").apply(csvRequest)
 
@@ -138,7 +138,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
            |""".stripMargin)
     }
     "generate an hourly breakdown csv with the correct headers for the given terminal" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-02", "T3").apply(csvRequest)
 
@@ -155,7 +155,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   "exportPassengersByTerminalForDateRangeApi" should {
     val acceptHeader = Headers(("Accept", "application/json"), ("X-Forwarded-Groups" -> "LHR"))
     "generate a json response for the given port" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
 
@@ -166,7 +166,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePax},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePax}],"regionName":"Heathrow","totalCapacity":$capacity,"totalPcpPax":$totalPax}]""")
     }
     "generate a daily breakdown json response for the given port" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
 
@@ -175,7 +175,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$terminalPaxPerDay},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$terminalPaxPerDay}],"regionName":"Heathrow","totalCapacity":$capacity,"totalPcpPax":$portPaxPerDay}]""")
     }
     "generate a hourly breakdown json response for the given port" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
 
@@ -188,7 +188,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentAsString(result) must ===(s"[$hourlyContent]")
     }
     "generate a json response for the given terminal" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
@@ -197,7 +197,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePaxPerDay},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePaxPerDay}],"regionName":"Heathrow","terminalName":"T3","totalCapacity":0,"totalPcpPax":${queuePaxPerDay * queues.size}}]""")
     }
     "generate a daily breakdown json response for the given terminal" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
@@ -206,7 +206,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
       contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePaxPerDay},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePaxPerDay}],"regionName":"Heathrow","terminalName":"T3","totalCapacity":0,"totalPcpPax":${queuePaxPerDay * queues.size}}]""")
     }
     "generate a hourly breakdown json response for the given terminal" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), terminals)
+      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
       val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = acceptHeader, body = AnyContentAsEmpty)
       val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
 
@@ -219,9 +219,9 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
   }
 
-  private def populateForDate(localDate: LocalDate, terminals: Seq[Terminal]): SummariesController = {
-    val startSDate = SDate(localDate)
-    val endSDate = SDate(localDate).addDays(1).addMinutes(-1)
+  private def populateForDate(startDate: LocalDate, endDate: LocalDate, terminals: Seq[Terminal]): SummariesController = {
+    val startSDate = SDate(startDate)
+    val endSDate = SDate(endDate).addDays(1).addMinutes(-1)
     val drtInterface = newDrtInterface
     val db = drtInterface.applicationService.aggregatedDb
     val replaceHours = CapacityHourlyDao.replaceHours(drtInterface.airportConfig.portCode)
@@ -235,7 +235,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
     val controller = newController(drtInterface)
 
     val request = FakeRequest(method = "PUT", uri = "", headers = Headers(("X-Forwarded-Groups", "super-admin,LHR")), body = AnyContentAsEmpty)
-    Await.ready(controller.populatePassengersForDate(localDate.toISOString).apply(request), 1.second)
+    Await.ready(controller.populatePassengersForDate(startDate.toISOString, endDate.toISOString).apply(request), 2.second)
     controller
   }
 

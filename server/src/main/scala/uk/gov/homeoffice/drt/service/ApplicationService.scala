@@ -149,8 +149,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
   )
   private lazy val getCapacities = PassengersLiveView.capacityForDate(uniqueFlightsForDate)
   private lazy val persistCapacity = PassengersLiveView.persistCapacityForDate(aggregatedDb, airportConfig.portCode)
-  private val updateAndPersistCapacity = PassengersLiveView.updateAndPersistCapacityForDate(getCapacities, persistCapacity)
 
+  lazy val updateAndPersistCapacity: UtcDate => Future[Done] =
+    PassengersLiveView.updateAndPersistCapacityForDate(getCapacities, persistCapacity)
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
     PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 

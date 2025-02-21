@@ -120,6 +120,8 @@ object PassengersLiveView {
                             (implicit ec: ExecutionContext): (UtcDate, Map[Terminal, Map[Int, Int]]) => Future[Done] = {
     val replaceHours = CapacityHourlyDao.replaceHours(portCode)
     (date, capacity) => {
+      log.info(s"Populating capacities for ${date.toISOString}")
+      
       val eventuals = capacity.map {
         case (terminal, hourly) =>
           val terminalHours = hourly.map {
