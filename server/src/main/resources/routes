@@ -112,10 +112,6 @@ POST          /data/close-banner                                                
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
-GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
-
-PUT           /data/user-preference-planning-interval-minutes                         controllers.Application.setUserSelectedTimePeriod()
-
 GET           /data/user-preferences                                                   controllers.Application.userPreferences
 
 POST          /data/user-preferences                                                   controllers.Application.setUserPreferences

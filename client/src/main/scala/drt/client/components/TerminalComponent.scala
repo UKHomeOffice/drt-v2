@@ -10,7 +10,7 @@ import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, _}
-import drt.client.services.handlers.{GetShifts, GetUserPreferences}
+import drt.client.services.handlers.GetShifts
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -267,10 +267,9 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(p => Callback(SPACircuit.dispatch(GetUserPreferences)) >>
-      Callback(SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString)))
-    )
-
+    .componentDidMount(p => Callback(
+      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr,
+        p.props.terminalPageTab.terminal.toString))))
     .build
 
   private def terminalTabs(props: Props,

@@ -119,7 +119,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
         case Some(user) => Ok(write(UserPreferences(
           user.staff_planning_interval_minutes.getOrElse(60),
           user.hide_pax_data_source_description.getOrElse(false))))
-        case None => Ok("")
+        case None => BadRequest("User not found")
       }
     }
   }
@@ -139,30 +139,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     }
   }
 
-  def userSelectedTimePeriod: Action[AnyContent] = authByRole(BorderForceStaff) {
-    Action.async { implicit request =>
-      val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
-      ctrl.userService.selectUser(userEmail.trim).map {
-        case Some(user) => Ok(user.staff_planning_interval_minutes.getOrElse(60).toString)
-        case None => Ok("")
-      }
-    }
-  }
-
-  def setUserSelectedTimePeriod(): Action[AnyContent] = authByRole(BorderForceStaff) {
-    Action.async { implicit request =>
-      val periodInterval: Int = request.body.asText.getOrElse("60").toInt
-      val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
-      ctrl.userService.updateStaffPlanningIntervalMinutes(userEmail, periodInterval).map {
-          case _ => Ok("Updated period")
-        }
-        .recover {
-          case t =>
-            log.error(s"Failed to update UpdateStaff Planning Time Period: ${t.getMessage}")
-            Ok("Updated period failed")
-        }
-    }
-  }
 
   def shouldUserViewBanner: Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
