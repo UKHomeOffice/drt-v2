@@ -112,9 +112,9 @@ POST          /data/close-banner                                                
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
-GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
+GET           /data/user-preferences                                                   controllers.Application.userPreferences
 
-PUT           /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod()
+POST          /data/user-preferences                                                   controllers.Application.setUserPreferences
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
