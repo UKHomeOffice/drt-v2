@@ -9,7 +9,7 @@ CREATE TABLE public.user
     drop_in_notification_at          timestamp,
     created_at                       timestamp,
     feedback_banner_closed_at        timestamp,
-    staff_planning_interval_minutes  integer
+    staff_planning_interval_minutes  integer,
     hide_pax_data_source_description boolean
     PRIMARY KEY (id)
 );
