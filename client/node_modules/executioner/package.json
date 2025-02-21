@@ -1,0 +1,46 @@
+{
+  "name": "executioner",
+  "version": "2.0.1",
+  "description": "Executes provided shell commands with supplied arguments. Supports parallel and templated commands",
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint *.js lib/*.js tests/*.js",
+    "test": "node tests/run.js",
+    "cover": "istanbul cover tests/run.js",
+    "check": "istanbul check-coverage coverage/coverage.json",
+    "files": "pkgfiles --sort=name"
+  },
+  "pre-commit": [
+    "lint",
+    "cover",
+    "check"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alexindigo/executioner.git"
+  },
+  "keywords": [
+    "exec",
+    "shell",
+    "arguments",
+    "command",
+    "cli",
+    "execute"
+  ],
+  "author": "Alex Indigo <iam@alexindigo.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/alexindigo/executioner/issues"
+  },
+  "homepage": "https://github.com/alexindigo/executioner#readme",
+  "devDependencies": {
+    "coveralls": "^2.11.12",
+    "eslint": "^2.13.1",
+    "istanbul": "^0.4.5",
+    "pkgfiles": "^2.3.0",
+    "pre-commit": "^1.1.3"
+  },
+  "dependencies": {
+    "mixly": "^1.0.0"
+  }
+}

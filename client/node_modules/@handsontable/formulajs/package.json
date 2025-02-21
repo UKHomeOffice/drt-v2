@@ -1,0 +1,48 @@
+{
+  "author": "Handsoncode <hello@handsontable.com>",
+  "name": "@handsontable/formulajs",
+  "description": "JavaScript implementation of most Microsoft Excel formula functions",
+  "version": "2.0.2",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:handsontable/formula.js.git"
+  },
+  "main": "index.js",
+  "bin": {
+    "implementation-stats": "./bin/implementation-stats"
+  },
+  "scripts": {
+    "test": "make test",
+    "test-browser": "make test-browser",
+    "lint": "make lint",
+    "watch": "make watch",
+    "build": "make build",
+    "coverage": "make coverage",
+    "release": "generate-release"
+  },
+  "dependencies": {
+    "bessel": "^1.0.2",
+    "jstat": "^1.9.2"
+  },
+  "devDependencies": {
+    "blanket": "^1.1.6",
+    "browserify": "^13.0.1",
+    "cli-table": "^0.3.0",
+    "generate-release": "^0.10.2",
+    "http-server": "^0.11.1",
+    "istanbul": "^0.4.5",
+    "jshint": "^2.5.2",
+    "mocha": "^2.5.0",
+    "mocha-lcov-reporter": "0.0.1",
+    "mocha-spec-cov": "0.0.3",
+    "should": "^11.1.0",
+    "webpack": "^3.5.5"
+  },
+  "config": {
+    "blanket": {
+      "pattern": "lib",
+      "data-cover-never": "node_modules"
+    }
+  },
+  "license": "MIT"
+}

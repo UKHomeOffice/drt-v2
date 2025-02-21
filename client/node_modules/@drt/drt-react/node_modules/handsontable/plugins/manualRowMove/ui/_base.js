@@ -1,0 +1,171 @@
+"use strict";
+
+exports.__esModule = true;
+require("core-js/modules/es.error.cause.js");
+function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: !0, configurable: !0, writable: !0 }) : e[r] = t, e; }
+function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == typeof i ? i : i + ""; }
+function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
+const STATE_INITIALIZED = 0;
+const STATE_BUILT = 1;
+const STATE_APPENDED = 2;
+const UNIT = 'px';
+
+/**
+ * @private
+ */
+class BaseUI {
+  constructor(hotInstance) {
+    /**
+     * Instance of Handsontable.
+     *
+     * @type {Core}
+     */
+    _defineProperty(this, "hot", void 0);
+    /**
+     * DOM element representing the ui element.
+     *
+     * @type {HTMLElement}
+     * @private
+     */
+    _defineProperty(this, "_element", null);
+    /**
+     * Flag which determines build state of element.
+     *
+     * @type {number}
+     */
+    _defineProperty(this, "state", STATE_INITIALIZED);
+    this.hot = hotInstance;
+  }
+
+  /**
+   * Add created UI elements to table.
+   *
+   * @param {HTMLElement} wrapper Element which are parent for our UI element.
+   */
+  appendTo(wrapper) {
+    wrapper.appendChild(this._element);
+    this.state = STATE_APPENDED;
+  }
+
+  /**
+   * Method for create UI element. Only create, without append to table.
+   */
+  build() {
+    if (this.state !== STATE_INITIALIZED) {
+      return;
+    }
+    this._element = this.hot.rootDocument.createElement('div');
+    this.state = STATE_BUILT;
+  }
+
+  /**
+   * Method for remove UI element.
+   */
+  destroy() {
+    if (this.isAppended()) {
+      this._element.parentElement.removeChild(this._element);
+    }
+    this._element = null;
+    this.state = STATE_INITIALIZED;
+  }
+
+  /**
+   * Check if UI element are appended.
+   *
+   * @returns {boolean}
+   */
+  isAppended() {
+    return this.state === STATE_APPENDED;
+  }
+
+  /**
+   * Check if UI element are built.
+   *
+   * @returns {boolean}
+   */
+  isBuilt() {
+    return this.state >= STATE_BUILT;
+  }
+
+  /**
+   * Setter for position.
+   *
+   * @param {number} top New top position of the element.
+   * @param {number} left New left position of the element.
+   */
+  setPosition(top, left) {
+    if (top !== undefined) {
+      this._element.style.top = top + UNIT;
+    }
+    if (left !== undefined) {
+      this._element.style.left = left + UNIT;
+    }
+  }
+
+  /**
+   * Getter for the element position.
+   *
+   * @returns {object} Object contains left and top position of the element.
+   */
+  getPosition() {
+    return {
+      top: this._element.style.top ? parseInt(this._element.style.top, 10) : 0,
+      left: this._element.style.left ? parseInt(this._element.style.left, 10) : 0
+    };
+  }
+
+  /**
+   * Setter for the element size.
+   *
+   * @param {number} width New width of the element.
+   * @param {number} height New height of the element.
+   */
+  setSize(width, height) {
+    if (width) {
+      this._element.style.width = width + UNIT;
+    }
+    if (height) {
+      this._element.style.height = height + UNIT;
+    }
+  }
+
+  /**
+   * Getter for the element position.
+   *
+   * @returns {object} Object contains height and width of the element.
+   */
+  getSize() {
+    return {
+      width: this._element.style.width ? parseInt(this._element.style.width, 10) : 0,
+      height: this._element.style.height ? parseInt(this._element.style.height, 10) : 0
+    };
+  }
+
+  /**
+   * Setter for the element offset. Offset means marginTop and marginLeft of the element.
+   *
+   * @param {number} top New margin top of the element.
+   * @param {number} left New margin left of the element.
+   */
+  setOffset(top, left) {
+    if (top) {
+      this._element.style.marginTop = top + UNIT;
+    }
+    if (left) {
+      this._element.style.marginLeft = left + UNIT;
+    }
+  }
+
+  /**
+   * Getter for the element offset.
+   *
+   * @returns {object} Object contains top and left offset of the element.
+   */
+  getOffset() {
+    return {
+      top: this._element.style.marginTop ? parseInt(this._element.style.marginTop, 10) : 0,
+      left: this._element.style.marginLeft ? parseInt(this._element.style.marginLeft, 10) : 0
+    };
+  }
+}
+var _default = exports.default = BaseUI;

@@ -2,6 +2,7 @@
 import Settings.versions.scalajsReact
 import com.typesafe.config.*
 import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin.autoImport.*
+import org.scalajs.linker.interface.ModuleSplitStyle
 import sbt.Credentials
 import sbt.Keys.{credentials, *}
 import sbt.Project.projectToRef
@@ -10,11 +11,14 @@ import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 import java.net.URL
 
 scalaVersion := Settings.versions.scala
-// uncomment the following to get a breakdown  of where build time is spent
-//enablePlugins(net.virtualvoid.optimizer.SbtOptimizerPlugin)
+
+lazy val root = (project in file("."))
+  .aggregate(server, client, shared.jvm, shared.js)
 
 // a special crossProject for configuring a JS/JVM/shared structure
-lazy val shared = (crossProject(JSPlatform, JVMPlatform).crossType(CrossType.Pure) in file("shared"))
+lazy val shared = (crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("shared")))
   .settings(
     scalaVersion := Settings.versions.scala,
     libraryDependencies ++= Settings.sharedDependencies.value,
@@ -22,22 +26,20 @@ lazy val shared = (crossProject(JSPlatform, JVMPlatform).crossType(CrossType.Pur
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
   )
-  // set up settings specific to the JS project
-  .jsConfigure(_ enablePlugins ScalaJSWeb)
+  .jsConfigure(_.enablePlugins(ScalaJSWeb))
 
-val bundle = project.in(file("bundle"))
+//val bundle = project.in(file("bundle"))
+//
+//addCommandAlias("bundle", "bundle/bundle")
 
-addCommandAlias("bundle", "bundle/bundle")
-
-lazy val sharedJVM = shared.jvm.settings(name := "sharedJVM")
-
-lazy val sharedJS = shared.js.settings(name := "sharedJS")
+//lazy val sharedJVM = shared.jvm.settings(name := "sharedJVM")
+//
+//lazy val sharedJS = shared.js.settings(name := "sharedJS")
 
 // use eliding to drop some debug code in the production build
 lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable functions")
 
 lazy val clientMacrosJS: Project = (project in file("client-macros"))
-  .enablePlugins(ScalaJSPlugin)
   .settings(
     name := "clientMacrosJS",
     version := Settings.version,
@@ -49,7 +51,7 @@ lazy val clientMacrosJS: Project = (project in file("client-macros"))
     ),
     resolvers += Resolver.defaultLocal,
   )
-
+  .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
 
 // instantiate the JS project for SBT with some additional settings
 lazy val client: Project = (project in file("client"))
@@ -61,22 +63,36 @@ lazy val client: Project = (project in file("client"))
     libraryDependencies ++= Settings.scalajsDependencies.value,
     scalaJSUseMainModuleInitializer := true,
     Compile / mainClass := Some("drt.client.SPAMain"),
-    webpackBundlingMode := BundlingMode.LibraryOnly(),
-    webpack / version := "5.75.0",
+
+    /* Configure Scala.js to emit modules in the optimal way to
+ * connect to Vite's incremental reload.
+ * - emit ECMAScript modules
+ * - emit as many small modules as possible for classes in the "drt-client" package
+ * - emit as few (large) modules as possible for all other classes
+ *   (in particular, for the standard library)
+ */
+    scalaJSLinkerConfig ~= {
+      _.withModuleKind(ModuleKind.ESModule)
+        .withModuleSplitStyle(
+          ModuleSplitStyle.SmallModulesFor(List("drt-client")))
+    },
+
+//    webpackBundlingMode := BundlingMode.LibraryOnly(),
+//    webpack / version := "5.75.0",
     // by default we do development build, no eliding
     elideOptions := Seq(),
     scalacOptions ++= elideOptions.value,
-    jsDependencies ++= Settings.jsDependencies.value,
+//    jsDependencies ++= Settings.jsDependencies.value,
     // reactjs testing
-    Test / requireJsDomEnv := true,
+//    Test / requireJsDomEnv := true,
     Test / scalaJSStage := FastOptStage,
     // 'new style js dependencies with scalaBundler'
-    Compile / npmDependencies ++= Settings.clientNpmDependencies,
-    Compile / npmDevDependencies += Settings.clientNpmDevDependencies,
+//    Compile / npmDependencies ++= Settings.clientNpmDependencies,
+//    Compile / npmDevDependencies += Settings.clientNpmDevDependencies,
     // RuntimeDOM is needed for tests
     //    useYarn := true,
     // yes, we want to package JS dependencies
-    packageJSDependencies / skip := false,
+//    packageJSDependencies / skip := false,
     resolvers += Resolver.defaultLocal,
     resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
@@ -87,21 +103,10 @@ lazy val client: Project = (project in file("client"))
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
   )
-  .enablePlugins(ScalaJSPlugin)
-  .enablePlugins(ScalaJSBundlerPlugin)
-  .enablePlugins(ScalaJSWeb)
-  .dependsOn(sharedJS, clientMacrosJS)
+  .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
+  .dependsOn(shared.js, clientMacrosJS)
 
-// Client projects (just one in this case)
-lazy val clients = Seq(client)
-
-// instantiate the JVM project for SBT with some additional settings
 lazy val server = (project in file("server"))
-  .enablePlugins(PlayScala)
-  .enablePlugins(SbtWeb)
-  .enablePlugins(WebScalaJSBundlerPlugin)
-  .enablePlugins(BuildInfoPlugin)
-  .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
   .settings(
     name := "drt",
     version := Settings.version,
@@ -119,19 +124,22 @@ lazy val server = (project in file("server"))
 
     commands += ReleaseCmd,
     // connect to the client project
-    scalaJSProjects := clients,
+    scalaJSProjects := Seq(client),
     Assets / pipelineStages := Seq(scalaJSPipeline),
+    pipelineStages := Seq(digest, gzip),
     // triggers scalaJSPipeline when using compile or continuous compilation
     Compile / compile := ((Compile / compile) dependsOn scalaJSPipeline).value,
     testFrameworks += new TestFramework("utest.runner.Framework"),
-    resolvers += Resolver.defaultLocal,
-    resolvers += Resolver.bintrayRepo("dwhjames", "maven"),
-    resolvers += Resolver.bintrayRepo("mfglabs", "maven"),
-    resolvers += "Akka library repository".at("https://repo.akka.io/maven"),
-    resolvers += "Artifactory Realm release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
-    resolvers += "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
-    resolvers += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
-    resolvers += "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases/",
+    resolvers ++= Seq(
+      Resolver.defaultLocal,
+      Resolver.bintrayRepo("dwhjames", "maven"),
+      Resolver.bintrayRepo("mfglabs", "maven"),
+      "Akka library repository".at("https://repo.akka.io/maven"),
+      "Artifactory Realm release" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
+      "BeDataDriven" at "https://nexus.bedatadriven.com/content/groups/public",
+      "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
+      "Sonatype OSS Releases" at "https://oss.sonatype.org/content/repositories/releases/",
+    ),
     Compile / packageBin / publishArtifact := false,
     Compile / packageDoc / publishArtifact := false,
     Compile / packageSrc / publishArtifact := false,
@@ -143,8 +151,10 @@ lazy val server = (project in file("server"))
     Compile / doc / sources := List(),
     dependencyCheckFormats := Seq("XML", "JSON", "HTML")
   )
-  .aggregate(clients.map(projectToRef) *)
-  .dependsOn(sharedJVM)
+  .enablePlugins(PlayScala)
+  .enablePlugins(BuildInfoPlugin)
+  .disablePlugins(PlayLayoutPlugin) // use the standard directory layout instead of Play's custom
+  .dependsOn(shared.jvm)
 
 // Command for building a release
 lazy val ReleaseCmd = Command.command("release") {

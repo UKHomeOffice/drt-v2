@@ -1,4 +1,4 @@
-@(title: String, port: String, googleTrackingCode: String, userId: String)(implicit request: RequestHeader ,config: play.api.Configuration, env: play.api.Environment)
+@(title: String, port: String, googleTrackingCode: String, userId: String)(implicit request: RequestHeader, config: play.api.Configuration, env: play.api.Environment)
 @import views.html.tags._
 @import views.html.helper.CSPNonce
 <!DOCTYPE html>
@@ -37,16 +37,17 @@
     <input type="hidden" name="ga-code" id="ga-code" value="@{googleTrackingCode}"/>
     <input type="hidden" name="user-id" id="user-id" value="@{userId}"/>
     <input type="hidden" name="csrfToken" id="csrfToken" value="@helper.CSRF.getToken.value"/>
+    @scalajs.html.scripts("client", routes.Assets.versioned(_).toString, name => getClass.getResource(s"/public/$name") != null)
 </body>
     @*
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css"
       integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
     *@
 
-    @Seq("fastopt", "opt").find(optType => env.resource(s"public/client-$optType.js").isDefined).map { appName =>
-        @Seq("-library.js", "-loader.js", ".js").map { filePostFix =>
-            <script src="/assets/client-@appName@filePostFix?@BuildInfo.version"></script>
-        }
-    }
+@*    @Seq("fastopt", "opt").find(optType => env.resource(s"public/client-$optType.js").isDefined).map { appName =>*@
+@*        @Seq("-library.js", "-loader.js", ".js").map { filePostFix =>*@
+@*            <script src="/assets/client-@appName@filePostFix?@BuildInfo.version"></script>*@
+@*        }*@
+@*    }*@
 <!-- version: @BuildInfo.version -->
 </html>

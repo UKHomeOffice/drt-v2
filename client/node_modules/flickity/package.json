@@ -1,0 +1,58 @@
+{
+  "name": "flickity",
+  "version": "2.3.0",
+  "description": "Touch, responsive, flickable carousels",
+  "main": "js/index.js",
+  "style": "css/flickity.css",
+  "scripts": {
+    "test": "npm run lint && echo \"View test/ in browser\" && exit 1",
+    "lint": "node bin/lint-json.js && npx eslint .",
+    "lintFix": "npx eslint . --fix",
+    "dist": "npm run bundleCss && npm run bundleJs && npm run uglify",
+    "bundleCss": "cp css/flickity.css dist/flickity.css && node bin/bundle-css.js",
+    "bundleJs": "node bin/bundle-js.js",
+    "uglify": "npx uglifyjs dist/flickity.pkgd.js -o dist/flickity.pkgd.min.js --mangle --comments /^!/",
+    "version": "node bin/version.js && npm run dist && git add -A css js dist"
+  },
+  "dependencies": {
+    "desandro-matches-selector": "^2.0.0",
+    "ev-emitter": "^1.1.1",
+    "fizzy-ui-utils": "^2.0.7",
+    "get-size": "^2.0.3",
+    "unidragger": "^2.4.0",
+    "unipointer": "^2.4.0"
+  },
+  "devDependencies": {
+    "clean-css": "^4.2.3",
+    "eslint": "^7.17.0",
+    "eslint-plugin-metafizzy": "^1.2.1",
+    "flickity-as-nav-for": "^2.0.0",
+    "flickity-imagesloaded": "^2.0.0",
+    "jquery-bridget": "^2.0.0",
+    "requirejs": "^2.3.6",
+    "uglify-js": "^3.9.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/metafizzy/flickity.git"
+  },
+  "keywords": [
+    "touch",
+    "responsive",
+    "flick",
+    "slider",
+    "carousel",
+    "gallery",
+    "DOM",
+    "browser"
+  ],
+  "author": "Metafizzy",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/metafizzy/flickity/issues"
+  },
+  "homepage": "https://flickity.metafizzy.co",
+  "directories": {
+    "test": "test"
+  }
+}
