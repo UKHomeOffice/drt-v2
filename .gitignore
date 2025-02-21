@@ -44,6 +44,7 @@ doc/_book
 *.log.zip
 
 client/src/main/resources/bundle.js
+client/node_modules
 
 .ensime_cache/
 runsbt.sh
