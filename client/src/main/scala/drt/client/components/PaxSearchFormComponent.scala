@@ -7,7 +7,7 @@ import scala.scalajs.js.Date
 import scala.scalajs.js.annotation.JSImport
 
 @js.native
-trait PaxSearchFormState extends js.Object {
+trait PaxSearchFormPayload extends js.Object {
   var day: String
   var time: String
   var arrivalDate: Date
@@ -16,26 +16,13 @@ trait PaxSearchFormState extends js.Object {
   var timeMachine: Boolean
 }
 
-object PaxSearchFormState {
-  def apply(day: String, time: String, arrivalDate: Date, fromDate: Date, toDate: Date, timeMachine: Boolean): PaxSearchFormState = {
-    val p = (new js.Object).asInstanceOf[PaxSearchFormState]
-    p.day = day
-    p.time = time
-    p.arrivalDate = arrivalDate
-    p.fromDate = fromDate
-    p.toDate = toDate
-    p.timeMachine = timeMachine
-    p
-  }
-}
-
 @js.native
-trait IPaxSearchForm extends PaxSearchFormState {
-  var onChange: js.Function1[PaxSearchFormState, Unit]
+trait IPaxSearchForm extends PaxSearchFormPayload {
+  var onChange: js.Function1[PaxSearchFormPayload, Unit]
 }
 
 object IPaxSearchForm {
-  def apply(day: String, time: String, arrivalDate: Date, fromDate: Date, toDate: Date, timeMachine: Boolean, onChange: PaxSearchFormState => Unit): IPaxSearchForm = {
+  def apply(day: String, time: String, arrivalDate: Date, fromDate: Date, toDate: Date, timeMachine: Boolean, onChange: PaxSearchFormPayload => Unit): IPaxSearchForm = {
     val p = (new js.Object).asInstanceOf[IPaxSearchForm]
     p.day = day
     p.time = time
