@@ -5,7 +5,6 @@ import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin.autoImport.*
 import org.scalajs.linker.interface.ModuleSplitStyle
 import sbt.Credentials
 import sbt.Keys.{credentials, *}
-import sbt.Project.projectToRef
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 
 import java.net.URL
@@ -59,7 +58,7 @@ lazy val client: Project = (project in file("client"))
     name := "client",
     version := Settings.version,
     scalaVersion := Settings.versions.scala,
-    scalacOptions ++= Settings.scalacOptions,
+//    scalacOptions ++= Settings.scalacOptions,
     libraryDependencies ++= Settings.scalajsDependencies.value,
     scalaJSUseMainModuleInitializer := true,
     Compile / mainClass := Some("drt.client.SPAMain"),
@@ -74,8 +73,10 @@ lazy val client: Project = (project in file("client"))
     scalaJSLinkerConfig ~= {
       _.withModuleKind(ModuleKind.ESModule)
         .withModuleSplitStyle(
-          ModuleSplitStyle.SmallModulesFor(List("drt-client")))
+          ModuleSplitStyle.SmallModulesFor(List("drt.client")))
     },
+
+    zonesFilter := {(z: String) => z == "Europe/London"},
 
 //    webpackBundlingMode := BundlingMode.LibraryOnly(),
 //    webpack / version := "5.75.0",
@@ -103,7 +104,7 @@ lazy val client: Project = (project in file("client"))
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
   )
-  .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
+  .enablePlugins(ScalaJSPlugin, ScalaJSWeb, TzdbPlugin)
   .dependsOn(shared.js, clientMacrosJS)
 
 lazy val server = (project in file("server"))
@@ -146,7 +147,9 @@ lazy val server = (project in file("server"))
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
     // compress CSS
     Assets / LessKeys.compress := true,
-    TwirlKeys.templateImports += "buildinfo._",
+    TwirlKeys.templateImports ++= Seq(
+      "buildinfo._",
+    ),
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
     dependencyCheckFormats := Seq("XML", "JSON", "HTML")

@@ -78,6 +78,7 @@ object Settings {
     val jwtCore = "9.4.6"
     val logback = "1.3.15"
     val logbackContrib = "0.1.5"
+    val scalajsScripts = "1.3.0"
   }
 
   import versions.*
@@ -120,6 +121,7 @@ object Settings {
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs,
+    "io.github.cquiroz" %%% "scala-java-time" % "2.5.0",
 
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
@@ -149,6 +151,7 @@ object Settings {
     "com.github.jwt-scala" %% "jwt-core" % jwtCore,
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %%% "utest" % uTest % Test,
+    "com.vmunier" %% "scalajs-scripts" % scalajsScripts,
 
     "javax.mail" % "mail" % "1.4.7",
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % jakartaXmlWsApi,

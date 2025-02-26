@@ -85,10 +85,10 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   private val systemStartGracePeriod: FiniteDuration = config.get[Int]("start-up-grace-period-seconds").seconds
 
-  log.info(s"Scheduling crunch system to start in ${systemStartGracePeriod.toString()}")
-  actorSystem.scheduler.scheduleOnce(systemStartGracePeriod) {
+//  log.info(s"Scheduling crunch system to start in ${systemStartGracePeriod.toString()}")
+//  actorSystem.scheduler.scheduleOnce(systemStartGracePeriod) {
     ctrl.run()
-  }
+//  }
 
   val now: () => SDateLike = () => SDate.now()
 
