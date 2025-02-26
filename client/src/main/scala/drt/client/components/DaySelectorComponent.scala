@@ -67,19 +67,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           case (Some(newTm), Some(oldTm)) => newTm.millisSinceEpoch != oldTm.millisSinceEpoch
         }
 
-//      def updateDisplayDate(e: ReactEventFromInput): Callback = {
-//        e.preventDefault()
-//        e.persist()
-//        if (isNotValidDate(e.target.value)) {
-//          scope.modState(_.updateValidity(true))
-//        } else {
-//          val newDate = LocalDate.parse(e.target.value).getOrElse(state.stateDate.date)
-//          scope.modState { s => s.update(newDate) }
-//          GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Point In time", state.selectedDate.toISODateOnly)
-//          updateUrlWithDateCallback(Option(SDate(newDate)), state.maybeTimeMachineDate)
-//        }
-//      }
-
       def updateTimeMachineDate(e: ReactEventFromInput): Callback = {
         e.persist()
         SDate.parse(e.target.value) match {
@@ -95,7 +82,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       }
 
       def updateUrlWithDate(is24Hours: Boolean, date: Option[String], tmDate: Option[TimeMachineDate]) = {
-//        println(s"is24Hours: $is24Hours")
         val params = List(
           UrlDateParameter(date),
           UrlTimeRangeStart(if (is24Hours) Option(WholeDayWindow().start.toString) else None),
@@ -110,19 +96,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         )
       }
 
-      //      def updateUrlWithDate(date: Option[String], tmDate: Option[TimeMachineDate]): Callback = {
-      //        val params = List(
-      //          UrlDateParameter(date),
-      //          UrlTimeRangeStart(None),
-      //          UrlTimeRangeEnd(None),
-      //          UrlTimeMachineDateParameter(tmDate.map(_.date.toISOString)),
-      //        )
-      //        props.router.set(
-      //          props.terminalPageTab.withUrlParameters(params: _*),
-      //          SetRouteVia.WindowLocation
-      //        )
-      //      }
-
       def updateUrlWithDateCallback(date: Option[SDateLike], tmDate: Option[TimeMachineDate]): Callback = {
         val params = List(
           UrlDateParameter(date.map(_.toISODateOnly)),
@@ -136,36 +109,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           SetRouteVia.WindowLocation
         )
       }
-
-//      def selectYesterday: ReactEventFromInput => Callback = (_: ReactEventFromInput) => {
-//        val yesterday = SDate.midnightThisMorning().addMinutes(-1)
-//        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Yesterday", yesterday.toISODateOnly)
-//        updateUrlWithDateCallback(Option(yesterday), state.maybeTimeMachineDate)
-//      }
-//
-//      def selectTomorrow: ReactEventFromInput => Callback = (_: ReactEventFromInput) => {
-//        val tomorrow = SDate.midnightThisMorning().addDays(2).addMinutes(-1)
-//        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Tomorrow", tomorrow.toISODateOnly)
-//        updateUrlWithDateCallback(Option(tomorrow), state.maybeTimeMachineDate)
-//      }
-//
-//      def selectToday: ReactEventFromInput => Callback = (_: ReactEventFromInput) => {
-//        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "Today", "Today")
-//        updateUrlWithDateCallback(None, state.maybeTimeMachineDate)
-//      }
-//
-//      def selectLatestView: ReactEventFromInput => Callback = (_: ReactEventFromInput) => {
-//        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "View as of", "Now")
-//        scope.modState(_.copy(maybeTimeMachineDate = None))
-//        updateUrlWithDateCallback(Option(state.selectedDate), None)
-//      }
-//
-//      def selectTimeMachineView: ReactEventFromInput => Callback = (_: ReactEventFromInput) => {
-//        GoogleEventTracker.sendEvent(props.terminalPageTab.terminalName, "View as of", "Time machine")
-//        val tmDate = TimeMachineDate(SDate.now(), isNotValid = true)
-//        scope.modState(_.copy(maybeTimeMachineDate = Option(tmDate)))
-//        updateUrlWithDateCallback(Option(state.selectedDate), Option(tmDate))
-//      }
 
       def goButton(loading: Boolean, dateIsUpdated: Boolean): TagMod = (loading, dateIsUpdated) match {
         case (false, false) =>
@@ -184,12 +127,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       def defaultTimeRangeWindow: TimeRangeHours = if (isToday) CurrentWindow() else WholeDayWindow()
 
-//      val liveViewButtonTheme = if (state.maybeTimeMachineDate.isEmpty) buttonSelectedTheme else buttonTheme
-//      val timeMachineViewButtonTheme = if (state.maybeTimeMachineDate.nonEmpty) buttonSelectedTheme else buttonTheme
-//
-//      val yesterdayButtonTheme = if (isYesterday) buttonSelectedTheme else buttonTheme
-//      val todayButtonTheme = if (isToday) buttonSelectedTheme else buttonTheme
-//      val tomorrowButtonTheme = if (isTomorrow) buttonSelectedTheme else buttonTheme
+
       val selectedWindow = TimeRangeHours(
         props.terminalPageTab.timeRangeStart.getOrElse(defaultTimeRangeWindow.start),
         props.terminalPageTab.timeRangeEnd.getOrElse(defaultTimeRangeWindow.end)

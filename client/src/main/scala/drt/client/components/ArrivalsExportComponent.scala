@@ -44,13 +44,15 @@ object ArrivalsExportComponent extends WithScalaCssImplicits {
       }
 
       val title = if (props.terminals.size > 1) s"Export arrivals for ${props.terminal} or all terminals" else s"Arrivals for ${props.terminal.toString}"
-      val exports = if (props.terminals.size > 1) List(ExportArrivalsSingleTerminal(props.terminal), ExportArrivalsCombinedTerminals) else List(ExportArrivals(props.terminal))
+      val exports = if (props.terminals.size > 1)
+        List(ExportArrivalsSingleTerminal(props.terminal), ExportArrivalsCombinedTerminals)
+      else List(ExportArrivals(props.terminal))
 
       <.div(
         ^.className := "export-button-wrapper",
         MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
           MuiIcons(GetApp)(fontSize = "small"),
-          "Arrivals",
+          "Exports Arrivals (.csv)",
           ^.className := "btn btn-default",
           ^.href := "#",
           VdomAttr("data-toggle") := "modal",
