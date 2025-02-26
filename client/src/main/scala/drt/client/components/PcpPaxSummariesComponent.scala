@@ -46,7 +46,7 @@ object PcpPaxSummariesComponent {
     def render(props: Props): html_<^.VdomNode = {
       val now = SDate.now()
       val fiveMinutes = 5
-      val queues: Seq[Queue] = Seq(Queues.EeaDesk, Queues.NonEeaDesk)
+      val queues: Seq[Queue] = Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)
       val boxes = Seq("next 5 minutes", "5-10 minutes", "10-15 minutes")
       ThemeProvider(DrtReactTheme)(
         if (props.viewMode.isLive) {
