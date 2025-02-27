@@ -102,9 +102,7 @@ GET           /export/forecast-accuracy/:daysForComparison/:daysAhead           
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                                     controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
 GET           /assets/images/*file                                                    controllers.Assets.at(path="/public/images", file)
-#GET           /assets/*file                                                           controllers.Assets.versioned(path="/public", file: Asset)
-
-GET           /src/*file                                                              controllers.Assets.versioned(path="/public/src", file: Asset)
+GET           /assets/*file                                                           controllers.Assets.versioned(path="/public", file: Asset)
 
 GET           /data/user                                                              controllers.Application.getLoggedInUser
 
@@ -164,7 +162,7 @@ POST          /drop-in-registrations                                            
 
 GET           /drop-in-registrations                                                  controllers.application.DropInsController.getDropInRegistrations
 
-GET          /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
+GET           /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
 
 GET           /ab-feature/:functionName                                               controllers.application.ABFeatureController.getABFeature(functionName: String)
 
@@ -174,4 +172,4 @@ GET           /is-new-feature-available-since-last-login                        
 
 POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
 
-GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds
+GET           /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds

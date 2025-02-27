@@ -14,7 +14,6 @@ scalaVersion := Settings.versions.scala
 lazy val root = (project in file("."))
   .aggregate(server, client, shared.jvm, shared.js)
 
-// a special crossProject for configuring a JS/JVM/shared structure
 lazy val shared = (crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("shared")))
@@ -26,17 +25,6 @@ lazy val shared = (crossProject(JSPlatform, JVMPlatform)
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
   )
   .jsConfigure(_.enablePlugins(ScalaJSWeb))
-
-//val bundle = project.in(file("bundle"))
-//
-//addCommandAlias("bundle", "bundle/bundle")
-
-//lazy val sharedJVM = shared.jvm.settings(name := "sharedJVM")
-//
-//lazy val sharedJS = shared.js.settings(name := "sharedJS")
-
-// use eliding to drop some debug code in the production build
-lazy val elideOptions = settingKey[Seq[String]]("Set limit for elidable functions")
 
 lazy val clientMacrosJS: Project = (project in file("client-macros"))
   .settings(
@@ -52,24 +40,23 @@ lazy val clientMacrosJS: Project = (project in file("client-macros"))
   )
   .enablePlugins(ScalaJSPlugin, ScalaJSWeb)
 
-// instantiate the JS project for SBT with some additional settings
 lazy val client: Project = (project in file("client"))
   .settings(
     name := "client",
     version := Settings.version,
     scalaVersion := Settings.versions.scala,
-//    scalacOptions ++= Settings.scalacOptions,
+
     libraryDependencies ++= Settings.scalajsDependencies.value,
     scalaJSUseMainModuleInitializer := true,
     Compile / mainClass := Some("drt.client.SPAMain"),
 
     /* Configure Scala.js to emit modules in the optimal way to
- * connect to Vite's incremental reload.
- * - emit ECMAScript modules
- * - emit as many small modules as possible for classes in the "drt-client" package
- * - emit as few (large) modules as possible for all other classes
- *   (in particular, for the standard library)
- */
+     * connect to Vite's incremental reload.
+     * - emit ECMAScript modules
+     * - emit as many small modules as possible for classes in the "drt-client" package
+     * - emit as few (large) modules as possible for all other classes
+     *   (in particular, for the standard library)
+     */
     scalaJSLinkerConfig ~= {
       _.withModuleKind(ModuleKind.ESModule)
         .withModuleSplitStyle(
@@ -78,27 +65,13 @@ lazy val client: Project = (project in file("client"))
 
     zonesFilter := {(z: String) => z == "Europe/London"},
 
-//    webpackBundlingMode := BundlingMode.LibraryOnly(),
-//    webpack / version := "5.75.0",
-    // by default we do development build, no eliding
-    elideOptions := Seq(),
-    scalacOptions ++= elideOptions.value,
-//    jsDependencies ++= Settings.jsDependencies.value,
-    // reactjs testing
-//    Test / requireJsDomEnv := true,
     Test / scalaJSStage := FastOptStage,
-    // 'new style js dependencies with scalaBundler'
-//    Compile / npmDependencies ++= Settings.clientNpmDependencies,
-//    Compile / npmDevDependencies += Settings.clientNpmDevDependencies,
-    // RuntimeDOM is needed for tests
-    //    useYarn := true,
-    // yes, we want to package JS dependencies
-//    packageJSDependencies / skip := false,
+
     resolvers += Resolver.defaultLocal,
     resolvers ++= Resolver.sonatypeOssRepos("snapshots"),
     resolvers += "Artifactory Realm" at "https://artifactory.digital.homeoffice.gov.uk/artifactory/libs-release/",
     credentials += Credentials(Path.userHome / ".ivy2" / ".credentials"),
-    // use uTest framework for tests
+
     testFrameworks += new TestFramework("utest.runner.Framework"),
     scalaJSUseMainModuleInitializer := true,
     Test / parallelExecution := false,

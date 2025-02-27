@@ -7,7 +7,6 @@ import uk.gov.homeoffice.drt.time.{LocalDate, MilliDate, SDateLike, UtcDate}
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDateTime, ZoneId}
 import scala.language.implicitConversions
-import scala.scalajs.js.Date
 
 object JSDateConversions {
 
@@ -15,23 +14,10 @@ object JSDateConversions {
 
   val europeLondon: String = "Europe/London"
 
-  implicit def jsDateToMillis(jsDate: Date): MillisSinceEpoch = jsDate.getTime().toLong
-
-  implicit def jsDateToMilliDate(jsDate: Date): MilliDate = MilliDate(jsDateToMillis(jsDate))
-
-  implicit def jsSDateToMilliDate(jsSDate: SDateLike): MilliDate = MilliDate(jsSDate.millisSinceEpoch)
-
   implicit def longToMilliDate(millis: MillisSinceEpoch): MilliDate = MilliDate(millis)
 
   implicit val longToSDateLocal: MillisSinceEpoch => SDateLike =
     millis => JSSDate(LocalDateTime.ofInstant(Instant.ofEpochMilli(millis), ZoneId.of(europeLondon)))
-
-  implicit val milliDateToSDate: MilliDate => SDateLike = milliDate => SDate(milliDate)
-
-  implicit def jsDateToSDate(date: Date): SDateLike =
-    JSSDate(LocalDateTime.ofInstant(Instant.ofEpochMilli(date.getTime().toLong), ZoneId.of(europeLondon)))
-
-//  implicit def localDateTimeToSDate(date: LocalDateTime): SDateLike = JSSDate(date)
 
   object SDate {
 
@@ -103,10 +89,10 @@ object JSDateConversions {
      * @param dateString
      * @return
      */
-    def apply(dateString: String): SDateLike = JSSDate(LocalDateTime.parse(dateString, DateTimeFormatter.ISO_DATE_TIME))
+    def apply(dateString: String): SDateLike = parse(dateString).getOrElse(throw new IllegalArgumentException(s"Could not parse date string: $dateString"))
 
     def parse(dateString: String): Option[SDateLike] = {
-      LocalDateTime.parse(dateString, DateTimeFormatter.ISO_DATE_TIME) match {
+      LocalDateTime.parse(dateString.replace(" ", "T"), DateTimeFormatter.ISO_DATE_TIME) match {
         case ldt: LocalDateTime => Some(JSSDate(ldt))
         case _ => None
       }
@@ -115,13 +101,6 @@ object JSDateConversions {
     def midnightThisMorning(): SDateLike = JSSDate(LocalDateTime.now(ZoneId.of(europeLondon))).getLocalLastMidnight
 
     def midnightOf(pointInTime: SDateLike): SDateLike = pointInTime.getLocalLastMidnight
-
-//    def midnightOf(mDate: moment.Date): SDateLike = mDate
-//      .tz(europeLondon)
-//      .hour(0)
-//      .minute(0)
-//      .second(0)
-//      .millisecond(0)
 
     def firstDayOfMonth(today: SDateLike): SDateLike = SDate(y = today.getFullYear, m = today.getMonth, d = 1)
 
