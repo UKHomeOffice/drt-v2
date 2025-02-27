@@ -3,7 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain._
-import drt.client.components.styles.{DrtReactTheme, DrtTheme}
+import drt.client.components.styles.{DrtReactTheme, DrtTheme, ILocalDateProvider, LocalDateProvider}
 import drt.client.components.styles.DrtTheme._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
@@ -18,7 +18,7 @@ import japgolly.scalajs.react.callback.CallbackTo
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.component.builder.ComponentBuilder
 import japgolly.scalajs.react.extra.router.{RouterCtl, SetRouteVia}
-import japgolly.scalajs.react.vdom.html_<^.{^, _}
+import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import scalacss.ScalaCssReactImplicits
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
@@ -143,7 +143,8 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       <.div(^.className := s"flex-horz-between",
         ThemeProvider(DrtReactTheme)(
-          PaxSearchFormComponent(
+          LocalDateProvider(ILocalDateProvider(
+          PaxSearchFormComponent( // This is the search form
             IPaxSearchForm(
               day = dayDisplayText,
               time = timeText,
@@ -160,7 +161,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                 updateUrlWithDate(s.time != null & s.time != "now", Option(dateString), timeMachineDate).runNow()
               }
             )
-          )
+          )))
         ),
         state.maybeTimeMachineDate match {
           case Some(tmDate) =>
