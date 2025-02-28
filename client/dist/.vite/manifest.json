@@ -1,0 +1,19 @@
+{
+  "_index-C6xKujAZ.js": {
+    "file": "assets/index-C6xKujAZ.js",
+    "name": "index",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ]
+  },
+  "index.html": {
+    "file": "assets/index-DOuOa_Dd.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "dynamicImports": [
+      "_index-C6xKujAZ.js"
+    ]
+  }
+}

@@ -14,9 +14,9 @@ scalaVersion := Settings.versions.scala
 lazy val root = (project in file("."))
   .aggregate(server, client, shared.jvm, shared.js)
 
-lazy val shared = (crossProject(JSPlatform, JVMPlatform)
+lazy val shared = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
-  .in(file("shared")))
+  .in(file("shared"))
   .settings(
     scalaVersion := Settings.versions.scala,
     libraryDependencies ++= Settings.sharedDependencies.value,
@@ -95,6 +95,8 @@ lazy val server = (project in file("server"))
     excludeDependencies += ExclusionRule("org.slf4j", "slf4j-log4j12"),
 
     dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0",
+
+    Compile / unmanagedResourceDirectories += baseDirectory.value / "public",
 
     commands += ReleaseCmd,
     // connect to the client project

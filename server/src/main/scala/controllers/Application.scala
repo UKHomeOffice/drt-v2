@@ -10,6 +10,7 @@ import controllers.application._
 import spray.json.enrichAny
 import drt.shared.DrtPortConfigs
 import org.joda.time.chrono.ISOChronology
+import play.api.libs.json.Json
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
@@ -83,12 +84,41 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
+  val manifestPath = "server/src/main/assets/dist/.vite/manifest.json"
+  val manifestFile = new java.io.File(manifestPath)
+  val manifestJson = if (manifestFile.exists()) {
+    println(s"\n\n** Found manifest file at $manifestPath")
+    val source = scala.io.Source.fromFile(manifestFile)
+    val json = Json.parse(source.getLines.mkString)
+    source.close()
+    json
+  } else {
+    println(s"\n\n** Didn't find manifest file at $manifestPath")
+    Json.obj()
+  }
+
+  val jsEntry = manifestJson.as[Map[String, play.api.libs.json.JsValue]]
+    .collectFirst {
+      case (key, value) if !key.endsWith(".html") && (value \ "file").asOpt[String].exists(_.endsWith(".js")) =>
+        println(s"\n\n** Found key: $key, value: $value")
+        key -> value
+    }
+
+//  manifestJson.as[Map[String, play.api.libs.json.JsValue]]
+//    .collectFirst {
+//      case (key, value) =>
+//        println(s"\n\n** Found key: $key, value: $value")
+//    }
+
+  val jsFile = jsEntry.map(_._2 \ "file").flatMap(_.asOpt[String]).getOrElse("#")
+
+
   private val systemStartGracePeriod: FiniteDuration = config.get[Int]("start-up-grace-period-seconds").seconds
 
-//  log.info(s"Scheduling crunch system to start in ${systemStartGracePeriod.toString()}")
-//  actorSystem.scheduler.scheduleOnce(systemStartGracePeriod) {
+  log.info(s"Scheduling crunch system to start in ${systemStartGracePeriod.toString()}")
+  actorSystem.scheduler.scheduleOnce(systemStartGracePeriod) {
     ctrl.run()
-//  }
+  }
 
   val now: () => SDateLike = () => SDate.now()
 
@@ -211,7 +241,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   def index: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     if (user.hasRole(airportConfig.role)) {
-      Ok(views.html.index("DRT", airportConfig.portCode.toString, googleTrackingCode, user.id))
+      Ok(views.html.index("DRT", airportConfig.portCode.toString, googleTrackingCode, user.id, jsFile))
     } else {
       log.info(s"User lacks ${airportConfig.role} role. Redirecting to $redirectUrl")
       Redirect(Call("get", redirectUrl))

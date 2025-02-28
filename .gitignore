@@ -43,8 +43,8 @@ doc/_book
 /_book
 *.log.zip
 
-client/src/main/resources/bundle.js
 client/node_modules
+server/src/main/assets/dist
 
 .ensime_cache/
 runsbt.sh

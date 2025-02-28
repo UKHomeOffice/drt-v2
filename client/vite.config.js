@@ -8,9 +8,13 @@ export default defineConfig({
     uriPrefix: 'scalajs',
   })],
   optimizeDeps: {
-    exclude: []
+    include: [''],
   },
-  preserveSymlinks: true,
+  build: {
+    outDir: '../server/src/main/assets/dist',
+    manifest: true,
+    emptyOutDir: true,
+  },
   server: {
     proxy: {
       "/report-to": "http://localhost:9000",

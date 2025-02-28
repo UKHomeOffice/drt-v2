@@ -8,7 +8,16 @@ platform:
   arch: amd64
 
 steps:
-  - name: Build app
+  - name: Build scalajs app
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    commands:
+      - /root/entrypoint.sh
+      - cd client
+      - npm install
+      - npm run build
+
+  - name: Build scala app
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
@@ -26,6 +35,8 @@ steps:
     when:
       event:
         - push
+    depends_on:
+      - Build scalajs app
 
   - name: ECR login
     pull: if-not-exists
@@ -79,7 +90,7 @@ steps:
       event:
         - push
     depends_on:
-      - Build app
+      - Build scala app
 
   - name: Code coverage report
     pull: if-not-exists
@@ -172,7 +183,7 @@ steps:
       event:
         - push
     depends_on:
-      - Build app
+      - Build scala app
 
   - name: End to end test
     pull: if-not-exists

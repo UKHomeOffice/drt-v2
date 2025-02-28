@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@drt/drt-react": "UKHomeOffice/drt-react#1.6.8",
+    "@drt/drt-react": "UKHomeOffice/drt-react#1.7.0",
     "@handsontable/react": "3.1.2",
     "@mui/icons-material": "5.16.5",
     "@mui/lab": "5.0.0-alpha.173",
@@ -34,7 +34,6 @@
   },
   "devDependencies": {
     "@scala-js/vite-plugin-scalajs": "^1.0.0",
-    "typescript": "~5.7.2",
     "vite": "^6.1.0"
   }
 }

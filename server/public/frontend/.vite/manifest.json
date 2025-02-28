@@ -1,0 +1,19 @@
+{
+  "_index-Dijefmtf.js": {
+    "file": "assets/index-Dijefmtf.js",
+    "name": "index",
+    "isDynamicEntry": true,
+    "imports": [
+      "index.html"
+    ]
+  },
+  "index.html": {
+    "file": "assets/index-AK62jmvu.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "dynamicImports": [
+      "_index-Dijefmtf.js"
+    ]
+  }
+}
