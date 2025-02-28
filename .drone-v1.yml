@@ -80,7 +80,7 @@ steps:
       event:
         - push
     depends_on:
-      - Build scala image
+      - Build docker image
 
   - name: ECR login
     pull: if-not-exists
