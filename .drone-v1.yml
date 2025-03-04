@@ -50,7 +50,7 @@ steps:
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
       - /root/entrypoint.sh
-      - sbt --error Docker / stage
+      - sbt --error "Docker / stage"
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
