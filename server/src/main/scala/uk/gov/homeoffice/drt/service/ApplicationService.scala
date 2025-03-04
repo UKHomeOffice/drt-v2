@@ -111,7 +111,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, Slas.slaProvider(slasActor))
 
   val deploymentSlas: (LocalDate, Queue) => Future[Int] =
-    (_, _) => Future.successful(5)
+    (_, _) => Future.successful(15)
   val portDeployments: PortDesksAndWaitsProviderLike =
     PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
 
@@ -306,7 +306,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         staffToDeskLimits = staffToDeskLimits,
         paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
         staffMinutesProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor),
-        loadsToDeployments = portDeskRecs.loadsToSimulations,
+        loadsToDeployments = portDeployments.loadsToSimulations,
         queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
         setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
           airportConfig.portCode,
