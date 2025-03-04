@@ -84,7 +84,8 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
-  val manifestPath = "server/src/main/assets/dist/.vite/manifest.json"
+  //  val manifestPath = "server/target/web/public/main/frontend/dist/.vite/manifest.json"
+  val manifestPath = ".vite/manifest.json"
   val manifestFile = new java.io.File(manifestPath)
   val manifestJson = if (manifestFile.exists()) {
     println(s"\n\n** Found manifest file at $manifestPath")
@@ -93,7 +94,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     source.close()
     json
   } else {
-    println(s"\n\n** Didn't find manifest file at $manifestPath")
+    println(s"\n\n** Yeah.. Didn't find manifest file at $manifestPath")
     Json.obj()
   }
 
@@ -104,13 +105,9 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
         key -> value
     }
 
-//  manifestJson.as[Map[String, play.api.libs.json.JsValue]]
-//    .collectFirst {
-//      case (key, value) =>
-//        println(s"\n\n** Found key: $key, value: $value")
-//    }
-
-  val jsFile = jsEntry.map(_._2 \ "file").flatMap(_.asOpt[String]).getOrElse("#")
+  val jsFile = jsEntry.map(_._2 \ "file").flatMap { f =>
+    f.asOpt[String].flatMap(_.split("/").lastOption)
+  }.getOrElse("#")
 
 
   private val systemStartGracePeriod: FiniteDuration = config.get[Int]("start-up-grace-period-seconds").seconds

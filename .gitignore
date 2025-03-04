@@ -44,7 +44,11 @@ doc/_book
 *.log.zip
 
 client/node_modules
-server/src/main/assets/dist
+
+# vite outputs from `npm run build`
+server/src/main/.vite
+server/src/main/index.html
+server/src/main/assets/index-*.js
 
 .ensime_cache/
 runsbt.sh

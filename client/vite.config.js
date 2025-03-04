@@ -11,9 +11,9 @@ export default defineConfig({
     include: [''],
   },
   build: {
-    outDir: '../server/src/main/assets/dist',
+    outDir: '../server/src/main',
     manifest: true,
-    emptyOutDir: true,
+    // emptyOutDir: true,
   },
   server: {
     proxy: {

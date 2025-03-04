@@ -5,6 +5,13 @@ WORKDIR /opt/docker
 COPY server/target/docker/stage/1/opt /1/opt
 COPY server/target/docker/stage/2/opt /2/opt
 COPY server/target/docker/stage/4/opt /4/opt
+COPY server/target/web/public /opt/docker/public
+COPY server/src/main/.vite /opt/docker/.vite
+#COPY server/target/web/public/main/frontend/assets/* /opt/docker/public/main/frontend/
+#COPY server/target/web/public/main/frontend/assets/* /opt/docker/public/main/images/
+#COPY server/target/web/public/main/frontend/assets/index-AK62jmvu.js /opt/docker/public/main/bundle.js
+#RUN echo "Hello" > /opt/docker/public/main/hello.html
+
 USER root
 RUN ["chmod", "-R", "u=rX,g=rX", "/1/opt/docker"]
 RUN ["chmod", "-R", "u=rX,g=rX", "/2/opt/docker"]
@@ -18,6 +25,9 @@ WORKDIR /opt/docker
 COPY --from=stage0 --chown=drt:root /1/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /2/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /4/opt/docker /opt/docker
+COPY --from=stage0 --chown=drt:root /opt/docker/public /opt/docker/public
+COPY --from=stage0 --chown=drt:root /opt/docker/.vite /opt/docker/.vite
+#RUN chmod a+rwx /opt/docker/public -R
 
 RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt

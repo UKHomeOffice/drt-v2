@@ -96,7 +96,7 @@ lazy val server = (project in file("server"))
 
     dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0",
 
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "public",
+//    Runtime / unmanagedResourceDirectories += baseDirectory.value / "src" / "main" / "assets",
 
     commands += ReleaseCmd,
     // connect to the client project
