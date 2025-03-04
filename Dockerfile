@@ -7,10 +7,6 @@ COPY server/target/docker/stage/2/opt /2/opt
 COPY server/target/docker/stage/4/opt /4/opt
 COPY server/target/web/public /opt/docker/public
 COPY server/src/main/.vite /opt/docker/.vite
-#COPY server/target/web/public/main/frontend/assets/* /opt/docker/public/main/frontend/
-#COPY server/target/web/public/main/frontend/assets/* /opt/docker/public/main/images/
-#COPY server/target/web/public/main/frontend/assets/index-AK62jmvu.js /opt/docker/public/main/bundle.js
-#RUN echo "Hello" > /opt/docker/public/main/hello.html
 
 USER root
 RUN ["chmod", "-R", "u=rX,g=rX", "/1/opt/docker"]
