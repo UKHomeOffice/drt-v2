@@ -111,7 +111,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, Slas.slaProvider(slasActor))
 
   val deploymentSlas: (LocalDate, Queue) => Future[Int] =
-    (_, _) => Future.successful(15)
+    (_, _) => Future.successful(config.get[Int]("crunch.deployments.sla"))
   val portDeployments: PortDesksAndWaitsProviderLike =
     PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
 
