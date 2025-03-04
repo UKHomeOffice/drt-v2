@@ -10,7 +10,7 @@ import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
 import uk.gov.homeoffice.drt.jsonformats.PassengersSummaryFormat.JsonFormat
-import uk.gov.homeoffice.drt.models.PassengersSummary
+import uk.gov.homeoffice.drt.model.PassengersSummary
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
@@ -22,19 +22,37 @@ import scala.util.{Failure, Success, Try}
 
 
 class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
-  def populatePassengersForDate(localDateStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
-    LocalDate.parse(localDateStr) match {
-      case Some(localDate) =>
+  def populatePassengersForDate(startDateStr: String, endDateStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
+    val maybeDateRange = for {
+      startDate <- LocalDate.parse(startDateStr)
+      endDate <- LocalDate.parse(endDateStr)
+    } yield {
+      val utcStart = SDate(startDate).toUtcDate
+      val utcEnd = SDate(endDate).addDays(1).addMinutes(-1).toUtcDate
+      DateRange(utcStart, utcEnd)
+    }
+
+    maybeDateRange match {
+      case Some(range) =>
         Action.async(
-          Source(Set(SDate(localDate).toUtcDate, SDate(localDate).addDays(1).addMinutes(-1).toUtcDate))
-            .mapAsync(1)(ctrl.applicationService.populateLivePaxViewForDate)
+          Source(range)
+            .mapAsync(1) { date =>
+              ctrl
+                .applicationService.populateLivePaxViewForDate(date)
+                .flatMap(_ => ctrl.applicationService.updateAndPersistCapacity(date))
+                .recover {
+                  case t: Throwable =>
+                    log.error(s"Failed to populate passengers or capacity for $date: ${t.getMessage}")
+                }
+            }
             .run()
-            .map(_ => Ok(s"Populated passengers for $localDate"))
+            .map(_ => Ok(s"Populated passengers for ${range.min} to ${range.max}"))
         )
       case None =>
-        Action(BadRequest(s"Invalid date format for $localDateStr. Expected YYYY-mm-dd"))
+        Action(BadRequest(s"Invalid date format for $startDateStr. Expected YYYY-mm-dd"))
     }
   }
+
   def exportPassengersByTerminalForDateRangeApi(startLocalDateString: String,
                                                 endLocalDateString: String,
                                                 terminalName: String): Action[AnyContent] =
@@ -57,7 +75,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
                                  ): Result =
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
-        val fileName = makeFileName("passengers", maybeTerminal, start, end, airportConfig.portCode) + ".csv"
+        val fileName = makeFileName("passengers", maybeTerminal.toSeq, SDate(start), SDate(end), airportConfig.portCode) + ".csv"
         val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"), acceptHeader(request))
 
         val result = if (acceptHeader(request) == "text/csv")
@@ -119,10 +137,10 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     }
 
   private val hourlyStream: (LocalDate => Future[Map[Long, Map[Queue, Int]]], LocalDate => Future[Map[Long, Int]]) => (LocalDate, LocalDate) => Source[(Map[Queue, Int], Int, Option[Long]), NotUsed] =
-    (queueTotalsForDate, capacityTotalsForDate) => (start, end) =>
+    (queueTotalsForDate, hourlyCapacityTotalsForDate) => (start, end) =>
       Source(DateRange(start, end))
         .mapAsync(1) { date =>
-          capacityTotalsForDate(date).map { capacityTotals =>
+          hourlyCapacityTotalsForDate(date).map { capacityTotals =>
             (date, capacityTotals)
           }
         }

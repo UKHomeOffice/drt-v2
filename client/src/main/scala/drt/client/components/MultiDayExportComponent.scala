@@ -9,7 +9,6 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.util.DateUtil.isNotValidDate
 import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared.redlist.LhrRedListDatesImpl.{dayHasPaxDiversions, overlapsRedListDates}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiTextField}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -31,7 +30,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
   val today: SDateLike = SDate.now()
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser) extends UseValueEq
+  case class Props(portCode: PortCode, terminal: Terminal, terminals: Iterable[Terminal], viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser) extends UseValueEq
 
   case class StateDate(date: LocalDate, isNotValid: Boolean = false)
 
@@ -125,21 +124,16 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
                         EmptyVdom,
 
                       if (props.loggedInUser.hasRole(ArrivalsAndSplitsView)) {
-                        val exports = props.portCode match {
-                          case PortCode("LHR") if overlapsRedListDates(SDate(state.startDate.date), SDate(state.endDate.date))
-                            && dayHasPaxDiversions(SDate(state.endDate.date)) =>
-                            List(ExportArrivalsWithRedListDiversions("Reflect pax diversions"),
-                              ExportArrivalsWithoutRedListDiversions("Don't reflect pax diversions"))
-                          case PortCode("BHX") => List(ExportArrivalsSingleTerminal, ExportArrivalsCombinedTerminals)
-                          case _ => List(ExportArrivals)
-                        }
-                        exportLinksGroup(props, state, exports, "Arrivals1")
+                        val exports =
+                          if (props.terminals.size > 1) List(ExportArrivalsSingleTerminal(props.terminal), ExportArrivalsCombinedTerminals)
+                          else List(ExportArrivals(props.terminal))
+                        exportLinksGroup(props, state, exports, "Arrivals")
                       } else EmptyVdom,
                       if (props.loggedInUser.hasRole(DesksAndQueuesView))
-                        exportLinksGroup(props, state, List(ExportDeskRecs, ExportDeployments), "Desks and queues")
+                        exportLinksGroup(props, state, List(ExportDeskRecs(props.terminal), ExportDeployments(props.terminal)), "Desks and queues")
                       else EmptyVdom,
                       if (props.loggedInUser.hasRole(ArrivalSource) && (state.endDate.date <= SDate.now().toLocalDate))
-                        exportLinksGroup(props, state, List(ExportLiveArrivalsFeed), "Feeds")
+                        exportLinksGroup(props, state, List(ExportLiveArrivalsFeed(props.terminal)), "Feeds")
                       else EmptyVdom
                     )
                   ),
@@ -171,7 +165,7 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
             props.selectedDate,
             props.terminal.toString,
             export,
-            SPAMain.exportDatesUrl(export, state.startDate.date, state.endDate.date, props.terminal),
+            SPAMain.exportDatesUrl(export, state.startDate.date, state.endDate.date),
             None,
             title
           )
@@ -179,6 +173,6 @@ object MultiDayExportComponent extends WithScalaCssImplicits {
       )
     )
 
-  def apply(portCode: PortCode, terminal: Terminal, viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement =
-    component(Props(portCode, terminal, viewMode, selectedDate, loggedInUser: LoggedInUser))
+  def apply(portCode: PortCode, terminal: Terminal, terminals: Iterable[Terminal], viewMode: ViewMode, selectedDate: SDateLike, loggedInUser: LoggedInUser): VdomElement =
+    component(Props(portCode, terminal, terminals, viewMode, selectedDate, loggedInUser: LoggedInUser))
 }

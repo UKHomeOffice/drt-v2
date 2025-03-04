@@ -47,3 +47,5 @@ client/src/main/resources/bundle.js
 
 .ensime_cache/
 runsbt.sh
+
+client/node_modules

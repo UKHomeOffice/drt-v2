@@ -5,9 +5,10 @@ import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.actor.{ActorRef, Props}
 import akka.pattern.ask
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, MinutesContainer, PassengersMinute}
-import drt.shared.TQM
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import services.crunch.CrunchTestLike
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
@@ -27,12 +28,12 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
   val crunchMinute: CrunchMinute = CrunchMinute(terminal, queue, date.millisSinceEpoch, 1, 2, 3, 4, None, None, None, None)
   val minutesContainer: MinutesContainer[CrunchMinute, TQM] = MinutesContainer(Seq(crunchMinute))
 
-  val noopUpdates: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[Long]] =
+  val noopUpdates: ((Terminal, UtcDate), MinutesContainer[CrunchMinute, TQM]) => Future[Set[TerminalUpdateRequest]] =
     (_: (Terminal, UtcDate), _: MinutesContainer[CrunchMinute, TQM]) => Future(Set())
 
   "When I send some PassengerMinutes to a QueueMinutesActor and query it" >> {
     "I should see the passenger minutes originally sent" >> {
-      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)))
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)), (_, _) => Future.successful(()))
       val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
       val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
       val result = lookups.queueLoadsMinutesActor
@@ -49,7 +50,7 @@ class QueueMinutesRouterActorSpec extends CrunchTestLike {
 
   "When I send two sets of PassengerMinutes to a QueueMinutesActor and query it" >> {
     "I should see the combined set of minutes" >> {
-      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)))
+      val lookups = MinuteLookups(myNow, MilliTimes.oneDayMillis, Map(terminal -> Seq(queue)), (_, _) => Future.successful(()))
       val passengers1 = PassengersMinute(terminal, queue, date.millisSinceEpoch, Seq(1, 2, 3), None)
       val passengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(4, 4, 4), None)
       val newPassengers2 = PassengersMinute(terminal, queue, date.addMinutes(1).millisSinceEpoch, Seq(2, 2), None)

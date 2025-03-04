@@ -3,26 +3,28 @@ package actors.daily
 import actors.serializers.ManifestMessageConversion
 import akka.actor.Props
 import akka.persistence.SaveSnapshotSuccess
-import drt.shared.ArrivalKey
+import drt.shared.ManifestKey
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.VoyageManifest.VoyageManifestsMessage
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 object DayManifestActor {
-  def props(date: UtcDate): Props =
-    Props(new DayManifestActor(date.year, date.month, date.day, None))
+  def props(date: UtcDate, terminals: Iterable[Terminal]): Props =
+    Props(new DayManifestActor(date.year, date.month, date.day, None, terminals))
 
-  def propsPointInTime(date: UtcDate, pointInTime: MillisSinceEpoch): Props =
-    Props(new DayManifestActor(date.year, date.month, date.day, Option(pointInTime)))
+  def propsPointInTime(date: UtcDate, pointInTime: MillisSinceEpoch, terminals: Iterable[Terminal]): Props =
+    Props(new DayManifestActor(date.year, date.month, date.day, Option(pointInTime), terminals))
 }
 
 
-class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointInTime: Option[MillisSinceEpoch])
+class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointInTime: Option[MillisSinceEpoch], terminals: Iterable[Terminal])
   extends RecoveryActorLike {
 
   def now: () => SDate.JodaSDate = () => SDate.now()
@@ -42,7 +44,7 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
   private val maxSnapshotInterval = 250
   override val maybeSnapshotInterval: Option[Int] = Option(maxSnapshotInterval)
 
-  var state: Map[ArrivalKey, VoyageManifest] = Map()
+  var state: Map[ManifestKey, VoyageManifest] = Map()
 
   override def receiveCommand: Receive = {
     case manifests: VoyageManifests =>
@@ -62,7 +64,7 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
 
     case vmm@VoyageManifestsMessage(Some(createdAt), _) =>
       maybePointInTime match {
-        case Some(pit) if pit < createdAt => // ignore messages from after the recovery point.
+        case Some(pit) if pit < createdAt =>
         case _ =>
           state = state ++ ManifestMessageConversion.voyageManifestsFromMessage(vmm).toMap
       }
@@ -76,11 +78,15 @@ class DayManifestActor(year: Int, month: Int, day: Int, override val maybePointI
   override def stateToMessage: GeneratedMessage = ManifestMessageConversion
     .voyageManifestsToMessage(VoyageManifests(state.values.toSet))
 
-  def updateAndPersist(vms: VoyageManifests): Unit = {
+  private def updateAndPersist(vms: VoyageManifests): Unit = {
     state = state ++ vms.toMap
 
-    val replyToAndMessage = List((sender(), vms.manifests.map(_.scheduled.millisSinceEpoch).toSet))
+    val updateRequests = vms.manifests
+      .map(vm => vm.scheduled.toLocalDate)
+      .flatMap(ms => terminals.map(TerminalUpdateRequest(_, ms)))
+      .toSet
+
+    val replyToAndMessage = List((sender(), updateRequests))
     persistAndMaybeSnapshotWithAck(ManifestMessageConversion.voyageManifestsToMessage(vms), replyToAndMessage)
   }
-
 }

@@ -1,10 +1,9 @@
 # DRT Dynamic Response Tool
 
 
-This project is a tool used by UK Borderforce to help ensure sufficient resources are available at the border to deal
+This project is a tool used by UK Border Force to help ensure sufficient resources are available at the border to deal
 with anticipated demand.
-It is the latest (as of Mar 2017) iteration of a tool to tackle this lofty goal. This repo replaces an earlier, PHP, database
-and Scala set of projects.
+It is the latest iteration of a tool to tackle this lofty goal. This repo replaces an earlier, PHP and Scala set of projects.
 We began from the ground up here, consolidating back into a monolith per port. 
 
 ## High level data flow
@@ -15,13 +14,13 @@ We began from the ground up here, consolidating back into a monolith per port.
 
 Drt v2 is a replacement for an earlier system built primarily with PHP.
 
-It is a tool which aims to provide Borderforce officers in airports with information that helps them
+It is a tool which aims to provide Border Force officers in airports with information that helps them
 A) respond to live changes to circumstances - flights coming in early or late, lower than expected resourcing due to people calling in sick,
 B) planning for future resourcing
 
 
 ## Approach
-The core of both drt v1 and v2 is an algorithm by Home Office Science. It's an optimization function which searches a space for the lowest cost based on: queue length (time), number of desks staffed, cost of changing staff and so on.
+The core of DRT v2 is an algorithm by HOAI. It's an optimization function which searches a space for the lowest cost based on: queue length (time), number of desks staffed, cost of changing staff and so on.
 The underlying algorithm is based on NM1Q simulation.
 
 ### Recognized flaws
@@ -33,17 +32,17 @@ An assumption/desire to operate with high utilization. Littles law shows us this
 ## Feeds
 
 ### Airports/Flights
-We take feeds from the Airports about flight statuses. Most ports use a Json based web service called Chroma, there's a couple of different flavours of that. LHR has their own proprietary feed based on CSV files on a web server. Gatwick use a push service in Microsoft's Azure cloud - we've not wired this one into the new system yet.
+We take feeds from the Airports about flight statuses. Ports use a variety of formats including JSON. LHR has their own proprietary feed based on CSV files on a web server. Gatwick use a push service in Microsoft's Azure cloud.
 
 ### API (Advance Passenger Info)
 This provides us data about the nationality breakdown on incoming flights.
 
 ### Technical Stack
-Scala server. Scalajs reactjs client. Communication between client server is primarily via lihaoyi's autowire. Server is hosted in play, uses Akka streams to read the feeds, state is store in Akka actors. Some of the actors use akka persistence.
-The simulation/optimization algorithm is R, taken directly from Home Office Science.
+Scala server. Scalajs reactjs client. Communication between client server is via lihaoyi's autowire & spray JSON. Server is hosted in play, uses Akka streams to read the feeds, state is store in Akka actors. Some of the actors use akka persistence.
+The simulation/optimization algorithm is Scala, translated & enhanced from R taken directly from HOAI.
 
 ### Physical Deployment
-Each port has their own instance. The feeds are chose at application start based on envvars
+Each port has their own instance. The feeds are chosen at application start based on envvars
 
 ![System Flow](doc/architecture/diagrams/systemflow.svg?raw=true)
 
@@ -101,3 +100,65 @@ At some point once the migration tool is available we can migrate to new schema 
  Need docker installed and running locally. 
  Following command will pull the docker image and run it locally on port 8008
  ```docker run -d --name nvdmirror-instance -p 8008:80 sspringett/nvdmirror```
+
+## API version 1
+### Flights
+
+Returns JSON object containing a list of ports. Each port contains a list of terminals. Each terminal contains a list of flights.
+Flights have fields:
+- code: Flight code standardised to 4 numeric digits padded with leading zeros, eg "BA0417"
+- scheduledTime: Scheduled landing slot time, ISO format, eg "2024-11-13T11:40:00Z"
+- originPortIata: Origin port's 3 letter IATA code, eg "LUX"
+- originPortName: Origin port's name, "Luxembourg"
+- estimatedPcpPaxCount: Optional. Estimated number of passengers that will cross the boarder (excludes transit passengers at LHR), eg 47
+- estimatedLandingTime: Optional. Updated estimation of landing/touchdown time for the plane, ISO format, eg "2024-11-13T11:12:00Z"
+- actualChocksTime: Optional. Time the plane pulled up at chocks when available. ISO format, eg "2024-11-13T11:12:00Z"
+- estimatedPcpStartTime: The estimated time the first passengers will reach the back of the PCP queue. ISO format, eg "2024-11-13T11:30:00Z"
+- estimatedPcpEndTime: The estimated time the last passengers will reach the back of the PCP queue. ISO format, eg "2024-11-13T11:33:00Z"
+- status: Standardised status. Possible values are:
+  - Scheduled - usually indicates the flight has not yet taken off
+  - Expected - updated timing information is available 
+  - Delayed - the flight is expected to be delayed by at least 15 minutes
+  - Landed - the flight has landed
+  - On Chocks - the flight has landed and is at the gate
+  - Diverted (rarely available) - the flight has been diverted
+
+### Queues
+* incomingPax: The number of passengers expected to join the back of the queue during the time slot. Fast-track will always be zero for the time being
+* maxWaitMinutes: The maximum wait time of any passengers processed during the time slot
+* queue: The type of queue:
+  * eeadesk
+  * noneeadesk
+  * egate
+  * fasttrack
+
+### Ports & terminals
+* ABZ: T1
+* API: T1
+* BFS: T1
+* BHD: T1
+* BHX: T1, T2
+* BOH: T1
+* BRS: T1
+* CWL: T1
+* EDI: A1, A2
+* EMA: T1
+* EXT: T1
+* GLA: T1
+* HUY: T1
+* INV: T1
+* LBA: T1
+* LCY: T1
+* LGW: N, S
+* LHR: T2, T3, T4, T4
+* LPL: T1
+* LTN: T1
+* MAN: T1, T2, T3
+* MME: T1
+* NCL: T1
+* NQY: T1
+* NWI: T1
+* PIK: T1
+* SEN: T1
+* SOU: T1
+* STN: T1

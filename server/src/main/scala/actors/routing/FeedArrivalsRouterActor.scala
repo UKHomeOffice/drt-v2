@@ -13,6 +13,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import services.SourceUtils
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
 import uk.gov.homeoffice.drt.actor.TerminalDayFeedArrivalActor
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -39,7 +40,7 @@ object FeedArrivalsRouterActor {
 
   def updateArrivals(requestAndTerminateActor: ActorRef,
                      props: (UtcDate, Terminal) => Props,
-                   )
+                    )
                     (implicit system: ActorSystem, timeout: Timeout): ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean] =
     (partition: (Terminal, UtcDate), arrivals: Seq[FeedArrival]) => {
       val (terminal, date) = partition
@@ -64,13 +65,13 @@ object FeedArrivalsRouterActor {
         .map(_.values.toSeq)
     }
 
-  def multiTerminalArrivalsByDaySource(flightsLookupByDayAndTerminal: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]])
-                                      (start: UtcDate,
-                                      end: UtcDate,
-                                      terminals: Iterable[Terminal],
-                                      maybePit: Option[MillisSinceEpoch],
-                                     )
-                                      (implicit ec: ExecutionContext): Source[(UtcDate, Seq[FeedArrival]), NotUsed] = {
+  private def multiTerminalArrivalsByDaySource(flightsLookupByDayAndTerminal: Option[MillisSinceEpoch] => UtcDate => Terminal => Future[Seq[FeedArrival]])
+                                              (start: UtcDate,
+                                               end: UtcDate,
+                                               terminals: Iterable[Terminal],
+                                               maybePit: Option[MillisSinceEpoch],
+                                              )
+                                              (implicit ec: ExecutionContext): Source[(UtcDate, Seq[FeedArrival]), NotUsed] = {
     val dates: Seq[UtcDate] = DateRange(start, end)
 
     val reduceAndSort = SourceUtils.reduceFutureIterables(terminals, (s: Iterable[Seq[FeedArrival]]) => s.reduce(_ ++ _))
@@ -91,7 +92,8 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
                               arrivalsByDayLookup: Option[MillisSinceEpoch] => UtcDate => Terminals.Terminal => Future[Seq[FeedArrival]],
                               updateArrivals: ((Terminals.Terminal, UtcDate), Seq[FeedArrival]) => Future[Boolean],
                               override val partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
-                             ) extends RouterActorLikeWithSubscriber[FeedArrivals, (Terminal, UtcDate), Long] {
+                             ) extends RouterActorLikeWithSubscriber[FeedArrivals, (Terminal, UtcDate), TerminalUpdateRequest] {
+
   override def receiveQueries: Receive = {
     case PointInTimeQuery(pit, FeedArrivalsRouterActor.GetStateForDateRange(start, end)) =>
       sender() ! flightsLookupService(start, end, allTerminals, Option(pit))
@@ -109,11 +111,15 @@ class FeedArrivalsRouterActor(allTerminals: Iterable[Terminal],
   private val flightsLookupService: (UtcDate, UtcDate, Iterable[Terminal], Option[MillisSinceEpoch]) => Source[(UtcDate, Seq[FeedArrival]), NotUsed] =
     FeedArrivalsRouterActor.multiTerminalArrivalsByDaySource(arrivalsByDayLookup)
 
-  override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[Long]] = {
-    log.info(s"FeedArrivalsRouterActor updating $partition")
+  override def updatePartition(partition: (Terminal, UtcDate), updates: FeedArrivals): Future[Set[TerminalUpdateRequest]] = {
     updateArrivals(partition, updates.arrivals).map {
       case true =>
-        Set(SDate(partition._2).millisSinceEpoch)
+        val date = SDate(partition._2)
+        val localDates = Set(
+          date.toLocalDate,
+          date.addDays(1).addMinutes(-1).toLocalDate
+        )
+        localDates.map(TerminalUpdateRequest(partition._1, _))
       case false =>
         Set.empty
     }

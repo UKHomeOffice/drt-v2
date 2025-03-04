@@ -189,9 +189,9 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
       pax = mf.pax,
       averageLoad = mf.load,
       createdAt = ctrl.now().millisSinceEpoch))
-    ctrl.applicationService.arrivalStats.addOrUpdate(actRow).flatMap(
-      _ => ctrl.applicationService.arrivalStats.addOrUpdate(fcstRow).flatMap(
-        _ => Future.sequence(modelFcstRows.map(mf => ctrl.applicationService.arrivalStats.addOrUpdate(mf)))
+    ctrl.applicationService.arrivalStatsDao.addOrUpdate(actRow).flatMap(
+      _ => ctrl.applicationService.arrivalStatsDao.addOrUpdate(fcstRow).flatMap(
+        _ => Future.sequence(modelFcstRows.map(mf => ctrl.applicationService.arrivalStatsDao.addOrUpdate(mf)))
       )
     )
   }
@@ -213,10 +213,10 @@ class ForecastAccuracyController @Inject()(cc: ControllerComponents, ctrl: DrtSy
                               sortedModels: List[(String, ModelAndFeatures)],
                              ): Future[Option[(Actuals, Forecast, List[ModelForecast])]] =
     for {
-      actuals <- ctrl.applicationService.arrivalStats.get(terminalName, localDate.toISOString, 0, "live")
-      forecasts <- ctrl.applicationService.arrivalStats.get(terminalName, localDate.toISOString, daysAhead, "forecast")
+      actuals <- ctrl.applicationService.arrivalStatsDao.get(terminalName, localDate.toISOString, 0, "live")
+      forecasts <- ctrl.applicationService.arrivalStatsDao.get(terminalName, localDate.toISOString, daysAhead, "forecast")
       modelForecasts <- Future.sequence(sortedModels.map { case (modelName, _) =>
-        ctrl.applicationService.arrivalStats.get(terminalName, localDate.toISOString, daysAhead, modelName)
+        ctrl.applicationService.arrivalStatsDao.get(terminalName, localDate.toISOString, daysAhead, modelName)
       })
     } yield {
       for {

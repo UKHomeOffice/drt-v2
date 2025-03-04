@@ -4,7 +4,7 @@ case class Country(name: String, twoLetterCode: String, threeLetterCode: String,
 
 case class FlightHighlight(showNumberOfVisaNationals: Boolean,
                            showRequireAllSelected: Boolean,
-                           showHighlightedRows: Boolean,
+                           showOnlyHighlightedRows: Boolean,
                            selectedAgeGroups: Seq[String],
                            selectedNationalities: Set[Country],
                            filterFlightSearch: String)

@@ -12,6 +12,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDateLike
 
 import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
 
 
 @Singleton
@@ -22,16 +23,21 @@ case class ActorsServiceService(journalType: StreamingJournalLike,
                                 flightLookups: FlightLookupsLike,
                                 minuteLookups: MinuteLookupsLike,
                                )
-                               (implicit system: ActorSystem, timeout: Timeout) extends ActorsServiceLike {
+                               (implicit system: ActorSystem, timeout: Timeout, ec: ExecutionContext) extends ActorsServiceLike {
   override val requestAndTerminateActor: ActorRef = system.actorOf(Props(new RequestAndTerminateActor), "request-and-terminate-actor")
-  override val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(
-    journalType, airportConfig.minutesToCrunch, now), name = "shifts-read-actor")
+  override val liveStaffAssignmentsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(StaffAssignmentsActor.persistenceId,
+    journalType, now), name = "staff-assignments-read-actor")
+  override val legacyStaffAssignmentsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(ShiftsActor.persistenceId,
+    journalType, now), name = "shifts-read-actor")
   override val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
-    journalType, now, forecastMaxDays, airportConfig.minutesToCrunch), name = "fixed-points-read-actor")
+    journalType, now, forecastMaxDays), name = "fixed-points-read-actor")
   override val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
-    journalType, airportConfig.minutesToCrunch), name = "staff-movements-read-actor")
+    journalType), name = "staff-movements-read-actor")
 
-  override val shiftsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
+  override val staffAssignmentsSequentialWritesActor: ActorRef = system.actorOf(StaffAssignmentsActor.sequentialWritesProps(
+    now, startOfTheMonth(now), requestAndTerminateActor, system), "staff-assignments-sequential-writes-actor")
+
+  override val legacyStaffAssignmentsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
     now, startOfTheMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
   override val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(
     now, requestAndTerminateActor, system), "fixed-points-sequential-writes-actor")

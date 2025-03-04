@@ -1,14 +1,13 @@
 package services
 
-import drt.shared.CrunchApi.{CrunchMinute, ForecastHeadlineFigures, QueueHeadline}
+import drt.shared.CrunchApi.{ForecastHeadlineFigures, QueueHeadline}
 import drt.shared.PortState
 import org.specs2.mutable.Specification
 import services.exports.Forecast
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
 import uk.gov.homeoffice.drt.time.SDate
-
-import scala.collection.immutable.Seq
 
 class ForecastHeadlineFiguresSpec extends Specification {
 

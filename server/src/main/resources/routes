@@ -64,12 +64,17 @@ GET           /sla-configs                                                      
 DELETE        /sla-configs/:effectiveFrom                                             controllers.application.SlaConfigsController.removeSlaConfig(effectiveFrom: Long)
 
 GET           /logged-in                                                              controllers.Application.isLoggedIn
-
-GET           /shifts/:localDate                                                      controllers.application.StaffingController.getShifts(localDate: String)
-POST          /shifts                                                                 controllers.application.StaffingController.saveShifts
-GET           /shifts-for-month/:monthMillis                                          controllers.application.StaffingController.getShiftsForMonth(monthMillis: Long)
+GET           /legacy-staff-assignments/:localDate                                    controllers.application.StaffingController.getShifts(localDate: String)
+GET           /legacy-staff-assignments                                               controllers.application.StaffingController.getAllShifts
+POST          /legacy-staff-assignments                                               controllers.application.StaffingController.saveShifts
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
+POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
+GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getShifts(port: String, terminal: String)
+GET           /shifts/:port/:terminal/:shiftName                                       controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
+POST          /staff-assignments                                                      controllers.application.ShiftsController.saveStaffAssignments
+GET           /staff-assignments                                                      controllers.application.ShiftsController.getAllStaffAssignments
+GET           /staff-assignments/:localDate                                           controllers.application.ShiftsController.getStaffAssignments(localDate: String)
 
 GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
 
@@ -77,10 +82,9 @@ GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName     
 GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)
 GET           /export/desk-deps/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesDepsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
 GET           /export/desk-deps/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesDepsAtPointInTimeCSV(localDate, pointInTime, terminalName)
-GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName              controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName              controllers.application.exports.FlightsExportController.exportTerminalFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
+GET           /export/arrivals-combined/:startLocalDay/:endLocalDay                   controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String)
 GET           /export/arrivals/snapshot/:localDate/:pointInTime/:terminalName         controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long, terminalName: String)
-GET           /export/arrivals-with-red-list-diversions/:startLocalDay/:endLocalDay/:terminalName              controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeCSVWithRedListDiversions(startLocalDay: String, endLocalDay: String, terminalName: String)
-GET           /export/arrivals-with-red-list-diversions/snapshot/:localDate/:pointInTime/:terminalName         controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDayAtPointInTimeCSVWithRedListDiversions(localDate: String, pointInTime: Long, terminalName: String)
 
 GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.application.exports.FlightsExportController.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
 GET           /export/planning/:weekStarting/:terminalName                            controllers.application.ExportsController.exportForecastWeekToCSV(weekStarting, terminalName)
@@ -108,9 +112,9 @@ POST          /data/close-banner                                                
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
-GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
+GET           /data/user-preferences                                                   controllers.Application.userPreferences
 
-PUT          /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod()
+POST          /data/user-preferences                                                   controllers.Application.setUserPreferences
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
@@ -124,11 +128,16 @@ GET           /data/user/has-port-access                                        
 GET           /data/actor-tree                                                        controllers.application.DebugController.getActorTree
 
 # v2 exports
-GET           /api/arrivals/:startLocalDate/:endLocalDate/:terminalName               controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)
-+ nocsrf
 GET           /api/passengers/:startLocalDate/:endLocalDate                           controllers.application.SummariesController.exportPassengersByPortForDateRangeApi(startLocalDate: String, endLocalDate: String)
 GET           /api/passengers/:startLocalDate/:endLocalDate/:terminalName             controllers.application.SummariesController.exportPassengersByTerminalForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)
-PUT           /api/passengers/:localDate                                              controllers.application.SummariesController.populatePassengersForDate(localDate: String)
++ nocsrf
+PUT           /api/passengers/:startDate/:endDate                                     controllers.application.SummariesController.populatePassengersForDate(startDate: String, endDate: String)
+
++ nocsrf
+PUT           /api/v1/queues/:startDateLocal/:endDateLocal                            controllers.application.api.v1.QueuesApiController.populateQueues(startDateLocal: String, endDateLocal: String)
+
++ nocsrf
+PUT           /api/v1/flights/:startDateLocal/:endDateLocal                           controllers.application.api.v1.FlightsApiController.populateFlights(startDateLocal: String, endDateLocal: String)
 
 GET           /debug/flights/:persistenceId/:dateString/:messages                     controllers.application.DebugController.getMessagesForFlightPersistenceIdAtTime(persistenceId: String, dateString: String, messages: Int)
 POST          /email/feedback/:feedback                                               controllers.application.EmailNotificationController.feedBack(feedback: String)

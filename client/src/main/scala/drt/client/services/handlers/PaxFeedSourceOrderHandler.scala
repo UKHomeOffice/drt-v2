@@ -21,6 +21,7 @@ class PaxFeedSourceOrderHandler[M](modelRW: ModelRW[M, List[FeedSource]]) extend
             log.error(s"GetPaxFeedSourceOrder request failed. Re-requesting after ${PollDelay.recoveryDelay}")
             Future(RetryActionAfter(GetPaxFeedSourceOrder, PollDelay.recoveryDelay))
         }))
+
     case UpdateGetPaxFeedSourceOrder(paxFeedSources) =>
       updated(paxFeedSources)
   }

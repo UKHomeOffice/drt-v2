@@ -2,10 +2,11 @@ package drt.shared
 
 import uk.gov.homeoffice.drt.DataUpdates.{Combinable, MinuteUpdates}
 import uk.gov.homeoffice.drt.arrivals.{WithLastUpdated, WithTimeAccessor}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, MinuteLike, TQM, WithMinute}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
 import upickle.default._
 
 import scala.collection.immutable.{Map => IMap}
@@ -18,24 +19,6 @@ object CrunchApi {
 
   object PortStateError {
     implicit val rw: ReadWriter[PortStateError] = macroRW
-  }
-
-  trait WithMinute {
-    val minute: MillisSinceEpoch
-  }
-
-  trait MinuteLike[A, B] {
-    val minute: MillisSinceEpoch
-    val lastUpdated: Option[MillisSinceEpoch]
-    val terminal: Terminal
-
-    def maybeUpdated(existing: A, now: MillisSinceEpoch): Option[A]
-
-    val key: B
-
-    def toUpdatedMinute(now: MillisSinceEpoch): A
-
-    def toMinute: A
   }
 
   trait TerminalQueueMinute {
@@ -101,57 +84,6 @@ object CrunchApi {
     def apply(minutesByKey: IMap[TM, StaffMinute]): StaffMinutes = StaffMinutes(minutesByKey.values.toSeq)
 
     implicit val rw: ReadWriter[StaffMinutes] = macroRW
-  }
-
-  case class CrunchMinute(terminal: Terminal,
-                          queue: Queue,
-                          minute: MillisSinceEpoch,
-                          paxLoad: Double,
-                          workLoad: Double,
-                          deskRec: Int,
-                          waitTime: Int,
-                          maybePaxInQueue: Option[Int],
-                          deployedDesks: Option[Int] = None,
-                          deployedWait: Option[Int] = None,
-                          maybeDeployedPaxInQueue: Option[Int] = None,
-                          actDesks: Option[Int] = None,
-                          actWait: Option[Int] = None,
-                          lastUpdated: Option[MillisSinceEpoch] = None)
-    extends MinuteLike[CrunchMinute, TQM]
-      with WithMinute with WithLastUpdated {
-    def equals(candidate: CrunchMinute): Boolean = this.copy(lastUpdated = None) == candidate.copy(lastUpdated = None)
-
-    override def maybeUpdated(existing: CrunchMinute, now: MillisSinceEpoch): Option[CrunchMinute] =
-      if (!equals(existing)) Option(copy(lastUpdated = Option(now)))
-      else None
-
-    lazy val key: TQM = MinuteHelper.key(terminal, queue, minute)
-
-    override def toUpdatedMinute(now: MillisSinceEpoch): CrunchMinute = this.copy(lastUpdated = Option(now))
-
-    override val toMinute: CrunchMinute = this
-
-    def prettyPrint(implicit niceDate: MillisSinceEpoch => String): String = {
-      s"CrunchMinute($terminal, $queue, ${niceDate(minute)}, $paxLoad pax, $workLoad work, $deskRec desks, $waitTime waits, $deployedDesks dep desks, $deployedWait dep wait, $actDesks act desks, $actWait act wait, ${lastUpdated.map(niceDate)} updated)"
-    }
-  }
-
-  object CrunchMinute {
-    def apply(tqm: TQM, ad: DeskStat, now: MillisSinceEpoch): CrunchMinute = CrunchMinute(
-      terminal = tqm.terminal,
-      queue = tqm.queue,
-      minute = tqm.minute,
-      paxLoad = 0,
-      workLoad = 0,
-      deskRec = 0,
-      waitTime = 0,
-      maybePaxInQueue = None,
-      actDesks = ad.desks,
-      actWait = ad.waitTime,
-      lastUpdated = Option(now)
-    )
-
-    implicit val rw: ReadWriter[CrunchMinute] = macroRW
   }
 
   case class PassengersMinute(terminal: Terminal,
@@ -333,8 +265,6 @@ object CrunchApi {
 
     def ++(that: MinutesContainer[MINUTE, IDX]): MinutesContainer[MINUTE, IDX] = MinutesContainer(minutes ++ that.minutes)
 
-    def updatedSince(sinceMillis: MillisSinceEpoch): MinutesContainer[MINUTE, IDX] = MinutesContainer(minutes.filter(_.lastUpdated.getOrElse(0L) > sinceMillis))
-
     def contains(clazz: Class[_]): Boolean = minutes.headOption match {
       case Some(x) if x.getClass == clazz => true
       case _ => false
@@ -344,6 +274,76 @@ object CrunchApi {
   }
 
   case class CrunchMinutes(minutes: Iterable[CrunchMinute]) extends MinutesLike[CrunchMinute, TQM]
+
+  object CrunchMinutes {
+    def groupByMinutes(slotSizeMinutes: Int, crunchMinutes: Seq[CrunchMinute], date: UtcDate)
+                      (implicit dateInMillis: UtcDate => MillisSinceEpoch): Iterable[CrunchMinute] =
+      crunchMinutes
+        .groupBy(_.terminal)
+        .map {
+          case (terminal, minutes) => (terminal, minutes.groupBy(_.queue))
+        }
+        .flatMap {
+          case (terminal, minutesByQueue) =>
+            minutesByQueue.flatMap {
+              case (queue, minutes) =>
+                val dayStart = dateInMillis(date)
+                (0 until 1440 by slotSizeMinutes).map { slot =>
+                  val slotStart = dayStart + slot * oneMinuteMillis
+                  val slotEnd = slotStart + slotSizeMinutes * oneMinuteMillis
+                  val minsInSlot = minutes.filter(cm => slotStart <= cm.minute && cm.minute < slotEnd)
+                  periodSummary(terminal, slotStart, queue, minsInSlot.toList)
+                }
+            }
+        }
+    def periodSummary(terminal: Terminal, periodStart: MillisSinceEpoch, queue: Queue, slotMinutes: List[CrunchMinute]): CrunchMinute = {
+      if (slotMinutes.nonEmpty) CrunchMinute(
+        terminal = terminal,
+        queue = queue,
+        minute = periodStart,
+        paxLoad = slotMinutes.map(_.paxLoad).sum,
+        workLoad = slotMinutes.map(_.workLoad).sum,
+        deskRec = slotMinutes.map(_.deskRec).max,
+        waitTime = slotMinutes.map(_.waitTime).max,
+        maybePaxInQueue = slotMinutes.map(_.maybePaxInQueue).max,
+        deployedDesks = if (slotMinutes.exists(cm => cm.deployedDesks.isDefined))
+          Option(slotMinutes.map(_.deployedDesks.getOrElse(0)).max)
+        else
+          None,
+        deployedWait = if (slotMinutes.exists(cm => cm.deployedWait.isDefined))
+          Option(slotMinutes.map(_.deployedWait.getOrElse(0)).max)
+        else
+          None,
+        maybeDeployedPaxInQueue = if (slotMinutes.exists(cm => cm.maybeDeployedPaxInQueue.isDefined))
+          Option(slotMinutes.map(_.maybeDeployedPaxInQueue.getOrElse(0)).max)
+        else
+          None,
+        actDesks = if (slotMinutes.exists(cm => cm.actDesks.isDefined))
+          Option(slotMinutes.map(_.actDesks.getOrElse(0)).max)
+        else
+          None,
+        actWait = if (slotMinutes.exists(cm => cm.actWait.isDefined))
+          Option(slotMinutes.map(_.actWait.getOrElse(0)).max)
+        else
+          None
+      )
+      else CrunchMinute(
+        terminal = terminal,
+        queue = queue,
+        minute = periodStart,
+        paxLoad = 0,
+        workLoad = 0,
+        deskRec = 0,
+        waitTime = 0,
+        maybePaxInQueue = None,
+        deployedDesks = None,
+        deployedWait = None,
+        maybeDeployedPaxInQueue = None,
+        actDesks = None,
+        actWait = None)
+    }
+
+  }
 
   case class PortStateUpdates(lastFlightsUpdate: MillisSinceEpoch,
                               lastQueuesUpdate: MillisSinceEpoch,
@@ -386,10 +386,11 @@ object CrunchApi {
     implicit val rw: ReadWriter[QueueHeadline] = macroRW
   }
 
-  def groupCrunchMinutesByX(groupSize: Int)
-                           (crunchMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])],
-                            terminalName: Terminal,
-                            queueOrder: List[Queue]): Seq[(MillisSinceEpoch, Seq[CrunchMinute])] = {
+  def groupCrunchMinutesBy(groupSize: Int)
+                          (crunchMinutes: Seq[(MillisSinceEpoch, List[CrunchMinute])],
+                           terminalName: Terminal,
+                           queueOrder: List[Queue],
+                          ): Seq[(MillisSinceEpoch, Seq[CrunchMinute])] =
     crunchMinutes.grouped(groupSize).toList.map(group => {
       val byQueueName = group.flatMap(_._2).groupBy(_.queue)
       val startMinute = group.map(_._1).min
@@ -422,13 +423,13 @@ object CrunchApi {
       }
       (startMinute, queueCrunchMinutes)
     })
-  }
 
-  def terminalMinutesByMinute[T <: MinuteLike[A, B], A, B](minutes: List[T],
-                                                           terminalName: Terminal): Seq[(MillisSinceEpoch, List[T])] = minutes
-    .filter(_.terminal == terminalName)
-    .groupBy(_.minute)
-    .toList
-    .sortBy(_._1)
+  def terminalMinutesByMinute[T <: MinuteLike[_, _]](minutes: List[T],
+                                                           terminalName: Terminal): Seq[(MillisSinceEpoch, List[T])] =
+    minutes
+      .filter(_.terminal == terminalName)
+      .groupBy(_.minute)
+      .toList
+      .sortBy(_._1)
 
 }

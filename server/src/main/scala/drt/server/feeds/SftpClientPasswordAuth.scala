@@ -4,7 +4,7 @@ import net.schmizz.sshj.SSHClient
 import net.schmizz.sshj.sftp.SFTPClient
 import net.schmizz.sshj.xfer.InMemoryDestFile
 
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayOutputStream, OutputStream}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class SftpClientPasswordAuth(ftpServer: String, username: String, password: String) {
@@ -26,6 +26,10 @@ case class SftpClientPasswordAuth(ftpServer: String, username: String, password:
 
     val file: InMemoryDestFile = new InMemoryDestFile {
       override def getOutputStream: ByteArrayOutputStream = outputStream
+
+      override def getLength: Long = outputStream.size()
+
+      override def getOutputStream(append: Boolean): OutputStream = outputStream
     }
 
     sftpClient.get(fileName, file)

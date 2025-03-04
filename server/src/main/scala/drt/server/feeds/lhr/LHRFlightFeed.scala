@@ -100,6 +100,7 @@ case class LHRFlightFeed(csvRecords: Iterator[Int => String]) {
         carrierCode = carrierCode.code,
         flightCodeSuffix = suffix.map(_.suffix),
         origin = flight.from,
+        previousPort = None,
         scheduled = SDate(schDtIso).millisSinceEpoch,
         estimated = flight.estimated.map(_.toDate.getTime),
         touchdown = flight.touchdown.map(_.toDate.getTime),

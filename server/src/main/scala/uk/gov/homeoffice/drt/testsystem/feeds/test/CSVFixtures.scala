@@ -47,6 +47,7 @@ object CSVFixtures {
         carrierCode = carrierCode.code,
         flightCodeSuffix = suffix.map(_.suffix),
         origin = fields(Origin),
+        previousPort = None,
         scheduled = timeToSDate(fields(Scheduled)).getOrElse(SDate.now().millisSinceEpoch),
         estimated = timeToSDate(fields(Estimated)),
         touchdown = timeToSDate(fields(Actual)),

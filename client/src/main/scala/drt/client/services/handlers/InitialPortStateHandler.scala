@@ -22,7 +22,7 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
                                  portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch, Pot[HashSet[PortCode]])],
                                 ) extends LoggingActionHandler(portStateModel) {
-  val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
+  private val crunchUpdatesRequestFrequency: FiniteDuration = 2 seconds
 
   val thirtySixHoursInMillis: Long = 1000L * 60 * 60 * 36
 
@@ -37,7 +37,8 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
       val eventualAction = processRequest(viewMode, updateRequestFuture)
 
-      updated((Pending(), 0L, 0L, 0L, Pending()), Effect(Future(ShowLoader())) + Effect(eventualAction))
+      val effects = Effect(Future(ShowLoader())) + Effect(eventualAction)
+      updated((Pending(), 0L, 0L, 0L, Pending()), effects)
 
     case SetPortState(viewMode, _) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring out of date view response")
@@ -45,7 +46,9 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
 
     case SetPortState(viewMode, portState) =>
       val originCodes = portState.flights
-        .map { case (_, fws) => fws.apiFlight.Origin }
+        .flatMap { case (_, fws) =>
+          Set(fws.apiFlight.Origin, fws.apiFlight.PreviousPort.getOrElse(fws.apiFlight.Origin))
+        }
         .toSet
 
       val hideLoader = Effect(Future(HideLoader()))
@@ -67,7 +70,7 @@ class InitialPortStateHandler[M](getCurrentViewMode: () => ViewMode,
       updated((Ready(portState), portState.flightsLatest, portState.crunchMinutesLatest, portState.staffMinutesLatest, Pending()), effects)
   }
 
-  def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
+  private def processRequest(viewMode: ViewMode, call: Future[dom.XMLHttpRequest]): Future[Action] = {
     call
       .map(r => read[PortState](r.responseText))
       .map(portState => SetPortState(viewMode, portState))

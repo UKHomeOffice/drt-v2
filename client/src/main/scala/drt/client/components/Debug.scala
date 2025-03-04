@@ -19,7 +19,7 @@ object Debug {
     .render_P { _ =>
       val staffingRCP = SPACircuit.connect(
         m => (
-          m.shifts,
+          m.legacyDayOfStaffAssignments,
           m.fixedPoints,
           m.staffMovements,
           m.portStatePot,

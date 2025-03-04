@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
+import diode.data.Pot
 import drt.client.SPAMain._
 import drt.client.components.styles.DrtTheme._
 import drt.client.logger.{Logger, LoggerFactory}
@@ -28,7 +29,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
   case class Props(router: RouterCtl[Loc],
                    terminalPageTab: TerminalPageTabLoc,
                    loadingState: LoadingState,
-                   minuteTicker: Int,
                   ) extends UseValueEq
 
   case class DisplayDate(date: LocalDate, isNotValid: Boolean)
@@ -181,7 +181,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
             )
           ),
           TimeRangeFilter(
-            TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isToday, props.minuteTicker)
+            TimeRangeFilter.Props(props.router, props.terminalPageTab, defaultTimeRangeWindow, isToday)
           ),
           MuiDivider()(),
           <.div(^.className := "time-machine",

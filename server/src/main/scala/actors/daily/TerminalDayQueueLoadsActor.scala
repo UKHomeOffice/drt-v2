@@ -2,10 +2,11 @@ package actors.daily
 
 import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesToMessage, passengersMinuteFromMessage}
 import akka.actor.Props
+import drt.shared.CrunchApi
 import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
-import drt.shared.{CrunchApi, TQM}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
+import uk.gov.homeoffice.drt.model.TQM
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{PassengersMinuteMessage, PassengersMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
@@ -23,7 +24,8 @@ class TerminalDayQueueLoadsActor(year: Int,
                                  day: Int,
                                  terminal: Terminal,
                                  val now: () => SDateLike,
-                                 maybePointInTime: Option[MillisSinceEpoch]) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
+                                 maybePointInTime: Option[MillisSinceEpoch],
+                                ) extends TerminalDayLikeActor[PassengersMinute, TQM, PassengersMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val persistenceIdType: String = "passengers"
@@ -32,13 +34,14 @@ class TerminalDayQueueLoadsActor(year: Int,
 
   override def shouldSendEffectsToSubscriber(container: CrunchApi.MinutesContainer[PassengersMinute, TQM]): Boolean = true
 
-  override def containerToMessage(differences: Iterable[PassengersMinute]): GeneratedMessage = PassengersMinutesMessage(
-    differences.map(pm => PassengersMinuteMessage(
-      queueName = Option(pm.queue.toString),
-      minute = Option(pm.minute),
-      passengers = pm.passengers.toSeq,
-    )).toSeq
-  )
+  override def containerToMessage(container: Iterable[PassengersMinute]): GeneratedMessage =
+    PassengersMinutesMessage(
+      container.map(pm => PassengersMinuteMessage(
+        queueName = Option(pm.queue.toString),
+        minute = Option(pm.minute),
+        passengers = pm.passengers.toSeq,
+      )).toSeq
+    )
 
   override val valFromMessage: PassengersMinuteMessage => PassengersMinute =
     (pm: PassengersMinuteMessage) => passengersMinuteFromMessage(terminal, pm)

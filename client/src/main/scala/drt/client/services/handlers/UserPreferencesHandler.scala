@@ -5,43 +5,43 @@ import diode.{Action, ActionResult, Effect, ModelRW}
 import drt.client.actions.Actions.RetryActionAfter
 import drt.client.logger.log
 import drt.client.services.{DrtApi, PollDelay}
-
+import drt.shared.UserPreferences
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
+import drt.shared.UserPreferences.rw
 
-case class SetSelectedTimeInterval(previousInterval: Int) extends Action
+case object GetUserPreferences extends Action
 
-case class SendSelectedTimeInterval(interval: Int) extends Action
+case class SetUserPreferences(userPreferences: UserPreferences) extends Action
 
-case class GetUserPreferenceIntervalMinutes() extends Action
+case class UpdateUserPreferences(userPreferences: UserPreferences) extends Action
 
-class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[Int]]) extends LoggingActionHandler(modelRW) {
+class UserPreferencesHandler[M](modelRW: ModelRW[M, Pot[UserPreferences]]) extends LoggingActionHandler(modelRW) {
+  import upickle.default.{read, write}
 
   override
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
-    case GetUserPreferenceIntervalMinutes() =>
-      val apiCallEffect = Effect(DrtApi.get("data/user-preference-planning-interval-minutes")
-        .map(r => SetSelectedTimeInterval(r.responseText match {
-          case "15" => 15
-          case _ => 60
-        }))
+    case GetUserPreferences =>
+      val apiCallEffect = Effect(DrtApi.get("data/user-preferences")
+        .map(r => SetUserPreferences(read[UserPreferences](r.responseText)))
         .recoverWith {
           case _ =>
-            log.error(s"Failed to get Previous Time PeriodSelected data. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(GetUserPreferenceIntervalMinutes(), PollDelay.recoveryDelay))
+            log.error(s"Failed to get User Preferences data. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(GetUserPreferences, PollDelay.recoveryDelay))
         })
       effectOnly(apiCallEffect)
 
-    case SetSelectedTimeInterval(previousPeriodInterval) => updated(Ready(previousPeriodInterval))
 
-    case SendSelectedTimeInterval(interval) =>
-      val apiCallEffect = Effect(DrtApi.put(s"data/user-preference-planning-interval-minutes", s"${interval.toString}")
-        .map(_ => SetSelectedTimeInterval(interval))
+    case SetUserPreferences(userPreferences) => updated(Ready(userPreferences))
+
+    case UpdateUserPreferences(userPreferences) =>
+      val apiCallEffect = Effect(DrtApi.post("data/user-preferences", s"${write(userPreferences)}")
+        .map(_ => SetUserPreferences(userPreferences))
         .recoverWith {
           case _ =>
-            log.error(s"Failed to send time period selected data. Re-requesting after ${PollDelay.recoveryDelay}")
-            Future(RetryActionAfter(SendSelectedTimeInterval(interval), PollDelay.recoveryDelay))
+            log.error(s"Failed to update User Preferences data. Re-requesting after ${PollDelay.recoveryDelay}")
+            Future(RetryActionAfter(UpdateUserPreferences(userPreferences), PollDelay.recoveryDelay))
         })
       effectOnly(apiCallEffect)
   }

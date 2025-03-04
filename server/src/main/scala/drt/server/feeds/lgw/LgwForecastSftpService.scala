@@ -8,7 +8,7 @@ import net.schmizz.sshj.xfer.InMemoryDestFile
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.time.SDate
 
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayOutputStream, OutputStream}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.util.{Failure, Success, Try}
 
@@ -51,6 +51,10 @@ case class LgwForecastSftpService(ftpServer: String, port: Int, username: String
 
     val output: InMemoryDestFile = new InMemoryDestFile {
       override def getOutputStream: ByteArrayOutputStream = outputStream
+
+      override def getLength: Long = outputStream.size()
+
+      override def getOutputStream(append: Boolean): OutputStream = outputStream
     }
 
     Try(sftp.get(fileName, output)) match {

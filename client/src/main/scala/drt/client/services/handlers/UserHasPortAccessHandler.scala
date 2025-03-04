@@ -15,24 +15,20 @@ import scala.concurrent.Future
 class UserHasPortAccessHandler[M](modelRW: ModelRW[M, Pot[Boolean]]) extends LoggingActionHandler(modelRW) {
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-
     case GetUserHasPortAccess =>
-
       val url = SPAMain.absoluteUrl(relativeUrl = "data/user/has-port-access")
-
       val eventualRequest: Future[XMLHttpRequest] = dom.ext.Ajax.get(url = url)
-      effectOnly(Effect(eventualRequest.map(r => {
 
-        SetUserHasPortAccess(r.status == 200)
-      }).recover {
-        case e: AjaxException if e.xhr.status == 401 =>
-
-          SetUserHasPortAccess(false)
-        case _ => RetryActionAfter(GetUserHasPortAccess, PollDelay.recoveryDelay)
-      }))
+      effectOnly(Effect(
+        eventualRequest
+          .map(r => SetUserHasPortAccess(r.status == 200))
+          .recover {
+            case e: AjaxException if e.xhr.status == 401 => SetUserHasPortAccess(false)
+            case _ => RetryActionAfter(GetUserHasPortAccess, PollDelay.recoveryDelay)
+          }
+      ))
 
     case SetUserHasPortAccess(hasAccess) =>
       updated(Ready(hasAccess))
-
   }
 }

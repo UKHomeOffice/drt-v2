@@ -151,8 +151,10 @@ object BigSummaryBoxTests extends TestSuite {
                 , SplitSources.ApiSplitsWithHistoricalEGateAndFTPercentages, Option(EventTypes.DC), PaxNumbers)
 
               val flights = FlightsWithSplitsDiff(
-                List(ApiFlightWithSplits(apiFlight1, Set(splits1)),
-                  ApiFlightWithSplits(apiFlight2, Set(splits2))), List())
+                List(
+                  ApiFlightWithSplits(apiFlight1, Set(splits1)),
+                  ApiFlightWithSplits(apiFlight2, Set(splits2))
+                ))
 
               val aggSplits = aggregateSplits(flights.flightsToUpdate, paxFeedSourceOrder)
 

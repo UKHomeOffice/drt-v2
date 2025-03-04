@@ -29,7 +29,8 @@ class LoggedInUserHandler[M](modelRW: ModelRW[M, Pot[LoggedInUser]]) extends Log
       """.stripMargin
 
     }, (s: Value) => {
-      LoggedInUser(s("userName").toString(),
+      LoggedInUser(
+        s("userName").toString(),
         s("id").toString(),
         s("email").toString(),
         s("roles").arr.map(r => Roles.parse(r.value.toString)).collect { case Some(r) => r }.toSet,

@@ -17,7 +17,7 @@ object RestartActor {
   case class AddResetActors(actors: Iterable[ActorRef])
 }
 
-class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with ActorLogging {
+class RestartActor(startSystem: () => List[KillSwitch], clearAggregatedDb: () => Unit) extends Actor with ActorLogging {
 
   private lazy val persistenceTestKit: PersistenceTestKit = PersistenceTestKit(context.system)
 
@@ -41,6 +41,7 @@ class RestartActor(startSystem: () => List[KillSwitch]) extends Actor with Actor
       }
 
       resetInMemoryData()
+      clearAggregatedDb()
 
       val resetFutures = actorsToReset
         .map(_.ask(ResetData)(new Timeout(3.second)).recover {

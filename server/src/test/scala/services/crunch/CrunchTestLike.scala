@@ -15,7 +15,7 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import org.specs2.execute.Result
 import org.specs2.mutable.SpecificationLike
-import org.specs2.specification.{AfterAll, AfterEach}
+import org.specs2.specification.{AfterAll, AfterEach, BeforeEach}
 import uk.gov.homeoffice.drt.arrivals.{Arrival, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.STN
 import uk.gov.homeoffice.drt.ports.PaxTypes._
@@ -24,6 +24,7 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2, Terminal}
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import scala.collection.immutable
@@ -34,6 +35,7 @@ import scala.concurrent.{Await, ExecutionContext, ExecutionContextExecutor, Futu
 object TestDefaults {
   val airportConfig: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
+    portName = "Stansted",
     queuesByTerminal = SortedMap(
       T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk),
       T2 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk)
@@ -104,6 +106,7 @@ object TestDefaults {
 
   val airportConfigWithEgates: AirportConfig = AirportConfig(
     portCode = PortCode("STN"),
+    portName = "Stansted",
     queuesByTerminal = SortedMap(
       T1 -> Seq(Queues.EGate, Queues.EeaDesk, Queues.NonEeaDesk)
     ),
@@ -166,6 +169,7 @@ object TestDefaults {
 
     AirportConfig(
       portCode = PortCode("STN"),
+      portName = "Stansted",
       queuesByTerminal = SortedMap(
         T1 -> queues
       ),
@@ -216,9 +220,12 @@ class CrunchTestLike
   extends TestKit(ActorSystem("DRT-TEST", PersistenceTestKitPlugin.config.withFallback(PersistenceTestKitSnapshotPlugin.config.withFallback(ConfigFactory.load()))))
     with SpecificationLike
     with AfterAll
-    with AfterEach {
+    with AfterEach
+    with BeforeEach {
   isolated
   sequential
+
+  implicit val aggregatedDb: AggregateDbH2.type = AggregateDbH2
 
   val paxFeedSourceOrder: List[FeedSource] = TestDefaults.paxFeedSourceOrder
 
@@ -231,9 +238,14 @@ class CrunchTestLike
     maybeDrtActor.foreach(shutDownDrtActor)
   }
 
-  override def after: Unit = {
+  override def after(): Unit = {
     log.info("Cleanup: Shutting down actor system")
     TestKit.shutdownActorSystem(system)
+  }
+
+  override def before(): Any = {
+    log.info("Before: Clearing db tables")
+    aggregatedDb.dropAndCreateH2Tables()
   }
 
   implicit val materializer: Materializer = Materializer.createMaterializer(system)

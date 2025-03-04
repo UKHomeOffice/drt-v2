@@ -14,12 +14,13 @@ import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 class AirportConfigHandler[M](modelRW: ModelRW[M, Pot[AirportConfig]]) extends LoggingActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetAirportConfig =>
-      updated(Pending(), Effect(DrtApi.get("airport-config")
+      effectOnly(Effect(DrtApi.get("airport-config")
         .map(r => UpdateAirportConfig(read[AirportConfig](r.responseText))).recoverWith {
         case _ =>
           log.error(s"AirportConfig request failed. Re-requesting after ${PollDelay.recoveryDelay}")
           Future(RetryActionAfter(GetAirportConfig, PollDelay.recoveryDelay))
       }))
+
     case UpdateAirportConfig(airportConfig) =>
       updated(Ready(airportConfig))
   }

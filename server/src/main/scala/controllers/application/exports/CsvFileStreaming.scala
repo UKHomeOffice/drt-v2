@@ -4,11 +4,11 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import play.api.http.{HttpEntity, Writeable}
-import play.api.mvc.{ResponseHeader, Result}
+import play.api.mvc._
 import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
-import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 
 object CsvFileStreaming {
 
@@ -40,17 +40,34 @@ object CsvFileStreaming {
   }
 
   def makeFileName(subject: String,
-                   maybeTerminal: Option[Terminal],
-                   start: LocalDate,
-                   end: LocalDate,
+                   terminal: Seq[Terminal],
+                   start: SDateLike,
+                   end: SDateLike,
                    portCode: PortCode): String = {
-    val startLocal = SDate(SDate(start), europeLondonTimeZone)
-    val endLocal = SDate(SDate(end), europeLondonTimeZone)
+    val startLocal = SDate(start, europeLondonTimeZone)
+    val endLocal = SDate(end, europeLondonTimeZone)
     val endDate = if (startLocal.daysBetweenInclusive(endLocal) > 1)
       f"-to-${endLocal.getFullYear}-${endLocal.getMonth}%02d-${endLocal.getDate}%02d"
     else ""
 
-    val terminalStr = maybeTerminal.map(t => s"${t.toString}-").getOrElse("")
+    val terminalStr = terminal.map(t => s"${t.toString}-").mkString
+
+    f"$portCode-$terminalStr$subject-" +
+      f"${startLocal.getFullYear}-${startLocal.getMonth}%02d-${startLocal.getDate}%02d" + endDate
+  }
+
+  def makeFileName(subject: String,
+                   terminals: Seq[Terminal],
+                   start: LocalDate,
+                   end: LocalDate,
+                   portCode: PortCode): String = {
+    val startLocal = SDate(start)
+    val endLocal = SDate(end)
+    val endDate = if (startLocal.daysBetweenInclusive(endLocal) > 1)
+      f"-to-${endLocal.getFullYear}-${endLocal.getMonth}%02d-${endLocal.getDate}%02d"
+    else ""
+
+    val terminalStr = terminals.map(t => s"${t.toString}-").mkString
 
     f"$portCode-$terminalStr$subject-" +
       f"${startLocal.getFullYear}-${startLocal.getMonth}%02d-${startLocal.getDate}%02d" + endDate

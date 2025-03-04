@@ -1,22 +1,25 @@
 package controllers
 
 import akka.event.Logging
-import api._
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import buildinfo.BuildInfo
 import com.google.inject.Inject
+import com.typesafe.config.ConfigFactory
 import controllers.application._
-import drt.http.ProdSendAndReceive
-import drt.shared.DrtPortConfigs
+import spray.json.enrichAny
+import drt.shared.{DrtPortConfigs, UserPreferences}
 import org.joda.time.chrono.ISOChronology
 import play.api.mvc._
 import play.api.{Configuration, Environment}
 import services.{ActorResponseTimeHealthCheck, FeedsHealthCheck, HealthChecker}
 import slickdb._
-import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.BorderForceStaff
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
+import uk.gov.homeoffice.drt.keycloak.{KeyCloakAuth, KeyCloakAuthError, KeyCloakAuthResponse, KeyCloakAuthToken, KeyCloakAuthTokenParserProtocol}
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDate, SDateLike}
 
@@ -41,6 +44,9 @@ object AirportConfigProvider {
     configForPort.assertValid()
     configForPort
   }
+
+  implicit val airportConfig: AirportConfig =
+    AirportConfigProvider(new Configuration(ConfigFactory.load))
 }
 
 trait FeatureGuideProviderLike {
@@ -68,8 +74,12 @@ trait ABFeatureProviderLike {
   val abFeatureService: IABFeatureDao
 }
 
+trait ShiftsProviderLike {
+  val shiftsService: ShiftsService
+}
+
 class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(implicit environment: Environment)
-  extends AuthController(cc, ctrl) {
+  extends AuthController(cc, ctrl) with KeyCloakAuthTokenParserProtocol {
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
@@ -86,7 +96,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   private val isSecure: Boolean = config.get[Boolean]("drt.use-https")
 
-
   log.info(s"Starting DRTv2 build ${BuildInfo.version}")
 
   log.info(s"ISOChronology.getInstance: ${ISOChronology.getInstance}")
@@ -102,30 +111,34 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
 
-  def userSelectedTimePeriod: Action[AnyContent] = authByRole(BorderForceStaff) {
+  def userPreferences: Action[AnyContent] = authByRole(BorderForceStaff) {
+    import upickle.default._
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.userService.selectUser(userEmail.trim).map {
-        case Some(user) => Ok(user.staff_planning_interval_minutes.getOrElse(60).toString)
-        case None => Ok("")
+        case Some(user) => Ok(write(UserPreferences(
+          user.staff_planning_interval_minutes.getOrElse(60),
+          user.hide_pax_data_source_description.getOrElse(false))))
+        case None => BadRequest("User not found")
       }
     }
   }
 
-  def setUserSelectedTimePeriod(): Action[AnyContent] = authByRole(BorderForceStaff) {
+  def setUserPreferences(): Action[AnyContent] = authByRole(BorderForceStaff) {
+    import upickle.default._
     Action.async { implicit request =>
-      val periodInterval: Int = request.body.asText.getOrElse("60").toInt
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
-      ctrl.userService.updateStaffPlanningIntervalMinutes(userEmail, periodInterval).map {
-        case _ => Ok("Updated period")
+      request.body.asText match {
+        case Some(json) =>
+          val userPreferences = read[UserPreferences](json)
+          ctrl.userService.updateUserPreferences(userEmail, userPreferences)
+            .map(_ => Ok("Updated preferences"))
+        case None =>
+          Future.successful(BadRequest("Invalid user preferences"))
       }
-        .recover {
-          case t =>
-            log.error(s"Failed to update UpdateStaff Planning Time Period: ${t.getMessage}")
-            Ok("Updated period failed")
-        }
     }
   }
+
 
   def shouldUserViewBanner: Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
@@ -190,7 +203,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   def viewedFeatureGuideIds: Action[AnyContent] = authByRole(BorderForceStaff) {
     Action.async { implicit request =>
-      import spray.json.DefaultJsonProtocol.{StringJsonFormat, immSeqFormat}
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.featureGuideViewService.featureViewed(userEmail).map(a => Ok(a.toJson.toString()))
     }
@@ -203,7 +215,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
   def index: Action[AnyContent] = Action { implicit request: Request[AnyContent] =>
     val user = ctrl.getLoggedInUser(config, request.headers, request.session)
     if (user.hasRole(airportConfig.role)) {
-      Ok(views.html.index("DRT - BorderForce", airportConfig.portCode.toString, googleTrackingCode, user.id))
+      Ok(views.html.index("DRT", airportConfig.portCode.toString, googleTrackingCode, user.id))
     } else {
       log.info(s"User lacks ${airportConfig.role} role. Redirecting to $redirectUrl")
       Redirect(Call("get", redirectUrl))
@@ -249,7 +261,7 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
     val clientSecretOption = config.getOptional[String]("key-cloak.client_secret")
     val usernameOption = postStringValOrElse("username")
     val passwordOption = postStringValOrElse("password")
-    import KeyCloakAuthTokenParserProtocol._
+
     import spray.json._
 
     def tokenToHttpResponse(username: String)(token: KeyCloakAuthResponse): Result = token match {
@@ -271,7 +283,8 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
       clientSecret <- clientSecretOption
     } yield (usernameOption, passwordOption) match {
       case (Some(username), Some(password)) =>
-        val authClient = new KeyCloakAuth(tokenUrl, clientId, clientSecret) with ProdSendAndReceive
+        val requestToEventualResponse: HttpRequest => Future[HttpResponse] = request => Http().singleRequest(request)
+        val authClient = KeyCloakAuth(tokenUrl, clientId, clientSecret, requestToEventualResponse)
         authClient.getToken(username, password).map(tokenToHttpResponse(username))
       case _ =>
         log.info(s"Invalid post fields for api login.")

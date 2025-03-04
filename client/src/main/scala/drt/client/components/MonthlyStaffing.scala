@@ -1,23 +1,34 @@
 package drt.client.components
 
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
-import drt.client.actions.Actions.UpdateShifts
-import drt.client.components.TerminalPlanningComponent.defaultStartDate
+import diode.AnyAction.aType
+import diode.data.{Empty, Pot, Ready}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ShiftViewEnabled, UrlDateParameter, UrlDayRangeType}
+import drt.client.actions.Actions.{GetAllStaffAssignments, UpdateShifts, UpdateStaffShifts}
+import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{JSDateConversions, SPACircuit}
+import drt.client.util.DateRange
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.{MuiDivider, MuiGrid}
+import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiSwipeableDrawer}
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
+import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ChevronLeft, ChevronRight, Groups}
+import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
+import japgolly.scalajs.react.vdom.HtmlAttrs.onClick.Event
 import japgolly.scalajs.react.vdom.TagOf
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{CtorType, _}
-import org.scalajs.dom.html.Select
+import moment.Moment
+import org.scalajs.dom.html.{Div, Select}
 import org.scalajs.dom.window.confirm
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.mutable
 import scala.scalajs.js
@@ -30,17 +41,33 @@ object MonthlyStaffing {
     def key: (Int, Int) = (timeSlot, day)
   }
 
-  case class State(timeSlots: Seq[Seq[Any]],
-                   colHeadings: Seq[String],
+  case class ColumnHeader(day: String, dayOfWeek: String)
+
+  case class State(timeSlots: Pot[Seq[Seq[Any]]],
+                   colHeadings: Seq[ColumnHeader],
                    rowHeadings: Seq[String],
-                   changes: Map[(Int, Int), Int])
+                   changes: Map[(Int, Int), Int],
+                   showEditStaffForm: Boolean,
+                   showStaffSuccess: Boolean,
+                   addShiftForm: Boolean,
+                   shifts: ShiftAssignments,
+                   shiftsLastLoaded: Option[Long] = None,
+                  )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(shifts: ShiftAssignments,
-                   terminalPageTab: TerminalPageTabLoc,
-                   router: RouterCtl[Loc]) {
-    def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(15)
+  case class Props(terminalPageTab: TerminalPageTabLoc,
+                   router: RouterCtl[Loc],
+                   airportConfig: AirportConfig,
+                   hideAddShifts: Boolean,
+                   isStaffShiftPage: Boolean
+                  ) {
+    def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
+
+    def dayRangeType: String = terminalPageTab.dayRangeType match {
+      case Some(dayRange) => dayRange
+      case None => "monthly"
+    }
   }
 
   def slotsInDay(date: SDateLike, slotDurationMinutes: Int): Seq[SDateLike] = {
@@ -94,17 +121,13 @@ object MonthlyStaffing {
                   callback: ReactEventFromInput => Callback
                 ): TagOf[Select] = {
     val valueNames = values.zip(names)
-    <.select(^.className := "form-control", ^.defaultValue := defaultValue,
+    <.select(^.className := "form-control dynamic-width", ^.defaultValue := defaultValue,
       ^.onChange ==> callback,
       valueNames.map {
         case (value, name) => <.option(^.value := value, s"$name")
       }.toTagMod)
   }
 
-  def consecutiveDaysInMonth(startDay: SDateLike, endDay: SDateLike): Seq[SDateLike] = {
-    val days = (endDay.getDate - startDay.getDate) + 1
-    List.tabulate(days)(i => startDay.addDays(i))
-  }
 
   def sixMonthsFromFirstOfMonth(date: SDateLike): Seq[SDateLike] = (0 to 5)
     .map(i => SDate.firstDayOfMonth(date).addMonths(i))
@@ -140,120 +163,288 @@ object MonthlyStaffing {
     }
   }
 
-  implicit val propsReuse: Reusability[Props] = Reusability.by((_: Props).shifts.hashCode)
-  implicit val stateReuse: Reusability[State] = Reusability.always[State]
+  implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
 
-  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("StaffingV2")
-    .initialStateFromProps(stateFromProps)
-    .renderPS { (scope, props, state) =>
-      def confirmAndSave(startOfMonthMidnight: SDateLike): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
+  class Backend(scope: BackendScope[Props, State]) {
+    def render(props: Props, state: State): VdomTagOf[Div] = {
+
+      val handleShiftEditForm = (e: Event) => Callback {
+        e.preventDefault()
+        scope.modState(state => state.copy(showEditStaffForm = true)).runNow()
+      }
+
+      def handleNavigation(props: Props, viewingDate: SDateLike): VdomTagOf[Div] = {
+        val (previousDate, nextDate) = navigationDates(viewingDate, props.terminalPageTab.dayRangeType.getOrElse("monthly"), () => SDate.now())
+        navigationArrows(props, previousDate, nextDate)
+      }
+
+      def confirmAndSave(viewingDate: SDateLike, timeSlots: Seq[Seq[Any]]): ReactEventFromInput => Callback = (_: ReactEventFromInput) =>
         Callback {
-          val initialTimeSlots: Seq[Seq[Any]] = stateFromProps(props).timeSlots
-          val changes = scope.state.changes
-          val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, changes)
-          val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(state.timeSlots, changes)
+          val initialTimeSlots: Seq[Seq[Any]] = slotsFromShifts(state.shifts,
+            props.terminalPageTab.terminal,
+            viewingDate,
+            props.timeSlotMinutes,
+            props.terminalPageTab.dayRangeType.getOrElse("monthly"))
+
+          val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, state.changes)
+          val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(timeSlots, state.changes)
           val saveAsTimeSlotMinutes = 15
 
           val changedShiftSlots: Seq[StaffAssignment] = updatedShiftAssignments(
             quarterHourlyChanges,
-            startOfMonthMidnight,
+            viewingDate,
             props.terminalPageTab.terminal,
-            saveAsTimeSlotMinutes)
+            saveAsTimeSlotMinutes,
+            props.terminalPageTab.dayRangeType.getOrElse("monthly"))
 
           val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
-          val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots)
-            .map(d => state.colHeadings(d)).toList
+          val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots).map(d => state.colHeadings(d)).toList
 
-          if (confirm(s"You have updated staff for ${dateListToString(changedDays)} $updatedMonth - do you want to save these changes?")) {
-            GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}", "Save Monthly Staffing", s"updated staff for ${dateListToString(changedDays)} $updatedMonth")
-            SPACircuit.dispatch(UpdateShifts(changedShiftSlots))
+          if (confirm(s"You have updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth - do you want to save these changes?")) {
+            GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}",
+              "Save Monthly Staffing",
+              s"updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth")
+            if (props.isStaffShiftPage)
+              SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
+            else
+              SPACircuit.dispatch(UpdateShifts(changedShiftSlots))
           }
         }
 
-      val viewingDate = SDate.firstDayOfMonth(props.terminalPageTab.dateFromUrlOrNow)
+      val viewingDate = props.terminalPageTab.dateFromUrlOrNow
+
+      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], monthOfShiftsPot: Pot[ShiftAssignments])
+      val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.allShifts))
+
+      val modelChangeDetection = staffRCP { modelMP =>
+        val model = modelMP()
+        val content = for {
+          monthOfShifts <- if (props.isStaffShiftPage) model.monthOfStaffShiftsPot else model.monthOfShiftsPot
+        } yield {
+          if (monthOfShifts != state.shifts || state.timeSlots.isEmpty) {
+            val slots = slotsFromShifts(monthOfShifts,
+              props.terminalPageTab.terminal,
+              viewingDate,
+              props.timeSlotMinutes,
+              props.terminalPageTab.dayRangeType.getOrElse("monthly"))
+            scope.modState(state => state.copy(shifts = monthOfShifts, timeSlots = Ready(slots),
+              shiftsLastLoaded = Option(SDate.now().millisSinceEpoch))).runNow()
+          }
+          <.div()
+        }
+        <.div(content.render(identity))
+      }
+
+      <.div(<.input.button(^.value := "staff updates",
+        ^.className := "btn btn-primary",
+        ^.onClick ==> handleShiftEditForm
+      ))
       <.div(
+        if (!props.isStaffShiftPage) {
+          if (props.hideAddShifts) {
+            EmptyVdom
+          } else {
+            <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
+              props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "staffing", "createShifts")).runNow()
+            })))
+          }
+        } else EmptyVdom,
+        modelChangeDetection,
         <.div(
-          ^.className := "terminal-content-header",
-          <.div(^.className := "staffing-controls-wrapper",
-            <.div(^.className := "staffing-controls-row",
-              <.label("Choose Month", ^.className := "staffing-controls-label"),
-              <.div(^.className := "staffing-controls-select",
-                drawSelect(
-                  values = monthOptions.map(_.toISOString),
-                  names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
-                  defaultValue = viewingDate.toISOString,
-                  callback = (e: ReactEventFromInput) => {
-                    props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
-                  })
+          if (state.showStaffSuccess)
+            StaffUpdateSuccess(IStaffUpdateSuccess(0, "The staff numbers have been successfully updated for your chosen dates and times", () => {
+              scope.modState(state => state.copy(showStaffSuccess = false)).runNow()
+            })) else EmptyVdom,
+        ),
+        state.timeSlots.render(timeSlots =>
+          <.div(^.className := "staffing-container",
+            <.div(^.className := "staffing-controls",
+              maybeClockChangeDate(viewingDate).map { clockChangeDate =>
+                val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
+                <.div(^.className := "staff-daylight-month-warning", MuiGrid(container = true, direction = "column", spacing = 1)(
+                  MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("fontWeight" -> "bold"))),
+                  MuiGrid(item = true)(<.span("Please ensure no staff are entered in the cells with a dash '-'. They are there to enable you to " +
+                    s"allocate staff in the additional hour on $prettyDate.")),
+                  MuiGrid(item = true)(<.span("If pasting from TAMS, " +
+                    "one solution is to first paste into a separate spreadsheet, then copy and paste the first 2 hours, and " +
+                    "then the rest of the hours in 2 separate steps", ^.style := js.Dictionary("marginBottom" -> "15px", "display" -> "block")))
+                ))
+              },
+              <.div(^.className := "staffing-controls-save",
+                <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
+                  <.span(^.className := "staffing-controls-title",
+                    <.strong(props.terminalPageTab.dayRangeType match {
+                      case Some("monthly") => s"Staff numbers: ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
+                      case Some("weekly") =>
+                        val firstDayOfWeek = SDate.firstDayOfWeek(viewingDate)
+                        val lastDayOfWeek = SDate.lastDayOfWeek(viewingDate)
+                        if (firstDayOfWeek.getFullYear == lastDayOfWeek.getFullYear) {
+                          val length = firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.length
+                          s"Staff numbers: ${firstDayOfWeek.`shortDayOfWeek-DD-MMM-YYYY`.substring(0, length - 4)} to ${SDate.lastDayOfWeek(viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
+                        } else
+                          s"Staff numbers: ${SDate.firstDayOfWeek(viewingDate).`shortDayOfWeek-DD-MMM-YYYY`} to ${SDate.lastDayOfWeek(viewingDate).`shortDayOfWeek-DD-MMM-YYYY`}"
+                      case Some("daily") => s"Staff numbers: ${viewingDate.`dayOfWeek-DD-MMM-YYYY`}"
+                      case _ => s"Staff numbers in ${viewingDate.getMonthString} ${viewingDate.getFullYear}"
+                    })),
+                  <.span(^.className := "staffing-controls-title-options",
+                    <.div(^.className := "staffing-controls-select",
+                      drawSelect(
+                        values = Seq("monthly", "weekly", "daily"),
+                        names = Seq("View: Monthly", "View: Weekly", "View: Daily"),
+                        defaultValue = s"${props.dayRangeType}",
+                        callback = (e: ReactEventFromInput) =>
+                          props.router.set(props.terminalPageTab.withUrlParameters(UrlDayRangeType(Some(e.target.value))))
+                      )
+                    ),
+                    if (props.dayRangeType != "weekly" && props.dayRangeType != "daily") {
+                      <.div(^.className := "staffing-controls-select",
+                        drawSelect(
+                          values = monthOptions.map(_.toISOString),
+                          names = monthOptions.map(d => s"${d.getMonthString} ${d.getFullYear}"),
+                          defaultValue = SDate.firstDayOfMonth(viewingDate).toISOString,
+                          callback = (e: ReactEventFromInput) => {
+                            props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toISODateOnly))))
+                          }
+                        ))
+                    } else EmptyVdom,
+                    <.div(^.className := "staffing-controls-navigation ",
+                      handleNavigation(props, viewingDate)
+                    ),
+                    <.div(^.className := "staffing-controls-select",
+                      drawSelect(
+                        values = Seq("15", "30", "60"),
+                        names = Seq("Display: Every 15 mins", "Display: Every 30 mins", "Display: Hourly"),
+                        defaultValue = s"${props.timeSlotMinutes}",
+                        callback = (e: ReactEventFromInput) =>
+                          props.router.set(props.terminalPageTab.copy(subMode = s"${e.target.value}"))
+                      )
+                    ),
+                    MuiButton(color = Color.primary,
+                      variant = "outlined",
+                      size = "small",
+                      sx = SxProps(Map("backgroundColor" -> "white")))
+                    (MuiIcons(Groups)(fontSize = "small"),
+                      <.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Edit staff"),
+                      VdomAttr("data-cy") := "edit-staff-button",
+                      ^.onClick ==> handleShiftEditForm),
+                    MuiButton(color = Color.primary, variant = "contained")
+                    (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
+                      ^.onClick ==> confirmAndSave(viewingDate, timeSlots)),
+                    if (props.isStaffShiftPage) {
+                      <.div(^.className := "staffing-controls-toggle",
+                        MuiButton(color = Color.secondary, variant = "outlined")
+                        (<.span(^.style := js.Dictionary("paddingRight" -> "5px"), "Toggle Shift view"),
+                          ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(false)))
+                        ))
+                    } else EmptyVdom
+                  )),
               ),
-            ),
-            <.div(^.className := "staffing-controls-row",
-              <.label("Time Resolution", ^.className := "staffing-controls-label"),
-              <.div(^.className := "staffing-controls-select",
-                drawSelect(
-                  values = Seq("15", "30", "60"),
-                  names = Seq("Quarter-hourly", "Half-hourly", "Hourly"),
-                  defaultValue = s"${props.timeSlotMinutes}",
-                  callback = (e: ReactEventFromInput) =>
-                    props.router.set(props.terminalPageTab.copy(subMode = e.target.value))
-                )
-              ),
-            ),
-            MuiDivider()(),
-            <.div(^.className := "staffing-controls-row",
-              <.div(
-                <.input.button(^.value := "Save Changes",
-                  ^.className := "btn btn-primary",
-                  ^.onClick ==> confirmAndSave(viewingDate)
+              MuiSwipeableDrawer(open = state.showEditStaffForm,
+                anchor = "right",
+                PaperProps = js.Dynamic.literal(
+                  "style" -> js.Dynamic.literal(
+                    "width" -> "400px",
+                    "transform" -> "translateY(-50%)"
+                  )
+                ),
+                onClose = (_: ReactEventFromHtml) => Callback {
+                  scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
+                },
+                onOpen = (_: ReactEventFromHtml) => Callback {})(
+                <.div(UpdateStaffForTimeRangeForm(IUpdateStaffForTimeRangeForm(
+                  ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
+                  interval = props.timeSlotMinutes,
+                  handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
+                    if (props.isStaffShiftPage)
+                      SPACircuit.dispatch(UpdateStaffShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                    else
+                      SPACircuit.dispatch(UpdateShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                    scope.modState(state => {
+                      val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
+                      newState
+                    }).runNow()
+                  },
+                  cancelHandler = () => {
+                    scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
+                  }))))
+              ,
+              <.div(^.className := "staffing-table",
+                state.shiftsLastLoaded.map(lastLoaded =>
+                  <.div(^.className := "staffing-table-content",
+                    HotTable(HotTable.Props(
+                      timeSlots,
+                      colHeadings = state.colHeadings.map(h => s"<div style='text-align: left;'>${h.day}<br>${h.dayOfWeek}</div>"),
+                      rowHeadings = state.rowHeadings,
+                      changeCallback = (row, col, value) => {
+                        scope.modState { state =>
+                          state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))
+                        }.runNow()
+                      },
+                      lastDataRefresh = lastLoaded
+                    ))
+                  )
+                ),
+                <.div(^.className := "terminal-staffing-content-header",
+                  MuiButton(color = Color.primary, variant = "contained")
+                  (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
+                    ^.onClick ==> confirmAndSave(viewingDate, timeSlots))
                 )
               )
             )
           )
-        ),
-        maybeClockChangeDate(viewingDate).map { clockChangeDate =>
-          val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
-          MuiGrid(container = true, direction = "column", spacing = 1)(
-            MuiGrid(item = true)(<.span(s"BST is changing to GMT on $prettyDate", ^.style := js.Dictionary("fontWeight" -> "bold"))),
-            MuiGrid(item = true)(<.span("Please ensure no staff are entered in the cells with a dash '-'. They are there to enable you to " +
-              s"allocate staff in the additional hour on $prettyDate.")),
-            MuiGrid(item = true)(<.span("If pasting from TAMS, " +
-              "one solution is to first paste into a separate spreadsheet, then copy and paste the first 2 hours, and " +
-              "then the rest of the hours in 2 separate steps", ^.style := js.Dictionary("marginBottom" -> "15px", "display" -> "block")))
-          )
-        },
-        <.div(^.className := "staffing-table",
-          HotTable.component(HotTable.props(
-            state.timeSlots,
-            colHeadings = state.colHeadings,
-            rowHeadings = state.rowHeadings,
-            changeCallback = (row, col, value) => {
-              scope.modState(state => state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))).runNow()
-            }
-          ))
-        ),
-        <.div(^.className := "terminal-content-header",
-          <.input.button(^.value := "Save Changes",
-            ^.className := "btn btn-primary",
-            ^.onClick ==> confirmAndSave(viewingDate)
-          )
         )
       )
     }
-    .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount { p =>
-      Callback(GoogleEventTracker.sendPageView(s"${p.props.terminalPageTab.terminal}/planning/${defaultStartDate(p.props.terminalPageTab.dateFromUrlOrNow).toISODateOnly}/${p.props.terminalPageTab.subMode}"))
+  }
+
+  private def staffAssignmentsFromForm(ssf: IUpdateStaffForTimeRangeData, terminal: Terminal): Seq[StaffAssignment] = {
+    val startDayLocal = LocalDate(ssf.startDayAt.year(), ssf.startDayAt.month() + 1, ssf.startDayAt.date())
+    val endDayLocal = LocalDate(ssf.endDayAt.year(), ssf.endDayAt.month() + 1, ssf.endDayAt.date())
+
+    val startHour = ssf.startTimeAt.hour()
+    val startMinute = ssf.startTimeAt.minute()
+
+    val endHour = ssf.endTimeAt.hour()
+    val endMinute = ssf.endTimeAt.minute()
+
+    DateRange(startDayLocal, endDayLocal).map { date =>
+      val startDateTime = SDate(date.year, date.month, date.day, startHour, startMinute)
+      val endDateTime = SDate(date.year, date.month, date.day, endHour, endMinute)
+      StaffAssignment(startDateTime.toISOString, terminal, startDateTime.millisSinceEpoch, endDateTime.millisSinceEpoch, ssf.actualStaff.toInt, None)
     }
+  }
+
+  private def navigationArrows(props: Props, previousWeekDate: SDateLike, nextWeekDate: SDateLike) = {
+    <.div(
+      MuiButton(color = Color.primary, variant = "outlined",
+        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronLeft)(fontSize = "medium"),
+        ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(previousWeekDate.toISODateOnly))))),
+      MuiButton(color = Color.primary, variant = "outlined",
+        sx = SxProps(Map("height" -> "40px", "backgroundColor" -> "white")))(MuiIcons(ChevronRight)(fontSize = "medium"),
+        ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(UrlDateParameter(Some(nextWeekDate.toISODateOnly)))))
+    )
+  }
+
+  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("MonthShiftStaffing")
+    .initialStateFromProps(stateFromProps)
+    .renderBackend[Backend]
+    .configure(Reusability.shouldComponentUpdate)
     .build
 
-  def updatedShiftAssignments(
-                               changes: Map[(Int, Int), Int],
-                               startOfMonthMidnight: SDateLike,
-                               terminalName: Terminal,
-                               timeSlotMinutes: Int
+  def updatedShiftAssignments(changes: Map[(Int, Int), Int],
+                              viewingDate: SDateLike,
+                              terminalName: Terminal,
+                              timeSlotMinutes: Int,
+                              dayRange: String
                              ): Seq[StaffAssignment] = changes.toSeq.map {
     case ((slotIdx, dayIdx), staff) =>
-      val timeSlots = daysInMonthByTimeSlot((startOfMonthMidnight, timeSlotMinutes))
-
+      val timeSlots: Seq[Seq[Option[SDateLike]]] =
+        dayRange match {
+          case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes))
+          case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes))
+          case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map(Seq(_))
+        }
       timeSlots(slotIdx)(dayIdx).map((slotStart: SDateLike) => {
         val startMd = slotStart.millisSinceEpoch
         val endMd = slotStart.addMinutes(timeSlotMinutes - 1).millisSinceEpoch
@@ -277,6 +468,38 @@ object MonthlyStaffing {
     override def apply(key: I): O = getOrElseUpdate(key, f(key))
   }
 
+  lazy val dayTimeSlot: ((SDateLike, Int)) => Seq[Option[SDateLike]] = memoize {
+    case (viewingDate, timeSlotMinutes) => timeZoneSafeTimeSlots(slotsInDay(viewingDate, timeSlotMinutes), timeSlotMinutes)
+  }
+
+  lazy val daysInWeekByTimeSlot: ((SDateLike, Int)) => Seq[Seq[Option[SDateLike]]] = memoize {
+    case (viewingDate, timeSlotMinutes) => daysInWeekByTimeSlotCalc(viewingDate, timeSlotMinutes)
+  }
+
+  private def daysInWeekByTimeSlotCalc(viewingDate: SDateLike, timeSlotMinutes: Int): Seq[Seq[Option[SDateLike]]] = {
+    val daysInWeek: Seq[Seq[Option[SDateLike]]] = StaffingUtil.consecutiveDayForWeek(viewingDate)
+      .map { day =>
+        timeZoneSafeTimeSlots(
+          slotsInDay(day._1, timeSlotMinutes),
+          timeSlotMinutes
+        )
+      }
+
+    val maxLength = daysInWeek.map(_.length).max
+
+    val paddedDaysInWeek = daysInWeek.map { seq =>
+      seq.padTo(maxLength, None)
+    }
+
+    try {
+      paddedDaysInWeek.transpose
+    } catch {
+      case e: Throwable =>
+        throw e
+    }
+
+  }
+
   lazy val daysInMonthByTimeSlot: ((SDateLike, Int)) => Seq[Seq[Option[SDateLike]]] = memoize {
     case (viewingDate, timeSlotMinutes) => daysInMonthByTimeSlotCalc(viewingDate, timeSlotMinutes)
   }
@@ -285,7 +508,7 @@ object MonthlyStaffing {
     consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
       .map { day =>
         timeZoneSafeTimeSlots(
-          slotsInDay(day, timeSlotMinutes),
+          slotsInDay(day._1, timeSlotMinutes),
           timeSlotMinutes
         )
       }
@@ -296,20 +519,37 @@ object MonthlyStaffing {
     (0 to 10).map(offset => lastDay.addDays(-1 * offset)).find(date => slotsInDay(date, 60).length == 25)
   }
 
+  private def slotsFromShifts(shifts: StaffAssignmentsLike, terminal: Terminal, viewingDate: SDateLike, timeSlotMinutes: Int, dayRange: String): Seq[Seq[Any]] =
+    dayRange match {
+      case "monthly" => daysInMonthByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
+        case Some(slotDateTime) =>
+          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+        case None => "-"
+      })
+
+      case "weekly" => daysInWeekByTimeSlot((viewingDate, timeSlotMinutes)).map(_.map {
+        case Some(slotDateTime) =>
+          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+        case None => "-"
+      })
+
+      case "daily" => dayTimeSlot((viewingDate, timeSlotMinutes)).map {
+        case Some(slotDateTime) =>
+          shifts.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
+        case None => "-"
+      }.map(Seq(_))
+    }
+
   private def stateFromProps(props: Props): State = {
     import drt.client.services.JSDateConversions._
 
     val viewingDate = props.terminalPageTab.dateFromUrlOrNow
-    val terminal = props.terminalPageTab.terminal
-    val terminalShifts = props.shifts.forTerminal(terminal)
-    val shiftAssignments = ShiftAssignments(terminalShifts)
 
-    val daysInMonth: Seq[SDateLike] = consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
-
-    val staffTimeSlots: Seq[Seq[Any]] = daysInMonthByTimeSlot((viewingDate, props.timeSlotMinutes)).map(_.map {
-      case Some(slotDateTime) => shiftAssignments.terminalStaffAt(terminal, slotDateTime, JSDateConversions.longToSDateLocal)
-      case None => "-"
-    })
+    val daysInDayRange: Seq[(SDateLike, String)] = props.terminalPageTab.dayRangeType match {
+      case Some("weekly") => consecutiveDayForWeek(viewingDate)
+      case Some("daily") => dateRangeDays(viewingDate, 1)
+      case _ => consecutiveDaysInMonth(SDate.firstDayOfMonth(viewingDate), SDate.lastDayOfMonth(viewingDate))
+    }
 
     val dayForRowLabels = if (viewingDate.getMonth != 10)
       viewingDate.startOfTheMonth
@@ -318,10 +558,20 @@ object MonthlyStaffing {
 
     val rowHeadings = slotsInDay(dayForRowLabels, props.timeSlotMinutes).map(_.prettyTime)
 
-    State(staffTimeSlots, daysInMonth.map(_.getDate.toString), rowHeadings, Map())
+    State(Empty,
+      daysInDayRange.map(a => ColumnHeader(a._1.getDate.toString, a._2.substring(0, 3))),
+      rowHeadings, Map.empty,
+      showEditStaffForm = false,
+      showStaffSuccess = false,
+      addShiftForm = false,
+      ShiftAssignments.empty,
+      None)
   }
 
-  def apply(shifts: ShiftAssignments,
-            terminalPageTab: TerminalPageTabLoc,
-            router: RouterCtl[Loc]): Unmounted[Props, State, Unit] = component(Props(shifts, terminalPageTab, router))
+  def apply(terminalPageTab: TerminalPageTabLoc,
+            router: RouterCtl[Loc],
+            airportConfig: AirportConfig,
+            hideAddShifts: Boolean,
+            isStaffShiftPage: Boolean
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, hideAddShifts, isStaffShiftPage: Boolean))
 }

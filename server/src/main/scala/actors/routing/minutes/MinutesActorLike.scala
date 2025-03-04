@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import services.graphstages.Crunch
 import uk.gov.homeoffice.drt.DataUpdates.FlightUpdates
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, WithTimeAccessor}
 import uk.gov.homeoffice.drt.ports.Terminals
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -30,10 +31,12 @@ object MinutesActorLike {
   type ManifestLookup = (UtcDate, Option[MillisSinceEpoch]) => Future[VoyageManifests]
 
   type MinutesUpdate[A, B <: WithTimeAccessor, U] = ((Terminals.Terminal, UtcDate), MinutesContainer[A, B]) => Future[Set[U]]
-  type FlightsUpdate = ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[Set[Long]]
-  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Set[Long]]
+  type FlightsUpdate = ((Terminals.Terminal, UtcDate), FlightUpdates) => Future[Set[TerminalUpdateRequest]]
+  type ManifestsUpdate = (UtcDate, VoyageManifests) => Future[Set[TerminalUpdateRequest]]
 
   case object ProcessNextUpdateRequest
+
+  case object FinishedProcessingRequest
 
   case class QueueUpdateRequest[U](update: U, replyTo: ActorRef)
 
@@ -99,7 +102,7 @@ object MinutesActorLikeCommon {
                                                                          end: UtcDate,
                                                                          maybePointInTime: Option[MillisSinceEpoch]
                                                                         )
-                                                                        (implicit ec: ExecutionContext, mat: Materializer): Source[(UtcDate, MinutesContainer[A, B]), NotUsed] =
+                                                                        (implicit ec: ExecutionContext): Source[(UtcDate, MinutesContainer[A, B]), NotUsed] =
     Source(DateRange(start, end))
       .mapAsync(1) { day =>
         handleLookup(lookup((terminal, day), maybePointInTime)).map(r => (day, r))
@@ -205,15 +208,13 @@ abstract class MinutesActorLike[A, B <: WithTimeAccessor, U](terminals: Iterable
 }
 
 abstract class MinutesActorLike2[A, B <: WithTimeAccessor, U](terminals: Iterable[Terminal],
-                                                           lookup: MinutesLookup[A, B],
-                                                           updateMinutes: MinutesUpdate[A, B, U],
-                                                           splitByResource: MinutesContainer[A, B] => Map[(Terminal, UtcDate), MinutesContainer[A, B]],
-                                                           shouldSendEffects: MinutesContainer[A, B] => Boolean,
-                                                          ) extends RouterActorLike2[MinutesContainer[A, B], (Terminal, UtcDate), U] {
+                                                              lookup: MinutesLookup[A, B],
+                                                              updateMinutes: MinutesUpdate[A, B, U],
+                                                              splitByResource: MinutesContainer[A, B] => Map[(Terminal, UtcDate), MinutesContainer[A, B]],
+                                                              shouldSendEffects: MinutesContainer[A, B] => Boolean,
+                                                             ) extends RouterActorLike2[MinutesContainer[A, B], (Terminal, UtcDate), U] {
   override val sequentialUpdatesActor: ActorRef = context.actorOf(Props(new SequentialAccessActor(updateMinutes, splitByResource) {
-    override def shouldSendEffectsToSubscribers(request: MinutesContainer[A, B]): Boolean = {
-      shouldSendEffects(request)
-    }
+    override def shouldSendEffectsToSubscribers(request: MinutesContainer[A, B]): Boolean = shouldSendEffects(request)
   }))
 
   override def receiveQueries: Receive = {

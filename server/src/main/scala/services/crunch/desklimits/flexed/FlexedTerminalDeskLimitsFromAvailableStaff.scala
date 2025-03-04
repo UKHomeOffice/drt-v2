@@ -20,17 +20,17 @@ case class FlexedTerminalDeskLimitsFromAvailableStaff(totalStaffByMinute: List[I
     val availableStaffByMinute = availableStaffForMinutes(minuteMillis, queue, allocatedDesks)
 
     eventualMaxProcessorsProvider.map { desksProvider =>
-      val minute: IndexedSeq[Int] = desksProvider.processorsByMinute.map(_.processors.size)
-      val availableDesks: Iterable[Int] = Crunch.reduceIterables[Int](List(minute, availableStaffByMinute))(Math.min)
+      val desksByMinute: IndexedSeq[Int] = desksProvider.processorsByMinute.map(_.processors.size)
+      val availableDesks: Iterable[Int] = Crunch.reduceIterables[Int](List(desksByMinute, availableStaffByMinute))(Math.min)
       WorkloadProcessorsProvider(desksProvider.processorsByMinute.zip(availableDesks).map {
         case (processors, available) => processors.copy(processors = processors.processors.take(available))
       })
     }
   }
 
-  def availableStaffForMinutes(minuteMillis: NumericRange[Long],
-                               queue: Queue,
-                               allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] = {
+  private def availableStaffForMinutes(minuteMillis: NumericRange[Long],
+                                       queue: Queue,
+                                       allocatedDesks: Map[Queue, List[Int]]): Iterable[Int] = {
     val processedQueues = allocatedDesks.keys.toSet
     val deployedByQueue = allocatedDesks.values.toList
     val totalDeployedByMinute = if (deployedByQueue.nonEmpty) Crunch.reduceIterables[Int](deployedByQueue)(_ + _)

@@ -1,14 +1,13 @@
 package services.exports.flights.templates
 
-import actors.PartitionedPortStateActor.FlightsRequest
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import drt.shared.{ArrivalKey, CodeShares}
+import drt.shared.{ManifestKey, CodeShares}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
-import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits}
+import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.SDateLike
+import uk.gov.homeoffice.drt.time.LocalDate
 
 trait FlightsExport {
 
@@ -16,17 +15,15 @@ trait FlightsExport {
 
   def rowValues(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): Iterable[String]
 
-  def start: SDateLike
+  def start: LocalDate
 
-  def end: SDateLike
+  def end: LocalDate
 
-  def terminal: Terminal
+  def terminals: Seq[Terminal]
 
-  val request: FlightsRequest
+  val standardFilter: (ApiFlightWithSplits, Seq[Terminal]) => Boolean = (fws, terminals) => terminals.contains(fws.apiFlight.Terminal)
 
-  val standardFilter: (ApiFlightWithSplits, Terminal) => Boolean = (fws, terminal) => fws.apiFlight.Terminal == terminal
-
-  val flightsFilter: (ApiFlightWithSplits, Terminal) => Boolean
+  val flightsFilter: (ApiFlightWithSplits, Seq[Terminal]) => Boolean
 
   val paxFeedSourceOrder: List[FeedSource]
 
@@ -35,24 +32,21 @@ trait FlightsExport {
 
   private def flightToCsvRow(fws: ApiFlightWithSplits, maybeManifest: Option[VoyageManifest]): String = rowValues(fws, maybeManifest).mkString(",")
 
-  def csvStream(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed]): Source[String, NotUsed] =
+  def csvStream(flightsStream: Source[(Iterable[ApiFlightWithSplits], VoyageManifests), NotUsed]): Source[String, NotUsed] =
     filterAndSort(flightsStream)
-      .map { case (fws, maybeManifest) =>
-        flightToCsvRow(fws, maybeManifest) + "\n"
-      }
+      .map { case (fws, maybeManifest) => flightToCsvRow(fws, maybeManifest) + "\n" }
       .prepend(Source(List(headings + "\n")))
 
-  private def filterAndSort(flightsStream: Source[(FlightsWithSplits, VoyageManifests), NotUsed],
+  private def filterAndSort(flightsStream: Source[(Iterable[ApiFlightWithSplits], VoyageManifests), NotUsed],
                            ): Source[(ApiFlightWithSplits, Option[VoyageManifest]), NotUsed] =
     flightsStream.mapConcat { case (flights, manifests) =>
-      uniqueArrivalsWithCodeShares(flights.flights.values.toSeq)
-        .filter(fws => flightsFilter(fws, terminal))
+      uniqueArrivalsWithCodeShares(flights.toSeq)
+        .filter(fws => flightsFilter(fws, terminals))
         .toSeq
         .sortBy(_.apiFlight.PcpTime.getOrElse(0L))
         .map { fws =>
-          val maybeManifest = manifests.manifests.find(_.maybeKey.exists(_ == ArrivalKey(fws.apiFlight)))
+          val maybeManifest = manifests.manifests.find(_.maybeKey.exists(_ == ManifestKey(fws.apiFlight)))
           (fws, maybeManifest)
         }
     }
-
 }

@@ -1,17 +1,20 @@
 package actors.daily
 
 import akka.persistence.SaveSnapshotSuccess
-import drt.shared.CrunchApi.{MillisSinceEpoch, MinuteLike, MinutesContainer}
+import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.model.MinuteLike
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
 import scala.collection.mutable
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 
 abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: WithTimeAccessor, M <: GeneratedMessage](year: Int,
@@ -19,7 +22,10 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
                                                                                                                      day: Int,
                                                                                                                      terminal: Terminal,
                                                                                                                      now: () => SDateLike,
-                                                                                                                     override val maybePointInTime: Option[MillisSinceEpoch]) extends RecoveryActorLike {
+                                                                                                                     override val maybePointInTime: Option[MillisSinceEpoch],
+                                                                                                                    ) extends RecoveryActorLike {
+  implicit val ec: ExecutionContextExecutor = context.dispatcher
+
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
     case Some(pit) => f"@${SDate(pit).toISOString}"
@@ -29,6 +35,8 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
   val persistenceIdType: String
 
   val state: mutable.Map[INDEX, VAL] = mutable.Map[INDEX, VAL]()
+
+  val onUpdate: Option[(UtcDate, Iterable[VAL]) => Future[Unit]] = None
 
   override def persistenceId: String = f"terminal-$persistenceIdType-${terminal.toString.toLowerCase}-$year-$month%02d-$day%02d"
 
@@ -50,11 +58,9 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   override def receiveCommand: Receive = {
     case container: MinutesContainer[VAL, INDEX] =>
-      log.debug(s"Received MinutesContainer for persistence")
       updateAndPersistDiff(container)
 
     case GetState =>
-      log.debug(s"Received GetState")
       sender() ! stateResponse
 
     case _: SaveSnapshotSuccess =>
@@ -78,7 +84,7 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
 
   private def updateStateFromDiff(diff: Iterable[MinuteLike[VAL, INDEX]]): Unit =
     diff.foreach { cm =>
-      if (firstMinuteMillis <= cm.minute && cm.minute < lastMinuteMillis) state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
+      if (firstMinuteMillis <= cm.minute && cm.minute <= lastMinuteMillis) state += (cm.key -> cm.toUpdatedMinute(cm.lastUpdated.getOrElse(0L)))
     }
 
   private def updateAndPersistDiff(container: MinutesContainer[VAL, INDEX]): Unit =
@@ -86,11 +92,15 @@ abstract class TerminalDayLikeActor[VAL <: MinuteLike[VAL, INDEX], INDEX <: With
       case noDifferences if noDifferences.isEmpty => sender() ! Set.empty[Long]
       case differences =>
         updateStateFromDiff(differences)
+        onUpdate.foreach(_(UtcDate(year, month, day), state.values))
         val messageToPersist = containerToMessage(differences)
-        val updatedMillis = if (shouldSendEffectsToSubscriber(container))
-          differences.map(_.minute).toSet
-        else Set.empty[Long]
-        val replyToAndMessage = List((sender(), updatedMillis))
+        val updateRequests = if (shouldSendEffectsToSubscriber(container))
+          differences
+            .map(v => SDate(v.minute).toLocalDate)
+            .map(date => TerminalUpdateRequest(terminal, date))
+            .toSet
+        else Set.empty
+        val replyToAndMessage = List((sender(), updateRequests))
         persistAndMaybeSnapshotWithAck(messageToPersist, replyToAndMessage)
     }
 

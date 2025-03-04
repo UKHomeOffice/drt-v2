@@ -2,7 +2,7 @@ package manifests.queues
 
 import manifests.passengers.ManifestLike
 import org.slf4j.{Logger, LoggerFactory}
-import queueus.{AdjustmentsNoop, ChildEGateAdjustments, PaxTypeQueueAllocation, QueueAdjustments}
+import queueus.{AdjustmentsNoop, PaxTypeQueueAllocation, QueueAdjustments}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals.Splits

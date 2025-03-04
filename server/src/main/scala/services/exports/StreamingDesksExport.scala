@@ -3,9 +3,10 @@ package services.exports
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import drt.shared.CrunchApi.{CrunchMinute, MillisSinceEpoch, StaffMinute}
+import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -15,7 +16,6 @@ import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}
 import scala.collection.immutable
 import scala.collection.immutable.SortedMap
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationLong
 
 object StreamingDesksExport {
   val log: Logger = LoggerFactory.getLogger(getClass)

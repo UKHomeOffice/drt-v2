@@ -32,7 +32,7 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
     new KeyCloakClient(token, keyCloakUrl) with ProdSendAndReceive
   }
 
-  private def timedEndPoint[A](name: String, maybeParams: Option[String] = None)(eventualThing: Future[A]): Future[A] = {
+  private def timedEndPoint[A](name: String, maybeParams: Option[String])(eventualThing: Future[A]): Future[A] = {
     val startMillis = SDate.now().millisSinceEpoch
     eventualThing.foreach { _ =>
       val endMillis = SDate.now().millisSinceEpoch
@@ -68,11 +68,11 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
         val minutesInSlot: Int = userRow.flatMap(_.staff_planning_interval_minutes).getOrElse(60)
         val numberOfSlots = minutesInADay / minutesInSlot
         val rowHeaders = Seq("") ++ (0 until numberOfSlots).map(qh => start.addMinutes(qh * minutesInSlot).toHoursAndMinutes)
-        val staffingProvider = StaffRequirementExports.staffingForLocalDateProvider(ctrl.applicationService.staffMinutesProvider(terminal))
+        val staffingProvider = StaffRequirementExports.staffingForLocalDateProvider(ctrl.applicationService.terminalStaffMinutesProvider(terminal))
         val makeHourlyStaffing = StaffRequirementExports.toHourlyStaffing(staffingProvider, minutesInSlot)
 
         StaffRequirementExports
-          .queuesProvider(ctrl.applicationService.crunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
+          .queuesProvider(ctrl.applicationService.terminalCrunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
           .mapAsync(1) {
             case (date, minutes) => makeHourlyStaffing(date, minutes)
           }
@@ -104,7 +104,7 @@ class ExportsController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInter
         val makeHeadlines = StaffRequirementExports.toPassengerHeadlines(queues)
 
         StaffRequirementExports
-          .queuesProvider(ctrl.applicationService.crunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
+          .queuesProvider(ctrl.applicationService.terminalCrunchMinutesProvider(terminal))(start.toLocalDate, end.toLocalDate)
           .map {
             case (date, minutes) => makeHeadlines(date, minutes)
           }

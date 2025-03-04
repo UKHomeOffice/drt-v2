@@ -40,6 +40,7 @@ object ArrivalInfo {
       ("Feed", None),
       ("Flight", None),
       ("Origin", None),
+      ("Previous Port", None),
       ("Terminal", None),
       ("Gate / Stand", Option("gate-stand")),
       ("Baggage", None),
@@ -80,10 +81,12 @@ object FeedSourceRow {
       val isCiriumAsPortLive = props.airportConfig.noLivePortFeed && props.airportConfig.aclDisabled
       val paxTotal: String = arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.actual.map(_.toString).getOrElse("-")
       val paxTrans: String = arrival.bestPaxEstimate(props.paxFeedSourceOrder).passengers.transit.map(_.toString).getOrElse("-")
+      val prevPort: String = arrival.PreviousPort.map(_.iata).getOrElse("n/a")
       val flightFields = List[TagMod](
         <.td(feedDisplayName(isCiriumAsPortLive, feedSource)),
         <.td(arrival.flightCodeString),
         <.td(arrival.Origin.toString),
+        <.td(prevPort),
         <.td(arrival.Terminal.toString),
         <.td(s"${arrival.Gate.getOrElse("")}/${arrival.Stand.getOrElse("")}"),
         <.td(s"${arrival.BaggageReclaimId.getOrElse("")}"),

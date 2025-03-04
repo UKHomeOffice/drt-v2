@@ -25,13 +25,12 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, MilliDate, SDateLike}
 
 import scala.collection.immutable.NumericRange
+import scala.concurrent.duration.DurationInt
 import scala.util.Success
 
 
 object TerminalStaffing {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
-
-  val oneMinute = 60000L
 
   case class Props(
                     terminal: Terminal,
@@ -62,10 +61,10 @@ object TerminalStaffing {
       }
     )
 
-    def staffOverTheDay(localDate: LocalDate,
-                        movements: Seq[StaffMovement],
-                        shifts: ShiftAssignments,
-                        terminalName: Terminal): VdomTagOf[Div] = {
+    private def staffOverTheDay(localDate: LocalDate,
+                                movements: Seq[StaffMovement],
+                                shifts: ShiftAssignments,
+                                terminalName: Terminal): VdomTagOf[Div] = {
       val terminalShifts = ShiftAssignments(shifts.forTerminal(terminalName))
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
 
@@ -75,7 +74,7 @@ object TerminalStaffing {
       )
     }
 
-    def movementsEditor(movements: Seq[StaffMovement], terminalName: Terminal): VdomTagOf[Div] = {
+    private def movementsEditor(movements: Seq[StaffMovement], terminalName: Terminal): VdomTagOf[Div] = {
       val terminalMovements = movements.filter(_.terminal == terminalName)
       <.div(^.className := "staff-movements-list", <.h2("Movements"), movementsListTagMod(terminalMovements, terminalName))
     }
@@ -94,7 +93,7 @@ object TerminalStaffing {
       }
     }
 
-    object FixedPointsEditor {
+    private object FixedPointsEditor {
       val component: Component[FixedPointsProps, FixedPointsState, Unit, CtorType.Props] = ScalaComponent.builder[FixedPointsProps]("FixedPointsEditor")
         .initialStateFromProps { props =>
           FixedPointsState(
@@ -135,14 +134,14 @@ object TerminalStaffing {
       def apply(props: FixedPointsProps): Unmounted[FixedPointsProps, FixedPointsState, Unit] = component(props)
     }
 
-    def daysWorthOf15Minutes(startOfDay: SDateLike): NumericRange[Long] = {
+    private def daysWorthOf15Minutes(startOfDay: SDateLike): NumericRange[Long] = {
       val timeMinPlusOneDay = startOfDay.addDays(1)
-      startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (oneMinute * 15)
+      startOfDay.millisSinceEpoch until timeMinPlusOneDay.millisSinceEpoch by (1.minute.toMillis * 15)
     }
 
-    def staffingTableHourPerColumn(terminalName: Terminal,
-                                   daysWorthOf15Minutes: NumericRange[Long],
-                                   staffWithShiftsAndMovements: (Terminal, SDateLike, MillisSinceEpoch => SDateLike) => Int): VdomTagOf[Table] =
+    private def staffingTableHourPerColumn(terminalName: Terminal,
+                                           daysWorthOf15Minutes: NumericRange[Long],
+                                           staffWithShiftsAndMovements: (Terminal, SDateLike, MillisSinceEpoch => SDateLike) => Int): VdomTagOf[Table] =
       <.table(
         ^.className := "table table-striped table-xcondensed table-sm",
         <.tbody(
@@ -166,14 +165,14 @@ object TerminalStaffing {
       )
   }
 
-  def movementsListTagMod(terminalMovements: Seq[StaffMovement], terminalName: Terminal): TagOf[HTMLElement] = {
+  private def movementsListTagMod(terminalMovements: Seq[StaffMovement], terminalName: Terminal): TagOf[HTMLElement] = {
     if (terminalMovements.nonEmpty)
       <.ul(^.className := "list-unstyled", movementsLiElements(terminalMovements, terminalName).toTagMod)
     else
       <.p("No movements recorded")
   }
 
-  def movementsLiElements(terminalMovements: Seq[StaffMovement], terminalName: Terminal): Seq[TagMod] = sortedMovements(terminalMovements).map {
+  private def movementsLiElements(terminalMovements: Seq[StaffMovement], terminalName: Terminal): Seq[TagMod] = sortedMovements(terminalMovements).map {
     case (_, movementPair) =>
       labelAndLink(terminalName, movementPair) match {
         case Some((label, link)) => <.li(link, " ", <.span(^.`class` := "movement-display", label))
@@ -181,7 +180,7 @@ object TerminalStaffing {
       }
   }
 
-  def sortedMovements(terminalMovements: Seq[StaffMovement]): Seq[(String, Seq[StaffMovement])] = terminalMovements
+  private def sortedMovements(terminalMovements: Seq[StaffMovement]): Seq[(String, Seq[StaffMovement])] = terminalMovements
     .groupBy(_.uUID)
     .toSeq
     .sortBy {
@@ -189,8 +188,8 @@ object TerminalStaffing {
       case (_, _) => 0L
     }
 
-  def labelAndLink(terminalName: Terminal,
-                   movementPair: Seq[StaffMovement]): Option[(String, html_<^.VdomTagOf[Anchor])] =
+  private def labelAndLink(terminalName: Terminal,
+                           movementPair: Seq[StaffMovement]): Option[(String, html_<^.VdomTagOf[Anchor])] =
     movementPair
       .toList
       .sortBy(_.time.millisSinceEpoch) match {
@@ -201,7 +200,7 @@ object TerminalStaffing {
         None
     }
 
-  def removeLink(terminal: Terminal, movement: StaffMovement): VdomTagOf[Anchor] =
+  private def removeLink(terminal: Terminal, movement: StaffMovement): VdomTagOf[Anchor] =
     <.a(Icon.remove, ^.key := movement.uUID, ^.onClick ==> ((_: ReactEventFromInput) =>
       Callback {
         GoogleEventTracker.sendEvent(terminal.toString, "Remove Staff Movement", movement.copy(createdBy = None).toString)
@@ -214,7 +213,7 @@ object TerminalStaffing {
     .renderBackend[Backend]
     .build
 
-  object MovementDisplay {
+  private object MovementDisplay {
     def toCsv(movement: StaffMovement): String = {
       s"${movement.terminal}, ${movement.reason}, ${displayDate(movement.time)}, ${displayTime(movement.time)}, ${movement.delta} staff"
     }
@@ -245,7 +244,7 @@ object TerminalStaffing {
 
     def displayTime(time: MilliDate): String = SDate(time).toHoursAndMinutes
 
-    def displayDate(time: MilliDate): String = SDate(time).ddMMyyString
+    private def displayDate(time: MilliDate): String = SDate(time).ddMMyyString
   }
 
 }

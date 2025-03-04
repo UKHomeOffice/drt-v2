@@ -81,11 +81,11 @@ case class TerminalDesksAndWaitsProvider(terminal: Terminal,
               case noWork if noWork.isEmpty || noWork.map(_.sum).sum == 0 =>
                 log.info(s"No workload to crunch for $identifier on ${SDate(minuteMillis.min).toISOString}. Filling with min desks and zero wait times")
                 queueRecsSoFar + (queue -> ((minDesks, List.fill(minDesks.size)(0), List.fill(minDesks.size)(0d))))
+
               case someWork =>
                 val start = System.currentTimeMillis()
                 val maxDesks = processorsProvider.maxProcessors(someWork.size)
-                val nonZeroMaxDesksPct = maxDesks.count(_ > 0).toDouble / maxDesks.size
-                val optimisedDesks = if (nonZeroMaxDesksPct > 0.5) {
+                val optimisedDesks = if (maxDesks.exists(_ > 0)) {
                   cruncher(someWork, minDesks.toSeq, maxDesks, OptimiserConfig(sla, processorsProvider)) match {
                     case Success(OptimizerCrunchResult(desks, waits, paxInQueue)) =>
                       queueRecsSoFar + (queue -> ((desks.toList, waits.toList, paxInQueue)))
@@ -94,7 +94,7 @@ case class TerminalDesksAndWaitsProvider(terminal: Terminal,
                       queueRecsSoFar
                   }
                 } else {
-                  log.info(s"Skipping crunch for $identifier as only ${nonZeroMaxDesksPct * 100}% of max desks are non-zero")
+                  log.info(s"Skipping crunch for $identifier as there are no desks/staff available")
                   queueRecsSoFar
                 }
 

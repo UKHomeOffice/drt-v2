@@ -59,9 +59,6 @@ object PortConfigPage {
         )
       mp.render(identity)
     }
-    .componentDidMount(_ => Callback {
-      GoogleEventTracker.sendPageView(s"port-config")
-    })
     .build
 
   def apply(props: Props): VdomElement = component(props)

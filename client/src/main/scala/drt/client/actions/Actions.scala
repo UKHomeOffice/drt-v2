@@ -6,15 +6,15 @@ import drt.client.components.scenarios.SimulationFormFields
 import drt.client.components.{FileUploadState, StaffAdjustmentDialogueState}
 import drt.client.services.ViewMode
 import drt.shared.CrunchApi._
-import drt.shared.{Country, _}
 import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
+import drt.shared._
 import org.scalajs.dom.File
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.{PortEgateBanksUpdates, SetEgateBanksUpdate}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.{SlaConfigs, SlasUpdate}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.{RedListUpdates, SetRedListUpdate}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike, UtcDate}
 
@@ -28,8 +28,6 @@ object Actions {
   case object TriggerReload extends Action
 
   case object GetApplicationVersion extends Action
-
-  case class ScheduleAction(delay: FiniteDuration, action: Action) extends Action
 
   case object GetLoggedInUser extends Action
 
@@ -95,11 +93,21 @@ object Actions {
 
   case class GetShifts(viewMode: ViewMode) extends Action
 
-  case class SetShiftsForMonth(shiftsForMonth: MonthOfShifts) extends Action
+  case class SetAllLegacyStaffAssignments(allShifts: ShiftAssignments) extends Action
 
-  case class GetShiftsForMonth(month: SDateLike) extends Action
+  case object GetAllLegacyStaffAssignments extends Action
 
   case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment]) extends Action
+
+  case class SetStaffAssignments(viewMode: ViewMode, shifts: ShiftAssignments, terminalName: Option[String]) extends Action
+
+  case class GetStaffAssignments(viewMode: ViewMode) extends Action
+
+  case class SetAllStaffShifts(allShifts: ShiftAssignments) extends Action
+
+  case object GetAllStaffAssignments extends Action
+
+  case class UpdateStaffShifts(shiftsToUpdate: Seq[StaffAssignment]) extends Action
 
   case class AddStaffMovements(staffMovements: Seq[StaffMovement]) extends Action
 
@@ -125,13 +133,11 @@ object Actions {
 
   case class GetManifestSummariesForDate(date: UtcDate) extends Action
 
-  case class GetManifestSummaries(arrivalKeys: Set[ArrivalKey]) extends Action
+  case class GetManifestSummaries(arrivalKeys: Set[ManifestKey]) extends Action
 
   case class SetManifestSummaries(summaries: Set[FlightManifestSummary]) extends Action
 
   case object GetPassengerInfoForFlights extends Action
-
-  case class UpdateAirportInfo(code: PortCode, info: Option[AirportInfo]) extends Action
 
   case class UpdateAirportInfos(infos: Map[PortCode, AirportInfo]) extends Action
 
@@ -220,8 +226,6 @@ object Actions {
   case class RemoveFlaggedNationality(country: Country) extends Action
 
   case object ClearFlaggedNationalities extends Action
-
-  case class SetFlightFilterMessage(message: String) extends Action
 
   case class UpdateNationalityFlaggerInputText(value: String) extends Action
 

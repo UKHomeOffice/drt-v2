@@ -20,6 +20,28 @@
 @colHighlight: #666666;
 @dropDown: false;
 
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-content {
+  flex: 1;
+  overflow: auto;
+}
+
+footer {
+  background: #f1f1f1;
+  padding: 10px;
+  text-align: center;
+}
+
 .badge-text {
   margin-left: 12px;
 }
@@ -574,6 +596,11 @@ table.headlines tr:nth-child(odd) {
   padding: 4px;
 }
 
+.dynamic-width {
+  width: auto;
+  height: 40px;
+}
+
 @media (max-width: 800px) {
   .tab-content {
     display: flex;
@@ -962,7 +989,6 @@ rect.bordered {
 .view-controls-selector {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
   background-color: #eee;
   border-radius: 5px;
   margin: 2px 0px;
@@ -971,7 +997,8 @@ rect.bordered {
 
 .controls-radio-wrapper {
   display: flex;
-  justify-content: space-between;
+  justify-content: left;
+  width: 150px;
   align-items: center;
   gap: 5px;
 }
@@ -1198,6 +1225,23 @@ p {
   flex-grow: 1;
 }
 
+.terminal-staffing-content-header {
+  gap: 15px;
+  justify-content: space-between;
+  flex-grow: 1;
+  border-radius: 5px;
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #eeeff0;
+}
+
+.staff-daylight-month-warning {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #f5f5f5;
+  border: 1px solid #666;
+}
+
 .terminal-content-header {
   display: flex;
   gap: 15px;
@@ -1257,8 +1301,17 @@ p {
 .controls-radio-wrapper label, th div {
   display: flex;
   gap: 8px;
-  justify-content: center;
-  align-items: center;
+}
+
+.question-hover {
+  position: relative;
+  cursor: help;
+}
+
+.data-quality-indicator {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  font-style: normal;
 }
 
 .date-quick-days {
@@ -1360,16 +1413,81 @@ p {
   align-items: center;
 }
 
+.staffing-container-empty {
+  padding-left: 10px;
+  padding-top: 20px;
+}
+
+.staffing-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  overflow: auto;
+}
+
+.staffing-table-content {
+  height: 600px;
+  overflow-y: auto;
+}
+
+.shifts-table-content {
+  height: 500px;
+  overflow-y: auto;
+}
+
+
+.staffing-controls {
+  background-color: white;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 15px;
+}
+
+.staffing-controls-title {
+  padding-left: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.staffing-controls-title-options {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-left: 20px;
+}
+
+.staffing-controls-save {
+  position: sticky;
+  top: 0;
+  z-index: 101;
+  padding-top: 10px;
+  padding-right: 10px;
+  padding-bottom: 10px;
+  display: flex;
+  gap: 15px;
+  background-color: #E6E9F1;
+}
+
+.staffing-controls-save > div {
+  align-self: flex-end;
+}
+
 .staffing-controls-label {
   width: 200px;
 }
 
 .staffing-controls-select {
-  width: 200px;
+  width: auto;
 }
 
 .staffing-table {
-  margin-top: 15px;
+  position: sticky;
+  top: 150px;
+  z-index: 100;
+  background-color: white;
 }
 
 .pcp-pax-summaries {
@@ -1498,12 +1616,17 @@ p {
 
 .arrivals_table__splits__queue-pax {
   min-width: 60px;
-  text-align: right;
   margin-bottom: 8px;
+  text-align: left;
 }
 
-// Usage table
+.arrivals_table__Splits__split-number {
+  width: 25px;
+  text-align: right;
+}
 
+
+// Usage table
 .usage-table {
   min-height: 1px;
   overflow-x: auto;
@@ -1564,7 +1687,6 @@ th h2 {
 }
 
 .data-quality {
-  border: 1px solid #404252;
   padding: 4px 8px 4px 8px;
   font-weight: 400;
   text-align: left;
@@ -1863,6 +1985,7 @@ th h2 {
 .dashboard-summary__total-pax {
   font-size: 18pt;
   text-align: center;
+  white-space: nowrap;
 }
 
 .dashboard-summary__splits-graph-bars {
@@ -1941,6 +2064,15 @@ th h2 {
   margin-left: 5px;
 }
 
+.arrivals__table__flight__pcp-pax__header {
+  text-align: left;
+}
+
+.arrivals__table__flight__pcp-pax__header_column {
+  border-left: 1px solid #C0C7DE;
+  border-right: 1px solid #C0C7DE;
+}
+
 .arrivals__table__flight__pcp-pax__incoming svg {
   transform: rotate(135deg);
 }
@@ -1966,7 +2098,7 @@ th h2 {
 
 .arrivals__table__flight-code-wrapper__highlighted {
   width: 141px;
-  margin-top:-7px;
+  margin-top: -7px;
   margin-left: -8px;
 }
 
@@ -2050,14 +2182,43 @@ th h2 {
   display: block;
 }
 
+.flight-origin-dfn {
+  font-style: normal;
+}
+
+.dotted-underline {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.flight-pax {
+  max-width: 25px;
+  text-align: right;
+}
+
+.pcp-icon-data-quality {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.icon-row-data-quality {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.icon-header-data-quality {
+    min-width: 20px;
+}
+
 .pcp-pax {
   border-right: 1px solid #ccc;
+  border-left: 1px solid #ccc;
 }
 
 .pcp-pax-value {
   display: block;
-  min-width: 30px;
-  text-align: right;
   font-weight: bold;
   padding-bottom: 8px;
 }
@@ -2629,6 +2790,10 @@ div.access-restricted {
   @media (max-width: 800px) {
     width: 100%;
   }
+}
+
+.arrivals__table__flight_transfer-pax {
+  border-left: 1px solid #C0C7DE;
 }
 
 .sr-only {

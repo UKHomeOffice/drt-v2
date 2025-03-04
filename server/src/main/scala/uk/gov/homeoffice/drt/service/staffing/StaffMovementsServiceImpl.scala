@@ -1,6 +1,7 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import actors.persistent.staffing.{AddStaffMovements, RemoveStaffMovements, StaffMovementsReadActor}
+import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements}
+import actors.persistent.staffing.StaffMovementsReadActor
 import akka.Done
 import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
 import akka.pattern.ask

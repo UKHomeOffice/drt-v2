@@ -49,7 +49,7 @@ class RestartOnStopSpec()
     val maxBackoff = 1.millis
     val restartOnStop = RestartOnStop(1.millis, maxBackoff)
     "I should continue receive acks after telling it to stop itself if I allow time for it to be respawned" in {
-      val actor = restartOnStop.actorOf(Props[StoppableActor], "my-actor")
+      val actor = restartOnStop.actorOf(Props[StoppableActor](), "my-actor")
 
       watch(actor)
 

@@ -15,12 +15,13 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import org.scalajs.dom.document
 import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, Queues}
 import uk.gov.homeoffice.drt.time.SDateLike
 
 object PortDashboardPage {
 
-  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc) extends UseValueEq
+  case class Props(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc, airportConfig: Pot[AirportConfig]) extends UseValueEq
 
   case class DisplayPeriod(start: SDateLike, end: SDateLike)
 
@@ -116,13 +117,7 @@ object PortDashboardPage {
           }))
       }
     })
-    .componentWillReceiveProps(p => Callback {
-      GoogleEventTracker.sendPageView(s"dashboard${p.nextProps.dashboardPage.period.map(period => s"/$period").getOrElse("")}")
-    })
-    .componentDidMount(p => Callback {
-      GoogleEventTracker.sendPageView(s"dashboard${p.props.dashboardPage.period.map(period => s"/$period").getOrElse("")}")
-    })
     .build
 
-  def apply(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc = PortDashboardLoc(None)): VdomElement = component(Props(router, dashboardPage))
+  def apply(router: RouterCtl[Loc], dashboardPage: PortDashboardLoc = PortDashboardLoc(None), airportConfig: Pot[AirportConfig]): VdomElement = component(Props(router, dashboardPage, airportConfig))
 }

@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
+import diode.data.{Empty, Pot}
 import drt.client.SPAMain._
 import drt.client.components.styles.DrtTheme
 import drt.client.logger.{Logger, LoggerFactory}
@@ -48,7 +49,6 @@ object TimeRangeFilter {
                    terminalPageTab: TerminalPageTabLoc,
                    defaultWindow: TimeRangeHours,
                    showNow: Boolean,
-                   minuteTicker: Int = 0
                   ) extends UseValueEq
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TimeRangeFilter")

@@ -24,6 +24,7 @@ import drt.server.feeds.bhx.{BHXClient, BHXFeed}
 import drt.server.feeds.chroma.ChromaLiveFeed
 import drt.server.feeds.cirium.CiriumFeed
 import drt.server.feeds.common.{ManualUploadArrivalFeed, ProdHttpClient}
+import drt.server.feeds.cwl.{CWLClient, CWLFeed}
 import drt.server.feeds.edi.EdiFeed
 import drt.server.feeds.gla.GlaFeed
 import drt.server.feeds.lcy.{LCYClient, LCYFeed}
@@ -57,15 +58,15 @@ import scala.concurrent.{ExecutionContext, Future}
 object ProdFeedService {
   def arrivalFeedProvidersInOrder(feedActorsWithPrimary: Seq[(FeedSource, Boolean, Option[FiniteDuration], ActorRef)],
                                  )
-                                 (implicit timeout: Timeout, ec: ExecutionContext, mat: Materializer): Seq[DateLike => Future[FeedArrivalSet]] =
+                                 (implicit timeout: Timeout, ec: ExecutionContext, mat: Materializer): Seq[(DateLike, Terminal) => Future[FeedArrivalSet]] =
     feedActorsWithPrimary
       .map {
         case (feedSource, isPrimary, maybeFuzzyThreshold, actor) =>
-          val arrivalsForDate = (date: DateLike) => {
+          val arrivalsForDate = (date: DateLike, terminal: Terminal) => {
             val start = SDate(date)
             val end = start.addDays(1).addMinutes(-1)
             actor
-              .ask(FeedArrivalsRouterActor.GetStateForDateRange(start.toUtcDate, end.toUtcDate))
+              .ask(FeedArrivalsRouterActor.GetStateForDateRangeAndTerminal(start.toUtcDate, end.toUtcDate, terminal))
               .mapTo[Source[(UtcDate, Seq[FeedArrival]), NotUsed]]
               .flatMap(s => s.runWith(Sink.fold(Seq[FeedArrival]())((acc, next) => acc ++ next._2)))
               .map(f => FeedArrivalSet(isPrimary, maybeFuzzyThreshold, f.map(fa => fa.unique -> fa.toArrival(feedSource)).toMap))
@@ -359,10 +360,10 @@ case class ProdFeedService(journalType: StreamingJournalLike,
                                  partitionUpdates: PartialFunction[FeedArrivals, Map[(Terminal, UtcDate), FeedArrivals]],
                                  name: String): ActorRef =
     system.actorOf(Props(new FeedArrivalsRouterActor(
-      airportConfig.terminals,
-      getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
-      updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
-      partitionUpdates,
+      allTerminals = airportConfig.terminals,
+      arrivalsByDayLookup = getFeedArrivalsLookup(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+      updateArrivals = updateFeedArrivals(source, TerminalDayFeedArrivalActor.props, nowMillis, requestAndTerminateActor),
+      partitionUpdates = partitionUpdates,
     )), name = name)
 
   override val forecastBaseFeedArrivalsActor: ActorRef = feedArrivalsRouter(AclFeedSource,
@@ -429,6 +430,8 @@ case class ProdFeedService(journalType: StreamingJournalLike,
         Feed(LGWFeed(azureClient)(system).source(Feed.actorRefSource), 5.seconds, 100.milliseconds)
       case "BHX" if params.bhxIataEndPointUrl.nonEmpty =>
         Feed(BHXFeed(BHXClient(params.bhxIataUsername, params.bhxIataEndPointUrl), Feed.actorRefSource), 5.seconds, 80.seconds)
+      case "CWL" if params.cwlIataEndPointUrl.nonEmpty =>
+        Feed(CWLFeed(CWLClient(params.cwlIataUsername, params.cwlIataEndPointUrl), Feed.actorRefSource), 5.seconds, 80.seconds)
       case "LCY" if params.lcyLiveEndPointUrl.nonEmpty =>
         Feed(LCYFeed(LCYClient(ProdHttpClient(), params.lcyLiveUsername, params.lcyLiveEndPointUrl, params.lcyLiveUsername, params.lcyLivePassword), Feed.actorRefSource), 5.seconds, 80.seconds)
       case "LTN" =>

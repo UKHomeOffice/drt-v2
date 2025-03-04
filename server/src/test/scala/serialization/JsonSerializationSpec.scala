@@ -1,19 +1,20 @@
 package serialization
 
 import drt.shared.CrunchApi._
-import drt.shared._
+import drt.shared.{DrtPortConfigs, FixedPointAssignments, FlightUpdatesAndRemovals, PortState, StaffAssignment, TM}
 import org.specs2.mutable.Specification
-import services.AirportToCountry
 import uk.gov.homeoffice.drt.Nationality
 import uk.gov.homeoffice.drt.arrivals.SplitStyle.Percentage
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.auth.Roles
 import uk.gov.homeoffice.drt.auth.Roles.Role
 import uk.gov.homeoffice.drt.feeds.{FeedStatusFailure, FeedStatusSuccess, FeedStatuses}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.{T1, Terminal}
 import uk.gov.homeoffice.drt.ports._
+import uk.gov.homeoffice.drt.services.AirportInfoService
 import upickle.default._
 
 import scala.collection.immutable.SortedMap
@@ -75,7 +76,7 @@ class JsonSerializationSpec extends Specification {
     }
 
     "AirportInfo" >> {
-      val info: Map[String, AirportInfo] = AirportToCountry.airportInfoByIataPortCode
+      val info: Map[String, AirportInfo] = AirportInfoService.airportInfoByIataPortCode
 
       val asJson: String = write(info)
 
@@ -96,7 +97,28 @@ class JsonSerializationSpec extends Specification {
 
     "PortState" >> {
       val flightWithSplits = ApiFlightWithSplits(
-        Arrival(None, ArrivalStatus("scheduled"), None, Predictions(0L, Map()), None, None, None, None, None, None, None, None, PortCode("test"), T1, "test", "test", PortCode("test"), 0L, None, Set(AclFeedSource, LiveFeedSource)),
+        Arrival(
+          Operator = None,
+          Status = ArrivalStatus("scheduled"),
+          Estimated = None,
+          Predictions = Predictions(0L, Map()),
+          Actual = None,
+          EstimatedChox = None,
+          ActualChox = None,
+          Gate = None,
+          Stand = None,
+          MaxPax = None,
+          RunwayID = None,
+          BaggageReclaimId = None,
+          AirportID = PortCode("test"),
+          Terminal = T1,
+          rawICAO = "test",
+          rawIATA = "test",
+          Origin = PortCode("test"),
+          PreviousPort = None,
+          Scheduled = 0L,
+          PcpTime = None,
+          FeedSources = Set(AclFeedSource, LiveFeedSource)),
         Set(
           Splits(
             Set(
@@ -136,10 +158,30 @@ class JsonSerializationSpec extends Specification {
     }
 
     "PortStateUpdates" >> {
-      val arrival = Arrival(None, ArrivalStatus("scheduled"), None, Predictions(0L, Map()), None, None, None, None, None, None, None, None, PortCode("test"),
-        T1, "test", "test", PortCode("test"), 0L, None,
-        Set(AclFeedSource, LiveFeedSource),
-        PassengerSources = Map())
+      val arrival = Arrival(
+        Operator = None,
+        Status = ArrivalStatus("scheduled"),
+        Estimated = None,
+        Predictions = Predictions(0L, Map()),
+        Actual = None,
+        EstimatedChox = None,
+        ActualChox = None,
+        Gate = None,
+        Stand = None,
+        MaxPax = None,
+        RunwayID = None,
+        BaggageReclaimId = None,
+        AirportID = PortCode("test"),
+        Terminal = T1,
+        rawICAO = "test",
+        rawIATA = "test",
+        Origin = PortCode("test"),
+        PreviousPort = None,
+        Scheduled = 0L,
+        PcpTime = None,
+        FeedSources = Set(AclFeedSource, LiveFeedSource),
+        PassengerSources = Map()
+      )
       val splits = Set(Splits(
         Set(ApiPaxTypeAndQueueCount(PaxTypes.VisaNational, Queues.NonEeaDesk, 1, Option(Map(Nationality("tw") -> 7.0)), None)),
         Historical,

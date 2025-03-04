@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
 import diode.data.{Pending, Pot, Ready}
-import diode.{ActionResult, Effect, ModelRW}
+import diode.{Action, ActionResult, Effect, EffectSingle, ModelRW}
 import drt.client.actions.Actions._
 import drt.client.services.{DrtApi, PollDelay}
 import drt.shared.FeedSourceArrival
@@ -29,7 +29,7 @@ class ArrivalSourcesHandler[M](modelRW: ModelRW[M, Option[(UniqueArrival, Pot[Li
       updated(None)
   }
 
-  private def effect(ua: UniqueArrival, endpoint: String) = {
+  private def effect(ua: UniqueArrival, endpoint: String): EffectSingle[Action] = {
     Effect(DrtApi.get(endpoint)
       .map { response =>
         val arrivalSources = read[List[Option[FeedSourceArrival]]](response.responseText)

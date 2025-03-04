@@ -9,9 +9,9 @@ import scala.scalajs.js.Date
 
 
 object SDateTests extends TestSuite {
-  override def tests = Tests {
-    'SDate - {
-      "You can add days to an SDate" - {
+  val tests: Tests = Tests {
+    test("SDate") {
+      test("You can add days to an SDate") - {
         import drt.client.services.JSDateConversions._
 
         val february = 2
@@ -160,5 +160,22 @@ object SDateTests extends TestSuite {
         assert(result == expected)
       }
     }
+
+    "first day of the week " - {
+      SDate.firstDayOfWeek(SDate(2024, 10, 23)) == SDate(2024, 10, 21)
+    }
+
+    "last day of the week " - {
+      SDate.lastDayOfWeek(SDate(2024, 10, 23)) == SDate(2024, 10, 27)
+    }
+
+    "first day of the month" - {
+      SDate.firstDayOfMonth(SDate(2024, 10, 23)) == SDate(2024, 10, 1)
+    }
+
+    "last day of the month" - {
+      SDate.lastDayOfMonth(SDate(2024, 10, 23)) == SDate(2024, 10, 31)
+    }
+
   }
 }

@@ -15,8 +15,8 @@ abstract class LoggingActionHandler[M, T](modelRW: ModelRW[M, T]) extends Action
         }
 
         throw f
-      case Success(s) =>
-        s
+
+      case Success(s) => s
     }
   }
 }

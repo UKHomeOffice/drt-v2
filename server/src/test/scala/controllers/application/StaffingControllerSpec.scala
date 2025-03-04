@@ -13,20 +13,20 @@ import play.api.test._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.config.Lhr
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, LegacyStaffAssignmentsService, StaffMovementsService}
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate, SDateLike}
 import upickle.default.write
 
 import scala.concurrent.Future
 
-case class MockShiftsService(shifts: Seq[StaffAssignmentLike]) extends ShiftsService {
+case class MockLegacyStaffAssignmentsService(shifts: Seq[StaffAssignmentLike]) extends LegacyStaffAssignmentsService {
   override def shiftsForDate(date: LocalDate, maybePointInTime: Option[MillisSinceEpoch]): Future[ShiftAssignments] =
     Future.successful(ShiftAssignments(shifts))
 
-  override def shiftsForMonth(month: MillisSinceEpoch): Future[MonthOfShifts] =
-    Future.successful(MonthOfShifts(month, ShiftAssignments(shifts)))
+  override def allShifts: Future[ShiftAssignments] =
+    Future.successful(ShiftAssignments(shifts))
 
-  override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Unit = ()
+  override def updateShifts(shiftAssignments: Seq[StaffAssignmentLike]): Future[ShiftAssignments] = Future.successful(ShiftAssignments(shifts))
 }
 
 case class MockFixedPointsService(fixedPoints: Seq[StaffAssignmentLike]) extends FixedPointsService {
@@ -97,11 +97,11 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     "return the shifts from the mock service as json" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
       val result = controller
-        .getShiftsForMonth(SDate("2024-07-01T01:00").millisSinceEpoch)
+        .getAllShifts
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
-      contentAsString(result) must ===(write(MonthOfShifts(SDate("2024-07-01T01:00").millisSinceEpoch, ShiftAssignments(shifts))))
+      contentAsString(result) must ===(write(ShiftAssignments(shifts)))
     }
   }
 
@@ -209,7 +209,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "return Forbidden for getShiftsForMonth" in {
       val result = controller
-        .getShiftsForMonth(SDate("2024-07-01T01:00").millisSinceEpoch)
+        .getAllShifts
         .apply(FakeRequest(method = "GET", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)
@@ -262,12 +262,13 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     new StaffingController(
       Helpers.stubControllerComponents(),
       interface,
-      MockShiftsService(shifts),
+      MockLegacyStaffAssignmentsService(shifts),
       MockFixedPointsService(fixedPoints),
-      MockStaffMovementsService(movements)
+      MockStaffMovementsService(movements),
     )
 
   private def newDrtInterface(): DrtSystemInterface = {
     new TestDrtModule(Lhr.config).provideDrtSystemInterface
   }
 }
+

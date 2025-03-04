@@ -8,8 +8,9 @@ import com.google.inject.Inject
 import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
 import uk.gov.homeoffice.drt.db._
-import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, UserFeedbackDao}
+import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, StaffShiftsDao, UserFeedbackDao}
 import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.service.staffing.{ShiftsService, ShiftsServiceImpl}
 import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
@@ -23,7 +24,16 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends DrtSystemInterface {
 
-  override val minuteLookups: MinuteLookupsLike = MinuteLookups(now, MilliTimes.oneDayMillis, airportConfig.queuesByTerminal)
+  lazy override val aggregatedDb: AggregatedDbTables = AggregateDb
+
+  lazy override val akkaDb: AkkaDbTables = AkkaDb
+
+  override val minuteLookups: MinuteLookupsLike = MinuteLookups(
+    now,
+    MilliTimes.oneDayMillis,
+    airportConfig.queuesByTerminal,
+    update15MinuteQueueSlotsLiveView
+  )
 
   override val flightLookups: FlightLookupsLike = FlightLookups(
     system,
@@ -32,11 +42,12 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     params.maybeRemovalCutOffSeconds,
     paxFeedSourceOrder,
     splitsCalculator.terminalSplits,
+    updateFlightsLiveView,
   )
 
   override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)
 
-  override val manifestLookups: ManifestLookups = ManifestLookups(system)
+  override val manifestLookups: ManifestLookups = ManifestLookups(system, airportConfig.terminals)
 
   override val userService: UserTableLike = UserTable(AggregateDb)
 
@@ -48,13 +59,12 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(AggregateDb)
 
-  lazy override val aggregatedDb: AggregatedDbTables = AggregateDb
+  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb)
 
-  lazy override val akkaDb: AkkaDbTables = AkkaDb
+  override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb)
 
-  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb.db)
+  override val shiftsService: ShiftsService = ShiftsServiceImpl(StaffShiftsDao(AggregateDb))
 
-  override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb.db)
 
   lazy override val actorService: ActorsServiceLike = ActorsServiceService(
     journalType = StreamingJournal.forConfig(config),
@@ -83,11 +93,9 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
   lazy val persistentActors: PersistentStateActors = ProdPersistentStateActors(
     system,
     now,
-    airportConfig.minutesToCrunch,
-    airportConfig.crunchOffsetMinutes,
     manifestLookups,
-    airportConfig.portCode,
-    feedService.paxFeedSourceOrder)
+    airportConfig.terminals,
+  )
 
   override def run(): Unit = applicationService.run()
 

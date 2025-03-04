@@ -3,6 +3,7 @@ package drt.shared
 
 import drt.shared.CrunchApi._
 import uk.gov.homeoffice.drt.arrivals.{WithLastUpdated, WithTimeAccessor}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import upickle.default._
@@ -14,13 +15,6 @@ case class StaffTimeSlot(terminal: Terminal,
                          start: MillisSinceEpoch,
                          staff: Int,
                          durationMillis: Int)
-
-case class MonthOfShifts(month: MillisSinceEpoch, shifts: ShiftAssignments)
-
-object MonthOfShifts {
-  implicit val rw: ReadWriter[MonthOfShifts] = macroRW
-}
-
 
 object MinuteHelper {
   def key(terminalName: Terminal, queue: Queue, minute: MillisSinceEpoch): TQM = TQM(terminalName, queue, minute)
@@ -47,12 +41,6 @@ trait PortStateQueueLoadMinutes extends PortStateMinutes[PassengersMinute, TQM]
 
 trait PortStateStaffMinutes extends PortStateMinutes[StaffMinute, TM]
 
-
-case class AirportInfo(airportName: String, city: String, country: String, code: String)
-
-object AirportInfo {
-  implicit val rw: ReadWriter[AirportInfo] = macroRW
-}
 
 case class BuildVersion(version: String, requiresReload: Boolean = false)
 

@@ -9,7 +9,7 @@ import uk.gov.homeoffice.drt.arrivals.{CarrierCode, EventTypes, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.PaxTypes.EeaMachineReadable
 import uk.gov.homeoffice.drt.ports.PaxTypesAndQueues.{eeaMachineReadableToDesk, eeaMachineReadableToEGate, eeaNonMachineReadableToDesk}
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.{SplitRatio, SplitRatios, SplitSources}
-import uk.gov.homeoffice.drt.ports.Terminals.{T1, T2}
+import uk.gov.homeoffice.drt.ports.Terminals.T1
 import uk.gov.homeoffice.drt.ports.{PortCode, Queues}
 import uk.gov.homeoffice.drt.time.SDate
 
@@ -86,9 +86,6 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
             T1 -> Map(
               Queues.EeaDesk -> Seq(1.0, 1.0, 0.0, 0.0, 0.0),
               Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)),
-            T2 -> Map(
-              Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
-              Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0))
           )
 
           crunch.portStateTestProbe.fishForMessage(2.seconds) {
@@ -174,10 +171,7 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               T1 -> Map(
                 Queues.EeaDesk -> Seq(20.0, 0.0, 0.0, 0.0, 0.0),
                 Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)),
-              T2 -> Map(
-                Queues.EeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0),
-                Queues.NonEeaDesk -> Seq(0.0, 0.0, 0.0, 0.0, 0.0)
-              ))
+            )
 
             crunch.portStateTestProbe.fishForMessage(2.seconds) {
               case ps: PortState =>

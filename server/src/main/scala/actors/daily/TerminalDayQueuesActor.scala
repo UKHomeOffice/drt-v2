@@ -1,20 +1,27 @@
 package actors.daily
 
 import akka.actor.Props
-import drt.shared.CrunchApi.{CrunchMinute, DeskRecMinute, MillisSinceEpoch}
-import drt.shared.{CrunchApi, TQM}
+import drt.shared.CrunchApi
+import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch}
 import scalapb.GeneratedMessage
-import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
+import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.protobuf.messages.CrunchState.{CrunchMinuteMessage, CrunchMinutesMessage}
 import uk.gov.homeoffice.drt.time.{SDateLike, UtcDate}
+
+import scala.concurrent.Future
 
 
 object TerminalDayQueuesActor {
-  def props(terminal: Terminal, date: UtcDate, now: () => SDateLike): Props =
-    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, None))
+  def props(maybeUpdateLiveView: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]])
+           (terminal: Terminal,
+            date: UtcDate,
+            now: () => SDateLike,
+           ): Props =
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, None, maybeUpdateLiveView))
 
   def propsPointInTime(terminal: Terminal, date: UtcDate, now: () => SDateLike, pointInTime: MillisSinceEpoch): Props =
-    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, Option(pointInTime)))
+    Props(new TerminalDayQueuesActor(date.year, date.month, date.day, terminal, now, Option(pointInTime), None))
 }
 
 class TerminalDayQueuesActor(year: Int,
@@ -22,7 +29,9 @@ class TerminalDayQueuesActor(year: Int,
                              day: Int,
                              terminal: Terminal,
                              val now: () => SDateLike,
-                             maybePointInTime: Option[MillisSinceEpoch]) extends
+                             maybePointInTime: Option[MillisSinceEpoch],
+                             override val onUpdate: Option[(UtcDate, Iterable[CrunchMinute]) => Future[Unit]],
+                            ) extends
   TerminalDayLikeActor[CrunchMinute, TQM, CrunchMinuteMessage](year, month, day, terminal, now, maybePointInTime) {
   override val persistenceIdType: String = "queues"
 

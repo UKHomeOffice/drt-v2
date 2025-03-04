@@ -27,6 +27,9 @@ trait DrtParameters {
   val bhxIataUsername: String
   val maybeBhxSoapEndPointUrl: Option[String]
 
+  val cwlIataEndPointUrl: String
+  val cwlIataUsername: String
+
   val maybeLtnLiveFeedUrl: Option[String]
   val maybeLtnLiveFeedUsername: Option[String]
   val maybeLtnLiveFeedPassword: Option[String]
@@ -64,6 +67,8 @@ trait DrtParameters {
   val retainDataForYears: Int
 
   val isTestEnvironment: Boolean
+
+  val enableShiftPlanningChange: Boolean
 }
 
 object DrtParameters {
@@ -74,7 +79,7 @@ object DrtParameters {
   }
 }
 
-case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParameters {
+case class ProdDrtParameters @Inject()(config: Configuration) extends DrtParameters {
   val log: Logger = LoggerFactory.getLogger(getClass)
 
   override val gateWalkTimesFilePath: Option[String] =
@@ -94,6 +99,9 @@ case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParamete
 
   override val bhxIataEndPointUrl: String = config.get[String]("feeds.bhx.iata.endPointUrl")
   override val bhxIataUsername: String = config.get[String]("feeds.bhx.iata.username")
+
+  override val cwlIataEndPointUrl: String = config.get[String]("feeds.cwl.iata.endPointUrl")
+  override val cwlIataUsername: String = config.get[String]("feeds.cwl.iata.username")
 
   override val maybeBhxSoapEndPointUrl: Option[String] = config.getOptional[String]("feeds.bhx.soap.endPointUrl")
 
@@ -136,4 +144,6 @@ case class ProdDrtParameters@Inject()(config: Configuration) extends DrtParamete
   override val govNotifyApiKey: String = config.get[String]("notifications.gov-notify-api-key")
 
   override val isTestEnvironment: Boolean = config.getOptional[String]("env").getOrElse("prod") == "test"
+
+  override val enableShiftPlanningChange: Boolean = config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
 }

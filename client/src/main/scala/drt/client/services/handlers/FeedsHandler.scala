@@ -21,15 +21,15 @@ case class SetFeedSourceStatuses(statuses: Seq[FeedSourceStatuses]) extends Acti
 
 case class CheckFeed(feedSource: FeedSource) extends Action
 
-class FeedsHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedSourceStatuses]]]) extends LoggingActionHandler(modelRW) {
+class FeedsHandler[M](modelRW: ModelRW[M, Pot[Seq[FeedSourceStatuses]]]) extends PotActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case CheckFeed(feedSource) =>
       DrtApi.post("feeds/check", write(feedSource))
       noChange
 
     case SetFeedSourceStatuses(statuses) =>
-      val scheduledRequest = Effect(Future(GetFeedSourceStatuses())).after(15 seconds)
-      updated(Ready(statuses), scheduledRequest)
+      val poll = Effect(Future(GetFeedSourceStatuses())).after(15 seconds)
+      updateIfChanged(statuses, poll)
 
     case GetFeedSourceStatuses() =>
       val apiCallEffect = Effect(DrtApi.get("feeds/statuses")

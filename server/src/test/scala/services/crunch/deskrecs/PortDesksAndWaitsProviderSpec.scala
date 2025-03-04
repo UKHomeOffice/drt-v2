@@ -1,13 +1,14 @@
 package services.crunch.deskrecs
 
 import drt.shared.CrunchApi.{DeskRecMinute, MillisSinceEpoch, PassengersMinute}
-import drt.shared.{ArrivalGenerator, CrunchApi, TQM}
+import drt.shared.{ArrivalGenerator, CrunchApi}
 import services.crunch.CrunchTestLike
 import services.crunch.desklimits.TerminalDeskLimitsLike
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter}
 import services.{OptimiserWithFlexibleProcessors, WorkloadProcessors, WorkloadProcessorsProvider}
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, FlightsWithSplits, Splits}
 import uk.gov.homeoffice.drt.egates.Desk
+import uk.gov.homeoffice.drt.model.TQM
 import uk.gov.homeoffice.drt.ports.PaxTypes.GBRNational
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources
@@ -104,11 +105,12 @@ class PortDesksAndWaitsProviderSpec extends CrunchTestLike {
     val start = scheduled.millisSinceEpoch
     val end = scheduled.addMinutes(14).millisSinceEpoch
     val loads = getFlightLoads(scheduled, flightParams, provider)
-    provider.loadsToDesks(
+    provider.terminalLoadsToDesks(
       minuteMillis = start to end by MilliTimes.oneMinuteMillis,
       loads,
-      Map(T1 -> MockTerminalDeskLimits),
-      "test"
+      MockTerminalDeskLimits,
+      "test",
+      T1,
     )
   }
 

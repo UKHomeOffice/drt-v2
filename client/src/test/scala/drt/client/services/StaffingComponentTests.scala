@@ -1,5 +1,6 @@
 package drt.client.services
 
+import drt.client.components.StaffingUtil.consecutiveDaysInMonth
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.{StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
 import uk.gov.homeoffice.drt.ports.Terminals.T1
@@ -13,7 +14,7 @@ object StaffingComponentTests extends TestSuite {
 
   def tests = Tests {
 
-    'StaffingService - {
+    "StaffingService" - {
       "When asking for the end date of the month " - {
         "Given 31-12-2017 then I should get 31-12-2017" - {
           val today = SDate(2017, 12, 31)
@@ -90,7 +91,7 @@ object StaffingComponentTests extends TestSuite {
           val startDay = SDate("2017-12-21")
           val endDay = SDate("2017-12-25")
 
-          val result = consecutiveDaysInMonth(startDay, endDay).map(_.millisSinceEpoch)
+          val result = consecutiveDaysInMonth(startDay, endDay).map(_._1.millisSinceEpoch)
 
           val expected = List(
             SDate("2017-12-21"),

@@ -12,7 +12,7 @@ import upickle.default._
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-case class GetABFeature(functionName:String) extends Action
+case class GetABFeature(functionName: String) extends Action
 
 case class SetABFeature(abFeature: Seq[ABFeature]) extends Action
 
@@ -21,11 +21,10 @@ object ABFeatureRow {
 }
 
 class ABFeatureHandler[M](modelRW: ModelRW[M, Pot[Seq[ABFeature]]]) extends LoggingActionHandler(modelRW) {
-  override
-  protected def handle: PartialFunction[Any, ActionResult[M]] = {
+  override protected def handle: PartialFunction[Any, ActionResult[M]] = {
 
-    case SetABFeature(userFeedbacks) =>
-      updated(Ready(userFeedbacks))
+    case SetABFeature(abFeatures) =>
+      updated(Ready(abFeatures))
 
     case GetABFeature(functionName) =>
       val apiCallEffect = Effect(DrtApi.get(s"ab-feature/$functionName")

@@ -4,51 +4,49 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
-import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.exports.StaffMovementsExport
 import uk.gov.homeoffice.drt.auth.Roles.{BorderForceStaff, FixedPointsEdit, FixedPointsView, StaffEdit, StaffMovementsEdit, StaffMovementsExport => StaffMovementsExportRole}
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.service.staffing.{FixedPointsService, ShiftsService, StaffMovementsService}
+import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.time.SDate
-import upickle.default.{read, write}
-
+import upickle.default._
 import scala.concurrent.Future
 
 
 class StaffingController @Inject()(cc: ControllerComponents,
                                    ctrl: DrtSystemInterface,
-                                   shiftsService: ShiftsService,
+                                   legacyStaffAssignmentsService: LegacyStaffAssignmentsService,
                                    fixedPointsService: FixedPointsService,
-                                   movementsService: StaffMovementsService,
-                                  ) extends AuthController(cc, ctrl) {
+                                   movementsService: StaffMovementsService) extends AuthController(cc, ctrl) {
   def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
       val date = SDate(localDateStr).toLocalDate
       val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
-      shiftsService.shiftsForDate(date, maybePointInTime)
+      legacyStaffAssignmentsService.shiftsForDate(date, maybePointInTime)
         .map(sa => Ok(write(sa)))
     }
   }
 
   def saveShifts: Action[AnyContent] = authByRole(StaffEdit) {
-    Action { request =>
+    Action.async { request =>
       request.body.asText match {
         case Some(text) =>
           val shifts = read[ShiftAssignments](text)
-          shiftsService.updateShifts(shifts.assignments)
-          Accepted
+          legacyStaffAssignmentsService
+            .updateShifts(shifts.assignments)
+            .map(allShifts => Accepted(write(allShifts)))
         case None =>
-          BadRequest
+          Future.successful(BadRequest)
       }
     }
   }
 
-  def getShiftsForMonth(month: MillisSinceEpoch): Action[AnyContent] = authByRole(StaffEdit) {
+  def getAllShifts: Action[AnyContent] = authByRole(StaffEdit) {
     Action.async {
-      shiftsService.shiftsForMonth(month).map(s => Ok(write(s)))
+      legacyStaffAssignmentsService.allShifts.map(s => Ok(write(s)))
     }
   }
 
@@ -121,9 +119,9 @@ class StaffingController @Inject()(cc: ControllerComponents,
           csvSource,
           CsvFileStreaming.makeFileName(
             "staff-movements",
-            Option(terminal),
-            localDate,
-            localDate,
+            Seq(terminal),
+            SDate(localDate),
+            SDate(localDate),
             airportConfig.portCode
           ) + ".csv"
         )

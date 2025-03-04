@@ -3,7 +3,7 @@ package uk.gov.homeoffice.drt.testsystem
 import actors.DrtParameters
 import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import drt.shared.DropIn
+import drt.shared.{DropIn, Shift, UserPreferences}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import slickdb._
@@ -11,6 +11,7 @@ import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
 import uk.gov.homeoffice.drt.db.tables.{ABFeatureRow, UserFeedbackRow}
 import uk.gov.homeoffice.drt.ports.PortCode
+import uk.gov.homeoffice.drt.service.staffing.ShiftsService
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
 import java.sql.Timestamp
@@ -36,13 +37,15 @@ case class MockUserTable() extends UserTableLike {
 
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(None)
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None)))
 
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
   override def updateCloseBanner(email: String, at: Timestamp)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
   override def updateStaffPlanningIntervalMinutes(email: String, periodInterval: Int)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
+
+  override def updateUserPreferences(email: String, userPreferences: UserPreferences)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 }
 
 case class MockFeatureGuideTable() extends FeatureGuideTableLike {
@@ -100,6 +103,8 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val isSuperUserMode: Boolean = false
   override val bhxIataEndPointUrl: String = ""
   override val bhxIataUsername: String = ""
+  override val cwlIataEndPointUrl: String = ""
+  override val cwlIataUsername: String = ""
   override val maybeBhxSoapEndPointUrl: Option[String] = None
   override val maybeLtnLiveFeedUrl: Option[String] = None
   override val maybeLtnLiveFeedUsername: Option[String] = None
@@ -127,6 +132,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val retainDataForYears: Int = 5
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
+  override val enableShiftPlanningChange: Boolean = true
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {
@@ -147,5 +153,16 @@ case class MockAbFeatureDao() extends IABFeatureDao {
   override def getABFeaturesByEmailForFunction(email: String, functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
 
   override def getABFeatureByFunctionName(functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
+}
+
+case class MockStaffShiftsService() extends ShiftsService {
+
+  override def getShift(port: String, terminal: String, shiftName: String): Future[Option[Shift]] = Future.successful(None)
+
+  override def getShifts(port: String, terminal: String): Future[Seq[Shift]] = Future.successful(Seq.empty)
+
+  override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = Future.successful(1)
+
+  override def saveShift(shifts: Seq[Shift]): Future[Int] = Future.successful(1)
 }
 

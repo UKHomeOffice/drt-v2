@@ -50,8 +50,8 @@ object ApiStatusComponent {
     override val maybeTooltip: Option[String] = Option(info)
   }
 
-  private val receivedInfoText = "The percentage of landed flights that have received API data"
-  private val validatedInfoText = "The percentage of received API data that is within a 5% threshold of the port operator's total pax count"
+  private val receivedInfoText = "Percentage of landed flights in DRT which received API"
+  private val validatedInfoText = "Percentage of received API which passed DRT's quality check"
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ApiStatus")
     .render_P { props =>
@@ -66,15 +66,15 @@ object ApiStatusComponent {
             val apiFeedStatus = ApiFeedStatus(flights, SDate.now().millisSinceEpoch, props.canValidate, terminalFlightsPot().paxFeedSourceOrder)
 
             <.div(^.className := "status-bar-item", "API (Advance Passenger Information)",
-              DataQualityIndicator(ApiDataQuality(apiFeedStatus.receivedPct.map(_.round.toInt), "Received", receivedInfoText), props.terminal, "api-received"),
+              DataQualityIndicator(ApiDataQuality(apiFeedStatus.receivedPct.map(_.round.toInt), "Received", receivedInfoText), props.terminal, "api-received", icon = true),
               if (props.canValidate)
-                DataQualityIndicator(ApiDataQuality(apiFeedStatus.validPct.map(_.round.toInt), "Valid", validatedInfoText), props.terminal, "api-valid")
+                DataQualityIndicator(ApiDataQuality(apiFeedStatus.validPct.map(_.round.toInt), "Valid", validatedInfoText), props.terminal, "api-valid", icon = true)
               else EmptyVdom,
             )
           },
           terminalFlightsPot().flights.renderPending(_ =>
             <.div(^.className := "status-bar-item", "API (Advance Passenger Information)",
-              DataQualityIndicator(ApiDataQuality(None, "Received", receivedInfoText), props.terminal, "api-received"),
+              DataQualityIndicator(ApiDataQuality(None, "Received", receivedInfoText), props.terminal, "api-received", icon = true),
             )
           ),
         )

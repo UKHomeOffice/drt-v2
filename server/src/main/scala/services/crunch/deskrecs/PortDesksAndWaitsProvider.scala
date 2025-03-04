@@ -6,9 +6,9 @@ import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import services.TryCrunchWholePax
 import services.crunch.desklimits.TerminalDeskLimitsLike
-import services.crunch.deskrecs
 import services.graphstages.{DynamicWorkloadCalculator, FlightFilter, WorkloadCalculatorLike}
 import uk.gov.homeoffice.drt.arrivals.{FlightsWithSplits, Splits}
+import uk.gov.homeoffice.drt.model.TQM
 import uk.gov.homeoffice.drt.ports.Queues._
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults
@@ -36,10 +36,12 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
 
   override def loadsToSimulations(minuteMillis: NumericRange[MillisSinceEpoch],
                                   passengersByQueue: Map[TQM, PassengersMinute],
-                                  deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike],
-                                  description: String)
+                                  deskLimitProviders: TerminalDeskLimitsLike,
+                                  description: String,
+                                  terminal: Terminal,
+                                 )
                                  (implicit ec: ExecutionContext, mat: Materializer): Future[SimulationMinutes] = {
-    loadsToDesks(minuteMillis, passengersByQueue, deskLimitProviders, description).map { deskRecMinutes =>
+    terminalLoadsToDesks(minuteMillis, passengersByQueue, deskLimitProviders, description, terminal).map { deskRecMinutes =>
       val simMinutes = deskRecsToSimulations(deskRecMinutes.minutes).values.toSeq
       log.info(s"Deployments & waits calculated for ${SDate(minuteMillis.min).toISOString} to ${SDate(minuteMillis.max).toISOString}")
       SimulationMinutes(simMinutes)
@@ -52,7 +54,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }.toMap
 
   private def terminalDescRecs(terminal: Terminal, description: String): TerminalDesksAndWaitsProvider =
-    deskrecs.TerminalDesksAndWaitsProvider(terminal, sla, flexedQueuesPriority, tryCrunch, description)
+    TerminalDesksAndWaitsProvider(terminal, sla, flexedQueuesPriority, tryCrunch, description)
 
   override def flightsToLoads(minuteMillis: NumericRange[MillisSinceEpoch],
                               flights: FlightsWithSplits,
@@ -69,7 +71,7 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     .map {
       case (tqm, minutes) =>
         val loads = minutes.values
-        (tqm, PassengersMinute(tqm.terminal, tqm.queue, tqm.minute, loads.flatMap(_.passengers), None) )
+        (tqm, PassengersMinute(tqm.terminal, tqm.queue, tqm.minute, loads.flatMap(_.passengers), None))
     }
 
   private def terminalWorkLoadsByQueue(terminal: Terminal,
@@ -97,24 +99,20 @@ case class PortDesksAndWaitsProvider(queuesByTerminal: SortedMap[Terminal, Seq[Q
     }
     .toMap
 
-  override def loadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
-                            loads: Map[TQM, PassengersMinute],
-                            deskLimitProviders: Map[Terminal, TerminalDeskLimitsLike],
-                            description: String,
-                           )
-                           (implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes] = {
-    val terminalQueueDeskRecs = deskLimitProviders.map {
-      case (terminal, maxDesksProvider) =>
-        val terminalPassengers = terminalPassengersByQueue(terminal, minuteMillis, loads)
-        val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
-        terminalDescRecs(terminal, description)
-          .workToDeskRecs(terminal, minuteMillis, terminalPassengers, terminalWork, maxDesksProvider)
-          .map(_.toList)
-    }.toList
+  override def terminalLoadsToDesks(minuteMillis: NumericRange[MillisSinceEpoch],
+                                    loads: Map[TQM, PassengersMinute],
+                                    maxDesksProvider: TerminalDeskLimitsLike,
+                                    description: String,
+                                    terminal: Terminal,
+                                   )
+                                   (implicit ec: ExecutionContext, mat: Materializer): Future[DeskRecMinutes] = {
+    val terminalPassengers = terminalPassengersByQueue(terminal, minuteMillis, loads)
+    val terminalWork = terminalWorkLoadsByQueue(terminal, minuteMillis, loads)
+    val deskRecs = terminalDescRecs(terminal, description)
+      .workToDeskRecs(terminal, minuteMillis, terminalPassengers, terminalWork, maxDesksProvider)
+      .map(_.toList)
 
-    Future.sequence(terminalQueueDeskRecs).map { deskRecs =>
-      DeskRecMinutes(deskRecs.toSeq.flatten)
-    }
+    deskRecs.map(dr => DeskRecMinutes(dr))
   }
 }
 

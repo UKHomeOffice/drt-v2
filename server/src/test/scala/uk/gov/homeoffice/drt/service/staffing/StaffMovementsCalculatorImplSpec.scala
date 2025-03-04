@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.service.staffing
 
-import actors.persistent.staffing.{AddStaffMovements, RemoveStaffMovements}
+import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements}
 import akka.Done
 import akka.actor.{Actor, ActorRef, ActorSystem, Props}
 import akka.testkit.{TestKit, TestProbe}

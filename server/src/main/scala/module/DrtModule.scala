@@ -1,6 +1,7 @@
 package module
 
 import actors.DrtParameters
+import actors.persistent.staffing.{ShiftsActor, StaffAssignmentsActor}
 import akka.actor.ActorSystem
 import akka.persistence.testkit.PersistenceTestKitPlugin
 import akka.util.Timeout
@@ -28,15 +29,14 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
 
   val config: Configuration = new Configuration(ConfigFactory.load)
 
-  val airportConfig: AirportConfig = AirportConfigProvider(config)
-
   lazy val drtParameters: DrtParameters = DrtParameters(config)
+
+  val airportConfig: AirportConfig = AirportConfigProvider(config)
+  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+  implicit val timeout: Timeout = new Timeout(90.seconds)
 
   private lazy val drtTestSystem: TestDrtSystem = TestDrtSystem(airportConfig, drtParameters, now)
   private lazy val drtProdSystem: ProdDrtSystem = ProdDrtSystem(airportConfig, drtParameters, now)
-
-  implicit val ec: ExecutionContextExecutor = ExecutionContext.global
-  implicit val timeout: Timeout = new Timeout(10.seconds)
 
   override def configure(): Unit = {
     if (drtParameters.isTestEnvironment) {
@@ -63,6 +63,7 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
     bind(classOf[PortStateController]).asEagerSingleton()
     bind(classOf[RedListsController]).asEagerSingleton()
     bind(classOf[StaffingController]).asEagerSingleton()
+    bind(classOf[ShiftsController]).asEagerSingleton()
     bind(classOf[SummariesController]).asEagerSingleton()
     bind(classOf[SimulationsController]).asEagerSingleton()
     bind(classOf[WalkTimeController]).asEagerSingleton()
@@ -90,10 +91,18 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   @Singleton
-  def provideShiftsService: ShiftsService = ShiftsServiceImpl(
-    provideDrtSystemInterface.actorService.liveShiftsReadActor,
-    provideDrtSystemInterface.actorService.shiftsSequentialWritesActor,
-    ShiftsServiceImpl.pitActor,
+  def provideLegacyStaffAssignmentsService: LegacyStaffAssignmentsService = LegacyStaffAssignmentsServiceImpl(
+    provideDrtSystemInterface.actorService.legacyStaffAssignmentsReadActor,
+    provideDrtSystemInterface.actorService.legacyStaffAssignmentsSequentialWritesActor,
+    LegacyStaffAssignmentsServiceImpl.pitActor(provideActorSystem),
+    )
+
+  @Provides
+  @Singleton
+  def provideStaffAssignmentsService: StaffAssignmentsService = StaffAssignmentsServiceImpl(
+    provideDrtSystemInterface.actorService.liveStaffAssignmentsReadActor,
+    provideDrtSystemInterface.actorService.staffAssignmentsSequentialWritesActor,
+    StaffAssignmentsServiceImpl.pitActor(provideActorSystem),
   )
 
   @Provides
@@ -114,4 +123,5 @@ class DrtModule extends AbstractModule with AkkaGuiceSupport {
 
   @Provides
   def provideGovNotifyEmail: GovNotifyEmail = new GovNotifyEmail(drtParameters.govNotifyApiKey)
+
 }

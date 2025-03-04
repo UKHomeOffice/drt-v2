@@ -1,6 +1,7 @@
 package drt.client.components
 
-import japgolly.scalajs.react._
+import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.VdomElement
 
 import scala.scalajs.js
@@ -17,19 +18,6 @@ object CountryJS {
     val p = (new js.Object).asInstanceOf[Country]
     p.name = name
     p.code = code
-    p
-  }
-}
-
-@js.native
-trait AutocompleteOption extends js.Object {
-  var title: String
-}
-
-object AutocompleteOption {
-  def apply(title: String): AutocompleteOption = {
-    val p = (new js.Object).asInstanceOf[AutocompleteOption]
-    p.title = title
     p
   }
 }
@@ -73,7 +61,7 @@ trait FlightFlaggerFiltersProps extends js.Object {
   var showAllCallback: js.Function1[js.Object, Unit] = js.native
   var clearFiltersCallback: js.Function1[js.Object, Unit] = js.native
   var onChangeInput: js.Function1[String, Unit] = js.native
-  var initialState: js.UndefOr[js.Dynamic] = js.native
+  var maybeInitialState: js.UndefOr[js.Dynamic] = js.native
 }
 
 object FlightFlaggerFiltersProps {
@@ -93,7 +81,7 @@ object FlightFlaggerFiltersProps {
     p.showAllCallback = showAllCallback
     p.clearFiltersCallback = clearFiltersCallback
     p.onChangeInput = onChangeInput
-    p.initialState = initialState
+    p.maybeInitialState = initialState
     p
   }
 }
@@ -104,7 +92,17 @@ object FlightFlaggerFilters {
   @JSImport("@drt/drt-react", "FlightFlaggerFilters")
   object RawComponent extends js.Object
 
-  val component = JsFnComponent[FlightFlaggerFiltersProps, Children.None](RawComponent)
+  class Backend {
+    def render(props: FlightFlaggerFiltersProps): VdomElement = {
+      val component = JsFnComponent[FlightFlaggerFiltersProps, Children.None](RawComponent)
+      component(props)
+    }
+  }
+
+  val component: Component[FlightFlaggerFiltersProps, Unit, Backend, CtorType.Props] =
+    ScalaComponent.builder[FlightFlaggerFiltersProps]("FlightFlaggerFilters")
+      .renderBackend[Backend]
+      .build
 
   def apply(
              nationalities: js.Array[Country],

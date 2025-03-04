@@ -21,13 +21,12 @@ class SimulationParamsSpec extends Specification {
     date = LocalDate(2020, 3, 27),
     passengerWeighting = 1.0,
     processingTimes = testConfig.terminalProcessingTimes(terminal).view.mapValues(_ => 60).toMap,
-    minDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
-    maxDesks = testConfig.queuesByTerminal(terminal).map(q => q -> 10).toMap,
-    eGateBanksSizes = IndexedSeq(5, 5, 5),
+    minDesksByQueue = testConfig.queuesByTerminal(terminal).map(q => q -> 0).toMap,
+    maxDesks = 20,
+    eGateBankSizes = IndexedSeq(5, 5, 5),
     slaByQueue = testConfig.slaByQueue,
     crunchOffsetMinutes = 0,
     eGateOpenHours = Seq(),
-    paxFeedSourceOrder = paxFeedSourceOrder,
   )
 
   "Given I am applying a simulation to an airport config" >> {
@@ -66,7 +65,7 @@ class SimulationParamsSpec extends Specification {
 
     "Simulation supplied min desks should be applied to each queue" >> {
 
-      val simulationWithMinDesks = simulation.copy(minDesks = Map(Queues.EGate -> 8))
+      val simulationWithMinDesks = simulation.copy(minDesksByQueue = Map(Queues.EGate -> 8))
 
       val expected = List.fill(24)(8)
 
@@ -77,28 +76,15 @@ class SimulationParamsSpec extends Specification {
       result === expected
     }
 
-    "Simulation supplied max desks should be applied to each queue" >> {
+    "Simulation supplied terminal desks should be applied to the total number of desks available" >> {
 
-      val simulationWithMinDesks = simulation.copy(maxDesks = Map(Queues.EGate -> 25))
+      val simulationWithMinDesks = simulation.copy(maxDesks = 25)
 
-      val expected = List.fill(24)(25)
-
-      val result = simulationWithMinDesks
-        .applyToAirportConfig(testConfig)
-        .minMaxDesksByTerminalQueue24Hrs(terminal)(Queues.EGate)._2
-
-      result === expected
-    }
-
-    "Simulation eGate bank size should be used" >> {
-
-      val simulationWithMinDesks = simulation.copy(eGateBanksSizes = IndexedSeq(7, 7, 7))
-
-      val expected = Map(T1 -> IndexedSeq(7, 7, 7))
+      val expected = Map(T1 -> 25)
 
       val result = simulationWithMinDesks
         .applyToAirportConfig(testConfig)
-        .eGateBankSizes
+        .desksByTerminal
 
       result === expected
     }
@@ -121,34 +107,33 @@ class SimulationParamsSpec extends Specification {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
     val flightWithSplits = ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100),transPax = Option(50)).toArrival(LiveFeedSource), Set())
-    val flights = FlightsWithSplits(List(
-      flightWithSplits
-    ).map(a => a.apiFlight.unique -> a).toMap)
+    val flights = FlightsWithSplits(Seq(flightWithSplits))
 
-    val result = weightingOfOne.applyPassengerWeighting(flights)
+    val result = weightingOfOne.applyPassengerWeighting(flights, paxFeedSourceOrder)
 
-    result.flights.values.head.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder) === flightWithSplits.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder)
+    sumPcpPax(result) === sumPcpPax(flights)
   }
 
   "Given I am applying a passenger weighting to a flight, it should have the ScenarioSimulationSource added to it" >> {
     val weightingOfOne = simulation.copy(passengerWeighting = 1.0)
 
     val flights = FlightsWithSplits(
-      List(ApiFlightWithSplits(ArrivalGenerator.live(totalPax = None).toArrival(LiveFeedSource), Set())).map(a => a.apiFlight.unique -> a).toMap)
+      List(ApiFlightWithSplits(ArrivalGenerator.live(totalPax = None).toArrival(LiveFeedSource), Set()))
+    )
 
-    val result = weightingOfOne.applyPassengerWeighting(flights)
+    val result = weightingOfOne.applyPassengerWeighting(flights, paxFeedSourceOrder)
 
     result.flights.values.head.apiFlight.FeedSources === Set(LiveFeedSource, ScenarioSimulationSource)
   }
 
-  "Given I am applying a passenger weighting of 1.5 to some flights then passenger numbers and trans numbers shoudl be doubled" >> {
+  "Given I am applying a passenger weighting of 1.5 to some flights then pcp numbers increase by that factor" >> {
     val weightingOfTwo = simulation.copy(passengerWeighting = 1.5)
 
     val fws = FlightsWithSplits(List(
       ApiFlightWithSplits(ArrivalGenerator.live(totalPax = Option(100), transPax = Option(50)).toArrival(LiveFeedSource), Set())
-    ).map(a => a.apiFlight.unique -> a).toMap)
+    ))
 
-    val result = weightingOfTwo.applyPassengerWeighting(fws)
+    val result = weightingOfTwo.applyPassengerWeighting(fws, paxFeedSourceOrder)
 
     sumPcpPax(result) === (sumPcpPax(fws) * 1.5).toInt
   }

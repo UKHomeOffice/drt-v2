@@ -13,7 +13,7 @@ import services.crunch.TestDefaults.airportConfig
 import services.crunch.desklimits.PortDeskLimits
 import services.imports.ArrivalCrunchSimulationActor
 import services.scenarios.Scenarios
-import uk.gov.homeoffice.drt.actor.commands.ProcessingRequest
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, Arrival, FlightsWithSplits}
 import uk.gov.homeoffice.drt.egates.{EgateBank, EgateBanksUpdate, EgateBanksUpdates, PortEgateBanksUpdates}
 import uk.gov.homeoffice.drt.ports.PaxTypes._
@@ -51,7 +51,7 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
   val terminalEgatesProvider: Terminal => Future[EgateBanksUpdates] =
     (terminal: Terminal) => egateBanksProvider().map(_.updatesByTerminal.getOrElse(terminal, throw new Exception(s"No egates found for terminal $terminal")))
 
-  def flightsProvider(cr: ProcessingRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
+  def flightsProvider(cr: TerminalUpdateRequest): Future[Source[List[ApiFlightWithSplits], NotUsed]] =
     Future.successful(Source(List(arrivals.map(a => ApiFlightWithSplits(a, Set())))))
 
   "Given some arrivals and simulation config I should get back DeskRecMinutes containing all the passengers from the arrivals" >> {
@@ -59,7 +59,9 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
     val simulationParams = defaultSimulationParams(Terminals.T1, crunchDate, defaultAirportConfig)
 
     val portStateActor = system.actorOf(Props(new ArrivalCrunchSimulationActor(
-      simulationParams.applyPassengerWeighting(FlightsWithSplits(arrivals.map(a => ApiFlightWithSplits(a, Set())))
+      simulationParams.applyPassengerWeighting(
+        FlightsWithSplits(arrivals.map(a => ApiFlightWithSplits(a, Set()))),
+        paxFeedSourceOrder,
       ))))
 
     val futureResult: Future[CrunchApi.DeskRecMinutes] = Scenarios.simulationResult(
@@ -95,14 +97,11 @@ class ArrivalsScenarioSpec extends CrunchTestLike {
       airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
         case (q, (min, _)) => q -> min.max
       },
-      airportConfig.minMaxDesksByTerminalQueue24Hrs(terminal).map {
-        case (q, (_, max)) => q -> max.max
-      },
-      eGateBanksSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
+      maxDesks = airportConfig.desksByTerminal(terminal),
+      eGateBankSizes = airportConfig.eGateBankSizes.getOrElse(terminal, Iterable()).toIndexedSeq,
       slaByQueue = airportConfig.slaByQueue,
       crunchOffsetMinutes = 0,
       eGateOpenHours = SimulationParams.fullDay,
-      paxFeedSourceOrder = paxFeedSourceOrder,
     )
   }
 

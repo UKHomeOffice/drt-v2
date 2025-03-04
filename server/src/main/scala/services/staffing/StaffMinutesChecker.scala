@@ -18,9 +18,9 @@ case class StaffMinutesChecker(now: () => SDateLike,
     (forecastMaxDays - 2 until forecastMaxDays).foreach { daysInFuture =>
       val date = now().addDays(daysInFuture).toLocalDate
       airportConfig.terminals.foreach { terminal: Terminal =>
-        log.info(s"Requesting staff minutes calculation for $terminal on $date")
-        val request = TerminalUpdateRequest(terminal, date, airportConfig.crunchOffsetMinutes, airportConfig.minutesToCrunch)
-        staffingUpdateRequestQueue ! request
+            log.info(s"Requesting staff minutes calculation for $terminal on $date")
+            val request = TerminalUpdateRequest(terminal, date)
+            staffingUpdateRequestQueue ! request
       }
     }
   }

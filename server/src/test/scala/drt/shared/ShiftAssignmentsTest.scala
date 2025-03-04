@@ -32,4 +32,109 @@ object ShiftAssignmentsTest extends Specification {
       }
     }
   }
+
+  "Given a shift that spans 24 hours from midnight" >> {
+    "Then it should correctly handle the shift" >> {
+      val startTime = SDate("2024-11-05T00:00:00Z").millisSinceEpoch
+      val endTime = SDate("2024-11-06T00:00:00Z").millisSinceEpoch
+      val shift = StaffAssignment("24HourShift", T1, startTime, endTime, 5, None)
+      val service = ShiftAssignments(Seq(shift))
+      val msToSdate: MillisSinceEpoch => SDateLike = millis => SDate(millis)
+
+      "I should see the shift apply at the start time" >> {
+        service.terminalStaffAt(T1, SDate("2024-11-05T00:00"), msToSdate) === 5
+      }
+      "I should see the shift apply at the 23:30 time" >> {
+        service.terminalStaffAt(T1, SDate("2024-11-05T23:30"), msToSdate) === 5
+      }
+      "I should see the shift apply at the end time" >> {
+        service.terminalStaffAt(T1, SDate("2024-11-06T00:00"), msToSdate) === 5
+      }
+      "I should see the shift apply throughout the 24 hours" >> {
+        service.terminalStaffAt(T1, SDate("2024-11-05T12:00"), msToSdate) === 5
+      }
+    }
+  }
+
+  "Give shift with start and end date" >> {
+    "Then split a shift into 15 minutes interval shifts" >> {
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T7:30").millisSinceEpoch
+      StaffAssignment("test", T1, startTime, endTime, 3, None).splitIntoSlots(15) mustEqual List(
+        StaffAssignment("test", T1, SDate(s"2017-01-01T07:00:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:14:00Z").millisSinceEpoch, 3, None),
+        StaffAssignment("test", T1, SDate(s"2017-01-01T07:15:00Z").millisSinceEpoch, SDate(s"2017-01-01T07:29:00Z").millisSinceEpoch, 3, None)
+      )
+    }
+  }
+
+  "Given no shifts" >> {
+    "Then update shift if nothing exists before" >> {
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T9:00").millisSinceEpoch
+      val existingShifts = ShiftAssignments(Seq())
+      val expectedResult = Set(
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:00:00Z").millisSinceEpoch, SDate("2017-01-01T07:14:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:15:00Z").millisSinceEpoch, SDate("2017-01-01T07:29:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:30:00Z").millisSinceEpoch, SDate("2017-01-01T07:44:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:45:00Z").millisSinceEpoch, SDate("2017-01-01T07:59:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:00:00Z").millisSinceEpoch, SDate("2017-01-01T08:14:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:15:00Z").millisSinceEpoch, SDate("2017-01-01T08:29:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:30:00Z").millisSinceEpoch, SDate("2017-01-01T08:44:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:45:00Z").millisSinceEpoch, SDate("2017-01-01T08:59:00Z").millisSinceEpoch, 10, None))
+      val result: ShiftAssignments = existingShifts.applyUpdates(
+        Seq(StaffAssignment("Morning", T1, startTime, endTime, 10, None)))
+      result.assignments.toSet mustEqual expectedResult
+    }
+  }
+
+  "Given existing shifts" >> {
+    "update shift if shift exists before" >> {
+
+      val existingShiftStartTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val existingShiftEndTime = SDate(s"2017-01-01T9:00").millisSinceEpoch
+
+      val startTime = SDate(s"2017-01-01T07:00").millisSinceEpoch
+      val endTime = SDate(s"2017-01-01T8:00").millisSinceEpoch
+      val existingShifts = ShiftAssignments(StaffAssignment("Morning", T1, existingShiftStartTime, existingShiftEndTime, 10, None).splitIntoSlots(15))
+      val expectedResult = Set(
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:00:00Z").millisSinceEpoch, SDate("2017-01-01T07:14:00Z").millisSinceEpoch, 5, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:15:00Z").millisSinceEpoch, SDate("2017-01-01T07:29:00Z").millisSinceEpoch, 5, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:30:00Z").millisSinceEpoch, SDate("2017-01-01T07:44:00Z").millisSinceEpoch, 5, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T07:45:00Z").millisSinceEpoch, SDate("2017-01-01T07:59:00Z").millisSinceEpoch, 5, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:00:00Z").millisSinceEpoch, SDate("2017-01-01T08:14:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:15:00Z").millisSinceEpoch, SDate("2017-01-01T08:29:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:30:00Z").millisSinceEpoch, SDate("2017-01-01T08:44:00Z").millisSinceEpoch, 10, None),
+        StaffAssignment("Morning", T1, SDate("2017-01-01T08:45:00Z").millisSinceEpoch, SDate("2017-01-01T08:59:00Z").millisSinceEpoch, 10, None))
+      val result: ShiftAssignments = existingShifts.applyUpdates(
+        Seq(StaffAssignment("Morning", T1, startTime, endTime, 5, None)))
+      result.assignments.toSet mustEqual expectedResult
+    }
+  }
+
+  "Performance test" >> {
+    "should not take too long to apply update to 6 months of 15 minute existing shifts" >> {
+      val existingShifts = ShiftAssignments(
+        (0 until 96 * 180).map { slot =>
+          StaffAssignment(
+            "Morning",
+            T1,
+            SDate(s"2017-01-01T07:00").addMinutes(15 * slot).millisSinceEpoch,
+            SDate(s"2017-01-01T07:00").addMinutes((15 * slot) + 14).millisSinceEpoch,
+            5,
+            None)
+        }
+      )
+
+      val updateShifts = Seq(
+        StaffAssignment("Morning", T1, SDate(s"2017-01-01T12:00").millisSinceEpoch, SDate(s"2017-01-01T18:59").millisSinceEpoch, 10, None)
+      )
+
+      val start = System.currentTimeMillis()
+      existingShifts.applyUpdates(updateShifts)
+      val end = System.currentTimeMillis()
+      (end - start) must be_<(5L)
+    }
+
+  }
+
 }

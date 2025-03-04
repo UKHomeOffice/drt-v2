@@ -8,6 +8,7 @@ import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{CtorType, ScalaComponent}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
+import uk.gov.homeoffice.drt.model.CrunchMinute
 import uk.gov.homeoffice.drt.ports.Queues.{InvalidQueue, Queue}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{FeedSource, PaxTypeAndQueue, Queues}
@@ -118,7 +119,8 @@ object DashboardTerminalSummary {
     }
   }
 
-  def aggSplits(paxFeedSourceOrder: List[FeedSource], flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] = BigSummaryBoxes.aggregateSplits(flights, paxFeedSourceOrder)
+  def aggSplits(paxFeedSourceOrder: List[FeedSource], flights: Seq[ApiFlightWithSplits]): Map[PaxTypeAndQueue, Int] =
+    BigSummaryBoxes.aggregateSplits(flights, paxFeedSourceOrder)
 
   case class Props(flights: List[ApiFlightWithSplits],
                    crunchMinutes: List[CrunchMinute],
@@ -133,8 +135,8 @@ object DashboardTerminalSummary {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("SummaryBox")
     .render_P { props =>
-      val crunchMinuteTimeSlots = groupCrunchMinutesByX(groupSize = 15)(
-        CrunchApi.terminalMinutesByMinute[CrunchMinute, CrunchMinute, TQM](props.crunchMinutes, props.terminal),
+      val crunchMinuteTimeSlots = groupCrunchMinutesBy(groupSize = 15)(
+        CrunchApi.terminalMinutesByMinute(props.crunchMinutes, props.terminal),
         props.terminal,
         Queues.queueOrder).flatMap(_._2)
 
@@ -144,9 +146,9 @@ object DashboardTerminalSummary {
 
         val pressurePoint = worstTimeslot(aggregateAcrossQueues(crunchMinuteTimeSlots.toList, props.terminal))
 
-        def pressureStaffMinute = props.staffMinutes.find(_.minute == pressurePoint.minute)
+        def pressureStaffMinute: Option[StaffMinute] = props.staffMinutes.find(_.minute == pressurePoint.minute)
 
-        val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.available).getOrElse(0)
+        val pressurePointAvailableStaff = pressureStaffMinute.map(sm => sm.availableAtPcp).getOrElse(0)
         val ragClass = TerminalDesksAndQueuesRow.ragStatus(pressurePoint.deskRec, pressurePointAvailableStaff)
 
         val splitsForPeriod: Map[PaxTypeAndQueue, Int] = aggSplits(props.paxFeedSourceOrder, props.flights)

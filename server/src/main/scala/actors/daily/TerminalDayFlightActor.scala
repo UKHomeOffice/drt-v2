@@ -10,6 +10,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
+import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals._
 import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
@@ -20,6 +21,7 @@ import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion
 import uk.gov.homeoffice.drt.protobuf.serialisation.FlightMessageConversion._
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 
+import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
 object TerminalDayFlightActor {
@@ -31,19 +33,21 @@ object TerminalDayFlightActor {
                               terminalSplits: Option[Splits],
                               requestHistoricSplitsActor: Option[ActorRef],
                               requestHistoricPaxActor: Option[ActorRef],
+                              maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit]],
                              ): Props =
     Props(new TerminalDayFlightActor(
-      date.year,
-      date.month,
-      date.day,
-      terminal,
-      now,
-      None,
-      cutOff,
-      paxFeedSourceOrder,
-      terminalSplits,
-      requestHistoricSplitsActor,
-      requestHistoricPaxActor,
+      year = date.year,
+      month = date.month,
+      day = date.day,
+      terminal = terminal,
+      now = now,
+      maybePointInTime = None,
+      maybeRemovalMessageCutOff = cutOff,
+      paxFeedSourceOrder = paxFeedSourceOrder,
+      terminalSplits = terminalSplits,
+      maybeRequestHistoricSplitsActor = requestHistoricSplitsActor,
+      maybeRequestHistoricPaxActor = requestHistoricPaxActor,
+      maybeUpdateLiveView = maybeUpdateLiveView,
     ))
 
   def propsPointInTime(terminal: Terminal,
@@ -55,17 +59,18 @@ object TerminalDayFlightActor {
                        terminalSplits: Option[Splits],
                       ): Props =
     Props(new TerminalDayFlightActor(
-      date.year,
-      date.month,
-      date.day,
-      terminal,
-      now,
-      Option(pointInTime),
-      cutOff,
-      paxFeedSourceOrder,
-      terminalSplits,
-      None,
-      None,
+      year = date.year,
+      month = date.month,
+      day = date.day,
+      terminal = terminal,
+      now = now,
+      maybePointInTime = Option(pointInTime),
+      maybeRemovalMessageCutOff = cutOff,
+      paxFeedSourceOrder = paxFeedSourceOrder,
+      terminalSplits = terminalSplits,
+      maybeRequestHistoricSplitsActor = None,
+      maybeRequestHistoricPaxActor = None,
+      maybeUpdateLiveView = None,
     ))
 }
 
@@ -80,6 +85,7 @@ class TerminalDayFlightActor(year: Int,
                              terminalSplits: Option[Splits],
                              maybeRequestHistoricSplitsActor: Option[ActorRef],
                              maybeRequestHistoricPaxActor: Option[ActorRef],
+                             maybeUpdateLiveView: Option[(Iterable[ApiFlightWithSplits], Iterable[UniqueArrival]) => Future[Unit]],
                             ) extends RecoveryActorLike {
   val loggerSuffix: String = maybePointInTime match {
     case None => ""
@@ -156,7 +162,7 @@ class TerminalDayFlightActor(year: Int,
       updateAndPersistDiffAndAck(diff)
 
     case RemoveSplits =>
-      val diff = FlightsWithSplitsDiff(state.flights.values.map(_.copy(splits = Set(), lastUpdated = Option(now().millisSinceEpoch))), Seq())
+      val diff = FlightsWithSplitsDiff(state.flights.values.map(_.copy(splits = Set(), lastUpdated = Option(now().millisSinceEpoch))))
       log.info(s"Removing splits for terminal ${terminal.toString} for day $year-$month%02d-$day%02d")
       updateAndPersistDiffAndAck(diff)
 
@@ -195,41 +201,43 @@ class TerminalDayFlightActor(year: Int,
     acceptableExistingSources.isEmpty
   }
 
-  private def applyDiffAndPersist(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long])): Set[MillisSinceEpoch] = {
-    val (updatedState, minutesToUpdate) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
+  private def applyDiffAndRequestMissingData(applyDiff: (FlightsWithSplits, Long, List[FeedSource]) => (FlightsWithSplits, Set[Long], Iterable[ApiFlightWithSplits], Iterable[UniqueArrival])
+                                            ): Set[TerminalUpdateRequest] = {
+    val (updatedState, minutesToUpdate, updates, removals) = applyDiff(state, now().millisSinceEpoch, paxFeedSourceOrder)
 
     state = updatedState
+
+    maybeUpdateLiveView.foreach(_(updates, removals))
 
     requestMissingPax()
     requestMissingHistoricSplits()
 
     minutesToUpdate
+      .map(SDate(_).toLocalDate)
+      .map(TerminalUpdateRequest(terminal, _))
   }
 
   private def updateAndPersistDiffAndAck(diff: FlightsWithSplitsDiff): Unit =
     if (diff.nonEmpty) {
-      val minutesToUpdate = applyDiffAndPersist(diff.applyTo)
+      val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
       val message = flightWithSplitsDiffToMessage(diff, now().millisSinceEpoch)
-      persistAndMaybeSnapshotWithAck(message, List((sender(), minutesToUpdate)))
+      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
     }
     else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: ArrivalsDiff): Unit =
     if (diff.toUpdate.nonEmpty || diff.toRemove.nonEmpty) {
-      val minutesToUpdate = applyDiffAndPersist(diff.applyTo)
+      val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
       val message = arrivalsDiffToMessage(diff, now().millisSinceEpoch)
-      persistAndMaybeSnapshotWithAck(message, List((sender(), minutesToUpdate)))
+      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
     } else sender() ! Set.empty
 
   private def updateAndPersistDiffAndAck(diff: SplitsForArrivals): Unit =
     if (diff.splits.nonEmpty) {
       val timestamp = now().millisSinceEpoch
-      val (updatedState, minutes) = diff.applyTo(state, timestamp, paxFeedSourceOrder)
-      state = updatedState
-
-      val replyToAndMessage = List((sender(), minutes))
+      val updateRequests = applyDiffAndRequestMissingData(diff.applyTo)
       val message = splitsForArrivalsToMessage(diff, timestamp)
-      persistAndMaybeSnapshotWithAck(message, replyToAndMessage)
+      persistAndMaybeSnapshotWithAck(message, List((sender(), updateRequests)))
     } else sender() ! Set.empty
 
   private def isBeforeCutoff(timestamp: Long): Boolean = maybeRemovalsCutoffTimestamp match {

@@ -3,8 +3,7 @@ package actors.persistent
 import akka.actor.ActorRef
 import akka.stream._
 import akka.stream.stage._
-import drt.shared.CrunchApi.MillisSinceEpoch
-import uk.gov.homeoffice.drt.actor.commands.{ProcessingRequest, RemoveProcessingRequest}
+import uk.gov.homeoffice.drt.actor.commands.{RemoveProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.time.SDate
 
 import scala.collection.{SortedSet, mutable}
@@ -16,17 +15,16 @@ private object SortedActorRefSource {
 }
 
 final class SortedActorRefSource(persistentActor: ActorRef,
-                                 processingRequest: MillisSinceEpoch => ProcessingRequest,
-                                 initialQueue: SortedSet[ProcessingRequest],
+                                 initialQueue: SortedSet[TerminalUpdateRequest],
                                  graphName: String,
                                 )
-  extends GraphStageWithMaterializedValue[SourceShape[ProcessingRequest], ActorRef] {
+  extends GraphStageWithMaterializedValue[SourceShape[TerminalUpdateRequest], ActorRef] {
 
   import SortedActorRefSource._
 
-  val out: Outlet[ProcessingRequest] = Outlet[ProcessingRequest]("actorRefSource.out")
+  val out: Outlet[TerminalUpdateRequest] = Outlet[TerminalUpdateRequest]("actorRefSource.out")
 
-  override val shape: SourceShape[ProcessingRequest] = SourceShape.of(out)
+  override val shape: SourceShape[TerminalUpdateRequest] = SourceShape.of(out)
 
   def createLogicAndMaterializedValue(inheritedAttributes: Attributes): (GraphStageLogic, ActorRef) =
     throw new IllegalStateException("Not supported")
@@ -37,7 +35,7 @@ final class SortedActorRefSource(persistentActor: ActorRef,
       with ActorRefStage {
       override protected def logSource: Class[_] = classOf[SortedActorRefSource]
 
-      private val buffer: mutable.SortedSet[ProcessingRequest] = mutable.SortedSet.empty[ProcessingRequest] ++ initialQueue
+      private val buffer: mutable.SortedSet[TerminalUpdateRequest] = mutable.SortedSet.empty[TerminalUpdateRequest] ++ initialQueue
       private var prioritiseForecast: Boolean = false
 
       override protected def stageActorName: String =
@@ -47,10 +45,11 @@ final class SortedActorRefSource(persistentActor: ActorRef,
         case (_, m: Iterable[_]) =>
           m.headOption
             .map {
-              case _: ProcessingRequest =>
-                m.collect { case r: ProcessingRequest => r }
-              case _: Long =>
-                m.collect { case l: Long => processingRequest(l) }
+              case _: TerminalUpdateRequest =>
+                m.collect { case r: TerminalUpdateRequest => r }
+              case unexpected =>
+                log.error(s"[$graphName] Received unexpected message ${unexpected.getClass.getSimpleName}")
+                Iterable.empty
             }
             .map { requests =>
               buffer ++= requests
@@ -58,7 +57,7 @@ final class SortedActorRefSource(persistentActor: ActorRef,
               tryPushElement()
             }
 
-        case (_, r: ProcessingRequest) =>
+        case (_, r: TerminalUpdateRequest) =>
           buffer += r
           persistentActor ! r
           tryPushElement()

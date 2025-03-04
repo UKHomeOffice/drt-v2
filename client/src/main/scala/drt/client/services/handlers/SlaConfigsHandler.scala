@@ -13,7 +13,18 @@ import upickle.default.{read, write}
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class SlaConfigsHandler[M](modelRW: ModelRW[M, Pot[SlaConfigs]]) extends LoggingActionHandler(modelRW) {
+abstract class PotActionHandler[M, T](modelRW: ModelRW[M, Pot[T]]) extends LoggingActionHandler(modelRW) {
+  def updateIfChanged(newValue: T, poll: Effect): ActionResult[M] = {
+    value match {
+      case Ready(currentValue) if currentValue == newValue =>
+        effectOnly(poll)
+      case _ =>
+        updated(Ready(newValue), poll)
+    }
+  }
+}
+
+class SlaConfigsHandler[M](modelRW: ModelRW[M, Pot[SlaConfigs]]) extends PotActionHandler(modelRW) {
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetSlaConfigs =>
       effectOnly(Effect(DrtApi.get("sla-configs")
@@ -25,12 +36,7 @@ class SlaConfigsHandler[M](modelRW: ModelRW[M, Pot[SlaConfigs]]) extends Logging
 
     case UpdateSlaConfigs(slaConfigs) =>
       val poll = Effect(Future(GetSlaConfigs)).after(PollDelay.updatesDelay)
-      value match {
-        case Ready(configs) if configs == slaConfigs =>
-          effectOnly(poll)
-        case _ =>
-          updated(Ready(slaConfigs), poll)
-      }
+      updateIfChanged(slaConfigs, poll)
 
     case SaveSlasUpdate(update) =>
       val eventualUpdate = DrtApi.post("sla-configs", write(update))

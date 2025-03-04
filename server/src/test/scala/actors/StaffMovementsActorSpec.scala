@@ -1,6 +1,7 @@
 package actors
 
 
+import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements}
 import actors.persistent.staffing._
 import akka.actor.{PoisonPill, Props}
 import akka.pattern.StatusReply
@@ -33,16 +34,16 @@ class StaffMovementsActorSpec extends CrunchTestLike with ImplicitSender {
       val staffMovements = StaffMovements(Seq(StaffMovement(T1, "lunch start", SDate(s"2017-01-01T00:00").millisSinceEpoch, -1, uuid, createdBy = Some("batman"))))
 
       val actor = system.actorOf(Props(new StaffMovementsActor(now, expireAfterOneDay)), "movementsActor1")
-      val updatesActor = system.actorOf(StaffMovementsActor.streamingUpdatesProps(InMemoryStreamingJournal, 1440))
+      val updatesActor = system.actorOf(StaffMovementsActor.streamingUpdatesProps(InMemoryStreamingJournal))
 
       val probe = TestProbe("movements-subscriber-test")
       updatesActor ! AddUpdatesSubscriber(probe.ref)
 
       actor ! AddStaffMovements(staffMovements.movements)
-      probe.expectMsg(List(TerminalUpdateRequest(T1, LocalDate(2017, 1, 1), 0, 1440)))
+      probe.expectMsg(List(TerminalUpdateRequest(T1, LocalDate(2017, 1, 1))))
 
       actor ! RemoveStaffMovements(uuid)
-      probe.expectMsg(List(TerminalUpdateRequest(T1, LocalDate(2017, 1, 1), 0, 1440)))
+      probe.expectMsg(List(TerminalUpdateRequest(T1, LocalDate(2017, 1, 1))))
 
       true
     }

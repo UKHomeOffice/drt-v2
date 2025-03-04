@@ -4,11 +4,11 @@ import akka.actor.{ActorRef, Props}
 import akka.pattern.{StatusReply, ask}
 import akka.testkit.TestProbe
 import drt.shared.CrunchApi._
-import drt.shared.TQM
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.DataUpdates.Combinable
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
+import uk.gov.homeoffice.drt.model.{CrunchMinute, MinuteLike, TQM}
 import uk.gov.homeoffice.drt.ports.Queues.EeaDesk
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
@@ -84,8 +84,12 @@ class SequentialAccessActorSpec extends CrunchTestLike {
 
     val ackReceived = Await.result(actor.ask("A1,A2,B1"), 1.second) === StatusReply.Ack
 
-    probeA.expectMsg(Set("A <- 1", "A <- 2", "B <- 1"))
-    probeB.expectMsg(Set("A <- 1", "A <- 2", "B <- 1"))
+    probeA.expectMsg("A <- 1")
+    probeA.expectMsg("A <- 2")
+    probeA.expectMsg("B <- 1")
+    probeB.expectMsg("A <- 1")
+    probeB.expectMsg("A <- 2")
+    probeB.expectMsg("B <- 1")
 
     ackReceived
   }
@@ -126,8 +130,10 @@ class SequentialAccessActorSpec extends CrunchTestLike {
       PassengersMinute(Terminal("T2"), EeaDesk, SDate("2022-09-04T08:00").millisSinceEpoch, Seq(10, 11, 12), None),
     ))), 1.second) === StatusReply.Ack
 
-    probeA.expectMsg(Set(0, 1))
-    probeB.expectMsg(Set(0, 1))
+    probeA.expectMsg(0)
+    probeA.expectMsg(1)
+    probeB.expectMsg(0)
+    probeB.expectMsg(1)
 
     ackReceived
   }
@@ -172,8 +178,10 @@ class SequentialAccessActorSpec extends CrunchTestLike {
 
     val ack2Received = Await.result(actor.ask(MinutesContainer(Seq(deskRecMinute))), 1.second) === StatusReply.Ack
 
-    probeA.expectMsg(Set(0, 1))
-    probeB.expectMsg(Set(0, 1))
+    probeA.expectMsg(0)
+    probeA.expectMsg(1)
+    probeB.expectMsg(0)
+    probeB.expectMsg(1)
 
     ack1Received && ack2Received
   }

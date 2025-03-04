@@ -3,14 +3,14 @@ package drt.client.services.handlers
 import diode._
 import drt.client.actions.Actions._
 import drt.client.services.DrtApi
-import drt.shared.ArrivalKey
+import drt.shared.ManifestKey
 import drt.shared.api.FlightManifestSummary
 import io.lemonlabs.uri.QueryString
 import upickle.default._
 
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
-class FlightManifestSummariesHandler[M](modelRW: ModelRW[M, Map[ArrivalKey, FlightManifestSummary]]) extends LoggingActionHandler(modelRW) {
+class FlightManifestSummariesHandler[M](modelRW: ModelRW[M, Map[ManifestKey, FlightManifestSummary]]) extends LoggingActionHandler(modelRW) {
   override def handle: PartialFunction[Any, ActionResult[M]] = {
     case GetManifestSummariesForDate(date) =>
       val request = Effect(DrtApi.get(s"manifest-summaries/$date/summary")

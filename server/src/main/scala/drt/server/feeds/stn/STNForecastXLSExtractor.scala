@@ -93,6 +93,7 @@ object STNForecastXLSExtractor {
         carrierCode = carrierCode.code,
         flightCodeSuffix = suffix.map(_.suffix),
         origin = flightRow.origin,
+        previousPort = None,
         scheduled = flightRow.scheduledDate.millisSinceEpoch,
       )
     }

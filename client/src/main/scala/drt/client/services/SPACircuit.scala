@@ -8,16 +8,17 @@ import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers._
 import drt.shared.CrunchApi._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
-import drt.shared.{Country, _}
 import drt.shared.api.{FlightManifestSummary, ForecastAccuracy, WalkTimes}
+import drt.shared._
 import uk.gov.homeoffice.drt.ABFeature
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.egates.PortEgateBanksUpdates
 import uk.gov.homeoffice.drt.feedback.UserFeedback
 import uk.gov.homeoffice.drt.feeds.FeedSourceStatuses
+import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 import uk.gov.homeoffice.drt.training.FeatureGuide
@@ -69,61 +70,67 @@ case class ViewDay(localDate: LocalDate, timeMachineDate: Option[SDateLike]) ext
 }
 
 sealed trait ExportType {
+  def linkLabel: String
+
   def toUrlString: String
+
+  def maybeTerminal: Option[Terminal]
 }
 
-object ExportDeskRecs extends ExportType {
-  override def toString = "Recommendations"
+case class ExportDeskRecs(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Recommendations"
 
   override def toUrlString: String = "desk-recs"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
-object ExportDeployments extends ExportType {
-  override def toString = "Deployments"
+case class ExportDeployments(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Deployments"
 
   override def toUrlString: String = "desk-deps"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
-object ExportArrivals extends ExportType {
-  override def toString = "Arrivals"
-
-  override def toUrlString: String = toString.toLowerCase
-}
-
-object ExportLiveArrivalsFeed extends ExportType {
-  override def toString = "Live arrivals feed"
+case class ExportLiveArrivalsFeed(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Live arrivals feed"
 
   override def toUrlString: String = "arrivals-feed"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
-case class ExportArrivalsWithRedListDiversions(label: String) extends ExportType {
-  override def toString: String = label
-
-  override def toUrlString: String = "arrivals-with-red-list-diversions"
-}
-
-case class ExportArrivalsWithoutRedListDiversions(label: String) extends ExportType {
-  override def toString: String = label
+case class ExportArrivals(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Arrivals"
 
   override def toUrlString: String = "arrivals"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
-object ExportArrivalsSingleTerminal extends ExportType {
-  override def toString = "Single terminal"
+case class ExportArrivalsSingleTerminal(terminal: Terminal) extends ExportType {
+  override def linkLabel = s"Export ${terminal.toString}"
 
   override def toUrlString: String = "arrivals"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
 object ExportArrivalsCombinedTerminals extends ExportType {
-  override def toString = "Combined terminals"
+  override def linkLabel = "Export all terminals"
 
-  override def toUrlString: String = "arrivals-with-red-list-diversions"
+  override def toUrlString: String = "arrivals-combined"
+
+  override def maybeTerminal: Option[Terminal] = None
 }
 
-object ExportStaffMovements extends ExportType {
-  override def toString = "Movements"
+case class ExportStaffMovements(terminal: Terminal) extends ExportType {
+  override def linkLabel = "Movements"
 
   override def toUrlString: String = "staff-movements"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
 case class LoadingState(isLoading: Boolean = false)
@@ -140,8 +147,10 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      airportConfig: Pot[AirportConfig] = Empty,
                      arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])] = None,
                      contactDetails: Pot[ContactDetails] = Empty,
-                     shifts: Pot[ShiftAssignments] = Empty,
-                     monthOfShifts: Pot[MonthOfShifts] = Empty,
+                     legacyDayOfStaffAssignments: Pot[ShiftAssignments] = Empty,
+                     dayOfStaffAssignments: Pot[ShiftAssignments] = Empty,
+                     allShifts: Pot[ShiftAssignments] = Empty,
+                     allStaffAssignments:Pot[ShiftAssignments] = Empty,
                      fixedPoints: Pot[FixedPointAssignments] = Empty,
                      staffMovements: Pot[StaffMovements] = Empty,
                      viewMode: ViewMode = ViewLive,
@@ -149,7 +158,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      showActualIfAvailable: Boolean = false,
                      loggedInUserPot: Pot[LoggedInUser] = Empty,
                      userHasPortAccess: Pot[Boolean] = Empty,
-                     minuteTicker: Int = 0,
+                     minuteTicker: Pot[Int] = Empty,
                      keyCloakUsers: Pot[List[KeyCloakUser]] = Empty,
                      selectedUserGroups: Pot[Set[KeyCloakGroup]] = Empty,
                      feedStatuses: Pot[Seq[FeedSourceStatuses]] = Empty,
@@ -159,7 +168,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureFlags: Pot[FeatureFlags] = Empty,
                      fileUploadState: Pot[FileUploadState] = Empty,
                      simulationResult: Pot[SimulationResult] = Empty,
-                     passengerInfoSummariesByArrival: Pot[Map[ArrivalKey, FlightManifestSummary]] = Ready(Map()),
+                     passengerInfoSummariesByArrival: Pot[Map[ManifestKey, FlightManifestSummary]] = Ready(Map()),
                      snackbarMessage: Pot[String] = Empty,
                      redListPorts: Pot[HashSet[PortCode]] = Empty,
                      redListUpdates: Pot[RedListUpdates] = Empty,
@@ -169,32 +178,31 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      featureGuides: Pot[Seq[FeatureGuide]] = Empty,
                      maybeTimeMachineDate: Option[SDateLike] = None,
                      flaggedNationalities: Set[Country] = Set(),
-                     filterFlightNumber: String = "",
-                     flightManifestSummaries: Map[ArrivalKey, FlightManifestSummary] = Map(),
+                     flightManifestSummaries: Map[ManifestKey, FlightManifestSummary] = Map(),
                      paxFeedSourceOrder: List[FeedSource] = List(),
                      showNewFeatureGuideOnLogin: Pot[Boolean] = Empty,
                      featureGuideViewedIds: Pot[Seq[String]] = Empty,
                      dropIns: Pot[Seq[DropIn]] = Empty,
                      dropInRegistrations: Pot[Seq[DropInRegistration]] = Empty,
                      userFeedbacks: Pot[Seq[UserFeedback]] = Empty,
-                     abFeatures:Pot[Seq[ABFeature]] = Empty,
+                     abFeatures: Pot[Seq[ABFeature]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
-                     userSelectedPlanningTimePeriod: Pot[Int] = Empty,
-                     flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], "")
+                     userPreferences: Pot[UserPreferences] = Empty,
+                     shifts: Pot[Seq[Shift]] = Empty,
+                     flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
                     )
 
 object PollDelay {
-  val recoveryDelay: FiniteDuration = 10 seconds
-  val loginCheckDelay: FiniteDuration = 30 seconds
-  val updatesDelay: FiniteDuration = 10 seconds
-  val oohSupportUpdateDelay: FiniteDuration = 1 minute
-  val checkFeatureFlagsDelay: FiniteDuration = 10 minutes
+  val recoveryDelay: FiniteDuration = 10.seconds
+  val loginCheckDelay: FiniteDuration = 10.seconds
+  val updatesDelay: FiniteDuration = 10.seconds
+  val minuteTickerDelay: FiniteDuration = 1.seconds
+  val oohSupportUpdateDelay: FiniteDuration = 10.seconds
+  val checkFeatureFlagsDelay: FiniteDuration = 10.seconds
 }
 
 trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
-  val blockWidth = 15
-
   override protected def initialModel: RootModel = RootModel()
 
   def currentViewMode: () => ViewMode = () => zoom(_.viewMode).value
@@ -225,8 +233,10 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new OohForSupportHandler(zoomRW(_.oohStatus)((m, v) => m.copy(oohStatus = v))),
       new FeatureFlagHandler(zoomRW(_.featureFlags)((m, v) => m.copy(featureFlags = v))),
       new ApplicationVersionHandler(zoomRW(_.applicationVersion)((m, v) => m.copy(applicationVersion = v))),
-      new ShiftsHandler(currentViewMode, zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
-      new ShiftsForMonthHandler(zoomRW(_.monthOfShifts)((m, v) => m.copy(monthOfShifts = v))),
+      new LegacyShiftsHandler(currentViewMode, zoomRW(_.legacyDayOfStaffAssignments)((m, v) => m.copy(legacyDayOfStaffAssignments = v))),
+      new LegacyAllStaffAssignmentsHandler(zoomRW(_.allShifts)((m, v) => m.copy(allShifts = v))),
+      new StaffAssignmentsHandler(currentViewMode, zoomRW(_.dayOfStaffAssignments)((m, v) => m.copy(dayOfStaffAssignments = v))),
+      new AllStaffAssignmentsHandler(zoomRW(_.allStaffAssignments)((m, v) => m.copy(allStaffAssignments = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
       new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
       new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3))),
@@ -252,7 +262,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new AppControlHandler(zoomRW(identity)((m, _) => m)),
       new ForecastAccuracyHandler(zoomRW(_.passengerForecastAccuracy)((m, v) => m.copy(passengerForecastAccuracy = v))),
       new FlaggedNationalitiesHandler(zoomRW(_.flaggedNationalities)((m, v) => m.copy(flaggedNationalities = v))),
-      new FlightFilterHandler(zoomRW(_.filterFlightNumber)((m, v) => m.copy(filterFlightNumber = v))),
       new FeatureGuidesHandler(zoomRW(_.featureGuides)((m, v) => m.copy(featureGuides = v))),
       new FeatureGuideDialogHandler(zoomRW(_.showNewFeatureGuideOnLogin)((m, v) => m.copy(showNewFeatureGuideOnLogin = v))),
       new ViewedFeatureGuidesHandler(zoomRW(_.featureGuideViewedIds)((m, v) => m.copy(featureGuideViewedIds = v))),
@@ -262,8 +271,9 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ABFeatureHandler(zoomRW(_.abFeatures)((m, v) => m.copy(abFeatures = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
-      new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v))),
-      new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v)))
+      new UserPreferencesHandler(zoomRW(_.userPreferences)((m, v) => m.copy(userPreferences = v))),
+      new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
+      new ShiftsHandler(zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
     )
     composedHandlers
   }

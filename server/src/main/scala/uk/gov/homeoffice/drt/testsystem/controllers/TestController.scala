@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.testsystem.controllers
 
-import actors.persistent.staffing.ReplaceAllShifts
+import actors.persistent.staffing.ShiftsActor.ReplaceAllShifts
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import akka.actor.ActorSystem
 import akka.pattern.ask
@@ -82,6 +82,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
             carrierCode = carrierCode.code,
             flightCodeSuffix = maybeSuffix.map(_.suffix),
             origin = flight.Origin,
+            previousPort = None,
             scheduled = SDate(flight.SchDT).millisSinceEpoch,
             estimated = Option(SDate(flight.EstDT).millisSinceEpoch),
             touchdown = Option(SDate(flight.ActDT).millisSinceEpoch),
@@ -165,7 +166,7 @@ class TestController @Inject()(cc: ControllerComponents, ctrl: TestDrtSystem, no
         maybeShifts match {
           case Some(shifts) =>
             log.info(s"Received ${shifts.assignments.length} shifts. Sending to actor")
-            ctrl.actorService.shiftsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
+            ctrl.actorService.legacyStaffAssignmentsSequentialWritesActor ! ReplaceAllShifts(shifts.assignments)
             Created
           case _ =>
             BadRequest("{\"error\": \"Unable to parse data\"}")
