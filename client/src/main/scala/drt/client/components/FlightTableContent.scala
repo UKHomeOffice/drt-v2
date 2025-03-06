@@ -4,6 +4,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.TerminalPageTabLoc
+import drt.client.components.DaySelectorComponent.currentSearchForm
 import drt.client.components.ToolTips._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -26,7 +27,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
-import uk.gov.homeoffice.drt.time.LocalDate
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.{HashSet, Seq}
 import scala.scalajs.js
@@ -55,38 +56,15 @@ object FlightTableContent {
                   ) extends UseValueEq
 
   class Backend {
-    def arrivalTime(terminalPageTab: TerminalPageTabLoc): String = {
-      val viewDate: LocalDate = terminalPageTab.viewMode.localDate
-      val viewDateString = f"${viewDate.day}%02d/${viewDate.month}%02d/${viewDate.year - 2000}%02d"
-      val isYesterday = viewDateString == SDate.now().addDays(-1).ddMMyyString
-      def isToday = viewDateString == SDate.now().ddMMyyString
-      val isTomorrow = viewDateString == SDate.now().addDays(1).ddMMyyString
-      val dayDisplayText = if (isYesterday) "yesterday" else if (isTomorrow) "tomorrow" else if(isToday) "today" else s"${viewDate.day}-${viewDate.month}-${viewDate.year}"
 
-      def getCurrentWindowTimeString = {
-        val currentWindow = CurrentWindow()
-        val fromTime = SDate(viewDate.toISOString).addHours(currentWindow.start)
-        val toTime = SDate(viewDate.toISOString).addHours(currentWindow.end)
-
-        val fromTimeHours: String = f"${fromTime.getHours}%02d"
-        val fromTimeMinutes = f"${fromTime.getMinutes}%02d"
-        val toTimeHours = f"${toTime.getHours}%02d"
-        val toTimeMinutes = f"${toTime.getMinutes}%02d"
-
-        s"${fromTimeHours}:${fromTimeMinutes} - ${toTimeHours}:${toTimeMinutes}"
-      }
-
-      def defaultTimeRangeWindow: String = if (isToday)
-        if (terminalPageTab.timeRangeStart.contains(0) && terminalPageTab.timeRangeEnd.contains(24)) "24 hours" else getCurrentWindowTimeString
-      else "24 hours"
-
-
-      s"$dayDisplayText ($defaultTimeRangeWindow)"
-    }
-
-    val handleTogglePaxSourceIcon = (e: ReactEventFromInput, userPreferences: UserPreferences) => Callback {
+    private val handleTogglePaxSourceIcon = (e: ReactEventFromInput, userPreferences: UserPreferences) => Callback {
       e.preventDefault()
       SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(hidePaxDataSourceDescription = !e.target.checked)))
+    }
+
+    private def displayArrivalSearchDate(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): String = {
+      val searchForm = currentSearchForm(selectedDate, terminalPageTab)
+      s"${searchForm.displayText} (${searchForm.fromTime} - ${searchForm.toTime})"
     }
 
 
@@ -120,7 +98,7 @@ object FlightTableContent {
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
-              <.div(^.style := js.Dictionary("paddingTop" -> "10px"), MuiTypography(sx = SxProps(Map("fontSize" -> "18px", "fontWeight" -> "bold")))(s"Arrivals, ${arrivalTime(props.terminalPageTab)}")),
+              <.div(^.style := js.Dictionary("paddingTop" -> "10px"), MuiTypography(sx = SxProps(Map("fontSize" -> "18px", "fontWeight" -> "bold")))(s"Arrivals, ${displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab)}")),
               <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"))(
                 <.div {
                   val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || ageGroups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals

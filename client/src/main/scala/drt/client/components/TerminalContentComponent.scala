@@ -47,7 +47,7 @@ object TerminalContentComponent {
                    airportConfig: AirportConfig,
                    slaConfigs: Pot[SlaConfigs],
                    terminalPageTab: TerminalPageTabLoc,
-                   defaultTimeRangeHours: TimeRangeHours,
+                   defaultTimeRangeHours: TimeRangeHoursMM,
                    router: RouterCtl[Loc],
                    showActuals: Boolean,
                    viewMode: ViewMode,
