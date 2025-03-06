@@ -61,13 +61,13 @@ object TerminalComponent {
 
   private val activeClass = "active"
 
-  private def timeRange(terminalPageTab: TerminalPageTabLoc, defaultTimeRangeHours: TimeRangeHoursMM): CustomWindowHHMM =
-    TimeRangeHoursMM(
-      terminalPageTab.timeRangeStartHHMM.getOrElse(defaultTimeRangeHours.start),
-      terminalPageTab.timeRangeEndHHMM.getOrElse(defaultTimeRangeHours.end)
+  private def timeRange(terminalPageTab: TerminalPageTabLoc, defaultTimeRangeHours: TimeRangeHours): CustomWindow =
+    TimeRangeHours(
+      terminalPageTab.timeRangeStart.getOrElse(defaultTimeRangeHours.start),
+      terminalPageTab.timeRangeEnd.getOrElse(defaultTimeRangeHours.end)
     )
 
-  def viewStartAndEnd(day: LocalDate, range: TimeRangeHoursMM): (SDateLike, SDateLike) = {
+  def viewStartAndEnd(day: LocalDate, range: TimeRangeHours): (SDateLike, SDateLike) = {
     val startOfDay = SDate(day)
     val startOfView = startOfDay.addHours(range.startInt)
     val endOfView = startOfDay.addHours(range.endInt)
@@ -112,8 +112,8 @@ object TerminalComponent {
             shifts <- terminalModel.shiftsPot
             userPreferences <- terminalModel.userPreferences
           } yield {
-            val timeRangeHours: TimeRangeHoursMM = if (terminalModel.viewMode == ViewLive) CurrentWindowHHMM() else WholeDayWindowHHMM()
-            val timeWindow: CustomWindowHHMM = timeRange(props.terminalPageTab, timeRangeHours)
+            val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
+            val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
             val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeWindow)
 
             <.div(

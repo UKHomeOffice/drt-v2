@@ -30,11 +30,11 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
     val isTomorrow = selectedDate.ddMMyyString == SDate.now().addDays(1).ddMMyyString
 
-    def defaultTimeHHMMRangeWindow: TimeRangeHoursMM = if (isToday) CurrentWindowHHMM() else WholeDayWindowHHMM()
+    def defaultTimeHHMMRangeWindow: TimeRangeHours = if (isToday) CurrentWindow() else WholeDayWindow()
 
-    val selectedWindow = TimeRangeHoursMM(
-      terminalPageTab.timeRangeStartHHMM.getOrElse(defaultTimeHHMMRangeWindow.start),
-      terminalPageTab.timeRangeEndHHMM.getOrElse(defaultTimeHHMMRangeWindow.end)
+    val selectedWindow = TimeRangeHours(
+      terminalPageTab.timeRangeStart.getOrElse(defaultTimeHHMMRangeWindow.start),
+      terminalPageTab.timeRangeEnd.getOrElse(defaultTimeHHMMRangeWindow.end)
     )
 
     println(s"..selectedWindow: ${selectedWindow.start} ${selectedWindow.end}")
@@ -81,7 +81,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         case _ => None
       }
 
-      val currentTimestamp = CurrentWindowHHMM()
+      val currentTimestamp = CurrentWindow()
       State(DisplayDate(date = viewMode.localDate, "now",
         startTime = currentTimestamp.start,
         endTime = currentTimestamp.end,
@@ -127,23 +127,23 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
         println(s"....s.toDate : ${s.toDate} endTimeFormat: $endTimeFormat startTimeFormat: $startTimeFormat")
 
-        val selectedWindow: TimeRangeHoursMM = s.time match {
+        val selectedWindow: TimeRangeHours = s.time match {
           case "now" =>
             GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "now")
-            CurrentWindowHHMM()
+            CurrentWindow()
 
           case "24hour" =>
             GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "24 hours")
-            WholeDayWindowHHMM()
+            WholeDayWindow()
 
           case "range" =>
             GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "range")
-            TimeRangeHoursMM(
-              startTimeFormat.getOrElse(CurrentWindowHHMM().start),
-              endTimeFormat.getOrElse(CurrentWindowHHMM().end)
+            TimeRangeHours(
+              startTimeFormat.getOrElse(CurrentWindow().start),
+              endTimeFormat.getOrElse(CurrentWindow().end)
             )
 
-          case _ => CurrentWindowHHMM()
+          case _ => CurrentWindow()
         }
 
         println(s"...selectedWindow: ${selectedWindow.start} ${selectedWindow.end}")
