@@ -84,8 +84,8 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
-    val manifestPath = "server/target/web/public/main/frontend/dist/.vite/manifest.json"
-//  val manifestPath = "server/src/main/.vite/manifest.json"
+//    val manifestPath = "server/target/web/public/main/frontend/dist/.vite/manifest.json"
+  val manifestPath = "server/src/main/.vite/manifest.json"
   val manifestFile = new java.io.File(manifestPath)
   val manifestJson = if (manifestFile.exists()) {
     println(s"\n\n** Found manifest file at $manifestPath")
