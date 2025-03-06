@@ -128,7 +128,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           }
           else Some(f"${s.toDate.split(":")(0).toInt}%02d:00") else None
 
-        println(s"....endTimeFormat: $endTimeFormat startTimeFormat: $startTimeFormat")
+        println(s"....s.toDate : ${s.toDate} endTimeFormat: $endTimeFormat startTimeFormat: $startTimeFormat")
 
         val selectedWindow: TimeRangeHoursMM =  s.time match {
           case "now" => //GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "now")
@@ -186,6 +186,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
       <.div(^.className := s"flex-horz-between",
         ThemeProvider(DrtReactTheme)(
+          <.div(^.className := s"arrival-datetime-pax-search",
           LocalDateProvider(ILocalDateProvider(
             PaxSearchFormComponent(
               IPaxSearchForm(
@@ -203,7 +204,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                 }
               )
             ))
-          )
+          ))
         ),
         state.maybeTimeMachineDate match {
           case Some(tmDate) =>
