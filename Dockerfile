@@ -23,7 +23,6 @@ COPY --from=stage0 --chown=drt:root /2/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /4/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /opt/docker/public /opt/docker/public
 COPY --from=stage0 --chown=drt:root /opt/docker/.vite /opt/docker/.vite
-#RUN chmod a+rwx /opt/docker/public -R
 
 RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt

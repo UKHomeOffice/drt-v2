@@ -13,7 +13,13 @@ export default defineConfig({
   build: {
     outDir: '../server/src/main',
     manifest: true,
-    // emptyOutDir: true,
+    rollupOptions: {
+      treeshake: 'recommended',
+      onwarn(warning, warn) {
+        if (warning.code === "MODULE_LEVEL_DIRECTIVE") return;
+        warn(warning);
+      },
+    },
   },
   server: {
     proxy: {
