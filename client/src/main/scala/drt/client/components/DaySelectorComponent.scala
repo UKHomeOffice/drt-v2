@@ -1,22 +1,15 @@
 package drt.client.components
 
 import diode.UseValueEq
-import diode.data.Pot
 import drt.client.SPAMain._
-import drt.client.components.styles.{DrtReactTheme, DrtTheme, ILocalDateProvider, LocalDateProvider}
-import drt.client.components.styles.DrtTheme._
+import drt.client.components.styles.{DrtReactTheme, ILocalDateProvider, LocalDateProvider}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{LoadingState, ViewDay}
-import drt.client.util.DateUtil.isNotValidDate
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
-import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Info
-import japgolly.scalajs.react.callback.CallbackTo
 import japgolly.scalajs.react.component.Scala.Component
-import japgolly.scalajs.react.component.builder.ComponentBuilder
 import japgolly.scalajs.react.extra.router.{RouterCtl, SetRouteVia}
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
@@ -25,7 +18,7 @@ import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.scalajs.js
 
-case class SearchForm(displayText: String, timeText:String, arrivalDate: js.Date, fromTime: String, toTime: String)
+case class SearchForm(displayText: String, timeText: String, arrivalDate: js.Date, fromTime: String, toTime: String)
 
 object DaySelectorComponent extends ScalaCssReactImplicits {
 
@@ -67,20 +60,18 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                    loadingState: LoadingState,
                   ) extends UseValueEq
 
-  case class DisplayDate(date: LocalDate, timeText:String , startTime: String, endTime: String, isNotValid: Boolean)
+  case class DisplayDate(date: LocalDate, timeText: String, startTime: String, endTime: String, isNotValid: Boolean)
 
   case class TimeMachineDate(date: SDateLike, isNotValid: Boolean)
 
   case class State(stateDate: DisplayDate, maybeTimeMachineDate: Option[TimeMachineDate]) {
     def selectedDate: SDateLike = SDate(stateDate.date)
-
-//    def update(d: LocalDate): State = copy(stateDate = DisplayDate(date = d, isNotValid = false))
-
-//    def updateValidity(isNotValid: Boolean): State = copy(stateDate = DisplayDate(date = stateDate.date, isNotValid = isNotValid))
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.stateDate == b.stateDate && a.maybeTimeMachineDate.map(_.date.millisSinceEpoch) == b.maybeTimeMachineDate.map(_.date.millisSinceEpoch))
+
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.stateDate == b.stateDate &&
+    a.maybeTimeMachineDate.map(_.date.millisSinceEpoch) == b.maybeTimeMachineDate.map(_.date.millisSinceEpoch))
 
   val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DatePicker")
     .initialStateFromProps { p =>
@@ -89,8 +80,13 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         case ViewDay(_, timeMachineDate) => timeMachineDate
         case _ => None
       }
+
       val currentTimestamp = CurrentWindowHHMM()
-      State(DisplayDate(date = viewMode.localDate, "now", startTime = currentTimestamp.start, endTime = currentTimestamp.end, isNotValid = false), tm.map(t => TimeMachineDate(t, isNotValid = false)))
+      State(DisplayDate(date = viewMode.localDate, "now",
+        startTime = currentTimestamp.start,
+        endTime = currentTimestamp.end,
+        isNotValid = false),
+        tm.map(t => TimeMachineDate(t, isNotValid = false)))
     }
     .renderPS { (scope, props, state) =>
 
@@ -119,10 +115,11 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         val dateMonth = (s.arrivalDate.getMonth() + 1).toLong
         val dateDay = s.arrivalDate.getDate().toLong
         val dateString = f"${s.arrivalDate.getFullYear()}-${dateMonth}%02d-${dateDay}%02d"
-        def startTimeFormat = if(s.fromDate.nonEmpty) Some(f"${s.fromDate.split(":")(0).toInt}%02d:00") else None
 
-        def endTimeFormat = if(s.toDate.nonEmpty)
-          if(s.toDate.contains("+1")){
+        def startTimeFormat = if (s.fromDate.nonEmpty) Some(f"${s.fromDate.split(":")(0).toInt}%02d:00") else None
+
+        def endTimeFormat = if (s.toDate.nonEmpty)
+          if (s.toDate.contains("+1")) {
             val d = f"${s.toDate.split(":")(0).toInt}%02d:00"
             Option(s"$d +1")
           }
@@ -130,16 +127,23 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
 
         println(s"....s.toDate : ${s.toDate} endTimeFormat: $endTimeFormat startTimeFormat: $startTimeFormat")
 
-        val selectedWindow: TimeRangeHoursMM =  s.time match {
-          case "now" => //GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "now")
+        val selectedWindow: TimeRangeHoursMM = s.time match {
+          case "now" =>
+            GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "now")
             CurrentWindowHHMM()
-          case "24hour" => //GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "24 hours")
+
+          case "24hour" =>
+            GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "24 hours")
             WholeDayWindowHHMM()
-          case "range" => TimeRangeHoursMM(
-            startTimeFormat.getOrElse(CurrentWindowHHMM().start),
-            endTimeFormat.getOrElse(CurrentWindowHHMM().end)
-          )
-          case  _ =>  CurrentWindowHHMM()
+
+          case "range" =>
+            GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "range")
+            TimeRangeHoursMM(
+              startTimeFormat.getOrElse(CurrentWindowHHMM().start),
+              endTimeFormat.getOrElse(CurrentWindowHHMM().end)
+            )
+
+          case _ => CurrentWindowHHMM()
         }
 
         println(s"...selectedWindow: ${selectedWindow.start} ${selectedWindow.end}")
@@ -187,24 +191,24 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       <.div(^.className := s"flex-horz-between",
         ThemeProvider(DrtReactTheme)(
           <.div(^.className := s"arrival-datetime-pax-search",
-          LocalDateProvider(ILocalDateProvider(
-            PaxSearchFormComponent(
-              IPaxSearchForm(
-                day = searchFormForDate.displayText,
-                time = searchFormForDate.timeText,
-                arrivalDate = searchFormForDate.arrivalDate,
-                fromDate = searchFormForDate.fromTime,
-                toDate = searchFormForDate.toTime,
-                timeMachine = state.maybeTimeMachineDate.nonEmpty,
-                onChange = (s: PaxSearchFormPayload) => {
-                  val timeMachineDate = if (s.timeMachine) {
-                    Option(TimeMachineDate(SDate.now(), isNotValid = false))
-                  } else None
-                  updateUrlWithDate(s, timeMachineDate, props.terminalPageTab).runNow()
-                }
-              )
+            LocalDateProvider(ILocalDateProvider(
+              PaxSearchFormComponent(
+                IPaxSearchForm(
+                  day = searchFormForDate.displayText,
+                  time = searchFormForDate.timeText,
+                  arrivalDate = searchFormForDate.arrivalDate,
+                  fromDate = searchFormForDate.fromTime,
+                  toDate = searchFormForDate.toTime,
+                  timeMachine = state.maybeTimeMachineDate.nonEmpty,
+                  onChange = (s: PaxSearchFormPayload) => {
+                    val timeMachineDate = if (s.timeMachine) {
+                      Option(TimeMachineDate(SDate.now(), isNotValid = false))
+                    } else None
+                    updateUrlWithDate(s, timeMachineDate, props.terminalPageTab).runNow()
+                  }
+                )
+              ))
             ))
-          ))
         ),
         state.maybeTimeMachineDate match {
           case Some(tmDate) =>
