@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "esbuild ./target/scala-2.13/client-opt/main.js --bundle --outdir=../server/src/main/assets/ --minify",
+    "build": "esbuild ./target/scala-2.13/client-opt/main.js --bundle --outdir=../server/src/main/assets/ --minify"
   },
   "dependencies": {
     "@drt/drt-react": "UKHomeOffice/drt-react#1.7.0",
