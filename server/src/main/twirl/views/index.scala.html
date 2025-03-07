@@ -1,4 +1,4 @@
-@(title: String, port: String, googleTrackingCode: String, userId: String, jsFile: String)(implicit request: RequestHeader, config: play.api.Configuration, env: play.api.Environment)
+@(title: String, port: String, googleTrackingCode: String, userId: String)(implicit request: RequestHeader, config: play.api.Configuration, env: play.api.Environment)
 @import views.html.tags._
 @import views.html.helper.CSPNonce
 <!DOCTYPE html>
@@ -29,7 +29,7 @@
   </script>
   }
 
-  <script type="module" src="@routes.Assets.versioned(jsFile)"></script>
+  <script type="module" src="@routes.Assets.versioned("main.js")"></script>
 @*  <script type="module" crossorigin src="/assets/main.js"></script>*@
 @*  <script type="module" crossorigin src="/assets/vendors-node_modules_flickity_js_index_js-library.js"></script>*@
 </head>

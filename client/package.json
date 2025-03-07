@@ -5,9 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "wp-dev": "webpack --config webpack.common.js"
+    "build": "esbuild ./target/scala-2.13/client-opt/main.js --bundle --outdir=../server/src/main/assets/ --minify",
   },
   "dependencies": {
     "@drt/drt-react": "UKHomeOffice/drt-react#1.7.0",
@@ -35,6 +33,7 @@
   },
   "devDependencies": {
     "@scala-js/vite-plugin-scalajs": "^1.0.0",
+    "esbuild": "0.25.0",
     "vite": "^6.1.0"
   }
 }
