@@ -37,13 +37,10 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
       terminalPageTab.timeRangeEnd.getOrElse(defaultTimeHHMMRangeWindow.end)
     )
 
-    println(s"..selectedWindow: ${selectedWindow.start} ${selectedWindow.end}")
     val selectedDateJs = new scala.scalajs.js.Date(selectedDate.millisSinceEpoch)
     val dayDisplayText = if (isYesterday) "yesterday" else if (isTomorrow) "tomorrow" else "today"
-
     val timeText = terminalPageTab.timeSelectString
 
-    println(s"..timeText = $timeText")
     SearchForm(
       displayText = dayDisplayText,
       timeText = timeText.getOrElse("now"),
@@ -125,8 +122,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           }
           else Some(f"${s.toDate.split(":")(0).toInt}%02d:00") else None
 
-        println(s"....s.toDate : ${s.toDate} endTimeFormat: $endTimeFormat startTimeFormat: $startTimeFormat")
-
         val selectedWindow: TimeRangeHours = s.time match {
           case "now" =>
             GoogleEventTracker.sendEvent(terminalPageTab.terminalName, "Time Range", "now")
@@ -146,7 +141,6 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           case _ => CurrentWindow()
         }
 
-        println(s"...selectedWindow: ${selectedWindow.start} ${selectedWindow.end}")
         val params = List(
           UrlDateParameter(Option(dateString)),
           UrlTimeRangeStart(Option(selectedWindow.start)),
