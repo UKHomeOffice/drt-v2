@@ -48,7 +48,7 @@ client/node_modules
 # vite outputs from `npm run build`
 server/src/main/.vite
 server/src/main/index.html
-server/src/main/assets/index-*.js
+server/src/main/assets/*.js
 
 .ensime_cache/
 runsbt.sh
