@@ -6,7 +6,6 @@ COPY server/target/docker/stage/1/opt /1/opt
 COPY server/target/docker/stage/2/opt /2/opt
 COPY server/target/docker/stage/4/opt /4/opt
 COPY server/target/web/public /opt/docker/public
-COPY server/src/main/.vite /opt/docker/.vite
 
 USER root
 RUN ["chmod", "-R", "u=rX,g=rX", "/1/opt/docker"]
@@ -22,7 +21,6 @@ COPY --from=stage0 --chown=drt:root /1/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /2/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /4/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /opt/docker/public /opt/docker/public
-COPY --from=stage0 --chown=drt:root /opt/docker/.vite /opt/docker/.vite
 
 RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt
