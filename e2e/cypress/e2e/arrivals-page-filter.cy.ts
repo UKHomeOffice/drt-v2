@@ -5,7 +5,7 @@ import moment from "moment-timezone";
 describe('Arrivals page filter', () => {
 
   beforeEach(function () {
-    cy.deleteData();
+    cy.deleteData("");
   });
 
   it('Filters flights by any relevant time range intersecting the selected range', () => {
@@ -23,12 +23,12 @@ describe('Arrivals page filter', () => {
           "ActDT": todayAtUtcString(16, 7),
           "ActChoxDT": todayAtUtcString(16, 45),
           "ActPax": 300
-        }
+        },""
       )
       .asABorderForceOfficer()
       .waitForFlightToAppear("TS0123")
-      .get('.time-range > :nth-child(1)').select("00")
-      .get('.time-range > :nth-child(2)').select("01")
+      .get('.time-range > :nth-child(1)').select("00:00")
+      .get('.time-range > :nth-child(2)').select("01:00")
       .get('#arrivals > div').contains("No flights to display")
       .get('.time-range > :nth-child(1)').select(scheduledHour)
       .get('.time-range > :nth-child(2)').select(oneHourAfterScheduled)
