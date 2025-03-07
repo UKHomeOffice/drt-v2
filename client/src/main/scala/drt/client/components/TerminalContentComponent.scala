@@ -178,7 +178,9 @@ object TerminalContentComponent {
                 ^.className := "btn btn-default",
                 ^.onClick ==> handleMenuOpen
               ),
+              <.div(^.className := "advanced-downloads-menu",
               MuiMenu(
+                disablePortal = true,
                 anchorEl = state.anchorEl.orUndefined,
                 open = state.anchorEl.isDefined,
                 onClose = (_: ReactEvent, _: String) => Callback {
@@ -221,7 +223,7 @@ object TerminalContentComponent {
                     selectedDate = props.terminalPageTab.dateFromUrlOrNow,
                     loggedInUser = props.loggedInUser
                   ))
-              )
+              ))
             )),
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",

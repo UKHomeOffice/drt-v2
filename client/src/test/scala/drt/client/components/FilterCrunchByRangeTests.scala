@@ -16,7 +16,7 @@ object FilterCrunchByRangeTests extends TestSuite {
 
   def tests: Tests = Tests {
     test("Given an hour range of 10 to 14") - {
-      val range = CustomWindow(10, 14)
+      val range = CustomWindow("10:00", "14:00")
       val dateWithinRange = SDate("2017-01-01T11:00:00Z")
       val dateOutsideRange = SDate("2017-01-01T09:00:00Z")
       val arrival = ArrivalGenerator.live(terminal = T1, schDt = dateWithinRange.toISOString).toArrival(LiveFeedSource)
