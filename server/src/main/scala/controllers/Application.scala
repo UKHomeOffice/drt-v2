@@ -84,32 +84,6 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   val googleTrackingCode: String = config.get[String]("googleTrackingCode")
 
-//    val manifestPath = "server/src/main/.vite/manifest.json"
-//  val manifestPath = ".vite/manifest.json"
-//  val manifestFile = new java.io.File(manifestPath)
-//  val manifestJson = if (manifestFile.exists()) {
-//    println(s"\n\n** Found manifest file at $manifestPath")
-//    val source = scala.io.Source.fromFile(manifestFile)
-//    val json = Json.parse(source.getLines.mkString)
-//    source.close()
-//    json
-//  } else {
-//    println(s"\n\n** Yeah.. Didn't find manifest file at $manifestPath")
-//    Json.obj()
-//  }
-//
-//  val jsEntry = manifestJson.as[Map[String, play.api.libs.json.JsValue]]
-//    .collectFirst {
-//      case (key, value) if !key.endsWith(".html") && (value \ "file").asOpt[String].exists(_.endsWith(".js")) =>
-//        println(s"\n\n** Found key: $key, value: $value")
-//        key -> value
-//    }
-//
-//  val jsFile = jsEntry.map(_._2 \ "file").flatMap { f =>
-//    f.asOpt[String].flatMap(_.split("/").lastOption)
-//  }.getOrElse("#")
-
-
   private val systemStartGracePeriod: FiniteDuration = config.get[Int]("start-up-grace-period-seconds").seconds
 
   log.info(s"Scheduling crunch system to start in ${systemStartGracePeriod.toString()}")

@@ -108,8 +108,6 @@ object Settings {
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
 
-//  val clientNpmDevDependencies: (String, String) = "expose-loader" -> exposeLoader
-
   /**
    * These dependencies are shared between JS and JVM projects
    * the special %%% function selects the correct version for each project

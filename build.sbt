@@ -96,14 +96,11 @@ lazy val server = (project in file("server"))
 
     dependencyOverrides += "org.scala-lang.modules" %% "scala-parser-combinators" % "2.4.0",
 
-//    Runtime / unmanagedResourceDirectories += baseDirectory.value / "src" / "main" / "assets",
-
     commands += ReleaseCmd,
-    // connect to the client project
     scalaJSProjects := Seq(client),
     Assets / pipelineStages := Seq(scalaJSPipeline),
     pipelineStages := Seq(digest, gzip),
-    // triggers scalaJSPipeline when using compile or continuous compilation
+
     Compile / compile := ((Compile / compile) dependsOn scalaJSPipeline).value,
     testFrameworks += new TestFramework("utest.runner.Framework"),
     resolvers ++= Seq(
