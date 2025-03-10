@@ -66,6 +66,7 @@ object TerminalContentComponent {
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
                    defaultDesksAndQueuesViewType: String,
+                   userPreferences: UserPreferences,
                   ) extends UseValueEq
 
   case class State(activeTab: String, showExportDialogue: Boolean = false)
@@ -249,6 +250,7 @@ object TerminalContentComponent {
                       flightManifestSummaries = props.flightManifestSummaries,
                       arrivalSources = props.arrivalSources,
                       originMapper = originMapper,
+                      userPreferences = props.userPreferences,
                     )
                   )
                 }

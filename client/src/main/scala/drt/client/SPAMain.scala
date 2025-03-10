@@ -11,7 +11,7 @@ import drt.client.logger._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.GetFeedSourceStatuses
+import drt.client.services.handlers.{GetFeedSourceStatuses, GetUserPreferences}
 import drt.client.spa.TerminalPageModes.{Current, Shifts, Staffing}
 import drt.client.spa.{TerminalPageMode, TerminalPageModes}
 import drt.shared.DrtPortConfigs
@@ -309,6 +309,7 @@ object SPAMain {
     GetManifestSummariesForDate(SDate.now().toUtcDate),
     GetManifestSummariesForDate(SDate.now().addDays(-1).toUtcDate),
     GetSlaConfigs,
+    GetUserPreferences
   )
 
   private def sendInitialRequests(): Unit = initialRequestsActions.foreach(SPACircuit.dispatch(_))

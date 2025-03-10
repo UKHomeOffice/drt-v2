@@ -10,7 +10,7 @@ import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, _}
-import drt.client.services.handlers.{GetShifts, GetUserPreferenceIntervalMinutes}
+import drt.client.services.handlers.GetShifts
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -39,7 +39,7 @@ object TerminalComponent {
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
 
-  private case class TerminalModel(userSelectedPlanningTimePeriod: Pot[Int],
+  private case class TerminalModel(userPreferences: Pot[UserPreferences],
                                    potShifts: Pot[ShiftAssignments],
                                    potStaffShifts: Pot[ShiftAssignments],
                                    potFixedPoints: Pot[FixedPointAssignments],
@@ -56,7 +56,7 @@ object TerminalComponent {
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
-                                   shiftsPot: Pot[Seq[Shift]]
+                                   shiftsPot: Pot[Seq[Shift]],
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -78,7 +78,7 @@ object TerminalComponent {
     def render(props: Props): VdomElement = {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
-        userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
+        userPreferences = model.userPreferences,
         potShifts = model.legacyDayOfStaffAssignments,
         potStaffShifts = model.dayOfStaffAssignments,
         potFixedPoints = model.fixedPoints,
@@ -110,6 +110,7 @@ object TerminalComponent {
             loggedInUser <- terminalModel.loggedInUserPot
             redListUpdates <- terminalModel.redListUpdates
             shifts <- terminalModel.shiftsPot
+            userPreferences <- terminalModel.userPreferences
           } yield {
             val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
@@ -205,6 +206,7 @@ object TerminalComponent {
                           dayCrunchSummaries = dayCrunchSummaries,
                           windowStaffSummaries = windowStaffSummaries,
                           defaultDesksAndQueuesViewType = defaultDesksAndQueuesViewType,
+                          userPreferences = userPreferences
                         ))
                       )
 
@@ -225,12 +227,15 @@ object TerminalComponent {
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
                           flightHighlight = fhl,
+                          userPreferences = userPreferences,
                         )
                       )
 
                     case Planning =>
-                      <.div(terminalModel.userSelectedPlanningTimePeriod.render { timePeriod =>
-                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod, airportConfig))
+                      <.div(terminalModel.userPreferences.render { userPreferences =>
+                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router,
+                          userPreferences.userSelectedPlanningTimePeriod,
+                          airportConfig))
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" =>
@@ -262,10 +267,9 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(p => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
-      Callback(SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString)))
-    )
-
+    .componentDidMount(p => Callback(
+      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr,
+        p.props.terminalPageTab.terminal.toString))))
     .build
 
   private def terminalTabs(props: Props,

@@ -102,7 +102,6 @@ GET           /export/forecast-accuracy/:daysForComparison/:daysAhead           
 # Map static resources from the /public folder to the /assets URL path
 GET           /assets/fonts/*file                                                     controllers.Assets.at(path="/public/lib/font-awesome/fonts", file)
 GET           /assets/images/*file                                                    controllers.Assets.at(path="/public/images", file)
-GET           /assets/frontend/*file                                                  controllers.Assets.at(path="/public/frontend", file)
 GET           /assets/*file                                                           controllers.Assets.versioned(path="/public", file: Asset)
 
 GET           /data/user                                                              controllers.Application.getLoggedInUser
@@ -113,9 +112,9 @@ POST          /data/close-banner                                                
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
-GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
+GET           /data/user-preferences                                                   controllers.Application.userPreferences
 
-PUT           /data/user-preference-planning-interval-minutes                         controllers.Application.setUserSelectedTimePeriod()
+POST          /data/user-preferences                                                   controllers.Application.setUserPreferences
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin

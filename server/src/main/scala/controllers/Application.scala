@@ -8,7 +8,7 @@ import com.google.inject.Inject
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import spray.json.enrichAny
-import drt.shared.DrtPortConfigs
+import drt.shared.{DrtPortConfigs, UserPreferences}
 import org.joda.time.chrono.ISOChronology
 import play.api.libs.json.Json
 import play.api.mvc._
@@ -138,30 +138,34 @@ class Application @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface)(
 
   log.info(s"timezone: ${Calendar.getInstance().getTimeZone}")
 
-  def userSelectedTimePeriod: Action[AnyContent] = authByRole(BorderForceStaff) {
+  def userPreferences: Action[AnyContent] = authByRole(BorderForceStaff) {
+    import upickle.default._
     Action.async { implicit request =>
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
       ctrl.userService.selectUser(userEmail.trim).map {
-        case Some(user) => Ok(user.staff_planning_interval_minutes.getOrElse(60).toString)
-        case None => Ok("")
+        case Some(user) => Ok(write(UserPreferences(
+          user.staff_planning_interval_minutes.getOrElse(60),
+          user.hide_pax_data_source_description.getOrElse(false))))
+        case None => BadRequest("User not found")
       }
     }
   }
 
-  def setUserSelectedTimePeriod(): Action[AnyContent] = authByRole(BorderForceStaff) {
+  def setUserPreferences(): Action[AnyContent] = authByRole(BorderForceStaff) {
+    import upickle.default._
     Action.async { implicit request =>
-      val periodInterval: Int = request.body.asText.getOrElse("60").toInt
       val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
-      ctrl.userService.updateStaffPlanningIntervalMinutes(userEmail, periodInterval).map {
-          case _ => Ok("Updated period")
-        }
-        .recover {
-          case t =>
-            log.error(s"Failed to update UpdateStaff Planning Time Period: ${t.getMessage}")
-            Ok("Updated period failed")
-        }
+      request.body.asText match {
+        case Some(json) =>
+          val userPreferences = read[UserPreferences](json)
+          ctrl.userService.updateUserPreferences(userEmail, userPreferences)
+            .map(_ => Ok("Updated preferences"))
+        case None =>
+          Future.successful(BadRequest("Invalid user preferences"))
+      }
     }
   }
+
 
   def shouldUserViewBanner: Action[AnyContent] = Action.async { implicit request =>
     val userEmail = request.headers.get("X-Forwarded-Email").getOrElse("Unknown")
