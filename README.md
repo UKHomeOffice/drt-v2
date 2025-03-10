@@ -107,7 +107,9 @@ As a minimum you'll need the ACL username, key & host set. For larger ports you'
 The front end uses vite for hot-reloading on code changes. To run it you need to do the following
 - `cd client`
 - `npm install`
-- `VITE_DRT_PORT_CODE=<PORT_CODE> npm run dev`
+- `VITE_DRT_PORT_CODE=<PORT_CODE> npm run dev` - nb PORT_CODE should be uppercase
+
+If you want to mimic the production build you can run `npm run build` and then use play's server @ `localhost:9000`
 
 The production build uses esbuild to get a much smaller bundle size and faster build times
 
