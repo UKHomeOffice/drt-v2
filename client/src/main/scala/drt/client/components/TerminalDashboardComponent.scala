@@ -118,6 +118,7 @@ object TerminalDashboardComponent {
                       arrivalSources = props.arrivalSources,
                       originMapper = originMapper,
                       userPreferences = props.userPreferences,
+                      terminalPageTab = props.terminalPageTabLoc
                     )
                   )
                 ),
