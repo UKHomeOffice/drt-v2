@@ -4,7 +4,7 @@ package drt.client.components
 import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.TerminalPageTabLoc
-import drt.client.components.DaySelectorComponent.currentSearchForm
+import drt.client.components.DaySelectorComponent.searchForm
 import drt.client.components.ToolTips._
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
@@ -63,8 +63,8 @@ object FlightTableContent {
     }
 
     private def displayArrivalSearchDate(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): String = {
-      val searchForm = currentSearchForm(selectedDate, terminalPageTab)
-      s"${searchForm.displayText} (${searchForm.fromTime} - ${searchForm.toTime})"
+      val searchFormForDate = searchForm(selectedDate, terminalPageTab)
+      s"${searchFormForDate.displayText} (${searchFormForDate.fromTime} - ${searchFormForDate.toTime})"
     }
 
 

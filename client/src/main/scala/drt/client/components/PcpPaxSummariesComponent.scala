@@ -51,7 +51,6 @@ object PcpPaxSummariesComponent {
       ThemeProvider(DrtReactTheme)(
         if (props.viewMode.isLive) {
           props.crunchMinutesPot.render(cms =>
-            <.div {
               <.div(
                 ^.className := "pcp-pax-summaries",
                 boxes.zipWithIndex.map {
@@ -67,7 +66,6 @@ object PcpPaxSummariesComponent {
                   }
                   .toVdomArray
               )
-            }
           )
         }
         else EmptyVdom

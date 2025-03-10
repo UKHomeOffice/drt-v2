@@ -22,7 +22,7 @@ case class SearchForm(displayText: String, timeText: String, arrivalDate: js.Dat
 
 object DaySelectorComponent extends ScalaCssReactImplicits {
 
-  def currentSearchForm(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): SearchForm = {
+  def searchForm(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): SearchForm = {
 
     val isYesterday = selectedDate.ddMMyyString == SDate.now().addDays(-1).ddMMyyString
 
@@ -78,10 +78,10 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
         case _ => None
       }
 
-      val currentTimestamp = CurrentWindow()
+      val currentWindow = CurrentWindow()
       State(DisplayDate(date = viewMode.localDate, "now",
-        startTime = currentTimestamp.start,
-        endTime = currentTimestamp.end,
+        startTime = currentWindow.start,
+        endTime = currentWindow.end,
         isNotValid = false),
         tm.map(t => TimeMachineDate(t, isNotValid = false)))
     }
@@ -180,7 +180,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
           <.div(^.className := "time-machine-action", <.div(Icon.arrowRight, ^.className := s"btn btn-primary", ^.onClick ==> loadTimeMachineDate))
       }
 
-      val searchFormForDate = currentSearchForm(state.selectedDate, props.terminalPageTab)
+      val searchFormForDate = searchForm(state.selectedDate, props.terminalPageTab)
 
       <.div(^.className := s"flex-horz-between",
         ThemeProvider(DrtReactTheme)(
