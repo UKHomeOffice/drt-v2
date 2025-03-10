@@ -16,7 +16,6 @@ describe('View Modes', () => {
         .get(".arrival-datetime-pax-search").then(() => {
         cy.contains('button', 'Tomorrow', {timeout: 20000}).should('be.visible').click({force: true}).then(() => {
           cy.reload()
-          cy.wait(5000)
           cy.get('input:hidden[name="csrfToken"]').should('exist').invoke('val').then((csrfToken) => {
             cy.addFlight({
             "ICAO": "TS0123",
@@ -36,6 +35,7 @@ describe('View Modes', () => {
               "SchDT": todayAtUtcString(5, 45),
               "ActChoxDT": todayAtUtcString(5, 45)
             }, csrfToken.toString())
+            cy.wait(5000)
             .get("#arrivals")
             .contains("TS0123")
           });
