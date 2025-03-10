@@ -78,33 +78,10 @@ object Settings {
     val jwtCore = "9.4.6"
     val logback = "1.5.17"
     val logbackContrib = "0.1.5"
+    val scalajsScripts = "1.3.0"
   }
 
   import versions.*
-
-  val clientNpmDependencies: Seq[(String, String)] = Seq(
-    "react" -> react,
-    "react-dom" -> react,
-    "log4javascript" -> log4Javascript,
-    "bootstrap" -> bootstrap,
-    "@handsontable/react" -> reactHandsontable,
-    "handsontable" -> "7.2.2",
-    "core-js" -> "3.23.3",
-    "chart.js" -> "^3.6.0",
-    "@tippyjs/react" -> "4.1.0",
-    "react-chartjs-2" -> "^4.0.0",
-    "moment" -> ">=2.29.4",
-    "@mui/system" -> "5.16.5",
-    "@mui/material" -> "5.16.5",
-    "@mui/icons-material" -> "5.16.5",
-    "@mui/lab" -> "5.0.0-alpha.173",
-    "flickity" -> "2.3.0",
-    "react-flickity-component" -> "4.0.6",
-    "react-markdown" -> "9.0.1",
-    "@types/react-dom" -> react,
-    "css-loader" -> "6.7.2",
-    "@drt/drt-react"-> "UKHomeOffice/drt-react#1.6.8",
-  )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
   val scalajsDependencies = Def.setting(Seq(
@@ -120,6 +97,7 @@ object Settings {
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs,
+    "io.github.cquiroz" %%% "scala-java-time" % "2.5.0",
 
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
@@ -129,8 +107,6 @@ object Settings {
 
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
-
-  val clientNpmDevDependencies: (String, String) = "expose-loader" -> exposeLoader
 
   /**
    * These dependencies are shared between JS and JVM projects
@@ -149,6 +125,7 @@ object Settings {
     "com.github.jwt-scala" %% "jwt-core" % jwtCore,
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %%% "utest" % uTest % Test,
+    "com.vmunier" %% "scalajs-scripts" % scalajsScripts,
 
     "javax.mail" % "mail" % "1.4.7",
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % jakartaXmlWsApi,

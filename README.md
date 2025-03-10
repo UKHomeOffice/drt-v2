@@ -83,13 +83,35 @@ alter user drt with password 'drt';
 ```
 You can create the relevant tables for the akka db using the akka-persistence-postgres.sql file in the resources folder and for the aggregated db using aggregated-arrivals.sql
 
-### NB - duplicate key insertion errors
-We've experienced the `nextval` for the ordering column become out of sync with the actual values. This results in permanent insertion errors until it's fixed
-To reset the value, first delete the deployment for the port in question to make sure there are no insertions going on (or lock the table as appropriate). Then issue the following SQL command:
+### Running the app locally
+## Backend
+The main scala app will need a few environment variables set to run, these are:
+- USE_PG_SSL=false
+- USE_PG_SSL_MODE=disable
+- ACL_HOST=ftp.acl-uk.org
+- ACL_KEYPATH=~/.ssh/id_rsa_acl
+- ACL_USERNAME=xxx
+- CONTACT_EMAIL=support@test.com
+- OOH_PHONE=012345
+- PORT_CODE=<port_code>
+- NO_JSON_LOGGING=
+- ACL_CHECK_ON_STARTUP=true
+- USE_CIRIUM_FEED=false
+- START_UP_GRACE_PERIOD_SECONDS=1
 
-```SELECT setval('journal_ordering_seq', COALESCE((SELECT MAX(ordering)+1 FROM journal), 1), false);```
+As a minimum you'll need the ACL username, key & host set. For larger ports you'll also need their live feed details. Then you can run the app via sbt like this:
 
-This gets the values back in sync and resolves the duplicate key insertion errors. The mystery is how we ended up having them out of sync in the first place...
+```sbt -J-Duser.timezone=UTC -J-Dconfig.resource=application-acp.conf run```
+
+## Frontend
+The front end uses vite for hot-reloading on code changes. To run it you need to do the following
+- `cd client`
+- `npm install`
+- `VITE_DRT_PORT_CODE=<PORT_CODE> npm run dev` - nb PORT_CODE should be uppercase
+
+If you want to mimic the production build you can run `npm run build` and then use play's server @ `localhost:9000`
+
+The production build uses esbuild to get a much smaller bundle size and faster build times
 
 #Updating the akka version and akka persistent jdbc 
 With upgrade for akka version (2.6.17) and akka persistent jdbc (5.0.4) there is change in schema for journal and snapshot . At moment there are no tools to migration from legacy to new schema.
