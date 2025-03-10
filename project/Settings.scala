@@ -27,14 +27,14 @@ object Settings {
   object versions {
     val scala = "2.13.16"
 
-    val drtLib = "v1085"
+    val drtLib = "v1088"
 
     val akka = "2.9.5" // last version with license key requirement
     val akkaHttp = "10.6.3" // last version dependent on akka 2.9.5
     val akkaPersistenceJdbc = "5.4.2"
     val slick = "3.5.2"
 
-    val aws = "2.30.2"
+    val aws = "2.30.36"
 
     val scalaDom = "2.8.0"
     val scalajsReact = "2.1.2"
@@ -56,7 +56,7 @@ object Settings {
     val bluebus = "v95"
     val postgres = "42.7.5"
     val sshJ = "0.39.0"
-    val jodaTime = "2.12.7"
+    val jodaTime = "2.13.1"
     val exposeLoader = "0.7.1"
     val log4Javascript = "1.4.15"
     val typesafeConfig = "1.4.3"
@@ -64,47 +64,24 @@ object Settings {
     val pac4jSaml = "2.0.0-RC1"
     val drtBirminghamSchema = "50"
     val drtCirium = "186"
-    val uPickle = "3.1.5"
+    val uPickle = "3.3.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.12"
     val scalaJsReactMaterialUi = "0.1.18"
     val scalaTestVersion = "3.2.19"
     val twirlApi = "2.0.2"
-    val mockito = "5.15.2"
+    val mockito = "5.16.0"
     val rtVersion = "4.0.3"
     val jakartaXmlWsApi = "4.0.2"
     val scalatestplusPlay = "7.0.1"
-    val nettyAll = "4.1.117.Final"
+    val nettyAll = "4.1.119.Final"
     val jwtCore = "9.4.6"
-    val logback = "1.3.15"
+    val logback = "1.5.17"
     val logbackContrib = "0.1.5"
+    val scalajsScripts = "1.3.0"
   }
 
   import versions.*
-
-  val clientNpmDependencies: Seq[(String, String)] = Seq(
-    "react" -> react,
-    "react-dom" -> react,
-    "log4javascript" -> log4Javascript,
-    "bootstrap" -> bootstrap,
-    "@handsontable/react" -> reactHandsontable,
-    "handsontable" -> "7.2.2",
-    "core-js" -> "3.23.3",
-    "chart.js" -> "^3.6.0",
-    "@tippyjs/react" -> "4.1.0",
-    "react-chartjs-2" -> "^4.0.0",
-    "moment" -> ">=2.29.4",
-    "@mui/system" -> "5.16.5",
-    "@mui/material" -> "5.16.5",
-    "@mui/icons-material" -> "5.16.5",
-    "@mui/lab" -> "5.0.0-alpha.173",
-    "flickity" -> "2.3.0",
-    "react-flickity-component" -> "4.0.6",
-    "react-markdown" -> "9.0.1",
-    "@types/react-dom" -> react,
-    "css-loader" -> "6.7.2",
-    "@drt/drt-react"-> "UKHomeOffice/drt-react#1.7.2",
-  )
 
   /** Dependencies only used by the JS project (note the use of %%% instead of %%) */
   val scalajsDependencies = Def.setting(Seq(
@@ -120,6 +97,7 @@ object Settings {
     "com.lihaoyi" %%% "utest" % uTest % Test,
     "com.lihaoyi" %%% "upickle" % uPickle,
     "ru.pavkin" %%% "scala-js-momentjs" % scalaJsMomentJs,
+    "io.github.cquiroz" %%% "scala-java-time" % "2.5.0",
 
     "com.freshcodelimited" %%% "scalajs-react-material-ui-core" % scalaJsReactMaterialUi,
     "com.freshcodelimited" %%% "scalajs-react-material-ui-icons" % scalaJsReactMaterialUi,
@@ -129,8 +107,6 @@ object Settings {
 
     "org.scalatest" %%% "scalatest" % scalaTestVersion % "test",
   ))
-
-  val clientNpmDevDependencies: (String, String) = "expose-loader" -> exposeLoader
 
   /**
    * These dependencies are shared between JS and JVM projects
@@ -149,6 +125,7 @@ object Settings {
     "com.github.jwt-scala" %% "jwt-core" % jwtCore,
     "com.hierynomus" % "sshj" % sshJ,
     "com.lihaoyi" %%% "utest" % uTest % Test,
+    "com.vmunier" %% "scalajs-scripts" % scalajsScripts,
 
     "javax.mail" % "mail" % "1.4.7",
     "jakarta.xml.ws" % "jakarta.xml.ws-api" % jakartaXmlWsApi,

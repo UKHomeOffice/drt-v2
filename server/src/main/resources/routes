@@ -71,7 +71,7 @@ GET           /fixed-points                                                     
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
 GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getShifts(port: String, terminal: String)
-GET           /shifts/:port/:terminal/:shiftName                                       controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
+GET           /shifts/:port/:terminal/:shiftName                                      controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
 POST          /staff-assignments                                                      controllers.application.ShiftsController.saveStaffAssignments
 GET           /staff-assignments                                                      controllers.application.ShiftsController.getAllStaffAssignments
 GET           /staff-assignments/:localDate                                           controllers.application.ShiftsController.getStaffAssignments(localDate: String)
@@ -112,9 +112,8 @@ POST          /data/close-banner                                                
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
-GET           /data/user-preferences                                                   controllers.Application.userPreferences
-
-POST          /data/user-preferences                                                   controllers.Application.setUserPreferences
+GET           /data/user-preferences                                                  controllers.Application.userPreferences
+POST          /data/user-preferences                                                  controllers.Application.setUserPreferences
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
@@ -162,7 +161,7 @@ POST          /drop-in-registrations                                            
 
 GET           /drop-in-registrations                                                  controllers.application.DropInsController.getDropInRegistrations
 
-GET          /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
+GET           /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
 
 GET           /ab-feature/:functionName                                               controllers.application.ABFeatureController.getABFeature(functionName: String)
 
@@ -172,4 +171,4 @@ GET           /is-new-feature-available-since-last-login                        
 
 POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
 
-GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds
+GET           /viewed-feature-guides                                                  controllers.Application.viewedFeatureGuideIds
