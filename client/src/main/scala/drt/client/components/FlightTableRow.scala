@@ -5,13 +5,12 @@ import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
 import drt.client.components.FlightComponents.{SplitsDataQuality, paxFeedSourceClass}
-import drt.client.components.styles.{ArrivalsPageStylesDefault, DrtReactTheme}
+import drt.client.components.styles.ArrivalsPageStylesDefault
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.MinuteAsAdjective
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist._
-import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.vdom.{TagMod, html_<^}
@@ -239,7 +238,7 @@ object FlightTableRow {
           ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
       }.toTagMod
 
-      def splits(dq: SplitsDataQuality) = ThemeProvider(DrtReactTheme)(if (props.hidePaxDataSourceDescription)
+      def splits(dq: SplitsDataQuality) = if (props.hidePaxDataSourceDescription)
         <.div(
           <.span(^.className := "flex-uniform-size",
             <.span(^.className := "icon-data-quality", PaxDatasourceComponent(IPaxDatasource(dq.text))),
@@ -248,7 +247,7 @@ object FlightTableRow {
         <.div(
           <.span(^.className := "flex-uniform-size", splitsOrder),
           DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false)
-        ))
+        )
 
       val queueSplits = <.td(
         splitsDataQuality.map(dq => splits(dq))
