@@ -8,7 +8,7 @@
     "build": "esbuild ./target/scala-2.13/client-opt/main.js --bundle --outdir=../server/src/main/assets/ --minify"
   },
   "dependencies": {
-    "@drt/drt-react": "github:UKHomeOffice/drt-react#27c64dc353b495ee9c0155092adabd8783c5fc6d",
+    "@drt/drt-react": "github:UKHomeOffice/drt-react#a7c0eb31a304037da4e2b805913d3554f8f3c404",
     "@handsontable/react": "3.1.2",
     "@mui/icons-material": "5.16.5",
     "@mui/lab": "5.0.0-alpha.173",
@@ -17,6 +17,7 @@
     "@tippyjs/react": "4.1.0",
     "@types/react-dom": "18.2.0",
     "bootstrap": "3.3.6",
+    "build": "^0.1.4",
     "chart.js": "^3.6.0",
     "core-js": "3.23.3",
     "css-loader": "6.7.2",
