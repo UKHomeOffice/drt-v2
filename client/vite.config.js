@@ -64,6 +64,7 @@ export default defineConfig({
       "/drop-ins": "http://localhost:9000",
       "/drop-in-registrations": "http://localhost:9000",
       "/user-feedback": "http://localhost:9000",
+      "/user-preferences": "http://localhost:9000",
       "/ab-feature": "http://localhost:9000",
       "/feature-guides": "http://localhost:9000",
       "/is-new-feature-available-since-last-login": "http://localhost:9000",
