@@ -16,7 +16,7 @@ import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import drt.shared.api.{FlightManifestSummary, WalkTimes}
 import drt.shared.redlist.RedList
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiMenu, MuiMenuItem}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
@@ -24,7 +24,8 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^.{<, VdomAttr, VdomElement, ^, _}
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
+import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ReactEventFromHtml, ScalaComponent}
+import org.scalajs.dom.HTMLElement
 import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.auth.Roles.{ArrivalSimulationUpload, Role, StaffMovementsExport}
@@ -37,6 +38,7 @@ import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.HashSet
+import scala.scalajs.js.JSConverters.JSRichOption
 
 object TerminalContentComponent {
   case class Props(potShifts: Pot[ShiftAssignments],
@@ -69,7 +71,7 @@ object TerminalContentComponent {
                    userPreferences: UserPreferences,
                   ) extends UseValueEq
 
-  case class State(activeTab: String, showExportDialogue: Boolean = false)
+  case class State(activeTab: String, showExportDialogue: Boolean = false, anchorEl: Option[HTMLElement] = None)
 
   def airportWrapper(portCode: PortCode): ReactConnectProxy[Pot[AirportInfo]] = SPACircuit.connect(_.airportInfos.getOrElse(portCode, Pending()))
 
@@ -99,7 +101,12 @@ object TerminalContentComponent {
       )
     }
 
-  class Backend {
+  class Backend($: BackendScope[Props, State]) {
+    private def handleMenuOpen(event: ReactEventFromHtml): Callback = {
+      val target = event.currentTarget.asInstanceOf[HTMLElement]
+      $.modState(_.copy(anchorEl = Some(target)))
+    }
+
     def render(props: Props, state: State): TagOf[Div] = {
       val terminal = props.terminalPageTab.terminal
       val queueOrder: Seq[Queue] = props.airportConfig.queueTypeSplitOrder(terminal)
@@ -165,36 +172,59 @@ object TerminalContentComponent {
                 props.terminalPageTab.dateFromUrlOrNow,
                 props.loggedInUser,
                 props.viewMode),
-              exportLink(
-                props.terminalPageTab.dateFromUrlOrNow,
-                terminalName,
-                ExportDeskRecs(props.terminalPageTab.terminal),
-                SPAMain.exportUrl(ExportDeskRecs(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
-                None,
-                "desk-recs",
+              MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
+                MuiIcons(GetApp)(fontSize = "small"),
+                "Advanced Downloads",
+                ^.className := "btn btn-default",
+                ^.onClick ==> handleMenuOpen
               ),
-              exportLink(
-                props.terminalPageTab.dateFromUrlOrNow,
-                terminalName,
-                ExportDeployments(props.terminalPageTab.terminal),
-                SPAMain.exportUrl(ExportDeployments(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
-                None,
-                "deployments"
-              ),
-              displayForRole(
-                exportLink(
-                  props.terminalPageTab.dateFromUrlOrNow,
-                  terminalName,
-                  ExportStaffMovements(props.terminalPageTab.terminal),
-                  SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
-                  None,
-                  "staff-movements",
-                ),
-                StaffMovementsExport,
-                props.loggedInUser
-              ),
-              MultiDayExportComponent(props.airportConfig.portCode, terminal, props.airportConfig.terminals, props.viewMode, props.terminalPageTab.dateFromUrlOrNow, props.loggedInUser)))
-          ,
+              <.div(^.className := "advanced-downloads-menu",
+              MuiMenu(
+                disablePortal = true,
+                anchorEl = state.anchorEl.orUndefined,
+                open = state.anchorEl.isDefined,
+                onClose = (_: ReactEvent, _: String) => Callback {
+                  $.modState(state => state.copy(anchorEl = None)).runNow()
+                })(
+                MuiMenuItem()(
+                  exportLink(
+                    exportDay = props.terminalPageTab.dateFromUrlOrNow,
+                    terminalName = terminalName,
+                    exportType = ExportDeskRecs(props.terminalPageTab.terminal),
+                    exportUrl = SPAMain.exportUrl(ExportDeskRecs(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
+                    title = "desk-recs"
+                  )),
+                MuiMenuItem()(
+                  exportLink(
+                    exportDay = props.terminalPageTab.dateFromUrlOrNow,
+                    terminalName = terminalName,
+                    exportType = ExportDeployments(props.terminalPageTab.terminal),
+                    exportUrl = SPAMain.exportUrl(ExportDeployments(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
+                    title = "deployments"
+                  )),
+                MuiMenuItem()(
+                  displayForRole(
+                    node = exportLink(
+                      exportDay = props.terminalPageTab.dateFromUrlOrNow,
+                      terminalName = terminalName,
+                      exportType = ExportStaffMovements(props.terminalPageTab.terminal),
+                      exportUrl = SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
+                      title = "staff-movements"
+                    ),
+                    role = StaffMovementsExport,
+                    loggedInUser = props.loggedInUser
+                  )),
+                MuiMenuItem()(
+                  MultiDayExportComponent(
+                    portCode = props.airportConfig.portCode,
+                    terminal = terminal,
+                    terminals = props.airportConfig.terminals,
+                    viewMode = props.viewMode,
+                    selectedDate = props.terminalPageTab.dateFromUrlOrNow,
+                    loggedInUser = props.loggedInUser
+                  ))
+              ))
+            )),
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
               if (state.activeTab == "desksAndQueues") {
@@ -251,6 +281,7 @@ object TerminalContentComponent {
                       arrivalSources = props.arrivalSources,
                       originMapper = originMapper,
                       userPreferences = props.userPreferences,
+                      terminalPageTab = props.terminalPageTab
                     )
                   )
                 }

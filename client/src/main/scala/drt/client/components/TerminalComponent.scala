@@ -25,7 +25,7 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -69,8 +69,8 @@ object TerminalComponent {
 
   def viewStartAndEnd(day: LocalDate, range: TimeRangeHours): (SDateLike, SDateLike) = {
     val startOfDay = SDate(day)
-    val startOfView = startOfDay.addHours(range.start)
-    val endOfView = startOfDay.addHours(range.end)
+    val startOfView = startOfDay.addHours(range.startInt)
+    val endOfView = startOfDay.addHours(range.endInt)
     (startOfView, endOfView)
   }
 
@@ -154,7 +154,7 @@ object TerminalComponent {
                         filterFlights(psw.flights.values.toList, fhl.filterFlightSearch, ai)
                       }
 
-                      val hoursToView = timeWindow.end - timeWindow.start
+                      val hoursToView = timeWindow.endInt - timeWindow.startInt
 
                       val terminal = props.terminalPageTab.terminal
                       val queues = terminalModel.airportConfig.map(_.nonTransferQueues(terminal).toList)

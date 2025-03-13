@@ -1,0 +1,39 @@
+{
+  "name": "drt-client",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "esbuild ./target/scala-2.13/client-opt/main.js --bundle --outdir=../server/src/main/assets/ --minify"
+  },
+  "dependencies": {
+    "@drt/drt-react": "UKHomeOffice/drt-react#1.7.2",
+    "@handsontable/react": "3.1.2",
+    "@mui/icons-material": "5.16.5",
+    "@mui/lab": "5.0.0-alpha.173",
+    "@mui/material": "5.16.5",
+    "@mui/system": "5.16.5",
+    "@tippyjs/react": "4.1.0",
+    "@types/react-dom": "18.2.0",
+    "bootstrap": "3.3.6",
+    "chart.js": "^3.6.0",
+    "core-js": "3.23.3",
+    "css-loader": "6.7.2",
+    "flickity": "2.3.0",
+    "handsontable": "7.2.2",
+    "log4javascript": "1.4.15",
+    "moment": ">=2.29.4",
+    "moment-timezone": "^0.5.43",
+    "react": "18.2.0",
+    "react-chartjs-2": "^4.0.0",
+    "react-dom": "18.2.0",
+    "react-flickity-component": "4.0.6",
+    "react-markdown": "9.0.1"
+  },
+  "devDependencies": {
+    "@scala-js/vite-plugin-scalajs": "^1.0.0",
+    "esbuild": "0.25.0",
+    "vite": "^6.1.0"
+  }
+}

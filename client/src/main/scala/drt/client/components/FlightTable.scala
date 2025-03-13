@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
+import drt.client.SPAMain.TerminalPageTabLoc
 import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
 import drt.client.components.styles.DrtTheme.buttonSecondaryTheme
 import drt.client.modules.GoogleEventTracker
@@ -49,6 +50,7 @@ object FlightTable {
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
                    userPreferences: UserPreferences,
+                   terminalPageTab: TerminalPageTabLoc
                   ) extends UseValueEq
 
   case class State(showHighlightedRows: Boolean)
@@ -186,6 +188,7 @@ object FlightTable {
               originMapper = props.originMapper,
               flightHighlight = props.flightHighlight,
               userPreferences = props.userPreferences,
+              terminalPageTab = props.terminalPageTab
             )
           )
         },

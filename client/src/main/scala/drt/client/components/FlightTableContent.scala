@@ -3,7 +3,10 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
+import drt.client.SPAMain.TerminalPageTabLoc
+import drt.client.components.DaySelectorComponent.searchForm
 import drt.client.components.ToolTips._
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.client.services.handlers.{GetUserPreferences, UpdateUserPreferences}
 import drt.shared.UserPreferences
@@ -24,6 +27,7 @@ import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.{HashSet, Seq}
 import scala.scalajs.js
@@ -47,14 +51,20 @@ object FlightTableContent {
                    paxFeedSourceOrder: List[FeedSource],
                    shortLabel: Boolean = false,
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
-                   userPreferences: UserPreferences
+                   userPreferences: UserPreferences,
+                   terminalPageTab: TerminalPageTabLoc,
                   ) extends UseValueEq
 
   class Backend {
 
-    val handleTogglePaxSourceIcon = (e: ReactEventFromInput, userPreferences:UserPreferences) => Callback {
+    private val handleTogglePaxSourceIcon = (e: ReactEventFromInput, userPreferences: UserPreferences) => Callback {
       e.preventDefault()
       SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(hidePaxDataSourceDescription = !e.target.checked)))
+    }
+
+    private def displayArrivalSearchDate(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): String = {
+      val searchFormForDate = searchForm(selectedDate, terminalPageTab)
+      s"${searchFormForDate.displayText} (${searchFormForDate.fromTime} - ${searchFormForDate.toTime})"
     }
 
 
@@ -88,6 +98,7 @@ object FlightTableContent {
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
+              <.div(^.style := js.Dictionary("paddingTop" -> "10px"), MuiTypography(sx = SxProps(Map("fontSize" -> "18px", "fontWeight" -> "bold")))(s"Arrivals, ${displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab)}")),
               <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"))(
                 <.div {
                   val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || ageGroups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals
@@ -106,7 +117,7 @@ object FlightTableContent {
                     MuiSwitch(defaultChecked = !props.userPreferences.hidePaxDataSourceDescription)
                     (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e, props.userPreferences)))
                   ),
-                  MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if(!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
+                  MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
                 )
               ),
               <.div(<.table(
