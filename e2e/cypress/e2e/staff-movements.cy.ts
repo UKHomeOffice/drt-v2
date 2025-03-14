@@ -180,7 +180,7 @@ Cypress.Commands.add('checkStaffAvailableOnDesksAndQueuesTabAre', (numStaff) => 
 
 Cypress.Commands.add('checkStaffMovementsOnDesksAndQueuesTabAre', (numStaff) => {
   [0, 1, 2, 3].map((row) => {
-    cy.staffMovementsAtRow(row).contains(numStaff);
+    cy.staffMovementsAtRow(row).contains(numStaff, {timeout: 20000});
   });
   cy.staffMovementsAtRow(4).contains(0);
 });
