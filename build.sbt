@@ -1,10 +1,9 @@
 
 import Settings.versions.scalajsReact
-import com.typesafe.config.*
-import net.vonbuchholtz.sbt.dependencycheck.DependencyCheckPlugin.autoImport.*
+import com.typesafe.config.ConfigFactory
 import org.scalajs.linker.interface.ModuleSplitStyle
 import sbt.Credentials
-import sbt.Keys.{credentials, *}
+import sbt.Keys.credentials
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 
 import java.net.URL

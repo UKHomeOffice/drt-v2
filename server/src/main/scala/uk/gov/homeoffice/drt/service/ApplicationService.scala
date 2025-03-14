@@ -107,12 +107,23 @@ case class ApplicationService(journalType: StreamingJournalLike,
     deserialiser = ConfigDeserialiser.slaConfigsDeserialiser,
   )))
 
-  val portDeskRecs: PortDesksAndWaitsProviderLike =
-    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, Slas.slaProvider(slasActor))
+  private val slaForDateAndQueue: (LocalDate, Queue) => Future[Int] = Slas.slaProvider(slasActor)
 
-  val deploymentSlas: (LocalDate, Queue) => Future[Int] =
-    (_, _) => Future.successful(config.get[Int]("crunch.deployments.sla"))
-  val portDeployments: PortDesksAndWaitsProviderLike =
+  val portDeskRecs: PortDesksAndWaitsProviderLike =
+    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, slaForDateAndQueue)
+
+  private val deploymentSlas: (LocalDate, Queue) => Future[Int] =
+    (date, queue) =>
+      config.getOptional[Int]("crunch.deployments.sla") match {
+        case Some(sla) =>
+          log.info(s"Using deployment SLA of $sla")
+          Future.successful(sla)
+        case None =>
+          log.info(s"Using config SLA for $date and $queue")
+          slaForDateAndQueue(date, queue)
+      }
+
+  private val portDeployments: PortDesksAndWaitsProviderLike =
     PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
 
   val paxTypeQueueAllocation: PaxTypeQueueAllocation = paxTypeQueueAllocator(airportConfig)
