@@ -50,3 +50,5 @@ server/src/main/assets/main.js
 
 .ensime_cache/
 runsbt.sh
+
+client/node_modules
