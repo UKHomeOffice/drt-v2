@@ -93,7 +93,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
   private val aclPaxAdjustmentDays: Int = config.get[Int]("acl.adjustment.number-of-days-in-average")
   private val refetchApiData: Boolean = config.get[Boolean]("crunch.manifests.refetch-live-api")
-
+  private val enableShiftPlanningChanges: Boolean = config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
   private val optimiser: TryCrunchWholePax = OptimiserWithFlexibleProcessors.crunchWholePax
 
   private val crunchRequestsProvider: LocalDate => Iterable[TerminalUpdateRequest] =
@@ -314,6 +314,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         staffingQueueActor = actors.staffingQueueActor,
         staffQueue = staffQueue,
         legacyStaffAssignmentsReadActor = actorService.legacyStaffAssignmentsReadActor,
+        liveStaffAssignmentsReadActor = actorService.liveStaffAssignmentsReadActor,
         fixedPointsActor = actorService.liveFixedPointsReadActor,
         movementsActor = actorService.liveStaffMovementsReadActor,
         staffMinutesActor = minuteLookups.staffMinutesRouterActor,
@@ -323,8 +324,10 @@ case class ApplicationService(journalType: StreamingJournalLike,
           aggregatedDb,
           _.staffUpdatedAt,
           (status, updatedAt) => status.copy(staffUpdatedAt = Option(updatedAt))),
+        enableShiftPlanningChanges = enableShiftPlanningChanges,
       )
 
+      actorService.liveStaffAssignmentsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       actorService.legacyStaffAssignmentsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       actorService.liveFixedPointsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
       actorService.liveStaffMovementsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)

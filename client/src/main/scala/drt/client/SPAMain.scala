@@ -340,7 +340,7 @@ object SPAMain {
     .setTitle(_.title(maybeTerminal))
     .onPostRender((maybePrevLoc, currentLoc) => {
       val title = currentLoc.title(maybeTerminal)
-      log.info(s"Sending pageview: $title (${currentLoc.href})")
+      log.info(s"Sending page view: $title (${currentLoc.href})")
       Callback(GoogleEventTracker.sendPageView(title, currentLoc.href)) >>
         Callback(
           (maybePrevLoc, currentLoc) match {
