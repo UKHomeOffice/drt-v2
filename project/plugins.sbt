@@ -15,7 +15,7 @@ addSbtPlugin("com.github.sbt" % "sbt-less" % "2.0.1")
 
 addSbtPlugin("com.github.sbt" % "sbt-native-packager" % "1.11.1")
 
-addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.9.6")
+addSbtPlugin("com.typesafe.play" % "sbt-plugin" % "2.9.7")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-gzip" % "1.0.2")
 
