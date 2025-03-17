@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ShiftViewEnabled, UrlDateParameter, UrlDayRangeType}
+import drt.client.SPAMain.{Loc, ShiftViewEnabled, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.{GetAllStaffAssignments, UpdateShifts, UpdateStaffShifts}
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays, navigationDates}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -13,7 +13,7 @@ import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiSwipeableDrawer}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormControl, MuiGrid, MuiSwipeableDrawer, MuiSwitch, MuiTypography}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ChevronLeft, ChevronRight, Groups}
 import japgolly.scalajs.react.callback.Callback
@@ -216,6 +216,7 @@ object MonthlyStaffing {
 
       case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], monthOfShiftsPot: Pot[ShiftAssignments])
       val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.allShifts))
+      val shiftViewEnabled = props.terminalPageTab.queryParams.get(ShiftViewEnabled.paramName).exists(_.toBoolean)
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
@@ -241,15 +242,13 @@ object MonthlyStaffing {
         ^.onClick ==> handleShiftEditForm
       ))
       <.div(
-        if (!props.isStaffShiftPage) {
           if (props.hideAddShifts) {
             EmptyVdom
           } else {
             <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
-              props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "staffing", "createShifts")).runNow()
+              props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
             })))
-          }
-        } else EmptyVdom,
+          },
         modelChangeDetection,
         <.div(
           if (state.showStaffSuccess)
@@ -333,11 +332,17 @@ object MonthlyStaffing {
                       ^.onClick ==> confirmAndSave(viewingDate, timeSlots)),
                     if (props.isStaffShiftPage) {
                       <.div(^.className := "staffing-controls-toggle",
-                        MuiButton(color = Color.secondary, variant = "outlined")
-                        (<.span(^.style := js.Dictionary("paddingRight" -> "5px"), "Toggle Shift view"),
-                          ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(false)))
+                        <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center"))(
+                          MuiTypography()("Show shifts"),
+                          MuiFormControl()(
+                            MuiSwitch(
+                              defaultChecked = shiftViewEnabled,
+                              color = Color.primary,
+                              inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
+                            )(^.onChange --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(!shiftViewEnabled)))),
+                          ),MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (shiftViewEnabled) "On" else "Off")
                         ))
-                    } else EmptyVdom
+                    } else EmptyVdom,
                   )),
               ),
               MuiSwipeableDrawer(open = state.showEditStaffForm,

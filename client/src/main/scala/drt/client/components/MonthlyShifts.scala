@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.Pot
-import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ShiftViewEnabled, UrlDateParameter, UrlDayRangeType}
+import drt.client.SPAMain.{Loc, ShiftViewEnabled, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
 import drt.client.actions.Actions.{GetAllStaffAssignments, UpdateStaffShifts}
 import drt.client.components.MonthlyShiftsUtil.{generateShiftSummaries, updateAssignments, updateChangeAssignment}
 import drt.client.components.StaffingUtil.navigationDates
@@ -14,7 +14,7 @@ import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid, MuiSwipeableDrawer}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiFormControl, MuiGrid, MuiSwipeableDrawer, MuiSwitch, MuiTypography}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.{ChevronLeft, ChevronRight, Groups}
 import japgolly.scalajs.react.callback.Callback
@@ -137,7 +137,7 @@ object MonthlyShifts {
       case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]])
       val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.shifts))
 
-
+      val shiftViewEnabled = props.terminalPageTab.queryParams.get(ShiftViewEnabled.paramName).exists(_.toBoolean)
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
         val content = for {
@@ -247,64 +247,68 @@ object MonthlyShifts {
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
                     ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments)),
-                  <.div(^.className := "staffing-controls-toggle",
-                    MuiButton(color = Color.secondary, variant = "outlined")
-                    (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Toggle Shift view"),
-                      ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(true)))
-                    )
+                  <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center"))(
+                    MuiTypography()("Show shifts"),
+                    MuiFormControl()(
+                      MuiSwitch(
+                        defaultChecked = shiftViewEnabled,
+                        color = Color.primary,
+                        inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
+                      )(^.onChange --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(!shiftViewEnabled)))),
+                    ), MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (shiftViewEnabled) "On" else "Off")
                   )
-                ),
               ),
             ),
-            MuiSwipeableDrawer(open = state.showEditStaffForm,
-              anchor = "right",
-              PaperProps = js.Dynamic.literal(
-                "style" -> js.Dynamic.literal(
-                  "width" -> "400px",
-                  "transform" -> "translateY(-50%)"
-                )
-              ),
-              onClose = (_: ReactEventFromHtml) => Callback {
-                scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
-              },
-              onOpen = (_: ReactEventFromHtml) => Callback {})(
-              <.div(UpdateStaffForTimeRangeForm(IUpdateStaffForTimeRangeForm(
-                ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
-                interval = props.timeSlotMinutes,
-                handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
-                  SPACircuit.dispatch(UpdateStaffShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
-                  scope.modState(state => {
-                    val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
-                    newState
-                  }).runNow()
-                },
-                cancelHandler = () => {
-                  scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
-                })))),
-            <.div(^.className := "shifts-table",
-              <.div(^.className := "shifts-table-content",
-                ShiftHotTableViewComponent(ShiftHotTableViewProps(
-                  ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
-                  dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
-                  interval = props.timeSlotMinutes,
-                  initialShifts = state.shiftsData,
-                  handleSaveChanges = (shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]) => {
-                    val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
-                    val updateShifts = updateAssignments(shifts, updateChanges, 15)
-                    scope.modState(state => state.copy(
-                      shiftsData = updateShifts,
-                      changedAssignments = updateChanges
-                    )).runNow()
-                  }))
-              ),
-              <.div(^.className := "terminal-staffing-content-header",
-                MuiButton(color = Color.primary, variant = "contained")
-                (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                  ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments))
+          ),
+          MuiSwipeableDrawer(open = state.showEditStaffForm,
+            anchor = "right",
+            PaperProps = js.Dynamic.literal(
+              "style" -> js.Dynamic.literal(
+                "width" -> "400px",
+                "transform" -> "translateY(-50%)"
               )
+            ),
+            onClose = (_: ReactEventFromHtml) => Callback {
+              scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
+            },
+            onOpen = (_: ReactEventFromHtml) => Callback {})(
+            <.div(UpdateStaffForTimeRangeForm(IUpdateStaffForTimeRangeForm(
+              ustd = IUpdateStaffForTimeRangeData(startDayAt = Moment.utc(), startTimeAt = Moment.utc(), endTimeAt = Moment.utc(), endDayAt = Moment.utc(), actualStaff = "0"),
+              interval = props.timeSlotMinutes,
+              handleSubmit = (ssf: IUpdateStaffForTimeRangeData) => {
+                SPACircuit.dispatch(UpdateStaffShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                scope.modState(state => {
+                  val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
+                  newState
+                }).runNow()
+              },
+              cancelHandler = () => {
+                scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
+              })))),
+          <.div(^.className := "shifts-table",
+            <.div(^.className := "shifts-table-content",
+              ShiftHotTableViewComponent(ShiftHotTableViewProps(
+                ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
+                dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
+                interval = props.timeSlotMinutes,
+                initialShifts = state.shiftsData,
+                handleSaveChanges = (shifts: Seq[ShiftSummaryStaffing], changedAssignments: Seq[StaffTableEntry]) => {
+                  val updateChanges = updateChangeAssignment(state.changedAssignments, changedAssignments)
+                  val updateShifts = updateAssignments(shifts, updateChanges, 15)
+                  scope.modState(state => state.copy(
+                    shiftsData = updateShifts,
+                    changedAssignments = updateChanges
+                  )).runNow()
+                }))
+            ),
+            <.div(^.className := "terminal-staffing-content-header",
+              MuiButton(color = Color.primary, variant = "contained")
+              (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
+                ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments))
             )
           )
         )
+      )
       )
     }
   }
