@@ -157,6 +157,8 @@ object FlightTable {
             )
             ThemeProvider(buttonSecondaryTheme)(
               FlightFlaggerFilters(
+                props.portCode.toString,
+                props.terminal.toString,
                 CountryOptions.countries.map { c => CountryJS(c.name, c.threeLetterCode) }.toJSArray,
                 ageGroups,
                 submitCallback,
