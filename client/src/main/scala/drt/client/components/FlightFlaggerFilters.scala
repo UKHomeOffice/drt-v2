@@ -8,6 +8,23 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 
 @js.native
+trait IAnalyticsEvent extends js.Object {
+  var category: String
+  var action: String
+  var label: String
+}
+
+object IAnalyticsEvent {
+  def apply(category: String, action: String, label: String): IAnalyticsEvent = {
+    val p = (new js.Object).asInstanceOf[IAnalyticsEvent]
+    p.category = category
+    p.action = action
+    p.label = label
+    p
+  }
+}
+
+@js.native
 trait Country extends js.Object {
   var name: String
   var code: String
@@ -64,6 +81,7 @@ trait FlightFlaggerFiltersProps extends js.Object {
   var clearFiltersCallback: js.Function1[js.Object, Unit] = js.native
   var onChangeInput: js.Function1[String, Unit] = js.native
   var maybeInitialState: js.UndefOr[js.Dynamic] = js.native
+  var sendEvent: js.Function1[IAnalyticsEvent, Unit] = js.native
 }
 
 object FlightFlaggerFiltersProps {
@@ -76,7 +94,8 @@ object FlightFlaggerFiltersProps {
              showAllCallback: js.Function1[js.Object, Unit],
              clearFiltersCallback: js.Function1[js.Object, Unit],
              onChangeInput: js.Function1[String, Unit],
-             initialState: js.UndefOr[js.Dynamic]
+             initialState: js.UndefOr[js.Dynamic],
+             sendEvent: js.Function1[IAnalyticsEvent, Unit]
            ): FlightFlaggerFiltersProps = {
     val p = (new js.Object).asInstanceOf[FlightFlaggerFiltersProps]
     p.port = port
@@ -88,6 +107,7 @@ object FlightFlaggerFiltersProps {
     p.clearFiltersCallback = clearFiltersCallback
     p.onChangeInput = onChangeInput
     p.maybeInitialState = initialState
+    p.sendEvent = sendEvent
     p
   }
 }
@@ -119,7 +139,8 @@ object FlightFlaggerFilters {
              showAllCallback: js.Function1[js.Object, Unit],
              clearFiltersCallback: js.Function1[js.Object, Unit],
              onChangeInput: js.Function1[String, Unit],
-             initialState: js.UndefOr[js.Dynamic]
+             initialState: js.UndefOr[js.Dynamic],
+             sendEvent: js.Function1[IAnalyticsEvent, Unit]
            ): VdomElement = {
     val props = FlightFlaggerFiltersProps(
       port,
@@ -130,7 +151,8 @@ object FlightFlaggerFilters {
       showAllCallback,
       clearFiltersCallback,
       onChangeInput,
-      initialState
+      initialState,
+      sendEvent
     )
     component(props)
   }

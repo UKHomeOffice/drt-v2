@@ -165,7 +165,8 @@ object FlightTable {
                 showAllCallback,
                 clearFiltersCallback,
                 onChangeInput,
-                initialState
+                initialState,
+                GoogleEventTracker.sendEvent
               ))
           } else EmptyVdom
         ),

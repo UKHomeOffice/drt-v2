@@ -1,5 +1,6 @@
 package drt.client.modules
 
+import drt.client.components.IAnalyticsEvent
 import org.scalajs.dom
 
 import scala.scalajs.js
@@ -17,6 +18,10 @@ object GoogleEventTracker {
           "page_location" -> url,
         ))
       }
+  }
+
+  def sendEvent(event : IAnalyticsEvent) : Unit = {
+    sendEvent(event.category, event.action, event.label)
   }
 
   def sendEvent(category: String, action: String, label: String): Unit = {
