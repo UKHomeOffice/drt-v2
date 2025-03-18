@@ -3,6 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.components.styles.DefaultToolTipsStyle
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Info
 import japgolly.scalajs.react.Ref.Simple
@@ -49,6 +50,14 @@ object TippyJSComponent {
     p.trigger = triggerEvent
     p.placement = "top-end"
     p.plugins = plugins
+
+    p.onTrigger = (el: TippyElement, event: Event) => {
+      if (event.`type` == "show") {
+        GoogleEventTracker.sendEvent("tooltip", s"show",  s"${event.toString}_${el.toString}")
+      } else if (event.`type` == "hide") {
+        GoogleEventTracker.sendEvent("tooltip", "hide", s"${event.toString}_${el.toString}")
+      }
+    }
 
     p
   }

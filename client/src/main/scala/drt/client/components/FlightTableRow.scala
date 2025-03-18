@@ -6,6 +6,7 @@ import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
 import drt.client.components.FlightComponents.{SplitsDataQuality, paxFeedSourceClass}
 import drt.client.components.styles.ArrivalsPageStylesDefault
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.MinuteAsAdjective
@@ -113,6 +114,7 @@ object FlightTableRow {
           <.span(
             ^.cls := s"arrivals__table__flight-code-value $diversionClass",
             ^.onClick --> Callback(SPACircuit.dispatch {
+              GoogleEventTracker.sendEvent(props.flightWithSplits.apiFlight.Terminal.toString, "flight feed source", props.flightWithSplits.unique.stringValue)
               props.viewMode match {
                 case vm: ViewDay if vm.isHistoric(SDate.now()) && vm.timeMachineDate.isEmpty =>
                   GetArrivalSourcesForPointInTime(SDate(props.viewMode.localDate).addHours(28), props.flightWithSplits.unique)
