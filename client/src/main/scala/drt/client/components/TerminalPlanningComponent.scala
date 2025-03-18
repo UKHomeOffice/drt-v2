@@ -6,6 +6,7 @@ import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.actions.Actions.GetForecastWeek
 import drt.client.components.DropInDialog.StringExtended
 import drt.client.components.styles.DrtTheme
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers.UpdateUserPreferences
 import drt.shared.UserPreferences
@@ -66,6 +67,8 @@ object TerminalPlanningComponent {
           def drawSelect(names: Seq[String], values: List[String], value: String): VdomTagOf[Select] = {
             <.select(^.className := "form-control", ^.value := value,
               ^.onChange ==> ((e: ReactEventFromInput) => {
+                GoogleEventTracker.sendEvent(props.page.terminalName,"planning_select_week",
+                  Option(SDate(e.target.value).toLocalDate.toISOString).getOrElse("none"))
                 props.router.set(props.page.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toLocalDate.toISOString))))
               }),
               values.zip(names).map {
@@ -96,6 +99,7 @@ object TerminalPlanningComponent {
                   val direct = scope.withEffectsImpure
                   DrtApi.get(url)
                     .map { r =>
+                      GoogleEventTracker.sendEvent(props.page.terminalName,"planning_export", url)
                       val fileName = r.getResponseHeader("Content-Disposition").split("filename=")(1)
                       downloadContent(r.responseText, fileName)
                       direct.modState(s => updateState(s, false))
@@ -167,7 +171,8 @@ object TerminalPlanningComponent {
                 MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
                   scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
                     Callback(SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(userSelectedPlanningTimePeriod = e.target.value.toInt)))) >>
-                      Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt)))
+                      Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt))) >>
+                      Callback(GoogleEventTracker.sendEvent(props.page.terminalName,"planning_timePeriod", e.target.value))
                 }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
                   MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")
                 ))
