@@ -53,9 +53,9 @@ object TippyJSComponent {
 
     p.onTrigger = (el: TippyElement, event: Event) => {
       if (event.`type` == "show") {
-        GoogleEventTracker.sendEvent("tooltip", s"show", label)
+        Callback(GoogleEventTracker.sendEvent("tooltip", s"show", label))
       } else if (event.`type` == "hide") {
-        GoogleEventTracker.sendEvent("tooltip", "hide", label)
+        Callback(GoogleEventTracker.sendEvent("tooltip", "hide", label))
       }
     }
 

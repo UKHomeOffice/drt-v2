@@ -72,7 +72,6 @@ object SearchFilterPayload {
 
 @js.native
 trait FlightFlaggerFiltersProps extends js.Object {
-  var port: String = js.native
   var terminal: String = js.native
   var nationalities: js.Array[Country] = js.native
   var ageGroups: js.Array[String] = js.native
@@ -86,7 +85,6 @@ trait FlightFlaggerFiltersProps extends js.Object {
 
 object FlightFlaggerFiltersProps {
   def apply(
-             port: String,
              terminal: String,
              nationalities: js.Array[Country],
              ageGroups: js.Array[String],
@@ -98,7 +96,6 @@ object FlightFlaggerFiltersProps {
              sendEvent: js.Function1[IAnalyticsEvent, Unit]
            ): FlightFlaggerFiltersProps = {
     val p = (new js.Object).asInstanceOf[FlightFlaggerFiltersProps]
-    p.port = port
     p.terminal = terminal
     p.nationalities = nationalities
     p.ageGroups = ageGroups
@@ -131,7 +128,6 @@ object FlightFlaggerFilters {
       .build
 
   def apply(
-             port: String,
              terminal: String,
              nationalities: js.Array[Country],
              ageGroups: js.Array[String],
@@ -143,7 +139,6 @@ object FlightFlaggerFilters {
              sendEvent: js.Function1[IAnalyticsEvent, Unit]
            ): VdomElement = {
     val props = FlightFlaggerFiltersProps(
-      port,
       terminal,
       nationalities,
       ageGroups,

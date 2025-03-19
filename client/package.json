@@ -8,7 +8,7 @@
     "build": "esbuild ./target/scala-2.13/client-opt/main.js --bundle --outdir=../server/src/main/assets/ --minify"
   },
   "dependencies": {
-    "@drt/drt-react": "UKHomeOffice/drt-react#c5f6c41c4ecfe166101a73fa61d91b8744b32082",
+    "@drt/drt-react": "UKHomeOffice/drt-react#4fff455ed37b657f249e37a7c8a054ed00b2ed07",
     "@handsontable/react": "3.1.2",
     "@mui/icons-material": "5.16.5",
     "@mui/lab": "5.0.0-alpha.173",
