@@ -102,7 +102,7 @@ object Tippy extends ScalaCssReactImplicits {
     val focusAndHover = s"$hover $focus"
   }
 
-  case class Props(label: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String, maybeOnClick: Option[ReactEventFromInput => Callback]) extends UseValueEq
+  case class Props(gaEventLabel: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String, maybeOnClick: Option[ReactEventFromInput => Callback]) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("TippyJs")
     .render_P(props => {
@@ -122,30 +122,30 @@ object Tippy extends ScalaCssReactImplicits {
 
       val plugins: js.Array[js.Any] = js.Array(new HideOnEsc())
 
-      TippyJSComponent(props.label, props.content.rawElement, props.interactive, triggerWithTabIndex, plugins, props.triggerEvent)
+      TippyJSComponent(props.gaEventLabel, props.content.rawElement, props.interactive, triggerWithTabIndex, plugins, props.triggerEvent)
     })
     .build
 
-  def apply(label: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String = TriggerEvents.focus, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    component(Props(label, content, interactive, trigger, triggerEvent, triggerCallback))
+  def apply(gaEventLabel: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String = TriggerEvents.focus, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
+    component(Props(gaEventLabel, content, interactive, trigger, triggerEvent, triggerCallback))
 
-  def interactive(label: String, content: VdomElement, trigger: VdomNode) =
-    apply(label, content, interactive = true, <.div(^.key := "trigger-wrapper", trigger))
+  def interactive(gaEventLabel: String, content: VdomElement, trigger: VdomNode) =
+    apply(gaEventLabel, content, interactive = true, <.div(^.key := "trigger-wrapper", trigger))
 
-  def describe(label: String, content: VdomElement, trigger: TagMod) =
-    apply(label, content, interactive = false, <.span(trigger))
+  def describe(gaEventLabel: String, content: VdomElement, trigger: TagMod) =
+    apply(gaEventLabel, content, interactive = false, <.span(trigger))
 
-  def interactiveInfo(label: String, content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    apply(label, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerCallback = triggerCallback)
+  def interactiveInfo(gaEventLabel: String, content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
+    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerCallback = triggerCallback)
 
-  def info(label: String, content: VdomElement) =
-    apply(label, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
+  def info(gaEventLabel: String, content: VdomElement) =
+    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
 
-  def info(label: String, content: String) =
-    apply(label, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
+  def info(gaEventLabel: String, content: String) =
+    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
 
-  def infoHover(label: String, content: String) =
-    apply(label, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerEvent = TriggerEvents.focusAndHover)
+  def infoHover(gaEventLabel: String, content: String) =
+    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerEvent = TriggerEvents.focusAndHover)
 
 }
 

@@ -11,7 +11,7 @@ object ToolTips {
 
   val apiDataTooltip = Tippy.info("api-data-tooltip", "Live API data should become available for all flights soon after they depart. However, there are occasionally circumstances where live API data is not made available.")
 
-  val availTooltip = Tippy.info("avail--tooltip", "Use the + or - buttons to make adjustments to staff available (eg due to sickness and lunch breaks). You can select from a list of reasons when making the adjustment.")
+  val availTooltip = Tippy.info("avail-tooltip", "Use the + or - buttons to make adjustments to staff available (eg due to sickness and lunch breaks). You can select from a list of reasons when making the adjustment.")
 
   val availableStaffDeploymentsTooltip = Tippy.infoHover("availableStaffDeployments-tooltip", "This view shows the minimum number of staff needed to help avoid breaching SLAs within the constraints of staff available.")
 
@@ -49,7 +49,7 @@ object ToolTips {
     <.p("amber-> live API data is not available for the flight so we rely on historic API data and have lower confidence levels when applying splits to queues"),
     <.p("red -> both live and relevant historic API data are not available and we depend on an historic average for flights across the port")))
 
-  val staffMovementsTabTooltip = Tippy.infoHover("staffMovementsTab-tooltip", "The Staff Movements tab provides more information about adjustments.")
+  val staffMovementsTabTooltip = Tippy.infoHover("staff-movements-tab-tooltip", "The Staff Movements tab provides more information about adjustments.")
 
   val walkTimesTooltip = Tippy.info("walk-times-tooltip", "Walk times measure the average time it takes for passengers to get from the gate or stand to the arrival hall. If they don't look right contact us.")
 

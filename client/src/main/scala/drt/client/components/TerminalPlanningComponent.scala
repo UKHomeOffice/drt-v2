@@ -172,7 +172,7 @@ object TerminalPlanningComponent {
                   scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>
                     Callback(SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(userSelectedPlanningTimePeriod = e.target.value.toInt)))) >>
                       Callback(SPACircuit.dispatch(GetForecastWeek(props.page.dateFromUrlOrNow, Terminal(props.page.terminalName), e.target.value.toInt))) >>
-                      Callback(GoogleEventTracker.sendEvent(props.page.terminalName,"planning_timePeriod", e.target.value))
+                      Callback(GoogleEventTracker.sendEvent(props.page.terminalName,"planning-time-period", e.target.value))
                 }), MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Hourly".toVdom)(^.value := "60"),
                   MuiFormControlLabel(control = MuiRadio()().rawElement, label = "Every 15 minutes".toVdom)(^.value := "15")
                 ))
