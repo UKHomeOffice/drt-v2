@@ -295,7 +295,7 @@ object FlightTableRow {
     }
     val walkTime = maybeActualWalkTime.getOrElse((terminalWalkTime / oneMinuteMillis).toInt)
     val walkTimeString = MinuteAsAdjective(walkTime).display + " " + description
-    <.span(^.className := "no-wrap", ^.key := "walk-time", Tippy.interactive(<.span(walkTimeString), gateOrStand))
+    <.span(^.className := "no-wrap", ^.key := "walk-time", Tippy.interactive("walk-time", <.span(walkTimeString), gateOrStand))
   }
 
   private def offScheduleClass(arrival: Arrival): String = {

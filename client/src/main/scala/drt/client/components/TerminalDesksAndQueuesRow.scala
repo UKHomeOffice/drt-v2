@@ -63,13 +63,13 @@ object TerminalDesksAndQueuesRow {
 
           def deployDeskTd: VdomTagOf[TableCell] = <.td(
             ^.className := s"${queueColour(queue)}",
-            Tippy.interactive(<.span(s"Suggested deployments with available staff: ${cm.deployedDesks.getOrElse("-")}"),
+            Tippy.interactive("deployDeskTd", <.span(s"Suggested deployments with available staff: ${cm.deployedDesks.getOrElse("-")}"),
               s"${cm.deskRec}")
           )
 
           def deployRecsDeskTd: VdomTagOf[TableCell] = <.td(
             ^.className := s"${queueColour(queue)}",
-            Tippy.interactive(
+            Tippy.interactive("deployRecsDeskTd",
               <.span(s"Recommended for this time slot / queue: ${cm.deskRec}"),
               s"${cm.deployedDesks.getOrElse("-")}"
             )
@@ -91,7 +91,7 @@ object TerminalDesksAndQueuesRow {
                   deployRecsDeskTd,
                   withSlaClass(cm.deployedWait.getOrElse(0))(ragClass => <.td(
                     ^.className := s"${queueColour(queue)} $ragClass",
-                    Tippy.interactive(
+                    Tippy.interactive("deployedWait",
                       <.span(s"Recommended for this time slot / queue: ${cm.waitTime}"),
                       s"${cm.deployedWait.map(Math.round(_)).getOrElse("-")}"
                     )
@@ -106,7 +106,7 @@ object TerminalDesksAndQueuesRow {
                   deployDeskTd,
                   withSlaClass(cm.waitTime)(ragClass => <.td(
                     ^.className := s"${queueColour(queue)} $ragClass",
-                    Tippy.interactive(<.span(s"Suggested deployments with available staff: ${cm.waitTime}"),
+                    Tippy.interactive("Ideal-waitTime", <.span(s"Suggested deployments with available staff: ${cm.waitTime}"),
                       s"${Math.round(cm.waitTime)}")
                   )),
                 )

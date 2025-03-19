@@ -84,7 +84,7 @@ object TerminalContentComponent {
       <.span(
         style,
         originProxy().render(ai =>
-          <.dfn(^.className := "flight-origin-dfn", Tippy.describe(<.span(s"${ai.airportName}, ${ai.city}, ${ai.country}"),
+          <.dfn(^.className := "flight-origin-dfn", Tippy.describe("flight-origin-dfn-originProxy", <.span(s"${ai.airportName}, ${ai.city}, ${ai.country}"),
             <.abbr(^.className := "dotted-underline", s"${origin.toString}")), <.span(s", ${ai.country}", prevPort))),
         originProxy().renderEmpty(<.abbr(^.className := "dotted-underline", <.span(origin.toString, prevPort)))
       )
@@ -95,7 +95,7 @@ object TerminalContentComponent {
       <.span(
         style,
         previousProxy().render(ai =>
-          <.dfn(^.className := "flight-origin-dfn", Tippy.describe(<.span(s"${ai.airportName}, ${ai.city}, ${ai.country}"),
+          <.dfn(^.className := "flight-origin-dfn", Tippy.describe("flight-origin-dfn-previousProxy", <.span(s"${ai.airportName}, ${ai.city}, ${ai.country}"),
             <.abbr(^.className := "dotted-underline", s"${previous.toString}")), s", ${ai.country}")),
         previousProxy().renderEmpty(<.abbr(^.className := "dotted-underline", previous.toString))
       )

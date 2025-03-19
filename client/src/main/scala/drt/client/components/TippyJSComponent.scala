@@ -40,7 +40,7 @@ object TippyJSComponent {
     var onTrigger: js.Function2[TippyElement, Event, Unit] = js.native
   }
 
-  def props(content: js.Object, interactive: Boolean, plugins: js.Array[js.Any], triggerEvent: String): Props = {
+  def props(label: String, content: js.Object, interactive: Boolean, plugins: js.Array[js.Any], triggerEvent: String): Props = {
     val p = (new js.Object).asInstanceOf[Props]
 
     p.interactive = interactive
@@ -53,9 +53,9 @@ object TippyJSComponent {
 
     p.onTrigger = (el: TippyElement, event: Event) => {
       if (event.`type` == "show") {
-        GoogleEventTracker.sendEvent("tooltip", s"show",  s"${event.toString}_${el.toString}")
+        GoogleEventTracker.sendEvent("tooltip", s"show", label)
       } else if (event.`type` == "hide") {
-        GoogleEventTracker.sendEvent("tooltip", "hide", s"${event.toString}_${el.toString}")
+        GoogleEventTracker.sendEvent("tooltip", "hide", label)
       }
     }
 
@@ -64,14 +64,14 @@ object TippyJSComponent {
 
   val component = JsComponent[Props, Children.Varargs, Null](TippyReactRaw)
 
-  def apply[A](
-                content: js.Object,
-                interactive: Boolean,
-                trigger: VdomTagOf[HTMLElement],
-                plugins: js.Array[js.Any] = js.Array(),
-                triggerEvent: String = Tippy.TriggerEvents.focus
+  def apply[A](label: String,
+               content: js.Object,
+               interactive: Boolean,
+               trigger: VdomTagOf[HTMLElement],
+               plugins: js.Array[js.Any] = js.Array(),
+               triggerEvent: String = Tippy.TriggerEvents.focus
               ): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-    component(props(content, interactive, plugins, triggerEvent))(trigger)
+    component(props(label, content, interactive, plugins, triggerEvent))(trigger)
 }
 
 @js.native
@@ -102,7 +102,7 @@ object Tippy extends ScalaCssReactImplicits {
     val focusAndHover = s"$hover $focus"
   }
 
-  case class Props(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String, maybeOnClick: Option[ReactEventFromInput => Callback]) extends UseValueEq
+  case class Props(label: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String, maybeOnClick: Option[ReactEventFromInput => Callback]) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("TippyJs")
     .render_P(props => {
@@ -122,30 +122,30 @@ object Tippy extends ScalaCssReactImplicits {
 
       val plugins: js.Array[js.Any] = js.Array(new HideOnEsc())
 
-      TippyJSComponent(props.content.rawElement, props.interactive, triggerWithTabIndex, plugins, props.triggerEvent)
+      TippyJSComponent(props.label, props.content.rawElement, props.interactive, triggerWithTabIndex, plugins, props.triggerEvent)
     })
     .build
 
-  def apply(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String = TriggerEvents.focus, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    component(Props(content, interactive, trigger, triggerEvent, triggerCallback))
+  def apply(label: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String = TriggerEvents.focus, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
+    component(Props(label, content, interactive, trigger, triggerEvent, triggerCallback))
 
-  def interactive(content: VdomElement, trigger: VdomNode) =
-    apply(content, interactive = true, <.div(^.key := "trigger-wrapper", trigger))
+  def interactive(label: String, content: VdomElement, trigger: VdomNode) =
+    apply(label, content, interactive = true, <.div(^.key := "trigger-wrapper", trigger))
 
-  def describe(content: VdomElement, trigger: TagMod) =
-    apply(content, interactive = false, <.span(trigger))
+  def describe(label: String, content: VdomElement, trigger: TagMod) =
+    apply(label, content, interactive = false, <.span(trigger))
 
-  def interactiveInfo(content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    apply(content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerCallback = triggerCallback)
+  def interactiveInfo(label: String, content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
+    apply(label, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerCallback = triggerCallback)
 
-  def info(content: VdomElement) =
-    apply(content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
+  def info(label: String, content: VdomElement) =
+    apply(label, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
 
-  def info(content: String) =
-    apply(<.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
+  def info(label: String, content: String) =
+    apply(label, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
 
-  def infoHover(content: String) =
-    apply(<.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerEvent = TriggerEvents.focusAndHover)
+  def infoHover(label: String, content: String) =
+    apply(label, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerEvent = TriggerEvents.focusAndHover)
 
 }
 
