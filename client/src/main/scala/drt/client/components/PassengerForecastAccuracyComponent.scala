@@ -39,7 +39,7 @@ object PassengerForecastAccuracyComponent {
           accuracyPot().renderReady { accuracy =>
             <.div(^.className := "status-bar-item",
               "Pax Forecast Accuracy",
-              Tippy.info("Pax Forecast Accuracy", <.div(
+              Tippy.info("pax-forecast-accuracy", <.div(
                 ^.className := "tooltip-content",
                 "The percentage displayed here shows how close to the actual number of passengers the forecast was for a number of days ahead.",
                 <.ul(

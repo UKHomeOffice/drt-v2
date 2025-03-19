@@ -99,14 +99,14 @@ object FlightComponents {
 
     <.div(
       ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData underline",
-      <.span(Tippy.describe("arrivals__table__flight__pcp-pax",
+      <.span(Tippy.describe("arrivals-table-flight-pcp-pax",
         paxNumberSources(flightWithSplits), <.span(^.className := s"pcp-pax-value $noPcpPaxClass", pcpPaxNumber))
       ),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
           if (directRedListFlight.incomingDiversion) s"Passengers diverted from ${flightWithSplits.apiFlight.Terminal}"
           else "Passengers diverted to red list terminal"
-        Tippy.describe("Passengers diverted", <.span(incomingTip), MuiIcons(TrendingFlat)())
+        Tippy.describe("passengers-diverted", <.span(incomingTip), MuiIcons(TrendingFlat)())
       } else <.span(),
     )
   }

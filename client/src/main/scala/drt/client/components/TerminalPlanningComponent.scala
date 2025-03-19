@@ -67,7 +67,7 @@ object TerminalPlanningComponent {
           def drawSelect(names: Seq[String], values: List[String], value: String): VdomTagOf[Select] = {
             <.select(^.className := "form-control", ^.value := value,
               ^.onChange ==> ((e: ReactEventFromInput) => {
-                GoogleEventTracker.sendEvent(props.page.terminalName,"planning_select_week",
+                GoogleEventTracker.sendEvent(props.page.terminalName,"planning-select-week",
                   Option(SDate(e.target.value).toLocalDate.toISOString).getOrElse("none"))
                 props.router.set(props.page.withUrlParameters(UrlDateParameter(Option(SDate(e.target.value).toLocalDate.toISOString))))
               }),
@@ -99,7 +99,7 @@ object TerminalPlanningComponent {
                   val direct = scope.withEffectsImpure
                   DrtApi.get(url)
                     .map { r =>
-                      GoogleEventTracker.sendEvent(props.page.terminalName,"planning_export", url)
+                      GoogleEventTracker.sendEvent(props.page.terminalName,"planning-export", url)
                       val fileName = r.getResponseHeader("Content-Disposition").split("filename=")(1)
                       downloadContent(r.responseText, fileName)
                       direct.modState(s => updateState(s, false))
