@@ -38,7 +38,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
     )
 
     val selectedDateJs = new scala.scalajs.js.Date(selectedDate.millisSinceEpoch)
-    val dayDisplayText = if (isYesterday) "yesterday" else if (isTomorrow) "tomorrow" else "today"
+    val dayDisplayText = if (isYesterday) "yesterday" else if (isTomorrow) "tomorrow" else if (isToday) "today" else selectedDate.`DD-Month-YYYY`
     val timeText = terminalPageTab.timeSelectString
 
     SearchForm(
