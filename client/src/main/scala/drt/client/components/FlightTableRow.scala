@@ -175,7 +175,7 @@ object FlightTableRow {
       val highlighterClass = s"arrivals__table__flight-code__highlighter-${if (highlighterIsActive) "on" else "off"}"
       val isHighlightedClass = if (highlighterIsActive) "arrivals__table__flight-code-wrapper__highlighted" else ""
 
-      val maybePreviousPort = None //flight.PreviousPort.filter(_ != flight.Origin)
+      val maybePreviousPort = flight.PreviousPort.filter(_ != flight.Origin)
 
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
