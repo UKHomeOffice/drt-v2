@@ -40,7 +40,7 @@ object TippyJSComponent {
     var onTrigger: js.Function2[TippyElement, Event, Unit] = js.native
   }
 
-  def props(label: String, content: js.Object, interactive: Boolean, plugins: js.Array[js.Any], triggerEvent: String): Props = {
+  def props(gaEventLabel: String, content: js.Object, interactive: Boolean, plugins: js.Array[js.Any], triggerEvent: String): Props = {
     val p = (new js.Object).asInstanceOf[Props]
 
     p.interactive = interactive
@@ -53,9 +53,9 @@ object TippyJSComponent {
 
     p.onTrigger = (el: TippyElement, event: Event) => {
       if (event.`type` == "show") {
-        Callback(GoogleEventTracker.sendEvent("tooltip", s"show", label))
+        Callback(GoogleEventTracker.sendEvent("tooltip", s"show", gaEventLabel))
       } else if (event.`type` == "hide") {
-        Callback(GoogleEventTracker.sendEvent("tooltip", "hide", label))
+        Callback(GoogleEventTracker.sendEvent("tooltip", "hide", gaEventLabel))
       }
     }
 
