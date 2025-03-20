@@ -77,6 +77,7 @@ object FlightChartComponent {
 
       <.div(^.className := "arrivals__table__flight__chart-box-wrapper",
         Tippy.interactiveInfo(
+          gaEventLabel = "arrival-table-flight-chart-box",
           content =
             <.div(^.cls := "arrivals__table__flight__chart-box",
               maybeWarning.map(MuiAlert(variant = MuiAlert.Variant.standard, severity = "warning")(_)).getOrElse(<.div()),

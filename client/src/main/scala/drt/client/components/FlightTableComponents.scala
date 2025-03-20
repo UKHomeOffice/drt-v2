@@ -19,10 +19,10 @@ object FlightTableComponents {
         val sdate = SDate(millis)
         val hhmm = <.span(^.className := "underline", sdate.toHoursAndMinutes)
         val toolTip = maybeToolTip.getOrElse(<.div(sdate.toLocalDateTimeString))
-        val timeElement = Tippy.describe(<.span(toolTip, ^.display := "inline"), hhmm)
+        val timeElement = Tippy.describe("time-element-hh-mm", <.span(toolTip, ^.display := "inline"), hhmm)
         maybeInfo match {
           case None => timeElement
-          case Some(info) => <.span(^.display := "flex", ^.flexWrap := "nowrap", timeElement, <.span(^.marginLeft := "5px", Tippy.info(info)))
+          case Some(info) => <.span(^.display := "flex", ^.flexWrap := "nowrap", timeElement, <.span(^.marginLeft := "5px", Tippy.info("time-element-info", info)))
         }
       case None => <.span()
     }
@@ -65,7 +65,7 @@ object FlightTableComponents {
         " to ",
         sdateTo.toHoursAndMinutes,
       )
-      Tippy.describe(postTouchdownTimes, content).vdomElement
+      Tippy.describe("post-touchdown-times", postTouchdownTimes, content).vdomElement
     } getOrElse {
       <.div()
     }
