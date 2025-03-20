@@ -64,14 +64,14 @@ object TippyJSComponent {
 
   val component = JsComponent[Props, Children.Varargs, Null](TippyReactRaw)
 
-  def apply[A](label: String,
+  def apply[A](gaEventLabel: String,
                content: js.Object,
                interactive: Boolean,
                trigger: VdomTagOf[HTMLElement],
                plugins: js.Array[js.Any] = js.Array(),
                triggerEvent: String = Tippy.TriggerEvents.focus
               ): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-    component(props(label, content, interactive, plugins, triggerEvent))(trigger)
+    component(props(gaEventLabel, content, interactive, plugins, triggerEvent))(trigger)
 }
 
 @js.native
