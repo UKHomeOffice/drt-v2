@@ -122,6 +122,7 @@ object TerminalContentComponent {
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
       val terminalName = terminal.toString
       val arrivalsExportForPort = componentFactory(props.airportConfig.terminals)
+      val deploymentsExportForPort = DeploymentsExportComponent.componentFactory(props.airportConfig.terminals)
       val movementsExportDate: LocalDate = props.viewMode match {
         case ViewLive => SDate.now().toLocalDate
         case ViewDay(localDate, _) => localDate
@@ -195,13 +196,13 @@ object TerminalContentComponent {
                     title = "desk-recs"
                   )),
                 MuiMenuItem()(
-                  exportLink(
-                    exportDay = props.terminalPageTab.dateFromUrlOrNow,
-                    terminalName = terminalName,
-                    exportType = ExportDeployments(props.terminalPageTab.terminal),
-                    exportUrl = SPAMain.exportUrl(ExportDeployments(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
-                    title = "deployments"
-                  )),
+                  deploymentsExportForPort(
+                    props.terminalPageTab.terminal,
+                    props.terminalPageTab.dateFromUrlOrNow,
+                    props.loggedInUser,
+                    props.viewMode
+                  )
+              ),
                 MuiMenuItem()(
                   displayForRole(
                     node = exportLink(

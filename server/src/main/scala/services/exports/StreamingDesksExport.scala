@@ -26,8 +26,8 @@ object StreamingDesksExport {
 
   private def csvHeader(queues: Seq[Queue], deskTitle: String): String = {
 
-    val headingsLine1 = "Date,," + queueHeadings(queues) + ",Misc,Moves,PCP Staff,PCP Staff"
-    val headingsLine2 = ",Start," + queues.flatMap(q => {
+    val headingsLine1 = "Date,Terminal,," + queueHeadings(queues) + ",Misc,Moves,PCP Staff,PCP Staff"
+    val headingsLine2 = ",,Start," + queues.flatMap(q => {
       if (q == Queues.EGate) eGatesHeadings(deskTitle) else colHeadings(deskTitle)
     }).mkString(",") +
       s",Staff req,Staff movements,Avail,Req"
@@ -37,6 +37,26 @@ object StreamingDesksExport {
 
   def queueHeadings(queues: Seq[Queue]): String = queues.map(queue => Queues.displayName(queue))
     .flatMap(qn => List.fill(colHeadings().length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
+
+  def deskRecsAllTerminalToCSVStreamWithHeaders(start: SDateLike,
+                                                end: SDateLike,
+                                                terminals: Seq[Terminal],
+                                                exportQueuesInOrder: List[Queue],
+                                                crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+                                                staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+                                                maybePit: Option[MillisSinceEpoch] = None,
+                                                periodMinutes: Int)(implicit ec: ExecutionContext): Source[String, NotUsed] = {
+    val streams = terminals.map { terminal =>
+      exportDesksToCSVStream(start, end, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup,
+        deskRecsCsv, maybePit, periodMinutes
+      )
+    }
+    val combinedStream = Source(streams).flatMapConcat(identity)
+
+    val header = Source.single(csvHeader(exportQueuesInOrder, "req"))
+
+    header.concat(combinedStream)
+  }
 
   def deskRecsToCSVStreamWithHeaders(start: SDateLike,
                                      end: SDateLike,
@@ -141,7 +161,7 @@ object StreamingDesksExport {
         val total = qcms.map(_.deskRec).sum
         val localMinute = SDate(minute, europeLondonTimeZone)
         val misc = terminalStaffMinutesWithinRange.get(minute).map(_.fixedPoints).getOrElse(0)
-        s"${localMinute.toISODateOnly},${localMinute.prettyTime},$qsCsv,$staffMinutesCsv,${total + misc}\n"
+        s"${localMinute.toISODateOnly},${terminal.toString},${localMinute.prettyTime},$qsCsv,$staffMinutesCsv,${total + misc}\n"
 
     }.mkString
   }
