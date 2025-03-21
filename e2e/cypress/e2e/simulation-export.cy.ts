@@ -6,15 +6,15 @@ import {paxRagGreenSelector} from "../support/commands";
 
 describe('Simulation export', () => {
 
-    const eeaDeskPaxCsvIndex = 2;
-    const eeaDeskWaitCsvIndex = 3;
-    const eeaDeskRecCsvIndex = 4;
-    const eGatePaxCsvIndex = 7;
-    const nonEeaDeskPaxCsvIndex = 12;
+    const eeaDeskPaxCsvIndex = 3;
+    const eeaDeskWaitCsvIndex = 4;
+    const eeaDeskRecCsvIndex = 5;
+    const eGatePaxCsvIndex = 8;
+    const nonEeaDeskPaxCsvIndex = 13;
     const scheduledDateTime = todayAtUtc(0, 55);
 
     beforeEach(function () {
-        cy.deleteData();
+        cy.deleteData("");
     });
 
     const manifest = (pl): object => manifestForDateTime(scheduledDateTime, pl)
@@ -45,7 +45,8 @@ describe('Simulation export', () => {
               "ActChoxDT": scheduledDateTime,
               "SchDT": todayAtUtcString(0, 55),
               "ActPax": 30
-          }
+          },
+          ""
         )
         .asABorderForceOfficerWithRoles(["arrival-simulation-upload"], 'nocheck')
         .waitForFlightToAppear("TS0123")
