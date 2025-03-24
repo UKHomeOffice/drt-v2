@@ -39,12 +39,32 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       }
     }
 
+  def exportDesksAndQueuesTerminalsRecsAtPointInTimeCSV(localDate: String,
+                                                        pointInTime: String): Action[AnyContent] =
+    authByRole(DesksAndQueuesView) {
+      Action { request =>
+        (LocalDate.parse(localDate), Try(SDate(pointInTime.toLong))) match {
+          case (Some(ld), Success(pit)) =>
+            val viewDay = SDate(ld)
+            val start = viewDay
+            val end = viewDay.getLocalNextMidnight.addMinutes(-1)
+
+            val combinedStream = deskRecsExportStreamForTerminals(
+              pointInTime = Option(pit.millisSinceEpoch), start, end,  periodMinutes(request))
+          val terminals = ctrl.airportConfig.terminals.toSeq
+
+            streamExport(ctrl.airportConfig.portCode, terminals, ld, ld, combinedStream, "desks-and-queues-recs-at-${pit.toISOString}-for")
+          case _ =>
+            BadRequest(write(ErrorResponse("Invalid date format")))
+        }
+      }
+    }
+
   private def periodMinutes(request: Request[AnyContent]): Int =
     request.getQueryString("period-minutes").map(_.toInt).getOrElse(15)
 
-
-  def exportTerminalsDesksAndQueuesRecsForDateRangeCSV(startLocalDate: String,
-                                           endLocalDate: String,
+  def exportDesksAndQueuesTerminalsRecsBetweenTimeStampsCSV(startLocalDate: String,
+                                                            endLocalDate: String,
                                            ): Action[AnyContent] =
     authByRole(DesksAndQueuesView) {
       Action { request =>
@@ -54,7 +74,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             val end = SDate(endLD).getLocalNextMidnight.addMinutes(-1)
             val terminals = ctrl.airportConfig.terminals.toSeq
 
-            val combinedStream = deskRecsExportStreamForAllTerminals(pointInTime = None, start, end, periodMinutes(request))
+            val combinedStream = deskRecsExportStreamForTerminals(pointInTime = None, start, end, periodMinutes(request))
 
             streamExport(ctrl.airportConfig.portCode, terminals, startLD, endLD, combinedStream, "desks-and-queues-recs")
           case _ =>
@@ -81,6 +101,25 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       }
     }
 
+
+  def exportDesksAndQueuesDepsTerminalsBetweenTimeStampsCSV(startLocalDate: String, endLocalDate: String): Action[AnyContent] =
+    authByRole(DesksAndQueuesView) {
+      Action { request =>
+        (LocalDate.parse(startLocalDate), LocalDate.parse(endLocalDate)) match {
+          case (Some(startLD), Some(endLD)) =>
+            val start = SDate(startLD)
+            val end = SDate(endLD).getLocalNextMidnight.addMinutes(-1)
+            val terminals = ctrl.airportConfig.terminals.toSeq
+
+            val combinedStream = deskDepsExportStreamForTerminals(pointInTime = None, start, end, periodMinutes(request))
+
+            streamExport(ctrl.airportConfig.portCode, terminals, startLD, endLD, combinedStream, "desks-and-queues-deps")
+          case _ =>
+            BadRequest(write(ErrorResponse("Invalid date format")))
+        }
+      }
+    }
+
   def exportDesksAndQueuesDepsAtPointInTimeCSV(localDate: String,
                                                pointInTime: String,
                                                terminalName: String
@@ -101,6 +140,23 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       }
     }
 
+  def exportDesksAndQueuesTerminalsDepsAtPointInTimeCSV(localDate: String, pointInTime: String): Action[AnyContent] =
+    authByRole(DesksAndQueuesView) {
+      Action { request =>
+        (LocalDate.parse(localDate), Try(SDate(pointInTime.toLong))) match {
+          case (Some(ld), Success(pit)) =>
+            val start = SDate(ld)
+            val end = start.getLocalNextMidnight.addMinutes(-1)
+            val terminals = ctrl.airportConfig.terminals.toSeq
+            val stream = deskDepsExportStreamForTerminals(
+              pointInTime = Option(pit.millisSinceEpoch), start, end, periodMinutes(request))
+            streamExport(airportConfig.portCode, terminals, ld, ld, stream, s"desks-and-queues-deps-at-${pit.toISOString}-for")
+          case _ =>
+            BadRequest(write(ErrorResponse("Invalid date format")))
+        }
+      }
+    }
+
   def exportDesksAndQueuesDepsBetweenTimeStampsCSV(startLocalDate: String,
                                                    endLocalDate: String,
                                                    terminalName: String): Action[AnyContent] =
@@ -111,7 +167,7 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
             val start = SDate(startLD)
             val end = SDate(endLD).getLocalNextMidnight.addMinutes(-1)
 
-            val stream = deploymentsExportStreamForTerminalDates(pointInTime = None, start, end, Terminal(terminalName), periodMinutes(request))
+            val stream = deskDepsExportStreamForTerminals(pointInTime = None, start, end, periodMinutes(request))
             streamExport(airportConfig.portCode, Seq(Terminal(terminalName)), startLD, endLD, stream, "desks-and-queues-deps")
           case _ =>
             BadRequest(write(ErrorResponse("Invalid date format")))
@@ -119,12 +175,29 @@ class DesksExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
       }
     }
 
-  private def deskRecsExportStreamForAllTerminals(pointInTime: Option[MillisSinceEpoch],
+  private def deskDepsExportStreamForTerminals(pointInTime: Option[MillisSinceEpoch],
                                                   start: SDateLike,
                                                   end: SDateLike,
                                                   periodMinutes: Int): Source[String, NotUsed] = {
     val terminals = ctrl.airportConfig.terminals.toSeq
-    StreamingDesksExport.deskRecsAllTerminalToCSVStreamWithHeaders(
+    StreamingDesksExport.deskDepsTerminalsToCSVStreamWithHeaders(
+      start,
+      end,
+      terminals,
+      airportConfig.desksExportQueueOrder,
+      ctrl.minuteLookups.queuesLookup,
+      ctrl.minuteLookups.staffLookup,
+      pointInTime,
+      periodMinutes,
+    )
+  }
+
+  private def deskRecsExportStreamForTerminals(pointInTime: Option[MillisSinceEpoch],
+                                                  start: SDateLike,
+                                                  end: SDateLike,
+                                                  periodMinutes: Int): Source[String, NotUsed] = {
+    val terminals = ctrl.airportConfig.terminals.toSeq
+    StreamingDesksExport.deskRecsTerminalsToCSVStreamWithHeaders(
       start,
       end,
       terminals,

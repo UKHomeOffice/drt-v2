@@ -350,7 +350,7 @@ class StreamingDesksExportSpec extends CrunchTestLike {
       val crunchMinuteLookup = MockMinutesLookup.cmLookup(crunchMinutesContainer)
       val staffMinuteLookup = MockMinutesLookup.smLookup(staffMinutesContainer)
 
-      val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsAllTerminalToCSVStreamWithHeaders(
+      val resultSource: Source[String, NotUsed] = StreamingDesksExport.deskRecsTerminalsToCSVStreamWithHeaders(
         start = minute1,
         end = minute2,
         terminals = List(T1, T2),

@@ -38,14 +38,34 @@ object StreamingDesksExport {
   def queueHeadings(queues: Seq[Queue]): String = queues.map(queue => Queues.displayName(queue))
     .flatMap(qn => List.fill(colHeadings().length)(Queues.exportQueueDisplayNames.getOrElse(Queue(qn), qn))).mkString(",")
 
-  def deskRecsAllTerminalToCSVStreamWithHeaders(start: SDateLike,
-                                                end: SDateLike,
-                                                terminals: Seq[Terminal],
-                                                exportQueuesInOrder: List[Queue],
-                                                crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
-                                                staffMinuteLookup: MinutesLookup[StaffMinute, TM],
-                                                maybePit: Option[MillisSinceEpoch] = None,
-                                                periodMinutes: Int)(implicit ec: ExecutionContext): Source[String, NotUsed] = {
+  def deskDepsTerminalsToCSVStreamWithHeaders(start: SDateLike,
+                                              end: SDateLike,
+                                              terminals: Seq[Terminal],
+                                              exportQueuesInOrder: List[Queue],
+                                              crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+                                              staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+                                              maybePit: Option[MillisSinceEpoch] = None,
+                                              periodMinutes: Int)(implicit ec: ExecutionContext): Source[String, NotUsed] = {
+    val streams = terminals.map { terminal =>
+      exportDesksToCSVStream(start, end, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup,
+        deploymentsCsv, maybePit, periodMinutes
+      )
+    }
+    val combinedStream = Source(streams).flatMapConcat(identity)
+
+    val header = Source.single(csvHeader(exportQueuesInOrder, "dep"))
+
+    header.concat(combinedStream)
+  }
+
+  def deskRecsTerminalsToCSVStreamWithHeaders(start: SDateLike,
+                                              end: SDateLike,
+                                              terminals: Seq[Terminal],
+                                              exportQueuesInOrder: List[Queue],
+                                              crunchMinuteLookup: MinutesLookup[CrunchMinute, TQM],
+                                              staffMinuteLookup: MinutesLookup[StaffMinute, TM],
+                                              maybePit: Option[MillisSinceEpoch] = None,
+                                              periodMinutes: Int)(implicit ec: ExecutionContext): Source[String, NotUsed] = {
     val streams = terminals.map { terminal =>
       exportDesksToCSVStream(start, end, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup,
         deskRecsCsv, maybePit, periodMinutes
@@ -67,8 +87,8 @@ object StreamingDesksExport {
                                      maybePit: Option[MillisSinceEpoch] = None,
                                      periodMinutes: Int,
                                     )(implicit ec: ExecutionContext): Source[String, NotUsed] =
-    exportDesksToCSVStream(start, end, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup,
-      deskRecsCsv, maybePit, periodMinutes
+    exportDesksToCSVStream(
+      start, end, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup, deskRecsCsv, maybePit, periodMinutes
     ).prepend(Source(List(csvHeader(exportQueuesInOrder, "req"))))
 
 

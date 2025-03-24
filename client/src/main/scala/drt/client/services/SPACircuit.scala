@@ -85,6 +85,22 @@ case class ExportDeskRecs(terminal: Terminal) extends ExportType {
   override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
+case class ExportDeskRecsSingleTerminal(terminal: Terminal) extends ExportType {
+  override def linkLabel = s"Export ${terminal.toString}"
+
+  override def toUrlString: String = "desk-recs"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
+}
+
+object ExportDeskRecsCombinedTerminals extends ExportType {
+  override def linkLabel = "Export all terminals"
+
+  override def toUrlString: String = "recs-combined"
+
+  override def maybeTerminal: Option[Terminal] = None
+}
+
 case class ExportDeployments(terminal: Terminal) extends ExportType {
   override def linkLabel = "Deployments"
 
@@ -128,7 +144,7 @@ case class ExportArrivalsSingleTerminal(terminal: Terminal) extends ExportType {
 object ExportDeploymentsCombinedTerminals extends ExportType {
   override def linkLabel = "Export all terminals"
 
-  override def toUrlString: String = "deployments-combined"
+  override def toUrlString: String = "deps-combined"
 
   override def maybeTerminal: Option[Terminal] = None
 }
