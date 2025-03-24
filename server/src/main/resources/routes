@@ -89,6 +89,7 @@ GET           /export/deps-combined/snapshot/:localDate/:pointInTime            
 GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName              controllers.application.exports.FlightsExportController.exportTerminalFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
 GET           /export/arrivals-combined/:startLocalDay/:endLocalDay                   controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String)
 GET           /export/arrivals/snapshot/:localDate/:pointInTime/:terminalName         controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long, terminalName: String)
+GET           /export/arrivals-combined/snapshot/:localDate/:pointInTime              controllers.application.exports.FlightsExportController.exportFlightsWithSplitsTerminalsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long)
 
 GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.application.exports.FlightsExportController.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
 GET           /export/planning/:weekStarting/:terminalName                            controllers.application.ExportsController.exportForecastWeekToCSV(weekStarting, terminalName)

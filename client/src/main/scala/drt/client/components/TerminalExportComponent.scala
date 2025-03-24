@@ -63,7 +63,7 @@ object TerminalExportComponent extends WithScalaCssImplicits {
         ^.className := "export-button-wrapper",
         MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
           MuiIcons(GetApp)(fontSize = "small"),
-          if(props.exportName.toLowerCase == "arrivals") "Exports Arrivals (.csv)" else s"${props.exportName}",
+          s"Exports ${props.exportName} (.csv)",
           ^.className := "btn btn-default",
           ^.href := "#",
           VdomAttr("data-toggle") := "modal",
@@ -129,13 +129,14 @@ object TerminalExportComponent extends WithScalaCssImplicits {
           exportUrl = SPAMain.exportUrl(ExportDeskRecs(term), viewMode),
           title = exportName.toLowerCase
         ).apply()
-      case "arrivals" => exportLink(
-        exportDay = date,
-        terminalName = term.toString,
-        exportType = ExportArrivals(term),
-        exportUrl = SPAMain.exportUrl(ExportArrivals(term), viewMode),
-        title = exportName.toLowerCase
-      ).apply()
+      case "arrivals" =>
+        exportLink(
+          exportDay = date,
+          terminalName = term.toString,
+          exportType = ExportArrivals(term),
+          exportUrl = SPAMain.exportUrl(ExportArrivals(term), viewMode),
+          title = exportName.toLowerCase
+        ).apply()
       case _ => <.div()
     }
 
