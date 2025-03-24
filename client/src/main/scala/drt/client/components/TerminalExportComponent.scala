@@ -67,27 +67,27 @@ object TerminalExportComponent extends WithScalaCssImplicits {
           ^.className := "btn btn-default",
           ^.href := "#",
           VdomAttr("data-toggle") := "modal",
-          VdomAttr("data-target") := s"#$exportNameLC-export",
+          VdomAttr("data-target") := "#terminals-export",
           ^.onClick ==> showDialogue,
         ),
-        <.div(^.className := s"$exportNameLC-export modal " + showClass, ^.id := s"#$exportNameLC-export", ^.tabIndex := -1, ^.role := "dialog",
+        <.div(^.className := s"terminals-export modal " + showClass, ^.id := s"#terminals-export", ^.tabIndex := -1, ^.role := "dialog",
           <.div(
             ^.className := "modal-dialog modal-dialog-centered",
-            ^.id := s"$exportNameLC-export-modal-dialog",
+            ^.id := "terminals-export-modal-dialog",
             ^.role := "document",
             <.div(
               ^.className := "modal-content",
               <.div(^.className := "modal-header", <.h5(^.className := "modal-title", title)),
               <.div(
                 ^.className := "modal-body",
-                ^.id := s"$exportNameLC-export-modal-body",
+                ^.id := "terminals-export-modal-body",
                 if (props.loggedInUser.hasRole(ArrivalsAndSplitsView))
                   exportLinks(exportNameLC, exports, props.selectedDate, props.terminal, props.viewMode)
                 else
                   EmptyVdom,
                 <.div(
                   ^.className := "modal-footer",
-                  ^.id := s"$exportNameLC-export-modal-footer",
+                  ^.id := "terminals-export-modal-footer",
                   <.button(
                     ^.className := "btn btn-link",
                     VdomAttr("data-dismiss") := "modal", "Close",
