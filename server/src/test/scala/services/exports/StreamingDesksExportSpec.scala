@@ -367,8 +367,8 @@ class StreamingDesksExportSpec extends CrunchTestLike {
         s"""|Date,Terminal,,EEA,EEA,EEA,EEA,EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,Non-EEA,e-Gates,e-Gates,e-Gates,e-Gates,e-Gates,Misc,Moves,PCP Staff,PCP Staff
             |,,Start,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Desks req,Act. wait time,Act. desks,Pax,Wait,Staff req,Act. wait time,Act. desks,Staff req,Staff movements,Avail,Req
             |2020-11-19,T1,00:00,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
-            |2020-11-19,T1,00:15,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
             |2020-11-19,T2,00:00,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
+            |2020-11-19,T1,00:15,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec
             |2020-11-19,T2,00:15,$pax,$waitTime,$eeaDeskRec,$actWait,$actDesk,$pax,$waitTime,$nonEEADeskRec,$actWait,$actDesk,$pax,$waitTime,$eGateRec,$actWait,$actDesk,$misc,$moves,$shifts,$totalRec"""
           .stripMargin
 
