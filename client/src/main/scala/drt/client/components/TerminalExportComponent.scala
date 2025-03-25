@@ -112,7 +112,7 @@ object TerminalExportComponent extends WithScalaCssImplicits {
       ))
 
   private val defaultDeploymentExport: (Terminal, SDateLike, LoggedInUser, ViewMode, String) => VdomElement = (term, date, _, viewMode, exportName) => {
-    exportName match {
+    exportName.toLowerCase match {
       case "deployments" =>
         exportLink(
           exportDay = date,
