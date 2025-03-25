@@ -5,7 +5,6 @@ import diode.data.{Pending, Pot}
 import diode.react.ReactConnectProxy
 import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.components.ArrivalsExportComponent.componentFactory
 import drt.client.components.Icon.Icon
 import drt.client.components.ToolTips.staffMovementsTabTooltip
 import drt.client.components.scenarios.ScenarioSimulationComponent
@@ -121,7 +120,9 @@ object TerminalContentComponent {
       val staffingPanelActive = if (state.activeTab == "staffing") "active" else "fade"
       val viewModeStr = props.terminalPageTab.viewMode.getClass.getSimpleName.toLowerCase
       val terminalName = terminal.toString
-      val arrivalsExportForPort = componentFactory(props.airportConfig.terminals)
+      val arrivalsExportForPort = TerminalExportComponent.componentFactory(props.airportConfig.terminals, "Arrivals")
+      val recommendationExportForPort = TerminalExportComponent.componentFactory(props.airportConfig.terminals, "Recommendations")
+      val deploymentsExportForPort = TerminalExportComponent.componentFactory(props.airportConfig.terminals, "Deployments")
       val movementsExportDate: LocalDate = props.viewMode match {
         case ViewLive => SDate.now().toLocalDate
         case ViewDay(localDate, _) => localDate
@@ -179,51 +180,50 @@ object TerminalContentComponent {
                 ^.onClick ==> handleMenuOpen
               ),
               <.div(^.className := "advanced-downloads-menu",
-              MuiMenu(
-                disablePortal = true,
-                anchorEl = state.anchorEl.orUndefined,
-                open = state.anchorEl.isDefined,
-                onClose = (_: ReactEvent, _: String) => Callback {
-                  $.modState(state => state.copy(anchorEl = None)).runNow()
-                })(
-                MuiMenuItem()(
-                  exportLink(
-                    exportDay = props.terminalPageTab.dateFromUrlOrNow,
-                    terminalName = terminalName,
-                    exportType = ExportDeskRecs(props.terminalPageTab.terminal),
-                    exportUrl = SPAMain.exportUrl(ExportDeskRecs(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
-                    title = "desk-recs"
-                  )),
-                MuiMenuItem()(
-                  exportLink(
-                    exportDay = props.terminalPageTab.dateFromUrlOrNow,
-                    terminalName = terminalName,
-                    exportType = ExportDeployments(props.terminalPageTab.terminal),
-                    exportUrl = SPAMain.exportUrl(ExportDeployments(props.terminalPageTab.terminal), props.terminalPageTab.viewMode),
-                    title = "deployments"
-                  )),
-                MuiMenuItem()(
-                  displayForRole(
-                    node = exportLink(
-                      exportDay = props.terminalPageTab.dateFromUrlOrNow,
-                      terminalName = terminalName,
-                      exportType = ExportStaffMovements(props.terminalPageTab.terminal),
-                      exportUrl = SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
-                      title = "staff-movements"
-                    ),
-                    role = StaffMovementsExport,
-                    loggedInUser = props.loggedInUser
-                  )),
-                MuiMenuItem()(
-                  MultiDayExportComponent(
-                    portCode = props.airportConfig.portCode,
-                    terminal = terminal,
-                    terminals = props.airportConfig.terminals,
-                    viewMode = props.viewMode,
-                    selectedDate = props.terminalPageTab.dateFromUrlOrNow,
-                    loggedInUser = props.loggedInUser
-                  ))
-              ))
+                MuiMenu(
+                  disablePortal = true,
+                  anchorEl = state.anchorEl.orUndefined,
+                  open = state.anchorEl.isDefined,
+                  onClose = (_: ReactEvent, _: String) => Callback {
+                    $.modState(state => state.copy(anchorEl = None)).runNow()
+                  })(
+                  MuiMenuItem()(
+                    recommendationExportForPort(
+                      props.terminalPageTab.terminal,
+                      props.terminalPageTab.dateFromUrlOrNow,
+                      props.loggedInUser,
+                      props.viewMode
+                    )),
+                  MuiMenuItem()(
+                    deploymentsExportForPort(
+                      props.terminalPageTab.terminal,
+                      props.terminalPageTab.dateFromUrlOrNow,
+                      props.loggedInUser,
+                      props.viewMode
+                    )
+                  ),
+                  MuiMenuItem()(
+                    displayForRole(
+                      node = exportLink(
+                        exportDay = props.terminalPageTab.dateFromUrlOrNow,
+                        terminalName = terminalName,
+                        exportType = ExportStaffMovements(props.terminalPageTab.terminal),
+                        exportUrl = SPAMain.absoluteUrl(s"export/staff-movements/${movementsExportDate.toISOString}/$terminal"),
+                        title = "staff-movements"
+                      ),
+                      role = StaffMovementsExport,
+                      loggedInUser = props.loggedInUser
+                    )),
+                  MuiMenuItem()(
+                    MultiDayExportComponent(
+                      portCode = props.airportConfig.portCode,
+                      terminal = terminal,
+                      terminals = props.airportConfig.terminals,
+                      viewMode = props.viewMode,
+                      selectedDate = props.terminalPageTab.dateFromUrlOrNow,
+                      loggedInUser = props.loggedInUser
+                    ))
+                ))
             )),
           <.div(^.className := "tab-content",
             <.div(^.id := "desksAndQueues", ^.className := s"tab-pane terminal-desk-recs-container $desksAndQueuesPanelActive",
