@@ -46,16 +46,13 @@ object StreamingDesksExport {
                                               staffMinuteLookup: MinutesLookup[StaffMinute, TM],
                                               maybePit: Option[MillisSinceEpoch] = None,
                                               periodMinutes: Int)(implicit ec: ExecutionContext): Source[String, NotUsed] = {
-    val streams = terminals.map { terminal =>
-      exportDesksToCSVStream(start, end, terminal, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup,
-        deploymentsCsv, maybePit, periodMinutes
-      )
-    }
-    val combinedStream = Source(streams).flatMapConcat(identity)
+    val streams = exportTerminalsDesksToCSVStream(start, end, terminals, exportQueuesInOrder, crunchMinuteLookup, staffMinuteLookup,
+      deploymentsCsv, maybePit, periodMinutes
+    )
 
     val header = Source.single(csvHeader(exportQueuesInOrder, "dep"))
 
-    header.concat(combinedStream)
+    header.concat(streams)
   }
 
   def deskRecsTerminalsToCSVStreamWithHeaders(start: SDateLike,
@@ -174,74 +171,15 @@ object StreamingDesksExport {
         }
       }
 
-
-  def terminalsMinutesDesksAndQueuesToCsv(terminals: Seq[Terminal],
-                                          exportQueuesInOrder: List[Queue],
-                                          utcDate: UtcDate,
-                                          start: SDateLike,
-                                          end: SDateLike,
-                                          crunchMinutes: Iterable[CrunchMinute],
-                                          staffMinutes: Iterable[StaffMinute],
-                                          deskExportFn: CrunchMinute => String,
-                                          periodMinutes: Int): String = {
-    val portState = PortState(
-      List(),
-      crunchMinutes,
-      staffMinutes
-    )
-
-    val minutesInaDay = 1440d
-    val numberOfPeriods = (minutesInaDay / periodMinutes).ceil.toInt
-
-    val terminalData = terminals.flatMap { terminal =>
-      val terminalCrunchMinutes = portState
-        .crunchSummary(SDate(utcDate), numberOfPeriods, periodMinutes, terminal, exportQueuesInOrder)
-      val terminalCrunchMinutesWithinRange: SortedMap[MillisSinceEpoch, Map[Queue, CrunchMinute]] = terminalCrunchMinutes.filter {
-        case (millis, _) => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch
-      }
-
-      val terminalStaffMinutes = portState
-        .staffSummary(SDate(utcDate), numberOfPeriods, periodMinutes, terminal)
-      val terminalStaffMinutesWithinRange: Map[MillisSinceEpoch, StaffMinute] = terminalStaffMinutes.filter {
-        case (millis, _) => start.millisSinceEpoch <= millis && millis <= end.millisSinceEpoch
-      }
-
-      terminalCrunchMinutesWithinRange.map {
-        case (minute, qcm) =>
-          val qcms: immutable.Seq[CrunchMinute] = exportQueuesInOrder.map(q => qcm.get(q)).collect {
-            case Some(qcm) => qcm
-          }
-          val qsCsv: String = qcms.map(deskExportFn).mkString(",")
-          val staffMinutesCsv = terminalStaffMinutesWithinRange.get(minute) match {
-            case Some(sm) =>
-              s"${sm.fixedPoints},${sm.movements},${sm.shifts}"
-            case _ => "Missing staffing data for this period,,"
-          }
-          val total = qcms.map(_.deskRec).sum
-          val localMinute = SDate(minute, europeLondonTimeZone)
-          val misc = terminalStaffMinutesWithinRange.get(minute).map(_.fixedPoints).getOrElse(0)
-          (minute, s"${localMinute.toISODateOnly},${terminal.toString},${localMinute.prettyTime},$qsCsv,$staffMinutesCsv,${total + misc}\n")
-      }
-    }
-
-    val groupedByMinute = terminalData.groupBy(_._1).toSeq.sortBy(_._1)
-
-    groupedByMinute.flatMap {
-      case (_, data) => data.map(_._2)
-    }.mkString
-  }
-
-
-  def minutesDesksAndQueuesToCsv(terminal: Terminal,
-                                 exportQueuesInOrder: List[Queue],
-                                 utcDate: UtcDate,
-                                 start: SDateLike,
-                                 end: SDateLike,
-                                 crunchMinutes: Iterable[CrunchMinute],
-                                 staffMinutes: Iterable[StaffMinute],
-                                 deskExportFn: CrunchMinute => String,
-                                 periodMinutes: Int,
-                                ): String = {
+  private def generateCsv(terminal: Terminal,
+                          exportQueuesInOrder: List[Queue],
+                          utcDate: UtcDate,
+                          start: SDateLike,
+                          end: SDateLike,
+                          crunchMinutes: Iterable[CrunchMinute],
+                          staffMinutes: Iterable[StaffMinute],
+                          deskExportFn: CrunchMinute => String,
+                          periodMinutes: Int): Seq[(MillisSinceEpoch, String)] = {
     val portState = PortState(
       List(),
       crunchMinutes,
@@ -277,9 +215,42 @@ object StreamingDesksExport {
         val total = qcms.map(_.deskRec).sum
         val localMinute = SDate(minute, europeLondonTimeZone)
         val misc = terminalStaffMinutesWithinRange.get(minute).map(_.fixedPoints).getOrElse(0)
-        s"${localMinute.toISODateOnly},${terminal.toString},${localMinute.prettyTime},$qsCsv,$staffMinutesCsv,${total + misc}\n"
+        (minute, s"${localMinute.toISODateOnly},${terminal.toString},${localMinute.prettyTime},$qsCsv,$staffMinutesCsv,${total + misc}\n")
+    }.toSeq
+  }
 
+  def terminalsMinutesDesksAndQueuesToCsv(terminals: Seq[Terminal],
+                                          exportQueuesInOrder: List[Queue],
+                                          utcDate: UtcDate,
+                                          start: SDateLike,
+                                          end: SDateLike,
+                                          crunchMinutes: Iterable[CrunchMinute],
+                                          staffMinutes: Iterable[StaffMinute],
+                                          deskExportFn: CrunchMinute => String,
+                                          periodMinutes: Int): String = {
+    val terminalData = terminals.flatMap { terminal =>
+      generateCsv(terminal, exportQueuesInOrder, utcDate, start, end, crunchMinutes, staffMinutes, deskExportFn, periodMinutes)
+    }
+
+    val groupedByMinute = terminalData.groupBy(_._1).toSeq.sortBy(_._1)
+
+    groupedByMinute.flatMap {
+      case (_, data) => data.map(_._2)
     }.mkString
+  }
+
+  def minutesDesksAndQueuesToCsv(terminal: Terminal,
+                                 exportQueuesInOrder: List[Queue],
+                                 utcDate: UtcDate,
+                                 start: SDateLike,
+                                 end: SDateLike,
+                                 crunchMinutes: Iterable[CrunchMinute],
+                                 staffMinutes: Iterable[StaffMinute],
+                                 deskExportFn: CrunchMinute => String,
+                                 periodMinutes: Int): String = {
+    generateCsv(terminal, exportQueuesInOrder, utcDate, start, end, crunchMinutes, staffMinutes, deskExportFn, periodMinutes)
+      .map(_._2)
+      .mkString
   }
 
   private def deskRecsCsv(cm: CrunchMinute): String =
