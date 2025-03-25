@@ -126,7 +126,7 @@ case class ExportLiveArrivalsFeed(terminal: Terminal) extends ExportType {
 }
 
 case class ExportArrivals(terminal: Terminal) extends ExportType {
-  override def linkLabel = "Exports Arrivals (.csv)"
+  override def linkLabel = "Export Arrivals (.csv)"
 
   override def toUrlString: String = "arrivals"
 

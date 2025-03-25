@@ -63,7 +63,7 @@ object TerminalExportComponent extends WithScalaCssImplicits {
         ^.className := "export-button-wrapper",
         MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
           MuiIcons(GetApp)(fontSize = "small"),
-          s"Exports ${props.exportName} (.csv)",
+          s"Export ${props.exportName} (.csv)",
           ^.className := "btn btn-default",
           ^.href := "#",
           VdomAttr("data-toggle") := "modal",
