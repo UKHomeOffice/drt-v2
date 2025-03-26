@@ -27,6 +27,10 @@ import scala.concurrent.Future
 
 class FlightsExportController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
 
+  def exportFlightsWithSplitsTerminalsForDayAtPointInTimeCSV(localDateString: String,
+                                                    pointInTime: MillisSinceEpoch): Action[AnyContent] =
+    doExportForPointInTime(localDateString, pointInTime, ctrl.airportConfig.terminals.toSeq, exportForUser)
+
   def exportFlightsWithSplitsForDayAtPointInTimeCSV(localDateString: String,
                                                     pointInTime: MillisSinceEpoch,
                                                     terminalName: String): Action[AnyContent] =

@@ -157,13 +157,15 @@ object FlightTable {
             )
             ThemeProvider(buttonSecondaryTheme)(
               FlightFlaggerFilters(
+                props.terminal.toString,
                 CountryOptions.countries.map { c => CountryJS(c.name, c.threeLetterCode) }.toJSArray,
                 ageGroups,
                 submitCallback,
                 showAllCallback,
                 clearFiltersCallback,
                 onChangeInput,
-                initialState
+                initialState,
+                GoogleEventTracker.sendEvent
               ))
           } else EmptyVdom
         ),
