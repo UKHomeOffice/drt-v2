@@ -27,7 +27,7 @@ object Settings {
   object versions {
     val scala = "2.13.16"
 
-    val drtLib = "v1091"
+    val drtLib = "v1094"
 
     val akka = "2.9.5" // last version with license key requirement
     val akkaHttp = "10.6.3" // last version dependent on akka 2.9.5
