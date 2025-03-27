@@ -16,10 +16,11 @@ class CrunchCodeSharesSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val fiveMinutes: Double = 600d / 60
+  val oneMinute: Double = 60d / 60
+
   val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(
-    T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes),
-    T2 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
+    T1 -> Map(eeaMachineReadableToDesk -> oneMinute),
+    T2 -> Map(eeaMachineReadableToDesk -> oneMinute))
 
     "Given 2 flights which are codeshares with each other " +
       "When I ask for a crunch " +

@@ -17,8 +17,8 @@ class PCPPaxNosSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val tenMinutes: Double = 600d / 60
-  val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaChildToDesk -> tenMinutes))
+  val oneMinute: Double = 60d / 60
+  val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaChildToDesk -> oneMinute))
 
   val scheduled = "2019-11-20T00:00Z"
 
