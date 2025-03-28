@@ -118,16 +118,6 @@ object SPAMain {
     }
   }
 
-//  object ShiftViewDisabled {
-//    val paramName = "shiftViewDisabled"
-//
-//    def apply(viewType: Boolean): UrlParameter = new UrlParameter {
-//      override val name: String = paramName
-//      override val value: Option[String] = Option(viewType.toString)
-//    }
-//  }
-
-
   case class PortConfigPageLoc()
 
   object AccessibilityStatementLoc {

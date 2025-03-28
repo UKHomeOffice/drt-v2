@@ -54,9 +54,7 @@ object MonthlyStaffing {
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
                    airportConfig: AirportConfig,
-                   hideAddShifts: Boolean,
                    isStaffShiftPage: Boolean,
-                   isShiftsEmpty: Boolean,
                    userPreferences: UserPreferences,
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
@@ -454,9 +452,7 @@ object MonthlyStaffing {
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
-            hideAddShifts: Boolean,
             showShiftsStaffing: Boolean,
-            isShiftEmpty: Boolean,
             userPreferences: UserPreferences
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, hideAddShifts, showShiftsStaffing, isShiftEmpty, userPreferences))
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, showShiftsStaffing, userPreferences))
 }
