@@ -23,7 +23,7 @@ import org.scalajs.dom.html.{Div, Select}
 import org.scalajs.dom.window.confirm
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDateLike
-
+import MonthlyStaffingUtil._
 import scala.scalajs.js
 import scala.util.Try
 
@@ -37,14 +37,14 @@ case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
                                             state: MonthlyStaffing.State,
                                             scope: BackendScope[MonthlyStaffing.Props, MonthlyStaffing.State]) extends ConfirmAndSave {
   override def apply(): ReactEventFromInput => Callback = _ => Callback {
-    val initialTimeSlots: Seq[Seq[Any]] = MonthlyStaffing.slotsFromShifts(state.shifts,
+    val initialTimeSlots: Seq[Seq[Any]] = slotsFromShifts(state.shifts,
       props.terminalPageTab.terminal,
       viewingDate,
       props.timeSlotMinutes,
       props.terminalPageTab.dayRangeType.getOrElse("monthly"))
 
-    val quarterHourlyChanges = MonthlyStaffing.getQuarterHourlySlotChanges(props.timeSlotMinutes, state.changes)
-    val updatedTimeSlots: Seq[Seq[Any]] = MonthlyStaffing.applyRecordedChangesToShiftState(timeSlots, state.changes)
+    val quarterHourlyChanges = getQuarterHourlySlotChanges(props.timeSlotMinutes, state.changes)
+    val updatedTimeSlots: Seq[Seq[Any]] = applyRecordedChangesToShiftState(timeSlots, state.changes)
     val saveAsTimeSlotMinutes = 15
 
     val changedShiftSlots: Seq[StaffAssignment] = MonthlyStaffing.updatedShiftAssignments(
@@ -55,12 +55,12 @@ case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
       props.terminalPageTab.dayRangeType.getOrElse("monthly"))
 
     val updatedMonth = props.terminalPageTab.dateFromUrlOrNow.getMonthString
-    val changedDays = MonthlyStaffing.whatDayChanged(initialTimeSlots, updatedTimeSlots).map(d => state.colHeadings(d)).toList
+    val changedDays = whatDayChanged(initialTimeSlots, updatedTimeSlots).map(d => state.colHeadings(d)).toList
 
-    if (confirm(s"You have updated staff for ${MonthlyStaffing.dateListToString(changedDays.map(_.day))} $updatedMonth - do you want to save these changes?")) {
+    if (confirm(s"You have updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth - do you want to save these changes?")) {
       GoogleEventTracker.sendEvent(s"${props.terminalPageTab.terminal}",
         "Save Monthly Staffing",
-        s"updated staff for ${MonthlyStaffing.dateListToString(changedDays.map(_.day))} $updatedMonth")
+        s"updated staff for ${dateListToString(changedDays.map(_.day))} $updatedMonth")
       if (props.isStaffShiftPage)
         SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
       else

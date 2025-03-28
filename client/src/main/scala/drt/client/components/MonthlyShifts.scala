@@ -5,7 +5,7 @@ import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.UpdateStaffShifts
 import drt.client.components.MonthlyShiftsUtil.{updateAssignments, updateChangeAssignment}
-import drt.client.components.MonthlyStaffing.slotsInDay
+import drt.client.components.MonthlyStaffingUtil.slotsInDay
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
