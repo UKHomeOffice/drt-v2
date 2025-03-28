@@ -115,7 +115,6 @@ object TerminalComponent {
             val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
             val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeWindow)
-           println("..featureFlags.enableShiftPlanningChange: " + featureFlags.enableShiftPlanningChange)
             <.div(
               <.div(^.className := "terminal-nav-wrapper",
                 terminalTabs(props, loggedInUser, airportConfig, terminalModel.timeMachineEnabled, featureFlags.enableShiftPlanningChange)),
@@ -241,11 +240,11 @@ object TerminalComponent {
                       <.div(drt.client.components.ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && !featureFlags.enableShiftPlanningChange =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, false))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, showShiftsStaffing = false, featureFlags.enableShiftPlanningChange && shifts.isEmpty))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && featureFlags.enableShiftPlanningChange =>
-                      if (props.terminalPageTab.shiftViewEnabled || shifts.isEmpty)
-                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, true))
+                      if (props.terminalPageTab.shiftViewDisabled || shifts.isEmpty)
+                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, showShiftsStaffing = true, featureFlags.enableShiftPlanningChange && shifts.isEmpty))
                       else
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig))
 
@@ -323,8 +322,8 @@ object TerminalComponent {
           props.router.link(props.terminalPageTab.update(
             mode = Shifts,
             subMode = subModeInterval,
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None), ShiftViewEnabled(false)).queryParams
-          ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Shifts", " ", monthlyStaffingTooltip)
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None), ShiftViewDisabled(true)).queryParams
+          ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
         )
       } else "",
       <.li(^.className := tabClass(Dashboard),
