@@ -240,13 +240,13 @@ object TerminalComponent {
                       <.div(drt.client.components.ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && !featureFlags.enableShiftPlanningChange =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, showShiftsStaffing = false, featureFlags.enableShiftPlanningChange && shifts.isEmpty))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, showShiftsStaffing = false, featureFlags.enableShiftPlanningChange && shifts.isEmpty, userPreferences))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && featureFlags.enableShiftPlanningChange =>
-                      if (props.terminalPageTab.shiftViewDisabled || shifts.isEmpty)
-                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, showShiftsStaffing = true, featureFlags.enableShiftPlanningChange && shifts.isEmpty))
+                      if (!userPreferences.showStaffingShiftView || shifts.isEmpty)
+                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, showShiftsStaffing = true, featureFlags.enableShiftPlanningChange && shifts.isEmpty, userPreferences))
                       else
-                        <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig))
+                        <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig, userPreferences))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.isEmpty =>
                       <.div(^.className := "staffing-container-empty",
@@ -322,7 +322,7 @@ object TerminalComponent {
           props.router.link(props.terminalPageTab.update(
             mode = Shifts,
             subMode = subModeInterval,
-            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None), ShiftViewDisabled(true)).queryParams
+            queryParams = props.terminalPageTab.withUrlParameters(UrlDateParameter(None), UrlTimeMachineDateParameter(None)).queryParams
           ))(^.id := "ShiftsTab", ^.className := "flex-horizontally", VdomAttr("data-toggle") := "tab", "Staffing", " ", monthlyStaffingTooltip)
         )
       } else "",

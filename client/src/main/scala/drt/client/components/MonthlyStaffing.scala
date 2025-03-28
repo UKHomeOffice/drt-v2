@@ -2,11 +2,12 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
-import drt.client.SPAMain.{Loc, ShiftViewDisabled, TerminalPageTabLoc}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.{UpdateShifts, UpdateStaffShifts}
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays}
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
+import drt.client.services.handlers.UpdateUserPreferences
 import drt.client.services.{JSDateConversions, SPACircuit}
 import drt.client.util.DateRange
 import drt.shared._
@@ -55,7 +56,8 @@ object MonthlyStaffing {
                    airportConfig: AirportConfig,
                    hideAddShifts: Boolean,
                    isStaffShiftPage: Boolean,
-                   isShiftsEmpty: Boolean
+                   isShiftsEmpty: Boolean,
+                   userPreferences: UserPreferences,
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
@@ -139,6 +141,9 @@ object MonthlyStaffing {
 
   class Backend(scope: BackendScope[Props, State]) {
     def render(props: Props, state: State): VdomTagOf[Div] = {
+      def handleShiftViewToggle(): Callback = {
+        Callback(SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(showStaffingShiftView = !props.userPreferences.showStaffingShiftView))))
+      }
 
       val handleShiftEditForm = (e: ReactEventFromInput) => Callback {
         e.preventDefault()
@@ -153,7 +158,6 @@ object MonthlyStaffing {
 
       case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], monthOfShiftsPot: Pot[ShiftAssignments])
       val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.allShifts))
-      val shiftViewDisabled = props.terminalPageTab.queryParams.get(ShiftViewDisabled.paramName).exists(_.toBoolean)
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
@@ -187,14 +191,14 @@ object MonthlyStaffing {
                 MuiTypography()("Show shifts"),
                 MuiFormControl()(
                   MuiSwitch(
-                    defaultChecked = !shiftViewDisabled,
+                    defaultChecked = props.userPreferences.showStaffingShiftView,
                     color = Color.primary,
                     inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
-                  )(^.onChange --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewDisabled(!shiftViewDisabled)))),
-                ), MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (shiftViewDisabled) "Off" else "On")
+                  )(^.onChange --> handleShiftViewToggle()),
+                ), MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (props.userPreferences.showStaffingShiftView) "On" else "Off")
               ))
           } else EmptyVdom),
-        if (shiftViewDisabled) {
+        if (!props.userPreferences.showStaffingShiftView) {
           <.div(
             modelChangeDetection,
             <.div(
@@ -452,6 +456,7 @@ object MonthlyStaffing {
             airportConfig: AirportConfig,
             hideAddShifts: Boolean,
             showShiftsStaffing: Boolean,
-            isShiftEmpty: Boolean
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, hideAddShifts, showShiftsStaffing, isShiftEmpty))
+            isShiftEmpty: Boolean,
+            userPreferences: UserPreferences
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, hideAddShifts, showShiftsStaffing, isShiftEmpty, userPreferences))
 }

@@ -2,13 +2,14 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import diode.data.Pot
-import drt.client.SPAMain.{Loc, ShiftViewDisabled, TerminalPageTabLoc}
+import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
 import drt.client.actions.Actions.UpdateStaffShifts
 import drt.client.components.MonthlyShiftsUtil.{updateAssignments, updateChangeAssignment}
 import drt.client.components.MonthlyStaffing.slotsInDay
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
+import drt.client.services.handlers.UpdateUserPreferences
 import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
@@ -36,14 +37,15 @@ object MonthlyShifts {
                    addShiftForm: Boolean,
                    shifts: ShiftAssignments,
                    shiftsData: Seq[ShiftSummaryStaffing] = Seq.empty,
-                   changedAssignments: Seq[StaffTableEntry] = Seq.empty
+                   changedAssignments: Seq[StaffTableEntry] = Seq.empty,
                   )
 
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
   case class Props(terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
-                   airportConfig: AirportConfig) {
+                   airportConfig: AirportConfig,
+                   userPreferences: UserPreferences) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
   }
 
@@ -53,6 +55,11 @@ object MonthlyShifts {
   class Backend(scope: BackendScope[Props, State]) {
 
     def render(props: Props, state: State): VdomTagOf[Div] = {
+
+      def handleShiftViewToggle: Callback = {
+        Callback(SPACircuit.dispatch(UpdateUserPreferences(props.userPreferences.copy(showStaffingShiftView = !props.userPreferences.showStaffingShiftView)))
+        )
+      }
 
       val handleShiftEditForm = (e: ReactEventFromInput) => Callback {
         e.preventDefault()
@@ -72,7 +79,6 @@ object MonthlyShifts {
       case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]])
       val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.shifts))
 
-      val shiftViewDisabled = props.terminalPageTab.queryParams.get(ShiftViewDisabled.paramName).exists(_.toBoolean)
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()
         val content = for {
@@ -110,18 +116,18 @@ object MonthlyShifts {
             })) else EmptyVdom,
         ),
         <.div(^.className := "staffing-container",
-          <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "flex-start", "gap" -> "40px","align-items" -> "center"),
-          <.div(<.h1("Staffing")),
-          <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center","paddingTop" -> "15px"))(
-          MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))("Show shifts"),
-          MuiFormControl()(
-            MuiSwitch(
-              defaultChecked = !shiftViewDisabled,
-              color = Color.primary,
-              inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
-            )(^.onChange --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewDisabled(!shiftViewDisabled)))),
-          ), MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (shiftViewDisabled) "Off" else "On")
-        )),
+          <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "flex-start", "gap" -> "40px", "align-items" -> "center"),
+            <.div(<.h1("Staffing")),
+            <.div(^.style := js.Dictionary("display" -> "flex", "flexDirection" -> "row", "alignItems" -> "center", "paddingTop" -> "15px"))(
+              MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))("Show shifts"),
+              MuiFormControl()(
+                MuiSwitch(
+                  defaultChecked = props.userPreferences.showStaffingShiftView,
+                  color = Color.primary,
+                  inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
+                )(^.onChange --> handleShiftViewToggle),
+              ), MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (props.userPreferences.showStaffingShiftView) "On" else "Off")
+            )),
           <.div(^.className := "staffing-controls",
             maybeClockChangeDate(viewingDate).map { clockChangeDate =>
               val prettyDate = s"${clockChangeDate.getDate} ${clockChangeDate.getMonthString}"
@@ -222,8 +228,8 @@ object MonthlyShifts {
     .configure(Reusability.shouldComponentUpdate)
     .build
 
-   def updatedConvertedShiftAssignments(changes: Seq[StaffAssignment],
-                                               terminalName: Terminal): Seq[StaffAssignment] = changes.map { change =>
+  def updatedConvertedShiftAssignments(changes: Seq[StaffAssignment],
+                                       terminalName: Terminal): Seq[StaffAssignment] = changes.map { change =>
     StaffAssignment(change.name, terminalName, change.start, change.end, change.numberOfStaff, None)
   }
 
@@ -234,6 +240,7 @@ object MonthlyShifts {
 
   def apply(terminalPageTab: TerminalPageTabLoc,
             router: RouterCtl[Loc],
-            airportConfig: AirportConfig
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig))
+            airportConfig: AirportConfig,
+            userPreferences: UserPreferences
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, userPreferences))
 }

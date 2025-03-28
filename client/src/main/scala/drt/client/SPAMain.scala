@@ -118,14 +118,14 @@ object SPAMain {
     }
   }
 
-  object ShiftViewDisabled {
-    val paramName = "shiftViewDisabled"
-
-    def apply(viewType: Boolean): UrlParameter = new UrlParameter {
-      override val name: String = paramName
-      override val value: Option[String] = Option(viewType.toString)
-    }
-  }
+//  object ShiftViewDisabled {
+//    val paramName = "shiftViewDisabled"
+//
+//    def apply(viewType: Boolean): UrlParameter = new UrlParameter {
+//      override val name: String = paramName
+//      override val value: Option[String] = Option(viewType.toString)
+//    }
+//  }
 
 
   case class PortConfigPageLoc()
@@ -195,7 +195,6 @@ object SPAMain {
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
-    val shiftViewDisabled: Boolean = queryParams.get(ShiftViewDisabled.paramName).exists(_.toBoolean)
     def viewMode: ViewMode = {
       (mode, maybeViewDate) match {
         case (Current, Some(viewDate)) =>
