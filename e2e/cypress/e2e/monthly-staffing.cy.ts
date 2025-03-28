@@ -10,7 +10,7 @@ Cypress.on('uncaught:exception', (err, runnable) => {
 describe('Monthly Staffing', () => {
 
   beforeEach(() => {
-    cy.deleteData();
+    cy.deleteData("");
   });
 
   const firstMidnightOfThisMonth = (): moment.Moment => {
