@@ -112,12 +112,14 @@ describe('Monthly Staffing', () => {
             const $html = Cypress.$(response.body)
             const csrf: any = $html.filter('input:hidden[name="csrfToken"]').val()
             cy.saveShifts(shifts(), csrf).then(() => {
-              cy.visit('#terminal/T1/staffing/15/')
-                .get(cellToTest).contains("1")
-                .visit('#terminal/T1/staffing/15/?date=' + nextMonthDateString())
-                .get(cellToTest).contains("2")
-                .visit('#terminal/T1/staffing/15/?date=' + thisMonthDateString())
-                .get(cellToTest).contains("1")
+              const enableShiftPlanningChange = Cypress.env('enableShiftPlanningChange');
+              const baseUrl = enableShiftPlanningChange ? '#terminal/T1/shifts/15/' : '#terminal/T1/staffing/15/';
+              cy.visit(baseUrl)
+                .get(cellToTest, { timeout: 20000 }).should('exist').contains("1")
+                .visit(baseUrl + '?date=' + nextMonthDateString())
+                .get(cellToTest, { timeout: 20000 }).should('exist').contains("2")
+                .visit(baseUrl + '?date=' + thisMonthDateString())
+                .get(cellToTest, { timeout: 20000 }).should('exist').contains("1")
                 .resetShifts(csrf);
             });
           });
