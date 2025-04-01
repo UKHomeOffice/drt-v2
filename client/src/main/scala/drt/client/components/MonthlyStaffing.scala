@@ -55,6 +55,7 @@ object MonthlyStaffing {
                    airportConfig: AirportConfig,
                    isStaffShiftPage: Boolean,
                    userPreferences: UserPreferences,
+                   isShiftsEmpty: Boolean
                   ) {
     def timeSlotMinutes: Int = Try(terminalPageTab.subMode.toInt).toOption.getOrElse(60)
 
@@ -122,7 +123,11 @@ object MonthlyStaffing {
                 ), MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (props.userPreferences.showStaffingShiftView) "On" else "Off")
               ))
           } else EmptyVdom),
-        if (!props.userPreferences.showStaffingShiftView) {
+         if(props.isShiftsEmpty) {
+           <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
+             props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
+           })))
+         } else EmptyVdom,
           <.div(
             modelChangeDetection,
             <.div(
@@ -207,11 +212,6 @@ object MonthlyStaffing {
                 )
               )
             ))
-        } else {
-          <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {
-            props.router.set(TerminalPageTabLoc(props.terminalPageTab.terminalName, "shifts", "createShifts")).runNow()
-          })))
-        },
       )
     }
   }
@@ -293,6 +293,7 @@ object MonthlyStaffing {
             router: RouterCtl[Loc],
             airportConfig: AirportConfig,
             showShiftsStaffing: Boolean,
-            userPreferences: UserPreferences
-           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, showShiftsStaffing, userPreferences))
+            userPreferences: UserPreferences,
+            isShiftsEmpty: Boolean
+           ): Unmounted[Props, State, Backend] = component(Props(terminalPageTab, router, airportConfig, showShiftsStaffing, userPreferences, isShiftsEmpty))
 }
