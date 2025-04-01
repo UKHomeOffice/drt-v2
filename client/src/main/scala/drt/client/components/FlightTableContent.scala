@@ -3,17 +3,21 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
+import drt.client.SPAMain.TerminalPageTabLoc
+import drt.client.components.DaySelectorComponent.searchForm
 import drt.client.components.ToolTips._
+import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.shared.{ManifestKey, CodeShares, DefaultFlightDisplayFilter, FlightHighlight, LhrFlightDisplayFilter}
+import drt.client.services.handlers.{GetUserPreferences, UpdateUserPreferences}
+import drt.shared.UserPreferences
+import drt.shared.{CodeShares, DefaultFlightDisplayFilter, FlightHighlight, LhrFlightDisplayFilter, ManifestKey}
 import drt.shared.api.{FlightManifestSummary, PaxAgeRange, WalkTimes}
 import drt.shared.redlist.{DirectRedListFlight, IndirectRedListPax, LhrRedListDatesImpl, LhrTerminalTypes}
 import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
-import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiTypography}
+import io.kinoplan.scalajs.react.material.ui.core.{MuiAlert, MuiFormControl, MuiSwitch, MuiTypography}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.vdom.{TagOf, html_<^}
-import japgolly.scalajs.react._
 import org.scalajs.dom
 import org.scalajs.dom.html.{TableCell, TableSection}
 import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
@@ -22,6 +26,8 @@ import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
+import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
+import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
 import scala.collection.immutable.{HashSet, Seq}
 import scala.scalajs.js
@@ -45,19 +51,29 @@ object FlightTableContent {
                    paxFeedSourceOrder: List[FeedSource],
                    shortLabel: Boolean = false,
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
+                   userPreferences: UserPreferences,
+                   terminalPageTab: TerminalPageTabLoc,
                   ) extends UseValueEq
 
-  case class Model(airportInfos: Map[PortCode, Pot[AirportInfo]]) extends UseValueEq
-
   class Backend {
+
+    private val handleTogglePaxSourceIcon = (e: ReactEventFromInput, userPreferences: UserPreferences) => Callback {
+      e.preventDefault()
+      SPACircuit.dispatch(UpdateUserPreferences(userPreferences.copy(hidePaxDataSourceDescription = !e.target.checked)))
+    }
+
+    private def displayArrivalSearchDate(selectedDate: SDateLike, terminalPageTab: TerminalPageTabLoc): String = {
+      val searchFormForDate = searchForm(selectedDate, terminalPageTab)
+      s"${searchFormForDate.displayText} (${searchFormForDate.fromTime} - ${searchFormForDate.toTime})"
+    }
+
+
     def render(props: Props): VdomElement = {
       val flightDisplayFilter = props.airportConfig.portCode match {
         case PortCode("LHR") => LhrFlightDisplayFilter(props.redListUpdates, (portCode, _, _) =>
           props.redListPorts.contains(portCode), LhrTerminalTypes(LhrRedListDatesImpl))
         case _ => DefaultFlightDisplayFilter
       }
-
-
       val content = for {
         flights <- props.flights
       } yield {
@@ -82,20 +98,31 @@ object FlightTableContent {
           if (sortedFlights.nonEmpty) {
             val redListPaxExist = sortedFlights.exists(_._1.apiFlight.RedListPax.exists(_ > 0))
             <.div(
-              <.div {
-                val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || ageGroups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals
-                val flightCounts = if (flaggerInUse && props.flightHighlight.showOnlyHighlightedRows)
-                  <.span(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} shown and highlighted")
-                else if (flaggerInUse)
-                  <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown", " | ", <.b(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} highlighted"))
-                else
-                  <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown")
+              <.div(^.style := js.Dictionary("paddingTop" -> "10px"), MuiTypography(sx = SxProps(Map("fontSize" -> "18px", "fontWeight" -> "bold")))(s"Arrivals, ${displayArrivalSearchDate(SDate(props.terminalPageTab.viewMode.localDate), props.terminalPageTab)}")),
+              <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"))(
+                <.div {
+                  val flaggerInUse = props.flightHighlight.selectedNationalities.nonEmpty || ageGroups.nonEmpty || props.flightHighlight.showNumberOfVisaNationals
+                  val flightCounts = if (flaggerInUse && props.flightHighlight.showOnlyHighlightedRows)
+                    <.span(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} shown and highlighted")
+                  else if (flaggerInUse)
+                    <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown", " | ", <.b(s"$highlightedFlightsCount flight${pluraliseString(highlightedFlightsCount)} highlighted"))
+                  else
+                    <.span(s"${sortedFlights.length} flight${pluraliseString(sortedFlights.length)} shown")
 
-                MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
-              },
+                  MuiTypography(sx = SxProps(Map("padding" -> "16px 0 16px 0")))(flightCounts)
+                },
+                <.div(^.style := js.Dictionary("display" -> "flex", "justifyContent" -> "space-between", "alignItems" -> "center"),
+                  MuiTypography()("Show pax data descriptions"),
+                  MuiFormControl()(
+                    MuiSwitch(defaultChecked = !props.userPreferences.hidePaxDataSourceDescription)
+                    (^.onChange ==> ((e: ReactEventFromInput) => handleTogglePaxSourceIcon(e, props.userPreferences)))
+                  ),
+                  MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
+                )
+              ),
               <.div(<.table(
                 ^.className := "arrivals-table table-striped",
-                tableHead(props, props.queueOrder, redListPaxExist, props.shortLabel, showFlagger),
+                tableHead(props, props.queueOrder, redListPaxExist, props.shortLabel, showFlagger, props.userPreferences.hidePaxDataSourceDescription),
                 <.tbody(
                   sortedFlights.flatMap {
                     case (flightWithSplits, codeShares) =>
@@ -130,7 +157,8 @@ object FlightTableContent {
                         showRequireAllSelected = props.flightHighlight.showRequireAllSelected,
                         maybeManifestSummary = maybeManifestSummary,
                         paxFeedSourceOrder = props.paxFeedSourceOrder,
-                        showHighLighted = showHightlighted
+                        showHighLighted = showHightlighted,
+                        hidePaxDataSourceDescription = props.userPreferences.hidePaxDataSourceDescription,
                       )
 
                       FlightHighlighter.highlightedFlight(maybeManifestSummary,
@@ -142,7 +170,8 @@ object FlightTableContent {
                         .map(h => FlightTableRow.component(flightTableRow(h)))
 
                   }.toTagMod
-                ))))
+                )))
+            )
           }
           else <.div(^.style := js.Dictionary("paddingTop" -> "16px", "paddingBottom" -> "16px"),
             if (flights.isEmpty) {
@@ -176,7 +205,8 @@ object FlightTableContent {
                 queues: Seq[Queue],
                 redListPaxExist: Boolean,
                 shortLabel: Boolean,
-                showFlagger: Boolean
+                showFlagger: Boolean,
+                hidePaxDataSourceDescription: Boolean
                ): TagOf[TableSection] = {
     val redListHeading = "Red List Pax"
     val isMobile = dom.window.innerWidth < 800
@@ -186,7 +216,8 @@ object FlightTableContent {
 
     val queueDisplayNames = <.th(
       <.span(^.className := "flex-uniform-size",
-        queues.map(q => <.div(Queues.displayName(q), " ", ^.className := "arrivals_table__splits__queue-pax flex-horizontally")).toTagMod
+        (Seq(if (hidePaxDataSourceDescription) <.div("", "", ^.className := "icon-header-data-quality") else EmptyVdom) ++
+          queues.map(q => <.div(Queues.displayName(q), " ", ^.className := "arrivals_table__splits__queue-pax flex-horizontally"))).toTagMod
       ),
       ^.className := "arrivals__table__flight-splits",
     )

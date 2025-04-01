@@ -42,6 +42,16 @@ class FlightFilterSpec extends Specification {
       FlightFilter.notCancelledFilter.apply(fws, redListedZimbabwe) === false
     }
   }
+  "Not redirected filter" >> {
+    "Given a flight with a scheduled status, the filter should return true to keep it" >> {
+      val fws = ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("scheduled")).toArrival(LiveFeedSource), Set())
+      FlightFilter.notDivertedFilter.apply(fws, redListedZimbabwe) === true
+    }
+    "Given a flight with a cancelled status, the filter should return false to keep it" >> {
+      val fws = ApiFlightWithSplits(ArrivalGenerator.live(status = ArrivalStatus("diverted")).toArrival(LiveFeedSource), Set())
+      FlightFilter.notDivertedFilter.apply(fws, redListedZimbabwe) === false
+    }
+  }
   "Outside CTA filter" >> {
     "Given a flight from JFK (outside the CTA), the filter should return true to keep it" >> {
       val fws = ApiFlightWithSplits(ArrivalGenerator.live(origin = PortCode("JFK")).toArrival(LiveFeedSource), Set())

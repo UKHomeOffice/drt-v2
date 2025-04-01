@@ -1,7 +1,7 @@
 package drt.client.components
 
 import drt.client.actions.Actions._
-import drt.client.components.ArrivalsExportComponent.StringExtended
+import drt.client.components.TerminalExportComponent.StringExtended
 import drt.client.services.SPACircuit
 import drt.shared.Country
 import io.kinoplan.scalajs.react.material.ui.core._

@@ -43,7 +43,12 @@ doc/_book
 /_book
 *.log.zip
 
-client/src/main/resources/bundle.js
+client/node_modules
+
+# esbuild output
+server/src/main/assets/main.js
 
 .ensime_cache/
 runsbt.sh
+
+client/node_modules

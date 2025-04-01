@@ -8,14 +8,29 @@ platform:
   arch: amd64
 
 steps:
-  - name: Build app
+  - name: Build scalajs app
     pull: if-not-exists
     image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
     commands:
       - /root/entrypoint.sh
-      - echo `node --version`
-      - echo `java -version`
-      - sbt --error compile docker:stage
+      - sbt "client/fullLinkJS"
+      - cd client
+      - npm install
+      - npm run build
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+
+  - name: Build scala app
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error compile playCompileEverything
     environment:
       ARTIFACTORY_PASSWORD:
         from_secret: ARTIFACTORY_PASSWORD
@@ -26,6 +41,45 @@ steps:
     when:
       event:
         - push
+    depends_on:
+      - Build scalajs app
+
+  - name: Build docker image
+    pull: if-not-exists
+    image: quay.io/ukhomeofficedigital/scala-sbt-nodejs:v1.4.0-debian12-jdk17-node20
+    commands:
+      - /root/entrypoint.sh
+      - sbt --error "Docker / stage"
+    environment:
+      ARTIFACTORY_PASSWORD:
+        from_secret: ARTIFACTORY_PASSWORD
+      ARTIFACTORY_USERNAME: drt_ci
+      ENV_LOG_LEVEL: ERROR
+      KEYTOOL_PASSWORD:
+        from_secret: KEYTOOL_PASSWORD
+    when:
+      event:
+        - push
+    depends_on:
+      - Build scala app
+
+  - name: Publish app
+    image: plugins/ecr
+    environment:
+      AWS_REGION: eu-west-2
+    settings:
+      access_key: AKIAU6OMSVAPQAIHYUVJ
+      secret_key:
+        from_secret: aws_secret_access_key
+      repo: drt/drt-v2
+      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
+      tags:
+        - B${DRONE_BUILD_NUMBER}
+    when:
+      event:
+        - push
+    depends_on:
+      - Build docker image
 
   - name: ECR login
     pull: if-not-exists
@@ -79,7 +133,7 @@ steps:
       event:
         - push
     depends_on:
-      - Build app
+      - Publish app
 
   - name: Code coverage report
     pull: if-not-exists
@@ -99,7 +153,7 @@ steps:
       branch:
         - master
     depends_on:
-      - Unit tests
+      - Publish app
 
   - name: Scapegoat
     pull: if-not-exists
@@ -155,24 +209,6 @@ steps:
         - master
     depends_on:
       - Dependency check
-
-  - name: Publish app
-    image: plugins/ecr
-    environment:
-      AWS_REGION: eu-west-2
-    settings:
-      access_key: AKIAU6OMSVAPQAIHYUVJ
-      secret_key:
-        from_secret: aws_secret_access_key
-      repo: drt/drt-v2
-      registry: 340268328991.dkr.ecr.eu-west-2.amazonaws.com
-      tags:
-        - B${DRONE_BUILD_NUMBER}
-    when:
-      event:
-        - push
-    depends_on:
-      - Build app
 
   - name: End to end test
     pull: if-not-exists

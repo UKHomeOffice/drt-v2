@@ -8,6 +8,23 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.JSImport
 
 @js.native
+trait IAnalyticsEvent extends js.Object {
+  var category: String
+  var action: String
+  var label: String
+}
+
+object IAnalyticsEvent {
+  def apply(category: String, action: String, label: String): IAnalyticsEvent = {
+    val p = (new js.Object).asInstanceOf[IAnalyticsEvent]
+    p.category = category
+    p.action = action
+    p.label = label
+    p
+  }
+}
+
+@js.native
 trait Country extends js.Object {
   var name: String
   var code: String
@@ -55,6 +72,7 @@ object SearchFilterPayload {
 
 @js.native
 trait FlightFlaggerFiltersProps extends js.Object {
+  var terminal: String = js.native
   var nationalities: js.Array[Country] = js.native
   var ageGroups: js.Array[String] = js.native
   var submitCallback: js.Function1[js.Object, Unit] = js.native
@@ -62,19 +80,23 @@ trait FlightFlaggerFiltersProps extends js.Object {
   var clearFiltersCallback: js.Function1[js.Object, Unit] = js.native
   var onChangeInput: js.Function1[String, Unit] = js.native
   var maybeInitialState: js.UndefOr[js.Dynamic] = js.native
+  var sendEvent: js.Function1[IAnalyticsEvent, Unit] = js.native
 }
 
 object FlightFlaggerFiltersProps {
   def apply(
+             terminal: String,
              nationalities: js.Array[Country],
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
              clearFiltersCallback: js.Function1[js.Object, Unit],
              onChangeInput: js.Function1[String, Unit],
-             initialState: js.UndefOr[js.Dynamic]
+             initialState: js.UndefOr[js.Dynamic],
+             sendEvent: js.Function1[IAnalyticsEvent, Unit]
            ): FlightFlaggerFiltersProps = {
     val p = (new js.Object).asInstanceOf[FlightFlaggerFiltersProps]
+    p.terminal = terminal
     p.nationalities = nationalities
     p.ageGroups = ageGroups
     p.submitCallback = submitCallback
@@ -82,6 +104,7 @@ object FlightFlaggerFiltersProps {
     p.clearFiltersCallback = clearFiltersCallback
     p.onChangeInput = onChangeInput
     p.maybeInitialState = initialState
+    p.sendEvent = sendEvent
     p
   }
 }
@@ -105,22 +128,26 @@ object FlightFlaggerFilters {
       .build
 
   def apply(
+             terminal: String,
              nationalities: js.Array[Country],
              ageGroups: js.Array[String],
              submitCallback: js.Function1[js.Object, Unit],
              showAllCallback: js.Function1[js.Object, Unit],
              clearFiltersCallback: js.Function1[js.Object, Unit],
              onChangeInput: js.Function1[String, Unit],
-             initialState: js.UndefOr[js.Dynamic]
+             initialState: js.UndefOr[js.Dynamic],
+             sendEvent: js.Function1[IAnalyticsEvent, Unit]
            ): VdomElement = {
     val props = FlightFlaggerFiltersProps(
+      terminal,
       nationalities,
       ageGroups,
       submitCallback,
       showAllCallback,
       clearFiltersCallback,
       onChangeInput,
-      initialState
+      initialState,
+      sendEvent
     )
     component(props)
   }

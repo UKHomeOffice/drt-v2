@@ -3,8 +3,8 @@ import {moment} from '../support/time-helpers'
 describe('Staff movements', () => {
 
   beforeEach(function () {
-    cy.deleteData()
-      .addFlight({});
+    cy.deleteData("")
+      .addFlight({},"");
   });
 
   const midnightThisMorning = (): moment.Moment => {
@@ -62,17 +62,19 @@ describe('Staff movements', () => {
           .findAndClick('Staff Movements')
           .checkStaffNumbersOnMovementsTabAre(1)
           .checkUserNameOnMovementsTab(1, "Unknown")
-          .get('#export-day-staff-movements')
-          .then((el) => {
-            const href = el.prop('href')
-            cy.request({
-              method: 'GET',
-              url: href,
-            }).then((resp) => {
-              expect(resp.body).to.equal(movementsCSV, "Staff movements Export CSV is wrong.");
+          cy.contains('button', 'Advanced Downloads', {timeout: 20000}).should('be.visible').click({force: true}).then(() => {
+          cy.get('#export-day-staff-movements')
+            .then((el) => {
+              const href = el.prop('href')
+              cy.request({
+                           method: 'GET',
+                           url: href,
+                         }).then((resp) => {
+                expect(resp.body).to.equal(movementsCSV, "Staff movements Export CSV is wrong.");
+              })
             })
-          })
-          .removeXMovements(1);
+            .removeXMovements(1);
+        });
       });
 
     it("Should update the available staff when 1 staff member is removed for 1 hour", () => {
@@ -178,7 +180,7 @@ Cypress.Commands.add('checkStaffAvailableOnDesksAndQueuesTabAre', (numStaff) => 
 
 Cypress.Commands.add('checkStaffMovementsOnDesksAndQueuesTabAre', (numStaff) => {
   [0, 1, 2, 3].map((row) => {
-    cy.staffMovementsAtRow(row).contains(numStaff);
+    cy.staffMovementsAtRow(row).contains(numStaff, {timeout: 20000});
   });
   cy.staffMovementsAtRow(4).contains(0);
 });

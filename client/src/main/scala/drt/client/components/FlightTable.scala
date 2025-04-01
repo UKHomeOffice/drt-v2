@@ -2,6 +2,7 @@ package drt.client.components
 
 import diode.UseValueEq
 import diode.data.Pot
+import drt.client.SPAMain.TerminalPageTabLoc
 import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
 import drt.client.components.styles.DrtTheme.buttonSecondaryTheme
 import drt.client.modules.GoogleEventTracker
@@ -48,6 +49,8 @@ object FlightTable {
                    flightManifestSummaries: Map[ManifestKey, FlightManifestSummary],
                    arrivalSources: Option[(UniqueArrival, Pot[List[Option[FeedSourceArrival]]])],
                    originMapper: (PortCode, Option[PortCode], html_<^.TagMod) => VdomNode,
+                   userPreferences: UserPreferences,
+                   terminalPageTab: TerminalPageTabLoc
                   ) extends UseValueEq
 
   case class State(showHighlightedRows: Boolean)
@@ -154,13 +157,15 @@ object FlightTable {
             )
             ThemeProvider(buttonSecondaryTheme)(
               FlightFlaggerFilters(
+                props.terminal.toString,
                 CountryOptions.countries.map { c => CountryJS(c.name, c.threeLetterCode) }.toJSArray,
                 ageGroups,
                 submitCallback,
                 showAllCallback,
                 clearFiltersCallback,
                 onChangeInput,
-                initialState
+                initialState,
+                GoogleEventTracker.sendEvent
               ))
           } else EmptyVdom
         ),
@@ -184,6 +189,8 @@ object FlightTable {
               paxFeedSourceOrder = props.paxFeedSourceOrder,
               originMapper = props.originMapper,
               flightHighlight = props.flightHighlight,
+              userPreferences = props.userPreferences,
+              terminalPageTab = props.terminalPageTab
             )
           )
         },

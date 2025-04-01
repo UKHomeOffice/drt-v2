@@ -71,20 +71,25 @@ GET           /fixed-points                                                     
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
 GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getShifts(port: String, terminal: String)
-GET           /shifts/:port/:terminal/:shiftName                                       controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
+GET           /shifts/:port/:terminal/:shiftName                                      controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
 POST          /staff-assignments                                                      controllers.application.ShiftsController.saveStaffAssignments
 GET           /staff-assignments                                                      controllers.application.ShiftsController.getAllStaffAssignments
 GET           /staff-assignments/:localDate                                           controllers.application.ShiftsController.getStaffAssignments(localDate: String)
 
 GET           /forecast-summary/:terminalName/:startDay/:periodInterval               controllers.application.PortStateController.forecastWeekSummary(terminalName: String, startDay: Long,periodInterval: Int)
 
-GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
-GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesRecsAtPointInTimeCSV(localDate, pointInTime, terminalName)
-GET           /export/desk-deps/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.exportDesksAndQueuesDepsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
-GET           /export/desk-deps/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.exportDesksAndQueuesDepsAtPointInTimeCSV(localDate, pointInTime, terminalName)
+GET           /export/desk-recs/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.recsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
+GET           /export/recs-combined/:startLocalDate/:endLocalDate                     controllers.application.exports.DesksExportController.terminalsRecsBetweenTimeStampsCSV(startLocalDate, endLocalDate)
+GET           /export/desk-recs/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.recsAtPointInTimeCSV(localDate, pointInTime, terminalName)
+GET           /export/recs-combined/snapshot/:localDate/:pointInTime/                 controllers.application.exports.DesksExportController.terminalsRecsAtPointInTimeCSV(localDate, pointInTime)
+GET           /export/desk-deps/:startLocalDate/:endLocalDate/:terminalName           controllers.application.exports.DesksExportController.depsBetweenTimeStampsCSV(startLocalDate, endLocalDate, terminalName)
+GET           /export/deps-combined/:startLocalDate/:endLocalDate                     controllers.application.exports.DesksExportController.depsTerminalsBetweenTimeStampsCSV(startLocalDate, endLocalDate)
+GET           /export/desk-deps/snapshot/:localDate/:pointInTime/:terminalName        controllers.application.exports.DesksExportController.depsAtPointInTimeCSV(localDate, pointInTime, terminalName)
+GET           /export/deps-combined/snapshot/:localDate/:pointInTime                  controllers.application.exports.DesksExportController.terminalsDepsAtPointInTimeCSV(localDate, pointInTime)
 GET           /export/arrivals/:startLocalDay/:endLocalDay/:terminalName              controllers.application.exports.FlightsExportController.exportTerminalFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String, terminalName: String)
 GET           /export/arrivals-combined/:startLocalDay/:endLocalDay                   controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDateRangeCSV(startLocalDay: String, endLocalDay: String)
 GET           /export/arrivals/snapshot/:localDate/:pointInTime/:terminalName         controllers.application.exports.FlightsExportController.exportFlightsWithSplitsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long, terminalName: String)
+GET           /export/arrivals-combined/snapshot/:localDate/:pointInTime              controllers.application.exports.FlightsExportController.exportFlightsWithSplitsTerminalsForDayAtPointInTimeCSV(localDate: String, pointInTime: Long)
 
 GET           /export/arrivals-feed/:terminal/:start/:end/:feedSource                 controllers.application.exports.FlightsExportController.exportArrivalsFromFeed(terminal: String, start: Long, end: Long, feedSource: String)
 GET           /export/planning/:weekStarting/:terminalName                            controllers.application.ExportsController.exportForecastWeekToCSV(weekStarting, terminalName)
@@ -112,9 +117,8 @@ POST          /data/close-banner                                                
 
 GET           /data/should-user-view-banner                                           controllers.Application.shouldUserViewBanner
 
-GET           /data/user-preference-planning-interval-minutes                         controllers.Application.userSelectedTimePeriod
-
-PUT           /data/user-preference-planning-interval-minutes                          controllers.Application.setUserSelectedTimePeriod()
+GET           /data/user-preferences                                                  controllers.Application.userPreferences
+POST          /data/user-preferences                                                  controllers.Application.setUserPreferences
 
 + nocsrf
 POST          /data/login                                                             controllers.Application.apiLogin
@@ -128,10 +132,10 @@ GET           /data/user/has-port-access                                        
 GET           /data/actor-tree                                                        controllers.application.DebugController.getActorTree
 
 # v2 exports
-+ nocsrf
 GET           /api/passengers/:startLocalDate/:endLocalDate                           controllers.application.SummariesController.exportPassengersByPortForDateRangeApi(startLocalDate: String, endLocalDate: String)
 GET           /api/passengers/:startLocalDate/:endLocalDate/:terminalName             controllers.application.SummariesController.exportPassengersByTerminalForDateRangeApi(startLocalDate: String, endLocalDate: String, terminalName: String)
-PUT           /api/passengers/:localDate                                              controllers.application.SummariesController.populatePassengersForDate(localDate: String)
++ nocsrf
+PUT           /api/passengers/:startDate/:endDate                                     controllers.application.SummariesController.populatePassengersForDate(startDate: String, endDate: String)
 
 + nocsrf
 PUT           /api/v1/queues/:startDateLocal/:endDateLocal                            controllers.application.api.v1.QueuesApiController.populateQueues(startDateLocal: String, endDateLocal: String)
@@ -162,7 +166,7 @@ POST          /drop-in-registrations                                            
 
 GET           /drop-in-registrations                                                  controllers.application.DropInsController.getDropInRegistrations
 
-GET          /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
+GET           /user-feedback                                                          controllers.application.UserFeedbackController.getUserFeedback
 
 GET           /ab-feature/:functionName                                               controllers.application.ABFeatureController.getABFeature(functionName: String)
 
@@ -172,4 +176,4 @@ GET           /is-new-feature-available-since-last-login                        
 
 POST          /record-feature-guide-view/:filename                                    controllers.Application.recordFeatureGuideView(filename:String)
 
-GET          /viewed-feature-guides                                                   controllers.Application.viewedFeatureGuideIds
+GET           /viewed-feature-guides                                                  controllers.Application.viewedFeatureGuideIds

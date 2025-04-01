@@ -16,6 +16,8 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
   sequential
   isolated
 
+  private val oneMinute = 60d / 60
+
   "Given two flights, one with an invalid terminal " +
     "When I ask for a crunch " +
     "I should only see crunch results for the flight with a valid terminal" >> {
@@ -29,12 +31,10 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
       ArrivalGenerator.live(schDt = scheduled01, iata = "FR8819", terminal = InvalidTerminal, totalPax = Option(10)),
     )
 
-    val fiveMinutes = 600d / 60
-
     val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
-        terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
         minutesToCrunch = 120
       )))
@@ -72,12 +72,10 @@ class CrunchFlightExclusionsSpec extends CrunchTestLike {
       ArrivalGenerator.live(schDt = scheduled03, iata = "ZX0888", terminal = T1, totalPax = Option(10), status = ArrivalStatus("xx deleted xx"))
     )
 
-    val fiveMinutes = 600d / 60
-
     val crunch = runCrunchGraph(TestConfig(
       now = () => SDate(scheduled),
       airportConfig = defaultAirportConfig.copy(
-        terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+        terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
         queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk)),
         minutesToCrunch = 120
       )

@@ -184,7 +184,7 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
 
       result should ===(ArrivalsDiff(Iterable.empty, Set.empty))
     }
-    "take an arrival exiting in the second set and not the first if the second set is a primary source" in {
+    "take an arrival existing in the second set and not the first if the second set is a primary source" in {
       val existingMerged = Set.empty[UniqueArrival]
       val arrivalSets = Seq(
         FeedArrivalSet(isPrimary = true, None, Map.empty[UniqueArrival, Arrival]),
@@ -222,7 +222,28 @@ class MergeArrivalsSpec extends AnyWordSpec with Matchers {
 
       result should ===(
         ArrivalsDiff(Map(
-          updateWithAllOptionals(LiveFeedSource).unique -> updateWithAllOptionals(LiveFeedSource).copy(
+          ciriumArrival.unique -> ciriumArrival.copy(
+            FeedSources = liveArrival.FeedSources ++ ciriumArrival.FeedSources,
+            PassengerSources = liveArrival.PassengerSources ++ ciriumArrival.PassengerSources,
+          )),
+          Set.empty[UniqueArrival]
+        )
+      )
+    }
+    "take the status from a non-primary if the primary's status is empty" in {
+      val existingMerged = Set.empty[UniqueArrival]
+      val ciriumArrival = updateWithAllOptionals(LiveBaseFeedSource).copy(Status = ArrivalStatus("Cancelled"))
+      val liveArrival = updateWithNoOptionals(LiveFeedSource).copy(Status = ArrivalStatus(""))
+      val arrivalSets = Seq(
+        FeedArrivalSet(isPrimary = false, None, Map(ciriumArrival.unique -> ciriumArrival)),
+        FeedArrivalSet(isPrimary = true, None, Map(liveArrival.unique -> liveArrival)),
+      )
+
+      val result = MergeArrivals.mergeSets(existingMerged, arrivalSets, identity)
+
+      result should ===(
+        ArrivalsDiff(Map(
+          ciriumArrival.unique -> ciriumArrival.copy(
             FeedSources = liveArrival.FeedSources ++ ciriumArrival.FeedSources,
             PassengerSources = liveArrival.PassengerSources ++ ciriumArrival.PassengerSources,
           )),

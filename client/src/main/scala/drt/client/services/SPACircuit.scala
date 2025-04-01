@@ -85,8 +85,32 @@ case class ExportDeskRecs(terminal: Terminal) extends ExportType {
   override def maybeTerminal: Option[Terminal] = Option(terminal)
 }
 
+case class ExportDeskRecsSingleTerminal(terminal: Terminal) extends ExportType {
+  override def linkLabel = s"Export ${terminal.toString}"
+
+  override def toUrlString: String = "desk-recs"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
+}
+
+object ExportDeskRecsCombinedTerminals extends ExportType {
+  override def linkLabel = "Export all terminals"
+
+  override def toUrlString: String = "recs-combined"
+
+  override def maybeTerminal: Option[Terminal] = None
+}
+
 case class ExportDeployments(terminal: Terminal) extends ExportType {
   override def linkLabel = "Deployments"
+
+  override def toUrlString: String = "desk-deps"
+
+  override def maybeTerminal: Option[Terminal] = Option(terminal)
+}
+
+case class ExportDeploymentsSingleTerminal(terminal: Terminal) extends ExportType {
+  override def linkLabel = s"Export ${terminal.toString}"
 
   override def toUrlString: String = "desk-deps"
 
@@ -102,7 +126,7 @@ case class ExportLiveArrivalsFeed(terminal: Terminal) extends ExportType {
 }
 
 case class ExportArrivals(terminal: Terminal) extends ExportType {
-  override def linkLabel = "Arrivals"
+  override def linkLabel = "Export Arrivals (.csv)"
 
   override def toUrlString: String = "arrivals"
 
@@ -115,6 +139,14 @@ case class ExportArrivalsSingleTerminal(terminal: Terminal) extends ExportType {
   override def toUrlString: String = "arrivals"
 
   override def maybeTerminal: Option[Terminal] = Option(terminal)
+}
+
+object ExportDeploymentsCombinedTerminals extends ExportType {
+  override def linkLabel = "Export all terminals"
+
+  override def toUrlString: String = "deps-combined"
+
+  override def maybeTerminal: Option[Terminal] = None
 }
 
 object ExportArrivalsCombinedTerminals extends ExportType {
@@ -188,7 +220,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      abFeatures: Pot[Seq[ABFeature]] = Empty,
                      slaConfigs: Pot[SlaConfigs] = Empty,
                      showFeedbackBanner: Pot[Boolean] = Empty,
-                     userSelectedPlanningTimePeriod: Pot[Int] = Empty,
+                     userPreferences: Pot[UserPreferences] = Empty,
                      shifts: Pot[Seq[Shift]] = Empty,
                      flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
                     )
@@ -271,7 +303,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new ABFeatureHandler(zoomRW(_.abFeatures)((m, v) => m.copy(abFeatures = v))),
       new SlaConfigsHandler(zoomRW(_.slaConfigs)((m, v) => m.copy(slaConfigs = v))),
       new UserFeedbackBannerHandler(zoomRW(_.showFeedbackBanner)((m, v) => m.copy(showFeedbackBanner = v))),
-      new UserPreferencesHandler(zoomRW(_.userSelectedPlanningTimePeriod)((m, v) => m.copy(userSelectedPlanningTimePeriod = v))),
+      new UserPreferencesHandler(zoomRW(_.userPreferences)((m, v) => m.copy(userPreferences = v))),
       new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
       new ShiftsHandler(zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
     )

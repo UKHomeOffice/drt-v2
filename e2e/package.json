@@ -10,20 +10,21 @@
   "license": "UNLICENSED",
   "devDependencies": {
     "@types/node": "^20.17.16",
-    "@typescript-eslint/eslint-plugin": "^5.62.0",
-    "@typescript-eslint/parser": "^5.62.0",
-    "cypress": "^14.0.0",
-    "eslint": "^8.57.1",
-    "eslint-plugin-cypress": "^4.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.26.0",
+    "@typescript-eslint/parser": "^8.26.0",
+    "cypress": "^14.1.0",
+    "eslint": "^9.22.0",
+    "eslint-plugin-cypress": "^4.2.0",
     "ts-loader": "^9.5.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.8.2"
   },
   "dependencies": {
-    "@types/papaparse": "^5.3.7",
+    "@types/papaparse": "^5.3.15",
     "har-validator": "5.1.5",
     "moment": "^2.29.4",
     "moment-timezone": "^0.5.43",
     "npm-run-all": "^4.1.5",
-    "papaparse": "^5.4.1"
+    "papaparse": "^5.5.2",
+    "run": "^1.5.0"
   }
 }

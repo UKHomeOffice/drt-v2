@@ -4,8 +4,9 @@ import diode.UseValueEq
 import diode.data.Pot
 import diode.react.ModelProxy
 import drt.client.actions.Actions.{GetArrivalSources, GetArrivalSourcesForPointInTime}
-import drt.client.components.FlightComponents.paxFeedSourceClass
+import drt.client.components.FlightComponents.{SplitsDataQuality, paxFeedSourceClass}
 import drt.client.components.styles.ArrivalsPageStylesDefault
+import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
 import drt.shared.MinuteAsAdjective
@@ -53,6 +54,7 @@ object FlightTableRow {
                    maybeManifestSummary: Option[FlightManifestSummary],
                    paxFeedSourceOrder: List[FeedSource],
                    showHighLighted: Boolean,
+                   hidePaxDataSourceDescription: Boolean
                   ) extends UseValueEq
 
   implicit val propsReuse: Reusability[Props] = Reusability {
@@ -112,6 +114,7 @@ object FlightTableRow {
           <.span(
             ^.cls := s"arrivals__table__flight-code-value $diversionClass",
             ^.onClick --> Callback(SPACircuit.dispatch {
+              GoogleEventTracker.sendEvent(props.flightWithSplits.apiFlight.Terminal.toString, "flight feed source", props.flightWithSplits.unique.stringValue)
               props.viewMode match {
                 case vm: ViewDay if vm.isHistoric(SDate.now()) && vm.timeMachineDate.isEmpty =>
                   GetArrivalSourcesForPointInTime(SDate(props.viewMode.localDate).addHours(28), props.flightWithSplits.unique)
@@ -172,7 +175,7 @@ object FlightTableRow {
       val highlighterClass = s"arrivals__table__flight-code__highlighter-${if (highlighterIsActive) "on" else "off"}"
       val isHighlightedClass = if (highlighterIsActive) "arrivals__table__flight-code-wrapper__highlighted" else ""
 
-      val maybePreviousPort = None //flight.PreviousPort.filter(_ != flight.Origin)
+      val maybePreviousPort = flight.PreviousPort.filter(_ != flight.Origin)
 
       val firstCells = List[TagMod](
         <.td(^.className := flightCodeClass,
@@ -211,12 +214,17 @@ object FlightTableRow {
           ^.className := "arrivals__table__flight-est-pcp"
         ),
         <.td(
-          <.div(^.className := "flight-pax",
-            FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder)),
           pcpPaxDataQuality.map(dq =>
-            DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false)),
-          ^.className := s"pcp-pax",
-        )
+            if (props.hidePaxDataSourceDescription) {
+              <.div(^.className := s"pcp-icon-data-quality pax-rag-${dq.`type`}",
+                PaxDatasourceComponent(IPaxDatasource(dq.text)),
+                FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder))
+            } else {
+              <.div(^.className := "text-data-quality",
+                FlightComponents.paxComp(flightWithSplits, props.directRedListFlight, flight.Origin.isDomesticOrCta, props.paxFeedSourceOrder),
+                DataQualityIndicator(dq, flight.Terminal, "pax-rag", icon = false))
+            }
+          ), ^.className := s"pcp-pax"),
       )
 
       val flightFields = firstCells ++ lastCells
@@ -225,17 +233,26 @@ object FlightTableRow {
 
       val splitsDataQuality = FlightComponents.splitsDataQuality(flightWithSplits)
 
+      val splitsOrder = props.splitsQueueOrder.map { q =>
+        val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
+        <.div(
+          <.div(^.className := "arrivals_table__Splits__split-number", pax),
+          ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
+      }.toTagMod
+
+      def splits(dq: SplitsDataQuality) = if (props.hidePaxDataSourceDescription)
+        <.div(
+          <.span(^.className := "flex-uniform-size",
+            <.span(^.className := "icon-data-quality", PaxDatasourceComponent(IPaxDatasource(dq.text))),
+            splitsOrder)
+        ) else
+        <.div(
+          <.span(^.className := "flex-uniform-size", splitsOrder),
+          DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false)
+        )
+
       val queueSplits = <.td(
-        <.span(^.className := "flex-uniform-size",
-          props.splitsQueueOrder.map { q =>
-            val pax = if (!flight.Origin.isDomesticOrCta) queuePax.getOrElse(q, 0).toString else "-"
-            <.div(
-              <.div(^.className := "arrivals_table__Splits__split-number", pax),
-              ^.className := s"${q.toString.toLowerCase()}-queue-pax arrivals_table__splits__queue-pax")
-          }.toTagMod,
-        ),
-        splitsDataQuality.map(dq =>
-          DataQualityIndicator(dq, flight.Terminal, "splits-rag", icon = false)),
+        splitsDataQuality.map(dq => splits(dq))
       )
 
       val cancelledClass = if (flight.isCancelled) " arrival-cancelled" else ""
@@ -278,7 +295,7 @@ object FlightTableRow {
     }
     val walkTime = maybeActualWalkTime.getOrElse((terminalWalkTime / oneMinuteMillis).toInt)
     val walkTimeString = MinuteAsAdjective(walkTime).display + " " + description
-    <.span(^.className := "no-wrap", ^.key := "walk-time", Tippy.interactive(<.span(walkTimeString), gateOrStand))
+    <.span(^.className := "no-wrap", ^.key := "walk-time", Tippy.interactive("walk-time", <.span(walkTimeString), gateOrStand))
   }
 
   private def offScheduleClass(arrival: Arrival): String = {

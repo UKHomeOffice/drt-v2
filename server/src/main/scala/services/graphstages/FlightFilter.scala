@@ -20,6 +20,8 @@ object FlightFilter {
 
   def validTerminalFilter(validTerminals: List[Terminal]): FlightFilter = FlightFilter((fws, _) => validTerminals.contains(fws.apiFlight.Terminal))
 
+  val notDivertedFilter: FlightFilter = FlightFilter((fws, _) => !fws.apiFlight.isDiverted)
+
   val notCancelledFilter: FlightFilter = FlightFilter((fws, _) => !fws.apiFlight.isCancelled)
 
   val outsideCtaFilter: FlightFilter = FlightFilter((fws, _) => !fws.apiFlight.Origin.isCta)
@@ -32,7 +34,7 @@ object FlightFilter {
   }
 
   def regular(validTerminals: Iterable[Terminal]): FlightFilter =
-    validTerminalFilter(validTerminals.toList) + notCancelledFilter + outsideCtaFilter
+    validTerminalFilter(validTerminals.toList) + notDivertedFilter + notCancelledFilter + outsideCtaFilter
 
   def forPortConfig(config: AirportConfig): FlightFilter = config.portCode match {
     case PortCode("LHR") => regular(config.terminals) + lhrRedListFilter

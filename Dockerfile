@@ -5,6 +5,8 @@ WORKDIR /opt/docker
 COPY server/target/docker/stage/1/opt /1/opt
 COPY server/target/docker/stage/2/opt /2/opt
 COPY server/target/docker/stage/4/opt /4/opt
+COPY server/target/web/public /opt/docker/public
+
 USER root
 RUN ["chmod", "-R", "u=rX,g=rX", "/1/opt/docker"]
 RUN ["chmod", "-R", "u=rX,g=rX", "/2/opt/docker"]
@@ -18,6 +20,7 @@ WORKDIR /opt/docker
 COPY --from=stage0 --chown=drt:root /1/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /2/opt/docker /opt/docker
 COPY --from=stage0 --chown=drt:root /4/opt/docker /opt/docker
+COPY --from=stage0 --chown=drt:root /opt/docker/public /opt/docker/public
 
 RUN mkdir /var/lib/drt-v2
 RUN mkdir -p /var/run/drt && chown 1000 /var/run/drt

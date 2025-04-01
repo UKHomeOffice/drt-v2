@@ -1,6 +1,7 @@
 package drt.client.components
 
 import diode.UseValueEq
+import drt.client.components.FlightComponents.PcpPaxDataQuality.TrustedPortData.text
 import drt.client.components.FlightComponents.SplitsDataQuality.{CarrierData, HistoricalCarrierData, TerminalAverageData, TrustedCarrierData}
 import drt.shared.redlist.DirectRedListFlight
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
@@ -24,33 +25,40 @@ object FlightComponents {
   trait PcpPaxDataQuality extends DataQuality {
     val `type`: String
     val text: String
+    val component = PaxDatasourceComponent(IPaxDatasource(text))
   }
+
   object PcpPaxDataQuality {
     object TrustedPortData extends PcpPaxDataQuality {
       val `type`: String = "success"
       val text: String = "Port live data"
       override val maybeTooltip: Option[String] = Option("Live data from the port operator")
     }
+
     object CarrierData extends PcpPaxDataQuality {
       val `type`: String = "info"
       val text: String = "Carrier data"
       override val maybeTooltip: Option[String] = Option("Advance Passenger Information (API) from the carrier")
     }
+
     object PortForecastData extends PcpPaxDataQuality {
       val `type`: String = "warning"
       val text: String = "Port forecast"
       override val maybeTooltip: Option[String] = Option("Data from the port operator")
     }
+
     object MlData extends PcpPaxDataQuality {
       val `type`: String = "warning"
       val text: String = "DRT forecast"
       override val maybeTooltip: Option[String] = Option("Machine learning from multiple information sources and historical trends")
     }
+
     object HistoricalData extends PcpPaxDataQuality {
       val `type`: String = "warning"
       val text: String = "Estimate"
       override val maybeTooltip: Option[String] = Option("Based on an historical average or an estimated load factor")
     }
+
     object AclData extends PcpPaxDataQuality {
       val `type`: String = "error"
       val text: String = "Estimate"
@@ -58,6 +66,7 @@ object FlightComponents {
     }
 
   }
+
   def paxFeedSourceClass(paxSource: PaxSource, isDomesticOrCta: Boolean): Option[PcpPaxDataQuality] =
     if (isDomesticOrCta)
       None
@@ -90,14 +99,14 @@ object FlightComponents {
 
     <.div(
       ^.className := s"arrivals__table__flight__pcp-pax $diversionClass $isNotApiData underline",
-      <.span(Tippy.describe(
+      <.span(Tippy.describe("arrivals-table-flight-pcp-pax",
         paxNumberSources(flightWithSplits), <.span(^.className := s"pcp-pax-value $noPcpPaxClass", pcpPaxNumber))
       ),
       if (directRedListFlight.paxDiversion) {
         val incomingTip =
           if (directRedListFlight.incomingDiversion) s"Passengers diverted from ${flightWithSplits.apiFlight.Terminal}"
           else "Passengers diverted to red list terminal"
-        Tippy.describe(<.span(incomingTip), MuiIcons(TrendingFlat)())
+        Tippy.describe("passengers-diverted", <.span(incomingTip), MuiIcons(TrendingFlat)())
       } else <.span(),
     )
   }

@@ -21,18 +21,35 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 
-class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl)  {
-  def populatePassengersForDate(localDateStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
-    LocalDate.parse(localDateStr) match {
-      case Some(localDate) =>
+class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInterface) extends AuthController(cc, ctrl) {
+  def populatePassengersForDate(startDateStr: String, endDateStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
+    val maybeDateRange = for {
+      startDate <- LocalDate.parse(startDateStr)
+      endDate <- LocalDate.parse(endDateStr)
+    } yield {
+      val utcStart = SDate(startDate).toUtcDate
+      val utcEnd = SDate(endDate).addDays(1).addMinutes(-1).toUtcDate
+      DateRange(utcStart, utcEnd)
+    }
+
+    maybeDateRange match {
+      case Some(range) =>
         Action.async(
-          Source(Set(SDate(localDate).toUtcDate, SDate(localDate).addDays(1).addMinutes(-1).toUtcDate))
-            .mapAsync(1)(ctrl.applicationService.populateLivePaxViewForDate)
+          Source(range)
+            .mapAsync(1) { date =>
+              ctrl
+                .applicationService.populateLivePaxViewForDate(date)
+                .flatMap(_ => ctrl.applicationService.updateAndPersistCapacity(date))
+                .recover {
+                  case t: Throwable =>
+                    log.error(s"Failed to populate passengers or capacity for $date: ${t.getMessage}")
+                }
+            }
             .run()
-            .map(_ => Ok(s"Populated passengers for $localDate"))
+            .map(_ => Ok(s"Populated passengers for ${range.min} to ${range.max}"))
         )
       case None =>
-        Action(BadRequest(s"Invalid date format for $localDateStr. Expected YYYY-mm-dd"))
+        Action(BadRequest(s"Invalid date format for $startDateStr. Expected YYYY-mm-dd"))
     }
   }
 

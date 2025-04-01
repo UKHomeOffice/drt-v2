@@ -59,7 +59,7 @@ import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, Pa
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
-import uk.gov.homeoffice.drt.time._
+import uk.gov.homeoffice.drt.time.{LocalDate, _}
 
 import javax.inject.Singleton
 import scala.collection.SortedSet
@@ -107,8 +107,24 @@ case class ApplicationService(journalType: StreamingJournalLike,
     deserialiser = ConfigDeserialiser.slaConfigsDeserialiser,
   )))
 
+  private val slaForDateAndQueue: (LocalDate, Queue) => Future[Int] = Slas.slaProvider(slasActor)
+
   val portDeskRecs: PortDesksAndWaitsProviderLike =
-    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, Slas.slaProvider(slasActor))
+    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, slaForDateAndQueue)
+
+  private val deploymentSlas: (LocalDate, Queue) => Future[Int] =
+    (date, queue) =>
+      config.getOptional[Int]("crunch.deployments.sla") match {
+        case Some(sla) =>
+          log.info(s"Using deployment SLA of $sla")
+          Future.successful(sla)
+        case None =>
+          log.info(s"Using config SLA for $date and $queue")
+          slaForDateAndQueue(date, queue)
+      }
+
+  private val portDeployments: PortDesksAndWaitsProviderLike =
+    PortDesksAndWaitsProvider(airportConfig, optimiser, FlightFilter.forPortConfig(airportConfig), feedService.paxFeedSourceOrder, deploymentSlas)
 
   val paxTypeQueueAllocation: PaxTypeQueueAllocation = paxTypeQueueAllocator(airportConfig)
 
@@ -149,8 +165,9 @@ case class ApplicationService(journalType: StreamingJournalLike,
   )
   private lazy val getCapacities = PassengersLiveView.capacityForDate(uniqueFlightsForDate)
   private lazy val persistCapacity = PassengersLiveView.persistCapacityForDate(aggregatedDb, airportConfig.portCode)
-  private val updateAndPersistCapacity = PassengersLiveView.updateAndPersistCapacityForDate(getCapacities, persistCapacity)
 
+  lazy val updateAndPersistCapacity: UtcDate => Future[Done] =
+    PassengersLiveView.updateAndPersistCapacityForDate(getCapacities, persistCapacity)
   lazy val populateLivePaxViewForDate: UtcDate => Future[StatusReply[Done]] =
     PassengersLiveView.populatePaxForDate(minuteLookups.queueMinutesRouterActor, updateLivePaxView)
 
@@ -300,7 +317,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
         staffToDeskLimits = staffToDeskLimits,
         paxProvider = OptimisationProviders.passengersProvider(minuteLookups.queueLoadsMinutesActor),
         staffMinutesProvider = OptimisationProviders.staffMinutesProvider(minuteLookups.staffMinutesRouterActor),
-        loadsToDeployments = portDeskRecs.loadsToSimulations,
+        loadsToDeployments = portDeployments.loadsToSimulations,
         queueMinutesSinkActor = minuteLookups.queueMinutesRouterActor,
         setUpdatedAtForDay = DrtRunnableGraph.setUpdatedAt(
           airportConfig.portCode,

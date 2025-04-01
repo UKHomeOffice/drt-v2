@@ -123,8 +123,8 @@ object TerminalDesksAndQueues {
 
         if (props.airportConfig.hasActualDeskStats && state.showActuals)
           headings ++ List(
-            <.th(Tippy.describe(<.span("Actual desks used"), s"Act ${deskUnitLabel(queueName)}"), ^.className := queueColumnActualsClass),
-            <.th(Tippy.describe(<.span("Actual wait times"), "Act wait"), ^.className := queueColumnActualsClass))
+            <.th(Tippy.describe("actual-desks-used", <.span("Actual desks used"), s"Act ${deskUnitLabel(queueName)}"), ^.className := queueColumnActualsClass),
+            <.th(Tippy.describe("actual-wait-times", <.span("Actual wait times"), "Act wait"), ^.className := queueColumnActualsClass))
         else headings
       }
 

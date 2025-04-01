@@ -10,7 +10,7 @@ import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.{SPACircuit, _}
-import drt.client.services.handlers.{GetShifts, GetUserPreferenceIntervalMinutes}
+import drt.client.services.handlers.GetShifts
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -25,7 +25,7 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode, Queues}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -39,7 +39,7 @@ object TerminalComponent {
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
 
-  private case class TerminalModel(userSelectedPlanningTimePeriod: Pot[Int],
+  private case class TerminalModel(userPreferences: Pot[UserPreferences],
                                    potShifts: Pot[ShiftAssignments],
                                    potStaffShifts: Pot[ShiftAssignments],
                                    potFixedPoints: Pot[FixedPointAssignments],
@@ -56,7 +56,7 @@ object TerminalComponent {
                                    timeMachineEnabled: Boolean,
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
-                                   shiftsPot: Pot[Seq[Shift]]
+                                   shiftsPot: Pot[Seq[Shift]],
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -69,8 +69,8 @@ object TerminalComponent {
 
   def viewStartAndEnd(day: LocalDate, range: TimeRangeHours): (SDateLike, SDateLike) = {
     val startOfDay = SDate(day)
-    val startOfView = startOfDay.addHours(range.start)
-    val endOfView = startOfDay.addHours(range.end)
+    val startOfView = startOfDay.addHours(range.startInt)
+    val endOfView = startOfDay.addHours(range.endInt)
     (startOfView, endOfView)
   }
 
@@ -78,7 +78,7 @@ object TerminalComponent {
     def render(props: Props): VdomElement = {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
-        userSelectedPlanningTimePeriod = model.userSelectedPlanningTimePeriod,
+        userPreferences = model.userPreferences,
         potShifts = model.legacyDayOfStaffAssignments,
         potStaffShifts = model.dayOfStaffAssignments,
         potFixedPoints = model.fixedPoints,
@@ -110,6 +110,7 @@ object TerminalComponent {
             loggedInUser <- terminalModel.loggedInUserPot
             redListUpdates <- terminalModel.redListUpdates
             shifts <- terminalModel.shiftsPot
+            userPreferences <- terminalModel.userPreferences
           } yield {
             val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
@@ -133,6 +134,8 @@ object TerminalComponent {
                 rcp { mp =>
                   val (mt, ps, ai, slas, manSums, arrSources, simRes, fhl) = mp()
 
+                  val hideAddShiftsMessage = shifts.nonEmpty || !featureFlags.enableShiftPlanningChange
+
                   props.terminalPageTab.mode match {
                     case Current =>
                       val headerClass = if (terminalModel.timeMachineEnabled) "terminal-content-header__time-machine" else ""
@@ -151,7 +154,7 @@ object TerminalComponent {
                         filterFlights(psw.flights.values.toList, fhl.filterFlightSearch, ai)
                       }
 
-                      val hoursToView = timeWindow.end - timeWindow.start
+                      val hoursToView = timeWindow.endInt - timeWindow.startInt
 
                       val terminal = props.terminalPageTab.terminal
                       val queues = terminalModel.airportConfig.map(_.nonTransferQueues(terminal).toList)
@@ -203,6 +206,7 @@ object TerminalComponent {
                           dayCrunchSummaries = dayCrunchSummaries,
                           windowStaffSummaries = windowStaffSummaries,
                           defaultDesksAndQueuesViewType = defaultDesksAndQueuesViewType,
+                          userPreferences = userPreferences
                         ))
                       )
 
@@ -223,22 +227,25 @@ object TerminalComponent {
                           flightManifestSummaries = manSums,
                           arrivalSources = arrSources,
                           flightHighlight = fhl,
+                          userPreferences = userPreferences,
                         )
                       )
 
                     case Planning =>
-                      <.div(terminalModel.userSelectedPlanningTimePeriod.render { timePeriod =>
-                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router, timePeriod, airportConfig))
+                      <.div(terminalModel.userPreferences.render { userPreferences =>
+                        TerminalPlanningComponent(TerminalPlanningComponent.Props(props.terminalPageTab, props.router,
+                          userPreferences.userSelectedPlanningTimePeriod,
+                          airportConfig))
                       })
 
                     case Staffing if loggedInUser.roles.contains(StaffEdit) && props.terminalPageTab.subMode == "createShifts" =>
                       <.div(drt.client.components.ShiftsComponent(props.terminalPageTab.terminal, props.terminalPageTab.portCodeStr, props.router))
                     case Staffing if loggedInUser.roles.contains(StaffEdit) =>
-                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, (shifts.nonEmpty || !featureFlags.enableShiftPlanningChange), false))
+                      <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, false))
 
                     case Shifts if loggedInUser.roles.contains(StaffEdit) && shifts.nonEmpty =>
                       if (props.terminalPageTab.shiftViewEnabled)
-                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, (shifts.nonEmpty || !featureFlags.enableShiftPlanningChange), true))
+                        <.div(MonthlyStaffing(props.terminalPageTab, props.router, airportConfig, hideAddShiftsMessage, true))
                       else
                         <.div(MonthlyShifts(props.terminalPageTab, props.router, airportConfig))
 
@@ -260,10 +267,9 @@ object TerminalComponent {
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("Loader")
     .renderBackend[Backend]
-    .componentDidMount(p => Callback(SPACircuit.dispatch(GetUserPreferenceIntervalMinutes())) >>
-      Callback(SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr, p.props.terminalPageTab.terminal.toString)))
-    )
-
+    .componentDidMount(p => Callback(
+      SPACircuit.dispatch(GetShifts(p.props.terminalPageTab.portCodeStr,
+        p.props.terminalPageTab.terminal.toString))))
     .build
 
   private def terminalTabs(props: Props,

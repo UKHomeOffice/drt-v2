@@ -20,7 +20,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val fiveMinutes: Double = 600d / 60
+  val threeMinutes: Double = 179d / 60
 
   val airportConfig: AirportConfig = defaultAirportConfig.copy(
     queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.EGate)),
@@ -30,8 +30,8 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       SplitRatio(eeaMachineReadableToEGate, 0.5)
     )),
     terminalProcessingTimes = Map(T1 -> Map(
-      eeaMachineReadableToDesk -> fiveMinutes,
-      eeaMachineReadableToEGate -> fiveMinutes
+      eeaMachineReadableToDesk -> threeMinutes,
+      eeaMachineReadableToEGate -> threeMinutes
     )),
     minMaxDesksByTerminalQueue24Hrs = Map(T1 -> Map(
       Queues.EeaDesk -> ((List.fill[Int](24)(0), List.fill[Int](24)(20))),
@@ -47,7 +47,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
   "Egate banks handling " >> {
     "Given a flight with 20 very expensive passengers and splits to eea desk & egates " +
       "When I ask for desk recs " +
-      "Then I should see lower egates recs by a factor of 7 (rounded up)" >> {
+      "Then I should see lower egates recs by a factor of 2" >> {
 
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
@@ -58,7 +58,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map(T1 -> Map(
-        Queues.EeaDesk -> Seq.fill(15)(7),
+        Queues.EeaDesk -> Seq.fill(15)(2),
         Queues.EGate -> Seq.fill(15)(1)
       ))
 
@@ -89,7 +89,7 @@ class CrunchEgateBanksSpec extends CrunchTestLike {
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
       val expected = Map(T1 -> Map(
-        Queues.EeaDesk -> Seq.fill(15)(7),
+        Queues.EeaDesk -> Seq.fill(15)(2),
         Queues.EGate -> Seq.fill(15)(1)
       ))
 

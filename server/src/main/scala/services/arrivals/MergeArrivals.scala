@@ -100,6 +100,7 @@ object MergeArrivals {
     next.copy(
       Operator = next.Operator.orElse(current.Operator),
       CarrierCode = current.CarrierCode,
+      Status = if (next.Status.description.isEmpty) current.Status else next.Status,
       Estimated = next.Estimated.orElse(current.Estimated),
       Actual = next.Actual.orElse(current.Actual),
       EstimatedChox = next.EstimatedChox.orElse(current.EstimatedChox),

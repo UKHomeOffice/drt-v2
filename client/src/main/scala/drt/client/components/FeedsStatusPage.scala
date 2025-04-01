@@ -104,7 +104,7 @@ object FeedsStatusPage {
                     <.li(
                       ^.className := className,
                       <.div(^.className := "vert-align",
-                        <.div(<.div(Tippy.describe(<.span(description), <.h4(label))), <.div(s"${
+                        <.div(<.div(Tippy.describe(s"times-summary-$label", <.span(description), <.h4(label))), <.div(s"${
                           maybeSDate.map(lu => s"${timeAgo(lu)}").getOrElse("n/a")
                         }"))))
                 }.toVdomArray)

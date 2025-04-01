@@ -113,8 +113,8 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
               slaByQueue = Map(Queues.EGate -> 15, Queues.EeaDesk -> 25, Queues.NonEeaDesk -> 45),
               queuesByTerminal = SortedMap(T1 -> Seq(Queues.EeaDesk, Queues.NonEeaDesk, Queues.EGate)),
               terminalProcessingTimes = Map(T1 -> Map(
-                eeaMachineReadableToDesk -> 0.25,
-                eeaMachineReadableToEGate -> 0.3,
+                eeaMachineReadableToDesk -> 0.35,
+                eeaMachineReadableToEGate -> 0.35,
                 eeaNonMachineReadableToDesk -> 0.4
               )),
               terminalPaxSplits = Map(T1 -> SplitRatios(
@@ -128,13 +128,14 @@ class CrunchSplitsToLoadAndDeskRecsSpec extends CrunchTestLike {
           offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(flights))
 
           val expected = Map(T1 -> Map(
-            Queues.EeaDesk -> List(5.25, 5.25, 5.25, 5.25, 5.25),
-            Queues.EGate -> List(1.5, 1.5, 1.5, 1.5, 1.5),
-            Queues.NonEeaDesk -> List(0, 0, 0, 0, 0)
+            Queues.EeaDesk -> List(5.75, 5.75, 5.75, 5.75, 5.75),
+            Queues.EGate -> List(1.75, 1.75, 1.75, 1.75, 1.75),
+            Queues.NonEeaDesk -> List(0.0, 0.0, 0.0, 0.0, 0.0)
           ))
 
           crunch.portStateTestProbe.fishForMessage(2.seconds) {
-            case ps: PortState => workLoadsFromPortState(ps, 5) == expected
+            case ps: PortState =>
+              workLoadsFromPortState(ps, 5) == expected
           }
 
           success

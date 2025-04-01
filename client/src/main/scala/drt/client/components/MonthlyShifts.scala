@@ -3,7 +3,7 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.Pot
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, ShiftViewEnabled, UrlDateParameter, UrlDayRangeType}
-import drt.client.actions.Actions.{GetAllStaffShifts, UpdateStaffShifts}
+import drt.client.actions.Actions.{GetAllStaffAssignments, UpdateStaffShifts}
 import drt.client.components.MonthlyShiftsUtil.{generateShiftSummaries, updateAssignments, updateChangeAssignment}
 import drt.client.components.StaffingUtil.navigationDates
 import drt.client.logger.{Logger, LoggerFactory}
@@ -145,14 +145,15 @@ object MonthlyShifts {
           staffShifts <- model.staffShiftsPot
         } yield {
           if (monthOfShifts != state.shifts) {
-            val initialShift: Seq[ShiftSummaryStaffing] = MonthlyShiftsUtil.generateShiftSummaries(viewingDate,
+            val shiftSummaries = MonthlyShiftsUtil.generateShiftSummaries(
+              viewingDate,
               props.terminalPageTab.dayRangeType.getOrElse("monthly"),
               props.terminalPageTab.terminal,
               staffShifts,
               ShiftAssignments(monthOfShifts.forTerminal(props.terminalPageTab.terminal)),
               props.timeSlotMinutes)
             scope.modState(state => state.copy(shifts = monthOfShifts,
-              shiftsData = initialShift)).runNow()
+              shiftsData = shiftSummaries)).runNow()
           }
           <.div()
         }
@@ -245,15 +246,15 @@ object MonthlyShifts {
                     ^.onClick ==> handleShiftEditForm),
                   MuiButton(color = Color.primary, variant = "contained")
                   (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Save staff updates"),
-                    ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments))
+                    ^.onClick ==> confirmAndSave(state.shiftsData, state.changedAssignments)),
+                  <.div(^.className := "staffing-controls-toggle",
+                    MuiButton(color = Color.secondary, variant = "outlined")
+                    (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Toggle Shift view"),
+                      ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(true)))
+                    )
+                  )
                 ),
               ),
-              <.div(^.className := "staffing-controls-toggle",
-                MuiButton(color = Color.secondary, variant = "outlined")
-                (<.span(^.style := js.Dictionary("paddingLeft" -> "5px"), "Toggle Shift view"),
-                  ^.onClick --> props.router.set(props.terminalPageTab.withUrlParameters(ShiftViewEnabled(true)))
-                )
-              )
             ),
             MuiSwipeableDrawer(open = state.showEditStaffForm,
               anchor = "right",
@@ -280,8 +281,8 @@ object MonthlyShifts {
                 cancelHandler = () => {
                   scope.modState(state => state.copy(showEditStaffForm = false)).runNow()
                 })))),
-            <.div(^.className := "staffing-table",
-              <.div(^.className := "staffing-table-content",
+            <.div(^.className := "shifts-table",
+              <.div(^.className := "shifts-table-content",
                 ShiftHotTableViewComponent(ShiftHotTableViewProps(
                   ViewDate(year = viewingDate.getFullYear, month = viewingDate.getMonth, day = viewingDate.getDate),
                   dayRange = props.terminalPageTab.dayRangeType.getOrElse("monthly"),
@@ -336,7 +337,6 @@ object MonthlyShifts {
     )
   }
 
-
   val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("ShiftStaffing")
     .initialStateFromProps(_ => State(showEditStaffForm = false,
       showStaffSuccess = false,
@@ -344,15 +344,12 @@ object MonthlyShifts {
       shifts = ShiftAssignments.empty))
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
-    .componentDidMount(_ => Callback(SPACircuit.dispatch(GetAllStaffShifts)))
     .build
-
 
   private def updatedConvertedShiftAssignments(changes: Seq[StaffAssignment],
                                                terminalName: Terminal): Seq[StaffAssignment] = changes.map { change =>
     StaffAssignment(change.name, terminalName, change.start, change.end, change.numberOfStaff, None)
   }
-
 
   private def maybeClockChangeDate(viewingDate: SDateLike): Option[SDateLike] = {
     val lastDay = SDate.lastDayOfMonth(viewingDate)

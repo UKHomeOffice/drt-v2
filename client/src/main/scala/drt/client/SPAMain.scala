@@ -11,7 +11,7 @@ import drt.client.logger._
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.GetFeedSourceStatuses
+import drt.client.services.handlers.{GetFeedSourceStatuses, GetUserPreferences}
 import drt.client.spa.TerminalPageModes.{Current, Shifts, Staffing}
 import drt.client.spa.{TerminalPageMode, TerminalPageModes}
 import drt.shared.DrtPortConfigs
@@ -69,6 +69,11 @@ object SPAMain {
       override val value: Option[String] = paramValue
     }
   }
+
+  object UrlTimeSelectedParameter extends UrlDateLikeParameter {
+    override val paramName = "time"
+  }
+
 
   object UrlDateParameter extends UrlDateLikeParameter {
     override val paramName = "date"
@@ -183,8 +188,10 @@ object SPAMain {
     val maybeTimeMachineDate: Option[SDateLike] = queryParams.get(UrlTimeMachineDateParameter.paramName)
       .filter(_.matches(".+"))
       .flatMap(dateStr => Try(parseDateString(dateStr)).toOption)
-    val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+"))
-    val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+"))
+    val timeSelectString: Option[String] = queryParams.get(UrlTimeSelectedParameter.paramName)
+    val timeRangeStartString: Option[String] = queryParams.get(UrlTimeRangeStart.paramName).filter(_.matches("[0-9]+:[0-9]+"))
+    val timeRangeEndString: Option[String] = queryParams.get(UrlTimeRangeEnd.paramName).filter(_.matches("[0-9]+:[0-9]+[ +1]*"))
+
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
@@ -212,9 +219,9 @@ object SPAMain {
 
     def parseDateString(s: String): SDateLike = SDate(s.replace("%20", " ").split(" ").mkString("T"))
 
-    def timeRangeStart: Option[Int] = timeRangeStartString.map(_.toInt)
+    def timeRangeStart: Option[String] = timeRangeStartString
 
-    def timeRangeEnd: Option[Int] = timeRangeEndString.map(_.toInt)
+    def timeRangeEnd: Option[String] = timeRangeEndString
 
     def dateFromUrlOrNow: SDateLike = maybeViewDate.map(ld => SDate(ld)).getOrElse(SDate.now())
 
@@ -223,9 +230,9 @@ object SPAMain {
 
     def loadAction: Action = mode match {
       case Staffing =>
-        GetAllShifts
+        GetAllLegacyStaffAssignments
       case Shifts =>
-        GetAllStaffShifts
+        GetAllStaffAssignments
       case _ =>
         SetViewMode(viewMode)
     }
@@ -309,6 +316,7 @@ object SPAMain {
     GetManifestSummariesForDate(SDate.now().toUtcDate),
     GetManifestSummariesForDate(SDate.now().addDays(-1).toUtcDate),
     GetSlaConfigs,
+    GetUserPreferences
   )
 
   private def sendInitialRequests(): Unit = initialRequestsActions.foreach(SPACircuit.dispatch(_))

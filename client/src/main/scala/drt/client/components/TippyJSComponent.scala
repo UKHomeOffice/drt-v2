@@ -3,6 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.components.styles.DefaultToolTipsStyle
 import drt.client.logger.{Logger, LoggerFactory}
+import drt.client.modules.GoogleEventTracker
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.Info
 import japgolly.scalajs.react.Ref.Simple
@@ -39,7 +40,7 @@ object TippyJSComponent {
     var onTrigger: js.Function2[TippyElement, Event, Unit] = js.native
   }
 
-  def props(content: js.Object, interactive: Boolean, plugins: js.Array[js.Any], triggerEvent: String): Props = {
+  def props(gaEventLabel: String, content: js.Object, interactive: Boolean, plugins: js.Array[js.Any], triggerEvent: String): Props = {
     val p = (new js.Object).asInstanceOf[Props]
 
     p.interactive = interactive
@@ -50,19 +51,27 @@ object TippyJSComponent {
     p.placement = "top-end"
     p.plugins = plugins
 
+    p.onTrigger = (el: TippyElement, event: Event) => {
+      if (event.`type` == "show") {
+        Callback(GoogleEventTracker.sendEvent("tooltip", s"show", gaEventLabel))
+      } else if (event.`type` == "hide") {
+        Callback(GoogleEventTracker.sendEvent("tooltip", "hide", gaEventLabel))
+      }
+    }
+
     p
   }
 
   val component = JsComponent[Props, Children.Varargs, Null](TippyReactRaw)
 
-  def apply[A](
-                content: js.Object,
-                interactive: Boolean,
-                trigger: VdomTagOf[HTMLElement],
-                plugins: js.Array[js.Any] = js.Array(),
-                triggerEvent: String = Tippy.TriggerEvents.focus
+  def apply[A](gaEventLabel: String,
+               content: js.Object,
+               interactive: Boolean,
+               trigger: VdomTagOf[HTMLElement],
+               plugins: js.Array[js.Any] = js.Array(),
+               triggerEvent: String = Tippy.TriggerEvents.focus
               ): UnmountedWithRawType[Props, Null, RawMounted[Props, Null]] =
-    component(props(content, interactive, plugins, triggerEvent))(trigger)
+    component(props(gaEventLabel, content, interactive, plugins, triggerEvent))(trigger)
 }
 
 @js.native
@@ -93,7 +102,7 @@ object Tippy extends ScalaCssReactImplicits {
     val focusAndHover = s"$hover $focus"
   }
 
-  case class Props(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String, maybeOnClick: Option[ReactEventFromInput => Callback]) extends UseValueEq
+  case class Props(gaEventLabel: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String, maybeOnClick: Option[ReactEventFromInput => Callback]) extends UseValueEq
 
   val component = ScalaComponent.builder[Props]("TippyJs")
     .render_P(props => {
@@ -113,30 +122,30 @@ object Tippy extends ScalaCssReactImplicits {
 
       val plugins: js.Array[js.Any] = js.Array(new HideOnEsc())
 
-      TippyJSComponent(props.content.rawElement, props.interactive, triggerWithTabIndex, plugins, props.triggerEvent)
+      TippyJSComponent(props.gaEventLabel, props.content.rawElement, props.interactive, triggerWithTabIndex, plugins, props.triggerEvent)
     })
     .build
 
-  def apply(content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String = TriggerEvents.focus, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    component(Props(content, interactive, trigger, triggerEvent, triggerCallback))
+  def apply(gaEventLabel: String, content: VdomElement, interactive: Boolean, trigger: VdomNode, triggerEvent: String = TriggerEvents.focus, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
+    component(Props(gaEventLabel, content, interactive, trigger, triggerEvent, triggerCallback))
 
-  def interactive(content: VdomElement, trigger: VdomNode) =
-    apply(content, interactive = true, <.div(^.key := "trigger-wrapper", trigger))
+  def interactive(gaEventLabel: String, content: VdomElement, trigger: VdomNode) =
+    apply(gaEventLabel, content, interactive = true, <.div(^.key := "trigger-wrapper", trigger))
 
-  def describe(content: VdomElement, trigger: TagMod) =
-    apply(content, interactive = false, <.span(trigger))
+  def describe(gaEventLabel: String, content: VdomElement, trigger: TagMod) =
+    apply(gaEventLabel, content, interactive = false, <.span(trigger))
 
-  def interactiveInfo(content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
-    apply(content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerCallback = triggerCallback)
+  def interactiveInfo(gaEventLabel: String, content: VdomElement, triggerCallback: Option[ReactEventFromInput => Callback] = None) =
+    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerCallback = triggerCallback)
 
-  def info(content: VdomElement) =
-    apply(content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
+  def info(gaEventLabel: String, content: VdomElement) =
+    apply(gaEventLabel, content, interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
 
-  def info(content: String) =
-    apply(<.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
+  def info(gaEventLabel: String, content: String) =
+    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")))
 
-  def infoHover(content: String) =
-    apply(<.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerEvent = TriggerEvents.focusAndHover)
+  def infoHover(gaEventLabel: String, content: String) =
+    apply(gaEventLabel, <.div(content), interactive = true, trigger = <.span(^.className := "tippy-info-icon", ^.fontSize := "20px", MuiIcons(Info)(fontSize = "inherit")), triggerEvent = TriggerEvents.focusAndHover)
 
 }
 
