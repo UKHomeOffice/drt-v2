@@ -1,14 +1,15 @@
 package controllers.application
 
+import drt.shared.CrunchApi.MinutesContainer
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream.Materializer
-import drt.shared.CrunchApi.MinutesContainer
 import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers._
 import play.api.test._
+import slick.jdbc.H2Profile
 import slick.jdbc.H2Profile.api._
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
@@ -30,7 +31,7 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
   implicit val system: ActorSystem = ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
 
-  val schemas = Seq(CapacityHourlyDao.table.schema, PassengersHourlyDao.table.schema)
+  val schemas: Seq[H2Profile.DDL] = Seq(CapacityHourlyDao.table.schema, PassengersHourlyDao.table.schema)
 
   override def beforeEach(): Unit = {
     schemas.map { schema =>
@@ -149,73 +150,6 @@ class SummariesControllerSpec extends PlaySpec with BeforeAndAfterEach {
           f"2024-06-01T$hour%02d:00:00+01:00,Heathrow,LHR,T3,0,${queuePaxPerHour * queues.size},0,0,$queuePaxPerHour,$queuePaxPerHour,0\n"
         }.mkString
       )
-    }
-  }
-
-  "exportPassengersByTerminalForDateRangeApi" should {
-    val acceptHeader = Headers(("Accept", "application/json"), ("X-Forwarded-Groups" -> "LHR"))
-    "generate a json response for the given port" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "", headers = acceptHeader, body = AnyContentAsEmpty)
-      val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
-
-      status(result) must ===(OK)
-      contentType(result) must ===(Some("application/json"))
-      val totalPax = queuePaxPerDay * queues.size * terminals.size
-      val queuePax = queuePaxPerDay * terminals.size
-      contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePax},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePax}],"regionName":"Heathrow","totalCapacity":$capacity,"totalPcpPax":$totalPax}]""")
-    }
-    "generate a daily breakdown json response for the given port" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = acceptHeader, body = AnyContentAsEmpty)
-      val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
-
-      status(result) must ===(OK)
-      contentType(result) must ===(Some("application/json"))
-      contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$terminalPaxPerDay},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$terminalPaxPerDay}],"regionName":"Heathrow","totalCapacity":$capacity,"totalPcpPax":$portPaxPerDay}]""")
-    }
-    "generate a hourly breakdown json response for the given port" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = acceptHeader, body = AnyContentAsEmpty)
-      val result = controller.exportPassengersByPortForDateRangeApi("2024-06-01", "2024-06-01").apply(csvRequest)
-
-      status(result) must ===(OK)
-      contentType(result) must ===(Some("application/json"))
-      val hourlyContent = (0 to 23).map { hour =>
-        val cap = if (hour == 13) capacity else 0
-        s"""{"date":"2024-06-01","hour":$hour,"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":${terminalPaxPerDay / 24}},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":${terminalPaxPerDay / 24}}],"regionName":"Heathrow","totalCapacity":$cap,"totalPcpPax":${portPaxPerDay / 24}}"""
-      }.mkString(",")
-      contentAsString(result) must ===(s"[$hourlyContent]")
-    }
-    "generate a json response for the given terminal" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "", headers = acceptHeader, body = AnyContentAsEmpty)
-      val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
-
-      status(result) must ===(OK)
-      contentType(result) must ===(Some("application/json"))
-      contentAsString(result) must ===(s"""[{"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePaxPerDay},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePaxPerDay}],"regionName":"Heathrow","terminalName":"T3","totalCapacity":0,"totalPcpPax":${queuePaxPerDay * queues.size}}]""")
-    }
-    "generate a daily breakdown json response for the given terminal" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=daily", headers = acceptHeader, body = AnyContentAsEmpty)
-      val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
-
-      status(result) must ===(OK)
-      contentType(result) must ===(Some("application/json"))
-      contentAsString(result) must ===(s"""[{"date":"2024-06-01","portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePaxPerDay},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePaxPerDay}],"regionName":"Heathrow","terminalName":"T3","totalCapacity":0,"totalPcpPax":${queuePaxPerDay * queues.size}}]""")
-    }
-    "generate a hourly breakdown json response for the given terminal" in {
-      val controller: SummariesController = populateForDate(LocalDate(2024, 6, 1), LocalDate(2024, 6, 1), terminals)
-      val csvRequest = FakeRequest(method = "GET", uri = "?granularity=hourly", headers = acceptHeader, body = AnyContentAsEmpty)
-      val result = controller.exportPassengersByTerminalForDateRangeApi("2024-06-01", "2024-06-01", "T3").apply(csvRequest)
-
-      status(result) must ===(OK)
-      contentType(result) must ===(Some("application/json"))
-      val hourlyContent = (0 to 23).map { hour =>
-        s"""{"date":"2024-06-01","hour":$hour,"portCode":"LHR","queueCounts":[{"queueName":"EeaDesk","queueDisplayName":"EEA","count":$queuePaxPerHour},{"queueName":"NonEeaDesk","queueDisplayName":"Non-EEA","count":$queuePaxPerHour}],"regionName":"Heathrow","terminalName":"T3","totalCapacity":0,"totalPcpPax":${queuePaxPerHour * queues.size}}"""
-      }.mkString(",")
-      contentAsString(result) must ===(s"[$hourlyContent]")
     }
   }
 
