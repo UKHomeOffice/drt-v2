@@ -52,7 +52,7 @@ object Settings {
 
     val poi = "5.2.5"
     val renjin = "0.9.2725"
-    val csvCommons = "1.13.0"
+    val csvCommons = "1.14.0"
     val bluebus = "v95"
     val postgres = "42.7.5"
     val sshJ = "0.39.0"
