@@ -10,7 +10,8 @@ CREATE TABLE public.user
     created_at                       timestamp,
     feedback_banner_closed_at        timestamp,
     staff_planning_interval_minutes  integer,
-    hide_pax_data_source_description boolean
+    hide_pax_data_source_description boolean,
+    show_staffing_shift_view         boolean,
     PRIMARY KEY (id)
 );
 

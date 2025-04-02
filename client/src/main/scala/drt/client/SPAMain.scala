@@ -118,16 +118,6 @@ object SPAMain {
     }
   }
 
-  object ShiftViewEnabled {
-    val paramName = "shiftViewEnabled"
-
-    def apply(viewType: Boolean): UrlParameter = new UrlParameter {
-      override val name: String = paramName
-      override val value: Option[String] = Option(viewType.toString)
-    }
-  }
-
-
   case class PortConfigPageLoc()
 
   object AccessibilityStatementLoc {
@@ -195,7 +185,6 @@ object SPAMain {
     val deskType: DeskType = queryParams.get(UrlViewType.paramName).map(vt => if (Ideal.queryParamsValue == vt) Ideal else Deployments).getOrElse(Deployments)
     val displayAs: DisplayType = queryParams.get(UrlDisplayType.paramName).map(vt => if (TableView.queryParamsValue == vt) TableView else ChartsView).getOrElse(TableView)
     val mode: TerminalPageMode = TerminalPageModes.fromString(modeStr)
-    val shiftViewEnabled: Boolean = queryParams.get(ShiftViewEnabled.paramName).exists(_.toBoolean)
     def viewMode: ViewMode = {
       (mode, maybeViewDate) match {
         case (Current, Some(viewDate)) =>
@@ -340,7 +329,7 @@ object SPAMain {
     .setTitle(_.title(maybeTerminal))
     .onPostRender((maybePrevLoc, currentLoc) => {
       val title = currentLoc.title(maybeTerminal)
-      log.info(s"Sending pageview: $title (${currentLoc.href})")
+      log.info(s"Sending page view: $title (${currentLoc.href})")
       Callback(GoogleEventTracker.sendPageView(title, currentLoc.href)) >>
         Callback(
           (maybePrevLoc, currentLoc) match {

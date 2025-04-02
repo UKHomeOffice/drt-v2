@@ -13,4 +13,7 @@ export default defineConfig({
     },
     baseUrl: 'http://localhost:9000',
   },
+  env: {
+    "enableShiftPlanningChange": false
+  }
 })

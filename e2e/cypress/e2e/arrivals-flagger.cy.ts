@@ -54,7 +54,8 @@ describe('Arrivals page filter', () => {
           {
               "ActPax": 11,
               "SchDT": scheduledTime.format()
-          }
+          },
+          ""
         )
         .asABorderForceOfficer()
         .waitForFlightToAppear("TS0123")
