@@ -3,8 +3,9 @@ package actors.persistent.staffing
 import drt.shared.{Shift, ShiftAssignments, StaffAssignment, StaffAssignmentLike, TM}
 import org.joda.time.DateTimeZone
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonId
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.{europeLondonId, europeLondonTimeZone}
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+
 import java.util.TimeZone
 
 object StaffingUtil {
@@ -22,16 +23,15 @@ object StaffingUtil {
     val daysBetween = startDate.daysBetweenInclusive(endDate) - 1
     (0 to daysBetween).map { day =>
       val currentDate: SDateLike = startDate.addDays(day)
-      val startMillis = SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM,
-        DateTimeZone.forTimeZone(TimeZone.getTimeZone(europeLondonId))).millisSinceEpoch
+      val startMillis = SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, startHH, startMM, europeLondonTimeZone).millisSinceEpoch
 
       val isShiftEndAfterMidNight = endHH < startHH || (endHH == startHH && endMM < startMM)
       val endMillis = if (isShiftEndAfterMidNight) {
         SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
-          DateTimeZone.forTimeZone(TimeZone.getTimeZone(europeLondonId))).addDays(1).millisSinceEpoch
+          europeLondonTimeZone).addDays(1).millisSinceEpoch
       } else {
         SDate(currentDate.getFullYear, currentDate.getMonth, currentDate.getDate, endHH, endMM,
-          DateTimeZone.forTimeZone(TimeZone.getTimeZone(europeLondonId))).millisSinceEpoch
+          europeLondonTimeZone).millisSinceEpoch
       }
 
       StaffAssignment(

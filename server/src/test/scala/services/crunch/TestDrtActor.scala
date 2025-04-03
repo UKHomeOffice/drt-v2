@@ -341,14 +341,13 @@ class TestDrtActor extends Actor {
         val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = RunnableStaffing(
           staffingQueueActor = TestProbe().ref,
           staffQueue = SortedSet.empty[TerminalUpdateRequest],
-          legacyStaffAssignmentsReadActor = liveShiftsReadActor,
-          liveStaffAssignmentsReadActor = liveStaffAssignmentsReadActor,
+          staffAssignmentsReadActor = if (tc.enableShiftPlanningChanges) liveStaffAssignmentsReadActor
+          else liveShiftsReadActor,
           fixedPointsActor = liveFixedPointsReadActor,
           movementsActor = liveStaffMovementsReadActor,
           staffMinutesActor = portStateActor,
           now = tc.now,
-          setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
-          enableShiftPlanningChanges = tc.enableShiftPlanningChanges,
+          setUpdatedAtForDay = (_, _, _) => Future.successful(Done)
         )
 
         liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)

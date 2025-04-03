@@ -94,7 +94,6 @@ case class ConfirmAndSaveForMonthlyShifts(shiftsData: Seq[ShiftSummaryStaffing],
   }
 }
 
-
 object MonthlyStaffingBar {
   def whatDayChanged(changedAssignments: Seq[StaffTableEntry]): String = {
     changedAssignments.map(_.startTime.day).sortBy(_.toInt).distinct.mkString(", ")
@@ -121,8 +120,6 @@ object MonthlyStaffingBar {
 
   private val monthOptions: Seq[SDateLike] = sixMonthsFromFirstOfMonth(SDate.now())
 
-  case class State()
-
   case class Props(viewingDate: SDateLike,
                    terminalPageTab: TerminalPageTabLoc,
                    router: RouterCtl[Loc],
@@ -140,22 +137,6 @@ object MonthlyStaffingBar {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
-
-  def slotsInDay(date: SDateLike, slotDurationMinutes: Int): Seq[SDateLike] = {
-    val startOfDay = SDate.midnightOf(date)
-    val slots = minutesInDay(date) / slotDurationMinutes
-    List.tabulate(slots)(i => {
-      val minsToAdd = i * slotDurationMinutes
-      startOfDay.addMinutes(minsToAdd)
-    })
-  }
-
-  private def minutesInDay(date: SDateLike): Int = {
-    val startOfDay = SDate.midnightOf(date)
-    val endOfDay = SDate.midnightOf(date.addDays(1))
-    (endOfDay.millisSinceEpoch - startOfDay.millisSinceEpoch).toInt / 1000 / 60
-  }
 
   def drawSelect(values: Seq[String],
                  names: Seq[String],
@@ -170,8 +151,8 @@ object MonthlyStaffingBar {
       }.toTagMod)
   }
 
-  class Backend(scope: BackendScope[Props, State]) {
-    def render(props: Props, state: State): VdomElement = {
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("MonthlyStaffingBar")
+    .render_P { props =>
       <.div(^.className := "staffing-controls-save",
         <.div(^.style := js.Dictionary("display" -> "flex", "justify-content" -> "space-between", "align-items" -> "center"),
           <.span(^.className := "staffing-controls-title",
@@ -235,11 +216,6 @@ object MonthlyStaffingBar {
           )),
       )
     }
-  }
-
-  val component: Component[Props, State, Backend, CtorType.Props] = ScalaComponent.builder[Props]("MonthlyStaffingBar")
-    .initialState(State())
-    .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build
 
@@ -251,5 +227,4 @@ object MonthlyStaffingBar {
             handleShiftEditForm: ReactEventFromInput => Callback,
             confirmAndSave: ConfirmAndSave,
            ) = component(Props(viewingDate, terminalPageTab, router, airportConfig, timeSlots, handleShiftEditForm, confirmAndSave))
-
 }

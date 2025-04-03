@@ -115,11 +115,11 @@ describe('Monthly Staffing', () => {
             cy.saveShifts(shifts(), csrf).then(() => {
               const baseUrl = '#terminal/T1/shifts/15/';
               cy.visit(baseUrl)
-                .get(cellToTest, { timeout: 20000 }).should('exist').contains("1")
+                .get(cellToTest, { timeout: 2000 }).should('exist').contains("1")
                 .visit(baseUrl + '?date=' + nextMonthDateString())
-                .get(cellToTest, { timeout: 20000 }).should('exist').contains("2")
+                .get(cellToTest, { timeout: 2000 }).should('exist').contains("2")
                 .visit(baseUrl + '?date=' + thisMonthDateString())
-                .get(cellToTest, { timeout: 20000 }).should('exist').contains("1")
+                .get(cellToTest, { timeout: 2000 }).should('exist').contains("1")
                 .resetShifts(csrf);
             });
           });

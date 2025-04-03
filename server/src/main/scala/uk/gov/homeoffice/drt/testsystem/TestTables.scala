@@ -92,7 +92,7 @@ case class MockDropInTable() extends DropInTableLike {
 
 }
 
-case class MockDrtParameters @Inject()(config: Configuration) extends DrtParameters {
+case class MockDrtParameters @Inject()() extends DrtParameters {
   override val gateWalkTimesFilePath: Option[String] = None
   override val standWalkTimesFilePath: Option[String] = None
   override val forecastMaxDays: Int = 3
@@ -133,7 +133,7 @@ case class MockDrtParameters @Inject()(config: Configuration) extends DrtParamet
   override val retainDataForYears: Int = 5
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
-  override val enableShiftPlanningChange: Boolean =  config.get[Boolean]("feature-flags.enable-ports-shift-planning-change")
+  override val enableShiftPlanningChange: Boolean =  false
 
 }
 

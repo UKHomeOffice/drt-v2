@@ -8,11 +8,11 @@ import uk.gov.homeoffice.drt.service.staffing.{LegacyStaffAssignmentsService, St
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class TransferStaffingController @Inject()(cc: ControllerComponents,
-                                           ctrl: DrtSystemInterface,
-                                           legacyStaffAssignmentsService: LegacyStaffAssignmentsService,
-                                           staffAssignmentsService: StaffAssignmentsService
-                                          )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) {
+class LegacyStaffAssignmentsMigrationController @Inject()(cc: ControllerComponents,
+                                                          ctrl: DrtSystemInterface,
+                                                          legacyStaffAssignmentsService: LegacyStaffAssignmentsService,
+                                                          staffAssignmentsService: StaffAssignmentsService
+                                                         )(implicit ec: ExecutionContext) extends AuthController(cc, ctrl) {
 
   def legacyToStaffAssignments: Action[AnyContent] = authByRole(StaffEdit) {
     Action.async { _ =>

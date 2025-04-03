@@ -75,7 +75,7 @@ object DrtParameters {
   def apply(config: Configuration): DrtParameters = {
     val isTest = config.getOptional[String]("env").getOrElse("prod") == "test"
 
-    if (isTest) MockDrtParameters(config) else ProdDrtParameters(config)
+    if (isTest) MockDrtParameters() else ProdDrtParameters(config)
   }
 }
 

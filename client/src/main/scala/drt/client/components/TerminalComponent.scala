@@ -133,8 +133,6 @@ object TerminalComponent {
                 rcp { mp =>
                   val (mt, ps, ai, slas, manSums, arrSources, simRes, fhl) = mp()
 
-                  val hideAddShiftsMessage = shifts.nonEmpty //|| !featureFlags.enableShiftPlanningChange
-
                   props.terminalPageTab.mode match {
                     case Current =>
                       val headerClass = if (terminalModel.timeMachineEnabled) "terminal-content-header__time-machine" else ""
