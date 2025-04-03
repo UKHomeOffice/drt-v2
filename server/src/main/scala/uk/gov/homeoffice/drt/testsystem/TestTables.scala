@@ -133,7 +133,7 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val retainDataForYears: Int = 5
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
-  override val enableShiftPlanningChange: Boolean =  false
+  override val enableShiftPlanningChange: Boolean =  true
 
 }
 
