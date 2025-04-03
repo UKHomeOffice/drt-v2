@@ -4,7 +4,7 @@ import {todayAtUtcString} from '../support/time-helpers'
 describe('Multi day export', () => {
 
   beforeEach(function () {
-    cy.deleteData();
+    cy.deleteData("");
   });
 
   it('Allows you to download API splits using the API splits dialog', () => {

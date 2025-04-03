@@ -47,6 +47,8 @@ declare global {
 
       choose24Hours(): Chainable<Element>;
 
+      shiftsGetStarted(): Chainable<Element>;
+
       chooseDesksAndQueuesTab(): Chainable<Element>;
 
       chooseArrivalsTab(): Chainable<Element>;

@@ -12,8 +12,5 @@ export default defineConfig({
     setupNodeEvents(on, config) {
     },
     baseUrl: 'http://localhost:9000',
-  },
-  env: {
-    "enableShiftPlanningChange": false
   }
 })
