@@ -32,7 +32,7 @@ object Settings {
     val akka = "2.9.5" // last version with license key requirement
     val akkaHttp = "10.6.3" // last version dependent on akka 2.9.5
     val akkaPersistenceJdbc = "5.4.2"
-    val slick = "3.5.2"
+    val slick = "3.6.0"
 
     val aws = "2.30.36"
 
