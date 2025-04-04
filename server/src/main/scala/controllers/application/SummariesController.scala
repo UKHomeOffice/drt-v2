@@ -5,12 +5,9 @@ import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
 import play.api.mvc._
-import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
-import uk.gov.homeoffice.drt.jsonformats.PassengersSummaryFormat.JsonFormat
-import uk.gov.homeoffice.drt.model.PassengersSummary
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
@@ -76,7 +73,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val fileName = makeFileName("passengers", maybeTerminal.toSeq, SDate(start), SDate(end), airportConfig.portCode) + ".csv"
-        val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"), acceptHeader(request))
+        val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"))
 
         val result = if (acceptHeader(request) == "text/csv")
           sourceToCsvResponse(contentStream(start, end), fileName)
@@ -101,7 +98,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
   private def streamForGranularity(maybeTerminal: Option[Terminal],
                                    granularity: Option[String],
-                                   contentType: String,
                                   ): (LocalDate, LocalDate) => Source[String, NotUsed] =
     (start, end) => {
       val portCode = airportConfig.portCode
@@ -113,10 +109,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val capacityTotals = CapacityHourlyDao.totalForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
       val capacityTotalsForDate: LocalDate => Future[Int] = date => ctrl.aggregatedDb.run(capacityTotals(date))
 
-      val queuesToContent = if (contentType == "text/csv")
-        passengersCsvRow(regionName, portCodeStr, maybeTerminalName)
-      else
-        passengersJson(regionName, portCodeStr, maybeTerminalName)
+      val queuesToContent = passengersCsvRow(regionName, portCodeStr, maybeTerminalName)
 
       val stream = granularity match {
         case Some("hourly") =>
@@ -199,19 +192,5 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         case None =>
           (dateStr.toList ++ List(regionName, portCodeStr, capacity, totalPcpPax, queueCells)).mkString(",") + "\n"
       }
-    }
-
-  private def passengersJson[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Int, Option[T]) => String =
-    (queueCounts, capacity, maybeDateOrDateHour) => {
-      val totalPcpPax = queueCounts.values.sum
-      val (maybeDate, maybeHour) = maybeDateOrDateHour match {
-        case Some(date: LocalDate) => (Option(date), None)
-        case Some(date: Long) =>
-          val sdate = SDate(date, europeLondonTimeZone)
-          (Option(sdate.toLocalDate), Option(sdate.getHours))
-        case _ => (None, None)
-      }
-      //TODO change this , queueCounts for bxQueueCounts is temp as drt lib update has cause this
-      PassengersSummary(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
     }
 }
