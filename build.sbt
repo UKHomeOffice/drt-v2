@@ -139,8 +139,8 @@ lazy val ReleaseCmd = Command.command("release") {
       state
 }
 val nvdBaseUrl = sys.env.getOrElse("NVD_BASE_URL", "http://localhost:8008")
-dependencyCheckCveUrlModified := Some(new URL(s"$nvdBaseUrl/nvdcve-1.1-modified.json.gz"))
-dependencyCheckCveUrlBase := Some(s"$nvdBaseUrl/nvdcve-%d.json.gz")
+//dependencyCheckCveUrlModified := Some(new URL(s"$nvdBaseUrl/nvdcve-1.1-modified.json.gz"))
+//dependencyCheckCveUrlBase := Some(s"$nvdBaseUrl/nvdcve-%d.json.gz")
 Global / cancelable := true
 
 // code generation task
