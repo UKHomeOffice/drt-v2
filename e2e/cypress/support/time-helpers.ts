@@ -11,13 +11,13 @@ const todayAsLocalString = (hours: number, minutes: number): string =>
         .format()
 
 const todayAsUtcString = (hours: number, minutes: number): string => {
-    const utc = moment()
+    const local = moment()
       .hour(hours)
       .minute(minutes)
       .seconds(0)
       .toDate()
 
-    return moment(utc)
+    return moment(local)
       .utc()
       .format('YYYY-MM-DDTHH:mm:ss')
 }
