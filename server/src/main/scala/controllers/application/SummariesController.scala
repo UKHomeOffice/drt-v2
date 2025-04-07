@@ -211,6 +211,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
           (Option(sdate.toLocalDate), Option(sdate.getHours))
         case _ => (None, None)
       }
-      PassengersSummary(regionName, portCodeStr, maybeTerminalName, capacity, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
+      //TODO change this , queueCounts for bxQueueCounts is temp as drt lib update has cause this
+      PassengersSummary(regionName, portCodeStr, maybeTerminalName, totalPcpPax, queueCounts, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
     }
 }
