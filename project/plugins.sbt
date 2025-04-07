@@ -25,7 +25,7 @@ addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 
 addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.11")
 
-addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "5.1.0")
+//addSbtPlugin("net.vonbuchholtz" % "sbt-dependency-check" % "5.1.0")
 
 addSbtPlugin("com.github.sbt" % "sbt-js-engine" % "1.3.9")
 
