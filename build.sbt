@@ -123,7 +123,7 @@ lazy val server = (project in file("server"))
     ),
     Test / parallelExecution := false,
     Compile / doc / sources := List(),
-    dependencyCheckFormats := Seq("XML", "JSON", "HTML")
+//    dependencyCheckFormats := Seq("XML", "JSON", "HTML")
   )
   .enablePlugins(PlayScala)
   .enablePlugins(BuildInfoPlugin)
