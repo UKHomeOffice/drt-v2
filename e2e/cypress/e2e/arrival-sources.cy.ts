@@ -1,4 +1,4 @@
-import {todayAtUtcString} from '../support/time-helpers'
+import {todayAsLocalString} from '../support/time-helpers'
 
 
 describe('Arrival sources', () => {
@@ -11,11 +11,11 @@ describe('Arrival sources', () => {
         cy
         .addFlight(
           {
-              "SchDT": todayAtUtcString(0, 55),
-              "EstDT": todayAtUtcString(1, 5),
-              "EstChoxDT": todayAtUtcString(1, 11),
-              "ActDT": todayAtUtcString(1, 7),
-              "ActChoxDT": todayAtUtcString(1, 12)
+              "SchDT": todayAsLocalString(0, 55),
+              "EstDT": todayAsLocalString(1, 5),
+              "EstChoxDT": todayAsLocalString(1, 11),
+              "ActDT": todayAsLocalString(1, 7),
+              "ActChoxDT": todayAsLocalString(1, 12)
           }
         )
         .asABorderForceOfficer()
@@ -29,11 +29,11 @@ describe('Arrival sources', () => {
     it('As an officer with the arrival-source role, clicking the flight code displays a popup displaying the sources', () => {
         cy.addFlight(
           {
-              "SchDT": todayAtUtcString(0, 55),
-              "EstDT": todayAtUtcString(1, 5),
-              "EstChoxDT": todayAtUtcString(1, 11),
-              "ActDT": todayAtUtcString(1, 7),
-              "ActChoxDT": todayAtUtcString(1, 12)
+              "SchDT": todayAsLocalString(0, 55),
+              "EstDT": todayAsLocalString(1, 5),
+              "EstChoxDT": todayAsLocalString(1, 11),
+              "ActDT": todayAsLocalString(1, 7),
+              "ActChoxDT": todayAsLocalString(1, 12)
           }
         )
         .asABorderForceOfficerWithRoles(["arrival-source"], 'nocheck')
