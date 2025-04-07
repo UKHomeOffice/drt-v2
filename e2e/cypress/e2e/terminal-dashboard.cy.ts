@@ -1,4 +1,4 @@
-import {todayAsLocalString, todayAsUtcString, todayAtUtc} from '../support/time-helpers'
+import {todayAsLocalString, todayAsUtcString} from '../support/time-helpers'
 
 
 describe('Terminal dashboard', () => {
