@@ -1,4 +1,4 @@
-import { todayAtUtcString as todayAtString } from '../support/time-helpers'
+import { todayAsLocalString } from '../support/time-helpers'
 import { currentTimeString as currentTimeString } from '../support/time-helpers'
 
 describe('Port dashboard', () => {
@@ -12,7 +12,7 @@ describe('Port dashboard', () => {
     .addFlight({
       "ICAO": "TS0124",
       "IATA": "TS0124",
-      "SchDT": todayAtString(10, 35),
+      "SchDT": todayAsLocalString(10, 35),
       "ActChoxDT": currentTimeString(),
       "ActPax": 0,
       "Status": "Cancelled"
@@ -20,7 +20,7 @@ describe('Port dashboard', () => {
     .addFlight({
       "ICAO": "TS0122",
       "IATA": "TS0122",
-      "SchDT": todayAtString(10, 40),
+      "SchDT": todayAsLocalString(10, 40),
       "ActChoxDT": currentTimeString(),
       "ActPax": 300
     })
