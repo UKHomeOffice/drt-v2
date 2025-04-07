@@ -1,6 +1,6 @@
 import {parse} from "papaparse"
 import {manifestForDateTime, passengerList} from '../support/manifest-helpers'
-import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import {todayAtUtc, todayAsLocalString} from '../support/time-helpers'
 import {paxRagGreenSelector} from "../support/commands";
 
 
@@ -43,7 +43,7 @@ describe('Simulation export', () => {
         cy.addFlight(
           {
               "ActChoxDT": scheduledDateTime,
-              "SchDT": todayAtUtcString(0, 55),
+              "SchDT": todayAsLocalString(0, 55),
               "ActPax": 30
           },
           ""

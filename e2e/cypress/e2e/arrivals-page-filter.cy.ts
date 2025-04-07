@@ -1,5 +1,5 @@
 
-import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import {todayAtUtc, todayAsLocalString} from '../support/time-helpers'
 import moment from "moment-timezone";
 
 describe('Arrivals page filter', () => {
@@ -15,11 +15,11 @@ describe('Arrivals page filter', () => {
 
     cy.addFlight(
       {
-        SchDT: todayAtUtcString(16, 55),
-        EstDT: todayAtUtcString(16, 5),
-        EstChoxDT: todayAtUtcString(16, 11),
-        ActDT: todayAtUtcString(16, 7),
-        ActChoxDT: todayAtUtcString(16, 45),
+        SchDT: todayAsLocalString(16, 55),
+        EstDT: todayAsLocalString(16, 5),
+        EstChoxDT: todayAsLocalString(16, 11),
+        ActDT: todayAsLocalString(16, 7),
+        ActChoxDT: todayAsLocalString(16, 45),
         ActPax: 300,
       },
       ''

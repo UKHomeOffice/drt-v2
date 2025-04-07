@@ -1,4 +1,4 @@
-import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import {todayAtUtc, todayAsLocalString} from '../support/time-helpers'
 import moment from "moment-timezone";
 import {paxRagGreenSelector} from "../support/commands";
 import {manifestForDateTime, passengerProfiles} from "../support/manifest-helpers";

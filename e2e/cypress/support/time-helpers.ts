@@ -2,13 +2,25 @@
 const moment = require('moment-timezone');
 moment.locale("en-gb");
 
-const todayAtUtcString = (hours: number, minutes: number): string =>
+const todayAsLocalString = (hours: number, minutes: number): string =>
     moment()
         .utc()
         .hour(hours)
         .minute(minutes)
         .seconds(0)
         .format()
+
+const todayAsUtcString = (hours: number, minutes: number): string => {
+    const utc = moment()
+      .hour(hours)
+      .minute(minutes)
+      .seconds(0)
+      .toDate()
+
+    return moment(utc)
+      .utc()
+      .format('YYYY-MM-DDTHH:mm:ss')
+}
 
 const inDaysAtTimeUtcString = (daysToAdd: number, hours: number, minutes: number): string =>
     moment()
@@ -36,7 +48,8 @@ const currentTimeString = (): string =>
 export {
     moment,
     todayAtUtc,
-    todayAtUtcString,
+    todayAsLocalString,
     inDaysAtTimeUtcString,
     currentTimeString,
+    todayAsUtcString,
 }

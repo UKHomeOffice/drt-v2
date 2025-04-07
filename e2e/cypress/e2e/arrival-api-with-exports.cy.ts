@@ -1,5 +1,5 @@
 import {manifestForDateTime, passengerList} from '../support/manifest-helpers'
-import {todayAtUtc, todayAtUtcString} from '../support/time-helpers'
+import {todayAtUtc, todayAsLocalString} from '../support/time-helpers'
 import {Moment} from "moment/moment";
 import {paxRagGreenSelector} from "../support/commands";
 
@@ -74,11 +74,11 @@ describe('Arrival API with exports', () => {
 
         cy.addFlight(
           {
-              "SchDT": todayAtUtcString(0, 55),
-              "EstDT": todayAtUtcString(1, 5),
-              "ActDT": todayAtUtcString(1, 7),
-              "EstChoxDT": todayAtUtcString(1, 11),
-              "ActChoxDT": todayAtUtcString(1, 12)
+              "SchDT": todayAsLocalString(0, 55),
+              "EstDT": todayAsLocalString(1, 5),
+              "ActDT": todayAsLocalString(1, 7),
+              "EstChoxDT": todayAsLocalString(1, 11),
+              "ActChoxDT": todayAsLocalString(1, 12)
           }
         )
         .asABorderForceOfficer()
@@ -107,11 +107,11 @@ describe('Arrival API with exports', () => {
         const csvWithAPISplits = headersWithActApi + "\n" + dataWithActApi + "\n";
         cy.addFlight(
           {
-              "SchDT": todayAtUtcString(0, 55),
-              "EstDT": todayAtUtcString(1, 5),
-              "ActDT": todayAtUtcString(1, 7),
-              "EstChoxDT": todayAtUtcString(1, 11),
-              "ActChoxDT": todayAtUtcString(1, 12)
+              "SchDT": todayAsLocalString(0, 55),
+              "EstDT": todayAsLocalString(1, 5),
+              "ActDT": todayAsLocalString(1, 7),
+              "EstChoxDT": todayAsLocalString(1, 11),
+              "ActChoxDT": todayAsLocalString(1, 12)
           }
         )
         .asABorderForceOfficer()
@@ -142,11 +142,11 @@ describe('Arrival API with exports', () => {
 
         cy.addFlight(
           {
-              "SchDT": todayAtUtcString(0, 55),
-              "EstDT": todayAtUtcString(1, 5),
-              "ActDT": todayAtUtcString(1, 7),
-              "EstChoxDT": todayAtUtcString(1, 11),
-              "ActChoxDT": todayAtUtcString(1, 12)
+              "SchDT": todayAsLocalString(0, 55),
+              "EstDT": todayAsLocalString(1, 5),
+              "ActDT": todayAsLocalString(1, 7),
+              "EstChoxDT": todayAsLocalString(1, 11),
+              "ActChoxDT": todayAsLocalString(1, 12)
           }
         )
         .asABorderForceOfficer()
