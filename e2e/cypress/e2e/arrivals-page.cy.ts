@@ -1,4 +1,4 @@
-import {todayAtUtc, todayAtUtcString} from "../support/time-helpers"
+import {todayAtUtc, todayAsLocalString} from "../support/time-helpers"
 import {eeaCellSelector, eGatesCellSelector, nonEeaCellSelector, paxRagGreenSelector} from "../support/commands";
 
 describe('Arrivals page', () => {
@@ -66,11 +66,11 @@ describe('Arrivals page', () => {
     it('Displays a flight after it has been ingested via the live feed', () => {
         cy.addFlight(
           {
-              "SchDT": todayAtUtcString(0, 55),
-              "EstDT": todayAtUtcString(1, 5),
-              "EstChoxDT": todayAtUtcString(1, 11),
-              "ActDT": todayAtUtcString(1, 7),
-              "ActChoxDT": todayAtUtcString(1, 12)
+              "SchDT": todayAsLocalString(0, 55),
+              "EstDT": todayAsLocalString(1, 5),
+              "EstChoxDT": todayAsLocalString(1, 11),
+              "ActDT": todayAsLocalString(1, 7),
+              "ActChoxDT": todayAsLocalString(1, 12)
           }
         )
         .asABorderForceOfficer()
@@ -118,8 +118,8 @@ describe('Arrivals page', () => {
     it('Handles manifests where the doctype is specified incorectly or left off', () => {
 
         cy.addFlight({
-            "SchDT": todayAtUtcString(0, 55),
-            "ActChoxDT": todayAtUtcString(0, 55),
+            "SchDT": todayAsLocalString(0, 55),
+            "ActChoxDT": todayAsLocalString(0, 55),
             "ActPax": 2,
         })
         .asABorderForceOfficer()
@@ -141,8 +141,8 @@ describe('Arrivals page', () => {
         cy.addFlight({
             "ICAO": "TS0123",
             "IATA": "TS0123",
-            "SchDT": todayAtUtcString(0, 55),
-            "ActChoxDT": todayAtUtcString(0, 55),
+            "SchDT": todayAsLocalString(0, 55),
+            "ActChoxDT": todayAsLocalString(0, 55),
             "ActPax": 0,
             "MaxPax": 0,
         })
@@ -183,7 +183,7 @@ describe('Arrivals page', () => {
     it('only counts each passenger once if API data contains multiple entries for each passenger', () => {
 
         cy.addFlight({
-            "SchDT": todayAtUtcString(0, 55),
+            "SchDT": todayAsLocalString(0, 55),
             "ActPax": 0,
             "MaxPax": 0,
         })
@@ -207,7 +207,7 @@ describe('Arrivals page', () => {
 
     it('does not add transit passengers to the total pax when using API pax', () => {
         cy.addFlight({
-            "SchDT": todayAtUtcString(0, 55),
+            "SchDT": todayAsLocalString(0, 55),
             "ActPax": 0,
             "MaxPax": 0,
         })
@@ -231,7 +231,7 @@ describe('Arrivals page', () => {
 
     it('does have green bar (pax-api) when API pax count within 5% threshold of Live source splits passenger count', () => {
         cy.addFlight({
-            "SchDT": todayAtUtcString(0, 55),
+            "SchDT": todayAsLocalString(0, 55),
             "ActPax": 2,
             "MaxPax": 0,
         })
