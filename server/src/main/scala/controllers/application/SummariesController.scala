@@ -113,10 +113,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       val capacityTotals = CapacityHourlyDao.totalForPortAndDate(ctrl.airportConfig.portCode.iata, maybeTerminal.map(_.toString))
       val capacityTotalsForDate: LocalDate => Future[Int] = date => ctrl.aggregatedDb.run(capacityTotals(date))
 
-      val queuesToContent = if (contentType == "text/csv")
-        passengersCsvRow(regionName, portCodeStr, maybeTerminalName)
-      else
-        passengersJson(regionName, portCodeStr, maybeTerminalName)
+      val queuesToContent = passengersCsvRow(regionName, portCodeStr, maybeTerminalName)
 
       val stream = granularity match {
         case Some("hourly") =>
@@ -199,18 +196,5 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         case None =>
           (dateStr.toList ++ List(regionName, portCodeStr, capacity, totalPcpPax, queueCells)).mkString(",") + "\n"
       }
-    }
-
-  private def passengersJson[T](regionName: String, portCodeStr: String, maybeTerminalName: Option[String]): (Map[Queue, Int], Int, Option[T]) => String =
-    (queueCounts, capacity, maybeDateOrDateHour) => {
-      val totalPcpPax = queueCounts.values.sum
-      val (maybeDate, maybeHour) = maybeDateOrDateHour match {
-        case Some(date: LocalDate) => (Option(date), None)
-        case Some(date: Long) =>
-          val sdate = SDate(date, europeLondonTimeZone)
-          (Option(sdate.toLocalDate), Option(sdate.getHours))
-        case _ => (None, None)
-      }
-      PassengersSummary(regionName, portCodeStr, maybeTerminalName, capacity, totalPcpPax, queueCounts, maybeDate, maybeHour).toJson(JsonFormat).compactPrint
     }
 }
