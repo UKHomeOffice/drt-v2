@@ -1,4 +1,4 @@
-import {todayAtUtcString as todayAtString} from './time-helpers'
+import {todayAsLocalString} from './time-helpers'
 
 Cypress.Commands.add('setRoles', (roles = []) => {
   cy.request("POST", '/test/mock-roles', {"roles": roles});
@@ -90,10 +90,10 @@ Cypress.Commands.add('addFlight', (params, csrfToken = 'nocheck') => {
   const defaults = {
     "Operator": "TestAir",
     "Status": "On Chocks",
-    "EstDT": todayAtString(12, 0),
-    "ActDT": todayAtString(12, 0),
-    "EstChoxDT": todayAtString(12, 0),
-    "ActChoxDT": todayAtString(12, 0),
+    "EstDT": todayAsLocalString(12, 0),
+    "ActDT": todayAsLocalString(12, 0),
+    "EstChoxDT": todayAsLocalString(12, 0),
+    "ActChoxDT": todayAsLocalString(12, 0),
     "Gate": "46",
     "Stand": "44R",
     "MaxPax": 78,
@@ -107,7 +107,7 @@ Cypress.Commands.add('addFlight', (params, csrfToken = 'nocheck') => {
     "ICAO": "TS123",
     "IATA": "TS123",
     "Origin": "AMS",
-    "SchDT": todayAtString(12, 0)
+    "SchDT": todayAsLocalString(12, 0)
   };
 
   const flightPayload = Object.assign({}, defaults, params);

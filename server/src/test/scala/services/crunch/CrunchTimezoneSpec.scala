@@ -56,8 +56,8 @@ class CrunchTimezoneSpec extends CrunchTestLike {
               ArrivalGenerator.live(schDt = scheduledDuringBst, iata = "BA0001", terminal = T1, totalPax = Option(1))
             )
 
-            val fiveMinutes = 600d / 60
-            val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes))
+            val oneMinute = 60d / 60
+            val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute))
 
             val crunch = runCrunchGraph(TestConfig(
               now = () => SDate(scheduledDuringBst),

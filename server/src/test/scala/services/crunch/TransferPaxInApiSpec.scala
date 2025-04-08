@@ -20,11 +20,11 @@ class TransferPaxInApiSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val fiveMinutes: Double = 600d / 60
+  val oneMinute: Double = 60d / 60
 
   val lhrAirportConfig: AirportConfig = defaultAirportConfig.copy(
     portCode = PortCode("LHR"),
-    terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+    terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
     queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk)),
     terminalPaxTypeQueueAllocation = Map(
       T1 -> Map(

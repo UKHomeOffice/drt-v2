@@ -22,8 +22,8 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
   sequential
   isolated
 
-  val tenMinutes: Double = 600d / 60
-  val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(gbrNationalChildToDesk -> tenMinutes))
+  val oneMinute: Double = 60d / 60
+  val procTimes: Map[Terminal, Map[PaxTypeAndQueue, Double]] = Map(T1 -> Map(gbrNationalChildToDesk -> oneMinute))
 
   val scheduled = "2019-11-20T00:00Z"
 
@@ -78,7 +78,7 @@ class ApiPaxNosCrunchSpec extends CrunchTestLike {
       waitForFlightsInPortState(crunch.portStateTestProbe)
       offerAndWait(crunch.manifestsLiveInput, manifests)
 
-      val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
+      val expected = Map(T1 -> Map(Queues.EeaDesk -> Seq(2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)))
 
       crunch.portStateTestProbe.fishForMessage(2.seconds) {
         case ps: PortState => workLoadsFromPortState(ps, 15) == expected

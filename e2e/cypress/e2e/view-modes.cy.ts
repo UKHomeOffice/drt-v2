@@ -1,4 +1,4 @@
-import {todayAtUtcString, inDaysAtTimeUtcString} from '../support/time-helpers'
+import {todayAsLocalString, inDaysAtTimeUtcString} from '../support/time-helpers'
 
 describe('View Modes', () => {
 
@@ -26,14 +26,14 @@ describe('View Modes', () => {
             .addFlight({
               "ICAO": "TS0234",
               "IATA": "TS0234",
-              "SchDT": todayAtUtcString(4, 45),
-              "ActChoxDT": todayAtUtcString(4, 45)
+              "SchDT": todayAsLocalString(4, 45),
+              "ActChoxDT": todayAsLocalString(4, 45)
             }, csrfToken.toString())
             .addFlight({
               "ICAO": "TS0235",
               "IATA": "TS0235",
-              "SchDT": todayAtUtcString(5, 45),
-              "ActChoxDT": todayAtUtcString(5, 45)
+              "SchDT": todayAsLocalString(5, 45),
+              "ActChoxDT": todayAsLocalString(5, 45)
             }, csrfToken.toString())
             cy.wait(5000)
             .get("#arrivals")
@@ -55,8 +55,8 @@ describe('View Modes', () => {
         cy.addFlight({
             "ICAO": "TS0123",
             "IATA": "TS0123",
-            "SchDT": todayAtUtcString(0, 55),
-            "ActChoxDT": todayAtUtcString(0, 55)
+            "SchDT": todayAsLocalString(0, 55),
+            "ActChoxDT": todayAsLocalString(0, 55)
           }, csrfToken.toString())
       })
         .get("#arrivals")
@@ -98,16 +98,16 @@ describe('View Modes', () => {
                 cy.addFlight({
                                "ICAO": "TS0123",
                                "IATA": "TS0123",
-                               "SchDT": todayAtUtcString(1, 30),
-                               "ActChoxDT": todayAtUtcString(1, 30)
+                               "SchDT": todayAsLocalString(1, 30),
+                               "ActChoxDT": todayAsLocalString(1, 30)
                              }, csrfToken.toString())
                   .get('#arrivals')
                   .contains("TS0123")
                   .addFlight({
                                "ICAO": "TS0234",
                                "IATA": "TS0234",
-                               "SchDT": todayAtUtcString(4, 45),
-                               "ActChoxDT": todayAtUtcString(4, 45)
+                               "SchDT": todayAsLocalString(4, 45),
+                               "ActChoxDT": todayAsLocalString(4, 45)
                              }, csrfToken.toString())
               })
 

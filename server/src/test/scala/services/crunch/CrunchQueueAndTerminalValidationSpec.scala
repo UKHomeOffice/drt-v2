@@ -17,6 +17,8 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
   sequential
   isolated
 
+  private val oneMinute = 60d / 60
+
   "Queue validation " >> {
     "Given a flight with transfers " >> {
       "When I ask for a crunch " >> {
@@ -28,8 +30,6 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
             ArrivalGenerator.live(schDt = scheduled00, iata = "BA0001", terminal = T1, totalPax = Option(15))
           )
 
-          val fiveMinutes = 600d / 60
-
           val crunch = runCrunchGraph(TestConfig(
             now = () => SDate(scheduled),
             airportConfig = defaultAirportConfig.copy(
@@ -38,7 +38,7 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
                 SplitRatio(eeaMachineReadableToDesk, 1),
                 SplitRatio(PaxTypeAndQueue(PaxTypes.EeaMachineReadable, Queues.Transfer), 1)
               )),
-              terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+              terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
               queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
             )))
 
@@ -69,12 +69,10 @@ class CrunchQueueAndTerminalValidationSpec extends CrunchTestLike {
           ArrivalGenerator.live(schDt = scheduled, iata = "FR8819", terminal = InvalidTerminal, totalPax = Option(10))
         )
 
-        val fiveMinutes = 600d / 60
-
         val crunch = runCrunchGraph(TestConfig(
           now = () => SDate(scheduled),
           airportConfig = defaultAirportConfig.copy(
-            terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)),
+            terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)),
             queuesByTerminal = SortedMap(T1 -> Seq(EeaDesk))
           )
         ))

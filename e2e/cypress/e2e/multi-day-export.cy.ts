@@ -1,4 +1,4 @@
-import {todayAtUtcString} from '../support/time-helpers'
+import {todayAsLocalString} from '../support/time-helpers'
 
 
 describe('Multi day export', () => {
@@ -52,8 +52,8 @@ describe('Multi day export', () => {
   it('Exporting desks & queues results in a file with desk recommendations', () => {
     cy
       .addFlight({
-                   "SchDT": todayAtUtcString(0, 55),
-                   "ActChoxDT": todayAtUtcString(4, 2),
+                   "SchDT": todayAsLocalString(0, 55),
+                   "ActChoxDT": todayAsLocalString(4, 2),
                    "ActPax": 51
                  },"")
       .asABorderForceOfficer()

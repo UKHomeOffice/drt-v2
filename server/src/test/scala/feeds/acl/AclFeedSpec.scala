@@ -247,6 +247,8 @@ class AclFeedSpec extends CrunchTestLike {
   }
 
   "ACL Flights " >> {
+    val oneMinute = 60d / 60
+
     "Given an ACL feed with one flight and no live flights" +
       "When I ask for a crunch " +
       "Then I should see that flight in the PortState" >> {
@@ -254,11 +256,9 @@ class AclFeedSpec extends CrunchTestLike {
       val arrival = ArrivalGenerator.forecast(iata = "BA0001", schDt = scheduled, totalPax = Option(10))
       val aclFlight = List(arrival)
 
-      val fiveMinutes = 600d / 60
-
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)))))
+        airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)))))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlight))
 
@@ -282,11 +282,9 @@ class AclFeedSpec extends CrunchTestLike {
       val liveFlight = live(iata = "BAW001", schDt = scheduled, totalPax = Option(20), actChoxDt = "2017-01-01T00:30Z")
       val liveFlights = List(liveFlight)
 
-      val fiveMinutes = 600d / 60
-
       val crunch = runCrunchGraph(TestConfig(
         now = () => SDate(scheduled),
-        airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> fiveMinutes)))))
+        airportConfig = defaultAirportConfig.copy(terminalProcessingTimes = Map(T1 -> Map(eeaMachineReadableToDesk -> oneMinute)))))
 
       offerAndWait(crunch.aclArrivalsInput, ArrivalsFeedSuccess(aclFlights))
       offerAndWait(crunch.liveArrivalsInput, ArrivalsFeedSuccess(liveFlights))
