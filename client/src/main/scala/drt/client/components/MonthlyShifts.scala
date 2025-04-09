@@ -127,7 +127,7 @@ object MonthlyShifts {
                     color = Color.primary,
                     inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
                   )(^.onChange --> handleShiftViewToggle),
-                ), MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (props.userPreferences.showStaffingShiftView) "On" else "Off")
+                ),
               )),
             if (state.shiftsData.isEmpty)
               <.div(^.style := js.Dictionary("padding-top" -> "10px"), AddShiftBarComponent(IAddShiftBarComponentProps(() => {

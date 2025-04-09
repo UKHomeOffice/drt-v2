@@ -120,7 +120,7 @@ object MonthlyStaffing {
                     color = Color.primary,
                     inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
                   )(^.onChange --> handleShiftViewToggle()),
-                ), MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (props.userPreferences.showStaffingShiftView) "On" else "Off")
+                ),
               ))
           } else EmptyVdom),
         if (props.isStaffShiftPage && props.isShiftsEmpty) {
