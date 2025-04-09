@@ -130,6 +130,7 @@ describe('Monthly Shifts Staffing', () => {
                 .get(cellToTest, {timeout: 20000}).should('exist').contains("2")
                 .visit(baseUrl + '?date=' + thisMonthDateString())
                 .get(cellToTest, {timeout: 20000}).should('exist').contains("1")
+                .
                 .resetShifts(csrf);
             });
           });

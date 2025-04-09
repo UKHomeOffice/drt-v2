@@ -48,9 +48,9 @@ object ShiftFormProps {
   }
 }
 
-object AddShiftFormComponent {
+object AddShiftsFormComponent {
   @js.native
-  @JSImport("@drt/drt-react", "AddShiftForm")
+  @JSImport("@drt/drt-react", "AddShiftsForm")
   object RawComponent extends js.Object
 
   val component = JsFnComponent[ShiftFormProps, Children.None](RawComponent)

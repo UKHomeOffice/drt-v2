@@ -116,6 +116,7 @@ object MonthlyStaffing {
                 MuiTypography()("Show shifts"),
                 MuiFormControl()(
                   MuiSwitch(
+//                    VdomAttr("data-cy").set("shift-staff-form"),
                     defaultChecked = props.userPreferences.showStaffingShiftView,
                     color = Color.primary,
                     inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
