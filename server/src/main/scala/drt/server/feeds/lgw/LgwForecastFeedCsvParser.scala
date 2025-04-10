@@ -83,6 +83,9 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
               (arrivals, failedCount + 1)
           }
       }
+    flights._1.take(50).foreach { f =>
+      log.info(s"Flight: ${f.terminal} - ${f.carrierCode} ${f.voyageNumber} ${f.origin} ${SDate(f.scheduled).toISOString}")
+    }
     flights
   }
 }
