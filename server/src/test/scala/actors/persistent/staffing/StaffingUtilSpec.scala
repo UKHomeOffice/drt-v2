@@ -1,8 +1,9 @@
 package actors.persistent.staffing
 
-import drt.shared.{ShiftAssignments, StaffAssignment, Shift}
+import drt.shared.{Shift, ShiftAssignments, StaffAssignment}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
 import uk.gov.homeoffice.drt.time.{LocalDate, SDate}
 
 class StaffingUtilSpec extends Specification {
@@ -34,9 +35,9 @@ class StaffingUtilSpec extends Specification {
         assignment.createdBy must beSome("test")
       }
 
-      val expectedStartMillis = SDate(2023, 10, 1, 8, 0).millisSinceEpoch
+      val expectedStartMillis = SDate(2023, 10, 1, 8, 0, europeLondonTimeZone).millisSinceEpoch
 
-      val expectedEndMillis = SDate(2023, 10, 3, 16, 0).millisSinceEpoch
+      val expectedEndMillis = SDate(2023, 10, 3, 16, 0, europeLondonTimeZone).millisSinceEpoch
 
       SDate(assignments.head.start).toISOString must beEqualTo(SDate(expectedStartMillis).toISOString)
       SDate(assignments.last.end).toISOString must beEqualTo(SDate(expectedEndMillis).toISOString)
@@ -50,21 +51,21 @@ class StaffingUtilSpec extends Specification {
       )
 
       val allShifts = ShiftAssignments(
-        StaffAssignment("afternoon", Terminal("terminal"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 0, None).splitIntoSlots(15),
+        StaffAssignment("afternoon", Terminal("terminal"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 0, None).splitIntoSlots(15),
       )
 
       val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
 
       updatedAssignments should have size 8
       updatedAssignments === List(
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 14, 14).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 15).millisSinceEpoch, SDate(2023, 10, 1, 14, 29).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 30).millisSinceEpoch, SDate(2023, 10, 1, 14, 44).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 45).millisSinceEpoch, SDate(2023, 10, 1, 14, 59).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 14).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 15).millisSinceEpoch, SDate(2023, 10, 1, 15, 29).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 30).millisSinceEpoch, SDate(2023, 10, 1, 15, 44).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 45).millisSinceEpoch, SDate(2023, 10, 1, 15, 59).millisSinceEpoch, 5, None))
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 59, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 59, europeLondonTimeZone).millisSinceEpoch, 5, None))
 
     }
 
@@ -74,7 +75,7 @@ class StaffingUtilSpec extends Specification {
       )
 
       val allShifts = ShiftAssignments(
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 3, None).splitIntoSlots(15),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 3, None).splitIntoSlots(15),
       )
 
       val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
@@ -82,14 +83,14 @@ class StaffingUtilSpec extends Specification {
       updatedAssignments should have size 8
 
       updatedAssignments.toSet === Set(
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 14, 14).millisSinceEpoch, 3, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 15).millisSinceEpoch, SDate(2023, 10, 1, 14, 29).millisSinceEpoch, 3, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 30).millisSinceEpoch, SDate(2023, 10, 1, 14, 44).millisSinceEpoch, 3, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 45).millisSinceEpoch, SDate(2023, 10, 1, 14, 59).millisSinceEpoch, 3, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 14).millisSinceEpoch, 5, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 15).millisSinceEpoch, SDate(2023, 10, 1, 15, 29).millisSinceEpoch, 5, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 30).millisSinceEpoch, SDate(2023, 10, 1, 15, 44).millisSinceEpoch, 5, None),
-        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 45).millisSinceEpoch, SDate(2023, 10, 1, 15, 59).millisSinceEpoch, 5, None))
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 14, europeLondonTimeZone).millisSinceEpoch, 3, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 29, europeLondonTimeZone).millisSinceEpoch, 3, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 44, europeLondonTimeZone).millisSinceEpoch, 3, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 14, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 59, europeLondonTimeZone).millisSinceEpoch, 3, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("afternoon", Terminal("T1"), SDate(2023, 10, 1, 15, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 59, europeLondonTimeZone).millisSinceEpoch, 5, None))
 
     }
 
@@ -100,7 +101,7 @@ class StaffingUtilSpec extends Specification {
       )
 
       val allShifts = ShiftAssignments(
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 15, 0).millisSinceEpoch, 0, None).splitIntoSlots(15),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, 0, None).splitIntoSlots(15),
       )
 
       val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
@@ -108,19 +109,19 @@ class StaffingUtilSpec extends Specification {
       updatedAssignments should have size 12
 
       updatedAssignments.toSet === Set(
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0).millisSinceEpoch, SDate(2023, 10, 1, 14, 14).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 15).millisSinceEpoch, SDate(2023, 10, 1, 14, 29).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 30).millisSinceEpoch, SDate(2023, 10, 1, 14, 44).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 45).millisSinceEpoch, SDate(2023, 10, 1, 14, 59).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 0).millisSinceEpoch,  SDate(2023, 10, 1, 15, 14).millisSinceEpoch, 10, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 15).millisSinceEpoch, SDate(2023, 10, 1, 15, 29).millisSinceEpoch, 10, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 30).millisSinceEpoch, SDate(2023, 10, 1, 15, 44).millisSinceEpoch, 10, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 45).millisSinceEpoch, SDate(2023, 10, 1, 15, 59).millisSinceEpoch, 10, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 0).millisSinceEpoch,  SDate(2023, 10, 1, 16, 14).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 15).millisSinceEpoch, SDate(2023, 10, 1, 16, 29).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 30).millisSinceEpoch, SDate(2023, 10, 1, 16, 44).millisSinceEpoch, 5, None),
-        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 45).millisSinceEpoch, SDate(2023, 10, 1, 16, 59).millisSinceEpoch, 5, None))
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 14, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 14, 59, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 14, europeLondonTimeZone).millisSinceEpoch, 10, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 29, europeLondonTimeZone).millisSinceEpoch, 10, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 44, europeLondonTimeZone).millisSinceEpoch, 10, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 15, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 15, 59, europeLondonTimeZone).millisSinceEpoch, 10, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 0, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 16, 14, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 15, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 16, 29, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 30, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 16, 44, europeLondonTimeZone).millisSinceEpoch, 5, None),
+        StaffAssignment("day", Terminal("T1"), SDate(2023, 10, 1, 16, 45, europeLondonTimeZone).millisSinceEpoch, SDate(2023, 10, 1, 16, 59, europeLondonTimeZone).millisSinceEpoch, 5, None))
     }
 
   }
-  }
+}

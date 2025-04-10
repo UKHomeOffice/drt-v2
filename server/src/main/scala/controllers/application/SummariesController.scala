@@ -5,12 +5,9 @@ import akka.stream.scaladsl.Source
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
 import play.api.mvc._
-import spray.json.enrichAny
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
 import uk.gov.homeoffice.drt.db.dao.{CapacityHourlyDao, PassengersHourlyDao}
-import uk.gov.homeoffice.drt.jsonformats.PassengersSummaryFormat.JsonFormat
-import uk.gov.homeoffice.drt.model.PassengersSummary
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.ports.{PortRegion, Queues}
@@ -76,7 +73,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     (LocalDate.parse(startLocalDateString), LocalDate.parse(endLocalDateString)) match {
       case (Some(start), Some(end)) =>
         val fileName = makeFileName("passengers", maybeTerminal.toSeq, SDate(start), SDate(end), airportConfig.portCode) + ".csv"
-        val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"), acceptHeader(request))
+        val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"))
 
         val result = if (acceptHeader(request) == "text/csv")
           sourceToCsvResponse(contentStream(start, end), fileName)
@@ -101,7 +98,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
   private def streamForGranularity(maybeTerminal: Option[Terminal],
                                    granularity: Option[String],
-                                   contentType: String,
                                   ): (LocalDate, LocalDate) => Source[String, NotUsed] =
     (start, end) => {
       val portCode = airportConfig.portCode

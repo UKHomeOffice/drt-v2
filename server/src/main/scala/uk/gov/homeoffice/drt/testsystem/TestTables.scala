@@ -6,6 +6,7 @@ import com.google.inject.Inject
 import drt.shared.{DropIn, Shift, UserPreferences}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.{ManifestLookupLike, UniqueArrivalKey}
+import play.api.Configuration
 import slickdb._
 import uk.gov.homeoffice.drt.arrivals.VoyageNumber
 import uk.gov.homeoffice.drt.db.dao.{IABFeatureDao, IUserFeedbackDao}
@@ -37,7 +38,7 @@ case class MockUserTable() extends UserTableLike {
 
   override def removeUser(email: String)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
-  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None)))
+  override def selectUser(email: String)(implicit ec: ExecutionContext): Future[Option[UserRow]] = Future.successful(Some(UserRow(email, email, email, new Timestamp(SDate.now().millisSinceEpoch), None, None, None, None, None, None, None, None)))
 
   override def upsertUser(userData: UserRow)(implicit ec: ExecutionContext): Future[Int] = Future.successful(1)
 
@@ -132,7 +133,8 @@ case class MockDrtParameters @Inject()() extends DrtParameters {
   override val retainDataForYears: Int = 5
   override val govNotifyApiKey: String = ""
   override val isTestEnvironment: Boolean = true
-  override val enableShiftPlanningChange: Boolean = true
+  override val enableShiftPlanningChange: Boolean =  true
+
 }
 
 case class MockUserFeedbackDao() extends IUserFeedbackDao {
@@ -155,14 +157,32 @@ case class MockAbFeatureDao() extends IABFeatureDao {
   override def getABFeatureByFunctionName(functionName: String): Future[Seq[ABFeatureRow]] = Future.successful(Seq.empty)
 }
 
-case class MockStaffShiftsService() extends ShiftsService {
+case class MockStaffShiftsService()(implicit ec: ExecutionContext) extends ShiftsService {
+ var shiftSeq = Seq.empty[Shift]
 
-  override def getShift(port: String, terminal: String, shiftName: String): Future[Option[Shift]] = Future.successful(None)
+  override def getShift(port: String, terminal: String, shiftName: String): Future[Option[Shift]] = {
+    val shift = shiftSeq.find(s => s.shiftName == shiftName && s.port == port && s.terminal == terminal)
+    Future.successful(shift)
+  }
 
-  override def getShifts(port: String, terminal: String): Future[Seq[Shift]] = Future.successful(Seq.empty)
+  override def getShifts(port: String, terminal: String): Future[Seq[Shift]] = {
+    Future.successful(shiftSeq)
+  }
 
-  override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = Future.successful(1)
+  override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = {
+    shiftSeq = Seq.empty
+    Future.successful(shiftSeq.size)
+  }
 
-  override def saveShift(shifts: Seq[Shift]): Future[Int] = Future.successful(1)
+  override def saveShift(shifts: Seq[Shift]): Future[Int] = {
+    shiftSeq = Seq.empty[Shift]
+    shiftSeq = shiftSeq ++ shifts
+    Future.successful(shiftSeq.size)
+  }
+
+  override def deleteShifts(): Future[Int] = {
+    shiftSeq = Seq.empty
+    Future.successful(shiftSeq.size)
+  }
 }
 

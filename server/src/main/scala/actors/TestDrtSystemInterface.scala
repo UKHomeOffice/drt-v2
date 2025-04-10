@@ -43,6 +43,7 @@ case class TestDrtSystemActors(applicationService: ApplicationService,
     persistentActors.staffingQueueActor,
     actorService.portStateActor,
     actorService.legacyStaffAssignmentsReadActor,
+    actorService.liveStaffAssignmentsReadActor,
     actorService.liveFixedPointsReadActor,
     actorService.liveStaffMovementsReadActor
   ))
