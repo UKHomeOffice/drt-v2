@@ -17,6 +17,8 @@ trait ShiftsService {
   def saveShift(shifts: Seq[Shift]): Future[Int]
 
   def deleteShift(port: String, terminal: String, shiftName: String): Future[Int]
+
+  def deleteShifts(): Future[Int]
 }
 
 case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: ExecutionContext) extends ShiftsService {
@@ -69,6 +71,8 @@ case class ShiftsServiceImpl(staffShiftsDao: StaffShiftsDao)(implicit ec: Execut
   }
 
   override def deleteShift(port: String, terminal: String, shiftName: String): Future[Int] = staffShiftsDao.deleteStaffShift(port, terminal, shiftName)
+
+  override def deleteShifts(): Future[Int] = staffShiftsDao.deleteStaffShifts()
 
   override def getShift(port: String, terminal: String, shiftName: String): Future[Option[Shift]] =
     staffShiftsDao.getStaffShiftByPortAndTerminalAndShiftName(port, terminal, shiftName).map(_.headOption).map(_.map(fromStaffShiftRow))

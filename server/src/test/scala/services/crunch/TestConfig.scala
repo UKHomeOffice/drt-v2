@@ -39,4 +39,5 @@ case class TestConfig(initialForecastBaseArrivals: Seq[ForecastArrival] = Seq.em
                       passengerAdjustments: List[FeedArrival] => Future[List[FeedArrival]] = arrivals => Future.successful(arrivals),
                       historicManifestLookup: Option[ManifestLookupLike] = None,
                       maybeAggregatedDbTables: Option[AggregatedDbTables] = None,
+                      enableShiftPlanningChanges: Boolean = false,
                      )

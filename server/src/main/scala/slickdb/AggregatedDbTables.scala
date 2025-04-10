@@ -4,7 +4,7 @@ package slickdb
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
 import uk.gov.homeoffice.drt.db.CentralDatabase
-import uk.gov.homeoffice.drt.db.tables.{FlightTable, QueueSlotTable, StatusDailyTable}
+import uk.gov.homeoffice.drt.db.tables.{FlightTable, QueueSlotTable, StaffShiftRow, StatusDailyTable}
 
 import java.sql.Timestamp
 import scala.concurrent.Future
@@ -138,7 +138,7 @@ trait AggregatedDbTables extends CentralDatabase {
   }
 
   class UserTable(_tableTag: Tag) extends profile.api.Table[UserRow](_tableTag, maybeSchema, "user") {
-    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at, feedback_banner_closed_at, staff_planning_interval_minutes, hide_pax_data_source_description) <> (UserRow.tupled, UserRow.unapply)
+    def * = (id, userName, email, latest_login, inactive_email_sent, revoked_access, drop_in_notification_at, created_at, feedback_banner_closed_at, staff_planning_interval_minutes, hide_pax_data_source_description, show_staffing_shift_view) <> (UserRow.tupled, UserRow.unapply)
 
     val id: Rep[String] = column[String]("id")
     val userName: Rep[String] = column[String]("username")
@@ -151,7 +151,7 @@ trait AggregatedDbTables extends CentralDatabase {
     val feedback_banner_closed_at = column[Option[java.sql.Timestamp]]("feedback_banner_closed_at")
     val staff_planning_interval_minutes = column[Option[Int]]("staff_planning_interval_minutes")
     val hide_pax_data_source_description = column[Option[Boolean]]("hide_pax_data_source_description")
-
+    val show_staffing_shift_view = column[Option[Boolean]]("show_staffing_shift_view")
     val pk = primaryKey("user_pkey", (id))
 
     index("username", userName)
@@ -176,6 +176,24 @@ trait AggregatedDbTables extends CentralDatabase {
     val pk = primaryKey("arrival_stats_pkey", (portCode, terminal, date, daysAhead, dataType))
   }
 
+  class StaffShiftsTable(_tableTag: Tag) extends profile.api.Table[StaffShiftRow](_tableTag, maybeSchema, "staff_shifts") {
+    val port: Rep[String] = column[String]("port")
+    val terminal: Rep[String] = column[String]("terminal")
+    val shift_name: Rep[String] = column[String]("shift_name")
+    val start_date: Rep[java.sql.Date] = column[java.sql.Date]("start_date")
+    val start_time: Rep[String] = column[String]("start_time")
+    val end_time: Rep[String] = column[String]("end_time")
+    val end_date: Rep[Option[java.sql.Date]] = column[Option[java.sql.Date]]("end_date")
+    val staff_number: Rep[Int] = column[Int]("staff_number")
+    val created_by: Rep[Option[String]] = column[Option[String]]("created_by")
+    val frequency: Rep[Option[String]] = column[Option[String]]("frequency")
+    val created_at: Rep[java.sql.Timestamp] = column[java.sql.Timestamp]("created_at")
+
+    def * = (port, terminal, shift_name, start_date, start_time, end_time, end_date, staff_number, created_by, frequency, created_at).mapTo[StaffShiftRow]
+
+    val pk = primaryKey("staff_shifts_pkey", (port, terminal, shift_name, start_date, start_time))
+  }
+
   /** Collection-like TableQuery object for table VoyageManifestPassengerInfo */
   val voyageManifestPassengerInfo = new TableQuery(tag => new VoyageManifestPassengerInfoTable(tag))
   val processedJson = new TableQuery(tag => new ProcessedJsonTable(tag))
@@ -185,6 +203,6 @@ trait AggregatedDbTables extends CentralDatabase {
   val statusDaily = new TableQuery(tag => new StatusDailyTable(tag))
   val flight = new TableQuery(tag => new FlightTable(tag))
   val queueSlot = new TableQuery(tag => new QueueSlotTable(tag))
-
-  val tables = Seq(arrivalStats, processedZip, processedJson, statusDaily, voyageManifestPassengerInfo, flight, queueSlot)
+  val staffShifts = new TableQuery(tag => new StaffShiftsTable(tag))
+  val tables = Seq(arrivalStats, processedZip, processedJson, statusDaily, voyageManifestPassengerInfo, flight, queueSlot, staffShifts)
 }

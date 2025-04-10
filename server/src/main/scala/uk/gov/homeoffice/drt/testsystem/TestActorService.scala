@@ -33,7 +33,7 @@ case class TestActorService(journalType: StreamingJournalLike,
 
   override val legacyStaffAssignmentsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
     now, startOfTheMonth(now), requestAndTerminateActor, system), "shifts-sequential-writes-actor")
-  override val staffAssignmentsSequentialWritesActor: ActorRef = system.actorOf(ShiftsActor.sequentialWritesProps(
+  override val staffAssignmentsSequentialWritesActor: ActorRef = system.actorOf(StaffAssignmentsActor.sequentialWritesProps(
     now, startOfTheMonth(now), requestAndTerminateActor, system), "staff-assignments-sequential-writes-actor")
 
   override val fixedPointsSequentialWritesActor: ActorRef = system.actorOf(FixedPointsActor.sequentialWritesProps(

@@ -1,16 +1,10 @@
 import {moment} from '../support/time-helpers'
 
-Cypress.on('uncaught:exception', (err, runnable) => {
-  // returning false here prevents Cypress from failing the test
-  console.log('Uncaught exception:', err);
-
-  return false;
-});
 
 describe('Monthly Staffing', () => {
 
   beforeEach(() => {
-    cy.deleteData();
+    cy.deleteData("");
   });
 
   const firstMidnightOfThisMonth = (): moment.Moment => {
@@ -105,6 +99,7 @@ describe('Monthly Staffing', () => {
     describe('When adding staff using the monthly staff view', () => {
       const cellToTest = ".htCore tbody :nth-child(1) :nth-child(2)";
       it("If I enter staff for the current month those staff should still be visible if I change months and change back", () => {
+        Cypress.env('enableShiftPlanningChange', false);
         cy
           .asABorderForcePlanningOfficer()
           .request('/')
@@ -112,12 +107,13 @@ describe('Monthly Staffing', () => {
             const $html = Cypress.$(response.body)
             const csrf: any = $html.filter('input:hidden[name="csrfToken"]').val()
             cy.saveShifts(shifts(), csrf).then(() => {
-              cy.visit('#terminal/T1/staffing/15/')
-                .get(cellToTest).contains("1")
-                .visit('#terminal/T1/staffing/15/?date=' + nextMonthDateString())
-                .get(cellToTest).contains("2")
-                .visit('#terminal/T1/staffing/15/?date=' + thisMonthDateString())
-                .get(cellToTest).contains("1")
+              const baseUrl = '#terminal/T1/shifts/15/';
+              cy.visit(baseUrl)
+                .get(cellToTest, { timeout: 2000 }).should('exist').contains("1")
+                .visit(baseUrl + '?date=' + nextMonthDateString())
+                .get(cellToTest, { timeout: 2000 }).should('exist').contains("2")
+                .visit(baseUrl + '?date=' + thisMonthDateString())
+                .get(cellToTest, { timeout: 2000 }).should('exist').contains("1")
                 .resetShifts(csrf);
             });
           });

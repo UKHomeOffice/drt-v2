@@ -6,7 +6,7 @@ import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
 import actors.persistent.ManifestRouterActor
 import actors.persistent.arrivals._
-import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffMovementsActor}
+import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffAssignmentsActor, StaffMovementsActor}
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
@@ -46,6 +46,7 @@ import uk.gov.homeoffice.drt.ports._
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.service.ProdFeedService.{getFeedArrivalsLookup, partitionUpdates, partitionUpdatesBase, updateFeedArrivals}
 import uk.gov.homeoffice.drt.service.{ManifestPersistence, ProdFeedService}
+import uk.gov.homeoffice.drt.testsystem.TestActors.TestShiftsActor
 import uk.gov.homeoffice.drt.time._
 
 import scala.collection.SortedSet
@@ -177,6 +178,9 @@ class TestDrtActor extends Actor {
 
       val liveShiftsReadActor: ActorRef = system.actorOf(ShiftsActor.streamingUpdatesProps(ShiftsActor.persistenceId,
         journalType, tc.now), name = "shifts-read-actor")
+
+       val liveStaffAssignmentsReadActor: ActorRef = system.actorOf(TestShiftsActor.streamingUpdatesProps(StaffAssignmentsActor.persistenceId,
+        journalType,tc.now), name = "staff-assignments-read-actor")
       val liveFixedPointsReadActor: ActorRef = system.actorOf(FixedPointsActor.streamingUpdatesProps(
         journalType, tc.now, tc.forecastMaxDays), name = "fixed-points-read-actor")
       val liveStaffMovementsReadActor: ActorRef = system.actorOf(StaffMovementsActor.streamingUpdatesProps(
@@ -337,12 +341,13 @@ class TestDrtActor extends Actor {
         val (staffingUpdateRequestQueue, staffingUpdateKillSwitch) = RunnableStaffing(
           staffingQueueActor = TestProbe().ref,
           staffQueue = SortedSet.empty[TerminalUpdateRequest],
-          legacyStaffAssignmentsReadActor = liveShiftsReadActor,
+          staffAssignmentsReadActor = if (tc.enableShiftPlanningChanges) liveStaffAssignmentsReadActor
+          else liveShiftsReadActor,
           fixedPointsActor = liveFixedPointsReadActor,
           movementsActor = liveStaffMovementsReadActor,
           staffMinutesActor = portStateActor,
           now = tc.now,
-          setUpdatedAtForDay = (_, _, _) => Future.successful(Done),
+          setUpdatedAtForDay = (_, _, _) => Future.successful(Done)
         )
 
         liveShiftsReadActor ! AddUpdatesSubscriber(staffingUpdateRequestQueue)
