@@ -28,8 +28,8 @@ object Settings {
     val scala = "2.13.16"
 
     val drtLib = "v1122"
-    val drtCirium = "v327"
-    val bluebus = "v140"
+    val drtCirium = "v339"
+    val bluebus = "v149"
 
     val pekko = "1.1.3"
     val pekkoHttp = "1.1.0"
