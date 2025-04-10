@@ -36,7 +36,6 @@ object RunnableStaffing extends DrtRunnableGraph {
            (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
 
     val shiftsProvider = (r: TerminalUpdateRequest) => staffAssignmentsReadActor.ask(r).mapTo[ShiftAssignments]
-//    val shiftsProvider = (r: TerminalUpdateRequest) => if(enableShiftPlanningChanges) liveStaffAssignmentsReadActor.ask(r).mapTo[ShiftAssignments] else legacyStaffAssignmentsReadActor.ask(r).mapTo[ShiftAssignments]
     val fixedPointsProvider = (r: TerminalUpdateRequest) => fixedPointsActor.ask(r).mapTo[FixedPointAssignments]
     val movementsProvider = (r: TerminalUpdateRequest) => movementsActor.ask(r).mapTo[StaffMovements]
 

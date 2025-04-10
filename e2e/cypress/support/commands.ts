@@ -167,7 +167,7 @@ Cypress.Commands.add('choose24Hours', () => {
     .click({force: true});
 });
 
-Cypress.Commands.add('shiftsGetStarted', () => {
+Cypress.Commands.add('clickShiftsGetStartedButton', () => {
   cy.contains('button', 'Get started')
     .click({force: true});
 });
