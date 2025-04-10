@@ -5,7 +5,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{FlightCode, ForecastArrival, VoyageNumber}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDate
-import uk.gov.homeoffice.drt.time.TimeZoneHelper.europeLondonTimeZone
+import uk.gov.homeoffice.drt.time.TimeZoneHelper.utcTimeZone
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.util.{Failure, Success, Try}
@@ -51,7 +51,7 @@ case class LgwForecastFeedCsvParser(fetchContent: () => Option[String]) {
                 dateParts(0).toInt,
                 timeParts(0).toInt,
                 timeParts(1).toInt,
-                europeLondonTimeZone
+                utcTimeZone
               ).millisSinceEpoch
               val totalPax = Option(record.get("POA PAX").toInt)
               val transPax = None
