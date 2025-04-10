@@ -1,11 +1,5 @@
 import {moment} from '../support/time-helpers'
 
-Cypress.on('uncaught:exception', (err, runnable) => {
-  // returning false here prevents Cypress from failing the test
-  console.log('Uncaught exception:', err);
-
-  return false;
-});
 
 describe('Monthly Shifts Staffing', () => {
 
@@ -130,7 +124,6 @@ describe('Monthly Shifts Staffing', () => {
                 .get(cellToTest, {timeout: 20000}).should('exist').contains("2")
                 .visit(baseUrl + '?date=' + thisMonthDateString())
                 .get(cellToTest, {timeout: 20000}).should('exist').contains("1")
-                .
                 .resetShifts(csrf);
             });
           });

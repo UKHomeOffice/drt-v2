@@ -1,11 +1,5 @@
 import {moment} from '../support/time-helpers'
 
-Cypress.on('uncaught:exception', (err, runnable) => {
-  // returning false here prevents Cypress from failing the test
-  console.log('Uncaught exception:', err);
-
-  return false;
-});
 
 describe('Monthly Staffing', () => {
 
