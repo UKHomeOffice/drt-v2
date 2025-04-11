@@ -80,7 +80,7 @@ object RunnableStaffing extends DrtRunnableGraph {
           val shifts = staff.shifts.terminalStaffAt(processingRequest.terminal, m, sdateFromMillisLocal)
           val fixedPoints = staff.fixedPoints.terminalStaffAt(processingRequest.terminal, m, sdateFromMillisLocal)
           val movements = staff.movements.terminalStaffAt(processingRequest.terminal, minute)
-
+          
           StaffMinute(processingRequest.terminal, minute, shifts, fixedPoints, movements, lastUpdated = Option(now().millisSinceEpoch))
         }).asContainer
       }
