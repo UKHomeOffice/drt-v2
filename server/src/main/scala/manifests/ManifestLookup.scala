@@ -1,6 +1,6 @@
 package manifests
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import manifests.passengers.{BestAvailableManifest, ManifestPassengerProfile, ManifestPaxCount}
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType

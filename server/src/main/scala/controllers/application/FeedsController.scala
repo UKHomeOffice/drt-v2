@@ -2,7 +2,7 @@ package controllers.application
 
 import actors.daily.RequestAndTerminate
 import actors.persistent.arrivals._
-import akka.pattern.ask
+import org.apache.pekko.pattern.ask
 import com.google.inject.Inject
 import drt.server.feeds.FeedPoller.AdhocCheck
 import drt.shared.CrunchApi.MillisSinceEpoch

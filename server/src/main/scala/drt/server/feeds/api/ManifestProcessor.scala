@@ -1,8 +1,8 @@
 package drt.server.feeds.api
 
-import akka.Done
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.Done
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey

@@ -1,7 +1,7 @@
 package drt.server.feeds.lcy
 
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshaller}
+import org.apache.pekko.http.scaladsl.model._
+import org.apache.pekko.http.scaladsl.unmarshalling.{FromResponseUnmarshaller, Unmarshaller}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{FeedArrival, FlightCode, LiveArrival, VoyageNumber}

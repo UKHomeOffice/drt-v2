@@ -2,7 +2,7 @@ package uk.gov.homeoffice.drt.crunchsystem
 
 import actors.ManifestLookups
 import actors.persistent._
-import akka.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.SDateLike
 

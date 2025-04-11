@@ -1,6 +1,6 @@
 package actors.daily
 
-import akka.actor.Props
+import org.apache.pekko.actor.Props
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
 import drt.shared.{CrunchApi, TM}
 import scalapb.GeneratedMessage

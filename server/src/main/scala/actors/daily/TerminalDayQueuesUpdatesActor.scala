@@ -2,9 +2,9 @@ package actors.daily
 
 import actors.StreamingJournalLike
 import actors.serializers.PortStateMessageConversion
-import akka.pattern.StatusReply
-import akka.persistence.query.EventEnvelope
-import akka.persistence.{SnapshotMetadata, SnapshotOffer}
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.persistence.query.EventEnvelope
+import org.apache.pekko.persistence.{SnapshotMetadata, SnapshotOffer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.model.{CrunchMinute, TQM}

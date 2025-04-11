@@ -1,7 +1,7 @@
 package controllers.application.exports
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import controllers.ArrivalGenerator
 import controllers.application.TestDrtModule
 import drt.server.feeds.{DqManifests, ManifestsFeedSuccess}
@@ -21,7 +21,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class FlightsExportControllerSpec extends PlaySpec {
-  implicit val system: ActorSystem = akka.actor.ActorSystem("test")
+  implicit val system: ActorSystem = ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
 
   "FlightsExportController" should {

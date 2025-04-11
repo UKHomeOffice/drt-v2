@@ -1,12 +1,12 @@
 package actors.routing
 
 import actors.routing.minutes.MinutesActorLike.ProcessNextUpdateRequest
-import akka.NotUsed
-import akka.actor.{Actor, ActorLogging, ActorRef}
-import akka.pattern.{StatusReply, ask, pipe}
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
-import akka.util.Timeout
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{Actor, ActorLogging, ActorRef}
+import org.apache.pekko.pattern.{StatusReply, ask, pipe}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.util.Timeout
 import uk.gov.homeoffice.drt.DataUpdates.Updates
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}
 import uk.gov.homeoffice.drt.actor.commands.Commands.AddUpdatesSubscriber

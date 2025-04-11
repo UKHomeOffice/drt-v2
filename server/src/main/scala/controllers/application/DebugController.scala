@@ -2,8 +2,8 @@ package controllers.application
 
 import actors.debug.{DebugFlightsActor, MessageQuery, MessageResponse}
 import actors.persistent.arrivals.{AclForecastArrivalsActor, CiriumLiveArrivalsActor, PortForecastArrivalsActor, PortLiveArrivalsActor}
-import akka.actor.Props
-import akka.pattern.ask
+import org.apache.pekko.actor.Props
+import org.apache.pekko.pattern.ask
 import com.google.inject.Inject
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import services.ActorTree

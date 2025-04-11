@@ -1,8 +1,8 @@
 package actors.persistent
 
-import akka.actor.ActorRef
-import akka.stream._
-import akka.stream.stage._
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.stream._
+import org.apache.pekko.stream.stage._
 import uk.gov.homeoffice.drt.actor.commands.{RemoveProcessingRequest, TerminalUpdateRequest}
 import uk.gov.homeoffice.drt.time.SDate
 

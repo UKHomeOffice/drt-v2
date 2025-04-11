@@ -1,7 +1,7 @@
 package actors.daily
 
-import akka.actor.{ActorRef, Props}
-import akka.pattern.ask
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern.ask
 import drt.shared.CrunchApi.{DeskRecMinute, MinutesContainer}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState

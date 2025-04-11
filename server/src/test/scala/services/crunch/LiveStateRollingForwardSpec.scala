@@ -1,6 +1,6 @@
 package services.crunch
 
-import akka.testkit.TestProbe
+import org.apache.pekko.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.PortState

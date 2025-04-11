@@ -1,9 +1,9 @@
 package drt.chroma
 
-import akka.NotUsed
-import akka.http.scaladsl.model._
-import akka.stream.scaladsl.{Sink, Source}
-import akka.testkit.TestProbe
+import org.apache.pekko.NotUsed
+import org.apache.pekko.http.scaladsl.model._
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.testkit.TestProbe
 import com.typesafe.config.{Config, ConfigFactory}
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaLiveFlight, ChromaToken}
 import drt.chroma.chromafetcher.{ChromaFetcher, ChromaFlightMarshallers}

@@ -1,7 +1,7 @@
 package controllers
 
-import akka.actor.{ActorSystem, Scheduler}
-import akka.stream.scaladsl.SourceQueueWithComplete
+import org.apache.pekko.actor.{ActorSystem, Scheduler}
+import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 import drt.shared.CrunchApi.{ActualDeskStats, DeskStat}
 import org.joda.time.DateTimeZone
 import org.slf4j.{Logger, LoggerFactory}

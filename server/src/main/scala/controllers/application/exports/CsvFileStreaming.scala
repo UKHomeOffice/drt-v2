@@ -1,8 +1,8 @@
 package controllers.application.exports
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
-import akka.util.ByteString
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.ByteString
 import play.api.http.{HttpEntity, Writeable}
 import play.api.mvc._
 import uk.gov.homeoffice.drt.ports.PortCode

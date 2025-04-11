@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import drt.shared.CrunchApi.{DeskRecMinutes, MillisSinceEpoch, PassengersMinute}
 import drt.shared.SimulationMinutes
 import services.crunch.desklimits.TerminalDeskLimitsLike

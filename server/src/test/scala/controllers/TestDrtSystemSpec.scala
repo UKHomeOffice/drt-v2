@@ -2,7 +2,7 @@ package controllers
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetUpdatesSince}
 import actors.TestDrtSystemActorsLike
-import akka.pattern.ask
+import org.apache.pekko.pattern.ask
 import drt.shared.CrunchApi._
 import drt.shared.PortState
 import services.crunch.CrunchTestLike

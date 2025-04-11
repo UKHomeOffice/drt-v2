@@ -1,7 +1,7 @@
 package actors.daily
 
-import akka.actor.ActorRef
-import akka.persistence._
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.persistence._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.PaxDeltas

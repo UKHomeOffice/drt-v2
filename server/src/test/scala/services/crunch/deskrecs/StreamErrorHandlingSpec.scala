@@ -1,8 +1,8 @@
 package services.crunch.deskrecs
 
-import akka.NotUsed
-import akka.stream.ActorAttributes
-import akka.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.ActorAttributes
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import services.StreamSupervision
 import services.crunch.CrunchTestLike
 

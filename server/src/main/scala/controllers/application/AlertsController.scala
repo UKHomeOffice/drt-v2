@@ -1,8 +1,8 @@
 package controllers.application
 
 import actors.persistent.DeleteAlerts
-import akka.pattern._
-import akka.util.Timeout
+import org.apache.pekko.pattern._
+import org.apache.pekko.util.Timeout
 import com.google.inject.Inject
 import drt.shared.Alert
 import drt.shared.CrunchApi.MillisSinceEpoch

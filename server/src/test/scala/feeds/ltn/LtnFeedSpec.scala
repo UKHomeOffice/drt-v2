@@ -1,9 +1,9 @@
 package feeds.ltn
 
-import akka.actor.typed.ActorRef
-import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
-import akka.stream.scaladsl.Sink
-import akka.testkit.TestProbe
+import org.apache.pekko.actor.typed.ActorRef
+import org.apache.pekko.http.scaladsl.model.{HttpEntity, HttpResponse}
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.ltn.{LtnFeedRequestLike, LtnLiveFeed}
 import drt.server.feeds.{ArrivalsFeedFailure, Feed}
 import org.joda.time.DateTimeZone

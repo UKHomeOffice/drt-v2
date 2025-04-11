@@ -1,9 +1,9 @@
 package drt.server.feeds.edi
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.model.StatusCodes.OK
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
-import akka.stream.Materializer
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.model.StatusCodes.OK
+import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
+import org.apache.pekko.stream.Materializer
 import drt.server.feeds.AzinqFeed
 import org.specs2.mutable.Specification
 import spray.json._

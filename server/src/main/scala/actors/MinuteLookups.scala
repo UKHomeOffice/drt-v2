@@ -3,9 +3,9 @@ package actors
 import actors.daily._
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
 import actors.routing.minutes.{QueueLoadsMinutesActor, QueueMinutesRouterActor, StaffMinutesRouterActor}
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi._
 import drt.shared.TM
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState

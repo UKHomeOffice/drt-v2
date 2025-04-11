@@ -1,8 +1,8 @@
 package services
 
 import actors.persistent.staffing.ShiftsActor.UpdateShifts
-import akka.actor.Actor
-import akka.pattern.after
+import org.apache.pekko.actor.Actor
+import org.apache.pekko.pattern.after
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._

@@ -3,8 +3,8 @@ package actors.persistent.nebo
 import actors.persistent.nebo.NeboArrivalActor.getRedListPassengerFlightKey
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.NeboArrivalMessageConversion._
-import akka.actor.Props
-import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
+import org.apache.pekko.actor.Props
+import org.apache.pekko.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.{NeboArrivals, RedListPassengers}
 import org.slf4j.{Logger, LoggerFactory}

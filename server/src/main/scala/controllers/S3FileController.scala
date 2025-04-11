@@ -1,6 +1,6 @@
 package controllers
 
-import akka.stream.scaladsl.StreamConverters
+import org.apache.pekko.stream.scaladsl.StreamConverters
 import play.api.Configuration
 import play.api.http.HttpEntity
 import play.api.mvc.{InjectedController, ResponseHeader, Result}

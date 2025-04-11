@@ -1,8 +1,8 @@
 package actors.persistent.staffing
 
 import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
-import akka.actor.Props
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import org.apache.pekko.actor.Props
+import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
 import uk.gov.homeoffice.drt.protobuf.messages.ShiftMessage.{ShiftStateSnapshotMessage, ShiftsMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 

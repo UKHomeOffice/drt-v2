@@ -1,8 +1,8 @@
 package actors.persistent
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import akka.actor.{PoisonPill, Props}
-import akka.pattern.ask
+import org.apache.pekko.actor.{PoisonPill, Props}
+import org.apache.pekko.pattern.ask
 import uk.gov.homeoffice.drt.time.SDate
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.egates._

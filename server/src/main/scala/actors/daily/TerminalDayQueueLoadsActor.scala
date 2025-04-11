@@ -1,7 +1,7 @@
 package actors.daily
 
 import actors.serializers.PassengersMinutesMessageConversion.{passengerMinutesToMessage, passengersMinuteFromMessage}
-import akka.actor.Props
+import org.apache.pekko.actor.Props
 import drt.shared.CrunchApi
 import drt.shared.CrunchApi.{MillisSinceEpoch, PassengersMinute}
 import org.slf4j.{Logger, LoggerFactory}

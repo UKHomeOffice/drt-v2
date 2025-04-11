@@ -1,6 +1,6 @@
 package drt.users
 
-import akka.http.scaladsl.model._
+import org.apache.pekko.http.scaladsl.model._
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import drt.users.KeyCloakUserParserProtocol._
 import services.crunch.CrunchTestLike

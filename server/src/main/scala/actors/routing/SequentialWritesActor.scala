@@ -1,10 +1,10 @@
 package actors.routing
 
 import actors.routing.minutes.MinutesActorLike.{FinishedProcessingRequest, ProcessNextUpdateRequest, QueueUpdateRequest}
-import akka.actor.{Actor, ActorLogging, ActorRef}
-import akka.pattern.StatusReply
-import akka.stream.Materializer
-import akka.util.Timeout
+import org.apache.pekko.actor.{Actor, ActorLogging, ActorRef}
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.util.Timeout
 
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}

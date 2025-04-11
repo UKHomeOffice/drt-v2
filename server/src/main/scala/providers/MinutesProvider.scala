@@ -1,11 +1,11 @@
 package providers
 
 import actors.PartitionedPortStateActor.UtcDateRangeLike
-import akka.NotUsed
-import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.stream.scaladsl.Source
-import akka.util.Timeout
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.MinutesContainer
 import uk.gov.homeoffice.drt.arrivals.WithTimeAccessor
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

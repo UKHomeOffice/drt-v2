@@ -1,8 +1,8 @@
 package drt.server.feeds.lcy
 
-import akka.actor.{ActorSystem, typed}
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import org.apache.pekko.actor.{ActorSystem, typed}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.server.feeds.Feed.FeedTick
 import org.slf4j.{Logger, LoggerFactory}

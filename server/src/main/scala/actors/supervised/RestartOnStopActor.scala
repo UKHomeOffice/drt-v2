@@ -1,7 +1,7 @@
 package actors.supervised
 
-import akka.actor.{Actor, ActorRef}
-import akka.pattern.{BackoffOnStopOptions, BackoffSupervisor}
+import org.apache.pekko.actor.{Actor, ActorRef}
+import org.apache.pekko.pattern.{BackoffOnStopOptions, BackoffSupervisor}
 
 
 class RestartOnStopActor(backoffOnStopOptions: BackoffOnStopOptions) extends Actor {

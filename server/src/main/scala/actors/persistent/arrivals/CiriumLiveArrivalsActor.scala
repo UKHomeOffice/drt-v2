@@ -3,7 +3,7 @@ package actors.persistent.arrivals
 import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.StreamingFeedStatusUpdates
 import actors.persistent.staffing.GetFeedStatuses
-import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
+import org.apache.pekko.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted

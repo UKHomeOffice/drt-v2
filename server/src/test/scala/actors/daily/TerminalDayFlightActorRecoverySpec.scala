@@ -1,9 +1,9 @@
 package actors.daily
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import akka.actor.{ActorRef, Props}
-import akka.pattern.{StatusReply, ask}
-import akka.persistence.PersistentActor
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.persistence.PersistentActor
 import controllers.ArrivalGenerator.flightWithSplitsForDayAndTerminal
 import scalapb.GeneratedMessage
 import services.crunch.CrunchTestLike

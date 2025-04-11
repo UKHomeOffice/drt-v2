@@ -2,9 +2,9 @@ package actors.persistent.staffing
 
 import actors.daily.RequestAndTerminate
 import actors.routing.SequentialWritesActor
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import drt.shared.StaffAssignmentLike
 import uk.gov.homeoffice.drt.time.SDateLike
 

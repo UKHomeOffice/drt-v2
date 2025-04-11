@@ -2,7 +2,7 @@ package controllers
 
 import java.io.InputStream
 
-import akka.http.scaladsl.model._
+import org.apache.pekko.http.scaladsl.model._
 import drt.http.WithSendAndReceive
 import org.slf4j.LoggerFactory
 

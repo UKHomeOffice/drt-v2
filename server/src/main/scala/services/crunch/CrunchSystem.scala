@@ -1,9 +1,9 @@
 package services.crunch
 
-import akka.Done
-import akka.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
-import akka.stream._
-import akka.stream.scaladsl.{Source, SourceQueueWithComplete}
+import org.apache.pekko.Done
+import org.apache.pekko.actor.{ActorRef, ActorSystem, CoordinatedShutdown}
+import org.apache.pekko.stream._
+import org.apache.pekko.stream.scaladsl.{Source, SourceQueueWithComplete}
 import drt.server.feeds.Feed.EnabledFeedWithFrequency
 import drt.server.feeds.{ArrivalsFeedResponse, Feed}
 import drt.shared.CrunchApi._

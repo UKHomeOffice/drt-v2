@@ -2,10 +2,10 @@ package uk.gov.homeoffice.drt.service.staffing
 
 import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements}
 import actors.persistent.staffing.StaffMovementsReadActor
-import akka.Done
-import akka.actor.{ActorRef, ActorSystem, PoisonPill, Props}
-import akka.pattern.ask
-import akka.util.Timeout
+import org.apache.pekko.Done
+import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import drt.shared.{StaffMovement, StaffMovements}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch

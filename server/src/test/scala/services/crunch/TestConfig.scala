@@ -1,7 +1,7 @@
 package services.crunch
 
 import actors.DrtStaticParameters
-import akka.actor.ActorRef
+import org.apache.pekko.actor.ActorRef
 import drt.shared._
 import manifests.ManifestLookupLike
 import services.arrivals.{ArrivalsAdjustmentsLike, ArrivalsAdjustmentsNoop}

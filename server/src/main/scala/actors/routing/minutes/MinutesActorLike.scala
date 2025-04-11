@@ -3,10 +3,10 @@ package actors.routing.minutes
 import actors.PartitionedPortStateActor._
 import actors.routing.minutes.MinutesActorLike.{MinutesLookup, MinutesUpdate}
 import actors.routing.{RouterActorLike, RouterActorLike2, SequentialAccessActor}
-import akka.NotUsed
-import akka.actor.{ActorRef, Props}
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import org.slf4j.LoggerFactory
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests

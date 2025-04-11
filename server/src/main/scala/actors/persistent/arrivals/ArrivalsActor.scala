@@ -2,8 +2,8 @@ package actors.persistent.arrivals
 
 import actors.PartitionedPortStateActor.GetFlights
 import actors.persistent.staffing.GetFeedStatuses
-import akka.actor.ActorRef
-import akka.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedSuccess}
 import scalapb.GeneratedMessage
 import services.graphstages.Crunch

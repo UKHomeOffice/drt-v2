@@ -1,10 +1,10 @@
 package uk.gov.homeoffice.drt.service.staffing
 
 import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
-import akka.Done
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.testkit.{TestKit, TestProbe}
-import akka.util.Timeout
+import org.apache.pekko.Done
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.testkit.{TestKit, TestProbe}
+import org.apache.pekko.util.Timeout
 import drt.shared.{FixedPointAssignments, StaffAssignment}
 import org.scalatest.concurrent.ScalaFutures.convertScalaFuture
 import org.scalatest.matchers.should.Matchers

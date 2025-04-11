@@ -4,10 +4,10 @@ import actors.DrtStaticParameters.expireAfterMillis
 import actors.daily.RequestAndTerminate
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.{DrtParameters, FlightLookupsLike, ManifestLookupsLike, StreamingJournalLike}
-import akka.actor.{ActorRef, ActorSystem, Props, typed}
-import akka.pattern.ask
-import akka.stream.Materializer
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, typed}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.util.Timeout
 import drt.server.feeds.Feed
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.acl.AclFeed

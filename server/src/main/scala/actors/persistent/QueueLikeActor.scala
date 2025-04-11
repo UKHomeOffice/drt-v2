@@ -1,6 +1,6 @@
 package actors.persistent
 
-import akka.persistence._
+import org.apache.pekko.persistence._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike

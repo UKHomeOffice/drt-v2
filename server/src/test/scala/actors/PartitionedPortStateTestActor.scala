@@ -3,10 +3,10 @@ package actors
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.PartitionedPortStateTestActor.{UpdateStateCrunchMinutes, UpdateStateFlights, UpdateStateStaffMinutes}
 import actors.routing.FlightsRouterActor
-import akka.NotUsed
-import akka.actor.ActorRef
-import akka.pattern.{StatusReply, ask}
-import akka.stream.scaladsl.Source
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.stream.scaladsl.Source
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, StaffMinute}
 import drt.shared.FlightsApi.PaxForArrivals
 import drt.shared._

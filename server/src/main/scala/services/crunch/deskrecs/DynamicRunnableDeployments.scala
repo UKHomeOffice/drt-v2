@@ -1,9 +1,9 @@
 package services.crunch.deskrecs
 
-import akka.actor.ActorRef
-import akka.stream.scaladsl.Flow
-import akka.stream.{Materializer, UniqueKillSwitch}
-import akka.{Done, NotUsed}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.stream.scaladsl.Flow
+import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
+import org.apache.pekko.{Done, NotUsed}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}

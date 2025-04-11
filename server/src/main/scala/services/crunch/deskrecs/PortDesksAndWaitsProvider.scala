@@ -1,6 +1,6 @@
 package services.crunch.deskrecs
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import drt.shared.CrunchApi.{DeskRecMinute, DeskRecMinutes, MillisSinceEpoch, PassengersMinute}
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}

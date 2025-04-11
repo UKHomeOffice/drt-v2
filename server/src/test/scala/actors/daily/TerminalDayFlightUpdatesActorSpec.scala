@@ -1,8 +1,8 @@
 package actors.daily
 
 import actors.InMemoryStreamingJournal
-import akka.actor.{PoisonPill, Props}
-import akka.pattern.ask
+import org.apache.pekko.actor.{PoisonPill, Props}
+import org.apache.pekko.pattern.ask
 import drt.shared.{ArrivalGenerator, FlightUpdatesAndRemovals}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.arrivals._

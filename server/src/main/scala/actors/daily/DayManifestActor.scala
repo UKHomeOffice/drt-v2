@@ -1,8 +1,8 @@
 package actors.daily
 
 import actors.serializers.ManifestMessageConversion
-import akka.actor.Props
-import akka.persistence.SaveSnapshotSuccess
+import org.apache.pekko.actor.Props
+import org.apache.pekko.persistence.SaveSnapshotSuccess
 import drt.shared.ManifestKey
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}

@@ -1,6 +1,6 @@
 package services.staffing
 
-import akka.actor.ActorRef
+import org.apache.pekko.actor.ActorRef
 import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.ports.AirportConfig

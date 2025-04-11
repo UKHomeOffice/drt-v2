@@ -1,6 +1,6 @@
 package controllers.application
 
-import akka.pattern.ask
+import org.apache.pekko.pattern.ask
 import com.google.inject.Inject
 import play.api.mvc.{Action, AnyContent, ControllerComponents}
 import spray.json.{DefaultJsonProtocol, JsArray, JsNumber, JsObject, JsString, JsValue, RootJsonFormat, enrichAny}

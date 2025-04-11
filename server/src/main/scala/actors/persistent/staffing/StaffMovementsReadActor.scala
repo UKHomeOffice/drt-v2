@@ -1,7 +1,7 @@
 package actors.persistent.staffing
 
 import actors.persistent.staffing.StaffMovementsActor.staffMovementMessagesToStaffMovements
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
 import uk.gov.homeoffice.drt.protobuf.messages.StaffMovementMessages.{RemoveStaffMovementMessage, StaffMovementsMessage, StaffMovementsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 

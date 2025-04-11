@@ -3,11 +3,11 @@ package actors.routing
 import actors.PartitionedPortStateActor.{DateRangeMillisLike, PointInTimeQuery}
 import actors.daily.RequestAndTerminate
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
-import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.stream.scaladsl.Source
-import akka.util.Timeout
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import services.SourceUtils

@@ -1,6 +1,6 @@
 package drt.chroma
 
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
+import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse, StatusCodes}
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 
 trait SampleData {

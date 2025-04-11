@@ -1,9 +1,9 @@
 package drt.server.feeds
 
-import akka.actor.typed
-import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.Source
-import akka.stream.typed.scaladsl.ActorSource
+import org.apache.pekko.actor.typed
+import org.apache.pekko.stream.OverflowStrategy
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.stream.typed.scaladsl.ActorSource
 
 import scala.concurrent.duration.FiniteDuration
 

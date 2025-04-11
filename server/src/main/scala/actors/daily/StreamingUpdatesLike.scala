@@ -2,12 +2,12 @@ package actors.daily
 
 import actors.StreamingJournalLike
 import actors.daily.StreamingUpdatesLike.StopUpdates
-import akka.actor.PoisonPill
-import akka.pattern.StatusReply.Ack
-import akka.persistence.query.PersistenceQuery
-import akka.persistence.{PersistentActor, RecoveryCompleted}
-import akka.stream.scaladsl.{Keep, Sink}
-import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
+import org.apache.pekko.actor.PoisonPill
+import org.apache.pekko.pattern.StatusReply.Ack
+import org.apache.pekko.persistence.query.PersistenceQuery
+import org.apache.pekko.persistence.{PersistentActor, RecoveryCompleted}
+import org.apache.pekko.stream.scaladsl.{Keep, Sink}
+import org.apache.pekko.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import org.slf4j.Logger
 import scalapb.GeneratedMessage

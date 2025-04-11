@@ -4,8 +4,8 @@ import actors.DrtStaticParameters.{startOfTheMonth, time48HoursAgo}
 import actors._
 import actors.daily.RequestAndTerminateActor
 import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffAssignmentsActor, StaffMovementsActor}
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.util.Timeout
 import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.testsystem.TestActors._

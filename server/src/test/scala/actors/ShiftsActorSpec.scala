@@ -2,8 +2,8 @@ package actors
 
 import actors.persistent.staffing.ShiftsActor.UpdateShifts
 import actors.persistent.staffing.{ShiftsActor, ShiftsReadActor}
-import akka.actor.{ActorRef, PoisonPill, Props}
-import akka.testkit.ImplicitSender
+import org.apache.pekko.actor.{ActorRef, PoisonPill, Props}
+import org.apache.pekko.testkit.ImplicitSender
 import drt.shared._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState

@@ -1,10 +1,10 @@
 package uk.gov.homeoffice.drt.testsystem
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Status}
-import akka.pattern.{StatusReply, ask}
-import akka.persistence.testkit.scaladsl.PersistenceTestKit
-import akka.stream.KillSwitch
-import akka.util.Timeout
+import org.apache.pekko.actor.{Actor, ActorLogging, ActorRef, Status}
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.persistence.testkit.scaladsl.PersistenceTestKit
+import org.apache.pekko.stream.KillSwitch
+import org.apache.pekko.util.Timeout
 import uk.gov.homeoffice.drt.testsystem.RestartActor.{AddResetActors, StartTestSystem}
 import uk.gov.homeoffice.drt.testsystem.TestActors.ResetData
 

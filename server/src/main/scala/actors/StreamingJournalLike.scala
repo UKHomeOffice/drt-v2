@@ -1,8 +1,8 @@
 package actors
 
-import akka.persistence.jdbc.query.scaladsl.JdbcReadJournal
-import akka.persistence.query.scaladsl.{CurrentEventsByPersistenceIdQuery, EventsByPersistenceIdQuery, ReadJournal}
-import akka.persistence.testkit.query.scaladsl.PersistenceTestKitReadJournal
+import org.apache.pekko.persistence.jdbc.query.scaladsl.JdbcReadJournal
+import org.apache.pekko.persistence.query.scaladsl.{CurrentEventsByPersistenceIdQuery, EventsByPersistenceIdQuery, ReadJournal}
+import org.apache.pekko.persistence.testkit.query.scaladsl.PersistenceTestKitReadJournal
 import play.api.Configuration
 
 trait StreamingJournalLike {

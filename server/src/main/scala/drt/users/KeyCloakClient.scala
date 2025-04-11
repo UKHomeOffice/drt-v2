@@ -1,12 +1,12 @@
 package drt.users
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{Accept, Authorization, OAuth2BearerToken}
-import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.Materializer
-import akka.util.Timeout
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import org.apache.pekko.http.scaladsl.model._
+import org.apache.pekko.http.scaladsl.model.headers.{Accept, Authorization, OAuth2BearerToken}
+import org.apache.pekko.http.scaladsl.unmarshalling.Unmarshal
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.util.Timeout
 import drt.http.WithSendAndReceive
 import drt.shared.KeyCloakApi.{KeyCloakGroup, KeyCloakUser}
 import org.slf4j.{Logger, LoggerFactory}

@@ -1,11 +1,11 @@
 package services
 
 import actors.daily.{GetAverageAdjustment, OriginAndTerminal}
-import akka.actor.{ActorRef, PoisonPill}
-import akka.pattern.ask
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, PoisonPill}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.arrivals.{FeedArrival, ForecastArrival, LiveArrival}

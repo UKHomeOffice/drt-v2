@@ -2,9 +2,9 @@ package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.persistent.SortedActorRefSource
-import akka.Done
-import akka.actor.{Actor, Props}
-import akka.testkit.TestProbe
+import org.apache.pekko.Done
+import org.apache.pekko.actor.{Actor, Props}
+import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import services.TryCrunchWholePax
 import services.crunch.desklimits.flexed.FlexedTerminalDeskLimitsFromAvailableStaff

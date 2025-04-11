@@ -1,8 +1,8 @@
 package services.crunch
 
-import akka.actor.ActorRef
-import akka.stream.scaladsl.SourceQueueWithComplete
-import akka.testkit.TestProbe
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
+import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.{ArrivalsFeedResponse, ManifestsFeedResponse}
 import drt.shared.CrunchApi.ActualDeskStats
 

@@ -1,8 +1,8 @@
 package services.accuracy
 
-import akka.NotUsed
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import drt.shared.api.ForecastAccuracy
 import services.{AccuracyForDate, ErrorValues, ForecastAccuracyComparison}
 import uk.gov.homeoffice.drt.arrivals.Arrival

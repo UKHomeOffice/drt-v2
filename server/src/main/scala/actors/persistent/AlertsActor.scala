@@ -2,7 +2,7 @@ package actors.persistent
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.AlertMessageConversion
-import akka.persistence._
+import org.apache.pekko.persistence._
 import drt.shared.Alert
 import org.joda.time.DateTime
 import org.slf4j.{Logger, LoggerFactory}

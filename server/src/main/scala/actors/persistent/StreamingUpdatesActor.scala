@@ -2,12 +2,12 @@ package actors.persistent
 
 import actors.StreamingJournalLike
 import actors.daily.StreamingUpdatesLike.StopUpdates
-import akka.actor.{ActorRef, ActorSystem}
-import akka.pattern.StatusReply.Ack
-import akka.persistence.query.{EventEnvelope, PersistenceQuery}
-import akka.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
-import akka.stream.scaladsl.{Keep, Sink}
-import akka.stream.{KillSwitches, Materializer, UniqueKillSwitch}
+import org.apache.pekko.actor.{ActorRef, ActorSystem}
+import org.apache.pekko.pattern.StatusReply.Ack
+import org.apache.pekko.persistence.query.{EventEnvelope, PersistenceQuery}
+import org.apache.pekko.persistence.{PersistentActor, RecoveryCompleted, SnapshotOffer}
+import org.apache.pekko.stream.scaladsl.{Keep, Sink}
+import org.apache.pekko.stream.{KillSwitches, Materializer, UniqueKillSwitch}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import services.StreamSupervision

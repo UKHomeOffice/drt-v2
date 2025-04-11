@@ -1,8 +1,8 @@
 package services
 
-import akka.actor.Scheduler
-import akka.pattern.after
-import akka.stream.scaladsl.SourceQueueWithComplete
+import org.apache.pekko.actor.Scheduler
+import org.apache.pekko.pattern.after
+import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 import org.slf4j.{Logger, LoggerFactory}
 import OfferHandler.log
 

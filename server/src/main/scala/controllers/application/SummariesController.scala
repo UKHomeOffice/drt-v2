@@ -1,9 +1,9 @@
 package controllers.application
 
-import akka.NotUsed
-import akka.stream.scaladsl.Source
 import com.google.inject.Inject
-import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse, sourceToJsonResponse}
+import controllers.application.exports.CsvFileStreaming.{makeFileName, sourceToCsvResponse}
+import org.apache.pekko.NotUsed
+import org.apache.pekko.stream.scaladsl.Source
 import play.api.mvc._
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.crunchsystem.DrtSystemInterface
@@ -75,12 +75,7 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         val fileName = makeFileName("passengers", maybeTerminal.toSeq, SDate(start), SDate(end), airportConfig.portCode) + ".csv"
         val contentStream = streamForGranularity(maybeTerminal, request.getQueryString("granularity"))
 
-        val result = if (acceptHeader(request) == "text/csv")
-          sourceToCsvResponse(contentStream(start, end), fileName)
-        else
-          sourceToJsonResponse(contentStream(start, end)
-            .fold(Seq[String]())(_ :+ _)
-            .map(objects => s"[${objects.mkString(",")}]"))
+        val result = sourceToCsvResponse(contentStream(start, end), fileName)
 
         Try(result) match {
           case Success(value) => value
@@ -91,10 +86,6 @@ class SummariesController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
       case _ =>
         BadRequest("Invalid date format for start or end date")
     }
-
-  private def acceptHeader(request: Request[AnyContent]): String = {
-    request.headers.get("Accept").getOrElse("application/json")
-  }
 
   private def streamForGranularity(maybeTerminal: Option[Terminal],
                                    granularity: Option[String],

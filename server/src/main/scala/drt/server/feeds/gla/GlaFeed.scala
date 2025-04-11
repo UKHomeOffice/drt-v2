@@ -1,9 +1,9 @@
 package drt.server.feeds.gla
 
-import akka.actor.ActorSystem
-import akka.actor.typed.ActorRef
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.actor.typed.ActorRef
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import drt.server.feeds.common.ProdHttpClient
 import drt.server.feeds.{ArrivalsFeedResponse, AzinqFeed, Feed}
 

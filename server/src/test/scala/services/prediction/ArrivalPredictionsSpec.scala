@@ -1,7 +1,7 @@
 package services.prediction
 
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.util.Timeout
 import controllers.ArrivalGenerator
 import drt.server.feeds.ArrivalsFeedSuccess
 import drt.shared.PortState

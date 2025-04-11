@@ -1,9 +1,9 @@
 package scenarios
 
-import akka.NotUsed
-import akka.actor.{Actor, Props}
-import akka.pattern.StatusReply
-import akka.stream.scaladsl.Source
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{Actor, Props}
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared._
 import manifests.queues.SplitsCalculator

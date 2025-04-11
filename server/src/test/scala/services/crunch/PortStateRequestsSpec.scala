@@ -4,10 +4,10 @@ import actors.PartitionedPortStateActor._
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, StaffUpdatesSupervisor}
 import actors.routing.FlightsRouterActor
-import akka.NotUsed
-import akka.actor.{ActorRef, Props}
-import akka.pattern.ask
-import akka.stream.scaladsl.Source
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi._
 import drt.shared._

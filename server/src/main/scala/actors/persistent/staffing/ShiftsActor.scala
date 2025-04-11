@@ -8,10 +8,10 @@ import actors.persistent.staffing.ShiftsActor.{ReplaceAllShifts, UpdateShifts}
 import actors.persistent.staffing.ShiftsMessageParser.shiftMessagesToStaffAssignments
 import actors.routing.SequentialWritesActor
 import actors.{ExpiryActorLike, StreamingJournalLike}
-import akka.actor.{ActorRef, ActorSystem, Props, Scheduler}
-import akka.pattern.{StatusReply, ask}
-import akka.persistence._
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, Scheduler}
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.persistence._
+import org.apache.pekko.util.Timeout
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

@@ -1,9 +1,9 @@
 package services.arrivals
 
-import akka.actor.ActorRef
-import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
-import akka.stream._
-import akka.{Done, NotUsed}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.stream.scaladsl.{Flow, Keep, Sink, Source}
+import org.apache.pekko.stream._
+import org.apache.pekko.{Done, NotUsed}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 
 trait RunnableHistoricManifestsLike {

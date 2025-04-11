@@ -1,6 +1,6 @@
 package controllers.application.api.v1
 
-import akka.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import com.google.inject.Inject
 import controllers.application.AuthController
 import play.api.mvc._

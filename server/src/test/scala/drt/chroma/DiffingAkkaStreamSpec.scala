@@ -1,7 +1,7 @@
 package drt.chroma
 
-import akka.stream.scaladsl.Source
-import akka.stream.testkit.scaladsl.TestSink
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.stream.testkit.scaladsl.TestSink
 import drt.chroma.chromafetcher.ChromaFetcher.ChromaLiveFlight
 import drt.chroma.chromafetcher.ChromaParserProtocol._
 import services.crunch.CrunchTestLike

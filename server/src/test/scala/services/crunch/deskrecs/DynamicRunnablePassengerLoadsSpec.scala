@@ -1,10 +1,10 @@
 package services.crunch.deskrecs
 
 import actors.persistent.SortedActorRefSource
-import akka.Done
-import akka.actor.{ActorRef, Props}
-import akka.pattern.StatusReply
-import akka.testkit.TestProbe
+import org.apache.pekko.Done
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.testkit.TestProbe
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{MinutesContainer, PassengersMinute}
 import manifests.queues.SplitsCalculator

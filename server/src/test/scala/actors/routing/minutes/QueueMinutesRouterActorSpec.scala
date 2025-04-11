@@ -3,8 +3,8 @@ package actors.routing.minutes
 import actors.MinuteLookups
 import actors.PartitionedPortStateActor.GetStateForTerminalDateRange
 import actors.routing.minutes.MinutesActorLike.MinutesLookup
-import akka.actor.{ActorRef, Props}
-import akka.pattern.ask
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern.ask
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest

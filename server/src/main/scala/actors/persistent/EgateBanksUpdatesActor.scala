@@ -2,12 +2,12 @@ package actors.persistent
 
 import actors.persistent.EgateBanksUpdatesActor.{ReceivedSubscriberAck, SendToSubscriber}
 import actors.serializers.EgateBanksUpdatesMessageConversion
-import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.persistence._
-import akka.stream.QueueOfferResult.Enqueued
-import akka.stream.scaladsl.SourceQueueWithComplete
-import akka.util.Timeout
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.persistence._
+import org.apache.pekko.stream.QueueOfferResult.Enqueued
+import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
+import org.apache.pekko.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.StreamCompleted

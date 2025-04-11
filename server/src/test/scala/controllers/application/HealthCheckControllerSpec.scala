@@ -1,10 +1,11 @@
 package controllers.application
 
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
+import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.MinutesContainer
+import org.apache.pekko.actor
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
 import play.api.test.Helpers._
@@ -27,7 +28,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike, UtcDate}
 import scala.concurrent.ExecutionContextExecutor
 
 class HealthCheckControllerSpec extends PlaySpec {
-  implicit val system: ActorSystem = akka.actor.ActorSystem("test")
+  implicit val system: ActorSystem = ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
 
   val now: () => SDateLike = () => SDate("2024-06-26T12:00")

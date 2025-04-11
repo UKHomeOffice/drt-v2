@@ -4,9 +4,9 @@ import actors.DrtStaticParameters.time48HoursAgo
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.staffing.ShiftsActor.UpdateShifts
 import actors.persistent.staffing.{ShiftsReadActor, StaffAssignmentsActor}
-import akka.actor.{ActorRef, ActorSystem, PoisonPill}
-import akka.pattern.ask
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, PoisonPill}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import drt.shared.{ShiftAssignments, StaffAssignmentLike}
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import uk.gov.homeoffice.drt.time.MilliDate.MillisSinceEpoch

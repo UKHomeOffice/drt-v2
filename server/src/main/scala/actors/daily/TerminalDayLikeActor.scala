@@ -1,6 +1,6 @@
 package actors.daily
 
-import akka.persistence.SaveSnapshotSuccess
+import org.apache.pekko.persistence.SaveSnapshotSuccess
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer}
 import org.slf4j.{Logger, LoggerFactory}
 import scalapb.GeneratedMessage

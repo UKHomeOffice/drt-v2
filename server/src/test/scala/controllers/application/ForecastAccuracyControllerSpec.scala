@@ -1,12 +1,13 @@
 package controllers.application
 
-import akka.Done
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.stream.Materializer
-import akka.stream.scaladsl.Source
 import controllers.ArrivalGenerator
 import drt.shared.airportconfig.Test
 import module.DrtModule
+import org.apache.pekko.Done
+import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.Timeout
 import org.scalatest.BeforeAndAfter
 import org.scalatestplus.play.PlaySpec
 import play.api.mvc.{AnyContentAsEmpty, Headers}
@@ -29,10 +30,10 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 class ForecastAccuracyControllerSpec extends PlaySpec with BeforeAndAfter {
-  implicit val system: ActorSystem = akka.actor.ActorSystem("test-1")
+  implicit val system: ActorSystem = ActorSystem("test-1")
   implicit val mat: Materializer = Materializer(system)
   implicit val ec: ExecutionContext = system.dispatcher
-  implicit val timeout: akka.util.Timeout = 5.seconds
+  implicit val timeout: Timeout = 5.seconds
   private val aggDb = AggregateDbH2
 
   before {

@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.crunchsystem
 
-import akka.actor.ActorRef
+import org.apache.pekko.actor.ActorRef
 
 trait ActorsServiceLike {
   val requestAndTerminateActor: ActorRef
