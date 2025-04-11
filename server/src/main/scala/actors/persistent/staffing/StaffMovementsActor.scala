@@ -25,6 +25,8 @@ import scala.collection.immutable
 
 trait StaffMovementsActorLike {
 
+  protected val log: Logger = LoggerFactory.getLogger(getClass)
+
   def persistenceId = "staff-movements-store"
 
   val snapshotMessageToState: Any => StaffMovementsState = {
@@ -35,10 +37,16 @@ trait StaffMovementsActorLike {
   val eventToState: (StaffMovementsState, Any) => (StaffMovementsState, Iterable[TerminalUpdateRequest]) =
     (state, msg) => msg match {
       case msg: StaffMovementsMessage =>
-        val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
-        val newState = state.updated(state.staffMovements + movementsToAdd)
-        val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd))
-        (newState, subscriberEvents)
+        val uUid = msg.staffMovements.headOption.flatMap(_.uUID).getOrElse("")
+        if (state.staffMovements.movements.exists(_.uUID == uUid)) {
+          log.warn(s"Received duplicate staff movement message with UUID $uUid")
+          (state, Seq())
+        } else {
+          val movementsToAdd = staffMovementMessagesToStaffMovements(msg.staffMovements.toList).movements
+          val newState = state.updated(state.staffMovements + movementsToAdd)
+          val subscriberEvents = terminalUpdateRequests(StaffMovements(movementsToAdd))
+          (newState, subscriberEvents)
+        }
 
       case msg: RemoveStaffMovementMessage =>
         val uuidToRemove = msg.getUUID
@@ -88,7 +96,7 @@ object StaffMovementsActor extends StaffMovementsActorLike {
   def staffMovementMessagesToStaffMovements(messages: Seq[StaffMovementMessage]): StaffMovements =
     StaffMovements(messages.map(staffMovementMessageToStaffMovement))
 
-  private def staffMovementMessageToStaffMovement(sm: StaffMovementMessage): StaffMovement = StaffMovement(
+  def staffMovementMessageToStaffMovement(sm: StaffMovementMessage): StaffMovement = StaffMovement(
     terminal = Terminal(sm.terminalName.getOrElse("")),
     reason = sm.reason.getOrElse(""),
     time = sm.time.getOrElse(0L),
