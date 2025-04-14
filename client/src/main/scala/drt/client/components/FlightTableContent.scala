@@ -120,7 +120,7 @@ object FlightTableContent {
                   MuiTypography(sx = SxProps(Map("paddingRight" -> "10px")))(if (!props.userPreferences.hidePaxDataSourceDescription) "On" else "Off"),
                 )
               ),
-              <.div(<.table(
+              <.div(^.className := "arrival-container", <.table(
                 ^.className := "arrivals-table table-striped",
                 tableHead(props, props.queueOrder, redListPaxExist, props.shortLabel, showFlagger, props.userPreferences.hidePaxDataSourceDescription),
                 <.tbody(
