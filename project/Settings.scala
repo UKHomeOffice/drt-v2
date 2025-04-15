@@ -79,6 +79,7 @@ object Settings {
     val logback = "1.5.17"
     val logbackContrib = "0.1.5"
     val scalajsScripts = "1.3.0"
+    val kubernetesClient = "7.1.0"
   }
 
   import versions.*
@@ -153,6 +154,8 @@ object Settings {
     "com.typesafe.akka" %% "akka-http-spray-json" % akkaHttp,
     "com.typesafe.akka" %% "akka-http-xml" % akkaHttp,
     "com.typesafe.akka" %% "akka-stream" % akka,
+
+    "io.fabric8" % "kubernetes-client" % kubernetesClient,
 
     "org.playframework.twirl" %% "twirl-api" % twirlApi,
 

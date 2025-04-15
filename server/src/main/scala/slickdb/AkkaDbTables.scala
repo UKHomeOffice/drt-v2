@@ -3,6 +3,7 @@ package slickdb
 
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
+import slick.sql.SqlStreamingAction
 
 import scala.concurrent.Future
 
@@ -53,4 +54,22 @@ trait AkkaDbTables {
   lazy val snapshotTable = new TableQuery(tag => new SnapshotTable(tag))
 
   lazy val schema: profile.SchemaDescription = journalTable.schema ++ snapshotTable.schema
+
+  def tryAcquireAdvisoryLock(lockId: Long): SimpleDBIO[Boolean] = {
+    SimpleDBIO[Boolean] { ctx =>
+      val stmt = ctx.connection.prepareStatement("SELECT pg_try_advisory_lock(?)")
+      stmt.setLong(1, lockId)
+      val rs = stmt.executeQuery()
+      if (rs.next()) rs.getBoolean(1) else false
+    }
+  }
+
+  def releaseAdvisoryLock(lockId: Long): SimpleDBIO[Boolean] = {
+    SimpleDBIO[Boolean] { ctx =>
+      val stmt = ctx.connection.prepareStatement("SELECT pg_advisory_unlock(?)")
+      stmt.setLong(1, lockId)
+      val rs = stmt.executeQuery()
+      if (rs.next()) rs.getBoolean(1) else false
+    }
+  }
 }

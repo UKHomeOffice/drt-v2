@@ -33,5 +33,3 @@ object StaffMovement {
 
   implicit val rw: ReadWriter[StaffMovement] = macroRW
 }
-
-case class StaffMovementList(movements: Seq[StaffMovement])

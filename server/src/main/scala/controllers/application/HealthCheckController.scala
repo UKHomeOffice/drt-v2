@@ -20,25 +20,39 @@ class HealthCheckController @Inject()(cc: ControllerComponents, ctrl: DrtSystemI
     MinutesProvider.allTerminals(ctrl.actorService.queuesRouterActor)
   )
 
-  def receivedLiveApiData(from: String, to: String, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
+  def ready(): Action[AnyContent] = Action {
+    if (ctrl.isReady)
+      Ok("Ready")
+    else
+      ServiceUnavailable("Not ready")
+  }
+
+  def releaseLock(): Action[AnyContent] = Action.async {
+    ctrl.releaseLock().map({
+      case true => Ok("Lock released")
+      case false => ServiceUnavailable("Failed to release lock")
+    })
+  }
+
+  def receivedLiveApiData(from: String, to: String, minimumToConsider: Int): Action[AnyContent] = Action.async {
     val start = SDate(from)
     val end = SDate(to)
     apiHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
-  def receivedLandingTimes(from: String, to: String, minimumToConsider: Int): Action[AnyContent] = Action.async { _ =>
+  def receivedLandingTimes(from: String, to: String, minimumToConsider: Int): Action[AnyContent] = Action.async {
     val start = SDate(from)
     val end = SDate(to)
     landingTimesHealthCheck.healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
-  def receivedUpdates(from: String, to: String, minimumToConsider: Int, lastUpdatedMinutes: Int): Action[AnyContent] = Action.async { _ =>
+  def receivedUpdates(from: String, to: String, minimumToConsider: Int, lastUpdatedMinutes: Int): Action[AnyContent] = Action.async {
     val start = SDate(from)
     val end = SDate(to)
     arrivalUpdatesHealthCheck(lastUpdatedMinutes).healthy(start, end, minimumToConsider).map(p => Ok(p.toJson.compactPrint))
   }
 
-  def deskUpdates(): Action[AnyContent] = Action.async { _ =>
+  def deskUpdates(): Action[AnyContent] = Action.async {
     deskUpdatesHealthCheck.healthy().map(p => Ok(p.toJson.compactPrint))
   }
 }

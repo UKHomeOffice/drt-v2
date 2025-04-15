@@ -2,20 +2,26 @@ package uk.gov.homeoffice.drt.crunchsystem
 
 import actors._
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpMethods, HttpRequest}
 import akka.stream.Materializer
 import akka.util.Timeout
 import com.google.inject.Inject
+import io.fabric8.kubernetes.api.model.Pod
+import io.fabric8.kubernetes.client.KubernetesClientBuilder
 import manifests.{ManifestLookup, ManifestLookupLike}
 import slickdb._
 import uk.gov.homeoffice.drt.db._
-import uk.gov.homeoffice.drt.db.dao.{ABFeatureDao, IABFeatureDao, IUserFeedbackDao, StaffShiftsDao, UserFeedbackDao}
+import uk.gov.homeoffice.drt.db.dao._
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing.{ShiftsService, ShiftsServiceImpl}
 import uk.gov.homeoffice.drt.service.{ActorsServiceService, FeedService, ProdFeedService}
 import uk.gov.homeoffice.drt.time.{MilliTimes, SDateLike}
 
 import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.DurationInt
+import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 @Singleton
 case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtParameters, now: () => SDateLike)
@@ -65,6 +71,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
 
   override val shiftsService: ShiftsService = ShiftsServiceImpl(StaffShiftsDao(AggregateDb))
 
+  override var isReady = false
 
   lazy override val actorService: ActorsServiceLike = ActorsServiceService(
     journalType = StreamingJournal.forConfig(config),
@@ -89,7 +96,6 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     params.legacyFeedArrivalsBeforeDate,
   )
 
-
   lazy val persistentActors: PersistentStateActors = ProdPersistentStateActors(
     system,
     now,
@@ -97,6 +103,59 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     airportConfig.terminals,
   )
 
-  override def run(): Unit = applicationService.run()
+  override def run(): Unit = {
+    def tryLock(): Unit =
+      akkaDb
+        .run(akkaDb.tryAcquireAdvisoryLock(123456))
+        .map {
+          case true =>
+            log.info("Acquired lock on database")
+            isReady = true
+            applicationService.run()
 
+          case false =>
+            log.info("Failed to acquire lock on database. Requesting lock release & retrying...")
+
+            val client = new KubernetesClientBuilder().build()
+            val namespace = client.getNamespace
+            val myPodName = sys.env("MY_POD_NAME")
+
+            val pods = client.pods()
+              .inNamespace(namespace)
+              .withLabel("name", airportConfig.portCode.iata.toLowerCase)
+              .list()
+              .getItems
+              .asScala
+              .filterNot(_.getMetadata.getName == myPodName)
+
+            Future.sequence(pods.map(requestLockRelease))
+              .onComplete { _ =>
+                log.info("Requested lock release from other pods")
+                system.scheduler.scheduleOnce(500.millis)(tryLock())
+              }
+        }
+
+    tryLock()
+  }
+
+  private def requestLockRelease(pod: Pod) = {
+    val url = s"http://${pod.getStatus.getPodIP}:8080/release-lock"
+    log.info(s"Requesting lock release from pod ${pod.getMetadata.getName} at $url")
+
+    Http().singleRequest(HttpRequest(method = HttpMethods.POST, uri = url))
+  }
+
+  override def releaseLock(): Future[Boolean] = {
+    akkaDb
+      .run(akkaDb.releaseAdvisoryLock(123456))
+      .map {
+        case true =>
+          log.info("Released lock on database")
+          isReady = false
+          true
+        case false =>
+          log.info("Failed to release lock on database")
+          false
+      }
+  }
 }

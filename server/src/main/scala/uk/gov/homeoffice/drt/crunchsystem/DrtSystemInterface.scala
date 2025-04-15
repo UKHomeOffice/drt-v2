@@ -107,6 +107,10 @@ trait DrtSystemInterface extends UserRoleProviderLike
 
   val feedService: FeedService
 
+  var isReady: Boolean
+
+  def releaseLock(): Future[Boolean]
+
   lazy val queueAdjustments: QueueAdjustments =
     if (params.adjustEGateUseByUnder12s) ChildEGateAdjustments(airportConfig.assumedAdultsPerChild) else AdjustmentsNoop
   lazy val splitsCalculator: SplitsCalculator = SplitsCalculator(airportConfig, queueAdjustments)
