@@ -28,14 +28,8 @@ html, body {
 #root {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  overflow: auto;
 }
 
-#layout {
-  min-height: 100vh;
-  overflow: auto;
-}
 
 .main-content {
   flex: 1;
@@ -2340,15 +2334,10 @@ body {
   }
 }
 
-.desks-and-queues-container {
-  height: 200vh;
-  overflow: auto;
-}
-
 .sticky-top {
   position: sticky;
   top: 0;
-  z-index: 101;
+  z-index: 999;
 }
 
 .solid-background {
