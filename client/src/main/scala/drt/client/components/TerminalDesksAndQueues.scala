@@ -242,7 +242,7 @@ object TerminalDesksAndQueues {
                 QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), state.deskType))
               }.toTagMod
             } else {
-              <.div(
+              <.div(^.className := "desks-and-queues-container",
                 <.table(
                   ^.className := s"user-desk-recs table-striped",
                   <.thead(

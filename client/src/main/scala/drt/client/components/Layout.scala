@@ -63,7 +63,7 @@ object Layout {
             case _ => ("Help us improve the DRT experience", 4, 2, 5)
           }
           ThemeProvider(DrtReactTheme)(
-            <.div(^.id := "root",
+            <.div(^.id := "layout",
               <.div(^.className := "main-content",
                 if (showFeedbackBanner) {
                   MuiPaper(sx = SxProps(Map("elevation" -> "4", "padding" -> "16px", "margin" -> "20px", "backgroundColor" -> "#0E2560")))(
