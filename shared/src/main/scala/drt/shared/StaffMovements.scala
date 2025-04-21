@@ -46,10 +46,10 @@ case class StaffMovements(movements: Seq[StaffMovement]) extends HasExpireables[
     val unexpiredPairsOfMovements = movements
       .groupBy(_.uUID)
       .values
-      .filter(pair => {
+      .filter { pair =>
         val neitherHaveExpired = pair.exists(!_.isExpired(expireBeforeMillis))
         neitherHaveExpired
-      })
+      }
       .flatten.toSeq
     copy(movements = unexpiredPairsOfMovements)
   }

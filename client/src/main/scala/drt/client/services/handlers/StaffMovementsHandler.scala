@@ -16,44 +16,46 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
-                               modelRW: ModelRW[M, Pot[StaffMovements]]) extends LoggingActionHandler(modelRW) {
+                               modelRW: ModelRW[M, (Pot[StaffMovements], Set[String])]) extends LoggingActionHandler(modelRW) {
   def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetStaffMovements(viewMode))).after(2 seconds)
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovements(staffMovements) =>
       value match {
-        case Ready(sms) =>
+        case (Ready(sms), _) =>
           val updatedStaffMovements = StaffMovements((sms.movements ++ staffMovements).sortBy(_.time))
           effectOnly(Effect(DrtApi.post("staff-movements", write(staffMovements))
             .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
-            case _ =>
-              RetryActionAfter(AddStaffMovements(staffMovements), PollDelay.recoveryDelay)
-          }))
+              case _ =>
+                RetryActionAfter(AddStaffMovements(staffMovements), PollDelay.recoveryDelay)
+            }))
 
         case _ => noChange
       }
 
     case RemoveStaffMovements(movementsPairUuid) =>
       value match {
-        case Ready(sms) =>
+        case (Ready(sms), removed) =>
           val updatedStaffMovements = StaffMovements(sms.movements.filterNot(_.uUID == movementsPairUuid).sortBy(_.time))
-          effectOnly(Effect(DrtApi.delete(s"staff-movements/$movementsPairUuid")
-            .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
-            case _ =>
-              RetryActionAfter(RemoveStaffMovements(movementsPairUuid), PollDelay.recoveryDelay)
-          }))
+          updated(
+            (Ready(updatedStaffMovements), removed + movementsPairUuid),
+            Effect(DrtApi.delete(s"staff-movements/$movementsPairUuid")
+              .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
+                case _ =>
+                  RetryActionAfter(RemoveStaffMovements(movementsPairUuid), PollDelay.recoveryDelay)
+              }))
 
         case _ => noChange
       }
 
     case SetStaffMovements(sms) =>
-      updated(Ready(sms))
+      updated((Ready(sms), value._2))
 
     case SetStaffMovementsAndPollIfLiveView(viewMode, staffMovements) =>
       if (viewMode.isHistoric(SDate.now()))
-        updated(Ready(staffMovements))
+        updated((Ready(staffMovements), value._2))
       else
-        updated(Ready(staffMovements), scheduledRequest(viewMode))
+        updated((Ready(staffMovements), value._2), scheduledRequest(viewMode))
 
     case GetStaffMovements(viewMode) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring old view response")

@@ -7,7 +7,7 @@ import drt.client.actions.Actions.RequestDateRecrunch
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.{SPACircuit, ViewMode}
+import drt.client.services.{MovementMinute, SPACircuit, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
@@ -55,6 +55,7 @@ object TerminalDesksAndQueues {
                    windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
+                   movementMinutes: Map[TM, Seq[MovementMinute]],
                    terminal: Terminal,
                   ) extends UseValueEq
 
@@ -255,7 +256,7 @@ object TerminalDesksAndQueues {
                       val rowProps = TerminalDesksAndQueuesRow.Props(
                         minuteMillis = millis,
                         queueMinutes = queues.map(q => windowCrunchMinutes(millis)(q)),
-                        staffMinute = windowStaffMinutes.getOrElse(millis, StaffMinute.empty),
+                        staffMinute = staffMinutesWithLocalUpdates(props.movementMinutes, windowStaffMinutes.getOrElse(millis, StaffMinute.empty)),
                         maxPaxInQueues = maxPaxInQueues,
                         airportConfig = props.airportConfig,
                         slaConfigs = props.slaConfigs,
@@ -279,6 +280,11 @@ object TerminalDesksAndQueues {
       }
     }
   }
+
+  def staffMinutesWithLocalUpdates(movementMinutes: Map[TM, Seq[MovementMinute]], staffMinute: StaffMinute): StaffMinute =
+    movementMinutes.getOrElse(TM(staffMinute), Seq.empty[MovementMinute])
+      .filter(_.createdAt > staffMinute.lastUpdated.getOrElse(0L))
+      .foldLeft(staffMinute)((sm, movementMinute) => sm.copy(movements = sm.movements + movementMinute.staff))
 
   private def adminRecrunchButton(requestForecastRecrunch: () => Callback): VdomTagOf[Div] = {
     <.div(MuiButton(

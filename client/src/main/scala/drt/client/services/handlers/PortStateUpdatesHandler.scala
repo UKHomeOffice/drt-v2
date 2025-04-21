@@ -27,7 +27,7 @@ object PortStateUpdatesHandler {
   def splitsToManifestKeys(incomingSplits: Iterable[SplitsForArrivals],
                            flights: Map[UniqueArrival, ApiFlightWithSplits],
                            existingManifestKeys: Set[ManifestKey]
-                                 ): Set[ManifestKey] =
+                          ): Set[ManifestKey] =
     incomingSplits
       .flatMap { splitsForArrivals =>
         splitsForArrivals.splits.filter { case (_, splits) =>
@@ -49,6 +49,7 @@ object PortStateUpdatesHandler {
 class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
                                  portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch)],
                                  manifestSummariesModel: ModelR[M, Map[ManifestKey, FlightManifestSummary]],
+                                 movementMinutes: ModelR[M, Map[TM, Seq[MovementMinute]]],
                                  paxFeedSourceOrder: ModelR[M, List[FeedSource]],
                                 ) extends LoggingActionHandler(portStateModel) {
   private val liveRequestFrequency: FiniteDuration = 2 seconds

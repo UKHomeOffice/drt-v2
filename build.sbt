@@ -6,7 +6,6 @@ import sbt.Credentials
 import sbt.Keys.credentials
 import sbtcrossproject.CrossPlugin.autoImport.{CrossType, crossProject}
 
-import java.net.URL
 
 scalaVersion := Settings.versions.scala
 

@@ -18,7 +18,7 @@ import scala.scalajs.js.{Dictionary, undefined}
 
 object ChartJSComponent {
 
-  @JSImport("chart.js/auto", JSImport.Default)
+  @JSImport("chart.js/auto/auto.js", JSImport.Default)
   @js.native
   object Chart extends js.Object {
     def register(thing: js.Object*): js.Object = js.native

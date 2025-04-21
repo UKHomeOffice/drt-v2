@@ -46,7 +46,7 @@ case class StaffAssignmentsServiceImpl(liveStaffShiftsReadActor: ActorRef,
   private def liveStaffAssignmentsForDate(date: LocalDate): Future[ShiftAssignments] = {
     val start = SDate(date).millisSinceEpoch
     val end = SDate(date).addDays(1).addMinutes(-1).millisSinceEpoch
-    shiftsStaffSequentialWritesActor.ask(GetStateForDateRange(start, end))
+    liveStaffShiftsReadActor.ask(GetStateForDateRange(start, end))
       .map { case sa: ShiftAssignments => sa }
   }
 

@@ -9,8 +9,8 @@ import drt.client.components.TerminalDesksAndQueues.Ideal
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
-import drt.client.services.{SPACircuit, _}
 import drt.client.services.handlers.GetShifts
+import drt.client.services._
 import drt.client.spa.TerminalPageMode
 import drt.client.spa.TerminalPageModes._
 import drt.shared._
@@ -25,7 +25,7 @@ import uk.gov.homeoffice.drt.arrivals.ApiFlightWithSplits
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.StaffEdit
 import uk.gov.homeoffice.drt.ports.config.slas.SlaConfigs
-import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode, Queues}
+import uk.gov.homeoffice.drt.ports.{AirportConfig, AirportInfo, FeedSource, PortCode}
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
@@ -44,6 +44,7 @@ object TerminalComponent {
                                    potStaffShifts: Pot[ShiftAssignments],
                                    potFixedPoints: Pot[FixedPointAssignments],
                                    potStaffMovements: Pot[StaffMovements],
+                                   removedStaffMovements: Set[String],
                                    airportConfig: Pot[AirportConfig],
                                    slaConfigs: Pot[SlaConfigs],
                                    loadingState: LoadingState,
@@ -57,6 +58,7 @@ object TerminalComponent {
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
                                    shiftsPot: Pot[Seq[Shift]],
+                                   movementMinutes: Map[TM, Seq[MovementMinute]],
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -83,6 +85,7 @@ object TerminalComponent {
         potStaffShifts = model.dayOfStaffAssignments,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
+        removedStaffMovements = model.removedStaffMovements,
         airportConfig = model.airportConfig,
         slaConfigs = model.slaConfigs,
         loadingState = model.loadingState,
@@ -95,7 +98,8 @@ object TerminalComponent {
         timeMachineEnabled = model.maybeTimeMachineDate.isDefined,
         walkTimes = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
-        shiftsPot = model.shifts
+        shiftsPot = model.shifts,
+        movementMinutes = model.movementMinutes,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -178,6 +182,7 @@ object TerminalComponent {
                           potShifts = terminalModel.potShifts,
                           potFixedPoints = terminalModel.potFixedPoints,
                           potStaffMovements = terminalModel.potStaffMovements,
+                          removedStaffMovements = terminalModel.removedStaffMovements,
                           airportConfig = airportConfig,
                           slaConfigs = slas,
                           terminalPageTab = props.terminalPageTab,
@@ -201,6 +206,7 @@ object TerminalComponent {
                           windowCrunchSummaries = windowCrunchSummaries,
                           dayCrunchSummaries = dayCrunchSummaries,
                           windowStaffSummaries = windowStaffSummaries,
+                          movementMinutes = terminalModel.movementMinutes,
                           defaultDesksAndQueuesViewType = defaultDesksAndQueuesViewType,
                           userPreferences = userPreferences
                         ))

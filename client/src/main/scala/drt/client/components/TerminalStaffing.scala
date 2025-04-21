@@ -37,6 +37,7 @@ object TerminalStaffing {
                     potShifts: Pot[ShiftAssignments],
                     potFixedPoints: Pot[FixedPointAssignments],
                     potStaffMovements: Pot[StaffMovements],
+                    removedStaffMovements: Set[String],
                     airportConfig: AirportConfig,
                     loggedInUser: LoggedInUser,
                     viewMode: ViewMode
@@ -47,7 +48,9 @@ object TerminalStaffing {
       props.potShifts.render { shifts =>
         props.potFixedPoints.render { fixedPoints =>
           props.potStaffMovements.render { movements =>
-            val movementsForTheDay = movements.forDay(props.viewMode.localDate)(ld => SDate(ld))
+            val movementsForTheDay = movements
+              .forDay(props.viewMode.localDate)(ld => SDate(ld))
+              .filter(sm => !props.removedStaffMovements.contains(sm.uUID))
             <.div(
               <.div(^.className := "container",
                 <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminal)), props.airportConfig, props.terminal, props.loggedInUser))),
@@ -214,10 +217,6 @@ object TerminalStaffing {
     .build
 
   private object MovementDisplay {
-    def toCsv(movement: StaffMovement): String = {
-      s"${movement.terminal}, ${movement.reason}, ${displayDate(movement.time)}, ${displayTime(movement.time)}, ${movement.delta} staff"
-    }
-
     def displayPair(start: StaffMovement, end: StaffMovement): String = {
       val startDate = displayDate(start.time)
       val endDate = displayDate(end.time)

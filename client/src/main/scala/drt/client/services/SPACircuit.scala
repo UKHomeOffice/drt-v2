@@ -169,6 +169,8 @@ case class LoadingState(isLoading: Boolean = false)
 
 case class ClientServerVersions(client: String, server: String)
 
+case class MovementMinute(terminal: Terminal, minute: MillisSinceEpoch, staff: Int, createdAt: MillisSinceEpoch)
+
 case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      latestFlightUpdateMillis: MillisSinceEpoch = 0L,
                      latestQueueUpdateMillis: MillisSinceEpoch = 0L,
@@ -223,6 +225,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      userPreferences: Pot[UserPreferences] = Empty,
                      shifts: Pot[Seq[Shift]] = Empty,
                      flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
+                     movementMinutes: Map[TM, Seq[MovementMinute]] = Map(),
+                     removedStaffMovements: Set[String] = Set(),
                     )
 
 object PollDelay {
@@ -253,6 +257,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
           (m, v) => m.copy(portStatePot = v._1, latestFlightUpdateMillis = v._2, latestQueueUpdateMillis = v._3, latestStaffUpdateMillis = v._4)
         ),
         zoom(_.flightManifestSummaries),
+        zoom(_.movementMinutes),
         zoom(_.paxFeedSourceOrder),
       ),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
@@ -270,7 +275,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new StaffAssignmentsHandler(currentViewMode, zoomRW(_.dayOfStaffAssignments)((m, v) => m.copy(dayOfStaffAssignments = v))),
       new AllStaffAssignmentsHandler(zoomRW(_.allStaffAssignments)((m, v) => m.copy(allStaffAssignments = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
-      new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
+      new StaffMovementsHandler(currentViewMode, zoomRW(m => (m.staffMovements, m.removedStaffMovements))((m, v) => m.copy(staffMovements = v._1, removedStaffMovements = v._2))),
       new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3))),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
@@ -306,6 +311,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UserPreferencesHandler(zoomRW(_.userPreferences)((m, v) => m.copy(userPreferences = v))),
       new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
       new ShiftsHandler(zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
+      new MovementMinutesHandler(zoomRW(_.movementMinutes)((m, v) => m.copy(movementMinutes = v))),
     )
     composedHandlers
   }

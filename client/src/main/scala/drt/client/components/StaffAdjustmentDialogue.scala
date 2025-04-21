@@ -6,6 +6,7 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
+import drt.client.services.handlers.AddMovementMinutes
 import drt.shared.StaffMovements
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^
@@ -125,10 +126,11 @@ object StaffAdjustmentDialogue {
           StaffAssignmentHelper
             .tryStaffAssignment(state.fullReason, state.terminal.toString, state.date, startTime,
               state.lengthOfTimeMinutes, numberOfStaff, createdBy = Option(state.loggedInUser.email)) match {
-            case Success(movement) =>
-              val movementsToAdd = for (movement <- StaffMovements.assignmentsToMovements(Seq(movement))) yield movement
+            case Success(staffAssignment) =>
+              val movementsToAdd = for (movement <- StaffMovements.assignmentsToMovements(Seq(staffAssignment))) yield movement
               SPACircuit.dispatch(AddStaffMovements(movementsToAdd))
-              GoogleEventTracker.sendEvent(state.terminal.toString, "Add StaffMovement", movement.copy(createdBy = None).toString)
+              SPACircuit.dispatch(AddMovementMinutes(state.terminal, staffAssignment.start, staffAssignment.end, staffAssignment.numberOfStaff))
+              GoogleEventTracker.sendEvent(state.terminal.toString, "Add StaffMovement", staffAssignment.copy(createdBy = None).toString)
               killPopover()
             case _ =>
           }
