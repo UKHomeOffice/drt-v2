@@ -67,7 +67,7 @@ object Settings {
     val uPickle = "3.3.1"
     val censorinus = "2.1.16"
     val janinoVersion = "3.1.12"
-    val scalaJsReactMaterialUi = "0.2.0-rc2"
+    val scalaJsReactMaterialUi = "0.1.18"
     val scalaTestVersion = "3.2.19"
     val twirlApi = "2.0.2"
     val mockito = "5.16.0"
