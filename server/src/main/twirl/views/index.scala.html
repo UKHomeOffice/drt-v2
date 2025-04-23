@@ -1,3 +1,4 @@
+@import scala.util.Try
 @(title: String, port: String, googleTrackingCode: String, userId: String)(implicit request: RequestHeader, config: play.api.Configuration, env: play.api.Environment)
 @import views.html.tags._
 @import views.html.helper.CSPNonce
@@ -30,8 +31,6 @@
   }
 
   <script type="module" src="@routes.Assets.versioned("main.js")"></script>
-@*  <script type="module" crossorigin src="/assets/main.js"></script>*@
-@*  <script type="module" crossorigin src="/assets/vendors-node_modules_flickity_js_index_js-library.js"></script>*@
 </head>
 
 <body>
@@ -39,7 +38,7 @@
   <input type="hidden" name="port-code" id="port-code" value="@{port}"/>
   <input type="hidden" name="ga-code" id="ga-code" value="@{googleTrackingCode}"/>
   <input type="hidden" name="user-id" id="user-id" value="@{userId}"/>
-  <input type="hidden" name="csrfToken" id="csrfToken" value="@helper.CSRF.getToken.value"/>
+  <input type="hidden" name="csrfToken" id="csrfToken" value="@{Try(helper.CSRF.getToken.value).getOrElse("")}"/>
 </body>
 <!-- version: @BuildInfo.version -->
 </html>
