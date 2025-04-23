@@ -14,7 +14,6 @@ import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core._
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -62,7 +61,12 @@ object MonthlyStaffing {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
-  implicit val stateReuse: Reusability[State] = Reusability.by((_: State).shifts.hashCode)
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) =>
+      a.showEditStaffForm == b.showEditStaffForm &&
+      a.showStaffSuccess == b.showStaffSuccess &&
+      a.addShiftForm == b.addShiftForm &&
+      a.shifts == b.shifts
+  )
 
   class Backend(scope: BackendScope[Props, State]) {
     def render(props: Props, state: State): VdomTagOf[Div] = {
@@ -116,7 +120,6 @@ object MonthlyStaffing {
                 MuiTypography()("Show shifts"),
                 MuiFormControl()(
                   MuiSwitch(
-//                    VdomAttr("data-cy").set("shift-staff-form"),
                     defaultChecked = props.userPreferences.showStaffingShiftView,
                     color = Color.primary,
                     inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
