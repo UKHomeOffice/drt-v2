@@ -1,11 +1,11 @@
 package services.crunch.deskrecs
 
 import actors.PartitionedPortStateActor.{GetFlightsForTerminalDateRange, GetStateForTerminalDateRange}
-import akka.NotUsed
-import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.stream.scaladsl.Source
-import akka.util.Timeout
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.{MillisSinceEpoch, MinutesContainer, PassengersMinute, StaffMinute}
 import drt.shared.TM
 import manifests.ManifestLookupLike

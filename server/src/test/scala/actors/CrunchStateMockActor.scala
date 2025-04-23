@@ -1,8 +1,8 @@
 package actors
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
-import akka.actor.Actor
-import akka.pattern.StatusReply
+import org.apache.pekko.actor.Actor
+import org.apache.pekko.pattern.StatusReply
 import drt.shared.PortState
 
 class CrunchStateMockActor(initialPortState: Option[PortState]) extends Actor {

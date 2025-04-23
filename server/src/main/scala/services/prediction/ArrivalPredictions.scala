@@ -1,7 +1,7 @@
 package services.prediction
 
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.slf4j.LoggerFactory
 import ArrivalPredictions.arrivalsByKey
 import uk.gov.homeoffice.drt.actor.PredictionModelActor.{Models, WithId}

@@ -3,9 +3,9 @@ package actors
 
 import actors.persistent.staffing.StaffMovementsActor.{AddStaffMovements, RemoveStaffMovements}
 import actors.persistent.staffing._
-import akka.actor.{PoisonPill, Props}
-import akka.pattern.StatusReply
-import akka.testkit.{ImplicitSender, TestProbe}
+import org.apache.pekko.actor.{PoisonPill, Props}
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.testkit.{ImplicitSender, TestProbe}
 import drt.shared.{StaffMovement, StaffMovements}
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}

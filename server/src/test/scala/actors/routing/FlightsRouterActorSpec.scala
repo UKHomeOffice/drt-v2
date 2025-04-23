@@ -5,11 +5,11 @@ import actors.PartitionedPortStateActor.{GetFlights, GetFlightsForTerminalDateRa
 import actors.persistent.nebo.NeboArrivalActor
 import actors.routing.FlightsRouterActor.runAndCombine
 import actors.routing.minutes.MockFlightsLookup
-import akka.NotUsed
-import akka.actor.{ActorRef, Props}
-import akka.pattern.ask
-import akka.stream.scaladsl.{Sink, Source}
-import akka.testkit.TestProbe
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.testkit.TestProbe
 import controllers.ArrivalGenerator
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch

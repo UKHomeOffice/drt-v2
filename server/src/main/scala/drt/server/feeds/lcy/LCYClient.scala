@@ -1,11 +1,11 @@
 package drt.server.feeds.lcy
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers.{BasicHttpCredentials, ModeledCustomHeader, ModeledCustomHeaderCompanion}
-import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import akka.stream.Materializer
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.http.scaladsl.marshallers.xml.ScalaXmlSupport
+import org.apache.pekko.http.scaladsl.model._
+import org.apache.pekko.http.scaladsl.model.headers.{BasicHttpCredentials, ModeledCustomHeader, ModeledCustomHeaderCompanion}
+import org.apache.pekko.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
+import org.apache.pekko.stream.Materializer
 import drt.server.feeds.common.HttpClient
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import org.slf4j.{Logger, LoggerFactory}

@@ -1,7 +1,7 @@
 package actors.daily
 
-import akka.actor.Props
-import akka.pattern.ask
+import org.apache.pekko.actor.Props
+import org.apache.pekko.pattern.ask
 import drt.shared.CrunchApi.MinutesContainer
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.model.CrunchMinute

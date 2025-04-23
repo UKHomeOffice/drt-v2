@@ -1,6 +1,6 @@
 package services.metrics
 
-import akka.stream.{Inlet, Outlet}
+import org.apache.pekko.stream.{Inlet, Outlet}
 import com.typesafe.config.ConfigFactory
 import drt.shared.CrunchApi.MillisSinceEpoch
 import github.gphat.censorinus.StatsDClient

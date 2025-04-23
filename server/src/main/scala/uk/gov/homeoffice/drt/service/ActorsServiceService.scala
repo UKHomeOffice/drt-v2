@@ -5,8 +5,8 @@ import actors.PartitionedPortStateActor.{flightUpdatesProps, queueUpdatesProps, 
 import actors._
 import actors.daily.{FlightUpdatesSupervisor, QueueUpdatesSupervisor, RequestAndTerminateActor, StaffUpdatesSupervisor}
 import actors.persistent.staffing._
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.util.Timeout
 import uk.gov.homeoffice.drt.crunchsystem.ActorsServiceLike
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.time.SDateLike

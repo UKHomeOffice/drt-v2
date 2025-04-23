@@ -2,9 +2,9 @@ package actors
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.persistent.{AlertsActor, DeleteAlerts}
-import akka.actor.{ActorRef, Props}
-import akka.pattern._
-import akka.testkit.TestKit
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern._
+import org.apache.pekko.testkit.TestKit
 import drt.shared.Alert
 import org.joda.time.DateTime
 import uk.gov.homeoffice.drt.time.SDate

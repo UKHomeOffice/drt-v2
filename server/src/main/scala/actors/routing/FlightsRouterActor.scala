@@ -3,12 +3,12 @@ package actors.routing
 import actors.PartitionedPortStateActor._
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
 import actors.routing.minutes.MinutesActorLike.{FlightsLookup, FlightsUpdate}
-import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
-import akka.util.Timeout
-import akka.{Done, NotUsed}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.util.Timeout
+import org.apache.pekko.{Done, NotUsed}
 import controllers.model.RedListCounts
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightsApi._

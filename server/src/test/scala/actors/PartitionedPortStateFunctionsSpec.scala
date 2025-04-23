@@ -2,9 +2,9 @@ package actors
 
 import actors.PartitionedPortStateActor._
 import actors.routing.FlightsRouterActor
-import akka.actor.{Actor, ActorRef, Props}
-import akka.stream.scaladsl.Source
-import akka.testkit.{ImplicitSender, TestProbe}
+import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.stream.scaladsl.Source
+import org.apache.pekko.testkit.{ImplicitSender, TestProbe}
 import controllers.ArrivalGenerator
 import drt.shared.CrunchApi.{MinutesContainer, PortStateUpdates, StaffMinute}
 import drt.shared.{FlightUpdatesAndRemovals, PortState, TM}

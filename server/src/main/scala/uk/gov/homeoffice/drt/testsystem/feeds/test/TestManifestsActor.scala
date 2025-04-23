@@ -1,8 +1,8 @@
 package uk.gov.homeoffice.drt.testsystem.feeds.test
 
-import akka.actor.{Actor, ActorLogging, Scheduler}
-import akka.pattern.StatusReply
-import akka.stream.scaladsl.SourceQueueWithComplete
+import org.apache.pekko.actor.{Actor, ActorLogging, Scheduler}
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import services.OfferHandler

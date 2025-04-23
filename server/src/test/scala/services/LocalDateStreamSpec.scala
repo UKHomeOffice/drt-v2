@@ -1,9 +1,9 @@
 package services
 
-import akka.NotUsed
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.specs2.mutable.Specification
 import uk.gov.homeoffice.drt.time.{DateRange, LocalDate, UtcDate}
 

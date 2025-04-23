@@ -10,14 +10,14 @@ import actors.persistent.staffing.{FixedPointsActor, ShiftsActor, StaffAssignmen
 import actors.routing.FeedArrivalsRouterActor
 import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
-import akka.Done
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.{StatusReply, ask}
-import akka.stream.Supervision.Stop
-import akka.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComplete}
-import akka.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
-import akka.testkit.TestProbe
-import akka.util.Timeout
+import org.apache.pekko.Done
+import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.stream.Supervision.Stop
+import org.apache.pekko.stream.scaladsl.{Keep, Sink, Source, SourceQueueWithComplete}
+import org.apache.pekko.stream.{Materializer, OverflowStrategy, UniqueKillSwitch}
+import org.apache.pekko.testkit.TestProbe
+import org.apache.pekko.util.Timeout
 import drt.server.feeds.{ArrivalsFeedResponse, Feed, ManifestsFeedResponse}
 import manifests.passengers.{BestAvailableManifest, ManifestPaxCount}
 import manifests.queues.SplitsCalculator

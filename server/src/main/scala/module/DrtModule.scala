@@ -1,10 +1,9 @@
 package module
 
 import actors.DrtParameters
-import actors.persistent.staffing.{ShiftsActor, StaffAssignmentsActor}
-import akka.actor.ActorSystem
-import akka.persistence.testkit.PersistenceTestKitPlugin
-import akka.util.Timeout
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.persistence.testkit.PersistenceTestKitPlugin
+import org.apache.pekko.util.Timeout
 import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
 import controllers.application._
@@ -12,7 +11,7 @@ import controllers.application.exports.{DesksExportController, FlightsExportCont
 import controllers.{AirportConfigProvider, Application}
 import email.GovNotifyEmail
 import play.api.Configuration
-import play.api.libs.concurrent.AkkaGuiceSupport
+import play.api.libs.concurrent.PekkoGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing._
@@ -24,7 +23,7 @@ import javax.inject.Singleton
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
-class DrtModule extends AbstractModule with AkkaGuiceSupport {
+class DrtModule extends AbstractModule with PekkoGuiceSupport {
   val now: () => SDateLike = () => SDate.now()
 
   val config: Configuration = new Configuration(ConfigFactory.load)

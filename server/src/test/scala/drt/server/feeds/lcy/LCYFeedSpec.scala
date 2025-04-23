@@ -1,11 +1,11 @@
 package drt.server.feeds.lcy
 
-import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, typed}
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
-import akka.testkit.TestProbe
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{ActorRef, ActorSystem, typed}
+import org.apache.pekko.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, HttpResponse}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.common.HttpClient
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
 import org.mockito.Mockito.{times, verify}

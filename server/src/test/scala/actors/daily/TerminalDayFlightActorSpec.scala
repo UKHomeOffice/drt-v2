@@ -1,7 +1,7 @@
 package actors.daily
 
-import akka.actor.ActorRef
-import akka.pattern.ask
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
 import controllers.ArrivalGenerator.arrivalForDayAndTerminal
 import drt.shared.FlightsApi.RemoveSplits
 import services.crunch.CrunchTestLike

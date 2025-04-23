@@ -1,7 +1,7 @@
 package actors.persistent.arrivals
 
-import akka.actor.Props
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import org.apache.pekko.actor.Props
+import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
 import org.slf4j.{Logger, LoggerFactory}
 import uk.gov.homeoffice.drt.ports.FeedSource
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.FlightsDiffMessage

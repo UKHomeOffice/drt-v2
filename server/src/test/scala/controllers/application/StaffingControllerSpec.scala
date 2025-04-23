@@ -1,8 +1,8 @@
 package controllers.application
 
-import akka.Done
-import akka.actor.ActorSystem
-import akka.stream.Materializer
+import org.apache.pekko.Done
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.scalatest.BeforeAndAfterEach
@@ -46,7 +46,7 @@ case class MockStaffMovementsService(movements: Seq[StaffMovement]) extends Staf
 }
 
 class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
-  implicit val system: ActorSystem = akka.actor.ActorSystem("test")
+  implicit val system: ActorSystem = ActorSystem("test")
   implicit val mat: Materializer = Materializer(system)
 
 

@@ -1,10 +1,10 @@
 package drt.server.feeds.api
 
-import akka.Done
-import akka.actor.ActorRef
-import akka.stream.KillSwitches
-import akka.stream.scaladsl.{Keep, Sink, Source}
-import akka.testkit.TestProbe
+import org.apache.pekko.Done
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.stream.KillSwitches
+import org.apache.pekko.stream.scaladsl.{Keep, Sink, Source}
+import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi.MillisSinceEpoch
 import manifests.UniqueArrivalKey
 import services.crunch.CrunchTestLike

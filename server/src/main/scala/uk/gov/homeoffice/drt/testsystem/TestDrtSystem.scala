@@ -2,9 +2,9 @@
 package uk.gov.homeoffice.drt.testsystem
 
 import actors._
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import akka.util.Timeout
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.util.Timeout
 import com.google.inject.Inject
 import manifests.ManifestLookupLike
 import play.api.Configuration

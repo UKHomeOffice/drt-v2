@@ -1,8 +1,8 @@
 package actors.daily
 
-import akka.actor.{Actor, ActorRef, PoisonPill, Terminated}
-import akka.pattern.{StatusReply, ask}
-import akka.util.Timeout
+import org.apache.pekko.actor.{Actor, ActorRef, PoisonPill, Terminated}
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.util.Timeout
 import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.ExecutionContextExecutor
 

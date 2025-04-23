@@ -1,12 +1,12 @@
 package services.crunch.deskrecs
 
 import actors.persistent.SortedActorRefSource
-import akka.NotUsed
-import akka.actor.ActorRef
-import akka.pattern.StatusReply
-import akka.stream.scaladsl.GraphDSL.Implicits.port2flow
-import akka.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
-import akka.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.stream.scaladsl.GraphDSL.Implicits.port2flow
+import org.apache.pekko.stream.scaladsl.{Flow, GraphDSL, RunnableGraph, Sink}
+import org.apache.pekko.stream.{ClosedShape, KillSwitches, UniqueKillSwitch}
 import org.slf4j.{Logger, LoggerFactory}
 import services.StreamSupervision
 import uk.gov.homeoffice.drt.actor.acking.AckingReceiver.{StreamCompleted, StreamFailure, StreamInitialized}

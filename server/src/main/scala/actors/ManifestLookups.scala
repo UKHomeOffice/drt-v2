@@ -2,9 +2,9 @@ package actors
 
 import actors.daily.{DayManifestActor, RequestAndTerminate, RequestAndTerminateActor}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.util.Timeout
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.parsing.VoyageManifestParser.VoyageManifests
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState

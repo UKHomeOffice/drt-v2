@@ -2,12 +2,12 @@ package actors.daily
 
 import actors.PartitionedPortStateActor.GetFlightUpdatesSince
 import actors.daily.StreamingUpdatesLike.StopUpdates
-import akka.NotUsed
-import akka.actor.{Actor, ActorRef, Cancellable, Props}
-import akka.pattern.{AskTimeoutException, ask}
-import akka.stream.Materializer
-import akka.stream.scaladsl.{Sink, Source}
-import akka.util.Timeout
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{Actor, ActorRef, Cancellable, Props}
+import org.apache.pekko.pattern.{AskTimeoutException, ask}
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.util.Timeout
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}

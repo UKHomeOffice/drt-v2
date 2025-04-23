@@ -2,9 +2,9 @@ package actors.daily
 
 import actors.StreamingJournalLike
 import actors.serializers.PortStateMessageConversion
-import akka.pattern.StatusReply.Ack
-import akka.persistence._
-import akka.persistence.query.EventEnvelope
+import org.apache.pekko.pattern.StatusReply.Ack
+import org.apache.pekko.persistence._
+import org.apache.pekko.persistence.query.EventEnvelope
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared.TM
 import org.slf4j.{Logger, LoggerFactory}
