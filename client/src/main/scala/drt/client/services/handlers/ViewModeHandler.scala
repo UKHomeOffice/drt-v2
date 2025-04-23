@@ -44,7 +44,7 @@ class ViewModeHandler[M](now: () => SDateLike,
     if (!isHistoricView)
       effects + Effect(Future(ClearForecastAccuracy))
     else if (newViewMode.dayStart != currentViewMode.dayStart)
-      effects + Effect(Future(GetForecastAccuracy(newViewMode.dayStart.toLocalDate)))
+      effects// + Effect(Future(GetForecastAccuracy(newViewMode.dayStart.toLocalDate)))
     else
       effects
   }
