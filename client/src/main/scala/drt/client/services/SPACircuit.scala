@@ -274,8 +274,12 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new StaffAssignmentsHandler(currentViewMode, zoomRW(_.dayOfStaffAssignments)((m, v) => m.copy(dayOfStaffAssignments = v))),
       new AllStaffAssignmentsHandler(zoomRW(_.allStaffAssignments)((m, v) => m.copy(allStaffAssignments = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
-      new StaffMovementsHandler(currentViewMode, zoomRW(m => (m.staffMovements, m.removedStaffMovements))((m, v) => m.copy(staffMovements = v._1, removedStaffMovements = v._2))),
-      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3))),
+      new StaffMovementsHandler(currentViewMode, zoomRW(m => (m.staffMovements, m.addedStaffMovementMinutes, m.removedStaffMovements)) { (m, v) =>
+        m.copy(staffMovements = v._1, addedStaffMovementMinutes = v._2, removedStaffMovements = v._3)
+      }),
+      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis)) { (m, v) =>
+        m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3)
+      }),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new RetryHandler(zoomRW(identity)((m, _) => m)),
@@ -310,7 +314,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UserPreferencesHandler(zoomRW(_.userPreferences)((m, v) => m.copy(userPreferences = v))),
       new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
       new ShiftsHandler(zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
-      new ClientSideStaffMovementsHandler(zoomRW(_.addedStaffMovementMinutes)((m, v) => m.copy(addedStaffMovementMinutes = v))),
     )
     composedHandlers
   }
