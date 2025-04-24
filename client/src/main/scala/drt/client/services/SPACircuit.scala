@@ -169,7 +169,7 @@ case class LoadingState(isLoading: Boolean = false)
 
 case class ClientServerVersions(client: String, server: String)
 
-case class MovementMinute(terminal: Terminal, minute: MillisSinceEpoch, staff: Int, createdAt: MillisSinceEpoch)
+case class StaffMovementMinute(terminal: Terminal, minute: MillisSinceEpoch, staff: Int, createdAt: MillisSinceEpoch)
 
 case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      latestFlightUpdateMillis: MillisSinceEpoch = 0L,
@@ -225,7 +225,7 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      userPreferences: Pot[UserPreferences] = Empty,
                      shifts: Pot[Seq[Shift]] = Empty,
                      flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
-                     movementMinutes: Map[TM, Seq[MovementMinute]] = Map(),
+                     addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]] = Map(),
                      removedStaffMovements: Set[String] = Set(),
                     )
 
@@ -257,7 +257,6 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
           (m, v) => m.copy(portStatePot = v._1, latestFlightUpdateMillis = v._2, latestQueueUpdateMillis = v._3, latestStaffUpdateMillis = v._4)
         ),
         zoom(_.flightManifestSummaries),
-        zoom(_.movementMinutes),
         zoom(_.paxFeedSourceOrder),
       ),
       new ForecastHandler(zoomRW(_.forecastPeriodPot)((m, v) => m.copy(forecastPeriodPot = v))),
@@ -311,7 +310,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UserPreferencesHandler(zoomRW(_.userPreferences)((m, v) => m.copy(userPreferences = v))),
       new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
       new ShiftsHandler(zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
-      new MovementMinutesHandler(zoomRW(_.movementMinutes)((m, v) => m.copy(movementMinutes = v))),
+      new MovementMinutesHandler(zoomRW(_.addedStaffMovementMinutes)((m, v) => m.copy(addedStaffMovementMinutes = v))),
     )
     composedHandlers
   }

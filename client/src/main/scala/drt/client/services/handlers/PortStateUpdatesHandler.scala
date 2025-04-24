@@ -49,7 +49,6 @@ object PortStateUpdatesHandler {
 class PortStateUpdatesHandler[M](getCurrentViewMode: () => ViewMode,
                                  portStateModel: ModelRW[M, (Pot[PortState], MillisSinceEpoch, MillisSinceEpoch, MillisSinceEpoch)],
                                  manifestSummariesModel: ModelR[M, Map[ManifestKey, FlightManifestSummary]],
-                                 movementMinutes: ModelR[M, Map[TM, Seq[MovementMinute]]],
                                  paxFeedSourceOrder: ModelR[M, List[FeedSource]],
                                 ) extends LoggingActionHandler(portStateModel) {
   private val liveRequestFrequency: FiniteDuration = 2 seconds

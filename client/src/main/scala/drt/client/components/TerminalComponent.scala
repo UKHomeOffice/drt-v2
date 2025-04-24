@@ -58,7 +58,7 @@ object TerminalComponent {
                                    walkTimes: Pot[WalkTimes],
                                    paxFeedSourceOrder: List[FeedSource],
                                    shiftsPot: Pot[Seq[Shift]],
-                                   movementMinutes: Map[TM, Seq[MovementMinute]],
+                                   addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -99,7 +99,7 @@ object TerminalComponent {
         walkTimes = model.gateStandWalkTime,
         paxFeedSourceOrder = model.paxFeedSourceOrder,
         shiftsPot = model.shifts,
-        movementMinutes = model.movementMinutes,
+        addedStaffMovementMinutes = model.addedStaffMovementMinutes,
       ))
 
       val dialogueStateRCP = SPACircuit.connect(_.maybeStaffDeploymentAdjustmentPopoverState)
@@ -206,7 +206,7 @@ object TerminalComponent {
                           windowCrunchSummaries = windowCrunchSummaries,
                           dayCrunchSummaries = dayCrunchSummaries,
                           windowStaffSummaries = windowStaffSummaries,
-                          movementMinutes = terminalModel.movementMinutes,
+                          addedStaffMovementMinutes = terminalModel.addedStaffMovementMinutes,
                           defaultDesksAndQueuesViewType = defaultDesksAndQueuesViewType,
                           userPreferences = userPreferences
                         ))

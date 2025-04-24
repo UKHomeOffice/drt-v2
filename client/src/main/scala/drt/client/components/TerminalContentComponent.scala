@@ -67,7 +67,7 @@ object TerminalContentComponent {
                    windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
-                   movementMinutes: Map[TM, Seq[MovementMinute]],
+                   addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
                    defaultDesksAndQueuesViewType: String,
                    userPreferences: UserPreferences,
                   ) extends UseValueEq
@@ -246,7 +246,7 @@ object TerminalContentComponent {
                       windowCrunchSummaries = props.windowCrunchSummaries,
                       dayCrunchSummaries = props.dayCrunchSummaries,
                       windowStaffSummaries = props.windowStaffSummaries,
-                      movementMinutes = props.movementMinutes,
+                      addedStaffMovementMinutes = props.addedStaffMovementMinutes,
                       terminal = terminal,
                     )
                   )
