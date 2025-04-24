@@ -34,7 +34,7 @@ object Settings {
     val pekko = "1.1.3"
     val pekkoHttp = "1.1.0"
     val pekkoPersistenceJdbc = "1.1.0"
-    val slick = "3.5.2"
+    val slick = "3.6.0"
 
     val aws = "2.30.36"
 
