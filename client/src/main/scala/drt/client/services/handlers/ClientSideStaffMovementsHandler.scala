@@ -12,18 +12,18 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 
 
-case class AddMovementMinutes(terminal: Terminal,
-                              startMinute: MillisSinceEpoch,
-                              endMinute: MillisSinceEpoch,
-                              staff: Int,
+case class RecordClientSideStaffMovement(terminal: Terminal,
+                                         startMinute: MillisSinceEpoch,
+                                         endMinute: MillisSinceEpoch,
+                                         staff: Int,
                              ) extends Action
 
-class MovementMinutesHandler[M](addedStaffMovementMinutes: ModelRW[M, Map[TM, Seq[StaffMovementMinute]]]) extends LoggingActionHandler(addedStaffMovementMinutes) {
+class ClientSideStaffMovementsHandler[M](addedStaffMovementMinutes: ModelRW[M, Map[TM, Seq[StaffMovementMinute]]]) extends LoggingActionHandler(addedStaffMovementMinutes) {
 
   val alertsRequestFrequency: FiniteDuration = 10 seconds
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
-    case AddMovementMinutes(terminal, start, end, staff) =>
+    case RecordClientSideStaffMovement(terminal, start, end, staff) =>
       val newMinutes = (start until end by oneMinuteMillis).map(minute => StaffMovementMinute(terminal, minute, staff, SDate.now().millisSinceEpoch))
       val existingMinutes = value.getOrElse(TM(terminal, start), Seq.empty[StaffMovementMinute])
       updated(value ++ newMinutes.map(m => TM(m.terminal, m.minute) -> (existingMinutes :+ m)).toMap)

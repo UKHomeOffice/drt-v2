@@ -310,7 +310,7 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new UserPreferencesHandler(zoomRW(_.userPreferences)((m, v) => m.copy(userPreferences = v))),
       new FlightHighlightHandler(zoomRW(_.flightHighlight)((m, v) => m.copy(flightHighlight = v))),
       new ShiftsHandler(zoomRW(_.shifts)((m, v) => m.copy(shifts = v))),
-      new MovementMinutesHandler(zoomRW(_.addedStaffMovementMinutes)((m, v) => m.copy(addedStaffMovementMinutes = v))),
+      new ClientSideStaffMovementsHandler(zoomRW(_.addedStaffMovementMinutes)((m, v) => m.copy(addedStaffMovementMinutes = v))),
     )
     composedHandlers
   }

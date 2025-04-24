@@ -6,12 +6,12 @@ import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services._
-import drt.client.services.handlers.AddMovementMinutes
+import drt.client.services.handlers.RecordClientSideStaffMovement
 import drt.shared.StaffMovements
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^
 import japgolly.scalajs.react.vdom.html_<^._
-import japgolly.scalajs.react.{CtorType, _}
+import japgolly.scalajs.react._
 import org.scalajs.dom.html
 import org.scalajs.dom.html.{Div, Select}
 import uk.gov.homeoffice.drt.auth.LoggedInUser
@@ -129,7 +129,7 @@ object StaffAdjustmentDialogue {
             case Success(staffAssignment) =>
               val movementsToAdd = for (movement <- StaffMovements.assignmentsToMovements(Seq(staffAssignment))) yield movement
               SPACircuit.dispatch(AddStaffMovements(movementsToAdd))
-              SPACircuit.dispatch(AddMovementMinutes(state.terminal, staffAssignment.start, staffAssignment.end, staffAssignment.numberOfStaff))
+              SPACircuit.dispatch(RecordClientSideStaffMovement(state.terminal, staffAssignment.start, staffAssignment.end, staffAssignment.numberOfStaff))
               GoogleEventTracker.sendEvent(state.terminal.toString, "Add StaffMovement", staffAssignment.copy(createdBy = None).toString)
               killPopover()
             case _ =>
