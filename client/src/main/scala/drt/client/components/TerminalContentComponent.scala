@@ -43,6 +43,7 @@ object TerminalContentComponent {
   case class Props(potShifts: Pot[ShiftAssignments],
                    potFixedPoints: Pot[FixedPointAssignments],
                    potStaffMovements: Pot[StaffMovements],
+                   removedStaffMovements: Set[String],
                    airportConfig: AirportConfig,
                    slaConfigs: Pot[SlaConfigs],
                    terminalPageTab: TerminalPageTabLoc,
@@ -66,6 +67,7 @@ object TerminalContentComponent {
                    windowCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    dayCrunchSummaries: Pot[Map[Long, Map[Queue, CrunchMinute]]],
                    windowStaffSummaries: Pot[Map[Long, StaffMinute]],
+                   addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]],
                    defaultDesksAndQueuesViewType: String,
                    userPreferences: UserPreferences,
                   ) extends UseValueEq
@@ -244,6 +246,7 @@ object TerminalContentComponent {
                       windowCrunchSummaries = props.windowCrunchSummaries,
                       dayCrunchSummaries = props.dayCrunchSummaries,
                       windowStaffSummaries = props.windowStaffSummaries,
+                      addedStaffMovementMinutes = props.addedStaffMovementMinutes,
                       terminal = terminal,
                     )
                   )
@@ -314,9 +317,10 @@ object TerminalContentComponent {
                   props.potShifts,
                   props.potFixedPoints,
                   props.potStaffMovements,
+                  props.removedStaffMovements,
                   props.airportConfig,
                   props.loggedInUser,
-                  props.viewMode
+                  props.viewMode,
                 ))
               } else ""
             )

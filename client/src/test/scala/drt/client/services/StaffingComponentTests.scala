@@ -1,5 +1,7 @@
 package drt.client.services
 
+import drt.client.components.MonthlyStaffingBar.sixMonthsFromFirstOfMonth
+import drt.client.components.MonthlyStaffingUtil._
 import drt.client.components.StaffingUtil.consecutiveDaysInMonth
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.{StaffTimeSlot, StaffTimeSlotsForTerminalMonth}
@@ -249,7 +251,6 @@ object StaffingComponentTests extends TestSuite {
     }
 
     "When applying changes to a list of staff per timeslot" - {
-      import scala.collection.immutable.Seq
       "Given 1 day with 1 time slot with 1 staff member and no changes then the time slot should be unchanged" - {
         val staffTimeSlotDays = Seq(Seq(1))
         val changes = Map[(Int, Int), Int]()

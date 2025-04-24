@@ -113,6 +113,8 @@ object Actions {
 
   case class RemoveStaffMovements(uUID: String) extends Action
 
+  case class RecordClientSideStaffMovement(terminal: Terminal, startMinute: MillisSinceEpoch, endMinute: MillisSinceEpoch, staff: Int) extends Action
+
   case class SetStaffMovementsAndPollIfLiveView(viewMode: ViewMode, staffMovements: StaffMovements) extends Action
 
   case class SetStaffMovements(staffMovements: StaffMovements) extends Action

@@ -129,13 +129,16 @@ case class PortState(flights: IMap[UniqueArrival, ApiFlightWithSplits],
       minute = periodStart,
       shifts = slotMinutes.map(_.shifts).min,
       fixedPoints = slotMinutes.map(_.fixedPoints).max,
-      movements = slotMinutes.map(_.movements).max)
+      movements = slotMinutes.map(_.movements).max,
+      lastUpdated = slotMinutes.map(_.lastUpdated).max,
+    )
     else StaffMinute(
       terminal = terminal,
       minute = periodStart,
       shifts = 0,
       fixedPoints = 0,
-      movements = 0)
+      movements = 0
+    )
   }
 }
 

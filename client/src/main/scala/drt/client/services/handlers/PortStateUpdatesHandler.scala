@@ -27,7 +27,7 @@ object PortStateUpdatesHandler {
   def splitsToManifestKeys(incomingSplits: Iterable[SplitsForArrivals],
                            flights: Map[UniqueArrival, ApiFlightWithSplits],
                            existingManifestKeys: Set[ManifestKey]
-                                 ): Set[ManifestKey] =
+                          ): Set[ManifestKey] =
     incomingSplits
       .flatMap { splitsForArrivals =>
         splitsForArrivals.splits.filter { case (_, splits) =>

@@ -5,9 +5,10 @@ import diode._
 import diode.data.{Pot, Ready}
 import drt.client.actions.Actions._
 import drt.client.logger.log
-import drt.client.services.{DrtApi, PollDelay, ViewMode}
-import drt.shared.{StaffMovement, StaffMovements}
+import drt.client.services.{DrtApi, PollDelay, StaffMovementMinute, ViewMode}
+import drt.shared.{StaffMovement, StaffMovements, TM}
 import drt.client.services.JSDateConversions.SDate
+import uk.gov.homeoffice.drt.time.MilliTimes.oneMinuteMillis
 import upickle.default.{read, write}
 
 import scala.concurrent.Future
@@ -16,44 +17,52 @@ import scala.language.postfixOps
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
 
 class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
-                               modelRW: ModelRW[M, Pot[StaffMovements]]) extends LoggingActionHandler(modelRW) {
+                               modelRW: ModelRW[M, (Pot[StaffMovements], Map[TM, Seq[StaffMovementMinute]], Set[String])]) extends LoggingActionHandler(modelRW) {
   def scheduledRequest(viewMode: ViewMode): Effect = Effect(Future(GetStaffMovements(viewMode))).after(2 seconds)
 
   protected def handle: PartialFunction[Any, ActionResult[M]] = {
     case AddStaffMovements(staffMovements) =>
       value match {
-        case Ready(sms) =>
+        case (Ready(sms), _, _) =>
           val updatedStaffMovements = StaffMovements((sms.movements ++ staffMovements).sortBy(_.time))
           effectOnly(Effect(DrtApi.post("staff-movements", write(staffMovements))
             .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
-            case _ =>
-              RetryActionAfter(AddStaffMovements(staffMovements), PollDelay.recoveryDelay)
-          }))
+              case _ =>
+                RetryActionAfter(AddStaffMovements(staffMovements), PollDelay.recoveryDelay)
+            }))
 
         case _ => noChange
       }
 
+    case RecordClientSideStaffMovement(terminal, start, end, staff) =>
+      val newMinutes = (start until end by oneMinuteMillis).map(minute => StaffMovementMinute(terminal, minute, staff, SDate.now().millisSinceEpoch))
+      val existingMinutes = value._2.getOrElse(TM(terminal, start), Seq.empty[StaffMovementMinute])
+      val updatedAdded = value._2 ++ newMinutes.map(m => TM(m.terminal, m.minute) -> (existingMinutes :+ m)).toMap
+      updated(value._1, updatedAdded, value._3)
+
     case RemoveStaffMovements(movementsPairUuid) =>
       value match {
-        case Ready(sms) =>
+        case (Ready(sms), localAdded, localRemoved) =>
           val updatedStaffMovements = StaffMovements(sms.movements.filterNot(_.uUID == movementsPairUuid).sortBy(_.time))
-          effectOnly(Effect(DrtApi.delete(s"staff-movements/$movementsPairUuid")
-            .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
-            case _ =>
-              RetryActionAfter(RemoveStaffMovements(movementsPairUuid), PollDelay.recoveryDelay)
-          }))
+          updated(
+            (Ready(updatedStaffMovements), localAdded, localRemoved + movementsPairUuid),
+            Effect(DrtApi.delete(s"staff-movements/$movementsPairUuid")
+              .map(_ => SetStaffMovements(updatedStaffMovements)).recover {
+                case _ =>
+                  RetryActionAfter(RemoveStaffMovements(movementsPairUuid), PollDelay.recoveryDelay)
+              }))
 
         case _ => noChange
       }
 
     case SetStaffMovements(sms) =>
-      updated(Ready(sms))
+      updated((Ready(sms), value._2, value._3))
 
     case SetStaffMovementsAndPollIfLiveView(viewMode, staffMovements) =>
       if (viewMode.isHistoric(SDate.now()))
-        updated(Ready(staffMovements))
+        updated((Ready(staffMovements), value._2, value._3))
       else
-        updated(Ready(staffMovements), scheduledRequest(viewMode))
+        updated((Ready(staffMovements), value._2, value._3), scheduledRequest(viewMode))
 
     case GetStaffMovements(viewMode) if viewMode.isDifferentTo(getCurrentViewMode()) =>
       log.info(s"Ignoring old view response")

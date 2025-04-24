@@ -169,6 +169,8 @@ case class LoadingState(isLoading: Boolean = false)
 
 case class ClientServerVersions(client: String, server: String)
 
+case class StaffMovementMinute(terminal: Terminal, minute: MillisSinceEpoch, staff: Int, createdAt: MillisSinceEpoch)
+
 case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      latestFlightUpdateMillis: MillisSinceEpoch = 0L,
                      latestQueueUpdateMillis: MillisSinceEpoch = 0L,
@@ -223,6 +225,8 @@ case class RootModel(applicationVersion: Pot[ClientServerVersions] = Empty,
                      userPreferences: Pot[UserPreferences] = Empty,
                      shifts: Pot[Seq[Shift]] = Empty,
                      flightHighlight: FlightHighlight = FlightHighlight(false, false, false, Seq.empty, Set.empty[Country], ""),
+                     addedStaffMovementMinutes: Map[TM, Seq[StaffMovementMinute]] = Map(),
+                     removedStaffMovements: Set[String] = Set(),
                     )
 
 object PollDelay {
@@ -270,8 +274,12 @@ trait DrtCircuit extends Circuit[RootModel] with ReactConnector[RootModel] {
       new StaffAssignmentsHandler(currentViewMode, zoomRW(_.dayOfStaffAssignments)((m, v) => m.copy(dayOfStaffAssignments = v))),
       new AllStaffAssignmentsHandler(zoomRW(_.allStaffAssignments)((m, v) => m.copy(allStaffAssignments = v))),
       new FixedPointsHandler(currentViewMode, zoomRW(_.fixedPoints)((m, v) => m.copy(fixedPoints = v))),
-      new StaffMovementsHandler(currentViewMode, zoomRW(_.staffMovements)((m, v) => m.copy(staffMovements = v))),
-      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis))((m, v) => m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3))),
+      new StaffMovementsHandler(currentViewMode, zoomRW(m => (m.staffMovements, m.addedStaffMovementMinutes, m.removedStaffMovements)) { (m, v) =>
+        m.copy(staffMovements = v._1, addedStaffMovementMinutes = v._2, removedStaffMovements = v._3)
+      }),
+      new ViewModeHandler(() => SDate.now(), zoomRW(m => (m.viewMode, m.portStatePot, m.latestFlightUpdateMillis)) { (m, v) =>
+        m.copy(viewMode = v._1, portStatePot = v._2, latestFlightUpdateMillis = v._3)
+      }),
       new LoaderHandler(zoomRW(_.loadingState)((m, v) => m.copy(loadingState = v))),
       new ShowActualDesksAndQueuesHandler(zoomRW(_.showActualIfAvailable)((m, v) => m.copy(showActualIfAvailable = v))),
       new RetryHandler(zoomRW(identity)((m, _) => m)),
