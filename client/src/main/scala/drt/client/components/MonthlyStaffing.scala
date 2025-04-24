@@ -197,7 +197,7 @@ object MonthlyStaffing {
                         changeCallback = (row, col, value) => {
                           scope.modState { state =>
                             state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))
-                          }.debounce(500.milliseconds).runNow()
+                          }.runNow()
                         },
                         lastDataRefresh = lastLoaded
                       ))
