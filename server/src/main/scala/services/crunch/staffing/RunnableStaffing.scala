@@ -1,11 +1,11 @@
 package services.crunch.staffing
 
-import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.stream.scaladsl.Flow
-import akka.stream.{Materializer, UniqueKillSwitch}
-import akka.util.Timeout
-import akka.{Done, NotUsed}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.Flow
+import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
+import org.apache.pekko.util.Timeout
+import org.apache.pekko.{Done, NotUsed}
 import drt.shared.CrunchApi.{MinutesContainer, StaffMinute, StaffMinutes}
 import drt.shared.{FixedPointAssignments, ShiftAssignments, StaffMovements, TM}
 import org.slf4j.{Logger, LoggerFactory}

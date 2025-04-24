@@ -1,8 +1,8 @@
 package drt.server.feeds.lgw
 
-import akka.actor.ActorSystem
-import akka.actor.typed.ActorRef
-import akka.stream.scaladsl.Source
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.actor.typed.ActorRef
+import org.apache.pekko.stream.scaladsl.Source
 import drt.server.feeds.{ArrivalsFeedFailure, ArrivalsFeedResponse, ArrivalsFeedSuccess, Feed}
 
 object LgwForecastFeed {

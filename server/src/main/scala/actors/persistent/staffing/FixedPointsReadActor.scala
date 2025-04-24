@@ -1,7 +1,7 @@
 package actors.persistent.staffing
 
 import actors.persistent.staffing.FixedPointsMessageParser.fixedPointMessagesToFixedPoints
-import akka.persistence.{Recovery, SnapshotSelectionCriteria}
+import org.apache.pekko.persistence.{Recovery, SnapshotSelectionCriteria}
 import uk.gov.homeoffice.drt.protobuf.messages.FixedPointMessage.{FixedPointsMessage, FixedPointsStateSnapshotMessage}
 import uk.gov.homeoffice.drt.time.SDateLike
 

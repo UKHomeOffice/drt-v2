@@ -1,7 +1,7 @@
 package actors.supervised
 
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.BackoffOpts
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.BackoffOpts
 
 import scala.concurrent.duration.FiniteDuration
 

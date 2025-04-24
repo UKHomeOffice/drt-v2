@@ -2,10 +2,10 @@ package actors.persistent.nebo
 
 import uk.gov.homeoffice.drt.actor.commands.Commands.GetState
 import actors.serializers.NeboArrivalMessageConversion
-import akka.actor.{ActorRef, PoisonPill, Props}
-import akka.pattern.ask
-import akka.persistence.{RecoveryCompleted, SaveSnapshotSuccess, SnapshotOffer}
-import akka.testkit.{ImplicitSender, TestProbe}
+import org.apache.pekko.actor.{ActorRef, PoisonPill, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.persistence.{RecoveryCompleted, SaveSnapshotSuccess, SnapshotOffer}
+import org.apache.pekko.testkit.{ImplicitSender, TestProbe}
 import com.typesafe.config.ConfigFactory
 import drt.shared.{NeboArrivals, RedListPassengers}
 import org.specs2.specification.BeforeEach
@@ -139,7 +139,7 @@ class NeboArrivalActorSpec extends CrunchTestLike with ImplicitSender with Befor
 
   private def cleanupSnapshotFiles(): Unit = {
     val config = ConfigFactory.load()
-    val file = new File(config.getString("akka.persistence.snapshot-store.local.dir"))
+    val file = new File(config.getString("pekko.persistence.snapshot-store.local.dir"))
     file.listFiles().map { file =>
       log.info(s"deleting snapshot file ${file.getName}")
       file.delete()

@@ -9,10 +9,10 @@ import actors.routing.FeedArrivalsRouterActor.FeedArrivals
 import actors.routing.minutes.MinutesActorLike._
 import actors.routing.minutes._
 import actors.routing.{FeedArrivalsRouterActor, FlightsRouterActor}
-import akka.actor.{Actor, ActorRef, Props}
-import akka.pattern.StatusReply.Ack
-import akka.pattern.{ask, pipe}
-import akka.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
+import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.pattern.StatusReply.Ack
+import org.apache.pekko.pattern.{ask, pipe}
+import org.apache.pekko.persistence.{DeleteMessagesSuccess, DeleteSnapshotsSuccess, PersistentActor, SnapshotSelectionCriteria}
 import drt.shared.CrunchApi._
 import drt.shared._
 import org.slf4j.Logger

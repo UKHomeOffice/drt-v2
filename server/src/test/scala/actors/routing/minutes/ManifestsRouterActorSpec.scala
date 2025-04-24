@@ -5,11 +5,11 @@ import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
 import actors.persistent.staffing.GetFeedStatuses
 import actors.persistent.{ApiFeedState, ManifestRouterActor}
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate}
-import akka.NotUsed
-import akka.actor.{ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.stream.scaladsl.{Sink, Source}
-import akka.testkit.TestProbe
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import passengersplits.core.PassengerTypeCalculatorValues.DocumentType

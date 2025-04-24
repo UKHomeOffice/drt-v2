@@ -1,8 +1,8 @@
 package actors
 
 import actors.PartitionedPortStateActor.{GetStateForDateRange, PointInTimeQuery}
-import akka.actor.{Actor, ActorRef, Props}
-import akka.testkit.TestProbe
+import org.apache.pekko.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.testkit.TestProbe
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.ports.Queues.Queue
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal

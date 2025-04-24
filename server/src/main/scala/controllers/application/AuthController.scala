@@ -1,9 +1,9 @@
 package controllers.application
 
-import akka.actor.ActorSystem
-import akka.event.LoggingAdapter
-import akka.http.scaladsl.model.HttpResponse
-import akka.util.Timeout
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.event.LoggingAdapter
+import org.apache.pekko.http.scaladsl.model.HttpResponse
+import org.apache.pekko.util.Timeout
 import drt.http.ProdSendAndReceive
 import drt.shared.ErrorResponse
 import drt.users.KeyCloakClient

@@ -2,9 +2,9 @@ package actors
 
 import actors.persistent.staffing.FixedPointsActor.SetFixedPoints
 import actors.persistent.staffing._
-import akka.actor.{ActorRef, PoisonPill, Props}
-import akka.pattern.StatusReply
-import akka.testkit.{ImplicitSender, TestProbe}
+import org.apache.pekko.actor.{ActorRef, PoisonPill, Props}
+import org.apache.pekko.pattern.StatusReply
+import org.apache.pekko.testkit.{ImplicitSender, TestProbe}
 import drt.shared._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.Commands.{AddUpdatesSubscriber, GetState}

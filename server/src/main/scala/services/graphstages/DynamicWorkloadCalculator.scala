@@ -1,6 +1,6 @@
 package services.graphstages
 
-import akka.stream.Materializer
+import org.apache.pekko.stream.Materializer
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}

@@ -1,6 +1,6 @@
 package drt.chroma
 
-import akka.http.scaladsl.model.FormData
+import org.apache.pekko.http.scaladsl.model.FormData
 import com.typesafe.config.ConfigFactory
 
 trait ChromaFeedType {

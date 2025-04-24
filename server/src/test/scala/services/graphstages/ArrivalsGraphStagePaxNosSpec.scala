@@ -1,7 +1,7 @@
 package services.graphstages
 
-import akka.stream.QueueOfferResult
-import akka.stream.scaladsl.SourceQueueWithComplete
+import org.apache.pekko.stream.QueueOfferResult
+import org.apache.pekko.stream.scaladsl.SourceQueueWithComplete
 import controllers.ArrivalGenerator
 import drt.server.feeds.{ArrivalsFeedResponse, ArrivalsFeedSuccess}
 import drt.shared._

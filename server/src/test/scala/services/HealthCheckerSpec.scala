@@ -2,7 +2,7 @@ package services
 
 import actors.PartitionedPortStateActor.GetStateForDateRange
 import actors.persistent.staffing.GetFeedStatuses
-import akka.actor.{Actor, ActorRef, Props}
+import org.apache.pekko.actor.{Actor, ActorRef, Props}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
 import services.crunch.CrunchTestLike

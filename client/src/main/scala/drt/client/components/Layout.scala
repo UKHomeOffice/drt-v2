@@ -112,7 +112,7 @@ object Layout {
                             ApiStatusComponent(ApiStatusComponent.Props(
                               !airportConfig.noLivePortFeed,
                               terminal)),
-                            PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
+//                            PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
                           )
                         case _ => EmptyVdom
                       },

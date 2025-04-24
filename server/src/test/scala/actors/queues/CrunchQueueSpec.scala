@@ -1,12 +1,12 @@
 package actors.queues
 
 import actors.persistent.SortedActorRefSource
-import akka.actor.ActorRef
-import akka.stream.javadsl.RunnableGraph
-import akka.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
-import akka.stream.scaladsl.{GraphDSL, Sink}
-import akka.stream.{ClosedShape, Materializer}
-import akka.testkit.{ImplicitSender, TestProbe}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.stream.javadsl.RunnableGraph
+import org.apache.pekko.stream.scaladsl.GraphDSL.Implicits.SourceShapeArrow
+import org.apache.pekko.stream.scaladsl.{GraphDSL, Sink}
+import org.apache.pekko.stream.{ClosedShape, Materializer}
+import org.apache.pekko.testkit.{ImplicitSender, TestProbe}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest

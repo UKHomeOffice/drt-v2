@@ -6,12 +6,12 @@ import actors.daily.{PassengersActor, RequestAndTerminate}
 import actors.persistent._
 import actors.persistent.arrivals.AclForecastArrivalsActor
 import actors.routing.FlightsRouterActor.{AddHistoricPaxRequestActor, AddHistoricSplitsRequestActor}
-import akka.actor.{ActorRef, ActorSystem, Props, typed}
-import akka.pattern.{StatusReply, ask}
-import akka.stream.scaladsl.{Sink, Source}
-import akka.stream.{Materializer, UniqueKillSwitch}
-import akka.util.Timeout
-import akka.{Done, NotUsed}
+import org.apache.pekko.actor.{ActorRef, ActorSystem, Props, typed}
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
+import org.apache.pekko.util.Timeout
+import org.apache.pekko.{Done, NotUsed}
 import drt.server.feeds.Feed.FeedTick
 import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._

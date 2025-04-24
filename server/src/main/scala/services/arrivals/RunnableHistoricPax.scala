@@ -1,11 +1,11 @@
 package services.arrivals
 
-import akka.actor.ActorRef
-import akka.pattern.ask
-import akka.stream.scaladsl.{Flow, Sink, Source}
-import akka.stream.{Materializer, UniqueKillSwitch}
-import akka.util.Timeout
-import akka.{Done, NotUsed}
+import org.apache.pekko.actor.ActorRef
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
+import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
+import org.apache.pekko.util.Timeout
+import org.apache.pekko.{Done, NotUsed}
 import drt.shared.FlightsApi.PaxForArrivals
 import manifests.UniqueArrivalKey
 import manifests.passengers.ManifestPaxCount

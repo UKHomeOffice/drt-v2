@@ -1,8 +1,8 @@
 package actors.routing
 
-import akka.actor.{ActorRef, Props}
-import akka.pattern.{StatusReply, ask}
-import akka.testkit.TestProbe
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern.{StatusReply, ask}
+import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi._
 import services.crunch.CrunchTestLike
 import uk.gov.homeoffice.drt.DataUpdates.Combinable

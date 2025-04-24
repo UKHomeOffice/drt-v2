@@ -1,7 +1,8 @@
 package controllers.application
 
-import akka.actor.ActorSystem
-import akka.stream.Materializer
+import org.apache.pekko.actor
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
 import org.scalatestplus.play.PlaySpec
 import play.api.test.Helpers._
 import play.api.test.{FakeRequest, Helpers}
@@ -10,7 +11,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import scala.concurrent.ExecutionContext
 
 class DataRetentionControllerSpec extends PlaySpec {
-  implicit val system: ActorSystem = akka.actor.ActorSystem("test-1")
+  implicit val system: ActorSystem = actor.ActorSystem("test-1")
   implicit val mat: Materializer = Materializer(system)
   implicit val ec: ExecutionContext = system.dispatcher
 

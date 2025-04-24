@@ -1,7 +1,7 @@
 package controllers.application
 
-import akka.stream.scaladsl.{Sink, Source}
-import akka.util.ByteString
+import org.apache.pekko.stream.scaladsl.{Sink, Source}
+import org.apache.pekko.util.ByteString
 import com.google.inject.Inject
 import controllers.application.exports.CsvFileStreaming
 import drt.http.ProdSendAndReceive

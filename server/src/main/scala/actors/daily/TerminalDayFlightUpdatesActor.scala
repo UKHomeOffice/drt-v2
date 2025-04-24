@@ -3,11 +3,11 @@ package actors.daily
 import actors.StreamingJournalLike
 import actors.daily.StreamingUpdatesLike.StopUpdates
 import actors.persistent.StreamingUpdatesActor
-import akka.actor.PoisonPill
-import akka.pattern.StatusReply.Ack
-import akka.persistence.query.EventEnvelope
-import akka.persistence.{PersistentActor, RecoveryCompleted}
-import akka.stream.{Materializer, UniqueKillSwitch}
+import org.apache.pekko.actor.PoisonPill
+import org.apache.pekko.pattern.StatusReply.Ack
+import org.apache.pekko.persistence.query.EventEnvelope
+import org.apache.pekko.persistence.{PersistentActor, RecoveryCompleted}
+import org.apache.pekko.stream.{Materializer, UniqueKillSwitch}
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.FlightUpdatesAndRemovals
 import org.slf4j.{Logger, LoggerFactory}

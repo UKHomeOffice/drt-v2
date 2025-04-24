@@ -2,8 +2,8 @@ package actors.persistent
 
 import actors.StreamingJournalLike
 import actors.persistent.staffing.GetFeedStatuses
-import akka.NotUsed
-import akka.actor.Props
+import org.apache.pekko.NotUsed
+import org.apache.pekko.actor.Props
 import uk.gov.homeoffice.drt.feeds.{FeedSourceStatuses, FeedStatuses}
 import uk.gov.homeoffice.drt.ports.{ApiFeedSource, FeedSource}
 import uk.gov.homeoffice.drt.protobuf.messages.FlightsMessage.{FeedStatusMessage, FlightStateSnapshotMessage}

@@ -1,7 +1,7 @@
 package drt.chroma
 
-import akka.actor.typed
-import akka.stream.scaladsl.Source
+import org.apache.pekko.actor.typed
+import org.apache.pekko.stream.scaladsl.Source
 import drt.chroma.chromafetcher.ChromaFetcher
 import drt.chroma.chromafetcher.ChromaFetcher.{ChromaFlightLike, ChromaLiveFlight}
 import drt.server.feeds.Feed.FeedTick

@@ -2,9 +2,9 @@ package actors.daily
 
 import actors.daily.ReadJournalTypes.ReadJournalWithEvents
 import actors.{InMemoryStreamingJournal, StreamingJournalLike}
-import akka.actor.{ActorRef, Props}
-import akka.pattern.ask
-import akka.testkit.TestProbe
+import org.apache.pekko.actor.{ActorRef, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.testkit.TestProbe
 import drt.shared.CrunchApi.MinutesContainer
 import scalapb.GeneratedMessage
 import services.crunch.CrunchTestLike

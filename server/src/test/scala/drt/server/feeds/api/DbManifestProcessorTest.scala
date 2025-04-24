@@ -1,7 +1,7 @@
 package drt.server.feeds.api
 
-import akka.Done
-import akka.testkit.TestProbe
+import org.apache.pekko.Done
+import org.apache.pekko.testkit.TestProbe
 import drt.server.feeds.api.DbHelper.addPaxRecord
 import drt.server.feeds.{DqManifests, ManifestsFeedResponse, ManifestsFeedSuccess}
 import manifests.UniqueArrivalKey
