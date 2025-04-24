@@ -25,6 +25,7 @@ import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
 
+import scala.concurrent.duration.DurationInt
 import scala.scalajs.js
 import scala.util.Try
 
@@ -61,12 +62,7 @@ object MonthlyStaffing {
   }
 
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a == b)
-  implicit val stateReuse: Reusability[State] = Reusability((a, b) =>
-      a.showEditStaffForm == b.showEditStaffForm &&
-      a.showStaffSuccess == b.showStaffSuccess &&
-      a.addShiftForm == b.addShiftForm &&
-      a.shifts == b.shifts
-  )
+  implicit val stateReuse: Reusability[State] = Reusability((a, b) => a == b)
 
   class Backend(scope: BackendScope[Props, State]) {
     def render(props: Props, state: State): VdomTagOf[Div] = {
@@ -201,7 +197,7 @@ object MonthlyStaffing {
                         changeCallback = (row, col, value) => {
                           scope.modState { state =>
                             state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))
-                          }.runNow()
+                          }.debounce(500.milliseconds).runNow()
                         },
                         lastDataRefresh = lastLoaded
                       ))
