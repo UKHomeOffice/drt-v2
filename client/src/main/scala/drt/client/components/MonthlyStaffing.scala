@@ -14,7 +14,6 @@ import drt.client.util.DateRange
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton.Color
 import io.kinoplan.scalajs.react.material.ui.core._
-import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.extra.router.RouterCtl
@@ -25,11 +24,11 @@ import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
-
 import scala.scalajs.js
 import scala.util.Try
 
 object MonthlyStaffing {
+  private var tempChanges: Map[(Int, Int), Int] = Map.empty
 
   case class TimeSlotDay(timeSlot: Int, day: Int) {
     def key: (Int, Int) = (timeSlot, day)
@@ -116,7 +115,6 @@ object MonthlyStaffing {
                 MuiTypography()("Show shifts"),
                 MuiFormControl()(
                   MuiSwitch(
-//                    VdomAttr("data-cy").set("shift-staff-form"),
                     defaultChecked = props.userPreferences.showStaffingShiftView,
                     color = Color.primary,
                     inputProps = js.Dynamic.literal("aria-label" -> "primary checkbox"),
@@ -195,10 +193,19 @@ object MonthlyStaffing {
                         timeSlots,
                         colHeadings = state.colHeadings.map(h => s"<div style='text-align: left;'>${h.day}<br>${h.dayOfWeek}</div>"),
                         rowHeadings = state.rowHeadings,
-                        changeCallback = (row, col, value) => {
-                          scope.modState { state =>
-                            state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))
-                          }.runNow()
+                        afterChanges = (changes: Seq[(Int, Int, Any, Any)]) => {
+                          tempChanges = changes.collect {
+                            case (row, col, _, newVal: String) if newVal.forall(_.isDigit) => TimeSlotDay(row, col).key -> newVal.toInt
+                            case (row, col, _, newVal: Int) => TimeSlotDay(row, col).key -> newVal
+                          }.toMap
+
+                          scala.scalajs.js.timers.setTimeout(500) {
+                            scope.modState { state =>
+                              val updatedChanges = state.changes ++ tempChanges
+                              tempChanges = Map.empty
+                              state.copy(changes = updatedChanges)
+                            }.runNow()
+                          }
                         },
                         lastDataRefresh = lastLoaded
                       ))

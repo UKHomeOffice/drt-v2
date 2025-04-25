@@ -2,7 +2,6 @@ package drt.client.components
 
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.shared.CrunchApi.MillisSinceEpoch
-import japgolly.scalajs.react.callback.Callback
 import japgolly.scalajs.react.component.Js.{Component, RawMounted, UnmountedWithRawType}
 import japgolly.scalajs.react.component.Scala.Unmounted
 import japgolly.scalajs.react.{Children, CtorType, JsComponent, Reusability, ScalaComponent}
@@ -27,36 +26,32 @@ object HotTable {
   case class Props(data: Seq[Seq[Any]],
                    colHeadings: Seq[String],
                    rowHeadings: Seq[String],
-                   changeCallback: (Int, Int, Int) => Unit,
+                   afterChanges: Seq[(Int, Int, Any, Any)] => Unit,
                    colWidths: String = "2em",
-                   lastDataRefresh: MillisSinceEpoch,
-                  ) {
+                   lastDataRefresh: MillisSinceEpoch) {
     val raw: RawProps = {
       import js.JSConverters._
 
       val props = (new js.Object).asInstanceOf[RawProps]
-      val afterChange = (changes: js.Array[js.Array[Any]], _: String) => {
-        val maybeArray = Option(changes)
-        maybeArray.foreach(
-          c => {
-            c.toList.foreach(change =>
-              (change(0), change(1), change(3)) match {
-                case (row: Int, col: Int, value: String) =>
-                  Try(Integer.parseInt(value)) match {
-                    case Success(v) =>
-                      changeCallback(row, col, v)
-                    case Failure(f) =>
-                      log.warn(s"Couldn't parse $value to an Integer $f")
-                  }
-                case (row: Int, col: Int, value: Int) =>
-                  changeCallback(row, col, value)
-                case other =>
-                  log.error(s"couldn't match $other")
+
+      val afterChangesCallback = (changes: js.Array[js.Array[Any]], _: String) => {
+        Option(changes).filter(_.nonEmpty).foreach { validChanges =>
+          val parsedChanges = validChanges.toList.collect {
+            case jsArray: js.Array[Any] if jsArray.length == 4 =>
+              Try(
+                (
+                  jsArray(0).asInstanceOf[Int],
+                  jsArray(1).asInstanceOf[Int],
+                  jsArray(2),
+                  jsArray(3)
+                )
+              ).getOrElse {
+                log.error(s"Invalid change format: $jsArray")
+                null
               }
-            )
-          })
-        if (maybeArray.isEmpty) {
-          log.info(s"Called change function with no values")
+          }.filter(_ != null)
+
+          afterChanges(parsedChanges)
         }
       }
 
@@ -64,7 +59,7 @@ object HotTable {
         "data" -> data.map(_.toJSArray).toJSArray,
         "rowHeaders" -> rowHeadings.toJSArray,
         "colHeaders" -> colHeadings.toJSArray,
-        "afterChange" -> afterChange,
+        "afterChange" -> afterChangesCallback,
         "colWidth" -> colWidths,
         "licenseKey" -> "non-commercial-and-evaluation",
       )
