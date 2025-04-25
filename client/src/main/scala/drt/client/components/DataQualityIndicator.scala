@@ -18,7 +18,7 @@ object DataQualityIndicator {
 
   case class State(showTooltip: Boolean)
 
-  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DataQualityIndicator")
     .initialState(State(false))
     .renderPS { case (scope, props, state) =>
 
@@ -38,12 +38,10 @@ object DataQualityIndicator {
         sx = SxProps(Map("fontSize" -> "inherit")),
       )
 
-      val dfnTooltip = <.dfn(^.className := "data-quality-indicator question-hover",
+      def dfnTooltip = <.dfn(^.className := "data-quality-indicator question-hover",
         props.dq.text,
         props.dq.maybeTooltip.map { tt =>
-          <.span(^.className := "data-quality__more-info",
-            tooltip(tt)
-          )
+          <.span(^.className := "data-quality__more-info", tooltip(tt)(<.div()))
         },
         ^.onClick ==> {
           handleOnClick
@@ -53,7 +51,7 @@ object DataQualityIndicator {
         },
       )
 
-      val iconTooltip = <.span(
+      def iconTooltip = <.span(
         props.dq.text,
         props.dq.maybeTooltip.map { tt =>
           <.span(

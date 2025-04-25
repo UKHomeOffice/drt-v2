@@ -59,10 +59,12 @@ object PcpPaxSummariesComponent {
                       val summary = PcpPaxSummary(start, fiveMinutes, cms, queues.toSet)
                       PaxCardComponent(
                         IPaxCard(
-                          portQueue(queues, summary),
-                          label,
-                          new scala.scalajs.js.Date(start.millisSinceEpoch),
-                          new scala.scalajs.js.Date(start.addMinutes(5).millisSinceEpoch)))
+                          queues = portQueue(queues, summary),
+                          timeRange = label,
+                          startTime = new scala.scalajs.js.Date(start.millisSinceEpoch),
+                          endTime = new scala.scalajs.js.Date(start.addMinutes(5).millisSinceEpoch),
+                          key = s"pax-card-$box",
+                        ))
                   }
                   .toVdomArray
               )
@@ -77,23 +79,6 @@ object PcpPaxSummariesComponent {
     queues.map { qn =>
       PortQueue(Queues.displayName(qn), summary.queuesPax.getOrElse(qn, 0d).round.toInt)
     }
-  }
-
-  private def summaryBox(boxNumber: Int, label: String, now: SDateLike, queues: Seq[Queue], summary: PcpPaxSummary): TagOf[Div] = {
-    <.div(^.className := s"pcp-pax-summary b$boxNumber", ^.key := boxNumber,
-      <.div(^.className := "total", s"${summary.totalPax}"),
-      <.div(^.className := "queues",
-        queues.map(qn => {
-          <.div(^.className := "queue",
-            <.div(^.className := "queue-name", <.div(Queues.displayName(qn))),
-            <.div(^.className := "queue-pax", <.div(s"${summary.queuesPax.getOrElse(qn, 0d).round}"))
-          )
-        }).toTagMod
-      ),
-      <.div(^.className := "vertical-spacer"),
-      <.div(^.className := "time-range-label", label),
-      <.div(^.className := "time-range", s"${now.toHoursAndMinutes} - ${now.addMinutes(5).toHoursAndMinutes}")
-    )
   }
 
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("PcpPaxSummariesComponent")

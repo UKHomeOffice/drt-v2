@@ -73,7 +73,7 @@ object FeedSourceRow {
     if (isCiriumAsPortLive) "Live arrival"
     else feedSource.displayName
 
-  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
+  val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("FeedSourceRow")
     .render_P { props =>
       val isMobile = dom.window.innerWidth < 800
       val feedSource = props.feedSourceArrival.feedSource

@@ -271,7 +271,7 @@ object FlightTableRow {
     }
   }
 
-  val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("TableRow")
+  val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("FlightTableRow")
     .renderBackend[Backend]
     .configure(Reusability.shouldComponentUpdate)
     .build

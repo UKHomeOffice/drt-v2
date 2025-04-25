@@ -35,10 +35,12 @@ class StaffMovementsHandler[M](getCurrentViewMode: () => ViewMode,
       }
 
     case RecordClientSideStaffMovement(terminal, start, end, staff) =>
-      val newMinutes = (start until end by oneMinuteMillis).map(minute => StaffMovementMinute(terminal, minute, staff, SDate.now().millisSinceEpoch))
-      val existingMinutes = value._2.getOrElse(TM(terminal, start), Seq.empty[StaffMovementMinute])
-      val updatedAdded = value._2 ++ newMinutes.map(m => TM(m.terminal, m.minute) -> (existingMinutes :+ m)).toMap
-      updated(value._1, updatedAdded, value._3)
+      val updatedMinutes = (start until end by oneMinuteMillis).map { minute =>
+        val existing = value._2.getOrElse(TM(terminal, minute), Seq.empty[StaffMovementMinute])
+        val newMinute = StaffMovementMinute(terminal, minute, staff, SDate.now().millisSinceEpoch)
+        TM(terminal, minute) -> (existing :+ newMinute)
+      }
+      updated(value._1, value._2 ++ updatedMinutes, value._3)
 
     case RemoveStaffMovements(movementsPairUuid) =>
       value match {

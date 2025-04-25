@@ -28,15 +28,17 @@ trait IPaxCard extends js.Object {
   var timeRange: String
   var startTime: Date
   var endTime: Date
+  var key: String
 }
 
 object IPaxCard {
-  def apply(queues: Seq[PortQueue], timeRange: String, startTime : Date, endTime: Date): IPaxCard = {
+  def apply(queues: Seq[PortQueue], timeRange: String, startTime : Date, endTime: Date, key: String): IPaxCard = {
     val p = (new js.Object).asInstanceOf[IPaxCard]
     p.queues = queues.toJSArray
     p.timeRange = timeRange
     p.startTime = startTime
     p.endTime = endTime
+    p.key = key
     p
   }
 }
