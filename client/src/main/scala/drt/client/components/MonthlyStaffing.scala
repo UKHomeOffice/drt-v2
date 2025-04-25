@@ -202,12 +202,12 @@ object MonthlyStaffing {
                           scala.scalajs.js.timers.setTimeout(500) {
                             scope.modState { state =>
                               val updatedChanges = state.changes ++ tempChanges
-                              tempChanges = Map.empty // Clear the buffer after processing
+                              tempChanges = Map.empty
                               state.copy(changes = updatedChanges)
                             }.runNow()
                           }
                         },
-                        lastDataRefresh = lastLoaded // Ensure this property is set
+                        lastDataRefresh = lastLoaded
                       ))
                     )
                   ),

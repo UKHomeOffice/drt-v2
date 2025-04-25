@@ -26,7 +26,7 @@ object HotTable {
   case class Props(data: Seq[Seq[Any]],
                    colHeadings: Seq[String],
                    rowHeadings: Seq[String],
-                   afterChanges: Seq[(Int, Int, Any, Any)] => Unit, // New parameter
+                   afterChanges: Seq[(Int, Int, Any, Any)] => Unit,
                    colWidths: String = "2em",
                    lastDataRefresh: MillisSinceEpoch) {
     val raw: RawProps = {
