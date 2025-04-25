@@ -24,12 +24,11 @@ import org.scalajs.dom.html.Div
 import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{LocalDate, SDateLike}
-
-import scala.concurrent.duration.DurationInt
 import scala.scalajs.js
 import scala.util.Try
 
 object MonthlyStaffing {
+  private var tempChanges: Map[(Int, Int), Int] = Map.empty
 
   case class TimeSlotDay(timeSlot: Int, day: Int) {
     def key: (Int, Int) = (timeSlot, day)
@@ -194,10 +193,31 @@ object MonthlyStaffing {
                         timeSlots,
                         colHeadings = state.colHeadings.map(h => s"<div style='text-align: left;'>${h.day}<br>${h.dayOfWeek}</div>"),
                         rowHeadings = state.rowHeadings,
-                        changeCallback = (row, col, value) => {
-                          scope.modState { state =>
-                            state.copy(changes = state.changes.updated(TimeSlotDay(row, col).key, value))
-                          }.debounce(1.milliseconds).runNow()
+                        afterChanges = (changes: Seq[(Int, Int, Any, Any)]) => {
+                          // Collect all changes in the temporary buffer
+                          tempChanges = changes.foldLeft(tempChanges) {
+                            case (acc, (row, col, _, newVal)) =>
+                              val newValueAsInt: Option[Int] = newVal match {
+                                case s: String if s.forall(_.isDigit) => Some(s.toInt)
+                                case i: Int => Some(i)
+                                case _ =>
+                                  println(s"Invalid value for cell ($row, $col): $newVal")
+                                  None
+                              }
+
+                              newValueAsInt match {
+                                case Some(value) => acc.updated(TimeSlotDay(row, col).key, value)
+                                case None => acc
+                              }
+                          }
+
+                          scala.scalajs.js.timers.setTimeout(500) {
+                            scope.modState { state =>
+                              val updatedChanges = state.changes ++ tempChanges
+                              tempChanges = Map.empty // Clear the buffer after processing
+                              state.copy(changes = updatedChanges)
+                            }.runNow()
+                          }
                         },
                         lastDataRefresh = lastLoaded
                       ))
