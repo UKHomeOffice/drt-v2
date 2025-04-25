@@ -79,23 +79,6 @@ object PcpPaxSummariesComponent {
     }
   }
 
-  private def summaryBox(boxNumber: Int, label: String, now: SDateLike, queues: Seq[Queue], summary: PcpPaxSummary): TagOf[Div] = {
-    <.div(^.className := s"pcp-pax-summary b$boxNumber", ^.key := boxNumber,
-      <.div(^.className := "total", s"${summary.totalPax}"),
-      <.div(^.className := "queues",
-        queues.map(qn => {
-          <.div(^.className := "queue",
-            <.div(^.className := "queue-name", <.div(Queues.displayName(qn))),
-            <.div(^.className := "queue-pax", <.div(s"${summary.queuesPax.getOrElse(qn, 0d).round}"))
-          )
-        }).toTagMod
-      ),
-      <.div(^.className := "vertical-spacer"),
-      <.div(^.className := "time-range-label", label),
-      <.div(^.className := "time-range", s"${now.toHoursAndMinutes} - ${now.addMinutes(5).toHoursAndMinutes}")
-    )
-  }
-
   val component: Component[Props, Unit, Backend, CtorType.Props] = ScalaComponent.builder[Props]("PcpPaxSummariesComponent")
     .renderBackend[PcpPaxSummariesComponent.Backend]
     .build
