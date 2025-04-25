@@ -12,8 +12,9 @@ trait PaxSearchFormPayload extends js.Object {
   var time: String
   var arrivalDate: Date
   var fromDate: String
-    var toDate: String
+  var toDate: String
   var timeMachine: Boolean
+  var key: String
 }
 
 @js.native
@@ -22,7 +23,7 @@ trait IPaxSearchForm extends PaxSearchFormPayload {
 }
 
 object IPaxSearchForm {
-  def apply(day: String, time: String, arrivalDate: Date, fromDate: String, toDate: String, timeMachine: Boolean, onChange: PaxSearchFormPayload => Unit): IPaxSearchForm = {
+  def apply(day: String, time: String, arrivalDate: Date, fromDate: String, toDate: String, timeMachine: Boolean, onChange: PaxSearchFormPayload => Unit, key: String): IPaxSearchForm = {
     val p = (new js.Object).asInstanceOf[IPaxSearchForm]
     p.day = day
     p.time = time
@@ -31,6 +32,7 @@ object IPaxSearchForm {
     p.toDate = toDate
     p.timeMachine = timeMachine
     p.onChange = onChange
+    p.key = key
     p
   }
 }

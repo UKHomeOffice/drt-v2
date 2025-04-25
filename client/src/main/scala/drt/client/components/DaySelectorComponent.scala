@@ -70,7 +70,7 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
   implicit val stateReuse: Reusability[State] = Reusability((a, b) => a.stateDate == b.stateDate &&
     a.maybeTimeMachineDate.map(_.date.millisSinceEpoch) == b.maybeTimeMachineDate.map(_.date.millisSinceEpoch))
 
-  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DatePicker")
+  val component: Component[Props, State, Unit, CtorType.Props] = ScalaComponent.builder[Props]("DaySelectorComponent")
     .initialStateFromProps { p =>
       val viewMode = p.terminalPageTab.viewMode
       val tm = viewMode match {
@@ -199,7 +199,8 @@ object DaySelectorComponent extends ScalaCssReactImplicits {
                       Option(TimeMachineDate(SDate.now(), isNotValid = false))
                     } else None
                     updateUrlWithDate(s, timeMachineDate, props.terminalPageTab).runNow()
-                  }
+                  },
+                  key = "pax-search-form",
                 )
               ))
             ))

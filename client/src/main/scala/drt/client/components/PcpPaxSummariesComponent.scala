@@ -59,10 +59,12 @@ object PcpPaxSummariesComponent {
                       val summary = PcpPaxSummary(start, fiveMinutes, cms, queues.toSet)
                       PaxCardComponent(
                         IPaxCard(
-                          portQueue(queues, summary),
-                          label,
-                          new scala.scalajs.js.Date(start.millisSinceEpoch),
-                          new scala.scalajs.js.Date(start.addMinutes(5).millisSinceEpoch)))
+                          queues = portQueue(queues, summary),
+                          timeRange = label,
+                          startTime = new scala.scalajs.js.Date(start.millisSinceEpoch),
+                          endTime = new scala.scalajs.js.Date(start.addMinutes(5).millisSinceEpoch),
+                          key = s"pax-card-$box",
+                        ))
                   }
                   .toVdomArray
               )
