@@ -35,29 +35,21 @@ object HotTable {
       val props = (new js.Object).asInstanceOf[RawProps]
 
       val afterChangesCallback = (changes: js.Array[js.Array[Any]], _: String) => {
-        if (changes == null || changes.isEmpty) {
-          log.info("No changes to process")
-        } else {
-          val parsedChanges: Seq[(Int, Int, Any, Any)] = changes.toList.flatMap {
-            case change if change.isInstanceOf[js.Array[_]] =>
-              val jsArray = change.asInstanceOf[js.Array[Any]]
-              if (jsArray.length == 4) {
-                Some(
-                  (
-                    jsArray(0).asInstanceOf[Int],
-                    jsArray(1).asInstanceOf[Int],
-                    jsArray(2),
-                    jsArray(3)
-                  )
+        Option(changes).filter(_.nonEmpty).foreach { validChanges =>
+          val parsedChanges = validChanges.toList.collect {
+            case jsArray: js.Array[Any] if jsArray.length == 4 =>
+              Try(
+                (
+                  jsArray(0).asInstanceOf[Int],
+                  jsArray(1).asInstanceOf[Int],
+                  jsArray(2),
+                  jsArray(3)
                 )
-              } else {
-                log.error(s"Unexpected change format: $change")
-                None
+              ).getOrElse {
+                log.error(s"Invalid change format: $jsArray")
+                null
               }
-            case _ =>
-              log.error(s"Invalid change type")
-              None
-          }
+          }.filter(_ != null)
 
           afterChanges(parsedChanges)
         }

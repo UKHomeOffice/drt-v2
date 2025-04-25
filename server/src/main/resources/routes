@@ -66,14 +66,12 @@ DELETE        /sla-configs/:effectiveFrom                                       
 GET           /logged-in                                                              controllers.Application.isLoggedIn
 GET           /legacy-staff-assignments/:localDate                                    controllers.application.StaffingController.getShifts(localDate: String)
 GET           /legacy-staff-assignments                                               controllers.application.StaffingController.getAllShifts
-+ nocsrf
 POST          /legacy-staff-assignments                                               controllers.application.StaffingController.saveShifts
 GET           /fixed-points                                                           controllers.application.StaffingController.getFixedPoints
 POST          /fixed-points                                                           controllers.application.StaffingController.saveFixedPoints
 POST          /shifts/save                                                            controllers.application.ShiftsController.saveShifts
 GET           /shifts/:port/:terminal                                                 controllers.application.ShiftsController.getShifts(port: String, terminal: String)
 GET           /shifts/:port/:terminal/:shiftName                                      controllers.application.ShiftsController.getShift(port: String, terminal: String, shiftName: String)
-+ nocsrf
 POST          /staff-assignments                                                      controllers.application.ShiftsController.saveStaffAssignments
 GET           /staff-assignments                                                      controllers.application.ShiftsController.getAllStaffAssignments
 GET           /staff-assignments/:localDate                                           controllers.application.ShiftsController.getStaffAssignments(localDate: String)

@@ -194,22 +194,10 @@ object MonthlyStaffing {
                         colHeadings = state.colHeadings.map(h => s"<div style='text-align: left;'>${h.day}<br>${h.dayOfWeek}</div>"),
                         rowHeadings = state.rowHeadings,
                         afterChanges = (changes: Seq[(Int, Int, Any, Any)]) => {
-                          // Collect all changes in the temporary buffer
-                          tempChanges = changes.foldLeft(tempChanges) {
-                            case (acc, (row, col, _, newVal)) =>
-                              val newValueAsInt: Option[Int] = newVal match {
-                                case s: String if s.forall(_.isDigit) => Some(s.toInt)
-                                case i: Int => Some(i)
-                                case _ =>
-                                  println(s"Invalid value for cell ($row, $col): $newVal")
-                                  None
-                              }
-
-                              newValueAsInt match {
-                                case Some(value) => acc.updated(TimeSlotDay(row, col).key, value)
-                                case None => acc
-                              }
-                          }
+                          tempChanges = changes.collect {
+                            case (row, col, _, newVal: String) if newVal.forall(_.isDigit) => TimeSlotDay(row, col).key -> newVal.toInt
+                            case (row, col, _, newVal: Int) => TimeSlotDay(row, col).key -> newVal
+                          }.toMap
 
                           scala.scalajs.js.timers.setTimeout(500) {
                             scope.modState { state =>
@@ -219,7 +207,7 @@ object MonthlyStaffing {
                             }.runNow()
                           }
                         },
-                        lastDataRefresh = lastLoaded
+                        lastDataRefresh = lastLoaded // Ensure this property is set
                       ))
                     )
                   ),
