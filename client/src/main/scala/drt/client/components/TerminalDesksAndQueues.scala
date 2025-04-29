@@ -7,7 +7,7 @@ import drt.client.actions.Actions.RequestDateRecrunch
 import drt.client.components.ToolTips._
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.modules.GoogleEventTracker
-import drt.client.services.{StaffMovementMinute, SPACircuit, ViewMode}
+import drt.client.services.{SPACircuit, StaffMovementMinute, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton
@@ -18,7 +18,6 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
-import org.scalajs.dom
 import org.scalajs.dom.DOMList
 import org.scalajs.dom.html.{Div, TableCell}
 import org.scalajs.dom.raw.Node
@@ -243,7 +242,7 @@ object TerminalDesksAndQueues {
                 QueueChartComponent(QueueChartComponent.Props(queue, sortedCrunchMinuteSummaries, slas(queue), state.deskType))
               }.toTagMod
             } else {
-              <.div(^.className := "desks-and-queues-container",
+              <.div(
                 <.table(
                   ^.className := s"user-desk-recs table-striped",
                   <.thead(
@@ -251,7 +250,6 @@ object TerminalDesksAndQueues {
                     <.tr(<.th(^.className := "solid-background", "") :: headings: _*),
                     <.tr(<.th("Time", ^.className := "solid-background") :: subHeadingLevel2(queueNames, state.showWaitColumn): _*)),
                   <.tbody(
-                    ^.id := "sticky-body",
                     viewMinutes.map { millis =>
                       val rowProps = TerminalDesksAndQueuesRow.Props(
                         minuteMillis = millis,
@@ -307,12 +305,7 @@ object TerminalDesksAndQueues {
         showWaitColumn = !p.featureFlags.displayWaitTimesToggle)
     }
     .renderBackend[Backend]
-    .componentDidMount(_ => StickyTableHeader("[data-sticky]"))
     .build
-
-  def documentScrollTop: Double = Math.max(dom.document.documentElement.scrollTop, dom.document.body.scrollTop)
-
-  def documentScrollHeight: Double = Math.max(dom.document.documentElement.scrollHeight, dom.document.body.scrollHeight)
 
   def apply(props: Props): VdomElement = component(props)
 
