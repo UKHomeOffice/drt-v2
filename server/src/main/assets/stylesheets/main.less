@@ -25,16 +25,14 @@ html, body {
   margin: 0;
 }
 
-#root {
+#root-content {
   display: flex;
   flex-direction: column;
+  min-height: 100vh;
 }
-
 
 .main-content {
   flex: 1;
-  height: 200vh;
-  overflow: auto;
 }
 
 footer {
@@ -389,6 +387,11 @@ table.headlines {
   width: 100%;
 }
 
+table.forecast {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
 table.forecast td.red {
   background-color: #d02d31;
 }
@@ -654,13 +657,14 @@ table.headlines tr:nth-child(odd) {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 5px;
+  gap: 16px;
 }
 
 .nav-tabs {
   display: flex;
   justify-content: flex-start;
   flex-grow: 4;
+  align-self: flex-start;
 }
 
 .nav-tabs li {
@@ -702,7 +706,7 @@ table.headlines tr:nth-child(odd) {
 .exports {
   display: flex;
   padding-top: 5px;
-  gap: 3px;
+  gap: 8px;
   margin-bottom: 10px;
 }
 
@@ -1666,10 +1670,6 @@ p {
   min-width: 200px;
 }
 
-.terminal-desk-recs-container {
-  height: 800px;
-}
-
 table.user-desk-recs tbody tr td.table-danger {
   background-color: @slaBreach;
   color: #ffffff;
@@ -2255,6 +2255,9 @@ th h2 {
   padding: 8px 8px 8px 8px;
   line-height: 1.4;
   vertical-align: top;
+}
+
+#arrivals td {
   border-top: 1px solid #ddd;
 }
 
