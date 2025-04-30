@@ -13,7 +13,11 @@ import email.GovNotifyEmail
 import play.api.Configuration
 import play.api.libs.concurrent.PekkoGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
-import uk.gov.homeoffice.drt.ports.AirportConfig
+import uk.gov.homeoffice.drt.ports.PaxTypes.{B5JPlusNational, EeaMachineReadable, GBRNational}
+import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
+import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
+import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults.defaultQueueRatios
+import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxType}
 import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
@@ -30,7 +34,21 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
 
   lazy val drtParameters: DrtParameters = DrtParameters(config)
 
-  val airportConfig: AirportConfig = AirportConfigProvider(config)
+  private val egateUptake = sys.env.getOrElse("EGATE_UPTAKE", "0.81").toDouble
+
+  private val queueRatios: Map[PaxType, Seq[(Queue, Double)]] = defaultQueueRatios ++ Map(
+    EeaMachineReadable -> List(EGate -> egateUptake, EeaDesk -> (1.0 - egateUptake)),
+    GBRNational -> List(EGate -> egateUptake, EeaDesk -> (1.0 - egateUptake)),
+    B5JPlusNational -> List(EGate -> egateUptake, EeaDesk -> (1.0 - egateUptake)),
+  )
+
+  val airportConfig: AirportConfig = AirportConfigProvider(config).copy(
+    terminalPaxTypeQueueAllocation = Map(
+      N -> queueRatios,
+      S -> queueRatios,
+    )
+  )
+
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(90.seconds)
 
