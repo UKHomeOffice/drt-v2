@@ -42,11 +42,12 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
     B5JPlusNational -> List(EGate -> egateUptake, EeaDesk -> (1.0 - egateUptake)),
   )
 
-  val airportConfig: AirportConfig = AirportConfigProvider(config).copy(
-    terminalPaxTypeQueueAllocation = Map(
-      N -> queueRatios,
-      S -> queueRatios,
-    )
+  private val aConfig: AirportConfig = AirportConfigProvider(config)
+
+  val airportConfig: AirportConfig = aConfig.copy(
+    terminalPaxTypeQueueAllocation = aConfig.terminalPaxTypeQueueAllocation.map {
+      case (t, _) => t -> queueRatios
+    }
   )
 
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
