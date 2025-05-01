@@ -21,7 +21,7 @@ object ForecastUploadComponent {
 
   case class Props(airportConfigPot: Pot[AirportConfig])
 
-  val heading: VdomTagOf[Heading] = <.h3("Forecast Feed File Upload")
+  val heading: VdomTagOf[Heading] = <.h1("Forecast Feed File Upload")
 
   val upload: String => VdomTagOf[Div] = (portCode: String) =>
     <.div(^.className := "fileUpload",

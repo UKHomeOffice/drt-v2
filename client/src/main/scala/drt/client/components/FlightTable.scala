@@ -129,7 +129,7 @@ object FlightTable {
         updateState(searchTerm)
       }
 
-      <.div(
+      <.div(<.h2(^.className := "arrivals-title", "Arrivals"),
         (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
           case (true, Some((_, sourcesPot))) =>
             <.div(^.tabIndex := 0,

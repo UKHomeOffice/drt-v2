@@ -230,7 +230,7 @@ object TerminalDesksAndQueues {
             }
             .view.mapValues(_.map(_._2).max).toMap
 
-          <.div(
+          <.div(<.h2(^.className := "desks-queues-title", "Desks and queues"),
             <.div(^.className := "desks-and-queues-top",
               viewTypeControls(props.featureFlags.displayWaitTimesToggle),
               if (props.loggedInUser.hasRole(SuperAdmin)) adminRecrunchButton(requestForecastRecrunch _) else EmptyVdom,

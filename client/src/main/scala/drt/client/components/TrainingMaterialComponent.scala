@@ -10,7 +10,7 @@ object TrainingMaterialComponent {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("TrainingMaterialComponent")
     .render_P(_ =>
-      <.div(^.className := "training-material", <.h3("Training Material"), TrainingMaterialDetailComponent())
+      <.div(^.className := "training-material", <.h2("Training Material"), TrainingMaterialDetailComponent())
     )
     .build
 

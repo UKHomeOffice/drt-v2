@@ -43,7 +43,7 @@ object PortDashboardPage {
       modelRCP { modelMP: ModelProxy[PortDashboardModel] =>
         val portDashboardModel: PortDashboardModel = modelMP()
         <.div(^.className := "terminal-summary-dashboard",
-
+          <.h1(s"${p.dashboardPage.portCodeStr} - Port Dashboard"),
           portDashboardModel.airportConfig.renderReady(portConfig => {
 
             val (queues, paxTypeAndQueueOrder, terminals) = (portConfig.queuesByTerminal, portConfig.terminalPaxSplits, portConfig.terminals)

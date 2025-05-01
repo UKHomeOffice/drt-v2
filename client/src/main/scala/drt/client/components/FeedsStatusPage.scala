@@ -150,7 +150,7 @@ object FeedsStatusPage {
         }
 
         <.div(
-          <.h2("Feeds status"),
+          <.h1("Feeds status"),
           <.div(^.className := "feed-status-container",
             statusContentPot.getOrElse(EmptyVdom)
           ),

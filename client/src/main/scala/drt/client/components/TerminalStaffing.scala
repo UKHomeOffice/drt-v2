@@ -51,7 +51,7 @@ object TerminalStaffing {
             val movementsForTheDay = movements
               .forDay(props.viewMode.localDate)(ld => SDate(ld))
               .filter(sm => !props.removedStaffMovements.contains(sm.uUID))
-            <.div(
+            <.div(<.h2(s"Staff movements"),
               <.div(^.className := "container",
                 <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminal)), props.airportConfig, props.terminal, props.loggedInUser))),
                 <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminal))
@@ -72,14 +72,14 @@ object TerminalStaffing {
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
 
       <.div(
-        <.h2("Staff over the day"),
+        <.h3("Staff over the day"),
         staffingTableHourPerColumn(terminalName, daysWorthOf15Minutes(SDate(localDate)), staffWithShiftsAndMovementsAt)
       )
     }
 
     private def movementsEditor(movements: Seq[StaffMovement], terminalName: Terminal): VdomTagOf[Div] = {
       val terminalMovements = movements.filter(_.terminal == terminalName)
-      <.div(^.className := "staff-movements-list", <.h2("Movements"), movementsListTagMod(terminalMovements, terminalName))
+      <.div(^.className := "staff-movements-list", <.h3("Movements"), movementsListTagMod(terminalMovements, terminalName))
     }
 
     case class FixedPointsProps(fixedPoints: FixedPointAssignments,
@@ -112,7 +112,7 @@ object TerminalStaffing {
             defaultExamples
 
           <.div(
-            <.h2("Miscellaneous Staff"),
+            <.h3("Miscellaneous Staff"),
             if (props.loggedInUser.roles.contains(StaffEdit)) {
               <.div(
                 <.p("One entry per line with values separated by commas, e.g.:"),

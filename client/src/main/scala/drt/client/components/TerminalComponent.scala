@@ -119,7 +119,7 @@ object TerminalComponent {
             val timeRangeHours: TimeRangeHours = if (terminalModel.viewMode == ViewLive) CurrentWindow() else WholeDayWindow()
             val timeWindow: CustomWindow = timeRange(props.terminalPageTab, timeRangeHours)
             val (viewStart, viewEnd) = viewStartAndEnd(props.terminalPageTab.viewMode.localDate, timeWindow)
-            <.div(
+            <.div(<.h1(^.className := "terminal-header", "Queues & Arrivals"),
               <.div(^.className := "terminal-nav-wrapper",
                 terminalTabs(props, loggedInUser, airportConfig, terminalModel.timeMachineEnabled, featureFlags.enableShiftPlanningChange)),
               <.div(^.className := "tab-content", {

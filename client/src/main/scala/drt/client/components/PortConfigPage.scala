@@ -40,7 +40,7 @@ object PortConfigPage {
         gateStandWalktime <- props.gateStandWalktime
       } yield
         <.div(
-          <.h3("Port Config"),
+          <.h1("Port Config"),
           if (user.hasRole(EgateBanksEdit)) {
             <.div(
               <.h2("E-gates schedule"),
