@@ -25,7 +25,7 @@ import play.api.Configuration
 import providers.{FlightsProvider, ManifestsProvider, MinutesProvider}
 import queueus._
 import services.PcpArrival.pcpFrom
-import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits, RunnableMergedArrivals}
+import services.arrivals.{RunnableHistoricPax, RunnableHistoricSplits, RunnableLiveSplits, RunnableMergedArrivals}
 import services.crunch.CrunchSystem.paxTypeQueueAllocator
 import services.crunch.desklimits.{PortDeskLimits, TerminalDeskLimitsLike}
 import services.crunch.deskrecs._
@@ -253,6 +253,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
       if (config.getOptional[Boolean]("feature-flags.populate-historic-pax").getOrElse(false))
         PassengersLiveView.populateHistoricPax(populateLivePaxViewForDate)
+
+      val (liveSplitsQueueActor, liveSplitsKillSwitch) = RunnableLiveSplits(
+        airportConfig.portCode,
+        actorService.flightsRouterActor,
+        splitsCalculator.splitsForManifest,
+        manifestLookupService.maybeBestAvailableManifest,
+      )
 
       val (historicSplitsQueueActor, historicSplitsKillSwitch) = RunnableHistoricSplits(
         airportConfig.portCode,

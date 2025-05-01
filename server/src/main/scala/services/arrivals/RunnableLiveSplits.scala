@@ -17,32 +17,32 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object RunnableHistoricSplits extends RunnableUniqueArrivalsLike {
+object RunnableLiveSplits extends RunnableUniqueArrivalsLike {
   private val log = LoggerFactory.getLogger(getClass)
 
-  private def arrivalsToHistoricSplits(maybeHistoricSplits: UniqueArrival => Future[Option[Splits]],
-                                       persistSplits: SplitsForArrivals => Future[Done],
+  private def arrivalsToSplits(maybeLiveSplits: UniqueArrival => Future[Option[Splits]],
+                               persistSplits: SplitsForArrivals => Future[Done],
                                       )
                                       (implicit ec: ExecutionContext, mat: Materializer): Flow[Iterable[UniqueArrival], Done, NotUsed] =
     Flow[Iterable[UniqueArrival]]
       .mapAsync(1) { arrivalKeys =>
-        log.info(s"Looking up historic splits for ${arrivalKeys.size} arrivals")
+        log.info(s"Looking up live splits for ${arrivalKeys.size} arrivals")
         val startTime = SDate.now().millisSinceEpoch
         Source(arrivalKeys.toList)
           .mapAsync(1) { arrival =>
-            maybeHistoricSplits(arrival).map(_.map(s => (arrival, Set(s))))
+            maybeLiveSplits(arrival).map(_.map(s => (arrival, Set(s))))
           }
           .collect {
             case Some(keyWithSplits) => keyWithSplits
           }
           .runWith(Sink.seq)
           .flatMap { splits =>
-            log.info(s"Found historic splits for ${splits.size}/${arrivalKeys.size} arrivals in ${SDate.now().millisSinceEpoch - startTime}ms")
+            log.info(s"Found live splits for ${splits.size}/${arrivalKeys.size} arrivals in ${SDate.now().millisSinceEpoch - startTime}ms")
             persistSplits(SplitsForArrivals(splits.toMap))
           }
       }
 
-  private def maybeHistoricSplits(maybeManifest: UniqueArrival => Future[Option[ManifestLike]],
+  private def maybeLiveSplits(maybeManifest: UniqueArrival => Future[Option[ManifestLike]],
                                   splitsFromManifest: (ManifestLike, Terminal) => Splits)
                                  (implicit ec: ExecutionContext): UniqueArrival => Future[Option[Splits]] =
     uniqueArrival =>
@@ -61,9 +61,9 @@ object RunnableHistoricSplits extends RunnableUniqueArrivalsLike {
       val scheduled = SDate(uniqueArrival.scheduled)
       maybeBestAvailableManifest(portCode, origin, voyageNumber, scheduled).map(_._2)
     }
-    val maybeHistoricSplits = RunnableHistoricSplits.maybeHistoricSplits(getManifest, splitsFromManifest)
+    val maybeLiveSplits = RunnableLiveSplits.maybeLiveSplits(getManifest, splitsFromManifest)
     val persistSplits: SplitsForArrivals => Future[Done] = splits => flightsRouterActor.ask(splits).map(_ => Done)
-    val flow = RunnableHistoricSplits.arrivalsToHistoricSplits(maybeHistoricSplits, persistSplits)
+    val flow = RunnableLiveSplits.arrivalsToSplits(maybeLiveSplits, persistSplits)
     constructAndRunGraph(flow)
   }
 }

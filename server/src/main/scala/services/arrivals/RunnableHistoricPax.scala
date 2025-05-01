@@ -16,7 +16,7 @@ import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object RunnableHistoricPax extends RunnableHistoricManifestsLike {
+object RunnableHistoricPax extends RunnableUniqueArrivalsLike {
   private def arrivalsToHistoricPax(maybeHistoricPax: UniqueArrival => Future[Option[(Int, Int)]],
                                     persist: PaxForArrivals => Future[Done],
                            )

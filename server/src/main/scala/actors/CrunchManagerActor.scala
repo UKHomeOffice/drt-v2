@@ -29,6 +29,8 @@ object CrunchManagerActor {
 
   case class RecalculateArrivals(updatedMillis: Set[Long]) extends ReProcessDates
 
+  case class RecalculateLiveSplits(updatedMillis: Set[Long]) extends ReProcessDates
+
   case class Recrunch(updatedMillis: Set[Long]) extends ReProcessDates
 
   case class LookupHistoricSplits(updatedMillis: Set[Long]) extends ReProcessDates
@@ -59,18 +61,32 @@ object CrunchManagerActor {
       }
       .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
 
+  def arrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                        )
+                        (implicit mat: Materializer): UtcDate => Future[Iterable[UniqueArrival]] =
+    date => allTerminalsFlights(date, date)
+      .map {
+        _._2
+          .filter(!_.apiFlight.Origin.isDomesticOrCta)
+          .map(_.unique)
+      }
+      .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
+
+
   def props(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
            )
            (implicit ec: ExecutionContext, mat: Materializer, ac: AirportConfig): Props = {
     val missingHistoricSplitsArrivalKeysForDate = CrunchManagerActor.missingHistoricSplitsArrivalKeysForDate(allTerminalsFlights)
     val missingPaxArrivalKeysForDate = CrunchManagerActor.missingPaxArrivalKeysForDate(allTerminalsFlights)
+    val arrivalKeysForDate = CrunchManagerActor.arrivalKeysForDate(allTerminalsFlights)
 
-    Props(new CrunchManagerActor(missingHistoricSplitsArrivalKeysForDate, missingPaxArrivalKeysForDate))
+    Props(new CrunchManagerActor(missingHistoricSplitsArrivalKeysForDate, missingPaxArrivalKeysForDate, arrivalKeysForDate))
   }
 }
 
 class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
                          historicPaxArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
+                         arrivalsKeysForDate: UtcDate => Future[Iterable[UniqueArrival]],
                         )
                         (implicit ec: ExecutionContext, mat: Materializer, ac: AirportConfig) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)

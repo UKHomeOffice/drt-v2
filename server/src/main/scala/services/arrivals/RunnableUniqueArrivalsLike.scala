@@ -6,7 +6,7 @@ import org.apache.pekko.stream._
 import org.apache.pekko.{Done, NotUsed}
 import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 
-trait RunnableHistoricManifestsLike {
+trait RunnableUniqueArrivalsLike {
   protected def constructAndRunGraph(flow: Flow[Iterable[UniqueArrival], Done, NotUsed])
                                     (implicit mat: Materializer): (ActorRef, UniqueKillSwitch) = {
     val completionMatcher: PartialFunction[Any, CompletionStrategy] = {
