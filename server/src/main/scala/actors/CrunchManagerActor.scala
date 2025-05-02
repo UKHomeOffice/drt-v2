@@ -17,7 +17,9 @@ import scala.concurrent.{ExecutionContext, Future}
 object CrunchManagerActor {
   case class AddQueueCrunchSubscriber(subscriber: ActorRef)
 
-  case class AddRecalculateArrivalsSubscriber(subscriber: ActorRef)
+  case class AddQueueRecalculateArrivalsSubscriber(subscriber: ActorRef)
+
+  case class AddQueueRecalculateLiveSplitsSubscriber(subscriber: ActorRef)
 
   case class AddQueueHistoricSplitsLookupSubscriber(subscriber: ActorRef)
 
@@ -29,7 +31,7 @@ object CrunchManagerActor {
 
   case class RecalculateArrivals(updatedMillis: Set[Long]) extends ReProcessDates
 
-  case class RecalculateLiveSplits(updatedMillis: Set[Long]) extends ReProcessDates
+  case class RecalculateSplits(updatedMillis: Set[Long]) extends ReProcessDates
 
   case class Recrunch(updatedMillis: Set[Long]) extends ReProcessDates
 
@@ -39,7 +41,7 @@ object CrunchManagerActor {
 
   def missingHistoricSplitsArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                                              )
-                                             (implicit mat: Materializer): UtcDate => Future[Iterable[UniqueArrival]] =
+                                             (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
       .map {
         _._2
@@ -49,9 +51,21 @@ object CrunchManagerActor {
       }
       .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
 
+  def historicSplitsArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                      )
+                                      (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
+    date => allTerminalsFlights(date, date)
+      .map {
+        _._2
+          .filter(!_.apiFlight.Origin.isDomesticOrCta)
+          .filter(_.splits.exists(_.source == Historical))
+          .map(_.unique)
+      }
+      .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
+
   def missingPaxArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                                   )
-                                  (implicit mat: Materializer): UtcDate => Future[Iterable[UniqueArrival]] =
+                                  (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
       .map {
         _._2
@@ -61,9 +75,9 @@ object CrunchManagerActor {
       }
       .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
 
-  def arrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
-                        )
-                        (implicit mat: Materializer): UtcDate => Future[Iterable[UniqueArrival]] =
+  def liveSplitsArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                  )
+                                  (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
       .map {
         _._2
@@ -72,27 +86,27 @@ object CrunchManagerActor {
       }
       .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
 
-
   def props(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
            )
            (implicit ec: ExecutionContext, mat: Materializer, ac: AirportConfig): Props = {
     val missingHistoricSplitsArrivalKeysForDate = CrunchManagerActor.missingHistoricSplitsArrivalKeysForDate(allTerminalsFlights)
+    val historicSplitsArrivalKeysForDate = CrunchManagerActor.historicSplitsArrivalKeysForDate(allTerminalsFlights)
     val missingPaxArrivalKeysForDate = CrunchManagerActor.missingPaxArrivalKeysForDate(allTerminalsFlights)
-    val arrivalKeysForDate = CrunchManagerActor.arrivalKeysForDate(allTerminalsFlights)
 
-    Props(new CrunchManagerActor(missingHistoricSplitsArrivalKeysForDate, missingPaxArrivalKeysForDate, arrivalKeysForDate))
+    Props(new CrunchManagerActor(missingHistoricSplitsArrivalKeysForDate, historicSplitsArrivalKeysForDate, missingPaxArrivalKeysForDate))
   }
 }
 
-class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
+class CrunchManagerActor(missingHistoricManifestArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
+                         historicManifestArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
                          historicPaxArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
-                         arrivalsKeysForDate: UtcDate => Future[Iterable[UniqueArrival]],
                         )
                         (implicit ec: ExecutionContext, mat: Materializer, ac: AirportConfig) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
   private var maybeQueueCrunchSubscriber: Option[ActorRef] = None
-  private var maybeRecalculateArrivalsSubscriber: Option[ActorRef] = None
+  private var maybeQueueRecalculateArrivalsSubscriber: Option[ActorRef] = None
+  private var maybeQueueRecalculateLiveSplitsLookupSubscriber: Option[ActorRef] = None
   private var maybeQueueHistoricSplitsLookupSubscriber: Option[ActorRef] = None
   private var maybeQueueHistoricPaxLookupSubscriber: Option[ActorRef] = None
 
@@ -100,8 +114,11 @@ class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable
     case AddQueueCrunchSubscriber(subscriber) =>
       maybeQueueCrunchSubscriber = Option(subscriber)
 
-    case AddRecalculateArrivalsSubscriber(subscriber) =>
-      maybeRecalculateArrivalsSubscriber = Option(subscriber)
+    case AddQueueRecalculateArrivalsSubscriber(subscriber) =>
+      maybeQueueRecalculateArrivalsSubscriber = Option(subscriber)
+
+    case AddQueueRecalculateLiveSplitsSubscriber(subscriber) =>
+      maybeQueueRecalculateLiveSplitsLookupSubscriber = Option(subscriber)
 
     case AddQueueHistoricSplitsLookupSubscriber(subscriber) =>
       maybeQueueHistoricSplitsLookupSubscriber = Option(subscriber)
@@ -115,13 +132,17 @@ class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable
 
     case RecalculateArrivals(um) =>
       val updateRequests = millisToTerminalUpdateRequests(um)
-      maybeRecalculateArrivalsSubscriber.foreach(_ ! updateRequests)
+      maybeQueueRecalculateArrivalsSubscriber.foreach(_ ! updateRequests)
 
-    case LookupHistoricSplits(um) =>
+    case RecalculateSplits(um) =>
+      maybeQueueRecalculateLiveSplitsLookupSubscriber.foreach(sub => um.map(ms => sub ! SDate(ms).toUtcDate))
       queueLookups(um, maybeQueueHistoricSplitsLookupSubscriber, historicManifestArrivalKeys, "historic splits")
 
+    case LookupHistoricSplits(um) =>
+      queueLookups(um, maybeQueueHistoricSplitsLookupSubscriber, missingHistoricManifestArrivalKeys, "mising historic splits")
+
     case LookupHistoricPaxNos(um) =>
-      queueLookups(um, maybeQueueHistoricPaxLookupSubscriber, historicPaxArrivalKeys, "historic pax nos")
+      queueLookups(um, maybeQueueHistoricPaxLookupSubscriber, historicPaxArrivalKeys, "mising historic pax nos")
 
     case other =>
       log.warn(s"CrunchManagerActor received unexpected message: $other")

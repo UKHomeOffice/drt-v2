@@ -378,7 +378,7 @@ class TestDrtActor extends Actor {
       val manifestsSource: Source[ManifestsFeedResponse, SourceQueueWithComplete[ManifestsFeedResponse]] = Source.queue[ManifestsFeedResponse](0, OverflowStrategy.backpressure)
 
       val persistManifests = ManifestPersistence.processManifestFeedResponse(
-        manifestsRouterActor,
+        Option(manifestsRouterActor),
         portStateActor,
         splitsCalculator.splitsForManifest,
       )

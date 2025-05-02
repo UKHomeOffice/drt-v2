@@ -71,13 +71,18 @@ object ManifestPersistence {
       FlightsRouterActor.persistSplits(flightsRouterActor),
     )
 
-  def processManifestFeedResponse(manifestsRouterActor: ActorRef,
+  def processManifestFeedResponse(maybeManifestsRouterActor: Option[ActorRef],
                                   flightsRouterActor: ActorRef,
                                   splitsForManifest: (ManifestLike, Terminal) => Splits
                                  )
                                  (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): ManifestsFeedResponse => Future[Done] = {
-    val persistManifestResponse = manifestsFeedResponsePersistor(manifestsRouterActor)
+    val persistManifestResponse = maybeManifestsRouterActor match {
+      case Some(manifestsRouterActor) => manifestsFeedResponsePersistor(manifestsRouterActor)
+      case None => (_: ManifestsFeedResponse) => Future.successful(Done)
+    }
+
     val persistSplitsFromManifests = manifestsToSplitsPersistor(flightsRouterActor, splitsForManifest)
+
     response =>
       persistManifestResponse(response)
         .recover {

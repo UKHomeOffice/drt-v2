@@ -1,6 +1,6 @@
 package uk.gov.homeoffice.drt.service
 
-import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddQueueHistoricPaxLookupSubscriber, AddQueueHistoricSplitsLookupSubscriber, AddRecalculateArrivalsSubscriber}
+import actors.CrunchManagerActor.{AddQueueCrunchSubscriber, AddQueueHistoricPaxLookupSubscriber, AddQueueHistoricSplitsLookupSubscriber, AddQueueRecalculateLiveSplitsSubscriber, AddQueueRecalculateArrivalsSubscriber}
 import actors._
 import actors.daily.{PassengersActor, RequestAndTerminate}
 import actors.persistent._
@@ -17,7 +17,7 @@ import drt.server.feeds.FeedPoller.{AdhocCheck, Enable}
 import drt.server.feeds._
 import drt.server.feeds.api.{ApiFeedImpl, DbManifestArrivalKeys, DbManifestProcessor}
 import drt.shared.CrunchApi.{MillisSinceEpoch, StaffMinute}
-import manifests.ManifestLookupLike
+import manifests.{ManifestLookupLike, UniqueArrivalKey}
 import manifests.queues.SplitsCalculator
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser
@@ -59,7 +59,7 @@ import uk.gov.homeoffice.drt.prediction.arrival.{OffScheduleModelAndFeatures, Pa
 import uk.gov.homeoffice.drt.redlist.RedListUpdates
 import uk.gov.homeoffice.drt.services.Slas
 import uk.gov.homeoffice.drt.time.MilliTimes.oneSecondMillis
-import uk.gov.homeoffice.drt.time.{LocalDate, _}
+import uk.gov.homeoffice.drt.time._
 
 import javax.inject.Singleton
 import scala.collection.SortedSet
@@ -254,11 +254,13 @@ case class ApplicationService(journalType: StreamingJournalLike,
       if (config.getOptional[Boolean]("feature-flags.populate-historic-pax").getOrElse(false))
         PassengersLiveView.populateHistoricPax(populateLivePaxViewForDate)
 
+      val manifestUpdatePersistence = ManifestPersistence.processManifestFeedResponse(None, actorService.flightsRouterActor, splitsCalculator.splitsForManifest)
+      val processManifestUpdates = DbManifestProcessor(AggregateDb, airportConfig.portCode, manifestUpdatePersistence)
+      val dateToEventualArrivals = CrunchManagerActor.liveSplitsArrivalKeysForDate(flightsProvider.allTerminalsDateRangeScheduledOrPcp)
+
       val (liveSplitsQueueActor, liveSplitsKillSwitch) = RunnableLiveSplits(
-        airportConfig.portCode,
-        actorService.flightsRouterActor,
-        splitsCalculator.splitsForManifest,
-        manifestLookupService.maybeBestAvailableManifest,
+        date => dateToEventualArrivals(date).map(keys => keys.map(ua => UniqueArrivalKey(airportConfig.portCode, ua))),
+        processManifestUpdates.process,
       )
 
       val (historicSplitsQueueActor, historicSplitsKillSwitch) = RunnableHistoricSplits(
@@ -374,7 +376,8 @@ case class ApplicationService(journalType: StreamingJournalLike,
       egateBanksUpdatesActor ! AddUpdatesSubscriber(paxLoadsRequestQueueActor)
 
       crunchManagerActor ! AddQueueCrunchSubscriber(paxLoadsRequestQueueActor)
-      crunchManagerActor ! AddRecalculateArrivalsSubscriber(mergeArrivalsRequestQueueActor)
+      crunchManagerActor ! AddQueueRecalculateArrivalsSubscriber(mergeArrivalsRequestQueueActor)
+      crunchManagerActor ! AddQueueRecalculateLiveSplitsSubscriber(liveSplitsQueueActor)
       crunchManagerActor ! AddQueueHistoricSplitsLookupSubscriber(historicSplitsQueueActor)
       crunchManagerActor ! AddQueueHistoricPaxLookupSubscriber(historicPaxQueueActor)
 
@@ -385,7 +388,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
 
       system.scheduler.scheduleAtFixedRate(delayUntilTomorrow.millis, 1.day)(() => staffChecker.calculateForecastStaffMinutes())
 
-      val killSwitches = Iterable(mergeArrivalsKillSwitch, historicSplitsKillSwitch, historicPaxKillSwitch,
+      val killSwitches = Iterable(mergeArrivalsKillSwitch, liveSplitsKillSwitch, historicSplitsKillSwitch, historicPaxKillSwitch,
         deskRecsKillSwitch, deploymentsKillSwitch, staffingUpdateKillSwitch)
 
       (mergeArrivalsRequestQueueActor, paxLoadsRequestQueueActor, deskRecsRequestQueueActor, deploymentRequestQueueActor, killSwitches)
@@ -416,7 +419,7 @@ case class ApplicationService(journalType: StreamingJournalLike,
     ))
 
   val persistManifests: ManifestsFeedResponse => Future[Done] = ManifestPersistence.processManifestFeedResponse(
-    persistentStateActors.manifestsRouterActor,
+    Option(persistentStateActors.manifestsRouterActor),
     actorService.flightsRouterActor,
     splitsCalculator.splitsForManifest,
   )

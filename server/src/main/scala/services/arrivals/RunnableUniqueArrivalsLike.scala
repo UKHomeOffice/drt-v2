@@ -1,18 +1,17 @@
 package services.arrivals
 
 import org.apache.pekko.actor.ActorRef
-import org.apache.pekko.stream.scaladsl.{Flow, Keep, Sink, Source}
 import org.apache.pekko.stream._
+import org.apache.pekko.stream.scaladsl.{Flow, Keep, Sink, Source}
 import org.apache.pekko.{Done, NotUsed}
-import uk.gov.homeoffice.drt.arrivals.UniqueArrival
 
 trait RunnableUniqueArrivalsLike {
-  protected def constructAndRunGraph(flow: Flow[Iterable[UniqueArrival], Done, NotUsed])
+  protected def constructAndRunGraph[T](flow: Flow[T, Done, NotUsed])
                                     (implicit mat: Materializer): (ActorRef, UniqueKillSwitch) = {
     val completionMatcher: PartialFunction[Any, CompletionStrategy] = {
       case Done => CompletionStrategy.immediately
     }
-    Source.actorRef[Iterable[UniqueArrival]](
+    Source.actorRef[T](
         completionMatcher = completionMatcher,
         failureMatcher = PartialFunction.empty,
         bufferSize = 365,

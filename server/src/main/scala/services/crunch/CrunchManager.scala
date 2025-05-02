@@ -14,10 +14,10 @@ import scala.concurrent.ExecutionContext
 object CrunchManager {
   private val log = LoggerFactory.getLogger(getClass)
 
-  def queueDaysToReProcess(crunchManager: ActorRef, offsetMinutes: Int, forecastMaxDays: Int, now: () => SDateLike, message: Set[Long] => ReProcessDates): Unit = {
+  def queueDaysToReProcess(crunchManager: ActorRef, offsetMinutes: Int, startDay: Int, forecastMaxDays: Int, now: () => SDateLike, message: Set[Long] => ReProcessDates): Unit = {
     val today = now()
     val millisToCrunchStart = Crunch.crunchStartWithOffset(offsetMinutes) _
-    val daysToReCrunch = (0 until forecastMaxDays).map(d => {
+    val daysToReCrunch = (startDay to forecastMaxDays).map(d => {
       millisToCrunchStart(today.addDays(d)).millisSinceEpoch
     }).toSet
     crunchManager ! message(daysToReCrunch)
@@ -30,11 +30,11 @@ object CrunchManager {
 
     flightsActor
       .ask(RemoveSplitsForDateRange(start.millisSinceEpoch, endMillis))
-      .map(_ => queueDaysToReProcess(crunchManager, offsetMinutes, forecastMaxDays, now, m => Recrunch(m)))
+      .map(_ => queueDaysToReProcess(crunchManager, offsetMinutes, 0, forecastMaxDays, now, m => Recrunch(m)))
       .recover {
         case t =>
           log.error("Failed to remove splits for date range", t)
-          queueDaysToReProcess(crunchManager, offsetMinutes, forecastMaxDays, now, m => Recrunch(m))
+          queueDaysToReProcess(crunchManager, offsetMinutes, 0, forecastMaxDays, now, m => Recrunch(m))
       }
   }
 }

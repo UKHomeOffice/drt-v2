@@ -1,7 +1,7 @@
 package drt.client.services.handlers
 
 import diode.{ActionResult, ModelRW}
-import drt.client.actions.Actions.{RequestDateRecrunch, RequestForecastRecrunch, RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals}
+import drt.client.actions.Actions._
 import drt.client.services.{DrtApi, RootModel}
 import upickle.default.write
 
@@ -11,8 +11,8 @@ class AppControlHandler[M](modelRW: ModelRW[M, RootModel]) extends LoggingAction
       DrtApi.post(s"control/crunch/recalculate/${date.toISOString}/${date.toISOString}", "")
       noChange
 
-    case RequestForecastRecrunch(recalculateSplits) =>
-      DrtApi.post("control/crunch/recalculate", write(recalculateSplits))
+    case RequestRecalculateSplits =>
+      DrtApi.post("control/splits/recalculate", write(true))
       noChange
 
     case RequestRecalculateArrivals =>

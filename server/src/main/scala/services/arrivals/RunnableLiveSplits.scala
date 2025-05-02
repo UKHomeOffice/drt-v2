@@ -1,18 +1,13 @@
 package services.arrivals
 
+import drt.shared.CrunchApi.MillisSinceEpoch
+import manifests.UniqueArrivalKey
+import org.apache.pekko.Done
 import org.apache.pekko.actor.ActorRef
-import org.apache.pekko.pattern.ask
 import org.apache.pekko.stream._
 import org.apache.pekko.stream.scaladsl.{Flow, Sink, Source}
-import org.apache.pekko.util.Timeout
-import org.apache.pekko.{Done, NotUsed}
-import manifests.UniqueArrivalKey
-import manifests.passengers.ManifestLike
 import org.slf4j.LoggerFactory
-import uk.gov.homeoffice.drt.arrivals.{Splits, SplitsForArrivals, UniqueArrival, VoyageNumber}
-import uk.gov.homeoffice.drt.ports.PortCode
-import uk.gov.homeoffice.drt.ports.Terminals.Terminal
-import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
+import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -20,50 +15,23 @@ import scala.concurrent.{ExecutionContext, Future}
 object RunnableLiveSplits extends RunnableUniqueArrivalsLike {
   private val log = LoggerFactory.getLogger(getClass)
 
-  private def arrivalsToSplits(maybeLiveSplits: UniqueArrival => Future[Option[Splits]],
-                               persistSplits: SplitsForArrivals => Future[Done],
-                                      )
-                                      (implicit ec: ExecutionContext, mat: Materializer): Flow[Iterable[UniqueArrival], Done, NotUsed] =
-    Flow[Iterable[UniqueArrival]]
-      .mapAsync(1) { arrivalKeys =>
-        log.info(s"Looking up live splits for ${arrivalKeys.size} arrivals")
+  def apply(arrivalKeysForDate: UtcDate => Future[Seq[UniqueArrivalKey]],
+            updateSplitsForArrivalKeys: (Seq[UniqueArrivalKey], MillisSinceEpoch) => Future[Done],
+           )
+           (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+    val flow = Flow[UtcDate]
+      .mapAsync(1) { date =>
+        log.info(s"Looking up live splits for ${date.toISOString}")
         val startTime = SDate.now().millisSinceEpoch
-        Source(arrivalKeys.toList)
-          .mapAsync(1) { arrival =>
-            maybeLiveSplits(arrival).map(_.map(s => (arrival, Set(s))))
-          }
-          .collect {
-            case Some(keyWithSplits) => keyWithSplits
-          }
+        Source.future(arrivalKeysForDate(date))
+          .mapAsync(1) { arrivalKeys => updateSplitsForArrivalKeys(arrivalKeys, SDate.now().millisSinceEpoch) }
           .runWith(Sink.seq)
-          .flatMap { splits =>
-            log.info(s"Found live splits for ${splits.size}/${arrivalKeys.size} arrivals in ${SDate.now().millisSinceEpoch - startTime}ms")
-            persistSplits(SplitsForArrivals(splits.toMap))
+          .map { _ =>
+            log.info(s"Updated live splits for ${date.toISOString} in ${SDate.now().millisSinceEpoch - startTime}ms")
+            Done
           }
       }
 
-  private def maybeLiveSplits(maybeManifest: UniqueArrival => Future[Option[ManifestLike]],
-                                  splitsFromManifest: (ManifestLike, Terminal) => Splits)
-                                 (implicit ec: ExecutionContext): UniqueArrival => Future[Option[Splits]] =
-    uniqueArrival =>
-      maybeManifest(uniqueArrival)
-        .map(_.map(m => splitsFromManifest(m, uniqueArrival.terminal)))
-
-  def apply(portCode: PortCode,
-            flightsRouterActor: ActorRef,
-            splitsFromManifest: (ManifestLike, Terminal) => Splits,
-            maybeBestAvailableManifest: (PortCode, PortCode, VoyageNumber, SDateLike) => Future[(UniqueArrivalKey, Option[ManifestLike])],
-           )
-           (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
-    val getManifest: UniqueArrival => Future[Option[ManifestLike]] = uniqueArrival => {
-      val origin: PortCode = uniqueArrival.origin
-      val voyageNumber: VoyageNumber = VoyageNumber(uniqueArrival.number)
-      val scheduled = SDate(uniqueArrival.scheduled)
-      maybeBestAvailableManifest(portCode, origin, voyageNumber, scheduled).map(_._2)
-    }
-    val maybeLiveSplits = RunnableLiveSplits.maybeLiveSplits(getManifest, splitsFromManifest)
-    val persistSplits: SplitsForArrivals => Future[Done] = splits => flightsRouterActor.ask(splits).map(_ => Done)
-    val flow = RunnableLiveSplits.arrivalsToSplits(maybeLiveSplits, persistSplits)
     constructAndRunGraph(flow)
   }
 }
