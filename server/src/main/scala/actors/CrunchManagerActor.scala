@@ -9,12 +9,14 @@ import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object CrunchManagerActor {
+  private val log = LoggerFactory.getLogger(getClass)
+
   case class AddQueueCrunchSubscriber(subscriber: ActorRef)
 
   case class AddQueueRecalculateArrivalsSubscriber(subscriber: ActorRef)
@@ -53,15 +55,27 @@ object CrunchManagerActor {
 
   def historicSplitsArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                                       )
-                                      (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
+                                      (implicit mat: Materializer, ec: ExecutionContext): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
-      .map {
-        _._2
+      .map { case (_, arrivals) =>
+        val arrivalsWithHistoricSplits = arrivals
           .filter(!_.apiFlight.Origin.isDomesticOrCta)
           .filter(_.splits.exists(_.source == Historical))
-          .map(_.unique)
+
+//        arrivalsWithHistoricSplits
+//          .headOption.foreach { arrival =>
+//            arrival.splits.find(_.source == Historical).map { splits =>
+//              splits.splits.map(a => println(s"Splits breakdown: ${arrival.apiFlight.flightCodeString}: ${a.passengerType.cleanName} -> ${a.queueType.stringValue} = ${a.paxCount}"))
+//            }
+//          }
+
+        arrivalsWithHistoricSplits.map(_.unique)
       }
       .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
+      .map { keys =>
+        log.info(s"Found ${keys.size} arrival keys for historic splits recalculation for ${date.toISOString}")
+        keys
+      }
 
   def missingPaxArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                                   )
@@ -82,6 +96,7 @@ object CrunchManagerActor {
       .map {
         _._2
           .filter(!_.apiFlight.Origin.isDomesticOrCta)
+          .filter(_.splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages))
           .map(_.unique)
       }
       .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))

@@ -80,8 +80,10 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
                                   (implicit
                                    ec: ExecutionContext,
                                    mat: Materializer,
-                                  ): Flow[TerminalUpdateRequest, MinutesContainer[PassengersMinute, TQM], NotUsed] =
+                                  ): Flow[TerminalUpdateRequest, MinutesContainer[PassengersMinute, TQM], NotUsed] = {
+    val validTerminals = queuesByTerminal.keys.toSet
     Flow[TerminalUpdateRequest]
+      .filter(cr => validTerminals.contains(cr.terminal))
       .wireTap(cr => log.info(s"$cr crunch request - started"))
       .via(addArrivals(arrivalsProvider))
       .wireTap(crWithFlights => log.info(s"${crWithFlights._1} crunch request - found ${crWithFlights._2.size} arrivals with ${crWithFlights._2.map(_.apiFlight.bestPcpPaxEstimate(paxFeedSourceOrder).getOrElse(0)).sum} passengers"))
@@ -104,6 +106,7 @@ object DynamicRunnablePassengerLoads extends DrtRunnableGraph {
           log.error(s"Failed to process crunch request", t)
           MinutesContainer.empty[PassengersMinute, TQM]
       }
+  }
 
 
   def validApiPercentage(flights: Iterable[ApiFlightWithSplits]): Double = {
