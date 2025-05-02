@@ -1,12 +1,13 @@
 package controllers.application
 
-import actors.CrunchManagerActor.{LookupHistoricPaxNos, LookupHistoricSplits, RecalculateArrivals, RecalculateSplits, Recrunch}
+import actors.CrunchManagerActor.{LookupHistoricPaxNos, LookupHistoricSplits, RecalculateArrivals, RecalculateHistoricSplits, RecalculateLiveSplits, Recrunch}
 import actors.PartitionedPortStateActor.{GetStateForDateRange, GetStateForTerminalDateRange, GetUpdatesSince, PointInTimeQuery}
 import org.apache.pekko.pattern.ask
 import org.apache.pekko.util.Timeout
 import com.google.inject.Inject
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, MillisSinceEpoch, PortStateUpdates}
 import drt.shared.PortState
+import org.apache.pekko.actor.ActorRef
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import services.crunch.CrunchManager.{queueDaysToReCrunchWithUpdatedSplits, queueDaysToReProcess}
 import services.exports.Forecast
@@ -119,6 +120,11 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
     }
   }
 
+  private val forecastLengthDays: Int = ctrl.params.forecastMaxDays
+  private val now: () => SDateLike = ctrl.now
+  private val offsetMinutes: Int = airportConfig.crunchOffsetMinutes
+  private val crunchManagerActor: ActorRef = ctrl.applicationService.crunchManagerActor
+
   def reCrunch(fromStr: String, toStr: String): Action[AnyContent] = authByRole(SuperAdmin) {
     Action {
       val maybeFuture = for {
@@ -126,7 +132,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
         to <- LocalDate.parse(toStr)
       } yield {
         val datesToReCrunch = DateRange(from, to).map { localDate => SDate(localDate).millisSinceEpoch }.toSet
-        ctrl.applicationService.crunchManagerActor ! Recrunch(datesToReCrunch)
+        crunchManagerActor ! Recrunch(datesToReCrunch)
         Ok(s"Queued dates $from to $to for re-crunch")
       }
       maybeFuture.getOrElse(BadRequest(s"Unable to parse dates '$fromStr' or '$toStr'"))
@@ -134,46 +140,47 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
   }
 
   def reCrunchFullForecast: Action[AnyContent] = authByRole(SuperAdmin) {
-    Action.async { request: Request[AnyContent] =>
+    Action { request: Request[AnyContent] =>
       request.body.asText match {
         case Some("true") =>
           queueDaysToReCrunchWithUpdatedSplits(ctrl.actorService.flightsRouterActor,
-            ctrl.applicationService.crunchManagerActor,
-            airportConfig.crunchOffsetMinutes,
-            ctrl.params.forecastMaxDays, ctrl.now)
-          Future.successful(Ok("Re-crunching with updated splits"))
+            crunchManagerActor,
+            offsetMinutes,
+            forecastLengthDays, now)
+          Ok("Re-crunching with updated splits")
         case _ =>
-          queueDaysToReProcess(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, 0, ctrl.params.forecastMaxDays, ctrl.now, m => Recrunch(m))
-          Future.successful(Ok("Re-crunching without updating splits"))
+          queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => Recrunch(m))
+          Ok("Re-crunching without updating splits")
       }
     }
   }
 
   def recalculateSplits: Action[AnyContent] = authByRole(SuperAdmin) {
-    Action.async {
-      queueDaysToReProcess(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, -1, 1, ctrl.now, m => RecalculateSplits(m))
-      Future.successful(Ok("Recalculating live splits"))
+    Action {
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, -1, 1, now, m => RecalculateLiveSplits(m))
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => RecalculateHistoricSplits(m))
+      Ok("Recalculating live splits")
     }
   }
 
   def lookupMissingHistoricSplits: Action[AnyContent] = authByRole(SuperAdmin) {
-    Action.async {
-      queueDaysToReProcess(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, 0, ctrl.params.forecastMaxDays, ctrl.now, m => LookupHistoricSplits(m))
-      Future.successful(Ok("Re-crunching without updating splits"))
+    Action {
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => LookupHistoricSplits(m))
+      Ok("Re-crunching without updating splits")
     }
   }
 
   def lookupMissingPaxNos: Action[AnyContent] = authByRole(SuperAdmin) {
-    Action.async {
-      queueDaysToReProcess(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, 0, ctrl.params.forecastMaxDays, ctrl.now, m => LookupHistoricPaxNos(m))
-      Future.successful(Ok("Re-crunching without updating splits"))
+    Action {
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => LookupHistoricPaxNos(m))
+      Ok("Re-crunching without updating splits")
     }
   }
 
   def reCalculateArrivals: Action[AnyContent] = authByRole(SuperAdmin) {
-    Action.async { _ =>
-      queueDaysToReProcess(ctrl.applicationService.crunchManagerActor, airportConfig.crunchOffsetMinutes, 0, ctrl.params.forecastMaxDays, ctrl.now, m => RecalculateArrivals(m))
-      Future.successful(Ok("Re-calculating arrivals"))
+    Action {
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => RecalculateArrivals(m))
+      Ok("Re-calculating arrivals")
     }
   }
 }

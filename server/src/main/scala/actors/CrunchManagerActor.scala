@@ -33,7 +33,9 @@ object CrunchManagerActor {
 
   case class RecalculateArrivals(updatedMillis: Set[Long]) extends ReProcessDates
 
-  case class RecalculateSplits(updatedMillis: Set[Long]) extends ReProcessDates
+  case class RecalculateLiveSplits(updatedMillis: Set[Long]) extends ReProcessDates
+
+  case class RecalculateHistoricSplits(updatedMillis: Set[Long]) extends ReProcessDates
 
   case class Recrunch(updatedMillis: Set[Long]) extends ReProcessDates
 
@@ -149,8 +151,10 @@ class CrunchManagerActor(missingHistoricManifestArrivalKeys: UtcDate => Future[I
       val updateRequests = millisToTerminalUpdateRequests(um)
       maybeQueueRecalculateArrivalsSubscriber.foreach(_ ! updateRequests)
 
-    case RecalculateSplits(um) =>
+    case RecalculateLiveSplits(um) =>
       maybeQueueRecalculateLiveSplitsLookupSubscriber.foreach(sub => um.map(ms => sub ! SDate(ms).toUtcDate))
+
+    case RecalculateHistoricSplits(um) =>
       queueLookups(um, maybeQueueHistoricSplitsLookupSubscriber, historicManifestArrivalKeys, "historic splits")
 
     case LookupHistoricSplits(um) =>
