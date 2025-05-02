@@ -108,12 +108,13 @@ object Layout {
                       props.currentLoc.page match {
                         case TerminalPageTabLoc(terminalName, _, _, _) =>
                           val terminal = Terminal(terminalName)
-                          <.div(^.className := "status-bar",
-                            ApiStatusComponent(ApiStatusComponent.Props(
-                              !airportConfig.noLivePortFeed,
-                              terminal)),
-//                            PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
-                          )
+                          <.div(<.h1(^.className := "terminal-header", "Queues & Arrivals"),
+                            <.div(^.className := "status-bar",
+                              ApiStatusComponent(ApiStatusComponent.Props(
+                                !airportConfig.noLivePortFeed,
+                                terminal)),
+                              //PassengerForecastAccuracyComponent(PassengerForecastAccuracyComponent.Props(terminal))
+                            ))
                         case _ => EmptyVdom
                       },
                     ),
