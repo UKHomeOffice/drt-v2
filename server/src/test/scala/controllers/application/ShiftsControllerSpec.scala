@@ -42,8 +42,10 @@ class ShiftsControllerSpec extends Specification  {
       val request = FakeRequest().withTextBody(write(shifts)).withHeaders(Headers("X-Forwarded-Groups" -> "staff:edit,LHR"))
       val result = controller.saveShifts.apply(request)
 
+      val expectResult =
+      """{"indexedAssignments":[[{"terminal":"uk.gov.homeoffice.drt.ports.Terminals.T1","minute":0},{"$type":"drt.shared.StaffAssignment","name":"shiftName","terminal":"uk.gov.homeoffice.drt.ports.Terminals.T1","start":0,"end":0,"numberOfStaff":0,"createdBy":[]}]]}"""
       status(result) must beEqualTo(OK)
-      contentAsString(result) must contain("Inserted 1 shift(s)")
+      contentAsString(result) must contain(expectResult)
     }
 
     "update shifts with zero staff using generateDailyAssignments" in {
