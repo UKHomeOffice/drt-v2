@@ -36,7 +36,7 @@ object ScenarioSimulationComponent extends ScalaCssReactImplicits {
   class Backend() {
     def render(props: Props, state: State): VdomTagOf[Div] = {
       <.div(
-        <.h2("Arrival Scenario Simulation"),
+        <.h2(s"Simulate a day at ${props.airportConfig.portCode} (${props.airportConfig.portName}), ${props.terminal}"),
         MuiPaper()(
           DefaultFormFieldsStyle.simulation,
           MuiGrid(direction = MuiGrid.Direction.row, container = true, spacing = 2)(

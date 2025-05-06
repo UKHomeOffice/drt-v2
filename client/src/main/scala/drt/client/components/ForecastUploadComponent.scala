@@ -21,11 +21,11 @@ object ForecastUploadComponent {
 
   case class Props(airportConfigPot: Pot[AirportConfig])
 
-  val heading: VdomTagOf[Heading] = <.h1("Forecast Feed File Upload")
+  val heading: String => VdomTagOf[Heading] = header => <.h1(s"Forecast Feed File Upload $header")
 
-  val upload: String => VdomTagOf[Div] = (portCode: String) =>
+  val upload: (String, String) => VdomTagOf[Div] = (portCode: String, header: String) =>
     <.div(^.className := "fileUpload",
-      heading,
+      heading(header),
       <.br(),
       <.form(<.input(^.`type` := "file", ^.id := "forecast-file"),
         <.br(),
@@ -33,9 +33,9 @@ object ForecastUploadComponent {
       )
     )
 
-  private val uploadingInProgress: String => VdomTagOf[Div] = { message =>
+  private val uploadingInProgress: (String, String) => VdomTagOf[Div] = { (message, header) =>
     <.div(
-      heading,
+      heading(header),
       <.br(),
       <.div(s"Upload status : $message"),
       <.br(),
@@ -43,9 +43,9 @@ object ForecastUploadComponent {
     )
   }
 
-  private val uploadResult: String => VdomTagOf[Div] = (message: String) =>
+  private val uploadResult: (String, String) => VdomTagOf[Div] = (message: String, header: String) =>
     <.div(
-      heading,
+      heading(header),
       <.br(),
       <.div(s"Upload status : $message"),
       <.br(),
@@ -54,21 +54,24 @@ object ForecastUploadComponent {
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ForecastFileUpload")
     .render_P { _ =>
+
       val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState, m.airportConfig))
       fileUploadStateRCP(fileUploadStateMP => {
         <.div(
-          fileUploadStateMP().airportConfig.renderReady(airportConfig =>
+          fileUploadStateMP().airportConfig.renderReady { airportConfig =>
+            val headerString = s"${airportConfig.portCode.iata} (${airportConfig.portName})"
             if (fileUploadStateMP().fileUploadState.isEmpty) {
-              upload(airportConfig.portCode.iata)
+              upload(airportConfig.portCode.iata, headerString)
             } else {
               <.div(fileUploadStateMP().fileUploadState.render(details => {
                 details.state match {
-                  case "uploaded" | "error" => uploadResult(details.message)
-                  case "uploadInProgress" => uploadingInProgress(details.message)
-                  case _ => upload(airportConfig.portCode.iata)
+                  case "uploaded" | "error" => uploadResult(details.message, headerString)
+                  case "uploadInProgress" => uploadingInProgress(details.message, headerString)
+                  case _ => upload(airportConfig.portCode.iata, headerString)
                 }
               }))
-            })
+            }
+          }
         )
       }
       )

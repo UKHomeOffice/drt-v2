@@ -31,7 +31,7 @@ object TrainingHubComponent {
   private case class TrainingModel(airportConfig: Pot[AirportConfig],
                                    loggedInUserPot: Pot[LoggedInUser],
                                    dropIns: Pot[Seq[DropIn]],
-                                   dropInRegistrations : Pot[Seq[DropInRegistration]]
+                                   dropInRegistrations: Pot[Seq[DropInRegistration]]
                                   ) extends UseValueEq
 
   private val activeClass = "active"
@@ -48,20 +48,20 @@ object TrainingHubComponent {
       <.div(
         modelRCP(modelMP => {
           val model: TrainingModel = modelMP()
-            <.div(
-              <.div(^.className := "terminal-nav-wrapper", trainingTabs(props)),
-              <.div(^.className := "tab-content",
-                props.trainingHubLoc.modeStr match {
-                  case "trainingMaterial" =>
-                    TrainingMaterialComponent()
-                  case "dropInBooking" =>
-                    <.div(model.dropIns.render(dropIns => {
-                      DropInComponent(dropIns)
-                    }))
+          <.div(<.h1(s"Training Hub"),
+            <.div(^.className := "terminal-nav-wrapper", trainingTabs(props)),
+            <.div(^.className := "tab-content",
+              props.trainingHubLoc.modeStr match {
+                case "trainingMaterial" =>
+                  TrainingMaterialComponent()
+                case "dropInBooking" =>
+                  <.div(model.dropIns.render(dropIns => {
+                    DropInComponent(dropIns)
+                  }))
 
-                }
-              )
+              }
             )
+          )
         }
         ))
     }

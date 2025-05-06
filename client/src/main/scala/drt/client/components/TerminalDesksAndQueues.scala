@@ -230,7 +230,7 @@ object TerminalDesksAndQueues {
             }
             .view.mapValues(_.map(_._2).max).toMap
 
-          <.div(<.h2(^.className := "desks-queues-title", "Desks and queues"),
+          <.div(<.h2(^.className := "desks-queues-title", s"Desks and queues at ${props.terminalPageTab.portCodeStr} (${props.airportConfig.portName}), ${props.terminalPageTab.terminal}"),
             <.div(^.className := "desks-and-queues-top",
               viewTypeControls(props.featureFlags.displayWaitTimesToggle),
               if (props.loggedInUser.hasRole(SuperAdmin)) adminRecrunchButton(requestForecastRecrunch _) else EmptyVdom,

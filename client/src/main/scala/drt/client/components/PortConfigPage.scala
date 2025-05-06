@@ -40,7 +40,7 @@ object PortConfigPage {
         gateStandWalktime <- props.gateStandWalktime
       } yield
         <.div(
-          <.h1("Port Config"),
+          <.h1(s"Port configuration for ${airportConfig.portCode} (${airportConfig.portName})"),
           if (user.hasRole(EgateBanksEdit)) {
             <.div(
               <.h2("E-gates schedule"),

@@ -51,7 +51,7 @@ object TerminalStaffing {
             val movementsForTheDay = movements
               .forDay(props.viewMode.localDate)(ld => SDate(ld))
               .filter(sm => !props.removedStaffMovements.contains(sm.uUID))
-            <.div(<.h2(s"Staff movements"),
+            <.div(<.h2(s"Staff movements at ${props.airportConfig.portCode} (${props.airportConfig.portName}), ${props.terminal}"),
               <.div(^.className := "container",
                 <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminal)), props.airportConfig, props.terminal, props.loggedInUser))),
                 <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminal))
