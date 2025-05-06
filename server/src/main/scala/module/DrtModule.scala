@@ -30,8 +30,8 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
 
   lazy val drtParameters: DrtParameters = DrtParameters(config)
 
-  private val airportConfig: AirportConfig = AirportConfigProvider(config)
-  
+  val airportConfig: AirportConfig = AirportConfigProvider(config)
+
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(90.seconds)
 
