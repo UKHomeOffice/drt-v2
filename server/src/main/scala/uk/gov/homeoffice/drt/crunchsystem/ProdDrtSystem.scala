@@ -24,7 +24,7 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
                                    val system: ActorSystem,
                                    val timeout: Timeout) extends DrtSystemInterface {
 
-  lazy override val aggregatedDb: AggregatedDbTables = AggregateDb
+  lazy override val aggregatedDb: AggregatedDbTables = AggregatedDbTables(config)
 
   lazy override val akkaDb: AkkaDbTables = AkkaDb
 
@@ -45,25 +45,25 @@ case class ProdDrtSystem @Inject()(airportConfig: AirportConfig, params: DrtPara
     updateFlightsLiveView,
   )
 
-  override val manifestLookupService: ManifestLookupLike = ManifestLookup(AggregateDb)
+  override val manifestLookupService: ManifestLookupLike = ManifestLookup(aggregatedDb)
 
   override val manifestLookups: ManifestLookups = ManifestLookups(system, airportConfig.terminals)
 
-  override val userService: UserTableLike = UserTable(AggregateDb)
+  override val userService: UserTableLike = UserTable(aggregatedDb)
 
-  override val featureGuideService: FeatureGuideTableLike = FeatureGuideTable(AggregateDb)
+  override val featureGuideService: FeatureGuideTableLike = FeatureGuideTable(aggregatedDb)
 
-  override val featureGuideViewService: FeatureGuideViewLike = FeatureGuideViewTable(AggregateDb)
+  override val featureGuideViewService: FeatureGuideViewLike = FeatureGuideViewTable(aggregatedDb)
 
-  override val dropInService: DropInTableLike = DropInTable(AggregateDb)
+  override val dropInService: DropInTableLike = DropInTable(aggregatedDb)
 
-  override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(AggregateDb)
+  override val dropInRegistrationService: DropInsRegistrationTableLike = DropInsRegistrationTable(aggregatedDb)
 
-  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(AggregateDb)
+  override val userFeedbackService: IUserFeedbackDao = UserFeedbackDao(aggregatedDb)
 
-  override val abFeatureService: IABFeatureDao = ABFeatureDao(AggregateDb)
+  override val abFeatureService: IABFeatureDao = ABFeatureDao(aggregatedDb)
 
-  override val shiftsService: ShiftsService = ShiftsServiceImpl(StaffShiftsDao(AggregateDb))
+  override val shiftsService: ShiftsService = ShiftsServiceImpl(StaffShiftsDao(aggregatedDb))
 
 
   lazy override val actorService: ActorsServiceLike = ActorsServiceService(

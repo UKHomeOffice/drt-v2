@@ -1,10 +1,12 @@
 
 package slickdb
 
+import play.api.Configuration
 import slick.dbio.{DBIOAction, NoStream}
 import slick.jdbc.PostgresProfile
-import uk.gov.homeoffice.drt.db.CentralDatabase
 import uk.gov.homeoffice.drt.db.tables.{FlightTable, QueueSlotTable, StaffShiftRow, StatusDailyTable}
+import uk.gov.homeoffice.drt.db.{AggregateDb, CentralDatabase}
+import uk.gov.homeoffice.drt.testsystem.db.AggregateDbH2
 
 import java.sql.Timestamp
 import scala.concurrent.Future
@@ -61,6 +63,13 @@ case class ArrivalStatsRow(portCode: String,
                            createdAt: Long,
                           )
 
+object AggregatedDbTables {
+  def apply(config: Configuration): AggregatedDbTables =
+    config.get[String]("database-type") match {
+      case "persistent" => AggregateDb
+      case "in-memory" => AggregateDbH2
+    }
+}
 
 /** Slick data model trait for extension, choice of backend or usage in the cake pattern. (Make sure to initialize this late.) */
 trait AggregatedDbTables extends CentralDatabase {
