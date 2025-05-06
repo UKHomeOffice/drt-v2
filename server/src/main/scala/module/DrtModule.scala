@@ -1,23 +1,19 @@
 package module
 
 import actors.DrtParameters
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.persistence.testkit.PersistenceTestKitPlugin
-import org.apache.pekko.util.Timeout
 import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController}
 import controllers.{AirportConfigProvider, Application}
 import email.GovNotifyEmail
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.persistence.testkit.PersistenceTestKitPlugin
+import org.apache.pekko.util.Timeout
 import play.api.Configuration
 import play.api.libs.concurrent.PekkoGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
-import uk.gov.homeoffice.drt.ports.PaxTypes.{B5JPlusNational, EeaMachineReadable, GBRNational}
-import uk.gov.homeoffice.drt.ports.Queues.{EGate, EeaDesk, Queue}
-import uk.gov.homeoffice.drt.ports.Terminals.{N, S}
-import uk.gov.homeoffice.drt.ports.config.AirportConfigDefaults.defaultQueueRatios
-import uk.gov.homeoffice.drt.ports.{AirportConfig, PaxType}
+import uk.gov.homeoffice.drt.ports.AirportConfig
 import uk.gov.homeoffice.drt.service.staffing._
 import uk.gov.homeoffice.drt.testsystem.TestDrtSystem
 import uk.gov.homeoffice.drt.testsystem.controllers.TestController
@@ -34,22 +30,8 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
 
   lazy val drtParameters: DrtParameters = DrtParameters(config)
 
-  private val egateUptake = sys.env.getOrElse("EGATE_UPTAKE", "0.81").toDouble
-
-  private val queueRatios: Map[PaxType, Seq[(Queue, Double)]] = defaultQueueRatios ++ Map(
-    EeaMachineReadable -> List(EGate -> egateUptake, EeaDesk -> (1.0 - egateUptake)),
-    GBRNational -> List(EGate -> egateUptake, EeaDesk -> (1.0 - egateUptake)),
-    B5JPlusNational -> List(EGate -> egateUptake, EeaDesk -> (1.0 - egateUptake)),
-  )
-
-  private val aConfig: AirportConfig = AirportConfigProvider(config)
-
-  val airportConfig: AirportConfig = aConfig.copy(
-    terminalPaxTypeQueueAllocation = aConfig.terminalPaxTypeQueueAllocation.map {
-      case (t, _) => t -> queueRatios
-    }
-  )
-
+  private val airportConfig: AirportConfig = AirportConfigProvider(config)
+  
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(90.seconds)
 
