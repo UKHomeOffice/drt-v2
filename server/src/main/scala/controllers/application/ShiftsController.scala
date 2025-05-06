@@ -109,8 +109,8 @@ class ShiftsController @Inject()(cc: ControllerComponents,
         ctrl.shiftsService.saveShift(shifts).flatMap { result =>
           staffAssignmentsService.allStaffAssignments.flatMap { allShifts =>
             val updatedAssignments = StaffingUtil.updateWithShiftDefaultStaff(shifts, allShifts)
-            staffAssignmentsService.updateStaffAssignments(updatedAssignments).map { _ =>
-              Ok(s"Inserted $result shift(s)")
+            staffAssignmentsService.updateStaffAssignments(updatedAssignments).map { s =>
+              Ok(write(s))
             }
           }.recoverWith {
             case e: Exception => Future.successful(BadRequest(s"Failed to update shifts: ${e.getMessage}"))

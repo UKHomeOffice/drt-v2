@@ -3,9 +3,10 @@ package drt.client.services.handlers
 import diode.AnyAction.aType
 import diode.data.{Pot, Ready}
 import diode.{ActionResult, Effect, ModelRW, NoAction}
+import drt.client.actions.Actions.SetAllStaffShifts
 import drt.client.logger.log
 import drt.client.services.DrtApi
-import drt.shared.Shift
+import drt.shared.{Shift, ShiftAssignments}
 import uk.gov.homeoffice.drt.time.LocalDate
 import scala.concurrent.Future
 import scala.scalajs.concurrent.JSExecutionContext.Implicits.queue
@@ -55,7 +56,7 @@ class ShiftsHandler[M](modelRW: ModelRW[M, Pot[Seq[Shift]]]) extends LoggingActi
 
     case SaveShifts(staffShifts) =>
       val apiCallEffect = Effect(DrtApi.post("shifts/save", write(staffShifts))
-        .map(_ => NoAction)
+        .map(r => SetAllStaffShifts(read[ShiftAssignments](r.responseText)))
         .recoverWith {
           case t =>
             log.error(msg = s"Failed to save shift: ${t.getMessage}")
