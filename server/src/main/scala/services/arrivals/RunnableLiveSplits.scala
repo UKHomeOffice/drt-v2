@@ -12,7 +12,7 @@ import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object RunnableLiveSplits extends RunnableUniqueArrivalsLike {
+object RunnableLiveSplits extends RunnableGraphLike {
   private val log = LoggerFactory.getLogger(getClass)
 
   def apply(arrivalKeysForDate: UtcDate => Future[Seq[UniqueArrivalKey]],

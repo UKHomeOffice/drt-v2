@@ -18,7 +18,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object RunnableHistoricSplits extends RunnableUniqueArrivalsLike {
+object RunnableHistoricSplits extends RunnableGraphLike {
   private val log = LoggerFactory.getLogger(getClass)
 
   private def arrivalsToHistoricSplits(maybeHistoricSplits: UniqueArrival => Future[Option[Splits]],

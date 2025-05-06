@@ -149,7 +149,7 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
             forecastLengthDays, now)
           Ok("Re-crunching with updated splits")
         case _ =>
-          queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => Recrunch(m))
+          queueDaysToReProcess(crunchManagerActor, offsetMinutes, forecastLengthDays, now, m => Recrunch(m))
           Ok("Re-crunching without updating splits")
       }
     }
@@ -157,29 +157,29 @@ class PortStateController @Inject()(cc: ControllerComponents, ctrl: DrtSystemInt
 
   def recalculateSplits: Action[AnyContent] = authByRole(SuperAdmin) {
     Action {
-      queueDaysToReProcess(crunchManagerActor, offsetMinutes, -1, 1, now, m => RecalculateLiveSplits(m))
-      queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => RecalculateHistoricSplits(m))
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, 1, now, m => RecalculateLiveSplits(m))
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, forecastLengthDays, now, m => RecalculateHistoricSplits(m))
       Ok("Recalculating live splits")
     }
   }
 
   def lookupMissingHistoricSplits: Action[AnyContent] = authByRole(SuperAdmin) {
     Action {
-      queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => LookupHistoricSplits(m))
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, forecastLengthDays, now, m => LookupHistoricSplits(m))
       Ok("Re-crunching without updating splits")
     }
   }
 
   def lookupMissingPaxNos: Action[AnyContent] = authByRole(SuperAdmin) {
     Action {
-      queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => LookupHistoricPaxNos(m))
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, forecastLengthDays, now, m => LookupHistoricPaxNos(m))
       Ok("Re-crunching without updating splits")
     }
   }
 
   def reCalculateArrivals: Action[AnyContent] = authByRole(SuperAdmin) {
     Action {
-      queueDaysToReProcess(crunchManagerActor, offsetMinutes, 0, forecastLengthDays, now, m => RecalculateArrivals(m))
+      queueDaysToReProcess(crunchManagerActor, offsetMinutes, forecastLengthDays, now, m => RecalculateArrivals(m))
       Ok("Re-calculating arrivals")
     }
   }

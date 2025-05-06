@@ -47,8 +47,8 @@ object CrunchManagerActor {
                                              )
                                              (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
-      .map {
-        _._2
+      .map { case (_, arrivals) =>
+        arrivals
           .filter(!_.apiFlight.Origin.isDomesticOrCta)
           .filter(!_.splits.exists(_.source == Historical))
           .map(_.unique)
@@ -60,18 +60,10 @@ object CrunchManagerActor {
                                       (implicit mat: Materializer, ec: ExecutionContext): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
       .map { case (_, arrivals) =>
-        val arrivalsWithHistoricSplits = arrivals
+        arrivals
           .filter(!_.apiFlight.Origin.isDomesticOrCta)
           .filter(_.splits.exists(_.source == Historical))
-
-//        arrivalsWithHistoricSplits
-//          .headOption.foreach { arrival =>
-//            arrival.splits.find(_.source == Historical).map { splits =>
-//              splits.splits.map(a => println(s"Splits breakdown: ${arrival.apiFlight.flightCodeString}: ${a.passengerType.cleanName} -> ${a.queueType.stringValue} = ${a.paxCount}"))
-//            }
-//          }
-
-        arrivalsWithHistoricSplits.map(_.unique)
+          .map(_.unique)
       }
       .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
       .map { keys =>
@@ -83,8 +75,8 @@ object CrunchManagerActor {
                                   )
                                   (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
-      .map {
-        _._2
+      .map { case (_, arrivals) =>
+        arrivals
           .filter(!_.apiFlight.Origin.isDomesticOrCta)
           .filter(_.apiFlight.hasNoPaxSource)
           .map(_.unique)
@@ -95,8 +87,8 @@ object CrunchManagerActor {
                                   )
                                   (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
-      .map {
-        _._2
+      .map { case (_, arrivals) =>
+        arrivals
           .filter(!_.apiFlight.Origin.isDomesticOrCta)
           .filter(_.splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages))
           .map(_.unique)

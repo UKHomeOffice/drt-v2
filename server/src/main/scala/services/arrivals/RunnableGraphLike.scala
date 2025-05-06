@@ -5,7 +5,7 @@ import org.apache.pekko.stream._
 import org.apache.pekko.stream.scaladsl.{Flow, Keep, Sink, Source}
 import org.apache.pekko.{Done, NotUsed}
 
-trait RunnableUniqueArrivalsLike {
+trait RunnableGraphLike {
   protected def constructAndRunGraph[T](flow: Flow[T, Done, NotUsed])
                                     (implicit mat: Materializer): (ActorRef, UniqueKillSwitch) = {
     val completionMatcher: PartialFunction[Any, CompletionStrategy] = {
