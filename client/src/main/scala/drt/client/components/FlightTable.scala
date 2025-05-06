@@ -4,7 +4,7 @@ import diode.UseValueEq
 import diode.data.Pot
 import drt.client.SPAMain.TerminalPageTabLoc
 import drt.client.actions.Actions.{RemoveArrivalSources, UpdateFlightHighlight}
-import drt.client.components.styles.DrtTheme.buttonSecondaryTheme
+import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared._
@@ -155,7 +155,7 @@ object FlightTable {
               selectedNationalities = props.flightHighlight.selectedNationalities.map(n => CountryJS(n.name, n.threeLetterCode)).toJSArray,
               selectedAgeGroups = props.flightHighlight.selectedAgeGroups.toJSArray,
             )
-            ThemeProvider(buttonSecondaryTheme)(
+            ThemeProvider(DrtReactTheme)(
               FlightFlaggerFilters(
                 props.terminal.toString,
                 CountryOptions.countries.map { c => CountryJS(c.name, c.threeLetterCode) }.toJSArray,
