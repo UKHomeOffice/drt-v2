@@ -14,10 +14,11 @@ import uk.gov.homeoffice.drt.ports.PortCode
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
 import uk.gov.homeoffice.drt.time.{SDate, SDateLike}
 
+import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 
 
-object RunnableHistoricSplits extends RunnableHistoricManifestsLike {
+object RunnableHistoricSplits extends RunnableGraphLike {
   private val log = LoggerFactory.getLogger(getClass)
 
   private def arrivalsToHistoricSplits(maybeHistoricSplits: UniqueArrival => Future[Option[Splits]],
@@ -29,8 +30,8 @@ object RunnableHistoricSplits extends RunnableHistoricManifestsLike {
         log.info(s"Looking up historic splits for ${arrivalKeys.size} arrivals")
         val startTime = SDate.now().millisSinceEpoch
         Source(arrivalKeys.toList)
-          .mapAsync(1) { arrival =>
-            maybeHistoricSplits(arrival).map(_.map(s => (arrival, Set(s))))
+          .mapAsync(1) { arrivalKey =>
+            maybeHistoricSplits(arrivalKey).map(_.map(s => (arrivalKey, Set(s))))
           }
           .collect {
             case Some(keyWithSplits) => keyWithSplits
@@ -54,7 +55,9 @@ object RunnableHistoricSplits extends RunnableHistoricManifestsLike {
             splitsFromManifest: (ManifestLike, Terminal) => Splits,
             maybeBestAvailableManifest: (PortCode, PortCode, VoyageNumber, SDateLike) => Future[(UniqueArrivalKey, Option[ManifestLike])],
            )
-           (implicit ec: ExecutionContext, timeout: Timeout, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+           (implicit ec: ExecutionContext, mat: Materializer): (ActorRef, UniqueKillSwitch) = {
+    implicit val timeout: Timeout = new Timeout(60.seconds)
+
     val getManifest: UniqueArrival => Future[Option[ManifestLike]] = uniqueArrival => {
       val origin: PortCode = uniqueArrival.origin
       val voyageNumber: VoyageNumber = VoyageNumber(uniqueArrival.number)
@@ -62,7 +65,15 @@ object RunnableHistoricSplits extends RunnableHistoricManifestsLike {
       maybeBestAvailableManifest(portCode, origin, voyageNumber, scheduled).map(_._2)
     }
     val maybeHistoricSplits = RunnableHistoricSplits.maybeHistoricSplits(getManifest, splitsFromManifest)
-    val persistSplits: SplitsForArrivals => Future[Done] = splits => flightsRouterActor.ask(splits).map(_ => Done)
+    val persistSplits: SplitsForArrivals => Future[Done] =
+      splits =>
+        flightsRouterActor
+          .ask(splits).map(_ => Done)
+          .recover {
+            case t =>
+              log.error(s"Failed to persist historic splits for ${splits.splits.size} arrivals: ${t.getMessage}")
+              Done
+          }
     val flow = RunnableHistoricSplits.arrivalsToHistoricSplits(maybeHistoricSplits, persistSplits)
     constructAndRunGraph(flow)
   }

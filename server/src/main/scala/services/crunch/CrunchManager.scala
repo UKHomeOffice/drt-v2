@@ -17,7 +17,7 @@ object CrunchManager {
   def queueDaysToReProcess(crunchManager: ActorRef, offsetMinutes: Int, forecastMaxDays: Int, now: () => SDateLike, message: Set[Long] => ReProcessDates): Unit = {
     val today = now()
     val millisToCrunchStart = Crunch.crunchStartWithOffset(offsetMinutes) _
-    val daysToReCrunch = (0 until forecastMaxDays).map(d => {
+    val daysToReCrunch = (0 to forecastMaxDays).map(d => {
       millisToCrunchStart(today.addDays(d)).millisSinceEpoch
     }).toSet
     crunchManager ! message(daysToReCrunch)

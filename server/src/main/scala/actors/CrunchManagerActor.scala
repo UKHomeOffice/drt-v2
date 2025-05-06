@@ -9,15 +9,19 @@ import org.slf4j.LoggerFactory
 import uk.gov.homeoffice.drt.actor.commands.TerminalUpdateRequest
 import uk.gov.homeoffice.drt.arrivals.{ApiFlightWithSplits, UniqueArrival}
 import uk.gov.homeoffice.drt.ports.AirportConfig
-import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.Historical
+import uk.gov.homeoffice.drt.ports.SplitRatiosNs.SplitSources.{ApiSplitsWithHistoricalEGateAndFTPercentages, Historical}
 import uk.gov.homeoffice.drt.time.{SDate, UtcDate}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object CrunchManagerActor {
+  private val log = LoggerFactory.getLogger(getClass)
+
   case class AddQueueCrunchSubscriber(subscriber: ActorRef)
 
-  case class AddRecalculateArrivalsSubscriber(subscriber: ActorRef)
+  case class AddQueueRecalculateArrivalsSubscriber(subscriber: ActorRef)
+
+  case class AddQueueRecalculateLiveSplitsSubscriber(subscriber: ActorRef)
 
   case class AddQueueHistoricSplitsLookupSubscriber(subscriber: ActorRef)
 
@@ -29,6 +33,10 @@ object CrunchManagerActor {
 
   case class RecalculateArrivals(updatedMillis: Set[Long]) extends ReProcessDates
 
+  case class RecalculateLiveSplits(updatedMillis: Set[Long]) extends ReProcessDates
+
+  case class RecalculateHistoricSplits(updatedMillis: Set[Long]) extends ReProcessDates
+
   case class Recrunch(updatedMillis: Set[Long]) extends ReProcessDates
 
   case class LookupHistoricSplits(updatedMillis: Set[Long]) extends ReProcessDates
@@ -37,24 +45,52 @@ object CrunchManagerActor {
 
   def missingHistoricSplitsArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                                              )
-                                             (implicit mat: Materializer): UtcDate => Future[Iterable[UniqueArrival]] =
+                                             (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
-      .map {
-        _._2
+      .map { case (_, arrivals) =>
+        arrivals
           .filter(!_.apiFlight.Origin.isDomesticOrCta)
           .filter(!_.splits.exists(_.source == Historical))
           .map(_.unique)
       }
       .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
 
+  def historicSplitsArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                      )
+                                      (implicit mat: Materializer, ec: ExecutionContext): UtcDate => Future[Seq[UniqueArrival]] =
+    date => allTerminalsFlights(date, date)
+      .map { case (_, arrivals) =>
+        arrivals
+          .filter(!_.apiFlight.Origin.isDomesticOrCta)
+          .filter(_.splits.exists(_.source == Historical))
+          .map(_.unique)
+      }
+      .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
+      .map { keys =>
+        log.info(s"Found ${keys.size} arrival keys for historic splits recalculation for ${date.toISOString}")
+        keys
+      }
+
   def missingPaxArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
                                   )
-                                  (implicit mat: Materializer): UtcDate => Future[Iterable[UniqueArrival]] =
+                                  (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
     date => allTerminalsFlights(date, date)
-      .map {
-        _._2
+      .map { case (_, arrivals) =>
+        arrivals
           .filter(!_.apiFlight.Origin.isDomesticOrCta)
           .filter(_.apiFlight.hasNoPaxSource)
+          .map(_.unique)
+      }
+      .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
+
+  def liveSplitsArrivalKeysForDate(allTerminalsFlights: (UtcDate, UtcDate) => Source[(UtcDate, Seq[ApiFlightWithSplits]), NotUsed],
+                                  )
+                                  (implicit mat: Materializer): UtcDate => Future[Seq[UniqueArrival]] =
+    date => allTerminalsFlights(date, date)
+      .map { case (_, arrivals) =>
+        arrivals
+          .filter(!_.apiFlight.Origin.isDomesticOrCta)
+          .filter(_.splits.exists(_.source == ApiSplitsWithHistoricalEGateAndFTPercentages))
           .map(_.unique)
       }
       .runWith(Sink.fold(Seq[UniqueArrival]())(_ ++ _))
@@ -63,20 +99,23 @@ object CrunchManagerActor {
            )
            (implicit ec: ExecutionContext, mat: Materializer, ac: AirportConfig): Props = {
     val missingHistoricSplitsArrivalKeysForDate = CrunchManagerActor.missingHistoricSplitsArrivalKeysForDate(allTerminalsFlights)
+    val historicSplitsArrivalKeysForDate = CrunchManagerActor.historicSplitsArrivalKeysForDate(allTerminalsFlights)
     val missingPaxArrivalKeysForDate = CrunchManagerActor.missingPaxArrivalKeysForDate(allTerminalsFlights)
 
-    Props(new CrunchManagerActor(missingHistoricSplitsArrivalKeysForDate, missingPaxArrivalKeysForDate))
+    Props(new CrunchManagerActor(missingHistoricSplitsArrivalKeysForDate, historicSplitsArrivalKeysForDate, missingPaxArrivalKeysForDate))
   }
 }
 
-class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
+class CrunchManagerActor(missingHistoricManifestArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
+                         historicManifestArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
                          historicPaxArrivalKeys: UtcDate => Future[Iterable[UniqueArrival]],
                         )
                         (implicit ec: ExecutionContext, mat: Materializer, ac: AirportConfig) extends Actor {
   private val log = LoggerFactory.getLogger(getClass)
 
   private var maybeQueueCrunchSubscriber: Option[ActorRef] = None
-  private var maybeRecalculateArrivalsSubscriber: Option[ActorRef] = None
+  private var maybeQueueRecalculateArrivalsSubscriber: Option[ActorRef] = None
+  private var maybeQueueRecalculateLiveSplitsLookupSubscriber: Option[ActorRef] = None
   private var maybeQueueHistoricSplitsLookupSubscriber: Option[ActorRef] = None
   private var maybeQueueHistoricPaxLookupSubscriber: Option[ActorRef] = None
 
@@ -84,8 +123,11 @@ class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable
     case AddQueueCrunchSubscriber(subscriber) =>
       maybeQueueCrunchSubscriber = Option(subscriber)
 
-    case AddRecalculateArrivalsSubscriber(subscriber) =>
-      maybeRecalculateArrivalsSubscriber = Option(subscriber)
+    case AddQueueRecalculateArrivalsSubscriber(subscriber) =>
+      maybeQueueRecalculateArrivalsSubscriber = Option(subscriber)
+
+    case AddQueueRecalculateLiveSplitsSubscriber(subscriber) =>
+      maybeQueueRecalculateLiveSplitsLookupSubscriber = Option(subscriber)
 
     case AddQueueHistoricSplitsLookupSubscriber(subscriber) =>
       maybeQueueHistoricSplitsLookupSubscriber = Option(subscriber)
@@ -99,13 +141,19 @@ class CrunchManagerActor(historicManifestArrivalKeys: UtcDate => Future[Iterable
 
     case RecalculateArrivals(um) =>
       val updateRequests = millisToTerminalUpdateRequests(um)
-      maybeRecalculateArrivalsSubscriber.foreach(_ ! updateRequests)
+      maybeQueueRecalculateArrivalsSubscriber.foreach(_ ! updateRequests)
 
-    case LookupHistoricSplits(um) =>
+    case RecalculateLiveSplits(um) =>
+      maybeQueueRecalculateLiveSplitsLookupSubscriber.foreach(sub => um.map(ms => sub ! SDate(ms).toUtcDate))
+
+    case RecalculateHistoricSplits(um) =>
       queueLookups(um, maybeQueueHistoricSplitsLookupSubscriber, historicManifestArrivalKeys, "historic splits")
 
+    case LookupHistoricSplits(um) =>
+      queueLookups(um, maybeQueueHistoricSplitsLookupSubscriber, missingHistoricManifestArrivalKeys, "missing historic splits")
+
     case LookupHistoricPaxNos(um) =>
-      queueLookups(um, maybeQueueHistoricPaxLookupSubscriber, historicPaxArrivalKeys, "historic pax nos")
+      queueLookups(um, maybeQueueHistoricPaxLookupSubscriber, historicPaxArrivalKeys, "missing historic pax nos")
 
     case other =>
       log.warn(s"CrunchManagerActor received unexpected message: $other")

@@ -1,15 +1,15 @@
 package module
 
 import actors.DrtParameters
-import org.apache.pekko.actor.ActorSystem
-import org.apache.pekko.persistence.testkit.PersistenceTestKitPlugin
-import org.apache.pekko.util.Timeout
 import com.google.inject.{AbstractModule, Provides}
 import com.typesafe.config.ConfigFactory
 import controllers.application._
 import controllers.application.exports.{DesksExportController, FlightsExportController}
 import controllers.{AirportConfigProvider, Application}
 import email.GovNotifyEmail
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.persistence.testkit.PersistenceTestKitPlugin
+import org.apache.pekko.util.Timeout
 import play.api.Configuration
 import play.api.libs.concurrent.PekkoGuiceSupport
 import uk.gov.homeoffice.drt.crunchsystem.{DrtSystemInterface, ProdDrtSystem}
@@ -31,6 +31,7 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
   lazy val drtParameters: DrtParameters = DrtParameters(config)
 
   val airportConfig: AirportConfig = AirportConfigProvider(config)
+
   implicit val ec: ExecutionContextExecutor = ExecutionContext.global
   implicit val timeout: Timeout = new Timeout(90.seconds)
 

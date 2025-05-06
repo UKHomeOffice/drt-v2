@@ -1,11 +1,10 @@
 package drt.client.components
 
 import diode.data.Pot
-import drt.client.actions.Actions.{RequestForecastRecrunch, RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals}
+import drt.client.actions.Actions.{RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals, RequestRecalculateSplits}
 import drt.client.components.ToolTips._
 import drt.client.components.styles.DrtTheme
 import drt.client.logger.{Logger, LoggerFactory}
-import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.client.services.handlers.CheckFeed
@@ -39,12 +38,8 @@ object FeedsStatusPage {
         SPACircuit.dispatch(CheckFeed(feedSource))
       }
 
-      def requestForecastRecrunch(): Callback = Callback {
-        SPACircuit.dispatch(RequestForecastRecrunch(recalculateSplits = false))
-      }
-
       def requestSplitsRefresh(): Callback = Callback {
-        SPACircuit.dispatch(RequestForecastRecrunch(recalculateSplits = true))
+        SPACircuit.dispatch(RequestRecalculateSplits)
       }
 
       def requestRecalculateArrivals(): Callback = Callback {
@@ -129,9 +124,6 @@ object FeedsStatusPage {
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
               ThemeProvider(DrtTheme.theme)(
-                MuiButton(variant = "outlined", color = Color.primary)(
-                  <.div("Re-crunch forecast", ^.onClick --> requestForecastRecrunch())
-                ),
                 MuiButton(variant = "outlined", color = Color.primary)(
                   <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
                 ),

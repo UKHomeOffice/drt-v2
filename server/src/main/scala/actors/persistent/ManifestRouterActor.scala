@@ -1,9 +1,10 @@
 package actors.persistent
 
 import actors.PartitionedPortStateActor._
-import actors.persistent.ManifestRouterActor.{GetForArrival, ManifestFound, ManifestNotFound}
 import actors.persistent.staffing.GetFeedStatuses
 import actors.routing.minutes.MinutesActorLike.{ManifestLookup, ManifestsUpdate, ProcessNextUpdateRequest}
+import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
+import drt.shared.CrunchApi.MillisSinceEpoch
 import org.apache.pekko.NotUsed
 import org.apache.pekko.actor.ActorRef
 import org.apache.pekko.pattern.StatusReply
@@ -11,9 +12,6 @@ import org.apache.pekko.persistence.{SaveSnapshotFailure, SaveSnapshotSuccess}
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.{Sink, Source}
 import org.apache.pekko.util.Timeout
-import drt.server.feeds.{DqManifests, ManifestsFeedFailure, ManifestsFeedSuccess}
-import drt.shared.CrunchApi.MillisSinceEpoch
-import drt.shared._
 import org.slf4j.{Logger, LoggerFactory}
 import passengersplits.parsing.VoyageManifestParser.{VoyageManifest, VoyageManifests}
 import uk.gov.homeoffice.drt.actor.RecoveryActorLike
@@ -30,13 +28,10 @@ import uk.gov.homeoffice.drt.time.{DateRange, SDate, SDateLike, UtcDate}
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
 
 object ManifestRouterActor extends StreamingFeedStatusUpdates {
   override val sourceType: FeedSource = ApiFeedSource
   override val persistenceId: String = "arrival-manifests"
-
-  case class GetForArrival(arrival: ManifestKey)
 
   sealed trait ManifestResult
 
@@ -133,27 +128,6 @@ class ManifestRouterActor(manifestLookup: ManifestLookup,
 
     case PointInTimeQuery(pit, GetStateForDateRange(startMillis, endMillis)) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), Option(pit))
-
-    case GetForArrival(arrival) =>
-      val scheduled = SDate(arrival.scheduled)
-      val replyTo = sender()
-      ManifestRouterActor
-        .manifestsByDaySource(manifestLookup)(scheduled, scheduled, None)
-        .map(manifests => manifests._2.manifests.find {
-          _.maybeKey.exists(_ == arrival)
-        }.toList)
-        .runWith(Sink.seq)
-        .map(_.flatten)
-        .onComplete {
-          case Success(manifests) =>
-            manifests.headOption match {
-              case Some(manifest) => replyTo ! ManifestFound(manifest)
-              case None => replyTo ! ManifestNotFound
-            }
-          case Failure(throwable) =>
-            log.error(s"Failed to look up manifest for $arrival: ${throwable.getMessage}")
-            replyTo ! ManifestNotFound
-        }
 
     case GetStateForDateRange(startMillis, endMillis) =>
       sender() ! ManifestRouterActor.manifestsByDaySource(manifestLookup)(SDate(startMillis), SDate(endMillis), None)
