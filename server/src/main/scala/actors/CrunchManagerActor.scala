@@ -150,10 +150,10 @@ class CrunchManagerActor(missingHistoricManifestArrivalKeys: UtcDate => Future[I
       queueLookups(um, maybeQueueHistoricSplitsLookupSubscriber, historicManifestArrivalKeys, "historic splits")
 
     case LookupHistoricSplits(um) =>
-      queueLookups(um, maybeQueueHistoricSplitsLookupSubscriber, missingHistoricManifestArrivalKeys, "mising historic splits")
+      queueLookups(um, maybeQueueHistoricSplitsLookupSubscriber, missingHistoricManifestArrivalKeys, "missing historic splits")
 
     case LookupHistoricPaxNos(um) =>
-      queueLookups(um, maybeQueueHistoricPaxLookupSubscriber, historicPaxArrivalKeys, "mising historic pax nos")
+      queueLookups(um, maybeQueueHistoricPaxLookupSubscriber, historicPaxArrivalKeys, "missing historic pax nos")
 
     case other =>
       log.warn(s"CrunchManagerActor received unexpected message: $other")
