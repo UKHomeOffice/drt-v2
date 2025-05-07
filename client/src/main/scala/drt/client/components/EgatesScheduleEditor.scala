@@ -3,7 +3,7 @@ package drt.client.components
 import diode.UseValueEq
 import drt.client.actions.Actions.{DeleteEgateBanksUpdate, SaveEgateBanksUpdate}
 import drt.client.components.ConfirmDialog.ConfirmParams
-import drt.client.components.styles.DrtTheme
+import drt.client.components.styles.DrtReactTheme
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
 import drt.shared.CrunchApi.MillisSinceEpoch
@@ -120,7 +120,7 @@ object EgatesScheduleEditor {
 
         val today = SDate.now().getLocalLastMidnight.millisSinceEpoch
 
-        ThemeProvider(DrtTheme.theme)(
+        ThemeProvider(DrtReactTheme)(
           <.div(^.className := "terminal-config",
             s.confirm.map(ConfirmDialog(_)).toTagMod,
             <.h3(s"$terminal"),

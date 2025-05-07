@@ -112,7 +112,7 @@ object TerminalPlanningComponent {
 
             <.div(
               MuiTypography(variant = "h2")(s"Planning at ${props.page.portCodeStr} (${props.airportConfig.portName}), ${props.page.terminalName}"),
-              <.h3(^.style := js.Dictionary("size" -> "24px", "color" -> DrtTheme.theme.palette.primary.`700`), "Headline Figures"),
+              MuiTypography(variant = "h3")( "Headline Figures"),
               <.div(^.className := "terminal-content-header",
                 <.div(^.className := "staffing-controls-wrapper",
                   <.div(^.className := "staffing-controls-row",
@@ -162,7 +162,7 @@ object TerminalPlanningComponent {
                   }
                 )
               ),
-              <.h3(^.style := js.Dictionary("size" -> "24px", "color" -> DrtTheme.theme.palette.primary.`700`), "Available and recommended staff"),
+              MuiTypography(variant="h3")("Available and recommended staff"),
               MuiFormControl()(
                 <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center"),
                   MuiFormLabel(sx = SxProps(Map("size" -> "16px",

@@ -3,7 +3,7 @@ package drt.client.components
 import diode.data.Pot
 import drt.client.actions.Actions.{RequestMissingHistoricSplits, RequestMissingPaxNos, RequestRecalculateArrivals, RequestRecalculateSplits}
 import drt.client.components.ToolTips._
-import drt.client.components.styles.DrtTheme
+import drt.client.components.styles.DrtReactTheme
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.SPACircuit
@@ -123,7 +123,7 @@ object FeedsStatusPage {
             <.br(),
             <.h2("Crunch"),
             <.div(^.className := "crunch-actions-container",
-              ThemeProvider(DrtTheme.theme)(
+              ThemeProvider(DrtReactTheme)(
                 MuiButton(variant = "outlined", color = Color.primary)(
                   <.div("Refresh splits", ^.onClick --> requestSplitsRefresh())
                 ),
