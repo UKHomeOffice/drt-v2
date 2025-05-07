@@ -77,11 +77,13 @@ object TrainingHubComponent {
           ^.id := "dropInBooking", "Book a Drop-in Session", VdomAttr("data-toggle") := "tab"
         )
       ),
-      <.li(^.className := tabClass(TrainingMaterial),
-        props.router.link(props.trainingHubLoc.copy(modeStr = TrainingMaterial.asString))(
-          ^.id := "trainingMaterial", "Training Material", VdomAttr("data-toggle") := "tab"
+      if (false) { //temporary setting to false as it will be coming in future
+        <.li(^.className := tabClass(TrainingMaterial),
+          props.router.link(props.trainingHubLoc.copy(modeStr = TrainingMaterial.asString))(
+            ^.id := "trainingMaterial", "Training Material", VdomAttr("data-toggle") := "tab"
+          )
         )
-      )
+      } else EmptyVdom
     )
   }
 
