@@ -10,7 +10,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.{SPACircuit, StaffMovementMinute, ViewMode}
 import drt.shared.CrunchApi.StaffMinute
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiTypography}
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIcons
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.RefreshOutlined
@@ -230,7 +230,8 @@ object TerminalDesksAndQueues {
             }
             .view.mapValues(_.map(_._2).max).toMap
 
-          <.div(
+          <.div(^.className := "desks-queues-title",
+            MuiTypography(variant = "h2")(s"Desks and queues at ${props.terminalPageTab.portCodeStr} (${props.airportConfig.portName}), ${props.terminalPageTab.terminal}"),
             <.div(^.className := "desks-and-queues-top",
               viewTypeControls(props.featureFlags.displayWaitTimesToggle),
               if (props.loggedInUser.hasRole(SuperAdmin)) adminRecrunchButton(requestForecastRecrunch _) else EmptyVdom,

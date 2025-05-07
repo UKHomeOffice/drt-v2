@@ -7,6 +7,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared.api.{WalkTime, WalkTimes}
+import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent}
@@ -40,7 +41,7 @@ object PortConfigPage {
         gateStandWalktime <- props.gateStandWalktime
       } yield
         <.div(
-          <.h3("Port Config"),
+          MuiTypography(variant = "h1")(s"Port configuration for ${airportConfig.portCode} (${airportConfig.portName})"),
           if (user.hasRole(EgateBanksEdit)) {
             <.div(
               <.h2("E-gates schedule"),

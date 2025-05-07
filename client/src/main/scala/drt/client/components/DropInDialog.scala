@@ -1,6 +1,6 @@
 package drt.client.components
 
-import drt.client.components.styles.{DrtTheme, WithScalaCssImplicits}
+import drt.client.components.styles.{DrtReactTheme, DrtTheme, WithScalaCssImplicits}
 import drt.client.modules.GoogleEventTracker
 import io.kinoplan.scalajs.react.material.ui.core._
 import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
@@ -38,7 +38,7 @@ object DropInDialog extends WithScalaCssImplicits {
       else
         DrtTheme.theme.palette.primary.`500`
 
-      ThemeProvider(DrtTheme.theme)(
+      ThemeProvider(DrtReactTheme)(
         MuiDialog(open = props.showDialog, maxWidth = "sm")(
           <.div(
             MuiGrid(container = true, spacing = 0, sx = SxProps(Map(

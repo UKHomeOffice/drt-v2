@@ -4,6 +4,7 @@ import diode.data.Pot
 import drt.client.actions.Actions.{FileUploadInProgress, ForecastFileUploadAction, ResetFileUpload}
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.SPACircuit
+import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, _}
 import japgolly.scalajs.react.{Callback, CtorType, ScalaComponent, _}
@@ -21,43 +22,36 @@ object ForecastUploadComponent {
 
   case class Props(airportConfigPot: Pot[AirportConfig])
 
-  val heading: VdomTagOf[Heading] = <.h3("Forecast Feed File Upload")
-
-  val upload: String => VdomTagOf[Div] = (portCode: String) =>
+  val upload: (String) => VdomTagOf[Div] = (portCode: String) =>
     <.div(^.className := "fileUpload",
-      heading,
-      <.br(),
       <.form(<.input(^.`type` := "file", ^.id := "forecast-file"),
         <.br(),
         <.input(^.`type` := "button", ^.value := "Upload", ^.onClick ==> onSubmit(portCode))
       )
     )
 
-  private val uploadingInProgress: String => VdomTagOf[Div] = { message =>
+  private val uploadingInProgress: (String) => VdomTagOf[Div] = { (message) =>
     <.div(
-      heading,
-      <.br(),
       <.div(s"Upload status : $message"),
       <.br(),
       <.span("Uploading ....."),
     )
   }
 
-  private val uploadResult: String => VdomTagOf[Div] = (message: String) =>
+  private val uploadResult: (String) => VdomTagOf[Div] = (message: String) =>
     <.div(
-      heading,
-      <.br(),
       <.div(s"Upload status : $message"),
       <.br(),
       <.button(^.`type` := "button", "Upload another file", ^.onClick ==> onReset)
     )
 
   val component: Component[Props, Unit, Unit, CtorType.Props] = ScalaComponent.builder[Props]("ForecastFileUpload")
-    .render_P { _ =>
+    .render_P { p =>
       val fileUploadStateRCP = SPACircuit.connect(m => FileUploadStateModel(m.fileUploadState, m.airportConfig))
       fileUploadStateRCP(fileUploadStateMP => {
         <.div(
-          fileUploadStateMP().airportConfig.renderReady(airportConfig =>
+          MuiTypography(variant = "h1")(s"Forecast Feed File Upload ${p.airportConfigPot.get.portCode.iata} (${p.airportConfigPot.get.portName})"),
+            fileUploadStateMP().airportConfig.renderReady { airportConfig =>
             if (fileUploadStateMP().fileUploadState.isEmpty) {
               upload(airportConfig.portCode.iata)
             } else {
@@ -68,7 +62,8 @@ object ForecastUploadComponent {
                   case _ => upload(airportConfig.portCode.iata)
                 }
               }))
-            })
+            }
+          }
         )
       }
       )

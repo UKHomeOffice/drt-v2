@@ -9,6 +9,7 @@ import drt.client.modules.GoogleEventTracker
 import drt.client.services._
 import drt.shared._
 import drt.shared.api.{AgeRange, FlightManifestSummary, WalkTimes}
+import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import io.kinoplan.scalajs.react.material.ui.core.system.ThemeProvider
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.html_<^
@@ -129,7 +130,8 @@ object FlightTable {
         updateState(searchTerm)
       }
 
-      <.div(
+      <.div(^.className := "arrivals-title",
+        MuiTypography(variant = "h2")(s"Arrivals at ${props.portCode} (${props.airportConfig.portName}), ${props.terminal}"),
         (props.loggedInUser.hasRole(ArrivalSource), props.arrivalSources) match {
           case (true, Some((_, sourcesPot))) =>
             <.div(^.tabIndex := 0,
