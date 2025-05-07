@@ -402,7 +402,7 @@ object SPAMain {
       (TerminalPageTabLoc.hashValue / requiredTerminalName / requiredTopLevelTab / requiredSecondLevelTab / "" ~ queryToMap).caseClass[TerminalPageTabLoc]) ~>
       dynRenderR { case (page: TerminalPageTabLoc, router) =>
         val props = TerminalComponent.Props(terminalPageTab = page, router)
-        ThemeProvider(DrtTheme.theme)(TerminalComponent(props))
+        ThemeProvider(DrtReactTheme)(TerminalComponent(props))
       }
   }
 
@@ -424,7 +424,7 @@ object SPAMain {
       dynRenderR { case (page: TrainingHubLoc, router) =>
         proxy { p =>
           val props = TrainingHubComponent.Props(trainingHubLoc = page, router, p()._1, p()._2)
-          ThemeProvider(DrtTheme.theme)(TrainingHubComponent(props))
+          ThemeProvider(DrtReactTheme)(TrainingHubComponent(props))
         }
       }
   }

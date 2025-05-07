@@ -10,7 +10,7 @@ import drt.client.services.JSDateConversions._
 import drt.client.services._
 import drt.shared.CrunchApi.MillisSinceEpoch
 import drt.shared._
-import io.kinoplan.scalajs.react.material.ui.core.MuiButton
+import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiTypography}
 import japgolly.scalajs.react.component.Scala.{Component, Unmounted}
 import japgolly.scalajs.react.vdom.all.onClick
 import japgolly.scalajs.react.vdom.html_<^._
@@ -51,7 +51,8 @@ object TerminalStaffing {
             val movementsForTheDay = movements
               .forDay(props.viewMode.localDate)(ld => SDate(ld))
               .filter(sm => !props.removedStaffMovements.contains(sm.uUID))
-            <.div(<.h2(s"Staff movements at ${props.airportConfig.portCode} (${props.airportConfig.portName}), ${props.terminal}"),
+            <.div(
+              MuiTypography(variant = "h2")(s"Staff movements at ${props.airportConfig.portCode} (${props.airportConfig.portName}), ${props.terminal}"),
               <.div(^.className := "container",
                 <.div(^.className := "col-md-3", FixedPointsEditor(FixedPointsProps(FixedPointAssignments(fixedPoints.forTerminal(props.terminal)), props.airportConfig, props.terminal, props.loggedInUser))),
                 <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminal))

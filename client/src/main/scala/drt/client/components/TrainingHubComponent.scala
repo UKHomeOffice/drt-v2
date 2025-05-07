@@ -8,6 +8,7 @@ import drt.client.services._
 import drt.client.spa.TrainingHubPageMode
 import drt.client.spa.TrainingHubPageModes.{DropInBooking, TrainingMaterial}
 import drt.shared.{DropIn, DropInRegistration}
+import io.kinoplan.scalajs.react.material.ui.core.MuiTypography
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
@@ -48,7 +49,8 @@ object TrainingHubComponent {
       <.div(
         modelRCP(modelMP => {
           val model: TrainingModel = modelMP()
-          <.div(<.h1(s"Training Hub"),
+          <.div(
+            MuiTypography(variant = "h1")(s"Training Hub"),
             <.div(^.className := "terminal-nav-wrapper", trainingTabs(props)),
             <.div(^.className := "tab-content",
               props.trainingHubLoc.modeStr match {

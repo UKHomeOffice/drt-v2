@@ -108,7 +108,8 @@ object Layout {
                       props.currentLoc.page match {
                         case TerminalPageTabLoc(terminalName, _, _, _) =>
                           val terminal = Terminal(terminalName)
-                          <.div(<.h1(^.className := "terminal-header", "Queues & Arrivals"),
+                          <.div(^.className := "terminal-header",
+                            MuiTypography(variant = "h1")("Queues & Arrivals"),
                             <.div(^.className := "status-bar",
                               ApiStatusComponent(ApiStatusComponent.Props(
                                 !airportConfig.noLivePortFeed,

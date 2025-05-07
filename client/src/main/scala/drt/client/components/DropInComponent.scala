@@ -81,7 +81,8 @@ object DropInComponent extends WithScalaCssImplicits with DropInTimeDisplay {
     }
 
     def render(props: Props, state: State) = {
-      <.div(<.h2("Book a Drop-in Session"),
+      <.div(
+        MuiTypography(variant = "h2")("Book a Drop-in Session"),
         modelRCP(modelMP => {
           val model: DropInRegistrationModel = modelMP()
 

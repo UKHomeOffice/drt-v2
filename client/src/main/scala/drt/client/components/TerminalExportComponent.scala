@@ -7,6 +7,7 @@ import drt.client.components.styles.WithScalaCssImplicits
 import drt.client.logger.{Logger, LoggerFactory}
 import drt.client.services._
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
+import io.kinoplan.scalajs.react.material.ui.core.system.SxProps
 import io.kinoplan.scalajs.react.material.ui.core.{MuiButton, MuiGrid}
 import io.kinoplan.scalajs.react.material.ui.icons.MuiIconsModule.GetApp
 import io.kinoplan.scalajs.react.material.ui.icons._
@@ -61,8 +62,8 @@ object TerminalExportComponent extends WithScalaCssImplicits {
 
       <.div(
         ^.className := "export-button-wrapper",
-        MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-          MuiIcons(GetApp)(fontSize = "small"),
+        MuiButton(color = Color.primary, variant = "outlined", size = "medium", sx = SxProps(Map("fontWeight" -> "normal")))(
+          MuiIcons(GetApp)(fontSize = "large"),
           s"Export ${props.exportName} (.csv)",
           ^.className := "btn btn-default",
           ^.href := "#",
