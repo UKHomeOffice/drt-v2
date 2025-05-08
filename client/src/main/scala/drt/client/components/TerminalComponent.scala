@@ -40,8 +40,8 @@ object TerminalComponent {
   implicit val propsReuse: Reusability[Props] = Reusability((a, b) => a.terminalPageTab == b.terminalPageTab)
 
   private case class TerminalModel(userPreferences: Pot[UserPreferences],
-                                   legacyDayOfStaffAssignmentsPot: Pot[ShiftAssignments],
-                                   dayOfStaffAssignmentsPot: Pot[ShiftAssignments],
+                                   legacyDayOfShiftAssignmentsPot: Pot[ShiftAssignments],
+                                   dayOfShiftAssignmentsPot: Pot[ShiftAssignments],
                                    potFixedPoints: Pot[FixedPointAssignments],
                                    potStaffMovements: Pot[StaffMovements],
                                    removedStaffMovements: Set[String],
@@ -81,8 +81,8 @@ object TerminalComponent {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userPreferences = model.userPreferences,
-        legacyDayOfStaffAssignmentsPot = model.legacyDayOfStaffAssignments,
-        dayOfStaffAssignmentsPot = model.dayOfStaffAssignments,
+        legacyDayOfShiftAssignmentsPot = model.legacyDayOfShiftAssignments,
+        dayOfShiftAssignmentsPot = model.dayOfShiftAssignments,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         removedStaffMovements = model.removedStaffMovements,
@@ -180,7 +180,7 @@ object TerminalComponent {
                           PcpPaxSummariesComponent(terminalModel.viewMode, mt, ps.map(_.crunchMinutes.values.toSeq))
                         ),
                         TerminalContentComponent(TerminalContentComponent.Props(
-                          potShifts = terminalModel.legacyDayOfStaffAssignmentsPot,
+                          legacyDayOfShiftAssignments = terminalModel.legacyDayOfShiftAssignmentsPot,
                           potFixedPoints = terminalModel.potFixedPoints,
                           potStaffMovements = terminalModel.potStaffMovements,
                           removedStaffMovements = terminalModel.removedStaffMovements,

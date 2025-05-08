@@ -32,20 +32,19 @@ import scala.util.Success
 object TerminalStaffing {
   val log: Logger = LoggerFactory.getLogger(getClass.getName)
 
-  case class Props(
-                    terminal: Terminal,
-                    potShifts: Pot[ShiftAssignments],
-                    potFixedPoints: Pot[FixedPointAssignments],
-                    potStaffMovements: Pot[StaffMovements],
-                    removedStaffMovements: Set[String],
-                    airportConfig: AirportConfig,
-                    loggedInUser: LoggedInUser,
-                    viewMode: ViewMode
+  case class Props(terminal: Terminal,
+                   potLegacyDayOfShiftAssignments: Pot[ShiftAssignments],
+                   potFixedPoints: Pot[FixedPointAssignments],
+                   potStaffMovements: Pot[StaffMovements],
+                   removedStaffMovements: Set[String],
+                   airportConfig: AirportConfig,
+                   loggedInUser: LoggedInUser,
+                   viewMode: ViewMode
                   ) extends UseValueEq
 
   class Backend() {
     def render(props: Props): VdomTagOf[Div] = <.div(
-      props.potShifts.render { shifts =>
+      props.potLegacyDayOfShiftAssignments.render { legacyDayOfShiftAssignments =>
         props.potFixedPoints.render { fixedPoints =>
           props.potStaffMovements.render { movements =>
             val movementsForTheDay = movements
@@ -57,7 +56,7 @@ object TerminalStaffing {
                 <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminal))
               ),
               <.div(^.className := "container",
-                <.div(^.className := "col-md-10", staffOverTheDay(props.viewMode.localDate, movementsForTheDay, shifts, props.terminal)))
+                <.div(^.className := "col-md-10", staffOverTheDay(props.viewMode.localDate, movementsForTheDay, legacyDayOfShiftAssignments, props.terminal)))
             )
           }
         }
@@ -66,9 +65,9 @@ object TerminalStaffing {
 
     private def staffOverTheDay(localDate: LocalDate,
                                 movements: Seq[StaffMovement],
-                                shifts: ShiftAssignments,
+                                dayOfShiftAssignments: ShiftAssignments,
                                 terminalName: Terminal): VdomTagOf[Div] = {
-      val terminalShifts = ShiftAssignments(shifts.forTerminal(terminalName))
+      val terminalShifts = ShiftAssignments(dayOfShiftAssignments.forTerminal(terminalName))
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
 
       <.div(
