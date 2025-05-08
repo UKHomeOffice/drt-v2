@@ -18,9 +18,8 @@ import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.extra.router.RouterCtl
 import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, ScalaComponent}
-import org.scalajs.dom.DOMList
+import org.scalajs.dom.{DOMList, Node}
 import org.scalajs.dom.html.{Div, TableCell}
-import org.scalajs.dom.raw.Node
 import uk.gov.homeoffice.drt.auth.LoggedInUser
 import uk.gov.homeoffice.drt.auth.Roles.SuperAdmin
 import uk.gov.homeoffice.drt.model.CrunchMinute
