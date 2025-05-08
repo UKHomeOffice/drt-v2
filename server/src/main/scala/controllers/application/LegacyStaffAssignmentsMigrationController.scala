@@ -16,7 +16,7 @@ class LegacyStaffAssignmentsMigrationController @Inject()(cc: ControllerComponen
 
   def legacyToStaffAssignments: Action[AnyContent] = authByRole(StaffEdit) {
     Action.async { _ =>
-      legacyStaffAssignmentsService.allShifts.flatMap { shiftAssignments =>
+      legacyStaffAssignmentsService.allStaffAssignments.flatMap { shiftAssignments =>
         staffAssignmentsService.updateStaffAssignments(shiftAssignments.assignments).map { _ =>
           Ok("Transfer completed successfully")
         }

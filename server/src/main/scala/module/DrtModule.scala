@@ -69,6 +69,7 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
     bind(classOf[WalkTimeController]).asEagerSingleton()
   }
 
+
   @Provides
   def provideTestDrtSystem = drtTestSystem
 
@@ -89,21 +90,26 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
       drtProdSystem
   }
 
-  @Provides
-  @Singleton
-  def provideLegacyStaffAssignmentsService: LegacyStaffAssignmentsService = LegacyStaffAssignmentsServiceImpl(
+  val legacyStaffAssignmentsService: LegacyStaffAssignmentsService = LegacyStaffAssignmentsServiceImpl(
     provideDrtSystemInterface.actorService.legacyStaffAssignmentsReadActor,
     provideDrtSystemInterface.actorService.legacyStaffAssignmentsSequentialWritesActor,
     LegacyStaffAssignmentsServiceImpl.pitActor(provideActorSystem),
-    )
-
-  @Provides
-  @Singleton
-  def provideStaffAssignmentsService: StaffAssignmentsService = StaffAssignmentsServiceImpl(
+  )
+  val staffAssignmentsService: StaffAssignmentsService = StaffAssignmentsServiceImpl(
     provideDrtSystemInterface.actorService.liveStaffAssignmentsReadActor,
     provideDrtSystemInterface.actorService.staffAssignmentsSequentialWritesActor,
     StaffAssignmentsServiceImpl.pitActor(provideActorSystem),
   )
+
+  @Provides
+  @Singleton
+  def provideLegacyStaffAssignmentsService: LegacyStaffAssignmentsService = legacyStaffAssignmentsService
+
+  @Provides
+  @Singleton
+  def provideStaffAssignmentsService: StaffAssignmentsService =
+    if (drtParameters.enableShiftPlanningChange) staffAssignmentsService
+    else legacyStaffAssignmentsService
 
   @Provides
   @Singleton

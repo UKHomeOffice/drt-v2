@@ -18,38 +18,8 @@ import scala.concurrent.Future
 
 class StaffingController @Inject()(cc: ControllerComponents,
                                    ctrl: DrtSystemInterface,
-                                   legacyStaffAssignmentsService: LegacyStaffAssignmentsService,
                                    fixedPointsService: FixedPointsService,
                                    movementsService: StaffMovementsService) extends AuthController(cc, ctrl) {
-  def getShifts(localDateStr: String): Action[AnyContent] = authByRole(FixedPointsView) {
-    Action.async { request: Request[AnyContent] =>
-      val date = SDate(localDateStr).toLocalDate
-      val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))
-      legacyStaffAssignmentsService.shiftsForDate(date, maybePointInTime)
-        .map(sa => Ok(write(sa)))
-    }
-  }
-
-  def saveShifts: Action[AnyContent] = authByRole(StaffEdit) {
-    Action.async { request =>
-      request.body.asText match {
-        case Some(text) =>
-          val shifts = read[ShiftAssignments](text)
-          legacyStaffAssignmentsService
-            .updateShifts(shifts.assignments)
-            .map(allShifts => Accepted(write(allShifts)))
-        case None =>
-          Future.successful(BadRequest)
-      }
-    }
-  }
-
-  def getAllShifts: Action[AnyContent] = authByRole(StaffEdit) {
-    Action.async {
-      legacyStaffAssignmentsService.allShifts.map(s => Ok(write(s)))
-    }
-  }
-
   def getFixedPoints: Action[AnyContent] = authByRole(FixedPointsView) {
     Action.async { request: Request[AnyContent] =>
       val maybePointInTime = request.queryString.get("pointInTime").flatMap(_.headOption.map(_.toLong))

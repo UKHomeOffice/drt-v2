@@ -3,7 +3,7 @@ package drt.client.components
 import diode.AnyAction.aType
 import diode.data.{Empty, Pot, Ready}
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc}
-import drt.client.actions.Actions.{UpdateShifts, UpdateStaffShifts}
+import drt.client.actions.Actions.{UpdateShiftAssignments, UpdateStaffShifts}
 import drt.client.components.MonthlyStaffingUtil._
 import drt.client.components.StaffingUtil.{consecutiveDayForWeek, consecutiveDaysInMonth, dateRangeDays}
 import drt.client.logger.{Logger, LoggerFactory}
@@ -80,13 +80,12 @@ object MonthlyStaffing {
 
       val viewingDate = props.terminalPageTab.dateFromUrlOrNow
 
-      case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], monthOfShiftsPot: Pot[ShiftAssignments])
-      val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.allShifts))
+      val staffAssignmentsRCP = SPACircuit.connect(_.allShiftAssignments)
 
-      val modelChangeDetection = staffRCP { modelMP =>
-        val model = modelMP()
+      val modelChangeDetection = staffAssignmentsRCP { staffAssignmentsMP =>
+        val staffAssignmentsPot = staffAssignmentsMP()
         val content = for {
-          monthOfShifts <- if (props.isStaffShiftPage) model.monthOfStaffShiftsPot else model.monthOfShiftsPot
+          monthOfShifts <- staffAssignmentsPot
         } yield {
           if (monthOfShifts != state.shifts || state.timeSlots.isEmpty) {
             val slots = slotsFromShifts(monthOfShifts,
@@ -177,7 +176,7 @@ object MonthlyStaffing {
                       if (props.isStaffShiftPage)
                         SPACircuit.dispatch(UpdateStaffShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
                       else
-                        SPACircuit.dispatch(UpdateShifts(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
+                        SPACircuit.dispatch(UpdateShiftAssignments(staffAssignmentsFromForm(ssf, props.terminalPageTab.terminal)))
                       scope.modState(state => {
                         val newState = state.copy(showEditStaffForm = false, showStaffSuccess = true)
                         newState

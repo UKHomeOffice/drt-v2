@@ -77,7 +77,7 @@ object MonthlyShifts {
       }
 
       case class Model(monthOfStaffShiftsPot: Pot[ShiftAssignments], staffShiftsPot: Pot[Seq[Shift]])
-      val staffRCP = SPACircuit.connect(m => Model(m.allStaffAssignments, m.shifts))
+      val staffRCP = SPACircuit.connect(m => Model(m.allShiftAssignments, m.shifts))
 
       val modelChangeDetection = staffRCP { modelMP =>
         val model = modelMP()

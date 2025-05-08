@@ -2,7 +2,7 @@ package drt.client.components
 
 import diode.AnyAction.aType
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter, UrlDayRangeType}
-import drt.client.actions.Actions.{UpdateShifts, UpdateStaffShifts}
+import drt.client.actions.Actions.{UpdateShiftAssignments, UpdateStaffShifts}
 import drt.client.components.StaffingUtil.navigationDates
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
@@ -64,7 +64,7 @@ case class ConfirmAndSaveForMonthlyStaffing(viewingDate: SDateLike,
       if (props.isStaffShiftPage)
         SPACircuit.dispatch(UpdateStaffShifts(changedShiftSlots))
       else
-        SPACircuit.dispatch(UpdateShifts(changedShiftSlots))
+        SPACircuit.dispatch(UpdateShiftAssignments(changedShiftSlots))
     }
   }
 }

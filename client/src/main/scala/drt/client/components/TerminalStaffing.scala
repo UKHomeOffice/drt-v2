@@ -34,7 +34,7 @@ object TerminalStaffing {
 
   case class Props(
                     terminal: Terminal,
-                    potShifts: Pot[ShiftAssignments],
+                    legacyDayOfShiftAssignmentsPot: Pot[ShiftAssignments],
                     potFixedPoints: Pot[FixedPointAssignments],
                     potStaffMovements: Pot[StaffMovements],
                     removedStaffMovements: Set[String],
@@ -45,7 +45,7 @@ object TerminalStaffing {
 
   class Backend() {
     def render(props: Props): VdomTagOf[Div] = <.div(
-      props.potShifts.render { shifts =>
+      props.legacyDayOfShiftAssignmentsPot.render { legacyDayOfShiftAssignments =>
         props.potFixedPoints.render { fixedPoints =>
           props.potStaffMovements.render { movements =>
             val movementsForTheDay = movements
@@ -57,7 +57,7 @@ object TerminalStaffing {
                 <.div(^.className := "col-md-4", movementsEditor(movementsForTheDay, props.terminal))
               ),
               <.div(^.className := "container",
-                <.div(^.className := "col-md-10", staffOverTheDay(props.viewMode.localDate, movementsForTheDay, shifts, props.terminal)))
+                <.div(^.className := "col-md-10", staffOverTheDay(props.viewMode.localDate, movementsForTheDay, legacyDayOfShiftAssignments, props.terminal)))
             )
           }
         }

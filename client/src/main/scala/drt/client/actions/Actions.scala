@@ -89,17 +89,13 @@ object Actions {
 
   case class GetFixedPoints(viewMode: ViewMode) extends Action
 
-  case class SetShifts(viewMode: ViewMode, shifts: ShiftAssignments, terminalName: Option[String]) extends Action
+  case class SetShiftAssignments(viewMode: ViewMode, shifts: ShiftAssignments, terminalName: Option[String]) extends Action
 
-  case class GetShifts(viewMode: ViewMode) extends Action
+  case class GetDayOfShiftAssignments(viewMode: ViewMode) extends Action
 
-  case class SetAllLegacyStaffAssignments(allShifts: ShiftAssignments) extends Action
+  case class SetAllShiftAssignments(allShifts: ShiftAssignments) extends Action
 
-  case object GetAllLegacyStaffAssignments extends Action
-
-  case class UpdateShifts(shiftsToUpdate: Seq[StaffAssignment]) extends Action
-
-  case class SetStaffAssignments(viewMode: ViewMode, shifts: ShiftAssignments, terminalName: Option[String]) extends Action
+  case class UpdateShiftAssignments(shiftsToUpdate: Seq[StaffAssignment]) extends Action
 
   case class GetStaffAssignments(viewMode: ViewMode) extends Action
 

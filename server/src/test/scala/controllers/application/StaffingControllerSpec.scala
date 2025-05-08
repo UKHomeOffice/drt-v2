@@ -78,7 +78,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     "return Accepted" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
       val result = controller
-        .saveShifts
+        .saveShiftAssignments
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsText(write(ShiftAssignments(shifts)))))
 
       status(result) must ===(ACCEPTED)
@@ -86,7 +86,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     "return BadRequest" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
       val result = controller
-        .saveShifts
+        .saveShiftAssignments
         .apply(FakeRequest(method = "POST", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(BAD_REQUEST)
@@ -97,7 +97,7 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     "return the shifts from the mock service as json" in {
       val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
       val result = controller
-        .getAllShifts
+        .getAllShiftAssignments
         .apply(FakeRequest(method = "GET", uri = "", headers = authHeader, body = AnyContentAsEmpty))
 
       status(result) must ===(OK)
@@ -202,14 +202,14 @@ class StaffingControllerSpec extends PlaySpec with BeforeAndAfterEach {
     }
     "return Forbidden for saveShifts" in {
       val result = controller
-        .saveShifts
+        .saveShiftAssignments
         .apply(FakeRequest(method = "POST", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)
     }
     "return Forbidden for getShiftsForMonth" in {
       val result = controller
-        .getAllShifts
+        .getAllShiftAssignments
         .apply(FakeRequest(method = "GET", uri = "", headers = Headers(), body = AnyContentAsEmpty))
 
       status(result) must ===(FORBIDDEN)

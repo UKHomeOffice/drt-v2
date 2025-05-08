@@ -40,7 +40,7 @@ import scala.collection.immutable.HashSet
 import scala.scalajs.js.JSConverters.JSRichOption
 
 object TerminalContentComponent {
-  case class Props(potShifts: Pot[ShiftAssignments],
+  case class Props(legacyDayOfShiftAssignmentsPot: Pot[ShiftAssignments],
                    potFixedPoints: Pot[FixedPointAssignments],
                    potStaffMovements: Pot[StaffMovements],
                    removedStaffMovements: Set[String],
@@ -313,14 +313,14 @@ object TerminalContentComponent {
             <.div(^.id := "available-staff", ^.className := s"tab-pane terminal-staffing-container $staffingPanelActive",
               if (state.activeTab == "staffing") {
                 TerminalStaffing(TerminalStaffing.Props(
-                  terminal,
-                  props.potShifts,
-                  props.potFixedPoints,
-                  props.potStaffMovements,
-                  props.removedStaffMovements,
-                  props.airportConfig,
-                  props.loggedInUser,
-                  props.viewMode,
+                  terminal = terminal,
+                  legacyDayOfShiftAssignmentsPot = props.legacyDayOfShiftAssignmentsPot,
+                  potFixedPoints = props.potFixedPoints,
+                  potStaffMovements = props.potStaffMovements,
+                  removedStaffMovements = props.removedStaffMovements,
+                  airportConfig = props.airportConfig,
+                  loggedInUser = props.loggedInUser,
+                  viewMode = props.viewMode,
                 ))
               } else ""
             )
