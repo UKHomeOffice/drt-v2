@@ -25,8 +25,10 @@ class ShiftAssignmentsController @Inject()(cc: ControllerComponents,
     }
   }
 
-  def getAllShiftAssignments: Action[AnyContent] = Action.async {
-    shiftAssignmentsService.allShiftAssignments.map(s => Ok(write(s)))
+  def getAllShiftAssignments: Action[AnyContent] = authByRole(StaffEdit) {
+    Action.async {
+      shiftAssignmentsService.allShiftAssignments.map(s => Ok(write(s)))
+    }
   }
 
   def saveShiftAssignments: Action[AnyContent] = authByRole(StaffEdit) {

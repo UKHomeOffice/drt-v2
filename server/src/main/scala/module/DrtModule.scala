@@ -24,7 +24,7 @@ import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor}
 
 class DrtModule extends AbstractModule with PekkoGuiceSupport {
-  val now: () => SDateLike = () => SDate.now()
+  lazy val now: () => SDateLike = () => SDate.now()
 
   val config: Configuration = new Configuration(ConfigFactory.load)
 
@@ -71,7 +71,7 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
 
 
   @Provides
-  def provideTestDrtSystem = drtTestSystem
+  def provideTestDrtSystem: TestDrtSystem = drtTestSystem
 
   @Provides
   @Singleton
@@ -83,7 +83,7 @@ class DrtModule extends AbstractModule with PekkoGuiceSupport {
 
   @Provides
   @Singleton
-  def provideDrtSystemInterface: DrtSystemInterface = {
+  lazy val provideDrtSystemInterface: DrtSystemInterface = {
     if (drtParameters.isTestEnvironment)
       drtTestSystem
     else

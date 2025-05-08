@@ -42,7 +42,7 @@ class DataRetentionControllerSpec extends PlaySpec {
 
   private def dataRetentionController = {
     val module = new TestDrtModule() {
-      override val now: () => SDateLike = () => SDate("2024-05-20")
+      override lazy val now: () => SDateLike = () => SDate("2024-05-20")
     }
 
     new DataRetentionController(Helpers.stubControllerComponents(), module.provideDrtSystemInterface)

@@ -34,8 +34,7 @@ class ShiftAssignmentsControllerSpec extends Specification  {
 
     val mockCtrl = new TestDrtModule(Lhr.config).provideDrtSystemInterface
 
-    val mockStaffShiftsPlanService = MockShiftAssignmentsService(allShifts.assignments)
-    val shiftAssignmentsController = new ShiftAssignmentsController(stubControllerComponents(), mockCtrl, mockStaffShiftsPlanService)
+    val shiftAssignmentsController = new ShiftAssignmentsController(stubControllerComponents(), mockCtrl, mockShiftAssignmentsService)
 
     "save shifts and update assignments with zero staff" in {
       val mockCtrl = new TestDrtModule(Lhr.config).provideDrtSystemInterface
@@ -88,6 +87,8 @@ class ShiftAssignmentsControllerSpec extends Specification  {
       Seq(StaffAssignment("assignment", T1, SDate("2024-07-01T05:00").millisSinceEpoch, SDate("2024-07-01T12:00").millisSinceEpoch, 1, None))
 
     "getShiftAssignmentsForDate" should {
+      val mockShiftAssignmentsService = MockShiftAssignmentsService(shifts)
+      val shiftAssignmentsController = new ShiftAssignmentsController(stubControllerComponents(), mockCtrl, mockShiftAssignmentsService)
       "return the shifts from the mock service as json" in {
         val authHeader = Headers("X-Forwarded-Groups" -> "fixed-points:view,LHR")
         val result = shiftAssignmentsController
@@ -120,6 +121,8 @@ class ShiftAssignmentsControllerSpec extends Specification  {
 
     "getShiftAssignmentsForDateForMonth" should {
       "return the shifts from the mock service as json" in {
+        val mockShiftAssignmentsService = MockShiftAssignmentsService(shifts)
+        val shiftAssignmentsController = new ShiftAssignmentsController(stubControllerComponents(), mockCtrl, mockShiftAssignmentsService)
         val authHeader = Headers("X-Forwarded-Groups" -> "staff:edit,LHR")
         val result = shiftAssignmentsController
           .getAllShiftAssignments
