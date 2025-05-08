@@ -129,7 +129,7 @@ object SlaConfigEditor {
                 MuiGrid(item = true, xs = 4)(MuiTypography(variant = "subtitle1")("SLAs (minutes)")),
                 MuiGrid(item = true, xs = 4)(
                   MuiButton(color = Color.primary, variant = "outlined", size = "medium")(
-                    MuiIcons(Add)(fontSize = "small"),
+                    MuiIcons(Add)(fontSize = "large"),
                     "Add SLA change",
                     ^.onClick --> scope.modState(_.copy(editing = Option(Editing(SlasUpdate(today, newUpdatesTemplate, None))))))
                 ),
@@ -148,11 +148,11 @@ object SlaConfigEditor {
                   MuiGrid(item = true, xs = 4)(
                     <.div(^.style := js.Dictionary("display" -> "flex", "gap" -> "8px"),
                       MuiButton(color = Color.primary, variant = "outlined", size = "small")(
-                        MuiIcons(Edit)(fontSize = "small"),
+                        MuiIcons(Edit)(fontSize = "large"),
                         ^.onClick --> scope.modState(_.copy(editing = Option(Editing(SlasUpdate(effectiveFrom, config, Option(effectiveFrom))))))
                       ),
                       MuiButton(color = Color.primary, variant = "outlined", size = "small")(
-                        MuiIcons(Delete)(fontSize = "small"),
+                        MuiIcons(Delete)(fontSize = "large"),
                         ^.onClick --> deleteUpdates(effectiveFrom))
                     )
                   ),

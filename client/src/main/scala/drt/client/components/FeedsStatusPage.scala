@@ -78,7 +78,7 @@ object FeedsStatusPage {
               if (feed.feedSource.name == "API")
                 <.h3(<.div(^.className := "flex-horizontally", feed.feedSource.displayName, apiDataTooltip))
               else if (manualCheckAllowed)
-                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "outlined", size = "medium", color = Color.primary)(MuiIcons(RefreshOutlined)(), ^.onClick --> checkFeed(feed.feedSource)))
+                <.h3(feed.feedSource.displayName, " ", MuiButton(variant = "outlined", size = "medium", color = Color.primary)(MuiIcons(RefreshOutlined)(fontSize = "large"), ^.onClick --> checkFeed(feed.feedSource)))
               else if (isCiriumAsPortLive)
                 <.h3("Live arrival")
               else
