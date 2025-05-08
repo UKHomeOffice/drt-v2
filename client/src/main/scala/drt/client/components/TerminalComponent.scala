@@ -41,7 +41,7 @@ object TerminalComponent {
 
   private case class TerminalModel(userPreferences: Pot[UserPreferences],
                                    legacyDayOfStaffAssignmentsPot: Pot[ShiftAssignments],
-                                   potStaffShifts: Pot[ShiftAssignments],
+                                   dayOfStaffAssignmentsPot: Pot[ShiftAssignments],
                                    potFixedPoints: Pot[FixedPointAssignments],
                                    potStaffMovements: Pot[StaffMovements],
                                    removedStaffMovements: Set[String],
@@ -82,7 +82,7 @@ object TerminalComponent {
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userPreferences = model.userPreferences,
         legacyDayOfStaffAssignmentsPot = model.legacyDayOfStaffAssignments,
-        potStaffShifts = model.dayOfStaffAssignments,
+        dayOfStaffAssignmentsPot = model.dayOfStaffAssignments,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         removedStaffMovements = model.removedStaffMovements,
