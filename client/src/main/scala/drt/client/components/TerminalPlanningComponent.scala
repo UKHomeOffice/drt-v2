@@ -5,14 +5,13 @@ import drt.client.SPAMain
 import drt.client.SPAMain.{Loc, TerminalPageTabLoc, UrlDateParameter}
 import drt.client.actions.Actions.GetForecastWeek
 import drt.client.components.DropInDialog.StringExtended
-import drt.client.components.styles.DrtTheme
+import drt.client.components.styles.DrtReactTheme
 import drt.client.modules.GoogleEventTracker
 import drt.client.services.JSDateConversions.SDate
 import drt.client.services.handlers.UpdateUserPreferences
-import drt.shared.UserPreferences
 import drt.client.services.{DrtApi, SPACircuit}
 import drt.shared.CrunchApi.{ForecastPeriodWithHeadlines, ForecastTimeSlot, MillisSinceEpoch}
-import drt.shared.Forecast
+import drt.shared.{Forecast, UserPreferences}
 import io.kinoplan.scalajs.react.bridge.WithPropsAndTagsMods
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
 import io.kinoplan.scalajs.react.material.ui.core._
@@ -28,8 +27,8 @@ import japgolly.scalajs.react.vdom.html_<^._
 import japgolly.scalajs.react.{Callback, CtorType, ReactEventFromInput, Reusability, ScalaComponent}
 import org.scalajs.dom.html.Select
 import org.scalajs.dom.{Blob, HTMLAnchorElement, URL, document}
-import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.ports.Terminals.Terminal
+import uk.gov.homeoffice.drt.ports.{AirportConfig, Queues}
 import uk.gov.homeoffice.drt.time.{MilliDate, SDateLike}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -167,7 +166,7 @@ object TerminalPlanningComponent {
                 <.div(^.style := js.Dictionary("display" -> "flex", "alignItems" -> "center"),
                   MuiFormLabel(sx = SxProps(Map("size" -> "16px",
                     "paddingRight" -> "10px",
-                    "color" -> DrtTheme.theme.palette.grey.`900`,
+                    "color" -> DrtReactTheme.palette.grey.`900`,
                     "fontWeight" -> "bold")))(<.span("Time Period")),
                   MuiRadioGroup(row = true)(^.value := state.timePeriod, ^.onChange ==> ((e: ReactEventFromInput) => {
                     scope.modState(_.copy(timePeriod = e.target.value.toInt)) >>

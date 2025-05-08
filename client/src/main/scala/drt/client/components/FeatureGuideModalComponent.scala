@@ -1,12 +1,11 @@
 package drt.client.components
 
 import drt.client.SPAMain
-import drt.client.components.styles.{DrtReactTheme, DrtTheme, WithScalaCssImplicits}
-import drt.client.modules.GoogleEventTracker
+import drt.client.components.styles.{DrtReactTheme, WithScalaCssImplicits}
 import drt.client.services.DrtApi
 import io.kinoplan.scalajs.react.material.ui.core.MuiButton._
-import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import io.kinoplan.scalajs.react.material.ui.core._
+import io.kinoplan.scalajs.react.material.ui.core.system.{SxProps, ThemeProvider}
 import japgolly.scalajs.react.component.Scala.Component
 import japgolly.scalajs.react.vdom.html_<^.{<, ^, _}
 import japgolly.scalajs.react.{BackendScope, Callback, CtorType, ReactEvent, ScalaComponent}
@@ -36,11 +35,11 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
           MuiDialog(open = props.showDialog, maxWidth = "lg", scroll = "body", fullWidth = true)(
             <.div(
               MuiGrid(container = true, spacing = 2, sx = SxProps(Map(
-                "backgroundColor" -> DrtTheme.theme.palette.primary.`50`,
+                "backgroundColor" -> DrtReactTheme.palette.primary.`50`,
               )))(
                 MuiGrid(item = true, xs = 10)(
                   MuiDialogTitle(sx = SxProps(Map(
-                    "color" -> DrtTheme.theme.palette.primary.`700`,
+                    "color" -> DrtReactTheme.palette.primary.`700`,
                     "fontSize" -> "40px",
                     "fontWeight" -> "bold"
                   )))(<.span(s"New features available for DRT"))),
@@ -50,7 +49,7 @@ object FeatureGuideModalComponent extends WithScalaCssImplicits {
                       Icon.close))),
               )),
             MuiDialogContent(sx = SxProps(Map(
-              "backgroundColor" -> DrtTheme.theme.palette.primary.`50`,
+              "backgroundColor" -> DrtReactTheme.palette.primary.`50`,
               "paddingTop" -> "0px",
               "paddingLeft" -> "24px",
               "paddingRight" -> "24px",
