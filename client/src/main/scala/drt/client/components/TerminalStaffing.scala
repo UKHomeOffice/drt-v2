@@ -65,9 +65,9 @@ object TerminalStaffing {
 
     private def staffOverTheDay(localDate: LocalDate,
                                 movements: Seq[StaffMovement],
-                                dayOfShiftAssignments: ShiftAssignments,
+                                dayOfStaffAssignments: ShiftAssignments,
                                 terminalName: Terminal): VdomTagOf[Div] = {
-      val terminalShifts = ShiftAssignments(dayOfShiftAssignments.forTerminal(terminalName))
+      val terminalShifts = ShiftAssignments(dayOfStaffAssignments.forTerminal(terminalName))
       val staffWithShiftsAndMovementsAt = StaffMovements.terminalStaffAt(terminalShifts)(movements) _
 
       <.div(

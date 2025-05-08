@@ -80,7 +80,7 @@ object TerminalComponent {
 
       val modelRCP = SPACircuit.connect(model => TerminalModel(
         userPreferences = model.userPreferences,
-        legacyDayOfShiftAssignmentsPot = model.legacyDayOfShiftAssignments,
+        legacyDayOfShiftAssignmentsPot = model.legacyDayOfStaffAssignments,
         potFixedPoints = model.fixedPoints,
         potStaffMovements = model.staffMovements,
         removedStaffMovements = model.removedStaffMovements,
